@@ -6,8 +6,14 @@
  * constants below (overridable per-construction via `Partial<EngineConfig>`).
  */
 import type { RetrievalFilters } from '../retrieval/types.js';
+import type { SettledAction } from './batch-settle.js';
 import type { EgoChatMessage } from './llm.js';
 import type { ChatResult, ChatStreamPreparation, EngineConfig, Message } from './types.js';
+
+export interface BuildLlmMessagesOptions {
+  maxHistoryMessages: number;
+  settled?: readonly SettledAction[];
+}
 
 const DEFAULT_MAX_HISTORY = 20;
 const DEFAULT_MAX_RETRIEVAL = 5;
@@ -53,6 +59,13 @@ export function renderMessageForModel(message: Message): string {
   return message.content ? `${message.content}\n\n${partsText}` : partsText;
 }
 
+/** Render the action outcomes settled by the current new message turn. */
+export function renderSettledResults(settled: readonly SettledAction[]): string {
+  return settled
+    .map((action) => `[action ${action.tool} "${action.summary}": ${action.content}]`)
+    .join('\n');
+}
+
 /**
  * Build the LLM message array: the most recent `maxHistoryMessages` user/
  * assistant turns, then the current message (with the retrieved-knowledge
@@ -62,10 +75,10 @@ export function buildLlmMessages(
   history: Message[],
   currentMessage: string,
   contextBlock: string,
-  maxHistoryMessages: number
+  options: BuildLlmMessagesOptions
 ): EgoChatMessage[] {
   const messages: EgoChatMessage[] = [];
-  const recentHistory = history.slice(-maxHistoryMessages);
+  const recentHistory = history.slice(-options.maxHistoryMessages);
 
   for (const msg of recentHistory) {
     if (msg.role === 'user' || msg.role === 'assistant') {
@@ -82,7 +95,10 @@ export function buildLlmMessages(
   const userContent = contextBlock
     ? `${currentMessage}\n\n---\nRetrieved knowledge:\n${contextBlock}`
     : currentMessage;
-  messages.push({ role: 'user', content: userContent });
+  const settledPrefix = options.settled?.length
+    ? `${renderSettledResults(options.settled)}\n\n`
+    : '';
+  messages.push({ role: 'user', content: `${settledPrefix}${userContent}` });
   return messages;
 }
 

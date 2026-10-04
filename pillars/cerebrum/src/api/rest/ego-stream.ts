@@ -29,6 +29,7 @@ import {
 } from '../modules/ego/chat-helpers.js';
 import { ConversationPersistence } from '../modules/ego/persistence.js';
 import { buildEgoEngine } from './ego-engine.js';
+import { settleForMessage } from './ego-settle.js';
 import { setSseHeaders, streamError, writeSseEvent } from './ego-stream-frames.js';
 import { pipeStreamEvents } from './ego-stream-pipe.js';
 import { handleResumeStreamRequest } from './ego-stream-resume.js';
@@ -136,6 +137,16 @@ interface NewMessageStreamParams {
 
 async function handleNewMessageStreamRequest(params: NewMessageStreamParams): Promise<void> {
   const { deps, req, res, persistence, actions, input } = params;
+  const settled = input.conversationId
+    ? await settleForMessage(deps, input.conversationId).catch((error: unknown) => {
+        writeSseEvent(res, streamError(error, req.requestId));
+        res.end();
+        return null;
+      })
+    : undefined;
+  if (settled === null) return;
+  for (const part of settled?.parts ?? []) writeSseEvent(res, { type: 'part', part });
+
   const resolved = resolveAndPersistUserTurn({
     deps,
     persistence,
@@ -157,6 +168,7 @@ async function handleNewMessageStreamRequest(params: NewMessageStreamParams): Pr
       channel: input.channel ?? 'shell',
       knownScopes: input.knownScopes,
       allowedTools: persistence.getAllowedTools(conversation.id),
+      settled: settled?.actions,
     });
     await pipeStreamEvents({ req, res, persistence, actions, preparation, conversation });
   } catch (err) {
