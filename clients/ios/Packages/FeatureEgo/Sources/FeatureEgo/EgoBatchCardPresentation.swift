@@ -48,7 +48,7 @@ internal struct EgoBatchCardPresentation: Hashable {
             ? Self.distinctTools(in: batch.actions).map { tool in
                 ToolOption(
                     tool: tool,
-                    label: EgoToolPresentation.label(for: tool, status: .started),
+                    label: Self.permissionLabel(for: tool),
                     isOn: alwaysAllow.contains(tool)
                 )
             }
@@ -77,7 +77,7 @@ internal struct EgoBatchCardPresentation: Hashable {
             actionId: action.actionId,
             status: action.status,
             summary: action.summary,
-            toolLabel: EgoToolPresentation.label(for: action.tool, status: .started),
+            toolLabel: "Changes to \(changeScope(for: action.tool))",
             isTicked: isPending && ticked.contains(action.actionId),
             isDestructive: isDestructiveTool(action.tool),
             showsCheckbox: isPending && canDecide,
@@ -89,6 +89,23 @@ internal struct EgoBatchCardPresentation: Hashable {
     private static func distinctTools(in actions: [EgoBatchAction]) -> [String] {
         var seen = Set<String>()
         return actions.compactMap { seen.insert($0.tool).inserted ? $0.tool : nil }
+    }
+
+    private static func permissionLabel(for tool: String) -> String {
+        "changes to \(changeScope(for: tool))"
+    }
+
+    private static func changeScope(for tool: String) -> String {
+        let domain = tool.split(whereSeparator: { ".-_".contains($0) }).first?.lowercased()
+        return switch domain {
+        case "finance": "financial data"
+        case "purchases": "purchases"
+        case "inventory": "inventory"
+        case "media": "the media library"
+        case "cerebrum": "notes"
+        case let domain?: domain
+        case nil: "this action"
+        }
     }
 
     private static func isDestructiveTool(_ tool: String) -> Bool {

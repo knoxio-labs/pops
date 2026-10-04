@@ -128,14 +128,43 @@ internal struct EgoBatchCardPresentationTests {
                 "inventory.items.move", "finance.transactions.update",
             ])
         #expect(
-            presentation.toolOptions.map(\.label) == ["Checking inventory", "Checking finance"])
+            presentation.toolOptions.map(\.label)
+                == ["changes to inventory", "changes to financial data"])
         #expect(presentation.toolOptions.map(\.isOn) == [false, true])
+        #expect(
+            presentation.rows.map(\.toolLabel) == [
+                "Changes to inventory", "Changes to financial data", "Changes to inventory",
+            ])
 
         let resolved = makePresentation(
             actions: [action("done", status: .executed)],
             canDecide: false
         )
         #expect(resolved.toolOptions.isEmpty)
+    }
+
+    @Test("write tool labels describe the changed scope")
+    func writeLabelsDescribeChangeScope() {
+        let presentation = makePresentation(
+            actions: [
+                action("inventory", "inventory.items.delete"),
+                action("notes", "cerebrum.engram.update"),
+                action("unknown", "lists.items.move"),
+                action("unnamed", ""),
+            ],
+            canDecide: true
+        )
+
+        #expect(
+            presentation.rows.map(\.toolLabel) == [
+                "Changes to inventory", "Changes to notes", "Changes to lists",
+                "Changes to this action",
+            ])
+        #expect(
+            presentation.toolOptions.map(\.label) == [
+                "changes to inventory", "changes to notes", "changes to lists",
+                "changes to this action",
+            ])
     }
 
     @Test("failed phase exposes its message and keeps decision buttons available")
