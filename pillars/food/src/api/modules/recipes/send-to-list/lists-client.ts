@@ -23,6 +23,15 @@ export interface ListHeader {
 export type UpsertRefKind = 'ingredient' | 'variant' | 'recipe' | 'custom';
 export type UpsertConflictMode = 'merge-additive' | 'replace' | 'skip';
 
+/** Controls note formatting and the maximum Unicode code-point length on upsert. */
+export interface NotesMergeOptions {
+  /** Text between note fragments. */
+  separator: string;
+  /** Maximum number of Unicode code points retained, including the truncation marker. */
+  maxLength: number;
+}
+
+/** Request shape for atomic upsert-by-reference operations in the lists pillar. */
 export interface UpsertByRefBody {
   refKind: UpsertRefKind;
   refId: number;
@@ -31,12 +40,15 @@ export interface UpsertByRefBody {
   unit?: string | null;
   notes?: string | null;
   onConflict?: UpsertConflictMode;
+  /** Formatting policy applied to notes when this upsert writes the row. */
+  notesMerge?: NotesMergeOptions;
 }
 
-export interface UpsertByRefResult {
-  outcome: 'inserted' | 'merged' | 'skipped';
-  itemId: number;
-}
+/** Result shape returned by the lists pillar after an upsert-by-reference operation. */
+export type UpsertByRefResult =
+  | { outcome: 'inserted'; itemId: number; position: number }
+  | { outcome: 'merged'; itemId: number; qty: number | null }
+  | { outcome: 'skipped'; itemId: number };
 
 export interface AddItemBody {
   label: string;
@@ -47,10 +59,13 @@ export interface AddItemBody {
   notes?: string | null;
 }
 
+/** Food's cross-pillar client for the lists operations used by shopping flows. */
 export interface ListsClient {
   getList(id: number): Promise<ListHeader | null>;
   createShoppingList(name: string): Promise<number>;
   upsertByRef(listId: number, body: UpsertByRefBody): Promise<UpsertByRefResult>;
+  /** Updates a field on an existing lists-owned row. */
+  updateItem(itemId: number, body: { label: string }): Promise<void>;
   addItem(listId: number, body: AddItemBody): Promise<void>;
   /** Distinct shopping-list ids whose item notes contain `notesContains`. */
   searchShoppingListIdsByNotes(notesContains: string): Promise<number[]>;
@@ -73,6 +88,7 @@ export type ListsRouter = {
   };
   items: {
     add: (input: { listId: number } & AddItemBody) => Promise<{ id: number; position: number }>;
+    update: (input: { id: number; label: string }) => Promise<{ ok: true }>;
     upsertByRef: (input: { listId: number } & UpsertByRefBody) => Promise<UpsertByRefResult>;
     search: (input: {
       kind: string;
@@ -134,6 +150,10 @@ export function createListsClient(
         'items.upsertByRef',
         await handleFactory().items.upsertByRef({ listId, ...body })
       );
+    },
+
+    async updateItem(itemId, body) {
+      unwrap('items.update', await handleFactory().items.update({ id: itemId, ...body }));
     },
 
     async addItem(listId, body) {

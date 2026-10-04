@@ -20,6 +20,20 @@ export const NON_FREE_REF_KIND_ENUM = z.enum(['ingredient', 'variant', 'recipe',
 
 export const UPSERT_CONFLICT_MODE_ENUM = z.enum(['merge-additive', 'replace', 'skip']);
 
+/** Optional note formatting and length bound for reference upserts. */
+export const NotesMergeOptionsSchema = z
+  .object({
+    separator: z
+      .string()
+      .describe('Text between adjacent note fragments; defaults to a newline when omitted.'),
+    maxLength: z
+      .number()
+      .int()
+      .positive()
+      .describe('Maximum number of Unicode code points retained in the merged notes.'),
+  })
+  .describe('Optional formatting and size limit for notes written by an upsert.');
+
 export const UpsertByRefBodySchema = z.object({
   refKind: NON_FREE_REF_KIND_ENUM,
   refId: z.number().int().positive(),
@@ -28,6 +42,9 @@ export const UpsertByRefBodySchema = z.object({
   unit: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
   onConflict: UPSERT_CONFLICT_MODE_ENUM.optional(),
+  notesMerge: NotesMergeOptionsSchema.optional().describe(
+    'Optional note formatting and size limit for this upsert.'
+  ),
 });
 
 export const UpsertByRefResponseSchema = z.discriminatedUnion('outcome', [
@@ -36,7 +53,11 @@ export const UpsertByRefResponseSchema = z.discriminatedUnion('outcome', [
     itemId: z.number().int().positive(),
     position: z.number().int().nonnegative(),
   }),
-  z.object({ outcome: z.literal('merged'), itemId: z.number().int().positive() }),
+  z.object({
+    outcome: z.literal('merged'),
+    itemId: z.number().int().positive(),
+    qty: z.number().nullable().describe('Quantity stored on the merged row after this upsert.'),
+  }),
   z.object({ outcome: z.literal('skipped'), itemId: z.number().int().positive() }),
 ]);
 

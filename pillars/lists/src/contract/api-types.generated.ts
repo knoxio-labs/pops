@@ -993,6 +993,13 @@ export interface operations {
         'application/json': {
           label: string;
           notes?: string | null;
+          /** @description Optional note formatting and size limit for this upsert. */
+          notesMerge?: {
+            /** @description Maximum number of Unicode code points retained in the merged notes. */
+            maxLength: number;
+            /** @description Text between adjacent note fragments; defaults to a newline when omitted. */
+            separator: string;
+          };
           /** @enum {string} */
           onConflict?: 'merge-additive' | 'replace' | 'skip';
           qty?: number | null;
@@ -1021,6 +1028,8 @@ export interface operations {
                 itemId: number;
                 /** @enum {string} */
                 outcome: 'merged';
+                /** @description Quantity stored on the merged row after this upsert. */
+                qty: number | null;
               }
             | {
                 itemId: number;
@@ -1046,6 +1055,8 @@ export interface operations {
                 itemId: number;
                 /** @enum {string} */
                 outcome: 'merged';
+                /** @description Quantity stored on the merged row after this upsert. */
+                qty: number | null;
               }
             | {
                 itemId: number;

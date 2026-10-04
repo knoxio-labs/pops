@@ -32,11 +32,14 @@ const DSL = `@recipe(slug="grilled-cheese", title="Grilled Cheese", servings=1)
 interface StubState {
   created: { name: string }[];
   upserts: { listId: number; body: UpsertByRefBody }[];
+  updates: { itemId: number; label: string }[];
+  itemsByRef: Map<string, { id: number; qty: number | null; label: string }>;
   lists: Map<number, ListHeader>;
 }
 
 function makeStubClient(state: StubState): ListsClient {
   let nextId = 100;
+  let nextItemId = 200;
   return {
     getList: (id) => Promise.resolve(state.lists.get(id) ?? null),
     createShoppingList: (name) => {
@@ -47,7 +50,35 @@ function makeStubClient(state: StubState): ListsClient {
     },
     upsertByRef: (listId, body) => {
       state.upserts.push({ listId, body });
-      return Promise.resolve({ outcome: 'inserted' as const, itemId: state.upserts.length });
+      const key = `${listId}:${body.refKind}:${body.refId}`;
+      const existing = state.itemsByRef.get(key);
+      if (existing !== undefined) {
+        existing.qty =
+          existing.qty === null && (body.qty ?? null) === null
+            ? null
+            : (existing.qty ?? 0) + (body.qty ?? 0);
+        existing.label = body.label;
+        return Promise.resolve({
+          outcome: 'merged' as const,
+          itemId: existing.id,
+          qty: existing.qty,
+        });
+      }
+      nextItemId += 1;
+      const inserted = { id: nextItemId, qty: body.qty ?? null, label: body.label };
+      state.itemsByRef.set(key, inserted);
+      return Promise.resolve({
+        outcome: 'inserted' as const,
+        itemId: inserted.id,
+        position: state.itemsByRef.size - 1,
+      });
+    },
+    updateItem: (itemId, body) => {
+      state.updates.push({ itemId, label: body.label });
+      for (const item of state.itemsByRef.values()) {
+        if (item.id === itemId) item.label = body.label;
+      }
+      return Promise.resolve();
     },
     addItem: () => Promise.resolve(),
     searchShoppingListIdsByNotes: () => Promise.resolve([]),
@@ -72,7 +103,7 @@ function client(): ReturnType<typeof makeClient> {
 beforeEach(() => {
   tmpDir = mkdtempSync(join(tmpdir(), 'food-api-send-to-list-test-'));
   foodDb = openFoodDb(join(tmpDir, 'food.db'));
-  state = { created: [], upserts: [], lists: new Map() };
+  state = { created: [], upserts: [], updates: [], itemsByRef: new Map(), lists: new Map() };
   createIngredient(foodDb.db, { name: 'Bread', slug: 'bread', defaultUnit: 'count' });
   createIngredient(foodDb.db, { name: 'Butter', slug: 'butter', defaultUnit: 'g' });
   createIngredient(foodDb.db, { name: 'Cheddar', slug: 'cheddar', defaultUnit: 'g' });
@@ -99,6 +130,42 @@ describe('send-to-list REST', () => {
       expect(state.created).toEqual([{ name: 'Groceries' }]);
       expect(state.upserts.length).toBe(res.addedCount);
       expect(state.upserts[0]?.body.onConflict).toBe('merge-additive');
+    }
+  });
+
+  it('regenerates merged labels from cumulative quantities and bounds notes', async () => {
+    const api = client();
+    const created = await api.recipes.create(DSL);
+    const firstSend = await api.sendToList.send(created.versionId, {
+      kind: 'new',
+      name: 'Groceries',
+    });
+    expect(firstSend.ok).toBe(true);
+    const listId = firstSend.ok ? firstSend.listId : 0;
+    const itemCount = state.itemsByRef.size;
+    const upsertCount = state.upserts.length;
+
+    const secondSend = await client().sendToList.send(created.versionId, {
+      kind: 'existing',
+      listId,
+    });
+
+    expect(secondSend).toMatchObject({ ok: true, addedCount: 0 });
+    if (!secondSend.ok) throw new Error('the existing shopping list should accept the send');
+    expect(secondSend.mergedCount).toBe(itemCount);
+    expect(state.upserts.slice(upsertCount)).toHaveLength(itemCount);
+    expect(
+      state.upserts
+        .slice(upsertCount)
+        .every(
+          ({ body }) => body.notesMerge?.separator === '; ' && body.notesMerge.maxLength === 500
+        )
+    ).toBe(true);
+    expect(state.updates).toHaveLength(itemCount);
+
+    for (const item of state.itemsByRef.values()) {
+      if (item.qty === null) throw new Error('food mergeable items have a cumulative quantity');
+      expect(Number(item.label.split(' ')[0])).toBe(item.qty);
     }
   });
 

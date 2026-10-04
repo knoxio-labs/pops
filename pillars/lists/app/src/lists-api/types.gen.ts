@@ -616,6 +616,19 @@ export type ItemsUpsertByRefData = {
   body?: {
     label: string;
     notes?: string | null;
+    /**
+     * Optional note formatting and size limit for this upsert.
+     */
+    notesMerge?: {
+      /**
+       * Maximum number of Unicode code points retained in the merged notes.
+       */
+      maxLength: number;
+      /**
+       * Text between adjacent note fragments; defaults to a newline when omitted.
+       */
+      separator: string;
+    };
     onConflict?: 'merge-additive' | 'replace' | 'skip';
     qty?: number | null;
     refId: number;
@@ -655,6 +668,10 @@ export type ItemsUpsertByRefResponses = {
     | {
         itemId: number;
         outcome: 'merged';
+        /**
+         * Quantity stored on the merged row after this upsert.
+         */
+        qty: number | null;
       }
     | {
         itemId: number;
@@ -672,6 +689,10 @@ export type ItemsUpsertByRefResponses = {
     | {
         itemId: number;
         outcome: 'merged';
+        /**
+         * Quantity stored on the merged row after this upsert.
+         */
+        qty: number | null;
       }
     | {
         itemId: number;

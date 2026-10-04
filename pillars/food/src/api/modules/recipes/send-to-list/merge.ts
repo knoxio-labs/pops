@@ -2,17 +2,19 @@
  * Per-item merge / insert for the send loop, over the lists REST API.
  *
  * Mergeable (ingredient/variant) items go through `upsert-by-ref` with
- * `onConflict='merge-additive'` — the lists pillar atomically sums qty +
- * merges notes by `(refKind, refId)`. Unconverted ("free") lines always
- * insert fresh (they have no ref to merge on).
+ * `onConflict='merge-additive'` — the lists pillar atomically sums qty and
+ * bounds note growth; food uses the returned quantity to rebuild the label.
+ * Unconverted ("free") lines always insert fresh because they have no ref.
  */
 import { type ListsClient } from './lists-client.js';
-import { type SendItem } from './send-items.js';
+import { relabelAfterMerge, type SendItem } from './send-items.js';
 
+/** Result of writing one recipe line to a shopping list. */
 export interface MergeOutcome {
   kind: 'merged' | 'inserted';
 }
 
+/** Upserts one send item and repairs its label from the cumulative quantity after a merge. */
 export async function processItem(
   client: ListsClient,
   listId: number,
@@ -29,8 +31,15 @@ export async function processItem(
       unit: item.preview.unit,
       notes,
       onConflict: 'merge-additive',
+      notesMerge: { separator: '; ', maxLength: 500 },
     });
-    return { kind: res.outcome === 'merged' ? 'merged' : 'inserted' };
+    if (res.outcome === 'merged') {
+      if (res.qty !== null) {
+        await client.updateItem(res.itemId, { label: relabelAfterMerge(item, res.qty) });
+      }
+      return { kind: 'merged' };
+    }
+    return { kind: 'inserted' };
   }
   await client.addItem(listId, {
     label: item.preview.label,
