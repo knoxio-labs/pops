@@ -1,5 +1,6 @@
 import AppCore
 import FeatureAccounts
+import FeatureEgo
 import FeatureInventory
 import FeaturePurchases
 import FeatureTransactions
@@ -29,20 +30,22 @@ import FeatureTransactions
 /// still carries an answer about it (`captureAvailable`, read straight off
 /// the BFM's snapshot by `AppShellModel`, independently of this list). POPS-
 /// 4294 retired its tab; adding it back here would put it through the same
-/// path as every other entry — a tab, a `RootFeature.presentation` name and
-/// icon (`RootCopyPresentationTests` enforces that every entry has one) — and
-/// it is not a screen. Purchases reads `captureAvailable` to decide whether to
-/// offer capture inline instead.
+/// path for every renderable feature: it needs a screen and an entry in
+/// `RootFeature.presentation` for its name and symbol (`RootCopyPresentationTests`
+/// enforces that every entry has one). Receipt capture is not a screen;
+/// Purchases reads `captureAvailable` to decide whether to offer capture inline.
 internal enum RootFeature {
     internal static let renderable: [MobileFeature] = [
         FeatureTransactions.feature,
         FeatureAccounts.feature,
         FeaturePurchases.feature,
         FeatureInventory.feature,
+        FeatureEgo.feature,
     ]
 
-    /// What each renderable feature calls itself: its tab label and icon, as
-    /// the feature module — not the tab bar — declares them.
+    /// What each renderable feature calls itself: its display name and symbol,
+    /// as the feature module — not the shell — declares them. Some features
+    /// use these in a tab; others, such as Ego, use them in a separate entry.
     ///
     /// Keyed here rather than switched on in `RootCopy`, so a feature that
     /// forgets to appear in this dictionary is the same mistake as forgetting
@@ -62,10 +65,13 @@ internal enum RootFeature {
         FeatureInventory.feature: FeaturePresentation(
             displayName: FeatureInventory.displayName,
             symbolName: FeatureInventory.symbolName),
+        FeatureEgo.feature: FeaturePresentation(
+            displayName: FeatureEgo.displayName,
+            symbolName: FeatureEgo.symbolName),
     ]
 }
 
-/// A feature's tab label and SF Symbol, as its own module declares them.
+/// A feature's display name and SF Symbol, as its own module declares them.
 internal struct FeaturePresentation {
     internal let displayName: String
     internal let symbolName: String

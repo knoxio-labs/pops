@@ -1,6 +1,7 @@
 import AppCore
 import DesignSystem
 import FeatureAccounts
+import FeatureEgo
 import FeatureInventory
 import FeaturePurchases
 import FeatureTransactions
@@ -14,8 +15,9 @@ import SwiftUI
 /// what stops one feature from having to construct another's views.
 ///
 /// Between features, this draws exactly one piece of navigation chrome — a tab
-/// bar — and only once there is more than one feature to move between. It
-/// draws none inside a feature: a feature that has more than one screen brings
+/// bar — and only once there is more than one tab feature to move between. Ego's
+/// separate sheet entry stays available without becoming a tab. It draws none
+/// inside a feature: a feature that has more than one screen brings
 /// its own `NavigationStack` — `TransactionsFlowView` is the first — because
 /// the routes between those screens belong to that feature and resolving them
 /// here would mean this file naming every screen in the app. A stack around a
@@ -30,6 +32,7 @@ internal struct ContentView: View {
     /// The tab the person chose, if they chose one. See ``features`` for why
     /// this is held here rather than left to `TabView`.
     @State private var chosenFeature: MobileFeature?
+    @State private var egoPresented = false
 
     /// Which bootstrap failure, if any, a person has already dismissed the
     /// degraded banner for. See ``DegradedBannerVisibility``.
@@ -67,14 +70,32 @@ internal struct ContentView: View {
 
     internal var body: some View {
         features
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                EgoEntryView(
+                    isAvailable: Self.showsEgoEntry(available: surface.available)
+                        && !showsTabSwitcher,
+                    placement: .safeArea,
+                    onOpen: { egoPresented = true }
+                )
+            }
             .safeAreaInset(edge: .top) { degradedBanner }
             .modifier(
                 EntitySheets(
                     presentation: composition.entityPresentation,
                     dependencies: dependencies,
-                    entityRouter: composition.entityRouter
+                    entityRouter: composition.entityRouter,
+                    isActive: !egoPresented
                 )
             )
+            .sheet(isPresented: $egoPresented) {
+                EgoSheetView(
+                    dependencies: dependencies,
+                    context: { composition.egoScreenContext.current },
+                    presentation: composition.entityPresentation,
+                    entityRouter: composition.entityRouter,
+                    onClose: { egoPresented = false }
+                )
+            }
             .environment(
                 \.startRePairing,
                 RePairingAction { composition.session.send(.revoked(.credentialsRejected)) }
@@ -113,7 +134,13 @@ internal struct ContentView: View {
         SearchPillar.allCases.contains { surface.available.contains($0.feature) }
     }
 
-    /// Primary features, More, and the app-wide search tab.
+    private var showsTabSwitcher: Bool {
+        let count = Self.tabFeatures(for: surface.available).count
+        return count > 1 || hasSearch
+    }
+
+    /// Tab features, More, and the app-wide search tab. Ego is exposed by
+    /// its sheet entry and does not count when choosing a tab layout.
     ///
     /// Zero gets the explanation below. Exactly one fills the screen outright
     /// — the shipped single-feature look, unchanged, because a tab bar with
@@ -129,11 +156,12 @@ internal struct ContentView: View {
     /// happened; the implicit selection was simply lost.
     /// `purchases-hand-entry.yaml` is the flow that catches it.
     @ViewBuilder internal var features: some View {
-        switch (surface.available.count, hasSearch) {
+        let tabFeatures = Self.tabFeatures(for: surface.available)
+        switch (tabFeatures.count, hasSearch) {
         case (0, _):
             unavailableExplanation
         case (1, false):
-            screen(for: surface.available[0])
+            screen(for: tabFeatures[0])
         default:
             TabView(selection: selection) {
                 ForEach(Self.primaryFeatures(for: surface.available), id: \.self) { feature in
@@ -165,6 +193,13 @@ internal struct ContentView: View {
                 }
             }
             .tint(Self.tabTint(for: selection.wrappedValue))
+            .tabViewBottomAccessory {
+                EgoEntryView(
+                    isAvailable: Self.showsEgoEntry(available: surface.available),
+                    placement: .tabAccessory,
+                    onOpen: { egoPresented = true }
+                )
+            }
         }
     }
 
@@ -192,7 +227,11 @@ internal struct ContentView: View {
         Binding(
             get: {
                 Self.shownFeature(
-                    chosen: chosenFeature, available: Self.tabs(for: surface.available))
+                    chosen: chosenFeature,
+                    available: Self.tabs(
+                        for: Self.tabFeatures(for: surface.available)
+                    )
+                )
             },
             set: { chosenFeature = $0 }
         )
@@ -209,59 +248,6 @@ internal struct ContentView: View {
     ) -> MobileFeature {
         if let chosen, available.contains(chosen) { return chosen }
         return available[0]
-    }
-
-    /// A feature is asked for its whole flow, not for one of its screens. What
-    /// the routes inside it mean is the feature's own business — this only
-    /// decides which feature is on screen.
-    @ViewBuilder private func screen(for feature: MobileFeature) -> some View {
-        switch feature {
-        case FeatureTransactions.feature:
-            TransactionsFlowView(
-                dependencies: dependencies,
-                router: composition.router(for: FeatureTransactions.feature))
-        case FeatureAccounts.feature:
-            AccountsFlowView(
-                dependencies: dependencies,
-                router: composition.router(for: FeatureAccounts.feature))
-        case FeaturePurchases.feature:
-            if let purchasesCaptureObserver {
-                PurchasesFlowView(
-                    dependencies: dependencies,
-                    captureAvailable: surface.captureAvailable,
-                    captureObserver: purchasesCaptureObserver)
-            } else {
-                PurchasesFlowView(
-                    dependencies: dependencies,
-                    captureAvailable: surface.captureAvailable)
-            }
-        case FeatureInventory.feature:
-            InventoryFlowView(dependencies: dependencies, entityRouter: composition.entityRouter)
-        default:
-            // Unreachable: `RootFeature.renderable` is what the shell filters
-            // against, so a feature with no screen is never offered. Drawn as
-            // the nothing-available state rather than as an empty view, because
-            // a blank screen is the one outcome with no way back.
-            unavailableExplanation
-        }
-    }
-
-    /// What the BFM said is not usable, in its own words rather than one
-    /// sentence covering both. "Not answering" and "answered something this
-    /// build cannot read" call for different next actions, and the second one
-    /// is about the app rather than the server.
-    ///
-    /// The retry is not decoration. Nothing on this screen makes a request, so
-    /// a pillar coming back is not something the app finds out about by
-    /// waiting — without a way to ask again, recovering means force-quitting.
-    private var unavailableExplanation: some View {
-        ErrorStateView(
-            message: RootCopy.nothingAvailable(surface.unavailable),
-            retryTitle: RootCopy.retry
-        ) {
-            Task { await shell.reloadBootstrap() }
-        }
-        .frame(maxHeight: .infinity)
     }
 
     /// Non-blocking, above the content, and never in the way of it. The app is
@@ -311,7 +297,7 @@ internal struct ContentView: View {
 
     /// Built from the session rather than held, because the client behind it is
     /// per device — see ``AppComposition``.
-    private var dependencies: AppDependencies {
+    internal var dependencies: AppDependencies {
         guard case .paired(let device) = shell.session.state else {
             return composition.pairingDependencies
         }
