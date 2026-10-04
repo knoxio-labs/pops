@@ -20,13 +20,13 @@ import {
 import { generateStreamEvents } from './engine-stream.js';
 import { buildEgoSystemPrompt } from './prompts.js';
 import { ConversationScopeNegotiator } from './scope-negotiator.js';
+import { readOnlyToolbox, type EgoToolbox } from './toolbox.js';
 
 import type { EngramService } from '../engrams/service.js';
 import type { SemanticSearchDeps } from '../retrieval/semantic-search.js';
 import type { RetrievalResult } from '../retrieval/types.js';
 import type { GatewayCaller } from './gateway/gateway-client.js';
 import type { EgoChatMessage, EgoLlm } from './llm.js';
-import type { EgoToolbox } from './toolbox.js';
 import type {
   AppContext,
   ChatParams,
@@ -77,11 +77,11 @@ export class ConversationEngine {
 
   /** Process a user message and generate a response. */
   async chat(params: ChatParams): Promise<ChatResult> {
-    return chatResultFromStream(await this.prepareStream(params));
+    return chatResultFromStream(await this.prepareStream(params, readOnlyToolbox(this.toolbox)));
   }
 
   /** Prepare a streaming chat response. Returns metadata + an async event generator. */
-  async prepareStream(params: ChatParams): Promise<ChatStreamPreparation> {
+  async prepareStream(params: ChatParams, toolbox = this.toolbox): Promise<ChatStreamPreparation> {
     const ctx = await this.assembleContext(params);
     return {
       stream: generateStreamEvents({
@@ -93,7 +93,7 @@ export class ConversationEngine {
         newActionId: this.newActionId,
         newBatchId: this.newBatchId,
         allowedTools: new Set(params.allowedTools ?? []),
-        ...(this.toolbox === undefined ? {} : { toolbox: this.toolbox }),
+        ...(toolbox === undefined ? {} : { toolbox }),
         ...(this.gateway === undefined
           ? {}
           : { runWrite: this.gateway.callTool.bind(this.gateway) }),

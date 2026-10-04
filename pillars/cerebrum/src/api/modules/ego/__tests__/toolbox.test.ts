@@ -1,15 +1,16 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { composeToolboxes } from '../toolbox.js';
+import { composeToolboxes, readOnlyToolbox } from '../toolbox.js';
 
 import type { EgoToolDefinition, EgoToolbox, ToolOutcome } from '../toolbox.js';
 
-function definition(name: string): EgoToolDefinition {
+function definition(name: string, write = false): EgoToolDefinition {
   return {
     name,
     label: name,
     description: 'Description for ' + name,
     inputSchema: { type: 'object' },
+    ...(write ? { write: true } : {}),
   };
 }
 
@@ -76,5 +77,30 @@ describe('composeToolboxes', () => {
       text: 'Unknown tool: unknown_name',
       isError: true,
     });
+  });
+});
+
+describe('readOnlyToolbox', () => {
+  it('filters writes, rejects hidden dispatches, and passes through reads and local tools', async () => {
+    const read = definition('finance__summary');
+    const write = definition('finance__transactions__create', true);
+    const local = definition('ego_navigate');
+    const outcome: ToolOutcome = { kind: 'result', text: 'ok', isError: false };
+    const { toolbox: inner, dispatch } = fakeToolbox([read, write, local], outcome);
+    const toolbox = readOnlyToolbox(inner);
+    const input = { id: 'tx_1' };
+
+    expect(await toolbox.definitions()).toEqual([read, local]);
+    expect(await toolbox.dispatch(write.name, input)).toEqual({
+      kind: 'result',
+      text: 'Unknown tool: ' + write.name,
+      isError: true,
+    });
+    expect(dispatch).not.toHaveBeenCalled();
+
+    expect(await toolbox.dispatch(read.name, input)).toBe(outcome);
+    expect(await toolbox.dispatch(local.name, input)).toBe(outcome);
+    expect(dispatch).toHaveBeenNthCalledWith(1, read.name, input);
+    expect(dispatch).toHaveBeenNthCalledWith(2, local.name, input);
   });
 });
