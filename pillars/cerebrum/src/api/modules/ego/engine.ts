@@ -17,6 +17,7 @@ import {
   buildRetrievalFilters,
   chatResultFromStream,
 } from './engine-helpers.js';
+import { generateResumeEvents, type ResumeStreamParams } from './engine-resume.js';
 import { generateStreamEvents } from './engine-stream.js';
 import { buildEgoSystemPrompt } from './prompts.js';
 import { ConversationScopeNegotiator } from './scope-negotiator.js';
@@ -104,6 +105,19 @@ export class ConversationEngine {
       })),
       scopeNegotiation: ctx.negotiation,
     };
+  }
+
+  /** Resume a paused tool turn after its approved actions have run. */
+  resumeStream(params: ResumeStreamParams): ReturnType<typeof generateResumeEvents> {
+    return generateResumeEvents({
+      ...params,
+      llm: this.llm,
+      allowedTools: new Set(params.allowedTools),
+      newActionId: this.newActionId,
+      newBatchId: this.newBatchId,
+      ...(this.toolbox === undefined ? {} : { toolbox: this.toolbox }),
+      ...(this.gateway === undefined ? {} : { runWrite: this.gateway.callTool.bind(this.gateway) }),
+    });
   }
 
   private async assembleContext(params: ChatParams): Promise<{
