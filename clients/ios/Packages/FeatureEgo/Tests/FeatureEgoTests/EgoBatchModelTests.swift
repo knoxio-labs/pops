@@ -103,6 +103,87 @@ internal struct EgoBatchModelTests {
         #expect(statuses(model) == [.executed, .rejected, .rejected, .failed])
     }
 
+    @Test("continues a decided batch without changing its action statuses")
+    func continuesDecidedBatch() async {
+        var resumed: [String] = []
+        let model = EgoBatchModel(
+            part: makePart([
+                action("approved", "inventory.items.move", .confirmed),
+                action("rejected", "inventory.items.move", .rejected),
+            ]),
+            decide: { _, _ in },
+            resume: { resumed.append($0) },
+            isContinuable: { true }
+        )
+
+        #expect(model.canContinue)
+        await model.continueTurn()
+
+        #expect(resumed == ["batch-1"])
+        #expect(statuses(model) == [.confirmed, .rejected])
+    }
+
+    @Test("does not continue an ineligible batch or one with pending actions")
+    func continuationRequiresAnEligibleResolvedBatch() async {
+        var resumed: [String] = []
+        let resume: @MainActor (String) async -> Void = { resumed.append($0) }
+        let resolvedPart = makePart([
+            action("approved", "inventory.items.move", .confirmed),
+            action("rejected", "inventory.items.move", .rejected),
+        ])
+        let notContinuable = EgoBatchModel(
+            part: resolvedPart,
+            decide: { _, _ in },
+            resume: resume,
+            isContinuable: { false }
+        )
+        #expect(!notContinuable.canContinue)
+        await notContinuable.continueTurn()
+
+        let pending = EgoBatchModel(
+            part: makePart([action("pending")]),
+            decide: { _, _ in },
+            resume: resume,
+            isContinuable: { true }
+        )
+        #expect(!pending.canContinue)
+        await pending.continueTurn()
+
+        let disabled = EgoBatchModel(
+            part: resolvedPart,
+            decide: { _, _ in },
+            isEnabled: { false },
+            resume: resume,
+            isContinuable: { true }
+        )
+        #expect(!disabled.canContinue)
+        await disabled.continueTurn()
+        #expect(resumed.isEmpty)
+    }
+
+    @Test("does not continue while a decision request is working")
+    func continuationWaitsForInFlightDecision() async {
+        let gate = DecisionGate()
+        var resumed: [String] = []
+        let model = EgoBatchModel(
+            part: makePart([action("approved")]),
+            decide: { _, _ in await gate.pause() },
+            resume: { resumed.append($0) },
+            isContinuable: { true }
+        )
+        let decision = Task { await model.approve() }
+        await gate.waitUntilEntered()
+        model.sync(makePart([action("approved", "inventory.items.move", .confirmed)]))
+
+        #expect(model.phase == .working)
+        #expect(!model.canContinue)
+        await model.continueTurn()
+        #expect(resumed.isEmpty)
+
+        gate.release()
+        await decision.value
+    }
+
     @Test("ignores a second decision while the first request is in flight")
     func requestLockBlocksDoubleTapAndCancellation() async {
         let gate = DecisionGate()

@@ -15,6 +15,8 @@ public enum EgoBatchPhase: Hashable, Sendable {
 public final class EgoBatchModel {
     private let decideBatch: @MainActor (String, EgoBatchDecision) async throws -> Void
     private let isEnabled: @MainActor () -> Bool
+    private let resumeBatch: @MainActor (String) async -> Void
+    private let isContinuable: @MainActor () -> Bool
 
     public private(set) var part: EgoActionsPart
     public private(set) var ticked: Set<String>
@@ -33,14 +35,23 @@ public final class EgoBatchModel {
         part.hasPending && phase != .working && isEnabled()
     }
 
+    /// Whether this decided batch can resume its saved turn.
+    public var canContinue: Bool {
+        isContinuable() && phase != .working && isEnabled() && !part.hasPending
+    }
+
     public init(
         part: EgoActionsPart,
         decide: @escaping @MainActor (String, EgoBatchDecision) async throws -> Void,
-        isEnabled: @escaping @MainActor () -> Bool = { true }
+        isEnabled: @escaping @MainActor () -> Bool = { true },
+        resume: @escaping @MainActor (String) async -> Void = { _ in },
+        isContinuable: @escaping @MainActor () -> Bool = { false }
     ) {
         self.part = part
         decideBatch = decide
         self.isEnabled = isEnabled
+        resumeBatch = resume
+        self.isContinuable = isContinuable
         ticked = Set(part.actions.filter(\.status.isActionable).map(\.actionId))
     }
 
@@ -97,6 +108,12 @@ public final class EgoBatchModel {
             approvedActionIDs: [],
             rejectedActionIDs: Set(pending.map(\.actionId))
         )
+    }
+
+    /// Resumes a saved turn without changing the locally displayed action statuses.
+    public func continueTurn() async {
+        guard canContinue else { return }
+        await resumeBatch(part.batchId)
     }
 
     /// Applies a same-batch reload without reviving an action already resolved locally.

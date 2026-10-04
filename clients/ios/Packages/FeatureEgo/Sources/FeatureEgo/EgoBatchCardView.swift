@@ -13,7 +13,8 @@ internal struct EgoBatchCardView: View {
             ticked: model.ticked,
             alwaysAllow: model.alwaysAllow,
             phase: model.phase,
-            canDecide: model.canDecide
+            canDecide: model.canDecide,
+            canContinue: model.canContinue
         )
     }
 
@@ -44,6 +45,10 @@ internal struct EgoBatchCardView: View {
 
                 if presentation.showsButtons {
                     decisionButtons
+                }
+
+                if presentation.showsContinue {
+                    continueAction
                 }
             }
         }
@@ -119,6 +124,29 @@ internal struct EgoBatchCardView: View {
             .accessibilityIdentifier(EgoBatchCardAccessibility.rejectAll)
         }
     }
+
+    private var continueAction: some View {
+        VStack(alignment: .leading, spacing: PopsSpacing.sm) {
+            Text("This decision was saved but the actions have not finished.")
+                .font(.popsCaption)
+                .foregroundStyle(Color.popsMutedForeground)
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack {
+                Spacer(minLength: PopsSpacing.zero)
+                Button {
+                    Task { await model.continueTurn() }
+                } label: {
+                    Text(presentation.continueTitle)
+                        .font(.popsHeadline)
+                        .frame(minWidth: PopsSize.touchTarget, minHeight: PopsSize.touchTarget)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Color.popsAccent)
+                .accessibilityIdentifier(EgoBatchCardAccessibility.continueButton)
+            }
+        }
+    }
 }
 
 private struct EgoBatchCardActionRow: View {
@@ -187,6 +215,7 @@ private enum EgoBatchCardAccessibility {
     static let card = "ego-batch-card"
     static let approve = "ego-batch-approve"
     static let rejectAll = "ego-batch-reject-all"
+    static let continueButton = "ego-batch-continue"
 
     static func checkbox(_ actionId: String) -> String {
         "ego-batch-checkbox-\(actionId)"

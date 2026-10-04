@@ -59,6 +59,26 @@ internal struct EgoBatchCardPresentationTests {
         #expect(presentation.approveTitle == "Approve 2")
     }
 
+    @Test("continuable batches show only the continue action")
+    func continuesDecidedBatch() {
+        let presentation = makePresentation(
+            actions: [
+                action("approved", status: .confirmed),
+                action("rejected", status: .rejected),
+            ],
+            canDecide: true,
+            canContinue: true
+        )
+
+        #expect(presentation.showsContinue)
+        #expect(presentation.continueTitle == "Continue")
+        #expect(!presentation.showsButtons)
+        #expect(presentation.rows.allSatisfy { !$0.showsCheckbox })
+
+        let notContinuable = makePresentation(canDecide: true)
+        #expect(!notContinuable.showsContinue)
+    }
+
     @Test("resolved statuses have distinct labels and symbols and no checkbox")
     func resolvedStatusPresentation() {
         let presentation = makePresentation(
@@ -193,7 +213,8 @@ internal struct EgoBatchCardPresentationTests {
         ticked: Set<String> = ["a1", "a2"],
         alwaysAllow: Set<String> = [],
         phase: EgoBatchPhase = .idle,
-        canDecide: Bool
+        canDecide: Bool,
+        canContinue: Bool = false
     ) -> EgoBatchCardPresentation {
         EgoBatchCardPresentation(
             batch: EgoActionsPart(
@@ -201,7 +222,8 @@ internal struct EgoBatchCardPresentationTests {
             ticked: ticked,
             alwaysAllow: alwaysAllow,
             phase: phase,
-            canDecide: canDecide
+            canDecide: canDecide,
+            canContinue: canContinue
         )
     }
 }
