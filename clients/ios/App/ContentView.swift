@@ -70,7 +70,7 @@ internal struct ContentView: View {
 
     internal var body: some View {
         features
-            .safeAreaInset(edge: .bottom, spacing: 0) {
+            .safeAreaInset(edge: .bottom, spacing: PopsSpacing.zero) {
                 EgoEntryView(
                     isAvailable: Self.showsEgoEntry(available: surface.available)
                         && !showsTabSwitcher,
