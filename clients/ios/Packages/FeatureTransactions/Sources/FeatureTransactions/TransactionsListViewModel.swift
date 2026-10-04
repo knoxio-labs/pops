@@ -226,7 +226,11 @@ extension TransactionsListViewModel {
         do {
             let page = try await repository.transactions(after: cursor)
             guard epoch == generation else { return }
-            await show(merging: page.transactions, nextCursor: page.nextCursor)
+            if page.restarted {
+                await show(page.transactions, nextCursor: page.nextCursor)
+            } else {
+                await show(merging: page.transactions, nextCursor: page.nextCursor)
+            }
         } catch let error where error.isCancellation {
             // Not a failure to report, but the `.loading` set above is this
             // call's to undo — left there, the footer spins forever and no

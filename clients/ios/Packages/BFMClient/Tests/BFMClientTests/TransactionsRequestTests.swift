@@ -56,9 +56,8 @@ internal struct TransactionsRequestTests {
     }
 
     /// The server's own instruction — "start the list again" — carried out
-    /// rather than reported. The caller merges by id, so a first page it has
-    /// already seen costs nothing and paging resumes against a cursor that
-    /// works.
+    /// rather than reported. The caller needs to replace rows from the stale
+    /// list with this first page.
     @Test("a cursor the server disowns restarts the list instead of failing")
     func staleCursorRestarts() async throws {
         let transport = StubTransport { request, _ in
@@ -80,6 +79,7 @@ internal struct TransactionsRequestTests {
             .transactions(after: "stale")
 
         #expect(page.transactions.count == 1)
+        #expect(page.restarted)
         let paths = await transport.recorded.all.compactMap(\.request.path)
         #expect(
             paths == ["/mobile/finance/transactions?cursor=stale", "/mobile/finance/transactions"])
