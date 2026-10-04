@@ -15,8 +15,8 @@
  *    zero. A share of a zero total is undefined, not `0`.
  *
  * The top-level totals and breakdowns are spend. `income` measures the income
- * tile's types over the same window with the same conventions, and `net` is
- * income minus spend — fees and transfers are in neither.
+ * tile's types over the same window, `costOfCredit` measures transaction fees
+ * separately, and `net` is income minus spend — fees and transfers are in neither.
  */
 import { z } from 'zod';
 
@@ -99,6 +99,31 @@ export const IncomeSummarySchema = z.object({
   byEntity: z.array(EntitySpendSchema.omit({ spend: true }).extend({ income: SpendMeasureSchema })),
 });
 
+/** Fees measured separately from spend, with totals and account/month/tag facets. */
+export const CostOfCreditSummarySchema = z.object({
+  total: SpendMeasureSchema,
+  /** `null` for `all`, which has no period before it. */
+  previousTotal: SpendMeasureSchema.nullable(),
+  deltaCents: z.number().int().nullable(),
+  /** Fractional change; `null` when the previous period's fees were zero. */
+  deltaRatio: z.number().nullable(),
+  byAccount: z.array(AccountSpendSchema.omit({ spend: true }).extend({ fees: SpendMeasureSchema })),
+  byMonth: z.array(
+    z.object({
+      month: z.string(),
+      fees: SpendMeasureSchema,
+      byAccount: z.array(z.object({ accountId: z.string(), fees: SpendMeasureSchema })),
+    })
+  ),
+  byTag: z.array(
+    z.object({
+      tag: z.string(),
+      fees: SpendMeasureSchema,
+      shareOfTotal: z.number().nullable(),
+    })
+  ),
+});
+
 export const NetSummarySchema = z.object({
   /** Income minus spend. Read the two sides' row counts before calling it measured. */
   cents: z.number().int(),
@@ -161,7 +186,7 @@ export const FinanceSummarySchema = z.object({
    */
   empty: z.boolean(),
   /**
-   * Currencies the contributing accounts are denominated in. More than one
+   * Currencies the accounts behind spend, income and cost of credit are denominated in. More than one
    * means `total` adds unlike units — the ledger converts nothing, so the
    * figure is served with that fact attached.
    */
@@ -177,6 +202,7 @@ export const FinanceSummarySchema = z.object({
   byTag: z.array(TagSpendSchema),
   byEntity: z.array(EntitySpendSchema),
   income: IncomeSummarySchema,
+  costOfCredit: CostOfCreditSummarySchema,
   net: NetSummarySchema,
   inference: SummaryInferenceSchema,
 });

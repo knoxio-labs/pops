@@ -9139,6 +9139,51 @@ export type SummaryGetResponses = {
         };
         tag: string;
       }>;
+      costOfCredit: {
+        byAccount: Array<{
+          accountId: string;
+          accountName: string | null;
+          archived: boolean;
+          currency: string | null;
+          fees: {
+            cents: number;
+            transactionCount: number;
+          };
+          shareOfTotal: number | null;
+        }>;
+        byMonth: Array<{
+          byAccount: Array<{
+            accountId: string;
+            fees: {
+              cents: number;
+              transactionCount: number;
+            };
+          }>;
+          fees: {
+            cents: number;
+            transactionCount: number;
+          };
+          month: string;
+        }>;
+        byTag: Array<{
+          fees: {
+            cents: number;
+            transactionCount: number;
+          };
+          shareOfTotal: number | null;
+          tag: string;
+        }>;
+        deltaCents: number | null;
+        deltaRatio: number | null;
+        previousTotal: {
+          cents: number;
+          transactionCount: number;
+        } | null;
+        total: {
+          cents: number;
+          transactionCount: number;
+        };
+      };
       currencies: Array<string>;
       deltaCents: number | null;
       deltaRatio: number | null;

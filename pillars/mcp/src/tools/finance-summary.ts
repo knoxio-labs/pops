@@ -14,7 +14,8 @@ const READING_NOTE =
   'the total they are a share of is zero. The top-level total and breakdowns are spend; ' +
   'income counts income, loan, rebate and tax rows, and a row mistyped as income (a friend ' +
   'paying you back) is counted as income until it is corrected. net.cents is income minus ' +
-  'spend — fees and transfers are in neither.';
+  'spend — transaction-type fees and transfers are in neither. Fee rows are measured separately ' +
+  'under costOfCredit, and inference.foreign.fees is the distinct issuer FX-fee measure.';
 
 const summaryGet: ToolDef = {
   name: 'finance.summary.get',
@@ -24,7 +25,8 @@ const summaryGet: ToolDef = {
     'Returns the resolved window and the range it is compared against, the spend total and ' +
     'previous total with their delta, spend by account, by month (stacked by account), by ' +
     'tag and by entity; an income block with the same total, previous total and delta, by ' +
-    'account, by month and by payer entity; a net block (income minus spend) for the window, ' +
+    'account, by month and by payer entity; a costOfCredit block for transaction fees with ' +
+    'the same comparison totals, by account, by month and by fee:* tag; a net block (income minus spend) for the window, ' +
     'the previous period and each month; and an inference block: largest charge, how ' +
     'concentrated spend is across the top merchants, subscriptions, and foreign spend with ' +
     `its FX fees. ${READING_NOTE}`,
