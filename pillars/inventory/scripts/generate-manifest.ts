@@ -15,10 +15,13 @@
  * or renamed export here makes the codegen fail loudly rather than
  * silently emitting a broken manifest.
  */
-import { execFileSync } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
 
-import { MANIFEST_OUTPUT_PATH, readContractVersion, renderManifest } from './render-manifest.js';
+import {
+  MANIFEST_OUTPUT_PATH,
+  readContractVersion,
+  renderFormattedManifest,
+} from './render-manifest.js';
 
 import type { InventoryError } from '../src/contract/errors.js';
 import type { InventoryRouter } from '../src/contract/router.js';
@@ -27,9 +30,5 @@ import type { Item } from '../src/contract/types/item.js';
 export type SurfaceAssertion = [Item, InventoryError, InventoryRouter];
 
 const version = readContractVersion();
-const rendered = renderManifest(version);
-writeFileSync(MANIFEST_OUTPUT_PATH, rendered);
-execFileSync('pnpm', ['exec', 'oxfmt', '--write', MANIFEST_OUTPUT_PATH], {
-  stdio: 'inherit',
-});
+writeFileSync(MANIFEST_OUTPUT_PATH, renderFormattedManifest(version));
 process.stdout.write(`[inventory] wrote ${MANIFEST_OUTPUT_PATH} (version=${version})\n`);
