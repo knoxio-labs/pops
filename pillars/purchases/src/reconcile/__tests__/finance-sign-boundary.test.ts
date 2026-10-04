@@ -113,6 +113,35 @@ describe('the finance sign boundary end to end', () => {
     ]);
   });
 
+  it.each([
+    { type: 'transfer', financeAmount: 337, amountCents: 33_700 },
+    { type: 'rebate', financeAmount: 60, amountCents: 6_000 },
+    { type: 'fee', financeAmount: 20, amountCents: 2_000 },
+  ])('keeps a positive $type inflow away from a matching merchant capture', (example) => {
+    const capture = purchaseCharge('chg-capture', 'capture', example.amountCents);
+    const inflow = financeTransaction({
+      id: `txn-${example.type}`,
+      amount: example.financeAmount,
+      type: example.type,
+    });
+    const purchase = financeTransaction({
+      id: 'txn-purchase',
+      amount: -example.financeAmount,
+      type: 'purchase',
+    });
+
+    const { links, review } = run([capture], [inflow, purchase]);
+
+    expect(links).toEqual([
+      expect.objectContaining({
+        chargeId: capture.id,
+        transactionUri: 'pops://finance/transaction/txn-purchase',
+        amountCents: example.amountCents,
+      }),
+    ]);
+    expect(review).toEqual([]);
+  });
+
   it.each(['transfer', 'rebate', 'fee'] as const)(
     'does not settle a purchase capture with a %s outflow',
     (type) => {
