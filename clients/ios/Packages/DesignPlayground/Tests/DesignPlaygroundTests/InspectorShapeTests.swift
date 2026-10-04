@@ -1,4 +1,5 @@
 import CoreGraphics
+import Foundation
 import SwiftUI
 import Testing
 
@@ -26,6 +27,21 @@ internal struct InspectorShapeTests {
             CGPoint(x: bounds.minX + inset, y: bounds.maxY - inset),
             CGPoint(x: bounds.maxX - inset, y: bounds.maxY - inset),
         ]
+    }
+
+    @Test("the lift drag shares touches with the inspector buttons")
+    func liftGestureDoesNotConsumeInspectorButtonTaps() throws {
+        let packageRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let inspector = packageRoot.appending(
+            path: "Sources/DesignPlayground/UI/InspectorView.swift"
+        )
+        let source = try String(contentsOf: inspector, encoding: .utf8)
+
+        #expect(source.contains(".simultaneousGesture(liftGesture)"))
+        #expect(!source.contains(".gesture(liftGesture)"))
     }
 
     @Test("the panel's glass reaches every corner of the box its content sits in")
