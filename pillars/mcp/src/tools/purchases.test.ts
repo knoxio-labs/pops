@@ -6,6 +6,7 @@ import {
   callUnavailable,
   extractText,
   mockPillarPurchases,
+  parseResult,
   pillarMockGetter,
 } from './test-helpers.js';
 
@@ -67,6 +68,22 @@ describe('purchases.orders.list', () => {
       from: '2026-01-01T00:00:00Z',
       to: '2026-12-31T23:59:59Z',
       limit: 10,
+    });
+  });
+
+  it('adds purchase URIs to every listed order', async () => {
+    purchase.list.mockResolvedValueOnce(
+      callOk({ items: [{ id: 'ord_1' }, { id: 'ord_2' }], total: 2 })
+    );
+
+    const result = await tool('purchases.orders.list').handler({});
+
+    expect(parseResult(result)).toEqual({
+      items: [
+        { id: 'ord_1', uri: 'pops:purchases/purchase/ord_1' },
+        { id: 'ord_2', uri: 'pops:purchases/purchase/ord_2' },
+      ],
+      total: 2,
     });
   });
 
@@ -142,6 +159,26 @@ describe('purchases.orders.get', () => {
     expect(purchase.get).toHaveBeenCalledWith({ id: 'ord_1' });
   });
 
+  it('adds a URI to the purchase while leaving its line items unchanged', async () => {
+    purchase.get.mockResolvedValueOnce(
+      callOk({ purchase: { id: 'ord_1' }, items: [{ id: 'line_1' }] })
+    );
+
+    const result = await tool('purchases.orders.get').handler({ id: 'ord_1' });
+
+    expect(parseResult(result)).toEqual({
+      purchase: { id: 'ord_1', uri: 'pops:purchases/purchase/ord_1' },
+      items: [{ id: 'line_1' }],
+    });
+  });
+
+  it('keeps a null purchase payload as a successful result', async () => {
+    const result = await tool('purchases.orders.get').handler({ id: 'ord_1' });
+
+    expect(result.isError).not.toBe(true);
+    expect(parseResult(result)).toBeNull();
+  });
+
   it('surfaces a contract mismatch as a tool error', async () => {
     purchase.get.mockResolvedValueOnce(callContractMismatch('purchases', '1.0.0', '2.0.0'));
     expect((await tool('purchases.orders.get').handler({ id: 'ord_1' })).isError).toBe(true);
@@ -149,6 +186,17 @@ describe('purchases.orders.get', () => {
 });
 
 describe('purchases.search', () => {
+  it('returns its hits unchanged because they already carry purchase URIs', async () => {
+    const hits = {
+      hits: [{ kind: 'purchase', uri: 'pops:purchases/purchase/ord_1' }],
+    };
+    search.search.mockResolvedValueOnce(callOk(hits));
+
+    const result = await tool('purchases.search').handler({ text: 'order' });
+
+    expect(parseResult(result)).toEqual(hits);
+  });
+
   it('wraps the text in the query envelope the pillar contract takes', async () => {
     await tool('purchases.search').handler({ text: 'dosing funnel' });
     expect(search.search).toHaveBeenCalledWith({ query: { text: 'dosing funnel' } });
@@ -202,6 +250,32 @@ describe('purchases.search', () => {
 });
 
 describe('purchases.items.byTag', () => {
+  it('adds a purchase URI to tagged-item results without assigning a line URI', async () => {
+    purchase.itemsByTag.mockResolvedValueOnce(
+      callOk({
+        items: [
+          { item: { id: 'line_1', purchaseId: 'ord_1' }, confirmedAt: null },
+          { item: { id: 'line_2' }, confirmedAt: null },
+          { confirmedAt: null },
+        ],
+      })
+    );
+
+    const result = await tool('purchases.items.byTag').handler({ tag: 'snack' });
+
+    expect(parseResult(result)).toEqual({
+      items: [
+        {
+          item: { id: 'line_1', purchaseId: 'ord_1' },
+          confirmedAt: null,
+          purchaseUri: 'pops:purchases/purchase/ord_1',
+        },
+        { item: { id: 'line_2' }, confirmedAt: null },
+        { confirmedAt: null },
+      ],
+    });
+  });
+
   it('requires the tag', async () => {
     const result = await tool('purchases.items.byTag').handler({});
     expect(result.isError).toBe(true);
