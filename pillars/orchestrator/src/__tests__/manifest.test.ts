@@ -19,13 +19,13 @@ describe('buildOrchestratorManifest', () => {
     expect(manifest.contract.tag).toBe('contract-orchestrator@v1.2.3');
   });
 
-  it('declares an empty cross-pillar surface in this increment (search/ai/uri/routes)', () => {
+  it('declares the read-only tagged query and leaves other capabilities empty', () => {
     const manifest = buildOrchestratorManifest('1.2.3');
 
     expect(manifest.search.adapters).toEqual([]);
     expect(manifest.ai.tools).toEqual([]);
     expect(manifest.uri.types).toEqual([]);
-    expect(manifest.routes.queries).toEqual([]);
+    expect(manifest.routes.queries).toEqual(['orchestrator.tagged.query']);
     expect(manifest.routes.mutations).toEqual([]);
   });
 });

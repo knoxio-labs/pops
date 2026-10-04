@@ -1,3 +1,6 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { act, renderHook } from '@testing-library/react';
+import { createElement, type ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { createMock, writeMock, releaseMock, heartbeatMock } = vi.hoisted(() => ({
@@ -19,7 +22,9 @@ import { useImportStore } from '../../../store/importStore';
 import {
   DRAFT_HEARTBEAT_MS,
   DRAFT_WRITE_DEBOUNCE_MS,
+  IMPORT_DRAFTS_LIST_KEY,
   startDraftWriteThrough,
+  useDraftWriteThrough,
 } from './useDraftWriteThrough';
 
 const summary = { id: 'draft-1', state: 'open' };
@@ -39,7 +44,7 @@ function ownedElsewhere() {
 const callbacks = {
   onOwnedElsewhere: vi.fn(),
   onSaveFailed: vi.fn(),
-  onDraftCreated: vi.fn(),
+  onDraftListChanged: vi.fn(),
 };
 
 let stop: (() => void) | null = null;
@@ -53,7 +58,7 @@ async function flushPromises(): Promise<void> {
   for (let i = 0; i < 5; i += 1) await Promise.resolve();
 }
 
-function startOnDraft(id = 'draft-1'): void {
+function setKnownDraft(id = 'draft-1'): void {
   useImportStore.setState({
     ...initialState,
     draftId: id,
@@ -61,7 +66,31 @@ function startOnDraft(id = 'draft-1'): void {
     rows: [{ Date: '01/01/2026' }],
     headers: ['Date'],
   });
+}
+
+function startOnDraft(id = 'draft-1'): void {
+  setKnownDraft(id);
   stop = startDraftWriteThrough(callbacks);
+}
+
+function renderWriteThrough() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  const wrapper = ({ children }: { children: ReactNode }) =>
+    createElement(QueryClientProvider, { client: queryClient }, children);
+  const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+  const rendered = renderHook(
+    () =>
+      useDraftWriteThrough({
+        enabled: true,
+        epoch: 0,
+        onOwnedElsewhere: vi.fn(),
+        onSaveFailed: vi.fn(),
+      }),
+    { wrapper }
+  );
+  return { ...rendered, invalidateSpy };
 }
 
 beforeEach(() => {
@@ -97,7 +126,7 @@ describe('creating the draft', () => {
     expect(body).toMatchObject({ accountId: 'acc-1', rowCount: 1, step: 1 });
     expect(body.ownerToken).toHaveLength(36);
     expect(useImportStore.getState().draftId).toBe('draft-1');
-    expect(callbacks.onDraftCreated).toHaveBeenCalledOnce();
+    expect(callbacks.onDraftListChanged).toHaveBeenCalledOnce();
   });
 
   it('creates once even when several changes arrive before the id is known, then writes what changed meanwhile', async () => {
@@ -303,5 +332,81 @@ describe('heartbeat', () => {
     expect(callbacks.onSaveFailed).not.toHaveBeenCalled();
     vi.advanceTimersByTime(DRAFT_HEARTBEAT_MS);
     expect(heartbeatMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('pending import list invalidation', () => {
+  it('invalidates after a successful step write', async () => {
+    setKnownDraft();
+    const { invalidateSpy, unmount } = renderWriteThrough();
+
+    await act(async () => {
+      useImportStore.getState().nextStep();
+      await flushPromises();
+    });
+
+    expect(writeMock).toHaveBeenCalledOnce();
+    expect(invalidateSpy).toHaveBeenCalledOnce();
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: IMPORT_DRAFTS_LIST_KEY });
+    unmount();
+    await flushPromises();
+  });
+
+  it('invalidates after a successful release', async () => {
+    setKnownDraft();
+    const { invalidateSpy, unmount } = renderWriteThrough();
+
+    unmount();
+    await flushPromises();
+
+    expect(releaseMock).toHaveBeenCalledOnce();
+    expect(invalidateSpy).toHaveBeenCalledOnce();
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: IMPORT_DRAFTS_LIST_KEY });
+  });
+
+  it('does not invalidate after payload writes or heartbeats', async () => {
+    setKnownDraft();
+    const { invalidateSpy, unmount } = renderWriteThrough();
+
+    await act(async () => {
+      useImportStore.getState().markChecksumsResolved(['a']);
+      vi.advanceTimersByTime(DRAFT_WRITE_DEBOUNCE_MS);
+      await flushPromises();
+    });
+    vi.advanceTimersByTime(DRAFT_HEARTBEAT_MS);
+    await flushPromises();
+
+    expect(writeMock).toHaveBeenCalledOnce();
+    expect(heartbeatMock).toHaveBeenCalledOnce();
+    expect(invalidateSpy).not.toHaveBeenCalled();
+    unmount();
+    await flushPromises();
+  });
+
+  it('does not invalidate after a failed step write or release', async () => {
+    setKnownDraft();
+    const { invalidateSpy, unmount } = renderWriteThrough();
+    writeMock.mockResolvedValueOnce({
+      data: undefined,
+      error: { message: 'write failed' },
+      response: new Response(null, { status: 503 }),
+    });
+
+    await act(async () => {
+      useImportStore.getState().nextStep();
+      await flushPromises();
+    });
+
+    expect(invalidateSpy).not.toHaveBeenCalled();
+    releaseMock.mockResolvedValueOnce({
+      data: undefined,
+      error: { message: 'release failed' },
+      response: new Response(null, { status: 503 }),
+    });
+    unmount();
+    await flushPromises();
+
+    expect(releaseMock).toHaveBeenCalledOnce();
+    expect(invalidateSpy).not.toHaveBeenCalled();
   });
 });

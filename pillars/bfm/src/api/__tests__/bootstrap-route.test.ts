@@ -299,7 +299,7 @@ describe('the federation half-broken, seen from the phone', () => {
     const app = open({ bootstrap: { probe: healthyProbe('finance') } });
     const device = pairedDevice(app);
     registryServing(pillarSnapshot('finance'));
-    failNextRegistryFetches(1, new Error('registry down'));
+    failNextRegistryFetches(2, new Error('registry down'));
 
     const res = await bootstrapAs(app, device);
 
@@ -323,7 +323,7 @@ describe('the federation half-broken, seen from the phone', () => {
     const app = open({ bootstrap: { probe: healthyProbe('finance') } });
     const device = pairedDevice(app);
     registryServing(pillarSnapshot('finance'));
-    failNextRegistryFetches(1, new Error('registry down'));
+    failNextRegistryFetches(2, new Error('registry down'));
 
     await bootstrapAs(app, device);
 

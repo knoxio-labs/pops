@@ -28,6 +28,7 @@ import type {
   ReconcileManualCandidatesResponses,
   ReconcileManualResponses,
   ReconcileSweepResponses,
+  TaggedListResponses,
 } from '../../purchases-api/types.gen';
 
 /**
@@ -111,6 +112,9 @@ export const handlers: MockHandlers = {
     pagination: { hasMore: false, limit: 50, offset: 0, total: 0 },
   }),
   'GET /items/tags': ok({ tags: [] }),
+  'POST /tagged/query': ok<TaggedListResponses[200]>({ items: [], nextCursor: null }),
+  'PUT /tagged/{entityType}/{entityId}/tags/{tagId}': ok({ tagIds: [] }),
+  'DELETE /tagged/{entityType}/{entityId}/tags/{tagId}': ok({ tagIds: [] }),
 
   // ── Products ─────────────────────────────────────────────────────────────
   'GET /products': ok(PRODUCT_DICTIONARY),

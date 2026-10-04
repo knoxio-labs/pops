@@ -19,6 +19,7 @@ interface VocabularyRow {
   is_active: number;
   usage_count: number;
   description: string | null;
+  shared_tag_id: string | null;
   created_at: string;
 }
 
@@ -41,6 +42,7 @@ describe('0113 fee:account-keeping', () => {
       is_active: 1,
       usage_count: 0,
       description: expect.any(String),
+      shared_tag_id: null,
       created_at: expect.any(String),
     });
   });

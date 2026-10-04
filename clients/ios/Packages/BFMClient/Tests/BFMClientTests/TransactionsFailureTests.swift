@@ -65,7 +65,8 @@ internal struct TransactionsFailureTests {
             ("gateway.upstream_degraded", RepositoryError.unavailable),
             ("gateway.upstream_misconfigured", RepositoryError.unavailable),
             ("gateway.upstream_conflict", RepositoryError.conflict("gateway.upstream_conflict")),
-            ("not_found", RepositoryError.transport("")),
+            ("upstream_invalid_request", RepositoryError.contractMismatch),
+            ("not_found", RepositoryError.contractMismatch),
         ]
     )
     func upstreamCodes(code: String, expected: RepositoryError) async {
@@ -140,8 +141,7 @@ internal struct TransactionsFailureTests {
                 .transactions(after: nil)
         }
 
-        #expect(isTransport(actual))
-        #expect(actual != .contractMismatch)
+        #expect(actual == .contractMismatch)
     }
 
     private func isTransport(_ error: RepositoryError?) -> Bool {

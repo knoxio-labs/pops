@@ -70,16 +70,17 @@ describe('orchestrator app', () => {
   });
 
   describe('GET /health', () => {
-    it('returns ok with the orchestrator service identity and build version', async () => {
+    it('returns the shared pillar health shape with the build version', async () => {
       const res = await requestOn(makeApp(emptyReader)).get('/health');
 
       expect(res.status).toBe(200);
       expect(res.body).toMatchObject({
         ok: true,
         status: 'ok',
-        service: 'orchestrator',
+        pillar: 'orchestrator',
         version: '1.2.3',
       });
+      expect(res.body).not.toHaveProperty('service');
       expect(typeof res.body.ts).toBe('string');
       expect(Number.isNaN(Date.parse(res.body.ts))).toBe(false);
     });

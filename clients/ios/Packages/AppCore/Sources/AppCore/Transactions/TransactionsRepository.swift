@@ -3,10 +3,19 @@ public struct TransactionPage: Hashable, Sendable {
     public let transactions: [Transaction]
     /// `nil` on the last page. An opaque token — the app must not derive it.
     public let nextCursor: String?
+    /// True when a rejected cursor caused the repository to fetch the first page again.
+    public let restarted: Bool
 
-    public init(transactions: [Transaction], nextCursor: String?) {
+    /// Creates one transactions page.
+    ///
+    /// - Parameters:
+    ///   - transactions: The rows returned for this page.
+    ///   - nextCursor: The opaque cursor for the following page, or `nil` when this is the last page.
+    ///   - restarted: Whether this page replaces rows from a list whose cursor was rejected.
+    public init(transactions: [Transaction], nextCursor: String?, restarted: Bool = false) {
         self.transactions = transactions
         self.nextCursor = nextCursor
+        self.restarted = restarted
     }
 }
 

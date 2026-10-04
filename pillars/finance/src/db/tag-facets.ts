@@ -69,6 +69,13 @@ export const TAG_FACET_KINDS = {
   flag: 'marker',
 } as const satisfies Record<string, TagFacetKind>;
 
+/** Finance facets whose vocabulary values are shared across participating pillars. */
+export const SHARED_TAG_FACETS = [
+  'trip',
+  'hobby',
+  'project',
+] as const satisfies readonly (keyof typeof TAG_FACET_KINDS)[];
+
 /**
  * The kind assumed for a tag with no facet prefix or an unrecognised one.
  * `open` rather than `closed`: such a tag can only have come from a human or

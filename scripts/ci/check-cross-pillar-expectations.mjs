@@ -240,6 +240,15 @@ export const EXPECTATIONS = [
     usedBy: 'pillars/purchases/src/api/contacts/merchant.ts',
   },
   {
+    consumer: 'purchases',
+    producer: 'tags',
+    operationId: 'tags.list',
+    path: '/tags',
+    method: 'get',
+    query: ['includeArchived'],
+    usedBy: 'pillars/purchases/src/api/tags/client.ts',
+  },
+  {
     consumer: 'bfm',
     producer: 'finance',
     operationId: 'transactions.list',
@@ -714,6 +723,24 @@ export const EXPECTATIONS = [
   },
   {
     consumer: 'finance',
+    producer: 'tags',
+    operationId: 'tags.list',
+    path: '/tags',
+    method: 'get',
+    query: ['facet', 'includeArchived', 'updatedSince'],
+    usedBy: 'pillars/finance/src/api/tags/client.ts',
+  },
+  {
+    consumer: 'finance',
+    producer: 'tags',
+    operationId: 'tags.create',
+    path: '/tags',
+    method: 'post',
+    query: [],
+    usedBy: 'pillars/finance/src/api/tags/client.ts',
+  },
+  {
+    consumer: 'finance',
     producer: 'contacts',
     operationId: 'entities.create',
     path: '/entities',
@@ -907,6 +934,16 @@ export const EXPECTATIONS = [
     query: [],
     usedBy: 'pillars/inventory/src/api/ai/client.ts',
   },
+  {
+    consumer: 'orchestrator',
+    producer: 'tags',
+    operationId: 'tags.expand',
+    path: '/tags/expand',
+    method: 'post',
+    // The request is the IDs body, which this guard does not model.
+    query: [],
+    usedBy: 'pillars/orchestrator/src/tags/federation.ts',
+  },
 ];
 
 /**
@@ -937,6 +974,13 @@ export const UNPINNABLE_CALL_SITES = [
       'Search fan-out over the live registry snapshot: the target set is every ' +
       'search-capable pillar at runtime, and the one operation it calls is the ' +
       'shared `search.search` every member publishes.',
+  },
+  {
+    file: 'pillars/orchestrator/src/tags/federation.ts',
+    reason:
+      'Tag fan-out over the live registry snapshot: the target set is every ' +
+      'registered, healthy tag-carrier pillar at runtime, and the one operation ' +
+      'it calls is the shared tagged.list every member publishes.',
   },
   {
     file: 'pillars/shell/src/app/pages/settings-page/useTestActionHandler.ts',

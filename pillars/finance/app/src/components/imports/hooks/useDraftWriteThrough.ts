@@ -86,7 +86,7 @@ export function useDraftWriteThrough(options: DraftWriteThroughOptions): void {
   useEffect(() => {
     if (!enabled) return;
     return startDraftWriteThrough({
-      onDraftCreated: () =>
+      onDraftListChanged: () =>
         void queryClient.invalidateQueries({ queryKey: IMPORT_DRAFTS_LIST_KEY }),
       onOwnedElsewhere: () => latest.current.onOwnedElsewhere(),
       onSaveFailed: () => latest.current.onSaveFailed(),

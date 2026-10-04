@@ -36,6 +36,12 @@ const expectedWrites = [
   'inventory.locations.delete',
   'media.watchlist.add',
   'purchases.inventoryProposals.accept',
+  'tags.assignments.attach',
+  'tags.assignments.detach',
+  'tags.tags.create',
+  'tags.tags.update',
+  'tags.tags.archive',
+  'tags.tags.merge',
 ];
 
 describe('ToolDef.readOnly', () => {
@@ -69,6 +75,9 @@ describe('ToolDef.readOnly', () => {
     'cerebrum.search',
     'purchases.search',
     'purchases.inventoryProposals.list',
+    'tags.tags.list',
+    'tags.tags.get',
+    'tags.things.list',
   ])('marks %s as read-only', (name) => {
     expect(byName.get(name)?.readOnly).toBe(true);
   });
