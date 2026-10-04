@@ -18,6 +18,15 @@ internal enum TransactionsCopy {
         return "Wait \(waitDuration(retryAfterSeconds)), then retry"
     }
 
+    internal static func offersRetry(for error: RepositoryError) -> Bool {
+        switch error {
+        case .contractMismatch, .dependencyNotBound:
+            false
+        case .unavailable, .unauthorized, .rateLimited, .conflict, .transport:
+            true
+        }
+    }
+
     internal static let loadingDetail = "Loading transaction…"
 
     /// What the detail screen says about a transaction finance no longer has.
