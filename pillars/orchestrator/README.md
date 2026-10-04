@@ -12,7 +12,7 @@ port **3009**.
 | `GET /ai/tools`      | AI-tool registry: projects each registered, healthy pillar's `ai.tools` manifest slot into a single flat tool list.                                                                                          |
 | `GET /pillars`       | Registry-first view of the fleet (live snapshot leads, `POPS_PILLARS` seed backfills), prepended with the synthetic `orchestrator` self-entry.                                                               |
 | `GET /openapi`       | The committed OpenAPI projection used by pillar clients to resolve operation ids.                                                                                                                            |
-| `GET /health`        | Liveness shape (`{ ok, status, service, version, ts }`). No DB round-trip — there is no DB.                                                                                                                  |
+| `GET /health`        | Liveness shape (`{ ok, status, pillar, version, ts }`). Matches the shared pillar health contract. No DB round-trip — there is no DB.                                                                        |
 
 Membership is resolved **per request** from the `registry` pillar via the SDK
 discovery client (TTL-cached) — there is no static, compiled pillar list. The
