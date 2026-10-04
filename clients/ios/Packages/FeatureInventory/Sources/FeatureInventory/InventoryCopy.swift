@@ -21,6 +21,8 @@ internal enum InventoryCopy {
             "This phone is no longer signed in, so nothing changed."
         case .contractMismatch:
             "The server would not take that change. Nothing changed."
+        case .requestRejected:
+            "This version of Pops sent a request the server cannot accept. Update the app. Nothing changed."
         case .conflict:
             "Something else changed first, so nothing changed."
         case .dependencyNotBound:

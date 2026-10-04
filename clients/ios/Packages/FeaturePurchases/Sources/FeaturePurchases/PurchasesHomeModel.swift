@@ -124,6 +124,7 @@ internal enum PurchasesHomeFailure: String, CaseIterable, Identifiable, Sendable
         case .rateLimited: self = .transport
         case .unauthorized: self = .unauthorized
         case .contractMismatch: self = .contractMismatch
+        case .requestRejected: self = .contractMismatch
         case .conflict: self = .conflict
         case .transport: self = .transport
         case .dependencyNotBound: self = .dependencyNotBound

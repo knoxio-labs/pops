@@ -15,7 +15,8 @@ internal enum PurchaseDetailFailure: Hashable, Sendable {
         case .rateLimited: self = .offline
         case .unavailable: self = .unreachable
         case .unauthorized: self = .unauthorized
-        case .contractMismatch, .conflict, .dependencyNotBound: self = .contractMismatch
+        case .contractMismatch, .requestRejected, .conflict, .dependencyNotBound:
+            self = .contractMismatch
         case nil: self = .offline
         }
     }

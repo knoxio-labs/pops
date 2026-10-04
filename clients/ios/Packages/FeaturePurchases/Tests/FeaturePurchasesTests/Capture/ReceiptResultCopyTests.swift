@@ -16,6 +16,7 @@ internal struct ReceiptResultCopyTests {
         .unavailable,
         .unauthorized,
         .contractMismatch,
+        .requestRejected,
         .conflict("already_saved"),
         .transport("URLError -1009"),
         .dependencyNotBound,

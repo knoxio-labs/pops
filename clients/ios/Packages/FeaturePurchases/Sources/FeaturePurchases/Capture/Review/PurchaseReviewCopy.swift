@@ -13,6 +13,8 @@ internal enum PurchaseReviewCopy {
             "The purchases service didn't answer."
         case .rateLimited:
             "Too many requests. Wait before trying again."
+        case .requestRejected:
+            "This version of Pops can't save this purchase. Update the app."
         case .transport:
             "No connection, so nothing was saved."
         case .unauthorized, .contractMismatch, .dependencyNotBound:

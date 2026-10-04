@@ -20,7 +20,7 @@ internal enum TransactionsCopy {
 
     internal static func offersRetry(for error: RepositoryError) -> Bool {
         switch error {
-        case .contractMismatch, .dependencyNotBound:
+        case .contractMismatch, .requestRejected, .dependencyNotBound:
             false
         case .unavailable, .unauthorized, .rateLimited, .conflict, .transport:
             true
@@ -86,6 +86,8 @@ internal enum TransactionsCopy {
             // build cannot read, and no amount of retrying changes which build
             // is on the phone.
             return "This version of Pops cannot read what the server sent. Update the app."
+        case .requestRejected:
+            return "This version of Pops sent a request the server cannot accept. Update the app."
         case .conflict:
             return "That change conflicts with something already saved."
         case .transport(let failure)
