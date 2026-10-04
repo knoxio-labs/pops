@@ -100,11 +100,13 @@ export interface UseStreamingChatReturn {
   /**
    * Start a new message turn or resume a paused turn through the SSE endpoint.
    *
-   * A failed resume is not retried by this hook: writes that ran are never run
-   * again, and writes the run did not reach stay `confirmed` for the chat model to
-   * offer to continue (WEB-26); otherwise the person sends a new message. A resume
-   * stream begins with `tool` and `part` frames for the approved writes before any
-   * token.
+   * A failed resume is not retried by this hook. The server persists each write
+   * result; if an accepted continuation is interrupted, a later recovery marks
+   * actions still `confirmed` as failed with an interruption result instead of
+   * replaying them. A client error does not prove whether a write ran, so this hook
+   * never automatically replays a resume. A request that never reaches the server
+   * leaves the batch unchanged. A resume stream emits `tool` and `part` frames for
+   * approved writes before any token.
    */
   stream: (params: StreamChatParams, callbacks: StreamCallbacks) => void;
   /** Whether a stream is currently active. */
