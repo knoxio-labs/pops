@@ -1,6 +1,15 @@
 import { ArrowLeftRight, Sparkles, Zap } from 'lucide-react';
 
-import { Badge, Popover, PopoverContent, PopoverTrigger } from '@pops/ui';
+import {
+  Badge,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@pops/ui';
 
 import { labelForType } from '../../../lib/transaction-type';
 
@@ -33,15 +42,27 @@ function aiMatchedTitle(confidence: number | undefined): string {
 function AiMatchedBadge({ confidence }: { confidence: number | undefined }) {
   const isLowConfidence = confidence !== undefined && confidence < LOW_AI_CONFIDENCE_THRESHOLD;
   return (
-    <Badge
-      variant={isLowConfidence ? 'destructive' : 'outline'}
-      className="text-xs flex items-center gap-1"
-      title={aiMatchedTitle(confidence)}
-    >
-      <Sparkles className="w-3 h-3" />
-      AI-matched
-      {confidence !== undefined && ` ${Math.round(confidence * 100)}%`}
-    </Badge>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Badge
+            asChild
+            variant={isLowConfidence ? 'destructive' : 'outline'}
+            className="text-xs flex items-center gap-1"
+          >
+            <button
+              type="button"
+              className="appearance-none border-0 bg-transparent p-0 font-sans focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Sparkles className="w-3 h-3" aria-hidden="true" />
+              AI-matched
+              {confidence !== undefined && ` ${Math.round(confidence * 100)}%`}
+            </button>
+          </Badge>
+        </TooltipTrigger>
+        <TooltipContent>{aiMatchedTitle(confidence)}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }
 

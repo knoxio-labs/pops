@@ -1,6 +1,6 @@
 import { Trash2 } from 'lucide-react';
 
-import { Badge } from '@pops/ui';
+import { Badge, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@pops/ui';
 
 import { opKindBadgeVariant, opKindLabel, opSummary } from '../../lib/correction-utils';
 
@@ -27,10 +27,19 @@ export function OpRow({ op, selected, disabled, onSelect, onDelete }: OpRowProps
               {opKindLabel(op.kind)}
             </Badge>
             {op.dirty && (
-              <span
-                className="h-1.5 w-1.5 rounded-full bg-warning"
-                title="Unsaved edits — preview stale"
-              />
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label="Preview status"
+                      onClick={(event) => event.stopPropagation()}
+                      className="h-1.5 w-1.5 appearance-none rounded-full border-0 bg-warning p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent>Unsaved edits — preview stale</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
           </div>
           <div className="text-xs truncate" title={opSummary(op)}>

@@ -1,6 +1,13 @@
 import { BookmarkPlus, ChevronDown, ChevronRight } from 'lucide-react';
 
-import { Button, ButtonPrimitive } from '@pops/ui';
+import {
+  Button,
+  ButtonPrimitive,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@pops/ui';
 
 import { describeTag } from '../../../lib/tags';
 import { GroupTagBar } from './GroupTagBar';
@@ -55,17 +62,24 @@ function GroupHeader(props: HeaderProps) {
       <div className="flex items-center gap-2 flex-shrink-0">
         <GroupTagsPreview tags={currentUnion} sources={tagSources} />
         {suggestedUnion.length > 0 && (
-          <ButtonPrimitive
-            variant="outline"
-            size="xs"
-            onClick={props.onApplySuggestions}
-            className="whitespace-nowrap"
-            title={`Apply suggestions: ${suggestedUnion
-              .map((tag) => describeTag(tag).ariaLabel)
-              .join(', ')}`}
-          >
-            Apply suggestions
-          </ButtonPrimitive>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <ButtonPrimitive
+                  variant="outline"
+                  size="xs"
+                  onClick={props.onApplySuggestions}
+                  className="whitespace-nowrap"
+                >
+                  Apply suggestions
+                </ButtonPrimitive>
+              </TooltipTrigger>
+              <TooltipContent>
+                Apply suggestions:{' '}
+                {suggestedUnion.map((tag) => describeTag(tag).ariaLabel).join(', ')}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         )}
         <ButtonPrimitive
           variant="ghost"
