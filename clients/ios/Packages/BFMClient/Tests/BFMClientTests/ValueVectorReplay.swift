@@ -31,14 +31,49 @@ internal struct ValueVectorReplay {
             let revision = try File.require(command["catalogueRevision"] as? Int, "revision")
             let args = try File.object(command["args"])
             let op = try File.require(command["op"] as? String, "op")
+            let kind = try File.require(vector["kind"] as? String, "kind")
+            let readBackItem = try File.object(vector["item"])
             commands.append(
                 try Self.command(
                     op: op, args: args, item: item, revision: revision, index: seen.count))
             expected.append(
                 Expected(
                     name: try File.require(vector["name"] as? String, "name"), op: op,
-                    catalogueRevision: revision, args: try File.json(args)))
+                    catalogueRevision: revision,
+                    args: try Self.acceptedArgs(
+                        args, readBackItem: readBackItem, op: op, kind: kind)))
         }
+    }
+
+    private static func acceptedArgs(
+        _ args: [String: Any], readBackItem: [String: Any], op: String, kind: String
+    ) throws -> String {
+        guard op == "item.create", kind == "short_text" || kind == "long_text" else {
+            return try File.json(args)
+        }
+
+        var accepted = args
+        var itemArgs = try File.object(args["item"])
+        let entries = try File.require(readBackItem["fieldValues"] as? [Any], "fieldValues")
+        var readBackValues: [String: [Any]] = [:]
+        for value in entries {
+            let entry = try File.object(value)
+            guard entry["source"] as? String == "stored" else { continue }
+            let fieldId = try File.require(entry["fieldId"] as? String, "fieldId")
+            readBackValues[fieldId] = try File.require(entry["values"] as? [Any], "values")
+        }
+
+        let values = try File.require(itemArgs["values"] as? [Any], "values")
+        itemArgs["values"] = try values.map { value -> [String: Any] in
+            let value = try File.object(value)
+            let fieldId = try File.require(value["fieldId"] as? String, "fieldId")
+            guard let readBack = readBackValues[fieldId] else {
+                throw File.Missing(description: "a read-back value for \(fieldId)")
+            }
+            return ["fieldId": fieldId, "values": readBack]
+        }
+        accepted["item"] = itemArgs
+        return try File.json(accepted)
     }
 
     private static func command(

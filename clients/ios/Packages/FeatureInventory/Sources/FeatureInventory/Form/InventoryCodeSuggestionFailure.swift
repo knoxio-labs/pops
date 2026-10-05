@@ -20,6 +20,7 @@ internal enum InventoryCodeSuggestionFailure: String, Equatable {
         case RepositoryError.rateLimited: self = .transport
         case RepositoryError.unauthorized: self = .unauthorized
         case RepositoryError.contractMismatch: self = .contractMismatch
+        case RepositoryError.requestRejected: self = .clientTooOld
         case RepositoryError.conflict: self = .conflict
         case RepositoryError.transport: self = .transport
         case RepositoryError.dependencyNotBound: self = .dependencyNotBound

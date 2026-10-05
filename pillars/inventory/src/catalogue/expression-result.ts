@@ -28,7 +28,7 @@ export function canonicalExpressionResult(
   resultType: ExpressionValueType
 ): PrimitiveWireValue | null {
   try {
-    return canonicalizeValue(resultField(value, resultType), value).value;
+    return canonicalizeValue(resultField(value, resultType), value, { trimText: false }).value;
   } catch {
     return null;
   }

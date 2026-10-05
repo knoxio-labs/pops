@@ -69,7 +69,9 @@ though nothing enforces it mechanically.
   go" question. It is one call to an aggregation the finance pillar already
   did, and the alternative — paging `finance.transactions.list` and adding it
   up in context — costs a page per 50 rows and produces an answer nobody can
-  check afterwards. It is deliberately one tool rather than a family: the
+  check afterwards. Its `costOfCredit` block keeps transaction fees separate
+  from spend and net, with totals and account, month and `fee:*` tag breakdowns.
+  It is deliberately one tool rather than a family: the
   endpoint returns every breakdown for a window in one response, so splitting
   it per axis would be several calls for data already fetched, and would make
   the mcp package mirror the response shape it currently never has to know.

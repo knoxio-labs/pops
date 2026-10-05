@@ -27,6 +27,23 @@ describe('canonicalizeValue', () => {
     });
   });
 
+  it('trims only the edges of short and long text values', () => {
+    const shortText = field({ kind: 'short_text' });
+    const longText = field({ kind: 'long_text' });
+
+    expect(canonicalizeValue(shortText, ' Ihomdec ').value).toBe('Ihomdec');
+    expect(canonicalizeValue(shortText, 'a  b').value).toBe('a  b');
+    expect(canonicalizeValue(longText, ' \nfirst line\nsecond  line\n ').value).toBe(
+      'first line\nsecond  line'
+    );
+  });
+
+  it('keeps canonically encoded legacy text readable with edge whitespace', () => {
+    const shortText = field({ kind: 'short_text' });
+
+    expect(parseCanonicalValue(shortText, JSON.stringify(' Ihomdec ')).value).toBe(' Ihomdec ');
+  });
+
   it.each(['01', '+1', '1e2', '-0', '-0.0', '1.', '.1'])(
     'rejects non-canonical decimal %s',
     (value) => {

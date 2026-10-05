@@ -232,7 +232,7 @@ extension Operations.MobilePurchases_saveReceiptDraft.Output: WriteOutput {
         case .ok(let ok):
             return BFMReceiptCaptureRepository.purchase(from: try ok.body.json)
         case .badRequest:
-            throw RepositoryError.transport("\(operation): invalid request")
+            throw RepositoryError.requestRejected
         case .unauthorized, .forbidden:
             throw RepositoryError.unauthorized
         case .tooManyRequests:
@@ -255,7 +255,7 @@ extension Operations.MobilePurchases_createManualPurchase.Output: WriteOutput {
         case .ok(let ok):
             return BFMReceiptCaptureRepository.purchase(from: try ok.body.json)
         case .badRequest:
-            throw RepositoryError.transport("\(operation): invalid request")
+            throw RepositoryError.requestRejected
         case .unauthorized, .forbidden:
             throw RepositoryError.unauthorized
         case .tooManyRequests:

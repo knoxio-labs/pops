@@ -16,6 +16,15 @@ function textSpecs(): readonly VectorSpec[] {
       values: ['Bulb'],
     },
     {
+      name: 'short_text trims edge whitespace',
+      kind: 'short_text',
+      cardinality: 'one',
+      storage: 'stored',
+      fieldKey: 'shortTextOne',
+      itemName: 'short_text trimmed',
+      values: [' Ihomdec '],
+    },
+    {
       name: 'short_text many, non-ASCII',
       kind: 'short_text',
       cardinality: 'many',
@@ -32,6 +41,15 @@ function textSpecs(): readonly VectorSpec[] {
       fieldKey: 'longTextOne',
       itemName: 'long_text one',
       values: ['A somewhat longer free-text note about this item, spanning a full sentence.'],
+    },
+    {
+      name: 'long_text trims edges and preserves line breaks',
+      kind: 'long_text',
+      cardinality: 'one',
+      storage: 'stored',
+      fieldKey: 'longTextOne',
+      itemName: 'long_text trimmed',
+      values: [' \nfirst line\nsecond  line\n '],
     },
     {
       name: 'long_text many',

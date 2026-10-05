@@ -107,6 +107,15 @@ const EMPTY_SUMMARY: SummaryGetResponses[200]['data'] = {
     byEntity: [],
     byMonth: [],
   },
+  costOfCredit: {
+    total: spend,
+    previousTotal: null,
+    deltaCents: null,
+    deltaRatio: null,
+    byAccount: [],
+    byMonth: [],
+    byTag: [],
+  },
   net: { cents: 0, byMonth: [], deltaCents: null, previousCents: null },
   inference: {
     concentration: { cents: 0, entityCount: 0, shareOfTotal: null },

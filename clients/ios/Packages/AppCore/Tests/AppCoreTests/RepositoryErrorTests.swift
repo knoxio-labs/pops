@@ -41,4 +41,17 @@ internal struct RepositoryErrorTests {
         #expect(error.retryable)
         #expect(error.kind == .client)
     }
+
+    @Test("a rejected request is non-retryable in structured diagnostics")
+    func requestRejectedDiagnostic() {
+        let error = PopsError(
+            repositoryError: .requestRejected,
+            fallbackMessage: "Update the app before saving this purchase."
+        )
+
+        #expect(error.code == "ios.contract.request_rejected")
+        #expect(error.message == "Update the app before saving this purchase.")
+        #expect(!error.retryable)
+        #expect(error.kind == .client)
+    }
 }

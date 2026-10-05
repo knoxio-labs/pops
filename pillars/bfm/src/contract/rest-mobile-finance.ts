@@ -4,6 +4,10 @@ import { z } from 'zod';
 import { MobileAccountsQuerySchema } from './account.js';
 import { requires } from './capabilities.js';
 import {
+  MobileFinanceSummaryQuerySchema,
+  MobileFinanceSummarySchema,
+} from './mobile-finance-summary-schemas.js';
+import {
   MOBILE_PERIMETER_RESPONSES,
   MOBILE_REQUEST_RESPONSES,
   MOBILE_UPSTREAM_RESPONSES,
@@ -93,5 +97,18 @@ export const mobileFinanceContract = c.router({
     },
     summary: 'One account and its month-end balance history, for the dashboard screen',
     metadata: requires('finance.accounts.read'),
+  },
+  getSummary: {
+    method: 'GET',
+    path: '/mobile/finance/summary',
+    query: MobileFinanceSummaryQuerySchema,
+    responses: {
+      200: MobileFinanceSummarySchema,
+      ...MOBILE_REQUEST_RESPONSES,
+      ...MOBILE_PERIMETER_RESPONSES,
+      ...MOBILE_UPSTREAM_RESPONSES,
+    },
+    summary: 'Finance cost of credit for a window and the period before it',
+    metadata: requires('finance.transactions.read'),
   },
 });

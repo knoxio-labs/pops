@@ -113,6 +113,9 @@ below the existing scan-size minimum.
 The primitive vocabulary is closed: short and long text, integer, exact decimal,
 boolean, enum, fixed-unit measurement, date, date-time, HTTPS URL and item or
 location reference. Cardinality is `one` or `many` rather than an array kind.
+Stored short and long text trim JavaScript whitespace at both edges when written;
+internal whitespace and line breaks remain, blank optional values clear the
+field, and blank required values use the required-field error.
 Decimals are strings, references retain a stable target ID even when the target
 is missing, and measurements retain the field's fixed unit. The precise wire,
 SQLite, compatibility and migration rules are Inventory ADR-002 D5.

@@ -158,6 +158,8 @@ Purchases Add offers photos, files, and hand entry — Scan is its own direct ac
 - **A corrected reading.** `PurchaseReadingViewModel` already called `extract()`; `PurchaseReviewViewModel.save()` turns the edited `ReceiptDraft` into a `ReceiptDraftSavePayload` — via `ReceiptDraftSaveMapping`, in this module, since `ReceiptDraft`'s fields are `internal` to it — carrying the reading's receipt URIs and capture facts forward untouched, and calls `saveDraft(_:)`.
 - **A manual entry.** No `extract()` call at all: `ReceiptDraftPresentation.blankDraft(currency:)` fills the form with nothing, and `PurchaseHandEntryViewModel.save(_:)` calls `createManualPurchase(_:)` instead — no receipt URIs, because there is no receipt.
 
+A `400` from either save call is a rejected request, not a lost connection. It becomes `RepositoryError.requestRejected`, and the save notice tells the person to update Pops instead of retrying their network connection.
+
 Money is parsed once, in `ReceiptDraftSaveMapping`, using `AppCore`'s `ReceiptMoneyText` — the same parser regardless of which of the two calls the result feeds. A field that will not parse (a stray letter, a date not in `YYYY-MM-DD[ HH:MM]`) is refused locally, before either call, as a `ReceiptDraftSaveError` the form's own alert names — never sent as an invented number.
 
 ### Showing the receipt

@@ -91,6 +91,11 @@ internal protocol APIProtocol: Sendable {
     /// - Remark: HTTP `GET /mobile/finance/accounts/{id}`.
     /// - Remark: Generated from `#/paths//mobile/finance/accounts/{id}/get(mobileFinance.getAccount)`.
     func mobileFinance_getAccount(_ input: Operations.MobileFinance_getAccount.Input) async throws -> Operations.MobileFinance_getAccount.Output
+    /// Finance cost of credit for a window and the period before it
+    ///
+    /// - Remark: HTTP `GET /mobile/finance/summary`.
+    /// - Remark: Generated from `#/paths//mobile/finance/summary/get(mobileFinance.getSummary)`.
+    func mobileFinance_getSummary(_ input: Operations.MobileFinance_getSummary.Input) async throws -> Operations.MobileFinance_getSummary.Output
     /// One cursor-paginated page of transaction list rows
     ///
     /// - Remark: HTTP `GET /mobile/finance/transactions`.
@@ -432,6 +437,19 @@ extension APIProtocol {
     ) async throws -> Operations.MobileFinance_getAccount.Output {
         try await mobileFinance_getAccount(Operations.MobileFinance_getAccount.Input(
             path: path,
+            headers: headers
+        ))
+    }
+    /// Finance cost of credit for a window and the period before it
+    ///
+    /// - Remark: HTTP `GET /mobile/finance/summary`.
+    /// - Remark: Generated from `#/paths//mobile/finance/summary/get(mobileFinance.getSummary)`.
+    internal func mobileFinance_getSummary(
+        query: Operations.MobileFinance_getSummary.Input.Query = .init(),
+        headers: Operations.MobileFinance_getSummary.Input.Headers = .init()
+    ) async throws -> Operations.MobileFinance_getSummary.Output {
+        try await mobileFinance_getSummary(Operations.MobileFinance_getSummary.Input(
+            query: query,
             headers: headers
         ))
     }
@@ -18406,6 +18424,1811 @@ internal enum Operations {
             /// - Throws: An error if `self` is not `.serviceUnavailable`.
             /// - SeeAlso: `.serviceUnavailable`.
             internal var serviceUnavailable: Operations.MobileFinance_getAccount.Output.ServiceUnavailable {
+                get throws {
+                    switch self {
+                    case let .serviceUnavailable(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "serviceUnavailable",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        internal enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            internal init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            internal var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            internal static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
+    /// Finance cost of credit for a window and the period before it
+    ///
+    /// - Remark: HTTP `GET /mobile/finance/summary`.
+    /// - Remark: Generated from `#/paths//mobile/finance/summary/get(mobileFinance.getSummary)`.
+    internal enum MobileFinance_getSummary {
+        internal static let id: Swift.String = "mobileFinance.getSummary"
+        internal struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/query`.
+            internal struct Query: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/query/window`.
+                internal enum WindowPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case _30d = "30d"
+                    case _90d = "90d"
+                    case month = "month"
+                    case year = "year"
+                    case all = "all"
+                }
+                /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/query/window`.
+                internal var window: Operations.MobileFinance_getSummary.Input.Query.WindowPayload?
+                /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/query/topLimit`.
+                internal var topLimit: Swift.Int?
+                /// Creates a new `Query`.
+                ///
+                /// - Parameters:
+                ///   - window:
+                ///   - topLimit:
+                internal init(
+                    window: Operations.MobileFinance_getSummary.Input.Query.WindowPayload? = nil,
+                    topLimit: Swift.Int? = nil
+                ) {
+                    self.window = window
+                    self.topLimit = topLimit
+                }
+            }
+            internal var query: Operations.MobileFinance_getSummary.Input.Query
+            /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/header`.
+            internal struct Headers: Sendable, Hashable {
+                internal var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.MobileFinance_getSummary.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                internal init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.MobileFinance_getSummary.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            internal var headers: Operations.MobileFinance_getSummary.Input.Headers
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - query:
+            ///   - headers:
+            internal init(
+                query: Operations.MobileFinance_getSummary.Input.Query = .init(),
+                headers: Operations.MobileFinance_getSummary.Input.Headers = .init()
+            ) {
+                self.query = query
+                self.headers = headers
+            }
+        }
+        internal enum Output: Sendable, Hashable {
+            internal struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/costOfCredit`.
+                        internal struct CostOfCreditPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/costOfCredit/ByAccountPayload`.
+                            internal struct ByAccountPayloadPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/costOfCredit/ByAccountPayload/accountId`.
+                                internal var accountId: Swift.String
+                                /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/costOfCredit/ByAccountPayload/accountName`.
+                                internal var accountName: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/costOfCredit/ByAccountPayload/archived`.
+                                internal var archived: Swift.Bool
+                                /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/costOfCredit/ByAccountPayload/currency`.
+                                internal var currency: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/costOfCredit/ByAccountPayload/fees`.
+                                internal struct FeesPayload: Codable, Hashable, Sendable {
+                                    /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/costOfCredit/ByAccountPayload/fees/cents`.
+                                    internal var cents: Swift.Int
+                                    /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/costOfCredit/ByAccountPayload/fees/transactionCount`.
+                                    internal var transactionCount: Swift.Int
+                                    /// Creates a new `FeesPayload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - cents:
+                                    ///   - transactionCount:
+                                    internal init(
+                                        cents: Swift.Int,
+                                        transactionCount: Swift.Int
+                                    ) {
+                                        self.cents = cents
+                                        self.transactionCount = transactionCount
+                                    }
+                                    internal enum CodingKeys: String, CodingKey {
+                                        case cents
+                                        case transactionCount
+                                    }
+                                    internal init(from decoder: any Swift.Decoder) throws {
+                                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                                        self.cents = try container.decode(
+                                            Swift.Int.self,
+                                            forKey: .cents
+                                        )
+                                        self.transactionCount = try container.decode(
+                                            Swift.Int.self,
+                                            forKey: .transactionCount
+                                        )
+                                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                            "cents",
+                                            "transactionCount"
+                                        ])
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/costOfCredit/ByAccountPayload/fees`.
+                                internal var fees: Operations.MobileFinance_getSummary.Output.Ok.Body.JsonPayload.CostOfCreditPayload.ByAccountPayloadPayload.FeesPayload
+                                /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/costOfCredit/ByAccountPayload/shareOfTotal`.
+                                internal var shareOfTotal: Swift.Double?
+                                /// Creates a new `ByAccountPayloadPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - accountId:
+                                ///   - accountName:
+                                ///   - archived:
+                                ///   - currency:
+                                ///   - fees:
+                                ///   - shareOfTotal:
+                                internal init(
+                                    accountId: Swift.String,
+                                    accountName: Swift.String? = nil,
+                                    archived: Swift.Bool,
+                                    currency: Swift.String? = nil,
+                                    fees: Operations.MobileFinance_getSummary.Output.Ok.Body.JsonPayload.CostOfCreditPayload.ByAccountPayloadPayload.FeesPayload,
+                                    shareOfTotal: Swift.Double? = nil
+                                ) {
+                                    self.accountId = accountId
+                                    self.accountName = accountName
+                                    self.archived = archived
+                                    self.currency = currency
+                                    self.fees = fees
+                                    self.shareOfTotal = shareOfTotal
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case accountId
+                                    case accountName
+                                    case archived
+                                    case currency
+                                    case fees
+                                    case shareOfTotal
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.accountId = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .accountId
+                                    )
+                                    self.accountName = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .accountName
+                                    )
+                                    self.archived = try container.decode(
+                                        Swift.Bool.self,
+                                        forKey: .archived
+                                    )
+                                    self.currency = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .currency
+                                    )
+                                    self.fees = try container.decode(
+                                        Operations.MobileFinance_getSummary.Output.Ok.Body.JsonPayload.CostOfCreditPayload.ByAccountPayloadPayload.FeesPayload.self,
+                                        forKey: .fees
+                                    )
+                                    self.shareOfTotal = try container.decodeIfPresent(
+                                        Swift.Double.self,
+                                        forKey: .shareOfTotal
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "accountId",
+                                        "accountName",
+                                        "archived",
+                                        "currency",
+                                        "fees",
+                                        "shareOfTotal"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/costOfCredit/byAccount`.
+                            internal typealias ByAccountPayload = [Operations.MobileFinance_getSummary.Output.Ok.Body.JsonPayload.CostOfCreditPayload.ByAccountPayloadPayload]
+                            /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/costOfCredit/byAccount`.
+                            internal var byAccount: Operations.MobileFinance_getSummary.Output.Ok.Body.JsonPayload.CostOfCreditPayload.ByAccountPayload
+                            /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/costOfCredit/ByMonthPayload`.
+                            internal struct ByMonthPayloadPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/costOfCredit/ByMonthPayload/ByAccountPayload`.
+                                internal struct ByAccountPayloadPayload: Codable, Hashable, Sendable {
+                                    /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/costOfCredit/ByMonthPayload/ByAccountPayload/accountId`.
+                                    internal var accountId: Swift.String
+                                    /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/costOfCredit/ByMonthPayload/ByAccountPayload/fees`.
+                                    internal struct FeesPayload: Codable, Hashable, Sendable {
+                                        /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/costOfCredit/ByMonthPayload/ByAccountPayload/fees/cents`.
+                                        internal var cents: Swift.Int
+                                        /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/costOfCredit/ByMonthPayload/ByAccountPayload/fees/transactionCount`.
+                                        internal var transactionCount: Swift.Int
+                                        /// Creates a new `FeesPayload`.
+                                        ///
+                                        /// - Parameters:
+                                        ///   - cents:
+                                        ///   - transactionCount:
+                                        internal init(
+                                            cents: Swift.Int,
+                                            transactionCount: Swift.Int
+                                        ) {
+                                            self.cents = cents
+                                            self.transactionCount = transactionCount
+                                        }
+                                        internal enum CodingKeys: String, CodingKey {
+                                            case cents
+                                            case transactionCount
+                                        }
+                                        internal init(from decoder: any Swift.Decoder) throws {
+                                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                                            self.cents = try container.decode(
+                                                Swift.Int.self,
+                                                forKey: .cents
+                                            )
+                                            self.transactionCount = try container.decode(
+                                                Swift.Int.self,
+                                                forKey: .transactionCount
+                                            )
+                                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                                "cents",
+                                                "transactionCount"
+                                            ])
+                                        }
+                                    }
+                                    /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/costOfCredit/ByMonthPayload/ByAccountPayload/fees`.
+                                    internal var fees: Operations.MobileFinance_getSummary.Output.Ok.Body.JsonPayload.CostOfCreditPayload.ByMonthPayloadPayload.ByAccountPayloadPayload.FeesPayload
+                                    /// Creates a new `ByAccountPayloadPayload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - accountId:
+                                    ///   - fees:
+                                    internal init(
+                                        accountId: Swift.String,
+                                        fees: Operations.MobileFinance_getSummary.Output.Ok.Body.JsonPayload.CostOfCreditPayload.ByMonthPayloadPayload.ByAccountPayloadPayload.FeesPayload
+                                    ) {
+                                        self.accountId = accountId
+                                        self.fees = fees
+                                    }
+                                    internal enum CodingKeys: String, CodingKey {
+                                        case accountId
+                                        case fees
+                                    }
+                                    internal init(from decoder: any Swift.Decoder) throws {
+                                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                                        self.accountId = try container.decode(
+                                            Swift.String.self,
+                                            forKey: .accountId
+                                        )
+                                        self.fees = try container.decode(
+                                            Operations.MobileFinance_getSummary.Output.Ok.Body.JsonPayload.CostOfCreditPayload.ByMonthPayloadPayload.ByAccountPayloadPayload.FeesPayload.self,
+                                            forKey: .fees
+                                        )
+                                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                            "accountId",
+                                            "fees"
+                                        ])
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/costOfCredit/ByMonthPayload/byAccount`.
+                                internal typealias ByAccountPayload = [Operations.MobileFinance_getSummary.Output.Ok.Body.JsonPayload.CostOfCreditPayload.ByMonthPayloadPayload.ByAccountPayloadPayload]
+                                /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/costOfCredit/ByMonthPayload/byAccount`.
+                                internal var byAccount: Operations.MobileFinance_getSummary.Output.Ok.Body.JsonPayload.CostOfCreditPayload.ByMonthPayloadPayload.ByAccountPayload
+                                /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/costOfCredit/ByMonthPayload/fees`.
+                                internal struct FeesPayload: Codable, Hashable, Sendable {
+                                    /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/costOfCredit/ByMonthPayload/fees/cents`.
+                                    internal var cents: Swift.Int
+                                    /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/costOfCredit/ByMonthPayload/fees/transactionCount`.
+                                    internal var transactionCount: Swift.Int
+                                    /// Creates a new `FeesPayload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - cents:
+                                    ///   - transactionCount:
+                                    internal init(
+                                        cents: Swift.Int,
+                                        transactionCount: Swift.Int
+                                    ) {
+                                        self.cents = cents
+                                        self.transactionCount = transactionCount
+                                    }
+                                    internal enum CodingKeys: String, CodingKey {
+                                        case cents
+                                        case transactionCount
+                                    }
+                                    internal init(from decoder: any Swift.Decoder) throws {
+                                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                                        self.cents = try container.decode(
+                                            Swift.Int.self,
+                                            forKey: .cents
+                                        )
+                                        self.transactionCount = try container.decode(
+                                            Swift.Int.self,
+                                            forKey: .transactionCount
+                                        )
+                                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                            "cents",
+                                            "transactionCount"
+                                        ])
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/costOfCredit/ByMonthPayload/fees`.
+                                internal var fees: Operations.MobileFinance_getSummary.Output.Ok.Body.JsonPayload.CostOfCreditPayload.ByMonthPayloadPayload.FeesPayload
+                                /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/costOfCredit/ByMonthPayload/month`.
+                                internal var month: Swift.String
+                                /// Creates a new `ByMonthPayloadPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - byAccount:
+                                ///   - fees:
+                                ///   - month:
+                                internal init(
+                                    byAccount: Operations.MobileFinance_getSummary.Output.Ok.Body.JsonPayload.CostOfCreditPayload.ByMonthPayloadPayload.ByAccountPayload,
+                                    fees: Operations.MobileFinance_getSummary.Output.Ok.Body.JsonPayload.CostOfCreditPayload.ByMonthPayloadPayload.FeesPayload,
+                                    month: Swift.String
+                                ) {
+                                    self.byAccount = byAccount
+                                    self.fees = fees
+                                    self.month = month
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case byAccount
+                                    case fees
+                                    case month
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.byAccount = try container.decode(
+                                        Operations.MobileFinance_getSummary.Output.Ok.Body.JsonPayload.CostOfCreditPayload.ByMonthPayloadPayload.ByAccountPayload.self,
+                                        forKey: .byAccount
+                                    )
+                                    self.fees = try container.decode(
+                                        Operations.MobileFinance_getSummary.Output.Ok.Body.JsonPayload.CostOfCreditPayload.ByMonthPayloadPayload.FeesPayload.self,
+                                        forKey: .fees
+                                    )
+                                    self.month = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .month
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "byAccount",
+                                        "fees",
+                                        "month"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/costOfCredit/byMonth`.
+                            internal typealias ByMonthPayload = [Operations.MobileFinance_getSummary.Output.Ok.Body.JsonPayload.CostOfCreditPayload.ByMonthPayloadPayload]
+                            /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/costOfCredit/byMonth`.
+                            internal var byMonth: Operations.MobileFinance_getSummary.Output.Ok.Body.JsonPayload.CostOfCreditPayload.ByMonthPayload
+                            /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/costOfCredit/ByTagPayload`.
+                            internal struct ByTagPayloadPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/costOfCredit/ByTagPayload/fees`.
+                                internal struct FeesPayload: Codable, Hashable, Sendable {
+                                    /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/costOfCredit/ByTagPayload/fees/cents`.
+                                    internal var cents: Swift.Int
+                                    /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/costOfCredit/ByTagPayload/fees/transactionCount`.
+                                    internal var transactionCount: Swift.Int
+                                    /// Creates a new `FeesPayload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - cents:
+                                    ///   - transactionCount:
+                                    internal init(
+                                        cents: Swift.Int,
+                                        transactionCount: Swift.Int
+                                    ) {
+                                        self.cents = cents
+                                        self.transactionCount = transactionCount
+                                    }
+                                    internal enum CodingKeys: String, CodingKey {
+                                        case cents
+                                        case transactionCount
+                                    }
+                                    internal init(from decoder: any Swift.Decoder) throws {
+                                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                                        self.cents = try container.decode(
+                                            Swift.Int.self,
+                                            forKey: .cents
+                                        )
+                                        self.transactionCount = try container.decode(
+                                            Swift.Int.self,
+                                            forKey: .transactionCount
+                                        )
+                                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                            "cents",
+                                            "transactionCount"
+                                        ])
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/costOfCredit/ByTagPayload/fees`.
+                                internal var fees: Operations.MobileFinance_getSummary.Output.Ok.Body.JsonPayload.CostOfCreditPayload.ByTagPayloadPayload.FeesPayload
+                                /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/costOfCredit/ByTagPayload/shareOfTotal`.
+                                internal var shareOfTotal: Swift.Double?
+                                /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/costOfCredit/ByTagPayload/tag`.
+                                internal var tag: Swift.String
+                                /// Creates a new `ByTagPayloadPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - fees:
+                                ///   - shareOfTotal:
+                                ///   - tag:
+                                internal init(
+                                    fees: Operations.MobileFinance_getSummary.Output.Ok.Body.JsonPayload.CostOfCreditPayload.ByTagPayloadPayload.FeesPayload,
+                                    shareOfTotal: Swift.Double? = nil,
+                                    tag: Swift.String
+                                ) {
+                                    self.fees = fees
+                                    self.shareOfTotal = shareOfTotal
+                                    self.tag = tag
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case fees
+                                    case shareOfTotal
+                                    case tag
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.fees = try container.decode(
+                                        Operations.MobileFinance_getSummary.Output.Ok.Body.JsonPayload.CostOfCreditPayload.ByTagPayloadPayload.FeesPayload.self,
+                                        forKey: .fees
+                                    )
+                                    self.shareOfTotal = try container.decodeIfPresent(
+                                        Swift.Double.self,
+                                        forKey: .shareOfTotal
+                                    )
+                                    self.tag = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .tag
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "fees",
+                                        "shareOfTotal",
+                                        "tag"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/costOfCredit/byTag`.
+                            internal typealias ByTagPayload = [Operations.MobileFinance_getSummary.Output.Ok.Body.JsonPayload.CostOfCreditPayload.ByTagPayloadPayload]
+                            /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/costOfCredit/byTag`.
+                            internal var byTag: Operations.MobileFinance_getSummary.Output.Ok.Body.JsonPayload.CostOfCreditPayload.ByTagPayload
+                            /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/costOfCredit/deltaCents`.
+                            internal var deltaCents: Swift.Int?
+                            /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/costOfCredit/deltaRatio`.
+                            internal var deltaRatio: Swift.Double?
+                            /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/costOfCredit/previousTotal`.
+                            internal struct PreviousTotalPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/costOfCredit/previousTotal/cents`.
+                                internal var cents: Swift.Int
+                                /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/costOfCredit/previousTotal/transactionCount`.
+                                internal var transactionCount: Swift.Int
+                                /// Creates a new `PreviousTotalPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - cents:
+                                ///   - transactionCount:
+                                internal init(
+                                    cents: Swift.Int,
+                                    transactionCount: Swift.Int
+                                ) {
+                                    self.cents = cents
+                                    self.transactionCount = transactionCount
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case cents
+                                    case transactionCount
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.cents = try container.decode(
+                                        Swift.Int.self,
+                                        forKey: .cents
+                                    )
+                                    self.transactionCount = try container.decode(
+                                        Swift.Int.self,
+                                        forKey: .transactionCount
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "cents",
+                                        "transactionCount"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/costOfCredit/previousTotal`.
+                            internal var previousTotal: Operations.MobileFinance_getSummary.Output.Ok.Body.JsonPayload.CostOfCreditPayload.PreviousTotalPayload?
+                            /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/costOfCredit/total`.
+                            internal struct TotalPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/costOfCredit/total/cents`.
+                                internal var cents: Swift.Int
+                                /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/costOfCredit/total/transactionCount`.
+                                internal var transactionCount: Swift.Int
+                                /// Creates a new `TotalPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - cents:
+                                ///   - transactionCount:
+                                internal init(
+                                    cents: Swift.Int,
+                                    transactionCount: Swift.Int
+                                ) {
+                                    self.cents = cents
+                                    self.transactionCount = transactionCount
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case cents
+                                    case transactionCount
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.cents = try container.decode(
+                                        Swift.Int.self,
+                                        forKey: .cents
+                                    )
+                                    self.transactionCount = try container.decode(
+                                        Swift.Int.self,
+                                        forKey: .transactionCount
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "cents",
+                                        "transactionCount"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/costOfCredit/total`.
+                            internal var total: Operations.MobileFinance_getSummary.Output.Ok.Body.JsonPayload.CostOfCreditPayload.TotalPayload
+                            /// Creates a new `CostOfCreditPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - byAccount:
+                            ///   - byMonth:
+                            ///   - byTag:
+                            ///   - deltaCents:
+                            ///   - deltaRatio:
+                            ///   - previousTotal:
+                            ///   - total:
+                            internal init(
+                                byAccount: Operations.MobileFinance_getSummary.Output.Ok.Body.JsonPayload.CostOfCreditPayload.ByAccountPayload,
+                                byMonth: Operations.MobileFinance_getSummary.Output.Ok.Body.JsonPayload.CostOfCreditPayload.ByMonthPayload,
+                                byTag: Operations.MobileFinance_getSummary.Output.Ok.Body.JsonPayload.CostOfCreditPayload.ByTagPayload,
+                                deltaCents: Swift.Int? = nil,
+                                deltaRatio: Swift.Double? = nil,
+                                previousTotal: Operations.MobileFinance_getSummary.Output.Ok.Body.JsonPayload.CostOfCreditPayload.PreviousTotalPayload? = nil,
+                                total: Operations.MobileFinance_getSummary.Output.Ok.Body.JsonPayload.CostOfCreditPayload.TotalPayload
+                            ) {
+                                self.byAccount = byAccount
+                                self.byMonth = byMonth
+                                self.byTag = byTag
+                                self.deltaCents = deltaCents
+                                self.deltaRatio = deltaRatio
+                                self.previousTotal = previousTotal
+                                self.total = total
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case byAccount
+                                case byMonth
+                                case byTag
+                                case deltaCents
+                                case deltaRatio
+                                case previousTotal
+                                case total
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.byAccount = try container.decode(
+                                    Operations.MobileFinance_getSummary.Output.Ok.Body.JsonPayload.CostOfCreditPayload.ByAccountPayload.self,
+                                    forKey: .byAccount
+                                )
+                                self.byMonth = try container.decode(
+                                    Operations.MobileFinance_getSummary.Output.Ok.Body.JsonPayload.CostOfCreditPayload.ByMonthPayload.self,
+                                    forKey: .byMonth
+                                )
+                                self.byTag = try container.decode(
+                                    Operations.MobileFinance_getSummary.Output.Ok.Body.JsonPayload.CostOfCreditPayload.ByTagPayload.self,
+                                    forKey: .byTag
+                                )
+                                self.deltaCents = try container.decodeIfPresent(
+                                    Swift.Int.self,
+                                    forKey: .deltaCents
+                                )
+                                self.deltaRatio = try container.decodeIfPresent(
+                                    Swift.Double.self,
+                                    forKey: .deltaRatio
+                                )
+                                self.previousTotal = try container.decodeIfPresent(
+                                    Operations.MobileFinance_getSummary.Output.Ok.Body.JsonPayload.CostOfCreditPayload.PreviousTotalPayload.self,
+                                    forKey: .previousTotal
+                                )
+                                self.total = try container.decode(
+                                    Operations.MobileFinance_getSummary.Output.Ok.Body.JsonPayload.CostOfCreditPayload.TotalPayload.self,
+                                    forKey: .total
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "byAccount",
+                                    "byMonth",
+                                    "byTag",
+                                    "deltaCents",
+                                    "deltaRatio",
+                                    "previousTotal",
+                                    "total"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/costOfCredit`.
+                        internal var costOfCredit: Operations.MobileFinance_getSummary.Output.Ok.Body.JsonPayload.CostOfCreditPayload
+                        /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/window`.
+                        internal struct WindowPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/window/end`.
+                            internal var end: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/window/key`.
+                            internal enum KeyPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case _30d = "30d"
+                                case _90d = "90d"
+                                case month = "month"
+                                case year = "year"
+                                case all = "all"
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/window/key`.
+                            internal var key: Operations.MobileFinance_getSummary.Output.Ok.Body.JsonPayload.WindowPayload.KeyPayload
+                            /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/window/previous`.
+                            internal struct PreviousPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/window/previous/end`.
+                                internal var end: Swift.String
+                                /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/window/previous/start`.
+                                internal var start: Swift.String
+                                /// Creates a new `PreviousPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - end:
+                                ///   - start:
+                                internal init(
+                                    end: Swift.String,
+                                    start: Swift.String
+                                ) {
+                                    self.end = end
+                                    self.start = start
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case end
+                                    case start
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.end = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .end
+                                    )
+                                    self.start = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .start
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "end",
+                                        "start"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/window/previous`.
+                            internal var previous: Operations.MobileFinance_getSummary.Output.Ok.Body.JsonPayload.WindowPayload.PreviousPayload?
+                            /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/window/start`.
+                            internal var start: Swift.String?
+                            /// Creates a new `WindowPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - end:
+                            ///   - key:
+                            ///   - previous:
+                            ///   - start:
+                            internal init(
+                                end: Swift.String,
+                                key: Operations.MobileFinance_getSummary.Output.Ok.Body.JsonPayload.WindowPayload.KeyPayload,
+                                previous: Operations.MobileFinance_getSummary.Output.Ok.Body.JsonPayload.WindowPayload.PreviousPayload? = nil,
+                                start: Swift.String? = nil
+                            ) {
+                                self.end = end
+                                self.key = key
+                                self.previous = previous
+                                self.start = start
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case end
+                                case key
+                                case previous
+                                case start
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.end = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .end
+                                )
+                                self.key = try container.decode(
+                                    Operations.MobileFinance_getSummary.Output.Ok.Body.JsonPayload.WindowPayload.KeyPayload.self,
+                                    forKey: .key
+                                )
+                                self.previous = try container.decodeIfPresent(
+                                    Operations.MobileFinance_getSummary.Output.Ok.Body.JsonPayload.WindowPayload.PreviousPayload.self,
+                                    forKey: .previous
+                                )
+                                self.start = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .start
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "end",
+                                    "key",
+                                    "previous",
+                                    "start"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/json/window`.
+                        internal var window: Operations.MobileFinance_getSummary.Output.Ok.Body.JsonPayload.WindowPayload
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - costOfCredit:
+                        ///   - window:
+                        internal init(
+                            costOfCredit: Operations.MobileFinance_getSummary.Output.Ok.Body.JsonPayload.CostOfCreditPayload,
+                            window: Operations.MobileFinance_getSummary.Output.Ok.Body.JsonPayload.WindowPayload
+                        ) {
+                            self.costOfCredit = costOfCredit
+                            self.window = window
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case costOfCredit
+                            case window
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.costOfCredit = try container.decode(
+                                Operations.MobileFinance_getSummary.Output.Ok.Body.JsonPayload.CostOfCreditPayload.self,
+                                forKey: .costOfCredit
+                            )
+                            self.window = try container.decode(
+                                Operations.MobileFinance_getSummary.Output.Ok.Body.JsonPayload.WindowPayload.self,
+                                forKey: .window
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "costOfCredit",
+                                "window"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/200/content/application\/json`.
+                    case json(Operations.MobileFinance_getSummary.Output.Ok.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileFinance_getSummary.Output.Ok.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileFinance_getSummary.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileFinance_getSummary.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// 200
+            ///
+            /// - Remark: Generated from `#/paths//mobile/finance/summary/get(mobileFinance.getSummary)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.MobileFinance_getSummary.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            internal var ok: Operations.MobileFinance_getSummary.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/400/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/400/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/400/content/json/code`.
+                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case invalidCursor = "invalid_cursor"
+                            case bfm_request_invalid = "bfm.request.invalid"
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/400/content/json/code`.
+                        internal var code: Operations.MobileFinance_getSummary.Output.BadRequest.Body.JsonPayload.CodePayload
+                        /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/400/content/json/details`.
+                        internal var details: OpenAPIRuntime.OpenAPIValueContainer?
+                        /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/400/content/json/message`.
+                        internal var message: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/400/content/json/requestId`.
+                        internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/400/content/json/retryable`.
+                        internal var retryable: Swift.Bool
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - details:
+                        ///   - message:
+                        ///   - requestId:
+                        ///   - retryable:
+                        internal init(
+                            code: Operations.MobileFinance_getSummary.Output.BadRequest.Body.JsonPayload.CodePayload,
+                            details: OpenAPIRuntime.OpenAPIValueContainer? = nil,
+                            message: Swift.String,
+                            requestId: Swift.String,
+                            retryable: Swift.Bool
+                        ) {
+                            self.code = code
+                            self.details = details
+                            self.message = message
+                            self.requestId = requestId
+                            self.retryable = retryable
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case details
+                            case message
+                            case requestId
+                            case retryable
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Operations.MobileFinance_getSummary.Output.BadRequest.Body.JsonPayload.CodePayload.self,
+                                forKey: .code
+                            )
+                            self.details = try container.decodeIfPresent(
+                                OpenAPIRuntime.OpenAPIValueContainer.self,
+                                forKey: .details
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            self.requestId = try container.decode(
+                                Swift.String.self,
+                                forKey: .requestId
+                            )
+                            self.retryable = try container.decode(
+                                Swift.Bool.self,
+                                forKey: .retryable
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "details",
+                                "message",
+                                "requestId",
+                                "retryable"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/400/content/application\/json`.
+                    case json(Operations.MobileFinance_getSummary.Output.BadRequest.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileFinance_getSummary.Output.BadRequest.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileFinance_getSummary.Output.BadRequest.Body
+                /// Creates a new `BadRequest`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileFinance_getSummary.Output.BadRequest.Body) {
+                    self.body = body
+                }
+            }
+            /// 400
+            ///
+            /// - Remark: Generated from `#/paths//mobile/finance/summary/get(mobileFinance.getSummary)/responses/400`.
+            ///
+            /// HTTP response code: `400 badRequest`.
+            case badRequest(Operations.MobileFinance_getSummary.Output.BadRequest)
+            /// The associated value of the enum case if `self` is `.badRequest`.
+            ///
+            /// - Throws: An error if `self` is not `.badRequest`.
+            /// - SeeAlso: `.badRequest`.
+            internal var badRequest: Operations.MobileFinance_getSummary.Output.BadRequest {
+                get throws {
+                    switch self {
+                    case let .badRequest(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "badRequest",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Unauthorized: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/401/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/401/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/401/content/json/code`.
+                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case bfm_auth_invalidToken = "bfm.auth.invalid_token"
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/401/content/json/code`.
+                        internal var code: Operations.MobileFinance_getSummary.Output.Unauthorized.Body.JsonPayload.CodePayload
+                        /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/401/content/json/details`.
+                        internal var details: OpenAPIRuntime.OpenAPIValueContainer?
+                        /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/401/content/json/message`.
+                        internal var message: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/401/content/json/requestId`.
+                        internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/401/content/json/retryable`.
+                        internal var retryable: Swift.Bool
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - details:
+                        ///   - message:
+                        ///   - requestId:
+                        ///   - retryable:
+                        internal init(
+                            code: Operations.MobileFinance_getSummary.Output.Unauthorized.Body.JsonPayload.CodePayload,
+                            details: OpenAPIRuntime.OpenAPIValueContainer? = nil,
+                            message: Swift.String,
+                            requestId: Swift.String,
+                            retryable: Swift.Bool
+                        ) {
+                            self.code = code
+                            self.details = details
+                            self.message = message
+                            self.requestId = requestId
+                            self.retryable = retryable
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case details
+                            case message
+                            case requestId
+                            case retryable
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Operations.MobileFinance_getSummary.Output.Unauthorized.Body.JsonPayload.CodePayload.self,
+                                forKey: .code
+                            )
+                            self.details = try container.decodeIfPresent(
+                                OpenAPIRuntime.OpenAPIValueContainer.self,
+                                forKey: .details
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            self.requestId = try container.decode(
+                                Swift.String.self,
+                                forKey: .requestId
+                            )
+                            self.retryable = try container.decode(
+                                Swift.Bool.self,
+                                forKey: .retryable
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "details",
+                                "message",
+                                "requestId",
+                                "retryable"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/401/content/application\/json`.
+                    case json(Operations.MobileFinance_getSummary.Output.Unauthorized.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileFinance_getSummary.Output.Unauthorized.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileFinance_getSummary.Output.Unauthorized.Body
+                /// Creates a new `Unauthorized`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileFinance_getSummary.Output.Unauthorized.Body) {
+                    self.body = body
+                }
+            }
+            /// 401
+            ///
+            /// - Remark: Generated from `#/paths//mobile/finance/summary/get(mobileFinance.getSummary)/responses/401`.
+            ///
+            /// HTTP response code: `401 unauthorized`.
+            case unauthorized(Operations.MobileFinance_getSummary.Output.Unauthorized)
+            /// The associated value of the enum case if `self` is `.unauthorized`.
+            ///
+            /// - Throws: An error if `self` is not `.unauthorized`.
+            /// - SeeAlso: `.unauthorized`.
+            internal var unauthorized: Operations.MobileFinance_getSummary.Output.Unauthorized {
+                get throws {
+                    switch self {
+                    case let .unauthorized(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unauthorized",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Forbidden: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/403/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/403/content/json`.
+                    internal enum JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/403/content/json/case1`.
+                        internal struct Case1Payload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/403/content/json/case1/code`.
+                            internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case bfm_auth_deviceRevoked = "bfm.auth.device_revoked"
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/403/content/json/case1/code`.
+                            internal var code: Operations.MobileFinance_getSummary.Output.Forbidden.Body.JsonPayload.Case1Payload.CodePayload
+                            /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/403/content/json/case1/details`.
+                            internal var details: OpenAPIRuntime.OpenAPIValueContainer?
+                            /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/403/content/json/case1/message`.
+                            internal var message: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/403/content/json/case1/requestId`.
+                            internal var requestId: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/403/content/json/case1/retryable`.
+                            internal var retryable: Swift.Bool
+                            /// Creates a new `Case1Payload`.
+                            ///
+                            /// - Parameters:
+                            ///   - code:
+                            ///   - details:
+                            ///   - message:
+                            ///   - requestId:
+                            ///   - retryable:
+                            internal init(
+                                code: Operations.MobileFinance_getSummary.Output.Forbidden.Body.JsonPayload.Case1Payload.CodePayload,
+                                details: OpenAPIRuntime.OpenAPIValueContainer? = nil,
+                                message: Swift.String,
+                                requestId: Swift.String,
+                                retryable: Swift.Bool
+                            ) {
+                                self.code = code
+                                self.details = details
+                                self.message = message
+                                self.requestId = requestId
+                                self.retryable = retryable
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case code
+                                case details
+                                case message
+                                case requestId
+                                case retryable
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.code = try container.decode(
+                                    Operations.MobileFinance_getSummary.Output.Forbidden.Body.JsonPayload.Case1Payload.CodePayload.self,
+                                    forKey: .code
+                                )
+                                self.details = try container.decodeIfPresent(
+                                    OpenAPIRuntime.OpenAPIValueContainer.self,
+                                    forKey: .details
+                                )
+                                self.message = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .message
+                                )
+                                self.requestId = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .requestId
+                                )
+                                self.retryable = try container.decode(
+                                    Swift.Bool.self,
+                                    forKey: .retryable
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "code",
+                                    "details",
+                                    "message",
+                                    "requestId",
+                                    "retryable"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/403/content/json/case1`.
+                        case case1(Operations.MobileFinance_getSummary.Output.Forbidden.Body.JsonPayload.Case1Payload)
+                        /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/403/content/json/case2`.
+                        internal struct Case2Payload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/403/content/json/case2/capability`.
+                            internal var capability: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/403/content/json/case2/code`.
+                            internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case capabilityNotGranted = "capability_not_granted"
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/403/content/json/case2/code`.
+                            internal var code: Operations.MobileFinance_getSummary.Output.Forbidden.Body.JsonPayload.Case2Payload.CodePayload
+                            /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/403/content/json/case2/message`.
+                            internal var message: Swift.String
+                            /// Creates a new `Case2Payload`.
+                            ///
+                            /// - Parameters:
+                            ///   - capability:
+                            ///   - code:
+                            ///   - message:
+                            internal init(
+                                capability: Swift.String,
+                                code: Operations.MobileFinance_getSummary.Output.Forbidden.Body.JsonPayload.Case2Payload.CodePayload,
+                                message: Swift.String
+                            ) {
+                                self.capability = capability
+                                self.code = code
+                                self.message = message
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case capability
+                                case code
+                                case message
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.capability = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .capability
+                                )
+                                self.code = try container.decode(
+                                    Operations.MobileFinance_getSummary.Output.Forbidden.Body.JsonPayload.Case2Payload.CodePayload.self,
+                                    forKey: .code
+                                )
+                                self.message = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .message
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "capability",
+                                    "code",
+                                    "message"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/403/content/json/case2`.
+                        case case2(Operations.MobileFinance_getSummary.Output.Forbidden.Body.JsonPayload.Case2Payload)
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            var errors: [any Swift.Error] = []
+                            do {
+                                self = .case1(try .init(from: decoder))
+                                return
+                            } catch {
+                                errors.append(error)
+                            }
+                            do {
+                                self = .case2(try .init(from: decoder))
+                                return
+                            } catch {
+                                errors.append(error)
+                            }
+                            throw Swift.DecodingError.failedToDecodeOneOfSchema(
+                                type: Self.self,
+                                codingPath: decoder.codingPath,
+                                errors: errors
+                            )
+                        }
+                        internal func encode(to encoder: any Swift.Encoder) throws {
+                            switch self {
+                            case let .case1(value):
+                                try value.encode(to: encoder)
+                            case let .case2(value):
+                                try value.encode(to: encoder)
+                            }
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/403/content/application\/json`.
+                    case json(Operations.MobileFinance_getSummary.Output.Forbidden.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileFinance_getSummary.Output.Forbidden.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileFinance_getSummary.Output.Forbidden.Body
+                /// Creates a new `Forbidden`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileFinance_getSummary.Output.Forbidden.Body) {
+                    self.body = body
+                }
+            }
+            /// 403
+            ///
+            /// - Remark: Generated from `#/paths//mobile/finance/summary/get(mobileFinance.getSummary)/responses/403`.
+            ///
+            /// HTTP response code: `403 forbidden`.
+            case forbidden(Operations.MobileFinance_getSummary.Output.Forbidden)
+            /// The associated value of the enum case if `self` is `.forbidden`.
+            ///
+            /// - Throws: An error if `self` is not `.forbidden`.
+            /// - SeeAlso: `.forbidden`.
+            internal var forbidden: Operations.MobileFinance_getSummary.Output.Forbidden {
+                get throws {
+                    switch self {
+                    case let .forbidden(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "forbidden",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct TooManyRequests: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/429/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/429/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/429/content/json/code`.
+                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case rateLimited = "rate_limited"
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/429/content/json/code`.
+                        internal var code: Operations.MobileFinance_getSummary.Output.TooManyRequests.Body.JsonPayload.CodePayload
+                        /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/429/content/json/message`.
+                        internal var message: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/429/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - message:
+                        ///   - retryAfterSeconds:
+                        internal init(
+                            code: Operations.MobileFinance_getSummary.Output.TooManyRequests.Body.JsonPayload.CodePayload,
+                            message: Swift.String,
+                            retryAfterSeconds: Swift.Int
+                        ) {
+                            self.code = code
+                            self.message = message
+                            self.retryAfterSeconds = retryAfterSeconds
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case message
+                            case retryAfterSeconds
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Operations.MobileFinance_getSummary.Output.TooManyRequests.Body.JsonPayload.CodePayload.self,
+                                forKey: .code
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            self.retryAfterSeconds = try container.decode(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "message",
+                                "retryAfterSeconds"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/429/content/application\/json`.
+                    case json(Operations.MobileFinance_getSummary.Output.TooManyRequests.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileFinance_getSummary.Output.TooManyRequests.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileFinance_getSummary.Output.TooManyRequests.Body
+                /// Creates a new `TooManyRequests`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileFinance_getSummary.Output.TooManyRequests.Body) {
+                    self.body = body
+                }
+            }
+            /// 429
+            ///
+            /// - Remark: Generated from `#/paths//mobile/finance/summary/get(mobileFinance.getSummary)/responses/429`.
+            ///
+            /// HTTP response code: `429 tooManyRequests`.
+            case tooManyRequests(Operations.MobileFinance_getSummary.Output.TooManyRequests)
+            /// The associated value of the enum case if `self` is `.tooManyRequests`.
+            ///
+            /// - Throws: An error if `self` is not `.tooManyRequests`.
+            /// - SeeAlso: `.tooManyRequests`.
+            internal var tooManyRequests: Operations.MobileFinance_getSummary.Output.TooManyRequests {
+                get throws {
+                    switch self {
+                    case let .tooManyRequests(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "tooManyRequests",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct BadGateway: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/502/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/502/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/502/content/json/code`.
+                        internal var code: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/502/content/json/details`.
+                        internal struct DetailsPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/502/content/json/details/upstream`.
+                            internal struct UpstreamPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/502/content/json/details/upstream/pillar`.
+                                internal var pillar: Swift.String
+                                /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/502/content/json/details/upstream/status`.
+                                internal var status: Swift.Int
+                                /// Creates a new `UpstreamPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - pillar:
+                                ///   - status:
+                                internal init(
+                                    pillar: Swift.String,
+                                    status: Swift.Int
+                                ) {
+                                    self.pillar = pillar
+                                    self.status = status
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case pillar
+                                    case status
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.pillar = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .pillar
+                                    )
+                                    self.status = try container.decode(
+                                        Swift.Int.self,
+                                        forKey: .status
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "pillar",
+                                        "status"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/502/content/json/details/upstream`.
+                            internal var upstream: Operations.MobileFinance_getSummary.Output.BadGateway.Body.JsonPayload.DetailsPayload.UpstreamPayload
+                            /// A container of undocumented properties.
+                            internal var additionalProperties: [String: OpenAPIRuntime.OpenAPIValueContainer]
+                            /// Creates a new `DetailsPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - upstream:
+                            ///   - additionalProperties: A container of undocumented properties.
+                            internal init(
+                                upstream: Operations.MobileFinance_getSummary.Output.BadGateway.Body.JsonPayload.DetailsPayload.UpstreamPayload,
+                                additionalProperties: [String: OpenAPIRuntime.OpenAPIValueContainer] = .init()
+                            ) {
+                                self.upstream = upstream
+                                self.additionalProperties = additionalProperties
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case upstream
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.upstream = try container.decode(
+                                    Operations.MobileFinance_getSummary.Output.BadGateway.Body.JsonPayload.DetailsPayload.UpstreamPayload.self,
+                                    forKey: .upstream
+                                )
+                                additionalProperties = try decoder.decodeAdditionalProperties(knownKeys: [
+                                    "upstream"
+                                ])
+                            }
+                            internal func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(
+                                    self.upstream,
+                                    forKey: .upstream
+                                )
+                                try encoder.encodeAdditionalProperties(additionalProperties)
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/502/content/json/details`.
+                        internal var details: Operations.MobileFinance_getSummary.Output.BadGateway.Body.JsonPayload.DetailsPayload
+                        /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/502/content/json/message`.
+                        internal var message: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/502/content/json/requestId`.
+                        internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/502/content/json/retryable`.
+                        internal var retryable: Swift.Bool
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - details:
+                        ///   - message:
+                        ///   - requestId:
+                        ///   - retryable:
+                        internal init(
+                            code: Swift.String,
+                            details: Operations.MobileFinance_getSummary.Output.BadGateway.Body.JsonPayload.DetailsPayload,
+                            message: Swift.String,
+                            requestId: Swift.String,
+                            retryable: Swift.Bool
+                        ) {
+                            self.code = code
+                            self.details = details
+                            self.message = message
+                            self.requestId = requestId
+                            self.retryable = retryable
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case details
+                            case message
+                            case requestId
+                            case retryable
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Swift.String.self,
+                                forKey: .code
+                            )
+                            self.details = try container.decode(
+                                Operations.MobileFinance_getSummary.Output.BadGateway.Body.JsonPayload.DetailsPayload.self,
+                                forKey: .details
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            self.requestId = try container.decode(
+                                Swift.String.self,
+                                forKey: .requestId
+                            )
+                            self.retryable = try container.decode(
+                                Swift.Bool.self,
+                                forKey: .retryable
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "details",
+                                "message",
+                                "requestId",
+                                "retryable"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/502/content/application\/json`.
+                    case json(Operations.MobileFinance_getSummary.Output.BadGateway.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileFinance_getSummary.Output.BadGateway.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileFinance_getSummary.Output.BadGateway.Body
+                /// Creates a new `BadGateway`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileFinance_getSummary.Output.BadGateway.Body) {
+                    self.body = body
+                }
+            }
+            /// 502
+            ///
+            /// - Remark: Generated from `#/paths//mobile/finance/summary/get(mobileFinance.getSummary)/responses/502`.
+            ///
+            /// HTTP response code: `502 badGateway`.
+            case badGateway(Operations.MobileFinance_getSummary.Output.BadGateway)
+            /// The associated value of the enum case if `self` is `.badGateway`.
+            ///
+            /// - Throws: An error if `self` is not `.badGateway`.
+            /// - SeeAlso: `.badGateway`.
+            internal var badGateway: Operations.MobileFinance_getSummary.Output.BadGateway {
+                get throws {
+                    switch self {
+                    case let .badGateway(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "badGateway",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct ServiceUnavailable: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/503/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/503/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/503/content/json/code`.
+                        internal var code: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/503/content/json/details`.
+                        internal struct DetailsPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/503/content/json/details/upstream`.
+                            internal struct UpstreamPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/503/content/json/details/upstream/pillar`.
+                                internal var pillar: Swift.String
+                                /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/503/content/json/details/upstream/status`.
+                                internal var status: Swift.Int
+                                /// Creates a new `UpstreamPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - pillar:
+                                ///   - status:
+                                internal init(
+                                    pillar: Swift.String,
+                                    status: Swift.Int
+                                ) {
+                                    self.pillar = pillar
+                                    self.status = status
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case pillar
+                                    case status
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.pillar = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .pillar
+                                    )
+                                    self.status = try container.decode(
+                                        Swift.Int.self,
+                                        forKey: .status
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "pillar",
+                                        "status"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/503/content/json/details/upstream`.
+                            internal var upstream: Operations.MobileFinance_getSummary.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload.UpstreamPayload
+                            /// A container of undocumented properties.
+                            internal var additionalProperties: [String: OpenAPIRuntime.OpenAPIValueContainer]
+                            /// Creates a new `DetailsPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - upstream:
+                            ///   - additionalProperties: A container of undocumented properties.
+                            internal init(
+                                upstream: Operations.MobileFinance_getSummary.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload.UpstreamPayload,
+                                additionalProperties: [String: OpenAPIRuntime.OpenAPIValueContainer] = .init()
+                            ) {
+                                self.upstream = upstream
+                                self.additionalProperties = additionalProperties
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case upstream
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.upstream = try container.decode(
+                                    Operations.MobileFinance_getSummary.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload.UpstreamPayload.self,
+                                    forKey: .upstream
+                                )
+                                additionalProperties = try decoder.decodeAdditionalProperties(knownKeys: [
+                                    "upstream"
+                                ])
+                            }
+                            internal func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(
+                                    self.upstream,
+                                    forKey: .upstream
+                                )
+                                try encoder.encodeAdditionalProperties(additionalProperties)
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/503/content/json/details`.
+                        internal var details: Operations.MobileFinance_getSummary.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload
+                        /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/503/content/json/message`.
+                        internal var message: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/503/content/json/requestId`.
+                        internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/503/content/json/retryable`.
+                        internal var retryable: Swift.Bool
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - details:
+                        ///   - message:
+                        ///   - requestId:
+                        ///   - retryable:
+                        internal init(
+                            code: Swift.String,
+                            details: Operations.MobileFinance_getSummary.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload,
+                            message: Swift.String,
+                            requestId: Swift.String,
+                            retryable: Swift.Bool
+                        ) {
+                            self.code = code
+                            self.details = details
+                            self.message = message
+                            self.requestId = requestId
+                            self.retryable = retryable
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case details
+                            case message
+                            case requestId
+                            case retryable
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Swift.String.self,
+                                forKey: .code
+                            )
+                            self.details = try container.decode(
+                                Operations.MobileFinance_getSummary.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload.self,
+                                forKey: .details
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            self.requestId = try container.decode(
+                                Swift.String.self,
+                                forKey: .requestId
+                            )
+                            self.retryable = try container.decode(
+                                Swift.Bool.self,
+                                forKey: .retryable
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "details",
+                                "message",
+                                "requestId",
+                                "retryable"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/finance/summary/GET/responses/503/content/application\/json`.
+                    case json(Operations.MobileFinance_getSummary.Output.ServiceUnavailable.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileFinance_getSummary.Output.ServiceUnavailable.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileFinance_getSummary.Output.ServiceUnavailable.Body
+                /// Creates a new `ServiceUnavailable`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileFinance_getSummary.Output.ServiceUnavailable.Body) {
+                    self.body = body
+                }
+            }
+            /// 503
+            ///
+            /// - Remark: Generated from `#/paths//mobile/finance/summary/get(mobileFinance.getSummary)/responses/503`.
+            ///
+            /// HTTP response code: `503 serviceUnavailable`.
+            case serviceUnavailable(Operations.MobileFinance_getSummary.Output.ServiceUnavailable)
+            /// The associated value of the enum case if `self` is `.serviceUnavailable`.
+            ///
+            /// - Throws: An error if `self` is not `.serviceUnavailable`.
+            /// - SeeAlso: `.serviceUnavailable`.
+            internal var serviceUnavailable: Operations.MobileFinance_getSummary.Output.ServiceUnavailable {
                 get throws {
                     switch self {
                     case let .serviceUnavailable(response):

@@ -34,6 +34,7 @@ export interface MobileFinanceHandlerDeps {
   finance: MobileFinanceClient;
 }
 
+/** Builds request handlers for routes already protected by mobile device auth. */
 export function makeMobileFinanceHandlers(deps: MobileFinanceHandlerDeps) {
   return {
     listTransactions: async ({ query }: Req['listTransactions']) => {
@@ -99,6 +100,16 @@ export function makeMobileFinanceHandlers(deps: MobileFinanceHandlerDeps) {
     getAccount: async ({ params }: Req['getAccount']) => {
       const outcome = await deps.finance.getAccount(params.id);
       if (!isGatewayOk(outcome)) return toUpstreamErrorResponse(outcome);
+
+      return { status: 200 as const, body: outcome.value };
+    },
+
+    getSummary: async ({ query }: Req['getSummary']) => {
+      const outcome = await deps.finance.getSummary({
+        ...(query.window === undefined ? {} : { window: query.window }),
+        ...(query.topLimit === undefined ? {} : { topLimit: query.topLimit }),
+      });
+      if (!isGatewayOk(outcome)) return toCollectionUpstreamErrorResponse(outcome);
 
       return { status: 200 as const, body: outcome.value };
     },

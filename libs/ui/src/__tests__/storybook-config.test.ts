@@ -1,4 +1,4 @@
-import { globSync, readFileSync } from 'node:fs';
+import { existsSync, globSync, readFileSync } from 'node:fs';
 import { dirname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -185,10 +185,15 @@ describe('storybook stories globs', () => {
       perSpecifier[ownIndex]!.length,
       `own-stories specifier "${storyGlobs[ownIndex]}" matched no files — its "@(...)" extglob may not be resolving`
     ).toBeGreaterThan(0);
-    expect(
-      perSpecifier[pillarsIndex]!.length,
-      `pillars specifier "${storyGlobs[pillarsIndex]}" matched no files — its "@(...)" extglob may not be resolving`
-    ).toBeGreaterThan(0);
+    // EX-2 preserves the package's relative depth but intentionally omits the
+    // monorepo pillars tree. Keep the glob declared everywhere, and require
+    // it to resolve whenever this is a full checkout.
+    if (existsSync(resolve(STORYBOOK_DIR, '../../../pillars'))) {
+      expect(
+        perSpecifier[pillarsIndex]!.length,
+        `pillars specifier "${storyGlobs[pillarsIndex]}" matched no files — its "@(...)" extglob may not be resolving`
+      ).toBeGreaterThan(0);
+    }
   });
 
   it('excludes libs/ui from the sibling-lib specifier', () => {

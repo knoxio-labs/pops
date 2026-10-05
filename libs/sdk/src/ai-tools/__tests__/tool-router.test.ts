@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { RegistryUnreachableError } from '../../discovery/index.js';
 import {
   __resetInvokeToolInternals,
   __setInvokeToolInternals,
@@ -8,6 +9,7 @@ import {
 } from '../tool-router.js';
 
 import type { CallResult } from '../../client/index.js';
+import type { Tool } from '../types.js';
 
 type ProcedureFn = (input: unknown) => Promise<CallResult<unknown>>;
 
@@ -47,6 +49,26 @@ function fakePillar(options: FakePillarOptions = {}) {
   return { factory, calls };
 }
 
+function advertisedTool(
+  pillar: string,
+  name: string,
+  pillarStatus: Tool['pillarStatus'] = 'healthy'
+): Tool {
+  return {
+    name,
+    description: `${pillar}.${name}`,
+    parameters: { type: 'object' },
+    pillar,
+    pillarStatus,
+  };
+}
+
+function setToolList(...tools: Tool[]) {
+  const toolList = vi.fn(async () => tools);
+  __setInvokeToolInternals({ toolList });
+  return toolList;
+}
+
 beforeEach(() => {
   __resetInvokeToolInternals();
 });
@@ -58,8 +80,10 @@ afterEach(() => {
 
 describe('invokeTool — name parsing', () => {
   it("returns 'unknown-tool' when the name has no dot", async () => {
+    const toolList = setToolList();
     const result = await invokeTool('search', {});
     expect(result).toEqual({ kind: 'unknown-tool', toolName: 'search' });
+    expect(toolList).not.toHaveBeenCalled();
   });
 
   it("returns 'unknown-tool' when the pillar segment is empty", async () => {
@@ -94,6 +118,7 @@ describe('invokeTool — happy path', () => {
       },
     });
     __setInvokeToolInternals({ pillarFactory: factory });
+    setToolList(advertisedTool('finance', 'searchTransactions'));
 
     const result = await invokeTool('finance.searchTransactions', { limit: 10 });
 
@@ -114,6 +139,7 @@ describe('invokeTool — happy path', () => {
       },
     });
     __setInvokeToolInternals({ pillarFactory: factory });
+    setToolList(advertisedTool('cerebrum', 'doThing'));
 
     await invokeTool('cerebrum.doThing', { foo: 'bar', n: 42 });
     expect(received).toEqual({ foo: 'bar', n: 42 });
@@ -128,6 +154,7 @@ describe('invokeTool — error mapping', () => {
       },
     });
     __setInvokeToolInternals({ pillarFactory: factory });
+    setToolList(advertisedTool('finance', 'doThing'));
 
     const result = await invokeTool('finance.doThing', {});
     expect(result).toEqual({ kind: 'pillar-unavailable', pillar: 'finance' });
@@ -140,6 +167,7 @@ describe('invokeTool — error mapping', () => {
       },
     });
     __setInvokeToolInternals({ pillarFactory: factory });
+    setToolList(advertisedTool('finance', 'doThing'));
 
     const result = await invokeTool('finance.doThing', {});
     expect(result).toEqual({ kind: 'pillar-unavailable', pillar: 'finance' });
@@ -157,6 +185,7 @@ describe('invokeTool — error mapping', () => {
       },
     });
     __setInvokeToolInternals({ pillarFactory: factory });
+    setToolList(advertisedTool('finance', 'doThing'));
 
     const result = await invokeTool('finance.doThing', {});
     expect(result).toEqual({ kind: 'tool-error', reason: 'contract mismatch' });
@@ -171,17 +200,59 @@ describe('invokeTool — error mapping', () => {
       },
     });
     __setInvokeToolInternals({ pillarFactory: factory });
+    setToolList(advertisedTool('finance', 'doThing'));
 
     const result = await invokeTool('finance.doThing', {});
     expect(result).toEqual({ kind: 'tool-error', reason: 'boom' });
   });
 
-  it("returns 'tool-error' (reason 'tool not exposed by pillar') when the aiTools path is missing", async () => {
-    const { factory } = fakePillar({ procedures: {} });
+  it("returns 'unknown-tool' for a well-formed name no pillar advertises", async () => {
+    const { factory, calls } = fakePillar({ procedures: {} });
     __setInvokeToolInternals({ pillarFactory: factory });
+    const toolList = setToolList(advertisedTool('finance', 'otherTool'));
 
     const result = await invokeTool('finance.missingTool', {});
-    expect(result).toEqual({ kind: 'tool-error', reason: 'tool not exposed by pillar' });
+    expect(result).toEqual({ kind: 'unknown-tool', toolName: 'finance.missingTool' });
+    expect(calls).toEqual([]);
+    expect(toolList).toHaveBeenCalledWith({ includeUnavailable: true });
+  });
+
+  it("returns 'pillar-unavailable' for an advertised tool on an unavailable pillar", async () => {
+    const { factory, calls } = fakePillar({
+      procedures: { doThing: async () => ({ kind: 'ok', value: null }) },
+    });
+    __setInvokeToolInternals({ pillarFactory: factory });
+    setToolList(advertisedTool('finance', 'doThing', 'unavailable'));
+
+    const result = await invokeTool('finance.doThing', {});
+    expect(result).toEqual({ kind: 'pillar-unavailable', pillar: 'finance' });
+    expect(calls).toEqual([]);
+  });
+
+  it("returns 'pillar-unavailable' for an advertised tool with unknown pillar status", async () => {
+    const { factory, calls } = fakePillar({
+      procedures: { doThing: async () => ({ kind: 'ok', value: null }) },
+    });
+    __setInvokeToolInternals({ pillarFactory: factory });
+    setToolList(advertisedTool('finance', 'doThing', 'unknown'));
+
+    const result = await invokeTool('finance.doThing', {});
+    expect(result).toEqual({ kind: 'pillar-unavailable', pillar: 'finance' });
+    expect(calls).toEqual([]);
+  });
+
+  it("returns 'pillar-unavailable' when the registry snapshot cannot be read", async () => {
+    const { factory, calls } = fakePillar();
+    __setInvokeToolInternals({
+      pillarFactory: factory,
+      toolList: async () => {
+        throw new RegistryUnreachableError('registry unavailable', { attempts: 1 });
+      },
+    });
+
+    const result = await invokeTool('finance.doThing', {});
+    expect(result).toEqual({ kind: 'pillar-unavailable', pillar: 'finance' });
+    expect(calls).toEqual([]);
   });
 
   it("returns 'tool-error' when the pillar does not expose an aiTools sub-router", async () => {
@@ -190,6 +261,7 @@ describe('invokeTool — error mapping', () => {
       procedures: { doThing: async () => ({ kind: 'ok', value: null }) },
     });
     __setInvokeToolInternals({ pillarFactory: factory });
+    setToolList(advertisedTool('finance', 'doThing'));
 
     const result = await invokeTool('finance.doThing', {});
     expect(result.kind).toBe('tool-error');
@@ -205,6 +277,7 @@ describe('invokeTool — timeout', () => {
       },
     });
     __setInvokeToolInternals({ pillarFactory: factory });
+    setToolList(advertisedTool('finance', 'slow'));
 
     const pending = invokeTool('finance.slow', {}, { timeoutMs: 50 });
     await vi.advanceTimersByTimeAsync(60);
@@ -224,6 +297,7 @@ describe('invokeTool — timeout', () => {
       },
     });
     __setInvokeToolInternals({ pillarFactory: factory });
+    setToolList(advertisedTool('finance', 'fast'));
 
     const pending = invokeTool('finance.fast', {}, { timeoutMs: 1_000 });
     await vi.advanceTimersByTimeAsync(0);

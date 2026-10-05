@@ -161,6 +161,11 @@ describe('finance.summary.get description', () => {
     expect(tool.description).toMatch(/a net block \(income minus spend\)/u);
   });
 
+  it('describes transaction fees as a separate cost-of-credit block', () => {
+    expect(tool.description).toMatch(/costOfCredit block for transaction fees/u);
+    expect(tool.description).toMatch(/fee:\* tag/u);
+  });
+
   it('never claims the ledger holds no income', () => {
     expect(tool.description).not.toMatch(/no income/iu);
   });
