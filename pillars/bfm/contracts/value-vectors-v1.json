@@ -4986,27 +4986,27 @@
       }
     },
     {
-      "name": "short_text many, non-ASCII",
+      "name": "short_text trims edge whitespace",
       "kind": "short_text",
-      "cardinality": "many",
+      "cardinality": "one",
       "storage": "stored",
-      "fieldId": "10000000-0000-4000-8000-00000000000b",
+      "fieldId": "10000000-0000-4000-8000-00000000000a",
       "itemId": "00000000-0000-4000-8000-00000000000f",
       "item": {
         "id": "00000000-0000-4000-8000-00000000000f",
         "revision": 1,
         "seq": 7,
-        "name": "short_text many",
+        "name": "short_text trimmed",
         "typeId": "10000000-0000-4000-8000-000000000001",
         "catalogueRevision": 2,
         "typeKey": null,
         "legacyType": null,
         "fieldValues": [
           {
-            "fieldId": "10000000-0000-4000-8000-00000000000b",
+            "fieldId": "10000000-0000-4000-8000-00000000000a",
             "source": "stored",
             "catalogueRevision": 2,
-            "values": ["red", "grün", "🙂"]
+            "values": ["Ihomdec"]
           }
         ],
         "computedValues": [
@@ -5043,6 +5043,123 @@
             ],
             "dependencies": [],
             "traversedItemIds": ["00000000-0000-4000-8000-00000000000f"]
+          }
+        ],
+        "fields": {},
+        "note": null,
+        "code": null,
+        "externalIds": [],
+        "quantity": 1,
+        "lifecycle": "active",
+        "lifecycleChangedAt": null,
+        "placement": {
+          "kind": "hand"
+        },
+        "previousPlacement": null,
+        "isContainer": false,
+        "access": null,
+        "isFull": null,
+        "photos": [],
+        "provenance": null,
+        "documentsStatus": "none",
+        "documentTitles": [],
+        "createdAt": "2026-09-24T00:00:00.000Z",
+        "updatedAt": "2026-09-24T00:00:00.000Z",
+        "deletedAt": null
+      },
+      "fieldValue": {
+        "fieldId": "10000000-0000-4000-8000-00000000000a",
+        "source": "stored",
+        "catalogueRevision": 2,
+        "values": ["Ihomdec"]
+      },
+      "computedValue": null,
+      "command": {
+        "mutationId": "00000000-0000-4000-8000-000000000010",
+        "op": "item.create",
+        "entityId": "00000000-0000-4000-8000-00000000000f",
+        "baseRevision": null,
+        "dependsOn": [],
+        "clientTime": "2026-09-24T00:00:00.000Z",
+        "catalogueRevision": 2,
+        "args": {
+          "item": {
+            "name": "short_text trimmed",
+            "typeId": "10000000-0000-4000-8000-000000000001",
+            "values": [
+              {
+                "fieldId": "10000000-0000-4000-8000-00000000000a",
+                "values": [" Ihomdec "]
+              }
+            ],
+            "note": null,
+            "externalIds": [],
+            "quantity": 1,
+            "placement": {
+              "kind": "hand"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "short_text many, non-ASCII",
+      "kind": "short_text",
+      "cardinality": "many",
+      "storage": "stored",
+      "fieldId": "10000000-0000-4000-8000-00000000000b",
+      "itemId": "00000000-0000-4000-8000-000000000011",
+      "item": {
+        "id": "00000000-0000-4000-8000-000000000011",
+        "revision": 1,
+        "seq": 8,
+        "name": "short_text many",
+        "typeId": "10000000-0000-4000-8000-000000000001",
+        "catalogueRevision": 2,
+        "typeKey": null,
+        "legacyType": null,
+        "fieldValues": [
+          {
+            "fieldId": "10000000-0000-4000-8000-00000000000b",
+            "source": "stored",
+            "catalogueRevision": 2,
+            "values": ["red", "grün", "🙂"]
+          }
+        ],
+        "computedValues": [
+          {
+            "fieldId": "10000000-0000-4000-8000-000000000020",
+            "source": "computed",
+            "catalogueRevision": 3,
+            "state": "unavailable",
+            "reason": "missing_dependency",
+            "failedFieldId": "10000000-0000-4000-8000-00000000000e",
+            "missingInputs": [
+              {
+                "reason": "missing_dependency",
+                "fieldId": "10000000-0000-4000-8000-00000000000e",
+                "itemId": "00000000-0000-4000-8000-000000000011"
+              }
+            ],
+            "dependencies": [],
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000011"]
+          },
+          {
+            "fieldId": "10000000-0000-4000-8000-000000000021",
+            "source": "computed",
+            "catalogueRevision": 3,
+            "state": "unavailable",
+            "reason": "missing_dependency",
+            "failedFieldId": "10000000-0000-4000-8000-00000000000e",
+            "missingInputs": [
+              {
+                "reason": "missing_dependency",
+                "fieldId": "10000000-0000-4000-8000-00000000000e",
+                "itemId": "00000000-0000-4000-8000-000000000011"
+              }
+            ],
+            "dependencies": [],
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000011"]
           }
         ],
         "fields": {},
@@ -5075,9 +5192,9 @@
       },
       "computedValue": null,
       "command": {
-        "mutationId": "00000000-0000-4000-8000-000000000010",
+        "mutationId": "00000000-0000-4000-8000-000000000012",
         "op": "item.create",
-        "entityId": "00000000-0000-4000-8000-00000000000f",
+        "entityId": "00000000-0000-4000-8000-000000000011",
         "baseRevision": null,
         "dependsOn": [],
         "clientTime": "2026-09-24T00:00:00.000Z",
@@ -5108,11 +5225,11 @@
       "cardinality": "one",
       "storage": "stored",
       "fieldId": "10000000-0000-4000-8000-00000000000c",
-      "itemId": "00000000-0000-4000-8000-000000000011",
+      "itemId": "00000000-0000-4000-8000-000000000013",
       "item": {
-        "id": "00000000-0000-4000-8000-000000000011",
+        "id": "00000000-0000-4000-8000-000000000013",
         "revision": 1,
-        "seq": 8,
+        "seq": 9,
         "name": "long_text one",
         "typeId": "10000000-0000-4000-8000-000000000001",
         "catalogueRevision": 2,
@@ -5140,11 +5257,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-000000000011"
+                "itemId": "00000000-0000-4000-8000-000000000013"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000011"]
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000013"]
           },
           {
             "fieldId": "10000000-0000-4000-8000-000000000021",
@@ -5157,11 +5274,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-000000000011"
+                "itemId": "00000000-0000-4000-8000-000000000013"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000011"]
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000013"]
           }
         ],
         "fields": {},
@@ -5194,9 +5311,9 @@
       },
       "computedValue": null,
       "command": {
-        "mutationId": "00000000-0000-4000-8000-000000000012",
+        "mutationId": "00000000-0000-4000-8000-000000000014",
         "op": "item.create",
-        "entityId": "00000000-0000-4000-8000-000000000011",
+        "entityId": "00000000-0000-4000-8000-000000000013",
         "baseRevision": null,
         "dependsOn": [],
         "clientTime": "2026-09-24T00:00:00.000Z",
@@ -5224,16 +5341,133 @@
       }
     },
     {
+      "name": "long_text trims edges and preserves line breaks",
+      "kind": "long_text",
+      "cardinality": "one",
+      "storage": "stored",
+      "fieldId": "10000000-0000-4000-8000-00000000000c",
+      "itemId": "00000000-0000-4000-8000-000000000015",
+      "item": {
+        "id": "00000000-0000-4000-8000-000000000015",
+        "revision": 1,
+        "seq": 10,
+        "name": "long_text trimmed",
+        "typeId": "10000000-0000-4000-8000-000000000001",
+        "catalogueRevision": 2,
+        "typeKey": null,
+        "legacyType": null,
+        "fieldValues": [
+          {
+            "fieldId": "10000000-0000-4000-8000-00000000000c",
+            "source": "stored",
+            "catalogueRevision": 2,
+            "values": ["first line\nsecond  line"]
+          }
+        ],
+        "computedValues": [
+          {
+            "fieldId": "10000000-0000-4000-8000-000000000020",
+            "source": "computed",
+            "catalogueRevision": 3,
+            "state": "unavailable",
+            "reason": "missing_dependency",
+            "failedFieldId": "10000000-0000-4000-8000-00000000000e",
+            "missingInputs": [
+              {
+                "reason": "missing_dependency",
+                "fieldId": "10000000-0000-4000-8000-00000000000e",
+                "itemId": "00000000-0000-4000-8000-000000000015"
+              }
+            ],
+            "dependencies": [],
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000015"]
+          },
+          {
+            "fieldId": "10000000-0000-4000-8000-000000000021",
+            "source": "computed",
+            "catalogueRevision": 3,
+            "state": "unavailable",
+            "reason": "missing_dependency",
+            "failedFieldId": "10000000-0000-4000-8000-00000000000e",
+            "missingInputs": [
+              {
+                "reason": "missing_dependency",
+                "fieldId": "10000000-0000-4000-8000-00000000000e",
+                "itemId": "00000000-0000-4000-8000-000000000015"
+              }
+            ],
+            "dependencies": [],
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000015"]
+          }
+        ],
+        "fields": {},
+        "note": null,
+        "code": null,
+        "externalIds": [],
+        "quantity": 1,
+        "lifecycle": "active",
+        "lifecycleChangedAt": null,
+        "placement": {
+          "kind": "hand"
+        },
+        "previousPlacement": null,
+        "isContainer": false,
+        "access": null,
+        "isFull": null,
+        "photos": [],
+        "provenance": null,
+        "documentsStatus": "none",
+        "documentTitles": [],
+        "createdAt": "2026-09-24T00:00:00.000Z",
+        "updatedAt": "2026-09-24T00:00:00.000Z",
+        "deletedAt": null
+      },
+      "fieldValue": {
+        "fieldId": "10000000-0000-4000-8000-00000000000c",
+        "source": "stored",
+        "catalogueRevision": 2,
+        "values": ["first line\nsecond  line"]
+      },
+      "computedValue": null,
+      "command": {
+        "mutationId": "00000000-0000-4000-8000-000000000016",
+        "op": "item.create",
+        "entityId": "00000000-0000-4000-8000-000000000015",
+        "baseRevision": null,
+        "dependsOn": [],
+        "clientTime": "2026-09-24T00:00:00.000Z",
+        "catalogueRevision": 2,
+        "args": {
+          "item": {
+            "name": "long_text trimmed",
+            "typeId": "10000000-0000-4000-8000-000000000001",
+            "values": [
+              {
+                "fieldId": "10000000-0000-4000-8000-00000000000c",
+                "values": [" \nfirst line\nsecond  line\n "]
+              }
+            ],
+            "note": null,
+            "externalIds": [],
+            "quantity": 1,
+            "placement": {
+              "kind": "hand"
+            }
+          }
+        }
+      }
+    },
+    {
       "name": "long_text many",
       "kind": "long_text",
       "cardinality": "many",
       "storage": "stored",
       "fieldId": "10000000-0000-4000-8000-00000000000d",
-      "itemId": "00000000-0000-4000-8000-000000000013",
+      "itemId": "00000000-0000-4000-8000-000000000017",
       "item": {
-        "id": "00000000-0000-4000-8000-000000000013",
+        "id": "00000000-0000-4000-8000-000000000017",
         "revision": 1,
-        "seq": 9,
+        "seq": 11,
         "name": "long_text many",
         "typeId": "10000000-0000-4000-8000-000000000001",
         "catalogueRevision": 2,
@@ -5259,11 +5493,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-000000000013"
+                "itemId": "00000000-0000-4000-8000-000000000017"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000013"]
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000017"]
           },
           {
             "fieldId": "10000000-0000-4000-8000-000000000021",
@@ -5276,11 +5510,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-000000000013"
+                "itemId": "00000000-0000-4000-8000-000000000017"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000013"]
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000017"]
           }
         ],
         "fields": {},
@@ -5313,9 +5547,9 @@
       },
       "computedValue": null,
       "command": {
-        "mutationId": "00000000-0000-4000-8000-000000000014",
+        "mutationId": "00000000-0000-4000-8000-000000000018",
         "op": "item.create",
-        "entityId": "00000000-0000-4000-8000-000000000013",
+        "entityId": "00000000-0000-4000-8000-000000000017",
         "baseRevision": null,
         "dependsOn": [],
         "clientTime": "2026-09-24T00:00:00.000Z",
@@ -5346,11 +5580,11 @@
       "cardinality": "one",
       "storage": "stored",
       "fieldId": "10000000-0000-4000-8000-00000000000e",
-      "itemId": "00000000-0000-4000-8000-000000000015",
+      "itemId": "00000000-0000-4000-8000-000000000019",
       "item": {
-        "id": "00000000-0000-4000-8000-000000000015",
+        "id": "00000000-0000-4000-8000-000000000019",
         "revision": 1,
-        "seq": 10,
+        "seq": 12,
         "name": "integer one (computed dependency)",
         "typeId": "10000000-0000-4000-8000-000000000001",
         "catalogueRevision": 2,
@@ -5373,12 +5607,12 @@
             "values": [800],
             "dependencies": [
               {
-                "itemId": "00000000-0000-4000-8000-000000000015",
+                "itemId": "00000000-0000-4000-8000-000000000019",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
                 "revision": 1
               }
             ],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000015"]
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000019"]
           },
           {
             "fieldId": "10000000-0000-4000-8000-000000000021",
@@ -5390,12 +5624,12 @@
             "missingInputs": [],
             "dependencies": [
               {
-                "itemId": "00000000-0000-4000-8000-000000000015",
+                "itemId": "00000000-0000-4000-8000-000000000019",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
                 "revision": 1
               }
             ],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000015"]
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000019"]
           }
         ],
         "fields": {},
@@ -5428,9 +5662,9 @@
       },
       "computedValue": null,
       "command": {
-        "mutationId": "00000000-0000-4000-8000-000000000016",
+        "mutationId": "00000000-0000-4000-8000-00000000001a",
         "op": "item.create",
-        "entityId": "00000000-0000-4000-8000-000000000015",
+        "entityId": "00000000-0000-4000-8000-000000000019",
         "baseRevision": null,
         "dependsOn": [],
         "clientTime": "2026-09-24T00:00:00.000Z",
@@ -5461,11 +5695,11 @@
       "cardinality": "many",
       "storage": "stored",
       "fieldId": "10000000-0000-4000-8000-00000000000f",
-      "itemId": "00000000-0000-4000-8000-000000000017",
+      "itemId": "00000000-0000-4000-8000-00000000001b",
       "item": {
-        "id": "00000000-0000-4000-8000-000000000017",
+        "id": "00000000-0000-4000-8000-00000000001b",
         "revision": 1,
-        "seq": 11,
+        "seq": 13,
         "name": "integer many",
         "typeId": "10000000-0000-4000-8000-000000000001",
         "catalogueRevision": 2,
@@ -5491,11 +5725,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-000000000017"
+                "itemId": "00000000-0000-4000-8000-00000000001b"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000017"]
+            "traversedItemIds": ["00000000-0000-4000-8000-00000000001b"]
           },
           {
             "fieldId": "10000000-0000-4000-8000-000000000021",
@@ -5508,11 +5742,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-000000000017"
+                "itemId": "00000000-0000-4000-8000-00000000001b"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000017"]
+            "traversedItemIds": ["00000000-0000-4000-8000-00000000001b"]
           }
         ],
         "fields": {},
@@ -5545,9 +5779,9 @@
       },
       "computedValue": null,
       "command": {
-        "mutationId": "00000000-0000-4000-8000-000000000018",
+        "mutationId": "00000000-0000-4000-8000-00000000001c",
         "op": "item.create",
-        "entityId": "00000000-0000-4000-8000-000000000017",
+        "entityId": "00000000-0000-4000-8000-00000000001b",
         "baseRevision": null,
         "dependsOn": [],
         "clientTime": "2026-09-24T00:00:00.000Z",
@@ -5578,11 +5812,11 @@
       "cardinality": "one",
       "storage": "stored",
       "fieldId": "10000000-0000-4000-8000-000000000010",
-      "itemId": "00000000-0000-4000-8000-000000000019",
+      "itemId": "00000000-0000-4000-8000-00000000001d",
       "item": {
-        "id": "00000000-0000-4000-8000-000000000019",
+        "id": "00000000-0000-4000-8000-00000000001d",
         "revision": 1,
-        "seq": 12,
+        "seq": 14,
         "name": "decimal one boundary",
         "typeId": "10000000-0000-4000-8000-000000000001",
         "catalogueRevision": 2,
@@ -5608,11 +5842,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-000000000019"
+                "itemId": "00000000-0000-4000-8000-00000000001d"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000019"]
+            "traversedItemIds": ["00000000-0000-4000-8000-00000000001d"]
           },
           {
             "fieldId": "10000000-0000-4000-8000-000000000021",
@@ -5625,11 +5859,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-000000000019"
+                "itemId": "00000000-0000-4000-8000-00000000001d"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000019"]
+            "traversedItemIds": ["00000000-0000-4000-8000-00000000001d"]
           }
         ],
         "fields": {},
@@ -5662,9 +5896,9 @@
       },
       "computedValue": null,
       "command": {
-        "mutationId": "00000000-0000-4000-8000-00000000001a",
+        "mutationId": "00000000-0000-4000-8000-00000000001e",
         "op": "item.create",
-        "entityId": "00000000-0000-4000-8000-000000000019",
+        "entityId": "00000000-0000-4000-8000-00000000001d",
         "baseRevision": null,
         "dependsOn": [],
         "clientTime": "2026-09-24T00:00:00.000Z",
@@ -5695,11 +5929,11 @@
       "cardinality": "one",
       "storage": "stored",
       "fieldId": "10000000-0000-4000-8000-000000000010",
-      "itemId": "00000000-0000-4000-8000-00000000001b",
+      "itemId": "00000000-0000-4000-8000-00000000001f",
       "item": {
-        "id": "00000000-0000-4000-8000-00000000001b",
+        "id": "00000000-0000-4000-8000-00000000001f",
         "revision": 1,
-        "seq": 13,
+        "seq": 15,
         "name": "decimal one boundary negative",
         "typeId": "10000000-0000-4000-8000-000000000001",
         "catalogueRevision": 2,
@@ -5725,11 +5959,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-00000000001b"
+                "itemId": "00000000-0000-4000-8000-00000000001f"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-00000000001b"]
+            "traversedItemIds": ["00000000-0000-4000-8000-00000000001f"]
           },
           {
             "fieldId": "10000000-0000-4000-8000-000000000021",
@@ -5742,11 +5976,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-00000000001b"
+                "itemId": "00000000-0000-4000-8000-00000000001f"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-00000000001b"]
+            "traversedItemIds": ["00000000-0000-4000-8000-00000000001f"]
           }
         ],
         "fields": {},
@@ -5779,9 +6013,9 @@
       },
       "computedValue": null,
       "command": {
-        "mutationId": "00000000-0000-4000-8000-00000000001c",
+        "mutationId": "00000000-0000-4000-8000-000000000020",
         "op": "item.create",
-        "entityId": "00000000-0000-4000-8000-00000000001b",
+        "entityId": "00000000-0000-4000-8000-00000000001f",
         "baseRevision": null,
         "dependsOn": [],
         "clientTime": "2026-09-24T00:00:00.000Z",
@@ -5812,11 +6046,11 @@
       "cardinality": "many",
       "storage": "stored",
       "fieldId": "10000000-0000-4000-8000-000000000011",
-      "itemId": "00000000-0000-4000-8000-00000000001d",
+      "itemId": "00000000-0000-4000-8000-000000000021",
       "item": {
-        "id": "00000000-0000-4000-8000-00000000001d",
+        "id": "00000000-0000-4000-8000-000000000021",
         "revision": 1,
-        "seq": 14,
+        "seq": 16,
         "name": "decimal many",
         "typeId": "10000000-0000-4000-8000-000000000001",
         "catalogueRevision": 2,
@@ -5842,11 +6076,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-00000000001d"
+                "itemId": "00000000-0000-4000-8000-000000000021"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-00000000001d"]
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000021"]
           },
           {
             "fieldId": "10000000-0000-4000-8000-000000000021",
@@ -5859,11 +6093,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-00000000001d"
+                "itemId": "00000000-0000-4000-8000-000000000021"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-00000000001d"]
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000021"]
           }
         ],
         "fields": {},
@@ -5896,9 +6130,9 @@
       },
       "computedValue": null,
       "command": {
-        "mutationId": "00000000-0000-4000-8000-00000000001e",
+        "mutationId": "00000000-0000-4000-8000-000000000022",
         "op": "item.create",
-        "entityId": "00000000-0000-4000-8000-00000000001d",
+        "entityId": "00000000-0000-4000-8000-000000000021",
         "baseRevision": null,
         "dependsOn": [],
         "clientTime": "2026-09-24T00:00:00.000Z",
@@ -5929,11 +6163,11 @@
       "cardinality": "one",
       "storage": "stored",
       "fieldId": "10000000-0000-4000-8000-000000000012",
-      "itemId": "00000000-0000-4000-8000-00000000001f",
+      "itemId": "00000000-0000-4000-8000-000000000023",
       "item": {
-        "id": "00000000-0000-4000-8000-00000000001f",
+        "id": "00000000-0000-4000-8000-000000000023",
         "revision": 1,
-        "seq": 15,
+        "seq": 17,
         "name": "boolean one true",
         "typeId": "10000000-0000-4000-8000-000000000001",
         "catalogueRevision": 2,
@@ -5959,11 +6193,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-00000000001f"
+                "itemId": "00000000-0000-4000-8000-000000000023"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-00000000001f"]
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000023"]
           },
           {
             "fieldId": "10000000-0000-4000-8000-000000000021",
@@ -5976,11 +6210,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-00000000001f"
+                "itemId": "00000000-0000-4000-8000-000000000023"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-00000000001f"]
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000023"]
           }
         ],
         "fields": {},
@@ -6013,9 +6247,9 @@
       },
       "computedValue": null,
       "command": {
-        "mutationId": "00000000-0000-4000-8000-000000000020",
+        "mutationId": "00000000-0000-4000-8000-000000000024",
         "op": "item.create",
-        "entityId": "00000000-0000-4000-8000-00000000001f",
+        "entityId": "00000000-0000-4000-8000-000000000023",
         "baseRevision": null,
         "dependsOn": [],
         "clientTime": "2026-09-24T00:00:00.000Z",
@@ -6046,11 +6280,11 @@
       "cardinality": "one",
       "storage": "stored",
       "fieldId": "10000000-0000-4000-8000-000000000012",
-      "itemId": "00000000-0000-4000-8000-000000000021",
+      "itemId": "00000000-0000-4000-8000-000000000025",
       "item": {
-        "id": "00000000-0000-4000-8000-000000000021",
+        "id": "00000000-0000-4000-8000-000000000025",
         "revision": 1,
-        "seq": 16,
+        "seq": 18,
         "name": "boolean one false",
         "typeId": "10000000-0000-4000-8000-000000000001",
         "catalogueRevision": 2,
@@ -6076,11 +6310,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-000000000021"
+                "itemId": "00000000-0000-4000-8000-000000000025"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000021"]
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000025"]
           },
           {
             "fieldId": "10000000-0000-4000-8000-000000000021",
@@ -6093,11 +6327,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-000000000021"
+                "itemId": "00000000-0000-4000-8000-000000000025"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000021"]
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000025"]
           }
         ],
         "fields": {},
@@ -6130,9 +6364,9 @@
       },
       "computedValue": null,
       "command": {
-        "mutationId": "00000000-0000-4000-8000-000000000022",
+        "mutationId": "00000000-0000-4000-8000-000000000026",
         "op": "item.create",
-        "entityId": "00000000-0000-4000-8000-000000000021",
+        "entityId": "00000000-0000-4000-8000-000000000025",
         "baseRevision": null,
         "dependsOn": [],
         "clientTime": "2026-09-24T00:00:00.000Z",
@@ -6163,11 +6397,11 @@
       "cardinality": "one",
       "storage": "stored",
       "fieldId": "10000000-0000-4000-8000-000000000013",
-      "itemId": "00000000-0000-4000-8000-000000000023",
+      "itemId": "00000000-0000-4000-8000-000000000027",
       "item": {
-        "id": "00000000-0000-4000-8000-000000000023",
+        "id": "00000000-0000-4000-8000-000000000027",
         "revision": 1,
-        "seq": 17,
+        "seq": 19,
         "name": "enum one active",
         "typeId": "10000000-0000-4000-8000-000000000001",
         "catalogueRevision": 2,
@@ -6197,11 +6431,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-000000000023"
+                "itemId": "00000000-0000-4000-8000-000000000027"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000023"]
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000027"]
           },
           {
             "fieldId": "10000000-0000-4000-8000-000000000021",
@@ -6214,11 +6448,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-000000000023"
+                "itemId": "00000000-0000-4000-8000-000000000027"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000023"]
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000027"]
           }
         ],
         "fields": {},
@@ -6255,9 +6489,9 @@
       },
       "computedValue": null,
       "command": {
-        "mutationId": "00000000-0000-4000-8000-000000000024",
+        "mutationId": "00000000-0000-4000-8000-000000000028",
         "op": "item.create",
-        "entityId": "00000000-0000-4000-8000-000000000023",
+        "entityId": "00000000-0000-4000-8000-000000000027",
         "baseRevision": null,
         "dependsOn": [],
         "clientTime": "2026-09-24T00:00:00.000Z",
@@ -6292,11 +6526,11 @@
       "cardinality": "one",
       "storage": "stored",
       "fieldId": "10000000-0000-4000-8000-000000000013",
-      "itemId": "00000000-0000-4000-8000-000000000025",
+      "itemId": "00000000-0000-4000-8000-000000000029",
       "item": {
-        "id": "00000000-0000-4000-8000-000000000025",
+        "id": "00000000-0000-4000-8000-000000000029",
         "revision": 1,
-        "seq": 18,
+        "seq": 20,
         "name": "enum one retired",
         "typeId": "10000000-0000-4000-8000-000000000001",
         "catalogueRevision": 2,
@@ -6326,11 +6560,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-000000000025"
+                "itemId": "00000000-0000-4000-8000-000000000029"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000025"]
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000029"]
           },
           {
             "fieldId": "10000000-0000-4000-8000-000000000021",
@@ -6343,11 +6577,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-000000000025"
+                "itemId": "00000000-0000-4000-8000-000000000029"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000025"]
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000029"]
           }
         ],
         "fields": {},
@@ -6384,9 +6618,9 @@
       },
       "computedValue": null,
       "command": {
-        "mutationId": "00000000-0000-4000-8000-000000000026",
+        "mutationId": "00000000-0000-4000-8000-00000000002a",
         "op": "item.create",
-        "entityId": "00000000-0000-4000-8000-000000000025",
+        "entityId": "00000000-0000-4000-8000-000000000029",
         "baseRevision": null,
         "dependsOn": [],
         "clientTime": "2026-09-24T00:00:00.000Z",
@@ -6421,11 +6655,11 @@
       "cardinality": "many",
       "storage": "stored",
       "fieldId": "10000000-0000-4000-8000-000000000014",
-      "itemId": "00000000-0000-4000-8000-000000000027",
+      "itemId": "00000000-0000-4000-8000-00000000002b",
       "item": {
-        "id": "00000000-0000-4000-8000-000000000027",
+        "id": "00000000-0000-4000-8000-00000000002b",
         "revision": 1,
-        "seq": 19,
+        "seq": 21,
         "name": "enum many",
         "typeId": "10000000-0000-4000-8000-000000000001",
         "catalogueRevision": 2,
@@ -6458,11 +6692,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-000000000027"
+                "itemId": "00000000-0000-4000-8000-00000000002b"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000027"]
+            "traversedItemIds": ["00000000-0000-4000-8000-00000000002b"]
           },
           {
             "fieldId": "10000000-0000-4000-8000-000000000021",
@@ -6475,11 +6709,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-000000000027"
+                "itemId": "00000000-0000-4000-8000-00000000002b"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000027"]
+            "traversedItemIds": ["00000000-0000-4000-8000-00000000002b"]
           }
         ],
         "fields": {},
@@ -6519,9 +6753,9 @@
       },
       "computedValue": null,
       "command": {
-        "mutationId": "00000000-0000-4000-8000-000000000028",
+        "mutationId": "00000000-0000-4000-8000-00000000002c",
         "op": "item.create",
-        "entityId": "00000000-0000-4000-8000-000000000027",
+        "entityId": "00000000-0000-4000-8000-00000000002b",
         "baseRevision": null,
         "dependsOn": [],
         "clientTime": "2026-09-24T00:00:00.000Z",
@@ -6559,11 +6793,11 @@
       "cardinality": "one",
       "storage": "stored",
       "fieldId": "10000000-0000-4000-8000-000000000015",
-      "itemId": "00000000-0000-4000-8000-000000000029",
+      "itemId": "00000000-0000-4000-8000-00000000002d",
       "item": {
-        "id": "00000000-0000-4000-8000-000000000029",
+        "id": "00000000-0000-4000-8000-00000000002d",
         "revision": 1,
-        "seq": 20,
+        "seq": 22,
         "name": "measurement one",
         "typeId": "10000000-0000-4000-8000-000000000001",
         "catalogueRevision": 2,
@@ -6594,11 +6828,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-000000000029"
+                "itemId": "00000000-0000-4000-8000-00000000002d"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000029"]
+            "traversedItemIds": ["00000000-0000-4000-8000-00000000002d"]
           },
           {
             "fieldId": "10000000-0000-4000-8000-000000000021",
@@ -6611,11 +6845,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-000000000029"
+                "itemId": "00000000-0000-4000-8000-00000000002d"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000029"]
+            "traversedItemIds": ["00000000-0000-4000-8000-00000000002d"]
           }
         ],
         "fields": {},
@@ -6653,9 +6887,9 @@
       },
       "computedValue": null,
       "command": {
-        "mutationId": "00000000-0000-4000-8000-00000000002a",
+        "mutationId": "00000000-0000-4000-8000-00000000002e",
         "op": "item.create",
-        "entityId": "00000000-0000-4000-8000-000000000029",
+        "entityId": "00000000-0000-4000-8000-00000000002d",
         "baseRevision": null,
         "dependsOn": [],
         "clientTime": "2026-09-24T00:00:00.000Z",
@@ -6691,11 +6925,11 @@
       "cardinality": "many",
       "storage": "stored",
       "fieldId": "10000000-0000-4000-8000-000000000016",
-      "itemId": "00000000-0000-4000-8000-00000000002b",
+      "itemId": "00000000-0000-4000-8000-00000000002f",
       "item": {
-        "id": "00000000-0000-4000-8000-00000000002b",
+        "id": "00000000-0000-4000-8000-00000000002f",
         "revision": 1,
-        "seq": 21,
+        "seq": 23,
         "name": "measurement many",
         "typeId": "10000000-0000-4000-8000-000000000001",
         "catalogueRevision": 2,
@@ -6730,11 +6964,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-00000000002b"
+                "itemId": "00000000-0000-4000-8000-00000000002f"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-00000000002b"]
+            "traversedItemIds": ["00000000-0000-4000-8000-00000000002f"]
           },
           {
             "fieldId": "10000000-0000-4000-8000-000000000021",
@@ -6747,11 +6981,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-00000000002b"
+                "itemId": "00000000-0000-4000-8000-00000000002f"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-00000000002b"]
+            "traversedItemIds": ["00000000-0000-4000-8000-00000000002f"]
           }
         ],
         "fields": {},
@@ -6793,9 +7027,9 @@
       },
       "computedValue": null,
       "command": {
-        "mutationId": "00000000-0000-4000-8000-00000000002c",
+        "mutationId": "00000000-0000-4000-8000-000000000030",
         "op": "item.create",
-        "entityId": "00000000-0000-4000-8000-00000000002b",
+        "entityId": "00000000-0000-4000-8000-00000000002f",
         "baseRevision": null,
         "dependsOn": [],
         "clientTime": "2026-09-24T00:00:00.000Z",
@@ -6835,11 +7069,11 @@
       "cardinality": "one",
       "storage": "stored",
       "fieldId": "10000000-0000-4000-8000-000000000017",
-      "itemId": "00000000-0000-4000-8000-00000000002d",
+      "itemId": "00000000-0000-4000-8000-000000000031",
       "item": {
-        "id": "00000000-0000-4000-8000-00000000002d",
+        "id": "00000000-0000-4000-8000-000000000031",
         "revision": 1,
-        "seq": 22,
+        "seq": 24,
         "name": "measurement derived unit",
         "typeId": "10000000-0000-4000-8000-000000000001",
         "catalogueRevision": 2,
@@ -6870,11 +7104,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-00000000002d"
+                "itemId": "00000000-0000-4000-8000-000000000031"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-00000000002d"]
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000031"]
           },
           {
             "fieldId": "10000000-0000-4000-8000-000000000021",
@@ -6887,11 +7121,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-00000000002d"
+                "itemId": "00000000-0000-4000-8000-000000000031"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-00000000002d"]
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000031"]
           }
         ],
         "fields": {},
@@ -6929,9 +7163,9 @@
       },
       "computedValue": null,
       "command": {
-        "mutationId": "00000000-0000-4000-8000-00000000002e",
+        "mutationId": "00000000-0000-4000-8000-000000000032",
         "op": "item.create",
-        "entityId": "00000000-0000-4000-8000-00000000002d",
+        "entityId": "00000000-0000-4000-8000-000000000031",
         "baseRevision": null,
         "dependsOn": [],
         "clientTime": "2026-09-24T00:00:00.000Z",
@@ -6967,11 +7201,11 @@
       "cardinality": "one",
       "storage": "stored",
       "fieldId": "10000000-0000-4000-8000-000000000018",
-      "itemId": "00000000-0000-4000-8000-00000000002f",
+      "itemId": "00000000-0000-4000-8000-000000000033",
       "item": {
-        "id": "00000000-0000-4000-8000-00000000002f",
+        "id": "00000000-0000-4000-8000-000000000033",
         "revision": 1,
-        "seq": 23,
+        "seq": 25,
         "name": "date one",
         "typeId": "10000000-0000-4000-8000-000000000001",
         "catalogueRevision": 2,
@@ -6997,11 +7231,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-00000000002f"
+                "itemId": "00000000-0000-4000-8000-000000000033"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-00000000002f"]
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000033"]
           },
           {
             "fieldId": "10000000-0000-4000-8000-000000000021",
@@ -7014,11 +7248,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-00000000002f"
+                "itemId": "00000000-0000-4000-8000-000000000033"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-00000000002f"]
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000033"]
           }
         ],
         "fields": {},
@@ -7051,9 +7285,9 @@
       },
       "computedValue": null,
       "command": {
-        "mutationId": "00000000-0000-4000-8000-000000000030",
+        "mutationId": "00000000-0000-4000-8000-000000000034",
         "op": "item.create",
-        "entityId": "00000000-0000-4000-8000-00000000002f",
+        "entityId": "00000000-0000-4000-8000-000000000033",
         "baseRevision": null,
         "dependsOn": [],
         "clientTime": "2026-09-24T00:00:00.000Z",
@@ -7084,11 +7318,11 @@
       "cardinality": "many",
       "storage": "stored",
       "fieldId": "10000000-0000-4000-8000-000000000019",
-      "itemId": "00000000-0000-4000-8000-000000000031",
+      "itemId": "00000000-0000-4000-8000-000000000035",
       "item": {
-        "id": "00000000-0000-4000-8000-000000000031",
+        "id": "00000000-0000-4000-8000-000000000035",
         "revision": 1,
-        "seq": 24,
+        "seq": 26,
         "name": "date many",
         "typeId": "10000000-0000-4000-8000-000000000001",
         "catalogueRevision": 2,
@@ -7114,11 +7348,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-000000000031"
+                "itemId": "00000000-0000-4000-8000-000000000035"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000031"]
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000035"]
           },
           {
             "fieldId": "10000000-0000-4000-8000-000000000021",
@@ -7131,11 +7365,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-000000000031"
+                "itemId": "00000000-0000-4000-8000-000000000035"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000031"]
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000035"]
           }
         ],
         "fields": {},
@@ -7168,9 +7402,9 @@
       },
       "computedValue": null,
       "command": {
-        "mutationId": "00000000-0000-4000-8000-000000000032",
+        "mutationId": "00000000-0000-4000-8000-000000000036",
         "op": "item.create",
-        "entityId": "00000000-0000-4000-8000-000000000031",
+        "entityId": "00000000-0000-4000-8000-000000000035",
         "baseRevision": null,
         "dependsOn": [],
         "clientTime": "2026-09-24T00:00:00.000Z",
@@ -7201,11 +7435,11 @@
       "cardinality": "one",
       "storage": "stored",
       "fieldId": "10000000-0000-4000-8000-00000000001a",
-      "itemId": "00000000-0000-4000-8000-000000000033",
+      "itemId": "00000000-0000-4000-8000-000000000037",
       "item": {
-        "id": "00000000-0000-4000-8000-000000000033",
+        "id": "00000000-0000-4000-8000-000000000037",
         "revision": 1,
-        "seq": 25,
+        "seq": 27,
         "name": "date_time one",
         "typeId": "10000000-0000-4000-8000-000000000001",
         "catalogueRevision": 2,
@@ -7231,11 +7465,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-000000000033"
+                "itemId": "00000000-0000-4000-8000-000000000037"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000033"]
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000037"]
           },
           {
             "fieldId": "10000000-0000-4000-8000-000000000021",
@@ -7248,11 +7482,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-000000000033"
+                "itemId": "00000000-0000-4000-8000-000000000037"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000033"]
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000037"]
           }
         ],
         "fields": {},
@@ -7285,9 +7519,9 @@
       },
       "computedValue": null,
       "command": {
-        "mutationId": "00000000-0000-4000-8000-000000000034",
+        "mutationId": "00000000-0000-4000-8000-000000000038",
         "op": "item.create",
-        "entityId": "00000000-0000-4000-8000-000000000033",
+        "entityId": "00000000-0000-4000-8000-000000000037",
         "baseRevision": null,
         "dependsOn": [],
         "clientTime": "2026-09-24T00:00:00.000Z",
@@ -7318,11 +7552,11 @@
       "cardinality": "many",
       "storage": "stored",
       "fieldId": "10000000-0000-4000-8000-00000000001b",
-      "itemId": "00000000-0000-4000-8000-000000000035",
+      "itemId": "00000000-0000-4000-8000-000000000039",
       "item": {
-        "id": "00000000-0000-4000-8000-000000000035",
+        "id": "00000000-0000-4000-8000-000000000039",
         "revision": 1,
-        "seq": 26,
+        "seq": 28,
         "name": "date_time many",
         "typeId": "10000000-0000-4000-8000-000000000001",
         "catalogueRevision": 2,
@@ -7348,11 +7582,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-000000000035"
+                "itemId": "00000000-0000-4000-8000-000000000039"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000035"]
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000039"]
           },
           {
             "fieldId": "10000000-0000-4000-8000-000000000021",
@@ -7365,11 +7599,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-000000000035"
+                "itemId": "00000000-0000-4000-8000-000000000039"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000035"]
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000039"]
           }
         ],
         "fields": {},
@@ -7402,9 +7636,9 @@
       },
       "computedValue": null,
       "command": {
-        "mutationId": "00000000-0000-4000-8000-000000000036",
+        "mutationId": "00000000-0000-4000-8000-00000000003a",
         "op": "item.create",
-        "entityId": "00000000-0000-4000-8000-000000000035",
+        "entityId": "00000000-0000-4000-8000-000000000039",
         "baseRevision": null,
         "dependsOn": [],
         "clientTime": "2026-09-24T00:00:00.000Z",
@@ -7435,11 +7669,11 @@
       "cardinality": "one",
       "storage": "stored",
       "fieldId": "10000000-0000-4000-8000-00000000001c",
-      "itemId": "00000000-0000-4000-8000-000000000037",
+      "itemId": "00000000-0000-4000-8000-00000000003b",
       "item": {
-        "id": "00000000-0000-4000-8000-000000000037",
+        "id": "00000000-0000-4000-8000-00000000003b",
         "revision": 1,
-        "seq": 27,
+        "seq": 29,
         "name": "url one",
         "typeId": "10000000-0000-4000-8000-000000000001",
         "catalogueRevision": 2,
@@ -7465,11 +7699,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-000000000037"
+                "itemId": "00000000-0000-4000-8000-00000000003b"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000037"]
+            "traversedItemIds": ["00000000-0000-4000-8000-00000000003b"]
           },
           {
             "fieldId": "10000000-0000-4000-8000-000000000021",
@@ -7482,11 +7716,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-000000000037"
+                "itemId": "00000000-0000-4000-8000-00000000003b"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000037"]
+            "traversedItemIds": ["00000000-0000-4000-8000-00000000003b"]
           }
         ],
         "fields": {},
@@ -7519,9 +7753,9 @@
       },
       "computedValue": null,
       "command": {
-        "mutationId": "00000000-0000-4000-8000-000000000038",
+        "mutationId": "00000000-0000-4000-8000-00000000003c",
         "op": "item.create",
-        "entityId": "00000000-0000-4000-8000-000000000037",
+        "entityId": "00000000-0000-4000-8000-00000000003b",
         "baseRevision": null,
         "dependsOn": [],
         "clientTime": "2026-09-24T00:00:00.000Z",
@@ -7552,11 +7786,11 @@
       "cardinality": "many",
       "storage": "stored",
       "fieldId": "10000000-0000-4000-8000-00000000001d",
-      "itemId": "00000000-0000-4000-8000-000000000039",
+      "itemId": "00000000-0000-4000-8000-00000000003d",
       "item": {
-        "id": "00000000-0000-4000-8000-000000000039",
+        "id": "00000000-0000-4000-8000-00000000003d",
         "revision": 1,
-        "seq": 28,
+        "seq": 30,
         "name": "url many",
         "typeId": "10000000-0000-4000-8000-000000000001",
         "catalogueRevision": 2,
@@ -7582,11 +7816,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-000000000039"
+                "itemId": "00000000-0000-4000-8000-00000000003d"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000039"]
+            "traversedItemIds": ["00000000-0000-4000-8000-00000000003d"]
           },
           {
             "fieldId": "10000000-0000-4000-8000-000000000021",
@@ -7599,11 +7833,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-000000000039"
+                "itemId": "00000000-0000-4000-8000-00000000003d"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000039"]
+            "traversedItemIds": ["00000000-0000-4000-8000-00000000003d"]
           }
         ],
         "fields": {},
@@ -7636,9 +7870,9 @@
       },
       "computedValue": null,
       "command": {
-        "mutationId": "00000000-0000-4000-8000-00000000003a",
+        "mutationId": "00000000-0000-4000-8000-00000000003e",
         "op": "item.create",
-        "entityId": "00000000-0000-4000-8000-000000000039",
+        "entityId": "00000000-0000-4000-8000-00000000003d",
         "baseRevision": null,
         "dependsOn": [],
         "clientTime": "2026-09-24T00:00:00.000Z",
@@ -7669,11 +7903,11 @@
       "cardinality": "one",
       "storage": "stored",
       "fieldId": "10000000-0000-4000-8000-00000000001e",
-      "itemId": "00000000-0000-4000-8000-00000000003b",
+      "itemId": "00000000-0000-4000-8000-00000000003f",
       "item": {
-        "id": "00000000-0000-4000-8000-00000000003b",
+        "id": "00000000-0000-4000-8000-00000000003f",
         "revision": 1,
-        "seq": 29,
+        "seq": 31,
         "name": "reference one resolved item",
         "typeId": "10000000-0000-4000-8000-000000000001",
         "catalogueRevision": 2,
@@ -7705,11 +7939,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-00000000003b"
+                "itemId": "00000000-0000-4000-8000-00000000003f"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-00000000003b"]
+            "traversedItemIds": ["00000000-0000-4000-8000-00000000003f"]
           },
           {
             "fieldId": "10000000-0000-4000-8000-000000000021",
@@ -7722,11 +7956,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-00000000003b"
+                "itemId": "00000000-0000-4000-8000-00000000003f"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-00000000003b"]
+            "traversedItemIds": ["00000000-0000-4000-8000-00000000003f"]
           }
         ],
         "fields": {},
@@ -7765,9 +7999,9 @@
       },
       "computedValue": null,
       "command": {
-        "mutationId": "00000000-0000-4000-8000-00000000003c",
+        "mutationId": "00000000-0000-4000-8000-000000000040",
         "op": "item.create",
-        "entityId": "00000000-0000-4000-8000-00000000003b",
+        "entityId": "00000000-0000-4000-8000-00000000003f",
         "baseRevision": null,
         "dependsOn": [],
         "clientTime": "2026-09-24T00:00:00.000Z",
@@ -7876,11 +8110,11 @@
       "cardinality": "one",
       "storage": "stored",
       "fieldId": "10000000-0000-4000-8000-00000000001e",
-      "itemId": "00000000-0000-4000-8000-00000000003d",
+      "itemId": "00000000-0000-4000-8000-000000000041",
       "item": {
-        "id": "00000000-0000-4000-8000-00000000003d",
+        "id": "00000000-0000-4000-8000-000000000041",
         "revision": 1,
-        "seq": 30,
+        "seq": 32,
         "name": "reference one resolved location",
         "typeId": "10000000-0000-4000-8000-000000000001",
         "catalogueRevision": 2,
@@ -7912,11 +8146,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-00000000003d"
+                "itemId": "00000000-0000-4000-8000-000000000041"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-00000000003d"]
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000041"]
           },
           {
             "fieldId": "10000000-0000-4000-8000-000000000021",
@@ -7929,11 +8163,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-00000000003d"
+                "itemId": "00000000-0000-4000-8000-000000000041"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-00000000003d"]
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000041"]
           }
         ],
         "fields": {},
@@ -7972,9 +8206,9 @@
       },
       "computedValue": null,
       "command": {
-        "mutationId": "00000000-0000-4000-8000-00000000003e",
+        "mutationId": "00000000-0000-4000-8000-000000000042",
         "op": "item.create",
-        "entityId": "00000000-0000-4000-8000-00000000003d",
+        "entityId": "00000000-0000-4000-8000-000000000041",
         "baseRevision": null,
         "dependsOn": [],
         "clientTime": "2026-09-24T00:00:00.000Z",
@@ -8024,11 +8258,11 @@
       "cardinality": "many",
       "storage": "stored",
       "fieldId": "10000000-0000-4000-8000-00000000001f",
-      "itemId": "00000000-0000-4000-8000-00000000003f",
+      "itemId": "00000000-0000-4000-8000-000000000043",
       "item": {
-        "id": "00000000-0000-4000-8000-00000000003f",
+        "id": "00000000-0000-4000-8000-000000000043",
         "revision": 1,
-        "seq": 31,
+        "seq": 33,
         "name": "reference many ordered",
         "typeId": "10000000-0000-4000-8000-000000000001",
         "catalogueRevision": 2,
@@ -8065,11 +8299,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-00000000003f"
+                "itemId": "00000000-0000-4000-8000-000000000043"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-00000000003f"]
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000043"]
           },
           {
             "fieldId": "10000000-0000-4000-8000-000000000021",
@@ -8082,11 +8316,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-00000000003f"
+                "itemId": "00000000-0000-4000-8000-000000000043"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-00000000003f"]
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000043"]
           }
         ],
         "fields": {},
@@ -8130,9 +8364,9 @@
       },
       "computedValue": null,
       "command": {
-        "mutationId": "00000000-0000-4000-8000-000000000040",
+        "mutationId": "00000000-0000-4000-8000-000000000044",
         "op": "item.create",
-        "entityId": "00000000-0000-4000-8000-00000000003f",
+        "entityId": "00000000-0000-4000-8000-000000000043",
         "baseRevision": null,
         "dependsOn": [],
         "clientTime": "2026-09-24T00:00:00.000Z",
@@ -8257,11 +8491,11 @@
       "cardinality": "one",
       "storage": "stored",
       "fieldId": "10000000-0000-4000-8000-00000000001e",
-      "itemId": "00000000-0000-4000-8000-000000000041",
+      "itemId": "00000000-0000-4000-8000-000000000045",
       "item": {
-        "id": "00000000-0000-4000-8000-000000000041",
+        "id": "00000000-0000-4000-8000-000000000045",
         "revision": 1,
-        "seq": 32,
+        "seq": 34,
         "name": "reference one missing target",
         "typeId": "10000000-0000-4000-8000-000000000001",
         "catalogueRevision": 2,
@@ -8293,11 +8527,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-000000000041"
+                "itemId": "00000000-0000-4000-8000-000000000045"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000041"]
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000045"]
           },
           {
             "fieldId": "10000000-0000-4000-8000-000000000021",
@@ -8310,11 +8544,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-000000000041"
+                "itemId": "00000000-0000-4000-8000-000000000045"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000041"]
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000045"]
           }
         ],
         "fields": {},
@@ -8353,9 +8587,9 @@
       },
       "computedValue": null,
       "command": {
-        "mutationId": "00000000-0000-4000-8000-000000000042",
+        "mutationId": "00000000-0000-4000-8000-000000000046",
         "op": "item.create",
-        "entityId": "00000000-0000-4000-8000-000000000041",
+        "entityId": "00000000-0000-4000-8000-000000000045",
         "baseRevision": null,
         "dependsOn": [],
         "clientTime": "2026-09-24T00:00:00.000Z",
@@ -8392,11 +8626,11 @@
       "cardinality": "one",
       "storage": "stored",
       "fieldId": "10000000-0000-4000-8000-00000000001e",
-      "itemId": "00000000-0000-4000-8000-000000000043",
+      "itemId": "00000000-0000-4000-8000-000000000047",
       "item": {
-        "id": "00000000-0000-4000-8000-000000000043",
+        "id": "00000000-0000-4000-8000-000000000047",
         "revision": 1,
-        "seq": 33,
+        "seq": 35,
         "name": "reference one archived target",
         "typeId": "10000000-0000-4000-8000-000000000001",
         "catalogueRevision": 2,
@@ -8428,11 +8662,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-000000000043"
+                "itemId": "00000000-0000-4000-8000-000000000047"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000043"]
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000047"]
           },
           {
             "fieldId": "10000000-0000-4000-8000-000000000021",
@@ -8445,11 +8679,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-000000000043"
+                "itemId": "00000000-0000-4000-8000-000000000047"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000043"]
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000047"]
           }
         ],
         "fields": {},
@@ -8488,9 +8722,9 @@
       },
       "computedValue": null,
       "command": {
-        "mutationId": "00000000-0000-4000-8000-000000000044",
+        "mutationId": "00000000-0000-4000-8000-000000000048",
         "op": "item.create",
-        "entityId": "00000000-0000-4000-8000-000000000043",
+        "entityId": "00000000-0000-4000-8000-000000000047",
         "baseRevision": null,
         "dependsOn": [],
         "clientTime": "2026-09-24T00:00:00.000Z",
@@ -8525,7 +8759,7 @@
           "item": {
             "id": "00000000-0000-4000-8000-000000000004",
             "revision": 2,
-            "seq": 34,
+            "seq": 36,
             "name": "Deleted reference target",
             "typeId": "10000000-0000-4000-8000-000000000001",
             "catalogueRevision": null,
@@ -8599,11 +8833,11 @@
       "cardinality": "one",
       "storage": "stored",
       "fieldId": "10000000-0000-4000-8000-00000000001e",
-      "itemId": "00000000-0000-4000-8000-000000000046",
+      "itemId": "00000000-0000-4000-8000-00000000004a",
       "item": {
-        "id": "00000000-0000-4000-8000-000000000046",
+        "id": "00000000-0000-4000-8000-00000000004a",
         "revision": 1,
-        "seq": 35,
+        "seq": 37,
         "name": "reference one deleted location target",
         "typeId": "10000000-0000-4000-8000-000000000001",
         "catalogueRevision": 2,
@@ -8635,11 +8869,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-000000000046"
+                "itemId": "00000000-0000-4000-8000-00000000004a"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000046"]
+            "traversedItemIds": ["00000000-0000-4000-8000-00000000004a"]
           },
           {
             "fieldId": "10000000-0000-4000-8000-000000000021",
@@ -8652,11 +8886,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-000000000046"
+                "itemId": "00000000-0000-4000-8000-00000000004a"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000046"]
+            "traversedItemIds": ["00000000-0000-4000-8000-00000000004a"]
           }
         ],
         "fields": {},
@@ -8695,9 +8929,9 @@
       },
       "computedValue": null,
       "command": {
-        "mutationId": "00000000-0000-4000-8000-000000000047",
+        "mutationId": "00000000-0000-4000-8000-00000000004b",
         "op": "item.create",
-        "entityId": "00000000-0000-4000-8000-000000000046",
+        "entityId": "00000000-0000-4000-8000-00000000004a",
         "baseRevision": null,
         "dependsOn": [],
         "clientTime": "2026-09-24T00:00:00.000Z",
@@ -8732,7 +8966,7 @@
           "location": {
             "id": "00000000-0000-4000-8000-000000000008",
             "revision": 2,
-            "seq": 36,
+            "seq": 38,
             "name": "Deleted reference location",
             "parentId": null,
             "sortOrder": 0,
@@ -8747,11 +8981,11 @@
       "cardinality": "one",
       "storage": "stored",
       "fieldId": "10000000-0000-4000-8000-00000000001e",
-      "itemId": "00000000-0000-4000-8000-000000000049",
+      "itemId": "00000000-0000-4000-8000-00000000004d",
       "item": {
-        "id": "00000000-0000-4000-8000-000000000049",
+        "id": "00000000-0000-4000-8000-00000000004d",
         "revision": 1,
-        "seq": 37,
+        "seq": 39,
         "name": "reference one target not yet on the phone",
         "typeId": "10000000-0000-4000-8000-000000000001",
         "catalogueRevision": 2,
@@ -8783,11 +9017,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-000000000049"
+                "itemId": "00000000-0000-4000-8000-00000000004d"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000049"]
+            "traversedItemIds": ["00000000-0000-4000-8000-00000000004d"]
           },
           {
             "fieldId": "10000000-0000-4000-8000-000000000021",
@@ -8800,11 +9034,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-000000000049"
+                "itemId": "00000000-0000-4000-8000-00000000004d"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000049"]
+            "traversedItemIds": ["00000000-0000-4000-8000-00000000004d"]
           }
         ],
         "fields": {},
@@ -8843,9 +9077,9 @@
       },
       "computedValue": null,
       "command": {
-        "mutationId": "00000000-0000-4000-8000-00000000004a",
+        "mutationId": "00000000-0000-4000-8000-00000000004e",
         "op": "item.create",
-        "entityId": "00000000-0000-4000-8000-000000000049",
+        "entityId": "00000000-0000-4000-8000-00000000004d",
         "baseRevision": null,
         "dependsOn": [],
         "clientTime": "2026-09-24T00:00:00.000Z",
@@ -8888,11 +9122,11 @@
       "cardinality": "one",
       "storage": "stored",
       "fieldId": "10000000-0000-4000-8000-00000000001e",
-      "itemId": "00000000-0000-4000-8000-00000000004b",
+      "itemId": "00000000-0000-4000-8000-00000000004f",
       "item": {
-        "id": "00000000-0000-4000-8000-00000000004b",
+        "id": "00000000-0000-4000-8000-00000000004f",
         "revision": 1,
-        "seq": 38,
+        "seq": 40,
         "name": "reference one renamed target",
         "typeId": "10000000-0000-4000-8000-000000000001",
         "catalogueRevision": 2,
@@ -8924,11 +9158,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-00000000004b"
+                "itemId": "00000000-0000-4000-8000-00000000004f"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-00000000004b"]
+            "traversedItemIds": ["00000000-0000-4000-8000-00000000004f"]
           },
           {
             "fieldId": "10000000-0000-4000-8000-000000000021",
@@ -8941,11 +9175,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-00000000004b"
+                "itemId": "00000000-0000-4000-8000-00000000004f"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-00000000004b"]
+            "traversedItemIds": ["00000000-0000-4000-8000-00000000004f"]
           }
         ],
         "fields": {},
@@ -8984,9 +9218,9 @@
       },
       "computedValue": null,
       "command": {
-        "mutationId": "00000000-0000-4000-8000-00000000004c",
+        "mutationId": "00000000-0000-4000-8000-000000000050",
         "op": "item.create",
-        "entityId": "00000000-0000-4000-8000-00000000004b",
+        "entityId": "00000000-0000-4000-8000-00000000004f",
         "baseRevision": null,
         "dependsOn": [],
         "clientTime": "2026-09-24T00:00:00.000Z",
@@ -9021,7 +9255,7 @@
           "item": {
             "id": "00000000-0000-4000-8000-00000000000b",
             "revision": 2,
-            "seq": 39,
+            "seq": 41,
             "name": "Reference target after rename",
             "typeId": "10000000-0000-4000-8000-000000000001",
             "catalogueRevision": null,
@@ -9095,11 +9329,11 @@
       "cardinality": "one",
       "storage": "stored",
       "fieldId": "10000000-0000-4000-8000-00000000000a",
-      "itemId": "00000000-0000-4000-8000-000000000050",
+      "itemId": "00000000-0000-4000-8000-000000000054",
       "item": {
-        "id": "00000000-0000-4000-8000-000000000050",
+        "id": "00000000-0000-4000-8000-000000000054",
         "revision": 1,
-        "seq": 41,
+        "seq": 43,
         "name": "no value set for shortTextOne",
         "typeId": "10000000-0000-4000-8000-000000000001",
         "catalogueRevision": null,
@@ -9118,11 +9352,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-000000000050"
+                "itemId": "00000000-0000-4000-8000-000000000054"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000050"]
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000054"]
           },
           {
             "fieldId": "10000000-0000-4000-8000-000000000021",
@@ -9135,11 +9369,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-000000000050"
+                "itemId": "00000000-0000-4000-8000-000000000054"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000050"]
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000054"]
           }
         ],
         "fields": {},
@@ -9167,9 +9401,9 @@
       "fieldValue": null,
       "computedValue": null,
       "command": {
-        "mutationId": "00000000-0000-4000-8000-000000000051",
+        "mutationId": "00000000-0000-4000-8000-000000000055",
         "op": "item.create",
-        "entityId": "00000000-0000-4000-8000-000000000050",
+        "entityId": "00000000-0000-4000-8000-000000000054",
         "baseRevision": null,
         "dependsOn": [],
         "clientTime": "2026-09-24T00:00:00.000Z",
@@ -9195,11 +9429,11 @@
       "cardinality": "one",
       "storage": "stored",
       "fieldId": "10000000-0000-4000-8000-00000000000a",
-      "itemId": "00000000-0000-4000-8000-000000000052",
+      "itemId": "00000000-0000-4000-8000-000000000056",
       "item": {
-        "id": "00000000-0000-4000-8000-000000000052",
+        "id": "00000000-0000-4000-8000-000000000056",
         "revision": 2,
-        "seq": 43,
+        "seq": 45,
         "name": "shortTextOne cleared",
         "typeId": "10000000-0000-4000-8000-000000000001",
         "catalogueRevision": null,
@@ -9218,11 +9452,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-000000000052"
+                "itemId": "00000000-0000-4000-8000-000000000056"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000052"]
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000056"]
           },
           {
             "fieldId": "10000000-0000-4000-8000-000000000021",
@@ -9235,11 +9469,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-000000000052"
+                "itemId": "00000000-0000-4000-8000-000000000056"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000052"]
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000056"]
           }
         ],
         "fields": {},
@@ -9267,9 +9501,9 @@
       "fieldValue": null,
       "computedValue": null,
       "command": {
-        "mutationId": "00000000-0000-4000-8000-000000000054",
+        "mutationId": "00000000-0000-4000-8000-000000000058",
         "op": "item.edit",
-        "entityId": "00000000-0000-4000-8000-000000000052",
+        "entityId": "00000000-0000-4000-8000-000000000056",
         "baseRevision": 1,
         "dependsOn": [],
         "clientTime": "2026-09-24T00:00:00.000Z",
@@ -9290,11 +9524,11 @@
       "cardinality": "one",
       "storage": "computed",
       "fieldId": "10000000-0000-4000-8000-000000000020",
-      "itemId": "00000000-0000-4000-8000-000000000015",
+      "itemId": "00000000-0000-4000-8000-000000000019",
       "item": {
-        "id": "00000000-0000-4000-8000-000000000015",
+        "id": "00000000-0000-4000-8000-000000000019",
         "revision": 1,
-        "seq": 10,
+        "seq": 12,
         "name": "integer one (computed dependency)",
         "typeId": "10000000-0000-4000-8000-000000000001",
         "catalogueRevision": 2,
@@ -9317,12 +9551,12 @@
             "values": [800],
             "dependencies": [
               {
-                "itemId": "00000000-0000-4000-8000-000000000015",
+                "itemId": "00000000-0000-4000-8000-000000000019",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
                 "revision": 1
               }
             ],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000015"]
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000019"]
           },
           {
             "fieldId": "10000000-0000-4000-8000-000000000021",
@@ -9334,12 +9568,12 @@
             "missingInputs": [],
             "dependencies": [
               {
-                "itemId": "00000000-0000-4000-8000-000000000015",
+                "itemId": "00000000-0000-4000-8000-000000000019",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
                 "revision": 1
               }
             ],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000015"]
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000019"]
           }
         ],
         "fields": {},
@@ -9373,17 +9607,17 @@
         "values": [800],
         "dependencies": [
           {
-            "itemId": "00000000-0000-4000-8000-000000000015",
+            "itemId": "00000000-0000-4000-8000-000000000019",
             "fieldId": "10000000-0000-4000-8000-00000000000e",
             "revision": 1
           }
         ],
-        "traversedItemIds": ["00000000-0000-4000-8000-000000000015"]
+        "traversedItemIds": ["00000000-0000-4000-8000-000000000019"]
       },
       "command": {
-        "mutationId": "00000000-0000-4000-8000-000000000016",
+        "mutationId": "00000000-0000-4000-8000-00000000001a",
         "op": "item.create",
-        "entityId": "00000000-0000-4000-8000-000000000015",
+        "entityId": "00000000-0000-4000-8000-000000000019",
         "baseRevision": null,
         "dependsOn": [],
         "clientTime": "2026-09-24T00:00:00.000Z",
@@ -9414,11 +9648,11 @@
       "cardinality": "one",
       "storage": "computed",
       "fieldId": "10000000-0000-4000-8000-000000000021",
-      "itemId": "00000000-0000-4000-8000-000000000015",
+      "itemId": "00000000-0000-4000-8000-000000000019",
       "item": {
-        "id": "00000000-0000-4000-8000-000000000015",
+        "id": "00000000-0000-4000-8000-000000000019",
         "revision": 1,
-        "seq": 10,
+        "seq": 12,
         "name": "integer one (computed dependency)",
         "typeId": "10000000-0000-4000-8000-000000000001",
         "catalogueRevision": 2,
@@ -9441,12 +9675,12 @@
             "values": [800],
             "dependencies": [
               {
-                "itemId": "00000000-0000-4000-8000-000000000015",
+                "itemId": "00000000-0000-4000-8000-000000000019",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
                 "revision": 1
               }
             ],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000015"]
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000019"]
           },
           {
             "fieldId": "10000000-0000-4000-8000-000000000021",
@@ -9458,12 +9692,12 @@
             "missingInputs": [],
             "dependencies": [
               {
-                "itemId": "00000000-0000-4000-8000-000000000015",
+                "itemId": "00000000-0000-4000-8000-000000000019",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
                 "revision": 1
               }
             ],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000015"]
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000019"]
           }
         ],
         "fields": {},
@@ -9499,17 +9733,17 @@
         "missingInputs": [],
         "dependencies": [
           {
-            "itemId": "00000000-0000-4000-8000-000000000015",
+            "itemId": "00000000-0000-4000-8000-000000000019",
             "fieldId": "10000000-0000-4000-8000-00000000000e",
             "revision": 1
           }
         ],
-        "traversedItemIds": ["00000000-0000-4000-8000-000000000015"]
+        "traversedItemIds": ["00000000-0000-4000-8000-000000000019"]
       },
       "command": {
-        "mutationId": "00000000-0000-4000-8000-000000000016",
+        "mutationId": "00000000-0000-4000-8000-00000000001a",
         "op": "item.create",
-        "entityId": "00000000-0000-4000-8000-000000000015",
+        "entityId": "00000000-0000-4000-8000-000000000019",
         "baseRevision": null,
         "dependsOn": [],
         "clientTime": "2026-09-24T00:00:00.000Z",
@@ -9540,11 +9774,11 @@
       "cardinality": "one",
       "storage": "computed",
       "fieldId": "10000000-0000-4000-8000-000000000020",
-      "itemId": "00000000-0000-4000-8000-000000000055",
+      "itemId": "00000000-0000-4000-8000-000000000059",
       "item": {
-        "id": "00000000-0000-4000-8000-000000000055",
+        "id": "00000000-0000-4000-8000-000000000059",
         "revision": 2,
-        "seq": 45,
+        "seq": 47,
         "name": "computed overridden",
         "typeId": "10000000-0000-4000-8000-000000000001",
         "catalogueRevision": 2,
@@ -9582,11 +9816,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-000000000055"
+                "itemId": "00000000-0000-4000-8000-000000000059"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000055"]
+            "traversedItemIds": ["00000000-0000-4000-8000-000000000059"]
           }
         ],
         "fields": {},
@@ -9625,9 +9859,9 @@
         "traversedItemIds": []
       },
       "command": {
-        "mutationId": "00000000-0000-4000-8000-000000000057",
+        "mutationId": "00000000-0000-4000-8000-00000000005b",
         "op": "item.setOverride",
-        "entityId": "00000000-0000-4000-8000-000000000055",
+        "entityId": "00000000-0000-4000-8000-000000000059",
         "baseRevision": 1,
         "dependsOn": [],
         "clientTime": "2026-09-24T00:00:00.000Z",
@@ -9644,11 +9878,11 @@
       "cardinality": "one",
       "storage": "computed",
       "fieldId": "10000000-0000-4000-8000-000000000020",
-      "itemId": "00000000-0000-4000-8000-000000000058",
+      "itemId": "00000000-0000-4000-8000-00000000005c",
       "item": {
-        "id": "00000000-0000-4000-8000-000000000058",
+        "id": "00000000-0000-4000-8000-00000000005c",
         "revision": 1,
-        "seq": 46,
+        "seq": 48,
         "name": "computed unavailable",
         "typeId": "10000000-0000-4000-8000-000000000001",
         "catalogueRevision": null,
@@ -9667,11 +9901,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-000000000058"
+                "itemId": "00000000-0000-4000-8000-00000000005c"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000058"]
+            "traversedItemIds": ["00000000-0000-4000-8000-00000000005c"]
           },
           {
             "fieldId": "10000000-0000-4000-8000-000000000021",
@@ -9684,11 +9918,11 @@
               {
                 "reason": "missing_dependency",
                 "fieldId": "10000000-0000-4000-8000-00000000000e",
-                "itemId": "00000000-0000-4000-8000-000000000058"
+                "itemId": "00000000-0000-4000-8000-00000000005c"
               }
             ],
             "dependencies": [],
-            "traversedItemIds": ["00000000-0000-4000-8000-000000000058"]
+            "traversedItemIds": ["00000000-0000-4000-8000-00000000005c"]
           }
         ],
         "fields": {},
@@ -9725,16 +9959,16 @@
           {
             "reason": "missing_dependency",
             "fieldId": "10000000-0000-4000-8000-00000000000e",
-            "itemId": "00000000-0000-4000-8000-000000000058"
+            "itemId": "00000000-0000-4000-8000-00000000005c"
           }
         ],
         "dependencies": [],
-        "traversedItemIds": ["00000000-0000-4000-8000-000000000058"]
+        "traversedItemIds": ["00000000-0000-4000-8000-00000000005c"]
       },
       "command": {
-        "mutationId": "00000000-0000-4000-8000-000000000059",
+        "mutationId": "00000000-0000-4000-8000-00000000005d",
         "op": "item.create",
-        "entityId": "00000000-0000-4000-8000-000000000058",
+        "entityId": "00000000-0000-4000-8000-00000000005c",
         "baseRevision": null,
         "dependsOn": [],
         "clientTime": "2026-09-24T00:00:00.000Z",
@@ -9760,11 +9994,11 @@
       "cardinality": "one",
       "storage": "stored",
       "fieldId": "10000000-0000-4000-8000-000000000022",
-      "itemId": "00000000-0000-4000-8000-00000000004e",
+      "itemId": "00000000-0000-4000-8000-000000000052",
       "item": {
-        "id": "00000000-0000-4000-8000-00000000004e",
+        "id": "00000000-0000-4000-8000-000000000052",
         "revision": 1,
-        "seq": 40,
+        "seq": 42,
         "name": "child type with inherited required field",
         "typeId": "10000000-0000-4000-8000-000000000003",
         "catalogueRevision": 2,
@@ -9809,9 +10043,9 @@
       },
       "computedValue": null,
       "command": {
-        "mutationId": "00000000-0000-4000-8000-00000000004f",
+        "mutationId": "00000000-0000-4000-8000-000000000053",
         "op": "item.create",
-        "entityId": "00000000-0000-4000-8000-00000000004e",
+        "entityId": "00000000-0000-4000-8000-000000000052",
         "baseRevision": null,
         "dependsOn": [],
         "clientTime": "2026-09-24T00:00:00.000Z",
@@ -9840,13 +10074,15 @@
   "negativeVectors": [
     {
       "category": "malformed_value",
-      "name": "short_text empty string",
+      "name": "short_text over its scalar limit",
       "kind": "short_text",
       "fieldValue": {
         "fieldId": "10000000-0000-4000-8000-00000000000a",
         "source": "stored",
         "catalogueRevision": 2,
-        "values": [""]
+        "values": [
+          "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        ]
       },
       "producerRejection": "invalid"
     },
@@ -10115,9 +10351,9 @@
       "category": "missing_required_field",
       "name": "child type missing inherited required field",
       "command": {
-        "mutationId": "00000000-0000-4000-8000-000000000087",
+        "mutationId": "00000000-0000-4000-8000-00000000008b",
         "op": "item.create",
-        "entityId": "00000000-0000-4000-8000-000000000086",
+        "entityId": "00000000-0000-4000-8000-00000000008a",
         "baseRevision": null,
         "dependsOn": [],
         "clientTime": "2026-09-24T00:00:00.000Z",

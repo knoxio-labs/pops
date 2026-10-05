@@ -43,7 +43,9 @@ function literalField(
 
 function literalAccepts(value: PrimitiveWireValue, expected: ExpressionValueType): boolean {
   try {
-    const canonical = canonicalizeValue(literalField(value, expected), value).value;
+    const canonical = canonicalizeValue(literalField(value, expected), value, {
+      trimText: false,
+    }).value;
     return JSON.stringify(canonical) === JSON.stringify(value);
   } catch {
     return false;
