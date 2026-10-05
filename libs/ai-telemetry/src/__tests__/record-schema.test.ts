@@ -20,11 +20,12 @@ describe('InferenceRecordSchema', () => {
     expect(InferenceRecordSchema.parse(valid)).toMatchObject(valid);
   });
 
-  it('accepts optional contextId/promptVersion/metadata', () => {
+  it('accepts optional contextId/promptVersion/stopReason/metadata', () => {
     const parsed = InferenceRecordSchema.safeParse({
       ...valid,
       contextId: 'ingest_source:42',
       promptVersion: 'v3',
+      stopReason: 'max_tokens',
       metadata: { prompt_version: 'v3' },
     });
     expect(parsed.success).toBe(true);
@@ -41,6 +42,13 @@ describe('InferenceRecordSchema', () => {
 
   it('rejects a contextId containing whitespace (PII guard)', () => {
     expect(InferenceRecordSchema.safeParse({ ...valid, contextId: 'has space' }).success).toBe(
+      false
+    );
+  });
+
+  it('rejects empty or oversized stop reasons', () => {
+    expect(InferenceRecordSchema.safeParse({ ...valid, stopReason: '' }).success).toBe(false);
+    expect(InferenceRecordSchema.safeParse({ ...valid, stopReason: 'x'.repeat(129) }).success).toBe(
       false
     );
   });

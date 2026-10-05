@@ -80,8 +80,21 @@ export interface CreateInferenceLogInput {
   cached?: number;
   contextId?: string | null;
   errorMessage?: string | null;
+  stopReason?: string | null;
   metadata?: string | null;
   createdAt?: string;
+}
+
+function buildOptionalInferenceLogFields(
+  input: CreateInferenceLogInput
+): Pick<AiInferenceLogInsert, 'domain' | 'contextId' | 'errorMessage' | 'stopReason' | 'metadata'> {
+  return {
+    domain: input.domain ?? null,
+    contextId: input.contextId ?? null,
+    errorMessage: input.errorMessage ?? null,
+    stopReason: input.stopReason ?? null,
+    metadata: input.metadata ?? null,
+  };
 }
 
 function buildInferenceLogInsert(input: CreateInferenceLogInput): AiInferenceLogInsert {
@@ -89,16 +102,13 @@ function buildInferenceLogInsert(input: CreateInferenceLogInput): AiInferenceLog
     provider: input.provider,
     model: input.model,
     operation: input.operation,
-    domain: input.domain ?? null,
+    ...buildOptionalInferenceLogFields(input),
     inputTokens: input.inputTokens ?? 0,
     outputTokens: input.outputTokens ?? 0,
     costUsd: input.costUsd ?? 0,
     latencyMs: input.latencyMs ?? 0,
     status: input.status ?? 'success',
     cached: input.cached ?? 0,
-    contextId: input.contextId ?? null,
-    errorMessage: input.errorMessage ?? null,
-    metadata: input.metadata ?? null,
     createdAt: input.createdAt ?? new Date().toISOString(),
   };
 }

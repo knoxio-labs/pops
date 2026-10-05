@@ -27,6 +27,7 @@ fn golden_fixture_round_trips_byte_for_byte() {
 
     assert_eq!(record.provider, "anthropic");
     assert_eq!(record.status, InferenceStatus::BudgetBlocked);
+    assert_eq!(record.stop_reason.as_deref(), Some("end_turn"));
     assert!(record.cached);
     assert_eq!(record.context_id.as_deref(), Some("import_batch:42"));
     assert_eq!(record.prompt_version.as_deref(), Some("v3"));
@@ -68,6 +69,7 @@ fn absent_optionals_are_omitted_not_null() {
         cost_usd: 0.001,
         latency_ms: 120,
         status: InferenceStatus::Success,
+        stop_reason: None,
         cached: false,
         context_id: None,
         prompt_version: None,
@@ -84,6 +86,18 @@ fn absent_optionals_are_omitted_not_null() {
         "no field should serialize to null: {json}"
     );
     assert!(json.contains("\"cached\":false"));
+    assert!(!json.contains("stopReason"));
+}
+
+#[test]
+fn missing_stop_reason_deserializes_as_none() {
+    let old_record = r#"{"provider":"anthropic","model":"claude-haiku-4-5","operation":"categorize","domain":"finance","inputTokens":10,"outputTokens":5,"costUsd":0.001,"latencyMs":120,"status":"success","cached":false}"#;
+
+    let record: InferenceRecord = serde_json::from_str(old_record).unwrap();
+
+    assert_eq!(record.stop_reason, None);
+    let serialized = serde_json::to_string(&record).unwrap();
+    assert!(!serialized.contains("stopReason"));
 }
 
 /// `compute_cost_usd` matches the TS arithmetic exactly.
@@ -174,6 +188,7 @@ async fn call_with_logging_reports_success() {
                 input_tokens: 1_000_000,
                 output_tokens: 1_000_000,
             },
+            stop_reason: Some("end_turn".into()),
         })
     })
     .await
@@ -182,6 +197,7 @@ async fn call_with_logging_reports_success() {
 
     let record = await_one_record(&sink).await;
     assert_eq!(record.status, InferenceStatus::Success);
+    assert_eq!(record.stop_reason.as_deref(), Some("end_turn"));
     assert_eq!(record.input_tokens, 1_000_000);
     assert!((record.cost_usd - 18.0).abs() < 1e-9);
 }

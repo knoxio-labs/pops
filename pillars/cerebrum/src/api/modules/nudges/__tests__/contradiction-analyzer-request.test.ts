@@ -5,6 +5,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  captureTelemetryRecord,
   CURRENT_MODEL,
   HAIKU_MODEL,
   restoreTelemetry,
@@ -74,5 +75,14 @@ describe('AnthropicContradictionAnalyzer request shape', () => {
       engramB: 'eng_b',
       conflict: 'A says Postgres, B says SQLite',
     });
+  });
+
+  it('reports the provider stop reason for contradiction analysis', async () => {
+    const report = captureTelemetryRecord();
+    createMock.mockResolvedValue(textMessage(VERDICT));
+
+    await analyze();
+
+    expect((await report).stopReason).toBe('end_turn');
   });
 });

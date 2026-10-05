@@ -38,5 +38,6 @@ describe('InferenceRecord golden fixture (Rust ↔ TS parity)', () => {
     expect(record.inputTokens).toBe(1280);
     expect(record.outputTokens).toBe(640);
     expect(record.contextId).toBe('import_batch:42');
+    expect(record.stopReason).toBe('end_turn');
   });
 });

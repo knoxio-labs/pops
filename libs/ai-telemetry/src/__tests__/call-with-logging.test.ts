@@ -60,7 +60,11 @@ describe('callWithLogging', () => {
       {
         ...ctx,
         call: () =>
-          Promise.resolve({ response: 1, usage: { inputTokens: 1_000_000, outputTokens: 0 } }),
+          Promise.resolve({
+            response: 1,
+            usage: { inputTokens: 1_000_000, outputTokens: 0 },
+            stopReason: 'max_tokens',
+          }),
       },
       { report, lookupPricing: pricing }
     );
@@ -72,6 +76,7 @@ describe('callWithLogging', () => {
       outputTokens: 0,
       costUsd: 3,
       cached: false,
+      stopReason: 'max_tokens',
     });
   });
 

@@ -2645,6 +2645,11 @@
                   "status": {
                     "enum": ["success", "error", "timeout", "budget-blocked"],
                     "type": "string"
+                  },
+                  "stopReason": {
+                    "maxLength": 128,
+                    "minLength": 1,
+                    "type": "string"
                   }
                 },
                 "required": [

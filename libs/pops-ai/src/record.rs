@@ -40,6 +40,9 @@ pub struct InferenceRecord {
     pub cost_usd: f64,
     pub latency_ms: u32,
     pub status: InferenceStatus,
+    /// Provider-reported terminal reason, when available.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub stop_reason: Option<String>,
     /// Stored as 0|1 server-side.
     pub cached: bool,
     /// Opaque low-cardinality FK to the originating row; no whitespace.
@@ -95,6 +98,7 @@ impl InferenceContext {
             cost_usd,
             latency_ms,
             status,
+            stop_reason: None,
             cached: false,
             context_id: self.context_id.clone(),
             prompt_version: self.prompt_version.clone(),
@@ -112,10 +116,12 @@ pub struct Usage {
     pub output_tokens: u32,
 }
 
-/// What a wrapped non-streaming Claude call hands back — the response plus its
-/// token usage. Mirrors TS `CallResult<T>`.
+/// What a wrapped non-streaming Claude call hands back — the response, token
+/// usage, and optional provider stop reason. Mirrors TS `CallResult<T>`.
 #[derive(Debug, Clone)]
 pub struct CallResult<T> {
     pub response: T,
     pub usage: Usage,
+    /// Provider-reported terminal reason, when available.
+    pub stop_reason: Option<String>,
 }

@@ -45,6 +45,7 @@ export async function* callWithLoggingStream<E>(
   const usage = opts.extractUsage(last);
   const inputTokens = usage?.inputTokens ?? 0;
   const outputTokens = usage?.outputTokens ?? 0;
+  const stopReason = opts.extractStopReason?.();
   void (async (): Promise<void> => {
     const pricing = usage
       ? await deps.lookupPricing(opts.provider, opts.model).catch(() => null)
@@ -58,6 +59,7 @@ export async function* callWithLoggingStream<E>(
       latencyMs,
       status: 'success',
       cached: false,
+      ...(stopReason !== undefined ? { stopReason } : {}),
     });
   })().catch((error: unknown) => warn('ai-telemetry: cost/report failed', error));
 }

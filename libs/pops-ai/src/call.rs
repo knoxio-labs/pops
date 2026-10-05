@@ -27,11 +27,17 @@ pub struct CallDeps {
 /// Schedules a success report off the hot path: resolves pricing, computes
 /// cost, and fires the record. A pricing miss yields `cost_usd: 0.0`, matching
 /// the record the TS wrapper emits.
-fn spawn_success_report(deps: CallDeps, ctx: InferenceContext, usage: Usage, latency_ms: u32) {
+fn spawn_success_report(
+    deps: CallDeps,
+    ctx: InferenceContext,
+    usage: Usage,
+    stop_reason: Option<String>,
+    latency_ms: u32,
+) {
     tokio::spawn(async move {
         let pricing = deps.lookup_pricing.lookup(&ctx.provider, &ctx.model).await;
         let cost = compute_cost_usd(usage.input_tokens, usage.output_tokens, pricing.as_ref());
-        let record = ctx.into_record(
+        let mut record = ctx.into_record(
             InferenceStatus::Success,
             usage.input_tokens,
             usage.output_tokens,
@@ -39,6 +45,7 @@ fn spawn_success_report(deps: CallDeps, ctx: InferenceContext, usage: Usage, lat
             latency_ms,
             None,
         );
+        record.stop_reason = stop_reason;
         deps.sink.report(record).await;
     });
 }
@@ -93,8 +100,12 @@ where
 {
     let start = Instant::now();
     match call().await {
-        Ok(CallResult { response, usage }) => {
-            spawn_success_report(deps, ctx, usage, elapsed_ms(start));
+        Ok(CallResult {
+            response,
+            usage,
+            stop_reason,
+        }) => {
+            spawn_success_report(deps, ctx, usage, stop_reason, elapsed_ms(start));
             Ok(response)
         }
         Err(error) => {
@@ -182,7 +193,7 @@ where
                         input_tokens: 0,
                         output_tokens: 0,
                     });
-                    spawn_success_report(deps, ctx, usage, elapsed_ms(this.start));
+                    spawn_success_report(deps, ctx, usage, None, elapsed_ms(this.start));
                 }
                 Poll::Ready(None)
             }

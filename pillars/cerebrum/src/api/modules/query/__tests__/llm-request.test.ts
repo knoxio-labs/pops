@@ -5,6 +5,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  captureTelemetryRecord,
   collect,
   CURRENT_MODEL,
   fakeMessageStream,
@@ -78,6 +79,14 @@ describe('AnthropicQueryLlm.complete', () => {
     expect(await new AnthropicQueryLlm().complete('sys', 'why?')).toBe('Because SQLite.');
   });
 
+  it('reports the provider stop reason for a one-shot completion', async () => {
+    const report = captureTelemetryRecord();
+    createMock.mockResolvedValue(textMessage('Because SQLite.'));
+
+    expect(await new AnthropicQueryLlm().complete('sys', 'why?')).toBe('Because SQLite.');
+    expect((await report).stopReason).toBe('end_turn');
+  });
+
   it('answers a refusal with the refusal message, never an empty answer', async () => {
     createMock.mockResolvedValue(refusalMessage());
     expect(await new AnthropicQueryLlm().complete('sys', 'why?')).toBe(QUERY_REFUSAL_MSG);
@@ -120,11 +129,13 @@ describe('AnthropicQueryStreamLlm.stream', () => {
   });
 
   it('adds nothing to a stream that completed normally', async () => {
+    const report = captureTelemetryRecord();
     streamMock.mockReturnValue(fakeMessageStream(['Hello'], textMessage('Hello')));
     const chunks = await collect(new AnthropicQueryStreamLlm().stream('sys', 'why?'));
     expect(chunks).toEqual([
       { kind: 'delta', text: 'Hello' },
       { kind: 'final', tokensIn: 20, tokensOut: 9 },
     ]);
+    expect((await report).stopReason).toBe('end_turn');
   });
 });

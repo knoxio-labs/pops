@@ -143,6 +143,7 @@ describe('read', () => {
     expect(record.status).toBe('success');
     expect(record.inputTokens).toBe(321);
     expect(record.outputTokens).toBe(88);
+    expect(record.stopReason).toBe('end_turn');
   });
 
   it('sends a pdf part as a base64 document content block', async () => {

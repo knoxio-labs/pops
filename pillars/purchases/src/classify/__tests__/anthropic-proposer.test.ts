@@ -43,9 +43,15 @@ const BATCH: readonly ProposalCandidate[] = [
   },
 ];
 
-function anthropicMessage(text: string, inputTokens = 100, outputTokens = 20) {
+function anthropicMessage(
+  text: string,
+  inputTokens = 100,
+  outputTokens = 20,
+  stopReason: string = 'end_turn'
+) {
   return {
     content: [{ type: 'text', text }],
+    stop_reason: stopReason,
     usage: { input_tokens: inputTokens, output_tokens: outputTokens },
   };
 }
@@ -152,6 +158,7 @@ describe('propose', () => {
       status: 'success',
       inputTokens: 321,
       outputTokens: 88,
+      stopReason: 'end_turn',
     });
   });
 

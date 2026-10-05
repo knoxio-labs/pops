@@ -155,6 +155,7 @@ export class AnthropicEgoLlm implements EgoLlm {
                 inputTokens: created.usage.input_tokens,
                 outputTokens: created.usage.output_tokens,
               },
+              ...(created.stop_reason !== null ? { stopReason: created.stop_reason } : {}),
             };
           },
         },
@@ -194,17 +195,22 @@ export class AnthropicEgoLlm implements EgoLlm {
       return;
     }
 
+    let stopReason: string | undefined;
     yield* callWithLoggingStream(
       {
         provider: ANTHROPIC_PROVIDER,
         model,
         operation: 'ego.stream',
         domain: CEREBRUM_DOMAIN,
-        stream: () => egoStreamEvents(messageStream),
+        stream: () =>
+          egoStreamEvents(messageStream, (reason) => {
+            stopReason = reason;
+          }),
         extractUsage: (last) =>
           last?.type === 'done'
             ? { inputTokens: last.tokensIn, outputTokens: last.tokensOut }
             : null,
+        extractStopReason: () => stopReason,
       },
       cerebrumTelemetryDeps()
     );
