@@ -13,6 +13,8 @@ internal enum EgoConversationListPresentation {
             "Too many requests. Wait \(waitDuration(retryAfterSeconds)) before trying again."
         case .contractMismatch:
             "Ego returned a response this app can’t read."
+        case .requestRejected:
+            "This version of Pops sent a request the server cannot accept. Update the app."
         case .conflict:
             "This conversation changed. Reload it before trying again."
         case .transport:

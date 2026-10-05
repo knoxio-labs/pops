@@ -18,6 +18,8 @@ internal enum EgoThreadModelFailurePresentation {
             return (EgoConversationListPresentation.failureMessage(for: error), true)
         case .contractMismatch:
             return ("Ego returned a response this app can't read.", false)
+        case .requestRejected:
+            return (EgoConversationListPresentation.failureMessage(for: error), false)
         case .conflict:
             return ("This conversation changed. Reload it before trying again.", false)
         case .transport(let failure):
