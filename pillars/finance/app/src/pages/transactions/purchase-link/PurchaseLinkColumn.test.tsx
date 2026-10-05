@@ -328,6 +328,18 @@ describe('when the purchases pillar does not answer', () => {
     expect(visibleCaveat).toBeVisible();
   });
 
+  it('gives the unavailable heading trigger a 44px touch target', async () => {
+    pillarIsDown();
+    renderTable();
+
+    await waitFor(() => expect(purchaseHeader()).toHaveTextContent(UNAVAILABLE));
+
+    const trigger = screen.getByText(UNAVAILABLE).parentElement;
+    if (trigger === null) throw new Error('missing purchase-link heading hint');
+
+    expect(trigger).toHaveClass('min-h-11', 'min-w-11');
+  });
+
   it('reads differently from a page where no order explains anything', async () => {
     // The whole point. Both pages draw an empty column; only one of them is
     // reporting a fact about the transactions.
