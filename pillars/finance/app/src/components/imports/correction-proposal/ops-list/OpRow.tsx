@@ -1,6 +1,6 @@
 import { Trash2 } from 'lucide-react';
 
-import { Badge, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@pops/ui';
+import { Badge, Button, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@pops/ui';
 
 import { opKindBadgeVariant, opKindLabel, opSummary } from '../../lib/correction-utils';
 
@@ -30,12 +30,16 @@ export function OpRow({ op, selected, disabled, onSelect, onDelete }: OpRowProps
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <button
+                    <Button
                       type="button"
+                      variant="ghost"
+                      size="icon"
                       aria-label="Preview status"
                       onClick={(event) => event.stopPropagation()}
-                      className="h-1.5 w-1.5 appearance-none rounded-full border-0 bg-warning p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    />
+                      className="shrink-0 p-0 text-warning hover:bg-transparent"
+                    >
+                      <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-warning" />
+                    </Button>
                   </TooltipTrigger>
                   <TooltipContent>Unsaved edits — preview stale</TooltipContent>
                 </Tooltip>

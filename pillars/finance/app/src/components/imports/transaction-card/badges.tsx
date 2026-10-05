@@ -52,7 +52,7 @@ function AiMatchedBadge({ confidence }: { confidence: number | undefined }) {
           >
             <button
               type="button"
-              className="appearance-none border-0 bg-transparent p-0 font-sans focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="min-h-11 min-w-11 appearance-none border-0 bg-transparent p-0 font-sans focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <Sparkles className="w-3 h-3" aria-hidden="true" />
               AI-matched

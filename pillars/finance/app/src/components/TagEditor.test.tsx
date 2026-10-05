@@ -34,6 +34,7 @@ describe('TagEditor', () => {
 
     await user.click(screen.getByRole('button', { name: /Edit tags/i }));
     const marker = screen.getByRole('button', { name: 'Rule' });
+    expect(marker).toHaveClass('min-h-11', 'min-w-11');
     for (let index = 0; index < 8 && !marker.matches(':focus'); index += 1) {
       await user.tab();
     }

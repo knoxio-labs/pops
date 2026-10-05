@@ -103,6 +103,7 @@ describe('HeaderBadges — AI-matched badge (CF037/#3655)', () => {
       />
     );
     const badge = screen.getByRole('button', { name: /AI-matched/ });
+    expect(badge).toHaveClass('min-h-11', 'min-w-11');
     expect(badge).toHaveAttribute('data-variant', 'destructive');
     expect(badge).not.toHaveAttribute('title');
   });

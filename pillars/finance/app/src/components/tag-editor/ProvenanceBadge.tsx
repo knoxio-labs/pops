@@ -11,7 +11,7 @@ export function ProvenanceBadge({ icon, visibleText, accessibleText }: SourceMar
           <button
             type="button"
             aria-label={visibleText}
-            className="inline-flex appearance-none items-center gap-0.5 border-0 bg-transparent p-0 font-sans text-2xs uppercase tracking-wide text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="inline-flex min-h-11 min-w-11 appearance-none items-center justify-center gap-0.5 border-0 bg-transparent p-0 font-sans text-2xs uppercase tracking-wide text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <span aria-hidden="true">{icon}</span>
             {visibleText}
