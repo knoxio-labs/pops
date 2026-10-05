@@ -7,9 +7,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { openCerebrumDb, type OpenedCerebrumDb } from '../../db/index.js';
 import { createCerebrumApiApp } from '../app.js';
-import { cerebrumScopeMap } from '../middleware/service-account-scope.js';
+import { cerebrumRawScopeMap, cerebrumScopeMap } from '../middleware/service-account-scope.js';
 import { createTestTransport } from './test-http.js';
-import { makeCerebrumApiDeps } from './test-utils.js';
+import { makeCerebrumApiDeps, makeFakeEgoLlm } from './test-utils.js';
 
 import type { ServiceAccountVerification, ServiceAccountVerifier } from '@pops/pillar-sdk/server';
 
@@ -42,7 +42,10 @@ const grantedScopes = (scopes: readonly string[]): ServiceAccountVerification =>
 
 function app(verify: ServiceAccountVerifier) {
   return createCerebrumApiApp(
-    makeCerebrumApiDeps({ cerebrumDb, tmpDir }, { serviceAccountVerifier: verify })
+    makeCerebrumApiDeps(
+      { cerebrumDb, tmpDir },
+      { serviceAccountVerifier: verify, egoLlm: makeFakeEgoLlm() }
+    )
   );
 }
 
@@ -52,6 +55,17 @@ describe('Cerebrum scope map', () => {
     expect(cerebrumScopeMap.routes.every((route) => route.scope.startsWith('cerebrum.'))).toBe(
       true
     );
+  });
+});
+
+describe('Cerebrum raw scope map', () => {
+  it('requires cerebrum.ego.chatStream for the chat stream and nothing else', () => {
+    expect(cerebrumRawScopeMap.routes).toHaveLength(1);
+    expect(cerebrumRawScopeMap.routes[0]).toMatchObject({
+      scope: 'cerebrum.ego.chatStream',
+      method: 'POST',
+      path: '/ego/chat/stream',
+    });
   });
 });
 
@@ -119,6 +133,51 @@ describe('raw routes outside the contract', () => {
 
     expect(health.status).toBe(200);
     expect(openapi.status).toBe(200);
+    expect(verify).not.toHaveBeenCalled();
+  });
+});
+
+describe('Ego chat stream', () => {
+  const conversationCount = () =>
+    cerebrumDb.raw.prepare('SELECT COUNT(*) AS n FROM conversations').get() as { n: number };
+
+  it('admits a key granted cerebrum.ego', async () => {
+    const response = await requestOn(app(verifierReturning(grantedScopes(['cerebrum.ego']))))
+      .post('/ego/chat/stream')
+      .set('x-api-key', TEST_KEY)
+      .send({ message: 'hello' });
+
+    expect(response.status).toBe(200);
+    expect(response.headers['content-type']).toContain('text/event-stream');
+  });
+
+  it('rejects a key without an Ego grant with 403 and creates no conversation', async () => {
+    const response = await requestOn(app(verifierReturning(grantedScopes(['cerebrum.templates']))))
+      .post('/ego/chat/stream')
+      .set('x-api-key', TEST_KEY)
+      .send({ message: 'hello' });
+
+    expect(response.status).toBe(403);
+    expect(conversationCount().n).toBe(0);
+  });
+
+  it('rejects an unknown or revoked key with 401', async () => {
+    const response = await requestOn(app(verifierReturning({ outcome: 'rejected' })))
+      .post('/ego/chat/stream')
+      .set('x-api-key', TEST_KEY)
+      .send({ message: 'hello' });
+
+    expect(response.status).toBe(401);
+    expect(conversationCount().n).toBe(0);
+  });
+
+  it('serves a request with no key without registry verification', async () => {
+    const verify = vi.fn(verifierReturning({ outcome: 'rejected' }));
+    const response = await requestOn(app(verify))
+      .post('/ego/chat/stream')
+      .send({ message: 'hello' });
+
+    expect(response.status).toBe(200);
     expect(verify).not.toHaveBeenCalled();
   });
 });

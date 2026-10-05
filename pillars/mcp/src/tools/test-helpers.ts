@@ -31,6 +31,7 @@ export const mockPillarFinance = {
     },
     accounts: {
       list: vi.fn().mockResolvedValue(callOk({ data: [], pagination: { total: 0 } })),
+      get: vi.fn().mockResolvedValue(callOk({ data: null })),
     },
     checkpoints: {
       list: vi.fn().mockResolvedValue(callOk({ data: [] })),

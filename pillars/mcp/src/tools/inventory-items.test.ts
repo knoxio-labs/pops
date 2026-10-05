@@ -61,7 +61,19 @@ beforeEach(() => {
 
 describe('protocol-2 inventory reads', () => {
   it('lists generic items through the cursor-paged web surface', async () => {
-    await tool('inventory.items.list').handler({
+    const item = { id: ITEM_ID, itemName: 'MacBook' };
+    inventory.web.list.mockResolvedValueOnce(
+      callOk({
+        items: [item],
+        contentCounts: { [ITEM_ID]: { direct: 2, deep: 4 } },
+        nextCursor: 'cursor-2',
+        total: 3,
+        unfilteredTotal: 8,
+        hiddenInactiveCount: 5,
+      })
+    );
+
+    const result = await tool('inventory.items.list').handler({
       cursor: 'next',
       limit: 10,
       typeKey: 'dynamic',
@@ -78,6 +90,14 @@ describe('protocol-2 inventory reads', () => {
       locationId: undefined,
       containingItemId: 'container-1',
       includeInactive: true,
+    });
+    expect(parseResult(result)).toEqual({
+      items: [{ ...item, uri: `pops:inventory/item/${ITEM_ID}` }],
+      contentCounts: { [ITEM_ID]: { direct: 2, deep: 4 } },
+      nextCursor: 'cursor-2',
+      total: 3,
+      unfilteredTotal: 8,
+      hiddenInactiveCount: 5,
     });
   });
 
@@ -113,7 +133,10 @@ describe('protocol-2 inventory reads', () => {
       historyCursor: undefined,
       historyLimit: 25,
     });
-    expect(parseResult(result)).toEqual({ item, history: { events: [], nextCursor: null } });
+    expect(parseResult(result)).toEqual({
+      item: { ...item, uri: `pops:inventory/item/${ITEM_ID}` },
+      history: { events: [], nextCursor: null },
+    });
   });
 });
 

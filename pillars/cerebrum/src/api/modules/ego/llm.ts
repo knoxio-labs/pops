@@ -1,10 +1,11 @@
 /**
  * LLM port for the cerebrum ego conversation engine.
  *
- * Ego needs two capabilities from the model: a one-shot chat completion and a
- * token-by-token streaming completion (SSE). Both are modelled on the
- * {@link EgoLlm} port so the engine can be driven by a real Anthropic client in
- * production and by canned fakes in tests (tests MUST NOT reach a real API).
+ * Ego needs one capability from the model: a token-by-token streaming turn
+ * (SSE) that may carry tool definitions and reports the tool calls the model
+ * made. It is modelled on the {@link EgoLlm} port so the engine can be driven
+ * by a real Anthropic client in production and by canned fakes in tests (tests
+ * MUST NOT reach a real API).
  *
  * Deviations from the monolith (parity with the ingest slice):
  * - **Model overrides / settings**: the monolith reads
@@ -12,9 +13,8 @@
  *   model is a hardcoded constant with an optional `CEREBRUM_EGO_MODEL` env
  *   override and the chat token, effort and temperature knobs are constants.
  * - **Inference logging**: usage/cost/latency is reported to the ai pillar via
- *   `@pops/ai-telemetry` (`callWithLogging` for chat, `callWithLoggingStream`
- *   for the SSE stream — both fire-and-forget) plus the 429 backoff
- *   ({@link withRateLimitRetry}) for correctness.
+ *   `@pops/ai-telemetry` (`callWithLoggingStream`, fire-and-forget), one record
+ *   per model call.
  *
  * The request is built per model: temperature goes only to a model that still
  * accepts it and effort only to one that takes it, so an env override in either
@@ -23,12 +23,7 @@
  */
 import Anthropic from '@anthropic-ai/sdk';
 
-import {
-  callWithLogging,
-  callWithLoggingStream,
-  messageText,
-  samplingParams,
-} from '@pops/ai-telemetry';
+import { callWithLoggingStream, samplingParams } from '@pops/ai-telemetry';
 
 import {
   ANTHROPIC_PROVIDER,
@@ -36,11 +31,16 @@ import {
   cerebrumTelemetryDeps,
 } from '../ai-telemetry-deps.js';
 import { resolveAnthropicApiKey } from '../anthropic-key.js';
-import { withRateLimitRetry } from '../ingest/llm.js';
-import { effortParams, isRefusal } from '../llm-request.js';
-import { EGO_REFUSAL_MSG, egoStreamEvents } from './stream-events.js';
+import { effortParams } from '../llm-request.js';
+import { egoStreamEvents } from './stream-events.js';
 
 import type { MessageStream } from '@anthropic-ai/sdk/lib/MessageStream';
+import type {
+  ContentBlockParam,
+  MessageParam,
+  MessageStreamParams,
+  Tool,
+} from '@anthropic-ai/sdk/resources/messages/messages';
 
 export const DEFAULT_EGO_MODEL = 'claude-sonnet-5-5';
 
@@ -49,7 +49,6 @@ export const DEFAULT_EGO_MODEL = 'claude-sonnet-5-5';
 const CHAT_MAX_TOKENS = 8000;
 const CHAT_TEMPERATURE = 0.3;
 const CHAT_EFFORT = 'low';
-const LOG_CONTEXT = 'cerebrum-ego';
 
 const LLM_UNAVAILABLE_MSG =
   'I can help with that, but the LLM is currently unavailable. Please try again later.';
@@ -57,11 +56,29 @@ const LLM_ERROR_MSG = 'I encountered an error while generating a response. Pleas
 
 export type EgoChatMessage = { role: 'user' | 'assistant'; content: string };
 
-/** Response from a one-shot chat completion. */
-export interface EgoLlmResponse {
-  content: string;
-  tokensIn: number;
-  tokensOut: number;
+/** A message in the model's own request format, so tool blocks pass through untouched. */
+export type EgoMessage = MessageParam;
+
+/** A tool definition offered to the model for one turn. */
+export interface EgoLlmTool {
+  name: string;
+  description: string;
+  inputSchema: Record<string, unknown>;
+}
+
+/** A tool call the model made in its final message. */
+export interface EgoToolUse {
+  id: string;
+  name: string;
+  input: Record<string, unknown>;
+}
+
+/** One model call: the system prompt, the conversation so far and the tools on offer. */
+export interface EgoTurnRequest {
+  system: string;
+  messages: EgoMessage[];
+  tools?: EgoLlmTool[];
+  toolChoice?: 'auto' | 'none';
 }
 
 /** A partial text token yielded during streaming. */
@@ -76,20 +93,25 @@ export interface EgoStreamDone {
   fullText: string;
   tokensIn: number;
   tokensOut: number;
+  /** The final message's content array, untouched, to append as the assistant message of the next request. */
+  assistantContent: ContentBlockParam[];
+  /** Tool calls to run. Empty when the turn was refused or cut off. */
+  toolUses: EgoToolUse[];
+  stopReason: 'tool_use' | 'refusal' | 'max_tokens' | 'end';
 }
 
 export type EgoStreamEvent = EgoStreamChunk | EgoStreamDone;
 
 /**
- * Capability the ego engine depends on. The real implementation degrades to a
- * canned "unavailable" message (chat) / fallback events (stream) when no API
- * key is configured, so a missing key never throws.
+ * Capability the ego engine depends on. The real implementation degrades to
+ * fallback events when no API key is configured, so a missing key never
+ * throws.
  */
 export interface EgoLlm {
   /** Resolve the configured chat model id (env override → default). */
   model(): string;
-  chat(systemPrompt: string, messages: EgoChatMessage[]): Promise<EgoLlmResponse>;
-  stream(systemPrompt: string, messages: EgoChatMessage[]): AsyncGenerator<EgoStreamEvent>;
+  /** Run one model call, yielding text tokens and then a terminal `done`. */
+  stream(request: EgoTurnRequest): AsyncGenerator<EgoStreamEvent>;
 }
 
 function envModel(): string {
@@ -97,24 +119,39 @@ function envModel(): string {
   return value !== undefined && value !== '' ? value : DEFAULT_EGO_MODEL;
 }
 
-function chatRequest(
-  model: string,
-  systemPrompt: string,
-  messages: EgoChatMessage[]
-): Anthropic.Messages.MessageCreateParamsNonStreaming {
+function toolParams(request: EgoTurnRequest): Pick<MessageStreamParams, 'tools' | 'tool_choice'> {
+  if (request.tools === undefined || request.tools.length === 0) return {};
+  const tools: Tool[] = request.tools.map((tool) => ({
+    name: tool.name,
+    description: tool.description,
+    input_schema: { ...tool.inputSchema, type: 'object' },
+  }));
+  return { tools, tool_choice: { type: request.toolChoice ?? 'auto' } };
+}
+
+function turnParams(model: string, request: EgoTurnRequest): MessageStreamParams {
   return {
     model,
     max_tokens: CHAT_MAX_TOKENS,
     ...samplingParams(model, CHAT_TEMPERATURE),
     ...effortParams(model, CHAT_EFFORT),
-    system: systemPrompt,
-    messages,
+    system: request.system,
+    messages: request.messages,
+    ...toolParams(request),
   };
 }
 
 function* fallbackEvents(text: string): Generator<EgoStreamEvent> {
   yield { type: 'token', text };
-  yield { type: 'done', fullText: text, tokensIn: 0, tokensOut: 0 };
+  yield {
+    type: 'done',
+    fullText: text,
+    tokensIn: 0,
+    tokensOut: 0,
+    assistantContent: [{ type: 'text', text }],
+    toolUses: [],
+    stopReason: 'end',
+  };
 }
 
 /**
@@ -128,52 +165,7 @@ export class AnthropicEgoLlm implements EgoLlm {
     return envModel();
   }
 
-  async chat(systemPrompt: string, messages: EgoChatMessage[]): Promise<EgoLlmResponse> {
-    const apiKey = resolveAnthropicApiKey();
-    if (apiKey === undefined) {
-      console.warn('[cerebrum-ego] ANTHROPIC_API_KEY not set — returning unavailable message');
-      return { content: LLM_UNAVAILABLE_MSG, tokensIn: 0, tokensOut: 0 };
-    }
-
-    const client = new Anthropic({ apiKey, maxRetries: 0 });
-    const model = this.model();
-    try {
-      const response = await callWithLogging(
-        {
-          provider: ANTHROPIC_PROVIDER,
-          model,
-          operation: 'ego.chat',
-          domain: CEREBRUM_DOMAIN,
-          call: async () => {
-            const created = await withRateLimitRetry(
-              () => client.messages.create(chatRequest(model, systemPrompt, messages)),
-              'ego.chat'
-            );
-            return {
-              response: created,
-              usage: {
-                inputTokens: created.usage.input_tokens,
-                outputTokens: created.usage.output_tokens,
-              },
-            };
-          },
-        },
-        cerebrumTelemetryDeps()
-      );
-      return {
-        content: isRefusal(response, LOG_CONTEXT) ? EGO_REFUSAL_MSG : messageText(response.content),
-        tokensIn: response.usage.input_tokens,
-        tokensOut: response.usage.output_tokens,
-      };
-    } catch (err) {
-      console.warn(
-        `[cerebrum-ego] chat failed: ${err instanceof Error ? err.message : String(err)}`
-      );
-      return { content: LLM_ERROR_MSG, tokensIn: 0, tokensOut: 0 };
-    }
-  }
-
-  async *stream(systemPrompt: string, messages: EgoChatMessage[]): AsyncGenerator<EgoStreamEvent> {
+  async *stream(request: EgoTurnRequest): AsyncGenerator<EgoStreamEvent> {
     const apiKey = resolveAnthropicApiKey();
     if (apiKey === undefined) {
       console.warn('[cerebrum-ego] ANTHROPIC_API_KEY not set — returning unavailable message');
@@ -183,9 +175,9 @@ export class AnthropicEgoLlm implements EgoLlm {
 
     const client = new Anthropic({ apiKey, maxRetries: 0 });
     const model = this.model();
-    let messageStream: MessageStream;
+    let messageStream: MessageStream<unknown>;
     try {
-      messageStream = client.messages.stream(chatRequest(model, systemPrompt, messages));
+      messageStream = client.messages.stream(turnParams(model, request));
     } catch (err) {
       console.warn(
         `[cerebrum-ego] stream creation failed: ${err instanceof Error ? err.message : String(err)}`

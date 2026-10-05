@@ -177,6 +177,24 @@ describe('a paired device asking what to render', () => {
     expect(() => MobileBootstrapResponseSchema.parse(res.body)).not.toThrow();
   });
 
+  it('reports the Ego surface healthy when Cerebrum answers', async () => {
+    const app = open({ bootstrap: { probe: healthyProbe('finance', 'cerebrum') } });
+    const device = pairedDevice(app);
+    registryServing(pillarSnapshot('finance'), pillarSnapshot('cerebrum'));
+
+    const res = await bootstrapAs(app, device);
+
+    expect(res.status).toBe(200);
+    expect(res.body.features).toEqual([
+      { id: 'transactions', reachability: 'healthy' },
+      { id: 'accounts', reachability: 'healthy' },
+      { id: 'purchases', reachability: 'unavailable' },
+      { id: 'receipt-capture', reachability: 'unavailable' },
+      { id: 'inventory', reachability: 'unavailable' },
+      { id: 'ego', reachability: 'healthy' },
+    ]);
+  });
+
   it('reads its roster through the SDK discovery cache', async () => {
     const app = open({ bootstrap: { probe: healthyProbe('finance', 'media') } });
     const device = pairedDevice(app);
@@ -296,6 +314,7 @@ describe('the federation half-broken, seen from the phone', () => {
       { id: 'purchases', reachability: 'unavailable' },
       { id: 'receipt-capture', reachability: 'unavailable' },
       { id: 'inventory', reachability: 'unavailable' },
+      { id: 'ego', reachability: 'unavailable' },
     ]);
   });
 

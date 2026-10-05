@@ -13,6 +13,7 @@ import type { ToolDef } from './tool-def.js';
 /** Non-mutating, producer-authoritative validation for a complete item value set. */
 export const itemValidationTool: ToolDef = {
   name: 'inventory.items.validate',
+  readOnly: true,
   description:
     'Validate and canonicalise a complete stable-ID item value set without writing. Read inventory.catalogue.get first and copy its revision, type ID, field IDs, enum option IDs, cardinalities and constraints.',
   inputSchema: {

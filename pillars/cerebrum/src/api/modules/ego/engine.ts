@@ -9,16 +9,24 @@
  */
 import { ContextAssemblyService } from '../retrieval/context-assembly.js';
 import { HybridSearchService } from '../retrieval/hybrid-search.js';
-import { CitationParser } from './citation-parser.js';
+import { generateActionId, generateBatchId } from './actions-store.js';
 import { biasScopes, loadViewedEngram } from './context-helpers.js';
-import { buildDefaultConfig, buildLlmMessages, buildRetrievalFilters } from './engine-helpers.js';
+import {
+  buildDefaultConfig,
+  buildLlmMessages,
+  buildRetrievalFilters,
+  chatResultFromStream,
+} from './engine-helpers.js';
+import { generateResumeEvents, type ResumeStreamParams } from './engine-resume.js';
 import { generateStreamEvents } from './engine-stream.js';
 import { buildEgoSystemPrompt } from './prompts.js';
 import { ConversationScopeNegotiator } from './scope-negotiator.js';
+import { readOnlyToolbox, type EgoToolbox } from './toolbox.js';
 
 import type { EngramService } from '../engrams/service.js';
 import type { SemanticSearchDeps } from '../retrieval/semantic-search.js';
 import type { RetrievalResult } from '../retrieval/types.js';
+import type { GatewayCaller } from './gateway/gateway-client.js';
 import type { EgoChatMessage, EgoLlm } from './llm.js';
 import type {
   AppContext,
@@ -34,54 +42,47 @@ export interface EngineDeps {
   /** Retrieval deps used to build a per-call HybridSearchService. */
   search: SemanticSearchDeps;
   engramService: EngramService;
+  /** Optional tool definitions and dispatcher; absent means no tool loop. */
+  toolbox?: EgoToolbox;
+  /** Optional gateway used only for conversation-allowed writes. */
+  gateway?: GatewayCaller;
+  /** Action id factory, defaulting to the shared Ego action store generator. */
+  newActionId?: () => string;
+  /** Batch id factory, defaulting to the shared Ego action store generator. */
+  newBatchId?: () => string;
   config?: Partial<EngineConfig>;
 }
 
 export class ConversationEngine {
   private readonly config: EngineConfig;
-  private readonly citationParser = new CitationParser();
   private readonly assembler = new ContextAssemblyService();
   private readonly scopeNegotiator = new ConversationScopeNegotiator();
   private readonly llm: EgoLlm;
   private readonly search: SemanticSearchDeps;
   private readonly engramService: EngramService;
+  private readonly toolbox?: EgoToolbox;
+  private readonly gateway?: GatewayCaller;
+  private readonly newActionId: () => string;
+  private readonly newBatchId: () => string;
 
   constructor(deps: EngineDeps) {
     this.config = buildDefaultConfig(deps.config);
     this.llm = deps.llm;
     this.search = deps.search;
     this.engramService = deps.engramService;
+    this.toolbox = deps.toolbox;
+    this.gateway = deps.gateway;
+    this.newActionId = deps.newActionId ?? generateActionId;
+    this.newBatchId = deps.newBatchId ?? generateBatchId;
   }
 
   /** Process a user message and generate a response. */
   async chat(params: ChatParams): Promise<ChatResult> {
-    const ctx = await this.assembleContext(params);
-    const llmResponse = await this.llm.chat(ctx.systemPrompt, ctx.llmMessages);
-    const { cleanedAnswer, citations } = this.citationParser.parse(
-      llmResponse.content,
-      ctx.allResults
-    );
-    const responseContent = ctx.scopeNotice
-      ? `${ctx.scopeNotice}\n\n${cleanedAnswer}`
-      : cleanedAnswer;
-
-    return {
-      response: {
-        content: responseContent,
-        citations: citations.map((c) => c.id),
-        tokensIn: llmResponse.tokensIn,
-        tokensOut: llmResponse.tokensOut,
-      },
-      retrievedEngrams: ctx.allResults.map((r) => ({
-        engramId: r.sourceId,
-        relevanceScore: r.score,
-      })),
-      scopeNegotiation: ctx.negotiation,
-    };
+    return chatResultFromStream(await this.prepareStream(params, readOnlyToolbox(this.toolbox)));
   }
 
   /** Prepare a streaming chat response. Returns metadata + an async event generator. */
-  async prepareStream(params: ChatParams): Promise<ChatStreamPreparation> {
+  async prepareStream(params: ChatParams, toolbox = this.toolbox): Promise<ChatStreamPreparation> {
     const ctx = await this.assembleContext(params);
     return {
       stream: generateStreamEvents({
@@ -90,6 +91,13 @@ export class ConversationEngine {
         llmMessages: ctx.llmMessages,
         scopeNotice: ctx.scopeNotice,
         allResults: ctx.allResults,
+        newActionId: this.newActionId,
+        newBatchId: this.newBatchId,
+        allowedTools: new Set(params.allowedTools ?? []),
+        ...(toolbox === undefined ? {} : { toolbox }),
+        ...(this.gateway === undefined
+          ? {}
+          : { runWrite: this.gateway.callTool.bind(this.gateway) }),
       }),
       retrievedEngrams: ctx.allResults.map((r) => ({
         engramId: r.sourceId,
@@ -97,6 +105,19 @@ export class ConversationEngine {
       })),
       scopeNegotiation: ctx.negotiation,
     };
+  }
+
+  /** Resume a paused tool turn after its approved actions have run. */
+  resumeStream(params: ResumeStreamParams): ReturnType<typeof generateResumeEvents> {
+    return generateResumeEvents({
+      ...params,
+      llm: this.llm,
+      allowedTools: new Set(params.allowedTools),
+      newActionId: this.newActionId,
+      newBatchId: this.newBatchId,
+      ...(this.toolbox === undefined ? {} : { toolbox: this.toolbox }),
+      ...(this.gateway === undefined ? {} : { runWrite: this.gateway.callTool.bind(this.gateway) }),
+    });
   }
 
   private async assembleContext(params: ChatParams): Promise<{
@@ -118,12 +139,10 @@ export class ConversationEngine {
       appContext
     );
     const scopeNotice = this.buildScopeNotice(negotiation);
-    const llmMessages = buildLlmMessages(
-      history,
-      message,
-      contextBlock,
-      this.config.maxHistoryMessages
-    );
+    const llmMessages = buildLlmMessages(history, message, contextBlock, {
+      maxHistoryMessages: this.config.maxHistoryMessages,
+      settled: params.settled,
+    });
     return { negotiation, allResults, systemPrompt, scopeNotice, llmMessages };
   }
 
@@ -191,7 +210,9 @@ export class ConversationEngine {
     scopes: string[],
     appContext?: AppContext
   ): { systemPrompt: string; contextBlock: string } {
-    const systemPrompt = buildEgoSystemPrompt(scopes, appContext);
+    const systemPrompt = buildEgoSystemPrompt(scopes, appContext, {
+      tools: this.toolbox !== undefined,
+    });
     let contextBlock = '';
     if (retrievalResults.length > 0) {
       const assembled = this.assembler.assemble({

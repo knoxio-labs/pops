@@ -1,6 +1,7 @@
 import CoreGraphics
 import SwiftUI
 import Testing
+import ViewInspector
 
 @testable import DesignPlayground
 
@@ -26,6 +27,33 @@ internal struct InspectorShapeTests {
             CGPoint(x: bounds.minX + inset, y: bounds.maxY - inset),
             CGPoint(x: bounds.maxX - inset, y: bounds.maxY - inset),
         ]
+    }
+
+    @Test("Inspector buttons invoke their actions when tapped in the view hierarchy")
+    @MainActor
+    func inspectorButtonsInvokeTheirActions() throws {
+        let surface = try #require(Catalog.surfaces.first)
+        let openingState = try #require(surface.openingState)
+        var settings = StageSettings(stateID: openingState.id, chrome: surface.chrome)
+        var expanded = false
+        var lift: CGFloat = 0
+        var closeCount = 0
+        let view = InspectorView(
+            surface: surface,
+            settings: Binding(get: { settings }, set: { settings = $0 }),
+            expanded: Binding(get: { expanded }, set: { expanded = $0 }),
+            lift: Binding(get: { lift }, set: { lift = $0 }),
+            onClose: { closeCount += 1 }
+        )
+        let inspector = try view.inspect()
+
+        let bar = try inspector.vStack().view(PlaygroundGlassGroup<EmptyView>.self, 1)
+        _ = try bar.simultaneousGesture(DragGesture.self)
+
+        try inspector.find(viewWithAccessibilityLabel: "Close").button().tap()
+        #expect(closeCount == 1)
+        try inspector.find(viewWithAccessibilityLabel: "Show conditions").button().tap()
+        #expect(expanded)
     }
 
     @Test("the panel's glass reaches every corner of the box its content sits in")

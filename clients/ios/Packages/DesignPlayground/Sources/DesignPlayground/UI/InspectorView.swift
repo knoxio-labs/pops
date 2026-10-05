@@ -93,7 +93,10 @@ internal struct InspectorView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .buttonStyle(.plain)
-        .gesture(liftGesture)
+        // Lifting is an inspector-wide drag, but a plain parent gesture can
+        // win over the sibling close and conditions buttons. Keep the lift
+        // gesture active without taking their taps.
+        .simultaneousGesture(liftGesture)
     }
 
     /// One round floating action. Its own piece of glass, and always in the
@@ -112,6 +115,7 @@ internal struct InspectorView: View {
                     width: InspectorShape.elementHeight,
                     height: InspectorShape.elementHeight
                 )
+                .contentShape(Rectangle())
         }
         .playgroundGlass(in: InspectorShape.action)
         .accessibilityLabel(label)

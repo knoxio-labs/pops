@@ -15,6 +15,8 @@ import { openTempDb } from '../../db/__tests__/helpers.js';
 import { createBfmApiApp, type CreateBfmApiAppOptions } from '../app.js';
 import { createMobileBarcodeClient, type MobileBarcodeClient } from '../barcode/client.js';
 import { createMobileContactsClient } from '../contacts/client.js';
+import { createMobileEgoClient } from '../ego/client.js';
+import { createEgoStreamClient } from '../ego/stream-client.js';
 import { createMobileFinanceClient } from '../finance/client.js';
 import { createMobileInventoryClient } from '../inventory/client.js';
 import { createMobileInventoryMediaClient } from '../inventory/media-client.js';
@@ -28,12 +30,15 @@ import type { ServiceAccountVerifier } from '@pops/pillar-sdk/server';
 
 import type { BfmDb, OpenedBfmDb } from '../../db/index.js';
 import type { BfmApiDeps } from '../app.js';
+import type { EgoRateLimitOptions } from '../auth/ego-rate-limit.js';
 import type { MobileRateLimitOptions } from '../auth/mobile-rate-limit.js';
 import type { PairingRateLimitOptions } from '../auth/pairing-rate-limit.js';
 import type { ReceiptRateLimitOptions } from '../auth/receipt-rate-limit.js';
 import type { RefreshChallengeStore } from '../auth/refresh-challenge.js';
 import type { RefreshRateLimitOptions } from '../auth/refresh-rate-limit.js';
 import type { MobileContactsClient } from '../contacts/client.js';
+import type { MobileEgoClient } from '../ego/client.js';
+import type { EgoStreamClient } from '../ego/stream-client.js';
 import type { MobileFinanceClient } from '../finance/client.js';
 import type { MobileInventoryClient } from '../inventory/client.js';
 import type { MobileInventoryMediaClient } from '../inventory/media-client.js';
@@ -123,6 +128,14 @@ export interface TestAppOptions {
   contacts?: MobileContactsClient;
   /** Where the `/mobile/barcode/*` route gets its lookup outcome. */
   barcode?: MobileBarcodeClient;
+  /** Where the `/mobile/ego/*` routes get conversations and threads. */
+  ego?: MobileEgoClient;
+  /** Where the raw `/mobile/ego/chat/stream` route gets its SSE frames. */
+  egoStream?: EgoStreamClient;
+  /** Same, for the raw Ego stream's request budget. */
+  egoRateLimit?: EgoRateLimitOptions;
+  /** Same, for the raw Ego stream's keep-alive interval. */
+  egoHeartbeatMs?: number;
   /** Captures privacy-safe barcode relay events. */
   barcodeLogger?: MobileBarcodeRelayLogger;
   /**
@@ -154,7 +167,7 @@ export interface TestAppOptions {
 
 const unreachableHandleFactory: PillarHandleFactory = (pillarId: string) => {
   throw new Error(
-    `[bfm-test] this test called ${pillarId} without supplying a fake — pass \`finance\` or \`purchases\` to createTestApp`
+    `[bfm-test] this test called ${pillarId} without supplying a fake — pass the client to createTestApp`
   );
 };
 
@@ -165,6 +178,11 @@ const unreachableHandleFactory: PillarHandleFactory = (pillarId: string) => {
  * fake meets a loud, wrong-looking status instead of a real network call.
  */
 const unreachableMediaDiscovery = {
+  lookup: () => Promise.resolve(undefined),
+};
+
+/** Default raw Ego discovery refuses locally rather than reaching a pillar. */
+const unreachableEgoStreamDiscovery = {
   lookup: () => Promise.resolve(undefined),
 };
 
@@ -196,6 +214,7 @@ function passthroughDeps(options: TestAppOptions): Partial<BfmApiDeps> {
     ...(options.receiptRateLimit === undefined
       ? {}
       : { receiptRateLimit: options.receiptRateLimit }),
+    ...egoStreamOptions(options),
     ...(options.barcodeLogger === undefined ? {} : { barcodeLogger: options.barcodeLogger }),
     ...(options.refreshChallenges === undefined
       ? {}
@@ -207,11 +226,27 @@ function passthroughDeps(options: TestAppOptions): Partial<BfmApiDeps> {
   };
 }
 
+function egoStreamOptions(
+  options: TestAppOptions
+): Pick<Partial<BfmApiDeps>, 'egoRateLimit' | 'egoHeartbeatMs'> {
+  return {
+    ...(options.egoRateLimit === undefined ? {} : { egoRateLimit: options.egoRateLimit }),
+    ...(options.egoHeartbeatMs === undefined ? {} : { egoHeartbeatMs: options.egoHeartbeatMs }),
+  };
+}
+
 function clientDeps(
   options: TestAppOptions
 ): Pick<
   BfmApiDeps,
-  'finance' | 'purchases' | 'contacts' | 'barcode' | 'inventory' | 'inventoryMedia'
+  | 'finance'
+  | 'purchases'
+  | 'contacts'
+  | 'barcode'
+  | 'ego'
+  | 'inventory'
+  | 'inventoryMedia'
+  | 'egoStream'
 > {
   return {
     finance:
@@ -223,6 +258,9 @@ function clientDeps(
       options.contacts ?? createMobileContactsClient(createPillarGateway(unreachableHandleFactory)),
     barcode:
       options.barcode ?? createMobileBarcodeClient(createPillarGateway(unreachableHandleFactory)),
+    ego: options.ego ?? createMobileEgoClient(createPillarGateway(unreachableHandleFactory)),
+    egoStream:
+      options.egoStream ?? createEgoStreamClient({ discovery: unreachableEgoStreamDiscovery }),
     inventory:
       options.inventory ??
       createMobileInventoryClient(createPillarGateway(unreachableHandleFactory)),

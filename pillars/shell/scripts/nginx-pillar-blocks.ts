@@ -14,9 +14,39 @@ export interface PillarUpstream {
   readonly port: number;
 }
 
+/** Exact public route for Cerebrum's server-sent Ego chat stream. */
+export const EGO_STREAM_LOCATION = '/cerebrum-api/ego/chat/stream';
+
 /** nginx variable names take no hyphens. */
 export function nginxVarName(pillarId: PillarId): string {
   return pillarId.replace(/-/g, '_');
+}
+
+/**
+ * Cerebrum's raw SSE stream route. The proxy headers are inlined because the
+ * shared REST snippet sets shorter read/send timeouts that cannot be
+ * overridden in the same nginx location.
+ */
+export function renderEgoStreamBlock(upstream: PillarUpstream): string {
+  return [
+    `    location = ${EGO_STREAM_LOCATION} {`,
+    `        set $cerebrum_ego_stream_upstream http://${upstream.host}:${upstream.port};`,
+    `        rewrite ^/cerebrum-api/(.*)$ /$1 break;`,
+    `        proxy_pass $cerebrum_ego_stream_upstream;`,
+    `        proxy_http_version 1.1;`,
+    `        proxy_set_header Host $host;`,
+    `        proxy_set_header X-Real-IP $remote_addr;`,
+    `        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;`,
+    `        proxy_set_header X-Forwarded-Proto $scheme;`,
+    `        proxy_set_header X-Request-Id $pops_request_id;`,
+    `        proxy_set_header Connection '';`,
+    `        proxy_buffering off;`,
+    `        proxy_cache off;`,
+    `        proxy_connect_timeout 5s;`,
+    `        proxy_read_timeout 300s;`,
+    `        proxy_send_timeout 300s;`,
+    `    }`,
+  ].join('\n');
 }
 
 /**
@@ -27,7 +57,7 @@ export function nginxVarName(pillarId: PillarId): string {
  */
 export function renderPillarRestBlockFromUpstream(upstream: PillarUpstream): string {
   const varName = nginxVarName(upstream.pillarId);
-  return [
+  const restBlock = [
     `    location /${upstream.pillarId}-api/ {`,
     `        set $${varName}_api_upstream http://${upstream.host}:${upstream.port};`,
     `        rewrite ^/${upstream.pillarId}-api/(.*)$ /$1 break;`,
@@ -35,6 +65,9 @@ export function renderPillarRestBlockFromUpstream(upstream: PillarUpstream): str
     `        include /etc/nginx/snippets/_pillar-proxy.conf;`,
     `    }`,
   ].join('\n');
+
+  if (upstream.pillarId !== 'cerebrum') return restBlock;
+  return `${renderEgoStreamBlock(upstream)}\n\n${restBlock}`;
 }
 
 /**

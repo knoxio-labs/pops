@@ -15,6 +15,7 @@ const gate = createServiceAccountScopeGate({
   contract: cerebrumContract,
   rootScope: 'cerebrum',
   logPrefix: 'cerebrum-api',
+  rawRoutes: { ego: { chatStream: { method: 'POST', path: '/ego/chat/stream' } } },
   errors: defineErrors('cerebrum', {
     invalid: {
       area: 'auth',
@@ -44,7 +45,14 @@ const gate = createServiceAccountScopeGate({
 export const cerebrumScopeMap: ContractScopeMap = gate.scopeMap;
 
 /**
- * Build the middleware and mount it before `createExpressEndpoints`.
+ * The raw routes served outside the contract, projected onto the scope each
+ * requires. A grant of `cerebrum.ego` covers the chat stream.
+ */
+export const cerebrumRawScopeMap: ContractScopeMap = gate.rawScopeMap;
+
+/**
+ * Build the middleware and mount it before the Ego stream router and
+ * `createExpressEndpoints`.
  *
  * @param verify Resolves a presented key to its principal. Production passes a
  *   registry-backed verifier; tests inject a fake.

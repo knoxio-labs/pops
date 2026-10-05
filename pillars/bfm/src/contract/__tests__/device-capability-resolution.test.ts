@@ -42,6 +42,13 @@ describe('a device that tracks the default grant', () => {
     expect(resolveDeviceCapabilities(row())).toContain('finance.accounts.read');
   });
 
+  it('gains both Ego capabilities on its next request', () => {
+    const resolved = resolveDeviceCapabilities(row());
+
+    expect(resolved).toContain('ego.chat');
+    expect(resolved).toContain('ego.actions');
+  });
+
   it('holds no more than the default set, even where the vocabulary is wider', () => {
     // The failure mode this guards is "re-resolve" quietly becoming "grant
     // everything this build knows about". `purchases.read` is in the
@@ -80,6 +87,18 @@ describe('a device with an explicit grant', () => {
     expect([...resolved]).toEqual(['session.read']);
     expect(DEFAULT_DEVICE_CAPABILITIES).toContain('finance.accounts.read');
     expect(resolved).not.toContain('finance.accounts.read');
+  });
+
+  it('does not gain Ego capabilities when its explicit grant omits them', () => {
+    const resolved = resolveDeviceCapabilities(
+      row({
+        capabilityMode: 'explicit',
+        capabilities: serialiseDeviceCapabilities(['session.read']),
+      })
+    );
+
+    expect(resolved).not.toContain('ego.chat');
+    expect(resolved).not.toContain('ego.actions');
   });
 
   it('reads an unparseable column as no grant rather than as the default one', () => {

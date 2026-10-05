@@ -3,14 +3,14 @@
  *
  * The gateway historically trusted the LAN and accepted any inbound MCP
  * request unauthenticated. This module adds a shared-secret bearer check so
- * only callers holding `MCP_INBOUND_TOKEN` reach the tool dispatcher.
+ * only callers holding the configured inbound token reach the tool dispatcher.
  *
- * Rollout is fail-open by design: when `MCP_INBOUND_TOKEN` is unset the route
- * stays open and logs a loud warning. This lets the deployer set the token and
- * update clients without a window where live MCP access is locked out. Once the
- * token is set, every inbound request must present `Authorization: Bearer <token>`.
+ * Rollout is fail-open by design: when neither inbound token variable is set
+ * the route stays open and logs a loud warning. A mounted token file takes
+ * precedence over the environment fallback.
  */
 import { timingSafeEqual } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 
 import { defineErrors } from '@pops/pillar-express';
 import { getRequestId, mintRequestId, REQUEST_ID_HEADER } from '@pops/pillar-sdk/server';
@@ -29,13 +29,40 @@ export const inboundAuthErrors = defineErrors('mcp', {
   },
 });
 
+const INBOUND_TOKEN_FILE_ENV = 'MCP_INBOUND_TOKEN_FILE';
+const INBOUND_TOKEN_ENV = 'MCP_INBOUND_TOKEN';
+
+/** Read a required mounted inbound token without exposing its contents. */
+function readInboundTokenFile(path: string): string {
+  let contents: string;
+  try {
+    contents = readFileSync(path, 'utf8');
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      '[pops-mcp] could not read ' + INBOUND_TOKEN_FILE_ENV + ' (' + path + '): ' + reason,
+      { cause: error }
+    );
+  }
+
+  const token = contents.trim();
+  if (token === '') {
+    throw new Error(
+      '[pops-mcp] ' + INBOUND_TOKEN_FILE_ENV + ' points to an empty file (' + path + ').'
+    );
+  }
+  return token;
+}
+
 /**
- * Resolve the inbound shared secret from the environment. Whitespace-only or
- * empty values are treated as unset so a blank env var cannot silently arm a
- * token that no client could ever match.
+ * Resolve the inbound shared secret from a mounted file, then the environment.
+ * Whitespace-only env values are treated as unset.
  */
-export function resolveInboundToken(): string | undefined {
-  const raw = process.env['MCP_INBOUND_TOKEN'];
+export function resolveInboundToken(env: NodeJS.ProcessEnv = process.env): string | undefined {
+  const filePath = env[INBOUND_TOKEN_FILE_ENV]?.trim();
+  if (filePath !== undefined && filePath !== '') return readInboundTokenFile(filePath);
+
+  const raw = env[INBOUND_TOKEN_ENV];
   if (raw === undefined) return undefined;
   const trimmed = raw.trim();
   return trimmed.length > 0 ? trimmed : undefined;
@@ -56,7 +83,7 @@ function warnUnprotectedOnce(): void {
   if (warnedUnprotected) return;
   warnedUnprotected = true;
   console.warn(
-    '[pops-mcp] SECURITY WARNING: MCP_INBOUND_TOKEN is not set — the /mcp endpoint is UNAUTHENTICATED and will accept any inbound caller. Set MCP_INBOUND_TOKEN to require a bearer token on inbound requests.'
+    '[pops-mcp] SECURITY WARNING: MCP_INBOUND_TOKEN is not set and MCP_INBOUND_TOKEN_FILE is not set — the /mcp endpoint is UNAUTHENTICATED and will accept any inbound caller. Set MCP_INBOUND_TOKEN_FILE or MCP_INBOUND_TOKEN to require a bearer token on inbound requests.'
   );
 }
 

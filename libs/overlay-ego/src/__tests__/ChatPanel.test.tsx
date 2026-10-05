@@ -14,6 +14,8 @@ vi.mock('../chat-hooks/useStreamingChat', () => ({
     isStreaming: false,
     error: null,
     streamingContent: null,
+    toolActivity: [],
+    streamParts: [],
     abort: vi.fn(),
   }),
 }));
@@ -24,6 +26,7 @@ const sdk = vi.hoisted(() => ({
   egoListConversations: vi.fn(),
   egoGetConversation: vi.fn(),
   egoDeleteConversation: vi.fn(),
+  egoDecideActionBatch: vi.fn(),
 }));
 
 vi.mock('../ego-api', () => sdk);
@@ -43,6 +46,10 @@ vi.mock('react-router', async () => {
       React.createElement('a', { href: to }, children),
   };
 });
+
+vi.mock('@pops/navigation', () => ({
+  useSearchResultNavigation: () => ({ navigateTo: vi.fn() }),
+}));
 
 // ── UI mock ──────────────────────────────────────────────────────────
 
@@ -314,7 +321,7 @@ describe('ChatPanel (overlay-ego)', () => {
 
     await user.click(await screen.findByText('Budget discussion'));
     const citationLink = await screen.findByText('eng_finance_001');
-    expect(citationLink.closest('a')).toHaveAttribute('href', '/cerebrum/eng_finance_001');
+    expect(citationLink.closest('a')).toHaveAttribute('href', '/cerebrum/engrams/eng_finance_001');
   });
 
   it('sends a message via the chat input', async () => {

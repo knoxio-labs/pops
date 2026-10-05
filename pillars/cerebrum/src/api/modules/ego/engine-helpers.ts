@@ -6,8 +6,14 @@
  * constants below (overridable per-construction via `Partial<EngineConfig>`).
  */
 import type { RetrievalFilters } from '../retrieval/types.js';
+import type { SettledAction } from './batch-settle.js';
 import type { EgoChatMessage } from './llm.js';
-import type { EngineConfig, Message } from './types.js';
+import type { ChatResult, ChatStreamPreparation, EngineConfig, Message } from './types.js';
+
+export interface BuildLlmMessagesOptions {
+  maxHistoryMessages: number;
+  settled?: readonly SettledAction[];
+}
 
 const DEFAULT_MAX_HISTORY = 20;
 const DEFAULT_MAX_RETRIEVAL = 5;
@@ -29,6 +35,37 @@ export function buildRetrievalFilters(scopes: string[]): RetrievalFilters {
   return filters;
 }
 
+/** Render assistant message parts as compact context for the next model turn. */
+export function renderMessageForModel(message: Message): string {
+  const renderedParts: string[] = [];
+
+  for (const part of message.parts ?? []) {
+    switch (part.type) {
+      case 'text':
+        break;
+      case 'entity':
+        renderedParts.push(`[shown: ${part.title} (${part.uri})]`);
+        break;
+      case 'actions':
+        for (const action of part.actions) {
+          renderedParts.push(`[action ${action.tool} "${action.summary}": ${action.status}]`);
+        }
+        break;
+    }
+  }
+
+  if (renderedParts.length === 0) return message.content;
+  const partsText = renderedParts.join('\n');
+  return message.content ? `${message.content}\n\n${partsText}` : partsText;
+}
+
+/** Render the action outcomes settled by the current new message turn. */
+export function renderSettledResults(settled: readonly SettledAction[]): string {
+  return settled
+    .map((action) => `[action ${action.tool} "${action.summary}": ${action.content}]`)
+    .join('\n');
+}
+
 /**
  * Build the LLM message array: the most recent `maxHistoryMessages` user/
  * assistant turns, then the current message (with the retrieved-knowledge
@@ -38,21 +75,30 @@ export function buildLlmMessages(
   history: Message[],
   currentMessage: string,
   contextBlock: string,
-  maxHistoryMessages: number
+  options: BuildLlmMessagesOptions
 ): EgoChatMessage[] {
   const messages: EgoChatMessage[] = [];
-  const recentHistory = history.slice(-maxHistoryMessages);
+  const recentHistory = history.slice(-options.maxHistoryMessages);
 
   for (const msg of recentHistory) {
     if (msg.role === 'user' || msg.role === 'assistant') {
-      messages.push({ role: msg.role, content: msg.content });
+      const content = msg.role === 'assistant' ? renderMessageForModel(msg) : msg.content;
+      if (!content.trim()) continue;
+      messages.push({ role: msg.role, content });
     }
+  }
+
+  while (messages.length > 0 && messages[0]?.role !== 'user') {
+    messages.shift();
   }
 
   const userContent = contextBlock
     ? `${currentMessage}\n\n---\nRetrieved knowledge:\n${contextBlock}`
     : currentMessage;
-  messages.push({ role: 'user', content: userContent });
+  const settledPrefix = options.settled?.length
+    ? `${renderSettledResults(options.settled)}\n\n`
+    : '';
+  messages.push({ role: 'user', content: `${settledPrefix}${userContent}` });
   return messages;
 }
 
@@ -62,5 +108,37 @@ export function buildDefaultConfig(config?: Partial<EngineConfig>): EngineConfig
     maxRetrievalResults: config?.maxRetrievalResults ?? DEFAULT_MAX_RETRIEVAL,
     tokenBudget: config?.tokenBudget ?? DEFAULT_TOKEN_BUDGET,
     minCosine: config?.minCosine ?? DEFAULT_MIN_COSINE,
+  };
+}
+
+/** Drains a model turn and returns its terminal `done` event; the streamed tokens are not needed. */
+export async function drainToDone<TEvent extends { type: string }>(
+  events: AsyncIterable<TEvent>
+): Promise<Extract<TEvent, { type: 'done' }>> {
+  let done: Extract<TEvent, { type: 'done' }> | undefined;
+  for await (const event of events) {
+    if (event.type === 'done') done = event as Extract<TEvent, { type: 'done' }>;
+  }
+  if (done === undefined) throw new Error('ego stream ended without a done event');
+  return done;
+}
+
+/** Drain the engine stream into the non-streaming chat response shape. */
+export async function chatResultFromStream(
+  preparation: ChatStreamPreparation
+): Promise<ChatResult> {
+  const done = await drainToDone(preparation.stream);
+  return {
+    response: {
+      content: done.content,
+      citations: done.citations,
+      tokensIn: done.tokensIn,
+      tokensOut: done.tokensOut,
+      parts: done.parts,
+      batch: done.batch,
+      autoExecuted: done.autoExecuted,
+    },
+    retrievedEngrams: preparation.retrievedEngrams,
+    scopeNegotiation: preparation.scopeNegotiation,
   };
 }

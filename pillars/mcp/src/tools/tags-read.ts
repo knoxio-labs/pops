@@ -32,6 +32,7 @@ const list: ToolDef = {
       },
     },
   },
+  readOnly: true,
   scope: TAGS_SCOPE,
   handler: async (args) => {
     const input: ListTagsInput = {};
@@ -73,6 +74,7 @@ const get: ToolDef = {
     properties: { id: { type: 'string', format: 'uuid', description: 'Shared tag id.' } },
     required: ['id'],
   },
+  readOnly: true,
   scope: TAGS_SCOPE,
   handler: async (args) => {
     const id = reqStr(args, 'id');

@@ -1,4 +1,7 @@
+import FeatureAccounts
 import FeatureInventory
+import FeaturePurchases
+import FeatureTransactions
 import Observation
 
 /// Which record a routed `pops://` reference asked to open, held until the
@@ -13,4 +16,13 @@ import Observation
 internal final class EntityPresentation {
     /// The Inventory record to present, or nil when none is open.
     internal var inventory: InventoryEntity?
+
+    /// The finance transaction to present, or nil when none is open.
+    internal var transaction: TransactionEntity?
+
+    /// The finance account to present, or nil when none is open.
+    internal var account: AccountEntity?
+
+    /// The purchase to present, or nil when none is open.
+    internal var purchase: PurchaseEntity?
 }

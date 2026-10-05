@@ -4,7 +4,10 @@
  * `POST /ego/chat/stream` — accepts the same body as `ego.chat` but returns a
  * `text/event-stream`:
  *   data: {"type":"token","text":"..."}
- *   data: {"type":"done","conversationId":"...","citations":[...],...}
+ *   data: {"type":"tool"|"part"|"navigate",...}
+ *   data: {"type":"done"|"error",...}
+ *
+ * Every frame is defined by `src/contract/rest-ego-stream.ts`.
  *
  * ts-rest cannot model SSE, so this is mounted as a plain Express route in
  * `app.ts` BEFORE `createExpressEndpoints`. The user turn is persisted before
@@ -17,120 +20,28 @@ import { Router, type Router as ExpressRouter, type Request, type Response } fro
 
 import { PopsError } from '@pops/pillar-express';
 
-import { egoChatBodySchema } from '../../contract/rest-ego-schemas.js';
+import { egoStreamBodySchema } from '../../contract/rest-ego-stream.js';
+import { EgoActionStore } from '../modules/ego/actions-store.js';
 import {
   persistAssistantError,
-  persistStreamResults,
   persistUserTurn,
   resolveConversation,
 } from '../modules/ego/chat-helpers.js';
-import { ConversationEngine } from '../modules/ego/engine.js';
 import { ConversationPersistence } from '../modules/ego/persistence.js';
-import { EngramService } from '../modules/engrams/service.js';
+import { buildEgoEngine } from './ego-engine.js';
+import { settleForMessage } from './ego-settle.js';
+import { setSseHeaders, streamError, writeSseEvent } from './ego-stream-frames.js';
+import { pipeStreamEvents } from './ego-stream-pipe.js';
+import { handleResumeStreamRequest } from './ego-stream-resume.js';
 
+import type { EgoChatBodyWire } from '../../contract/rest-ego-schemas.js';
 import type { Conversation, Message } from '../modules/ego/persistence.js';
-import type { AppContext, ChatStreamPreparation } from '../modules/ego/types.js';
-import type { EgoHandlerDeps } from './ego-handlers.js';
-
-function setSseHeaders(res: Response): void {
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('X-Accel-Buffering', 'no');
-  res.flushHeaders();
-}
-
-function writeSseEvent(res: Response, data: Record<string, unknown>): void {
-  res.write(`data: ${JSON.stringify(data)}\n\n`);
-}
-
-interface PipeStreamParams {
-  req: Request;
-  res: Response;
-  persistence: ConversationPersistence;
-  preparation: ChatStreamPreparation;
-  conversation: Conversation;
-}
-
-async function pipeStreamEvents(params: PipeStreamParams): Promise<void> {
-  const { req, res, persistence, preparation, conversation } = params;
-  let clientDisconnected = false;
-  req.on('close', () => {
-    clientDisconnected = true;
-  });
-
-  for await (const event of preparation.stream) {
-    if (clientDisconnected) break;
-
-    if (event.type === 'token') {
-      writeSseEvent(res, { type: 'token', text: event.text });
-    } else {
-      const assistantMsg = persistStreamResults({
-        persistence,
-        conversationId: conversation.id,
-        content: event.content,
-        citations: event.citations,
-        tokensIn: event.tokensIn,
-        tokensOut: event.tokensOut,
-        retrievedEngrams: preparation.retrievedEngrams,
-        scopeNegotiation: preparation.scopeNegotiation,
-      });
-
-      writeSseEvent(res, {
-        type: 'done',
-        conversationId: conversation.id,
-        messageId: assistantMsg.id,
-        citations: event.citations,
-        tokensIn: event.tokensIn,
-        tokensOut: event.tokensOut,
-        retrievedEngrams: preparation.retrievedEngrams,
-        scopeNegotiation: preparation.scopeNegotiation,
-      });
-    }
-  }
-}
-
-function buildEngine(deps: EgoHandlerDeps): ConversationEngine {
-  return new ConversationEngine({
-    llm: deps.llm,
-    search: {
-      db: deps.db,
-      raw: deps.raw,
-      vecAvailable: deps.vecAvailable,
-      peers: deps.peers,
-      embeddingClient: deps.embeddingClient,
-    },
-    engramService: new EngramService({
-      root: deps.engramRoot,
-      db: deps.db,
-      templates: deps.templates,
-    }),
-  });
-}
+import type { AppContext } from '../modules/ego/types.js';
+import type { EgoHandlerDeps } from './ego-engine.js';
 
 interface ResolvedTurn {
   conversation: Conversation;
   history: Message[];
-}
-
-function streamError(err: unknown, requestId: string | undefined): Record<string, unknown> {
-  if (err instanceof PopsError) {
-    return {
-      type: 'error',
-      code: err.code,
-      message: err.message,
-      requestId,
-      retryable: err.retryable,
-    };
-  }
-  console.error('[cerebrum] ego stream failure', { requestId, error: err });
-  return {
-    type: 'error',
-    code: 'cerebrum.internal.failure',
-    message: 'The service could not complete the request.',
-    requestId,
-    retryable: false,
-  };
 }
 
 /**
@@ -143,7 +54,7 @@ interface ResolveTurnParams {
   deps: EgoHandlerDeps;
   persistence: ConversationPersistence;
   res: Response;
-  input: ReturnType<typeof egoChatBodySchema.parse>;
+  input: EgoChatBodyWire;
   requestId: string | undefined;
 }
 
@@ -181,7 +92,7 @@ async function handleStreamRequest(
   res: Response,
   next: (error: unknown) => void
 ): Promise<void> {
-  const parsed = egoChatBodySchema.safeParse(req.body);
+  const parsed = egoStreamBodySchema.safeParse(req.body);
   if (!parsed.success) {
     next(
       new PopsError({
@@ -199,6 +110,43 @@ async function handleStreamRequest(
   setSseHeaders(res);
 
   const persistence = new ConversationPersistence({ db: deps.db });
+  const actions = new EgoActionStore({ db: deps.db });
+  if ('resumeBatchId' in input) {
+    await handleResumeStreamRequest({ deps, req, res, persistence, actions, input });
+    return;
+  }
+
+  await handleNewMessageStreamRequest({
+    deps,
+    req,
+    res,
+    persistence,
+    actions,
+    input,
+  });
+}
+
+interface NewMessageStreamParams {
+  deps: EgoHandlerDeps;
+  req: Request;
+  res: Response;
+  persistence: ConversationPersistence;
+  actions: EgoActionStore;
+  input: EgoChatBodyWire;
+}
+
+async function handleNewMessageStreamRequest(params: NewMessageStreamParams): Promise<void> {
+  const { deps, req, res, persistence, actions, input } = params;
+  const settled = input.conversationId
+    ? await settleForMessage(deps, input.conversationId).catch((error: unknown) => {
+        writeSseEvent(res, streamError(error, req.requestId));
+        res.end();
+        return null;
+      })
+    : undefined;
+  if (settled === null) return;
+  for (const part of settled?.parts ?? []) writeSseEvent(res, { type: 'part', part });
+
   const resolved = resolveAndPersistUserTurn({
     deps,
     persistence,
@@ -211,7 +159,7 @@ async function handleStreamRequest(
   const appContext: AppContext | undefined = input.appContext ?? undefined;
 
   try {
-    const preparation = await buildEngine(deps).prepareStream({
+    const preparation = await buildEgoEngine(deps).prepareStream({
       conversationId: conversation.id,
       message: input.message,
       history,
@@ -219,8 +167,10 @@ async function handleStreamRequest(
       appContext: appContext ?? (conversation.appContext as AppContext | undefined),
       channel: input.channel ?? 'shell',
       knownScopes: input.knownScopes,
+      allowedTools: persistence.getAllowedTools(conversation.id),
+      settled: settled?.actions,
     });
-    await pipeStreamEvents({ req, res, persistence, preparation, conversation });
+    await pipeStreamEvents({ req, res, persistence, actions, preparation, conversation });
   } catch (err) {
     const failure = streamError(err, req.requestId);
     persistAssistantError(persistence, conversation.id, String(failure['message']));

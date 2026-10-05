@@ -4,6 +4,8 @@ import { createElement, type ReactNode } from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { AppContextProvider, resolveUri, useAppContext } from '@pops/navigation';
+
 const {
   tvShowsGetMock,
   tvShowsListSeasonsMock,
@@ -218,18 +220,47 @@ function makeQueryClient() {
   });
 }
 
-function renderPage(showId = '1', seasonNum = '1', queryClient = makeQueryClient()) {
+function PageContextProbe() {
+  const { page, entity } = useAppContext();
+  return (
+    <output
+      data-testid="page-context-probe"
+      data-page={page ?? ''}
+      data-entity-uri={entity?.uri ?? ''}
+      data-entity-type={entity?.type ?? ''}
+      data-entity-title={entity?.title ?? ''}
+    />
+  );
+}
+
+function renderPage(
+  showId = '1',
+  seasonNum = '1',
+  queryClient = makeQueryClient(),
+  withAppContext = false
+) {
   const wrapper = ({ children }: { children: ReactNode }) =>
     createElement(QueryClientProvider, { client: queryClient }, children);
-  const view = render(
-    <MemoryRouter initialEntries={[`/media/tv/${showId}/season/${seasonNum}`]}>
+  const routes = (
+    <>
       <Routes>
         <Route path="/media/tv/:id/season/:num" element={<SeasonDetailPage />} />
       </Routes>
+      {withAppContext && <PageContextProbe />}
+    </>
+  );
+  const content = withAppContext ? <AppContextProvider>{routes}</AppContextProvider> : routes;
+  const view = render(
+    <MemoryRouter initialEntries={[`/media/tv/${showId}/season/${seasonNum}`]}>
+      {content}
     </MemoryRouter>,
     { wrapper }
   );
   return { ...view, queryClient };
+}
+
+function renderPageWithAppContext(showId = '1', seasonNum = '1', queryClient = makeQueryClient()) {
+  return renderPage(showId, seasonNum, queryClient, true);
 }
 
 beforeEach(() => {
@@ -247,6 +278,23 @@ beforeEach(() => {
   watchHistoryDeleteMock.mockResolvedValue(ok({ message: 'ok' }));
   arrUpdateSeasonMonitoringMock.mockResolvedValue(ok({ message: 'ok' }));
   arrUpdateEpisodeMonitoringMock.mockResolvedValue(ok({ message: 'ok' }));
+});
+
+describe('SeasonDetailPage page context', () => {
+  it('registers the shared TV show URI for the season route', async () => {
+    setupQueries();
+    renderPageWithAppContext('1', '1');
+
+    await screen.findByText('Pilot');
+    const probe = screen.getByTestId('page-context-probe');
+    await waitFor(() => expect(probe).toHaveAttribute('data-entity-title', 'Breaking Bad'));
+
+    const uri = probe.getAttribute('data-entity-uri') ?? '';
+    expect(probe).toHaveAttribute('data-page', 'season-detail');
+    expect(uri).toBe('pops:media/tv-show/1');
+    expect(probe).toHaveAttribute('data-entity-type', 'tv-show');
+    expect(resolveUri(uri)).toBe('/media/tv/1');
+  });
 });
 
 describe('SeasonDetailPage — monitoring', () => {

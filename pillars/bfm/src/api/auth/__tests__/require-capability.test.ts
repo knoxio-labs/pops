@@ -19,14 +19,18 @@ import {
   serialiseDeviceCapabilities,
 } from '../../../contract/capabilities.js';
 import { MobileForbiddenErrorSchema } from '../../../contract/rest-schemas.js';
+import { bfmContract } from '../../../contract/rest.js';
 import { deviceRow } from '../../../db/__tests__/helpers.js';
 import { devices } from '../../../db/index.js';
 import { createTestApp, type TestApp } from '../../__tests__/harness.js';
 import { requestOn } from '../../__tests__/test-http.js';
+import { MOBILE_EGO_CHAT_STREAM_PATH, MOBILE_PATH_PREFIX } from '../../paths.js';
 import { mintAccessToken } from '../access-token.js';
 import {
   buildMobileRouteGates,
+  collectContractRoutes,
   createRequireCapability,
+  UNCONTRACTED_MOBILE_ROUTES,
   UndeclaredMobileRouteError,
 } from '../require-capability.js';
 
@@ -205,6 +209,61 @@ describe('a device asking for something its grant does not cover', () => {
 
     expect(res.status).toBe(404);
   });
+
+  it('requires ego.chat for POST on the out-of-contract Ego stream', async () => {
+    const app = open();
+    const device = pairedDevice(app, [MOBILE_SESSION_CAPABILITY]);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    const res = await requestOn(app.app, (r) =>
+      r.post(MOBILE_EGO_CHAT_STREAM_PATH).set('Authorization', device.authorization)
+    );
+
+    expect(res.status).toBe(403);
+    expect(MobileForbiddenErrorSchema.parse(res.body)).toMatchObject({
+      code: 'capability_not_granted',
+      capability: 'ego.chat',
+    });
+    expect(warn).toHaveBeenCalledWith(
+      `[bfm-api] device ${device.id} asked for POST ${MOBILE_EGO_CHAT_STREAM_PATH} without ego.chat`
+    );
+  });
+
+  it('lets a device with ego.chat reach the mounted stream router', async () => {
+    const app = open();
+    const device = pairedDevice(app, [MOBILE_SESSION_CAPABILITY, 'ego.chat']);
+
+    const res = await requestOn(app.app, (r) =>
+      r
+        .post(MOBILE_EGO_CHAT_STREAM_PATH)
+        .set('Authorization', device.authorization)
+        .send({ message: 'hello' })
+    );
+
+    expect(res.status).toBe(503);
+    expect(res.headers['content-type']).toContain('application/json');
+  });
+
+  it('does not apply the Ego stream capability to GET on the same path', async () => {
+    const app = open();
+    const device = pairedDevice(app, [MOBILE_SESSION_CAPABILITY]);
+
+    const res = await requestOn(app.app, (r) =>
+      r.get(MOBILE_EGO_CHAT_STREAM_PATH).set('Authorization', device.authorization)
+    );
+
+    expect(res.status).toBe(404);
+  });
+
+  it('leaves the stream ungated when the uncontracted route list is empty', async () => {
+    const app = express();
+    app.use(MOBILE_PATH_PREFIX, createRequireCapability(bfmContract, []));
+    app.post(MOBILE_EGO_CHAT_STREAM_PATH, (_req, res) => res.sendStatus(204));
+
+    const res = await requestOn(app, (r) => r.post(MOBILE_EGO_CHAT_STREAM_PATH));
+
+    expect(res.status).toBe(204);
+  });
 });
 
 describe('the route table it derives', () => {
@@ -240,6 +299,27 @@ describe('the route table it derives', () => {
 
     expect(gates[0]?.pattern.test('/mobile/axb')).toBe(false);
     expect(gates[0]?.pattern.test('/mobile/a.b')).toBe(true);
+  });
+
+  it('keeps each uncontracted route under /mobile without a method/path collision', () => {
+    const contractRoutes = collectContractRoutes(bfmContract);
+
+    expect(UNCONTRACTED_MOBILE_ROUTES).toEqual([
+      { method: 'POST', path: MOBILE_EGO_CHAT_STREAM_PATH, capability: 'ego.chat' },
+    ]);
+
+    for (const route of UNCONTRACTED_MOBILE_ROUTES) {
+      expect(
+        route.path === MOBILE_PATH_PREFIX || route.path.startsWith(`${MOBILE_PATH_PREFIX}/`)
+      ).toBe(true);
+      expect(
+        contractRoutes.some(
+          (contractRoute) =>
+            contractRoute.method.toUpperCase() === route.method.toUpperCase() &&
+            contractRoute.path === route.path
+        )
+      ).toBe(false);
+    }
   });
 });
 

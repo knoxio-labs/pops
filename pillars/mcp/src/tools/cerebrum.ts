@@ -1,9 +1,11 @@
 import { getPillar } from '../pillar-client.js';
+import { mapRows, objectUri, withUri } from './uri.js';
 import { mapCallResult, toolError } from './utils.js';
 
 import type { PillarHandle } from '@pops/pillar-sdk/client';
 
 import type { ToolDef } from './index.js';
+import type { ObjectUriType, Row } from './uri.js';
 
 type EngramListInput = {
   search?: string;
@@ -35,8 +37,28 @@ function cerebrum(): PillarHandle<CerebrumShape> {
   return getPillar<CerebrumShape>('cerebrum');
 }
 
+const SEARCH_SOURCE_URI_TYPES: Record<string, ObjectUriType> = {
+  engram: 'cerebrum/engram',
+  transaction: 'finance/transaction',
+  movie: 'media/movie',
+  tv_show: 'media/tv-show',
+  inventory: 'inventory/item',
+};
+
+function hitUri(row: Row): Row {
+  const sourceType = row['sourceType'];
+  const sourceId = row['sourceId'];
+  if (typeof sourceType !== 'string' || typeof sourceId !== 'string' || sourceId.length === 0) {
+    return row;
+  }
+
+  const type = SEARCH_SOURCE_URI_TYPES[sourceType];
+  return type === undefined ? row : { ...row, uri: objectUri(type, sourceId) };
+}
+
 const engramsList: ToolDef = {
   name: 'cerebrum.engrams.list',
+  readOnly: true,
   description:
     'List engrams (knowledge notes) from the Cerebrum knowledge base. Filter by type, scopes, tags, status, or free-text search.',
   inputSchema: {
@@ -80,12 +102,15 @@ const engramsList: ToolDef = {
     if (typeof args['limit'] === 'number') input.limit = args['limit'];
     if (typeof args['offset'] === 'number') input.offset = args['offset'];
 
-    return mapCallResult(await cerebrum().engrams.list(input));
+    return mapCallResult(
+      mapRows(await cerebrum().engrams.list(input), 'engrams', withUri('cerebrum/engram'))
+    );
   },
 };
 
 const engramGet: ToolDef = {
   name: 'cerebrum.engrams.get',
+  readOnly: true,
   description: 'Read a single engram by ID. Returns full metadata and body content.',
   inputSchema: {
     type: 'object',
@@ -98,12 +123,19 @@ const engramGet: ToolDef = {
     if (typeof args['id'] !== 'string' || args['id'].length === 0) {
       return toolError('Invalid "id"');
     }
-    return mapCallResult(await cerebrum().engrams.get({ id: args['id'] }));
+    return mapCallResult(
+      mapRows(
+        await cerebrum().engrams.get({ id: args['id'] }),
+        'engram',
+        withUri('cerebrum/engram')
+      )
+    );
   },
 };
 
 const cerebrumSearch: ToolDef = {
   name: 'cerebrum.search',
+  readOnly: true,
   description:
     'Search the Cerebrum knowledge base. The default hybrid mode ranks engrams by keyword match (BM25) fused with embedding similarity, and by keyword match alone when no embeddings are configured. Returns ranked results with titles, scores, scopes, and content snippets.',
   inputSchema: {
@@ -129,7 +161,7 @@ const cerebrumSearch: ToolDef = {
         : 'hybrid';
     const input: SearchInput = { query: args['query'], mode };
     if (typeof args['limit'] === 'number') input.limit = args['limit'];
-    return mapCallResult(await cerebrum().retrieval.search(input));
+    return mapCallResult(mapRows(await cerebrum().retrieval.search(input), 'results', hitUri));
   },
 };
 

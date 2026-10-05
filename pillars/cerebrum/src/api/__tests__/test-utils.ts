@@ -29,8 +29,11 @@ import type {
   ConversationWire,
   EgoChatBodyWire,
   EgoChatResponseWire,
+  EgoDecisionBodyWire,
+  EgoDecisionResultWire,
   GetActiveContextResponseWire,
 } from '../../contract/rest-ego-schemas.js';
+import type { EgoStreamBody } from '../../contract/rest-ego-stream.js';
 import type { EmbeddingsStatusWire } from '../../contract/rest-embeddings.js';
 import type {
   EmitSourceCitationWire,
@@ -136,20 +139,27 @@ export function makeFakeIngestLlm(
 }
 
 /**
- * Offline {@link EgoLlm} stub. `reply` is the canned chat content; `stream`
+ * Offline {@link EgoLlm} stub. `reply` is the canned content; `stream`
  * splits it into per-word tokens (so SSE tests see multiple `token` frames
  * then a `done`). Never reaches a real API.
  */
 export function makeFakeEgoLlm(reply = 'Canned ego reply.'): EgoLlm {
   return {
     model: () => 'fake-sonnet',
-    chat: () => Promise.resolve({ content: reply, tokensIn: 7, tokensOut: 11 }),
     async *stream(): AsyncGenerator<EgoStreamEvent> {
       const words = reply.split(' ');
       for (const word of words) {
         yield { type: 'token', text: `${word} ` };
       }
-      yield { type: 'done', fullText: reply, tokensIn: 7, tokensOut: 11 };
+      yield {
+        type: 'done',
+        fullText: reply,
+        tokensIn: 7,
+        tokensOut: 11,
+        assistantContent: [{ type: 'text', text: reply }],
+        toolUses: [],
+        stopReason: 'end',
+      };
     },
   };
 }
@@ -760,6 +770,8 @@ export function makeClient(app: Express) {
     },
     ego: {
       chat: (body: EgoChatBodyWire) => send<EgoChatResponseWire>(r.post('/ego/chat').send(body)),
+      decideActionBatch: (batchId: string, body: EgoDecisionBodyWire) =>
+        send<EgoDecisionResultWire>(r.post(`/ego/action-batches/${batchId}/decide`).send(body)),
       createConversation: (body: { model: string; title?: string; scopes?: string[] }) =>
         send<{ conversation: ConversationWire }>(r.post('/ego/conversations').send(body)),
       listConversations: (body: { limit?: number; offset?: number; search?: string } = {}) =>
@@ -776,7 +788,7 @@ export function makeClient(app: Express) {
         send<{ scopes: string[] }>(r.post(`/ego/conversations/${id}/scopes`).send({ scopes })),
       getActiveContext: (id: string) =>
         send<GetActiveContextResponseWire>(r.get(`/ego/conversations/${id}/context`)),
-      stream: (body: EgoChatBodyWire) => r.post('/ego/chat/stream').send(body),
+      stream: (body: EgoStreamBody) => r.post('/ego/chat/stream').send(body),
     },
     workers: {
       runPruner: (dryRun?: boolean) =>

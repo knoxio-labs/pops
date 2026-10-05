@@ -7,6 +7,7 @@ import {
   type SearchFilterOperator,
   type StructuredFilter,
 } from './finance-client.js';
+import { mapRows, objectUri, type Row } from './uri.js';
 import { mapCallResult, reqStr, toolError } from './utils.js';
 
 import type { ToolDef } from './tool-def.js';
@@ -31,8 +32,21 @@ function parseFilters(args: Record<string, unknown>): StructuredFilter[] | undef
   );
 }
 
+function normaliseHit(row: Row): Row {
+  const uri = row['uri'];
+  if (typeof uri === 'string' && uri.startsWith('pops:')) return row;
+
+  const budgetId = typeof uri === 'string' ? /^\/budgets\/([^/]+)$/.exec(uri)?.[1] : undefined;
+  if (budgetId) return { ...row, uri: objectUri('finance/budget', budgetId) };
+
+  const hit = { ...row };
+  delete hit['uri'];
+  return hit;
+}
+
 export const financeSearch: ToolDef = {
   name: 'finance.search',
+  readOnly: true,
   description:
     "Search the finance pillar's domains (transactions, budgets, wishlist) for a free-text query. Returns ranked hits across all three.",
   inputSchema: {
@@ -71,7 +85,8 @@ export const financeSearch: ToolDef = {
     const filters = parseFilters(args);
     const query: FinanceSearchInput['query'] =
       filters !== undefined && filters.length > 0 ? { text, filters } : { text };
-    return mapCallResult(await finance().search.search({ query }));
+    const result = await finance().search.search({ query });
+    return mapCallResult(mapRows(result, 'hits', normaliseHit));
   },
 };
 

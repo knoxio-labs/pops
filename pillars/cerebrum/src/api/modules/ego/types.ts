@@ -2,11 +2,14 @@
  * Ego conversation engine domain types.
  *
  * The conversation/message/context row shapes live in the pillar db
- * (`conversationsService`, src/db/services/conversations.ts); these are the
+ * (conversationsService, src/db/services/conversations.ts); these are the
  * engine-level shapes (chat params, results, streaming events, scope
  * negotiation) the engine traffics in.
  */
-import type { Message } from '../../../db/index.js';
+import type { EgoMessagePart } from '../../../contract/rest-ego-parts.js';
+import type { SettledAction } from './batch-settle.js';
+import type { Message } from './persistence.js';
+import type { AutoExecutedGroup, ProposedBatch } from './tool-loop.js';
 
 export type { Message };
 
@@ -17,6 +20,7 @@ export interface AppContext {
   entityId?: string;
   entityType?: string;
   entityTitle?: string;
+  uri?: string;
 }
 
 /** Scope negotiation outcome included in ChatResult. */
@@ -34,6 +38,9 @@ export interface ChatResult {
     citations: string[];
     tokensIn: number;
     tokensOut: number;
+    parts: EgoMessagePart[];
+    batch: ProposedBatch | null;
+    autoExecuted: AutoExecutedGroup[];
   };
   retrievedEngrams: Array<{ engramId: string; relevanceScore: number }>;
   /** Scope negotiation outcome, present when negotiation was run. */
@@ -46,6 +53,25 @@ export interface ChatStreamToken {
   text: string;
 }
 
+/** A tool lifecycle event forwarded from the tool loop. */
+export interface ChatStreamTool {
+  type: 'tool';
+  name: string;
+  status: 'started' | 'finished' | 'failed';
+}
+
+/** A model-visible part yielded by a tool. */
+export interface ChatStreamPart {
+  type: 'part';
+  part: EgoMessagePart;
+}
+
+/** A navigation request yielded by a tool. */
+export interface ChatStreamNavigate {
+  type: 'navigate';
+  uri: string;
+}
+
 /** Final metadata yielded when the stream completes. */
 export interface ChatStreamDone {
   type: 'done';
@@ -53,10 +79,18 @@ export interface ChatStreamDone {
   citations: string[];
   tokensIn: number;
   tokensOut: number;
+  parts: EgoMessagePart[];
+  batch: ProposedBatch | null;
+  autoExecuted: AutoExecutedGroup[];
 }
 
 /** Union of events yielded by the engine's streaming generator. */
-export type ChatStreamEvent = ChatStreamToken | ChatStreamDone;
+export type ChatStreamEvent =
+  | ChatStreamToken
+  | ChatStreamTool
+  | ChatStreamPart
+  | ChatStreamNavigate
+  | ChatStreamDone;
 
 /** Preparation result from ConversationEngine.prepareStream(). */
 export interface ChatStreamPreparation {
@@ -79,6 +113,10 @@ export interface ChatParams {
   channel?: EgoChannel;
   /** All known scopes in the system (for scope negotiation matching). */
   knownScopes?: string[];
+  /** Gateway dotted tool names allowed to execute writes in this conversation. */
+  allowedTools?: readonly string[];
+  /** Outcomes for action batches settled before this new message. */
+  settled?: readonly SettledAction[];
 }
 
 /** Configuration for the conversation engine. */

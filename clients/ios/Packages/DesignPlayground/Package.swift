@@ -27,9 +27,11 @@ let package = Package(
         .package(path: "../AppCore"),
         .package(path: "../DesignSystem"),
         .package(path: "../FeatureAccounts"),
+        .package(path: "../FeatureEgo"),
         .package(path: "../FeaturePairing"),
         .package(path: "../FeaturePurchases"),
         .package(path: "../FeatureTransactions"),
+        .package(url: "https://github.com/nalexn/ViewInspector.git", exact: "0.10.5"),
     ],
     targets: [
         .target(
@@ -38,6 +40,7 @@ let package = Package(
                 "AppCore",
                 "DesignSystem",
                 "FeatureAccounts",
+                "FeatureEgo",
                 "FeaturePairing",
                 "FeaturePurchases",
                 "FeatureTransactions",
@@ -51,7 +54,10 @@ let package = Package(
         ),
         .testTarget(
             name: "DesignPlaygroundTests",
-            dependencies: ["DesignPlayground"],
+            dependencies: [
+                "DesignPlayground",
+                .product(name: "ViewInspector", package: "ViewInspector"),
+            ],
             swiftSettings: strictSwiftSettings
         ),
     ]

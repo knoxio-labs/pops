@@ -157,24 +157,74 @@ extension AuthenticatingMiddleware {
         _ answered: (HTTPResponse, HTTPBody?)
     ) async -> (HTTPResponse, HTTPBody?) {
         guard answered.0.status.code == 403, let body = answered.1 else { return answered }
-        if body.iterationBehavior == .single {
-            guard case .known(let length) = body.length,
-                length <= Int64(Self.maximumRefusalBodyBytes)
-            else { return answered }
-        }
-
-        do {
-            let bytes = try await [UInt8](collecting: body, upTo: Self.maximumRefusalBodyBytes)
-            let replayedBody = HTTPBody(bytes)
-            if let refusal = try? JSONDecoder().decode(BFMRefusalBody.self, from: Data(bytes)),
-                refusal.code == "bfm.auth.device_revoked"
-            {
-                await refresher.deviceWasRevoked()
-            }
-            return (answered.0, replayedBody)
-        } catch {
+        if case .known(let length) = body.length,
+            length > Int64(Self.maximumRefusalBodyBytes)
+        {
             return answered
         }
+
+        if body.iterationBehavior == .multiple {
+            do {
+                let bytes = try await [UInt8](collecting: body, upTo: Self.maximumRefusalBodyBytes)
+                if Self.isDeviceRevocation(bytes) {
+                    await refresher.deviceWasRevoked()
+                }
+            } catch {
+                return answered
+            }
+            return answered
+        }
+
+        return await preservingSinglePassRefusalBody(body, in: answered.0)
+    }
+
+    private func preservingSinglePassRefusalBody(
+        _ body: HTTPBody,
+        in response: HTTPResponse
+    ) async -> (HTTPResponse, HTTPBody?) {
+        var iterator = body.makeAsyncIterator()
+        var bytes: [UInt8] = []
+        do {
+            while let chunk = try await iterator.next() {
+                guard chunk.count <= Self.maximumRefusalBodyBytes - bytes.count else {
+                    let source = RefusalBodyReplaySource(
+                        state: RefusalBodyReplayState(
+                            prefix: [ArraySlice(bytes), chunk], iterator: iterator))
+                    return (
+                        response,
+                        HTTPBody(
+                            RefusalBodyReplaySequence(source: source),
+                            length: .unknown,
+                            iterationBehavior: .single
+                        )
+                    )
+                }
+                bytes.append(contentsOf: chunk)
+            }
+            if Self.isDeviceRevocation(bytes) {
+                await refresher.deviceWasRevoked()
+            }
+            return (response, HTTPBody(bytes))
+        } catch {
+            let source = RefusalBodyReplaySource(
+                state: RefusalBodyReplayState(
+                    prefix: [ArraySlice(bytes)], terminalError: error))
+            return (
+                response,
+                HTTPBody(
+                    RefusalBodyReplaySequence(source: source),
+                    length: .unknown,
+                    iterationBehavior: .single
+                )
+            )
+        }
+    }
+
+    private static func isDeviceRevocation(_ bytes: [UInt8]) -> Bool {
+        guard let refusal = try? JSONDecoder().decode(BFMRefusalBody.self, from: Data(bytes)) else {
+            return false
+        }
+        return refusal.code == "bfm.auth.device_revoked"
     }
 
     private static func carriesCredentials(_ request: HTTPRequest) -> Bool {
@@ -191,3 +241,95 @@ extension AuthenticatingMiddleware {
 private struct BFMRefusalBody: Decodable {
     let code: String
 }
+
+private struct RefusalBodyReplayState {
+    fileprivate var prefix: [HTTPBody.ByteChunk]
+    fileprivate var iterator: HTTPBody.Iterator?
+    fileprivate var terminalError: (any Error)?
+
+    fileprivate init(
+        prefix: [HTTPBody.ByteChunk],
+        iterator: HTTPBody.Iterator? = nil,
+        terminalError: (any Error)? = nil
+    ) {
+        self.prefix = prefix.filter { !$0.isEmpty }
+        self.iterator = iterator
+        self.terminalError = terminalError
+    }
+}
+
+private final class RefusalBodyReplaySource: @unchecked Sendable {
+    private let lock = NSLock()
+    private var state: RefusalBodyReplayState?
+
+    fileprivate init(state: RefusalBodyReplayState) {
+        self.state = state
+    }
+
+    fileprivate func takeState() -> RefusalBodyReplayState? {
+        // The lock makes the non-Sendable iterator a one-time handoff to its consumer.
+        lock.lock()
+        defer { lock.unlock() }
+        let state = self.state
+        self.state = nil
+        return state
+    }
+}
+
+private struct RefusalBodyReplaySequence: AsyncSequence, Sendable {
+    internal typealias Element = HTTPBody.ByteChunk
+
+    internal struct AsyncIterator: AsyncIteratorProtocol {
+        private var prefix: [HTTPBody.ByteChunk]
+        private var iterator: HTTPBody.Iterator?
+        private var terminalError: (any Error)?
+        private var terminalErrorDelivered = false
+        private var alreadyConsumed = false
+
+        fileprivate init(state: RefusalBodyReplayState?) {
+            if let state {
+                self.prefix = state.prefix
+                self.iterator = state.iterator
+                self.terminalError = state.terminalError
+                self.alreadyConsumed = false
+            } else {
+                self.prefix = []
+                self.iterator = nil
+                self.terminalError = nil
+                self.alreadyConsumed = true
+            }
+        }
+
+        internal mutating func next() async throws -> Element? {
+            if !prefix.isEmpty { return prefix.removeFirst() }
+            if let terminalError {
+                guard !terminalErrorDelivered else { return nil }
+                terminalErrorDelivered = true
+                throw terminalError
+            }
+            guard var iterator else {
+                if alreadyConsumed { throw RefusalBodyReplayAlreadyConsumedError() }
+                return nil
+            }
+            let chunk = try await iterator.next()
+            if chunk == nil {
+                self.iterator = nil
+            } else {
+                self.iterator = iterator
+            }
+            return chunk
+        }
+    }
+
+    private let source: RefusalBodyReplaySource
+
+    fileprivate init(source: RefusalBodyReplaySource) {
+        self.source = source
+    }
+
+    internal func makeAsyncIterator() -> AsyncIterator {
+        AsyncIterator(state: source.takeState())
+    }
+}
+
+private struct RefusalBodyReplayAlreadyConsumedError: Error {}

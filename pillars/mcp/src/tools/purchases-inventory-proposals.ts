@@ -44,6 +44,7 @@ function inventory(): PillarHandle<InventoryShape> {
 
 const proposalsList: ToolDef = {
   name: 'purchases.inventoryProposals.list',
+  readOnly: true,
   description:
     "List an order's unanswered inventory offers: one per unit of each line classified as durable that is not yet linked to an inventory item. Lines are unclassified until a classification pass runs, so an empty list does not mean nothing can be linked; inventoryProposals.accept takes any line of the order. Also empty for an order that does not exist.",
   inputSchema: {
@@ -72,6 +73,7 @@ async function missingInventoryItem(inventoryItemId: string): Promise<CallToolRe
 
 const proposalsAccept: ToolDef = {
   name: 'purchases.inventoryProposals.accept',
+  readOnly: false,
   description:
     "Link an existing inventory item to the order line unit it came from. Take orderId and the line's itemId from purchases.orders.get or purchases.search. It works on any line of the order, whether or not purchases.inventoryProposals.list offers it: that list only covers lines already classified as durable, and most lines are unclassified. Send unitId only when the line already has an unanswered unit row, as orders.get shows it. The inventory item must already exist; this creates nothing. The link is permanent: it cannot be changed or removed afterwards, so only call it when the user has said which item came from which order line.",
   inputSchema: {

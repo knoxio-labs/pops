@@ -170,6 +170,9 @@ describe('computed values on item reads', () => {
 
     const result = await tool('inventory.items.get').handler({ id: ITEM_ID });
 
-    expect(parseResult(result)).toEqual({ item, history: { events: [], nextCursor: null } });
+    expect(parseResult(result)).toEqual({
+      item: { ...item, uri: `pops:inventory/item/${ITEM_ID}` },
+      history: { events: [], nextCursor: null },
+    });
   });
 });

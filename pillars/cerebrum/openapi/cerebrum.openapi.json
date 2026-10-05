@@ -749,6 +749,343 @@
         "tags": ["debrief"]
       }
     },
+    "/ego/action-batches/{batchId}/decide": {
+      "post": {
+        "operationId": "ego.decideActionBatch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "batchId",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "alwaysAllow": {
+                    "items": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "approve": {
+                    "items": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "reject": {
+                    "items": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                },
+                "required": ["approve", "reject", "alwaysAllow"],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "batch": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "actions": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "batchId": {
+                                "type": "string"
+                              },
+                              "conversationId": {
+                                "type": "string"
+                              },
+                              "createdAt": {
+                                "type": "string"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "messageId": {
+                                "type": "string"
+                              },
+                              "resolvedAt": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "result": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "status": {
+                                "enum": ["pending", "confirmed", "rejected", "executed", "failed"],
+                                "type": "string"
+                              },
+                              "summary": {
+                                "type": "string"
+                              },
+                              "tool": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "batchId",
+                              "conversationId",
+                              "messageId",
+                              "tool",
+                              "summary",
+                              "status",
+                              "result",
+                              "createdAt",
+                              "resolvedAt"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "conversationId": {
+                          "type": "string"
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        },
+                        "decidedAt": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "id": {
+                          "type": "string"
+                        },
+                        "messageId": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "enum": ["pending", "decided", "continued", "auto"],
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "conversationId",
+                        "messageId",
+                        "status",
+                        "actions",
+                        "createdAt",
+                        "decidedAt"
+                      ],
+                      "type": "object"
+                    },
+                    "updatedMessage": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "citations": {
+                          "nullable": true
+                        },
+                        "content": {
+                          "type": "string"
+                        },
+                        "conversationId": {
+                          "type": "string"
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        },
+                        "id": {
+                          "type": "string"
+                        },
+                        "parts": {
+                          "items": {
+                            "oneOf": [
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "text": {
+                                    "type": "string"
+                                  },
+                                  "type": {
+                                    "enum": ["text"],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["type", "text"],
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "subtitle": {
+                                    "type": "string"
+                                  },
+                                  "title": {
+                                    "minLength": 1,
+                                    "type": "string"
+                                  },
+                                  "type": {
+                                    "enum": ["entity"],
+                                    "type": "string"
+                                  },
+                                  "uri": {
+                                    "pattern": "^pops:([a-z][a-z0-9-]*)\\/([a-z][a-z0-9-]*)\\/([^/\\s]+)$",
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["type", "uri", "title"],
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "actions": {
+                                    "items": {
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "actionId": {
+                                          "minLength": 1,
+                                          "type": "string"
+                                        },
+                                        "status": {
+                                          "enum": [
+                                            "pending",
+                                            "confirmed",
+                                            "rejected",
+                                            "executed",
+                                            "failed"
+                                          ],
+                                          "type": "string"
+                                        },
+                                        "summary": {
+                                          "type": "string"
+                                        },
+                                        "tool": {
+                                          "minLength": 1,
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": ["actionId", "tool", "summary", "status"],
+                                      "type": "object"
+                                    },
+                                    "minItems": 1,
+                                    "type": "array"
+                                  },
+                                  "batchId": {
+                                    "minLength": 1,
+                                    "type": "string"
+                                  },
+                                  "type": {
+                                    "enum": ["actions"],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["type", "batchId", "actions"],
+                                "type": "object"
+                              }
+                            ]
+                          },
+                          "nullable": true,
+                          "type": "array"
+                        },
+                        "role": {
+                          "type": "string"
+                        },
+                        "tokensIn": {
+                          "nullable": true,
+                          "type": "number"
+                        },
+                        "tokensOut": {
+                          "nullable": true,
+                          "type": "number"
+                        },
+                        "toolCalls": {
+                          "nullable": true
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "conversationId",
+                        "role",
+                        "content",
+                        "citations",
+                        "toolCalls",
+                        "parts",
+                        "tokensIn",
+                        "tokensOut",
+                        "createdAt"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": ["batch", "updatedMessage"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "409"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "503"
+          }
+        },
+        "summary": "Record an Ego action batch decision.",
+        "tags": ["ego"]
+      }
+    },
     "/ego/chat": {
       "post": {
         "operationId": "ego.chat",
@@ -775,6 +1112,10 @@
                         "type": "string"
                       },
                       "route": {
+                        "type": "string"
+                      },
+                      "uri": {
+                        "pattern": "^pops:([a-z][a-z0-9-]*)\\/([a-z][a-z0-9-]*)\\/([^/\\s]+)$",
                         "type": "string"
                       }
                     },
@@ -843,6 +1184,97 @@
                         "id": {
                           "type": "string"
                         },
+                        "parts": {
+                          "items": {
+                            "oneOf": [
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "text": {
+                                    "type": "string"
+                                  },
+                                  "type": {
+                                    "enum": ["text"],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["type", "text"],
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "subtitle": {
+                                    "type": "string"
+                                  },
+                                  "title": {
+                                    "minLength": 1,
+                                    "type": "string"
+                                  },
+                                  "type": {
+                                    "enum": ["entity"],
+                                    "type": "string"
+                                  },
+                                  "uri": {
+                                    "pattern": "^pops:([a-z][a-z0-9-]*)\\/([a-z][a-z0-9-]*)\\/([^/\\s]+)$",
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["type", "uri", "title"],
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "actions": {
+                                    "items": {
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "actionId": {
+                                          "minLength": 1,
+                                          "type": "string"
+                                        },
+                                        "status": {
+                                          "enum": [
+                                            "pending",
+                                            "confirmed",
+                                            "rejected",
+                                            "executed",
+                                            "failed"
+                                          ],
+                                          "type": "string"
+                                        },
+                                        "summary": {
+                                          "type": "string"
+                                        },
+                                        "tool": {
+                                          "minLength": 1,
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": ["actionId", "tool", "summary", "status"],
+                                      "type": "object"
+                                    },
+                                    "minItems": 1,
+                                    "type": "array"
+                                  },
+                                  "batchId": {
+                                    "minLength": 1,
+                                    "type": "string"
+                                  },
+                                  "type": {
+                                    "enum": ["actions"],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["type", "batchId", "actions"],
+                                "type": "object"
+                              }
+                            ]
+                          },
+                          "nullable": true,
+                          "type": "array"
+                        },
                         "role": {
                           "type": "string"
                         },
@@ -865,6 +1297,7 @@
                         "content",
                         "citations",
                         "toolCalls",
+                        "parts",
                         "tokensIn",
                         "tokensOut",
                         "createdAt"
@@ -1281,6 +1714,97 @@
                           "id": {
                             "type": "string"
                           },
+                          "parts": {
+                            "items": {
+                              "oneOf": [
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "text": {
+                                      "type": "string"
+                                    },
+                                    "type": {
+                                      "enum": ["text"],
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": ["type", "text"],
+                                  "type": "object"
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "subtitle": {
+                                      "type": "string"
+                                    },
+                                    "title": {
+                                      "minLength": 1,
+                                      "type": "string"
+                                    },
+                                    "type": {
+                                      "enum": ["entity"],
+                                      "type": "string"
+                                    },
+                                    "uri": {
+                                      "pattern": "^pops:([a-z][a-z0-9-]*)\\/([a-z][a-z0-9-]*)\\/([^/\\s]+)$",
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": ["type", "uri", "title"],
+                                  "type": "object"
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "actions": {
+                                      "items": {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "actionId": {
+                                            "minLength": 1,
+                                            "type": "string"
+                                          },
+                                          "status": {
+                                            "enum": [
+                                              "pending",
+                                              "confirmed",
+                                              "rejected",
+                                              "executed",
+                                              "failed"
+                                            ],
+                                            "type": "string"
+                                          },
+                                          "summary": {
+                                            "type": "string"
+                                          },
+                                          "tool": {
+                                            "minLength": 1,
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": ["actionId", "tool", "summary", "status"],
+                                        "type": "object"
+                                      },
+                                      "minItems": 1,
+                                      "type": "array"
+                                    },
+                                    "batchId": {
+                                      "minLength": 1,
+                                      "type": "string"
+                                    },
+                                    "type": {
+                                      "enum": ["actions"],
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": ["type", "batchId", "actions"],
+                                  "type": "object"
+                                }
+                              ]
+                            },
+                            "nullable": true,
+                            "type": "array"
+                          },
                           "role": {
                             "type": "string"
                           },
@@ -1303,6 +1827,7 @@
                           "content",
                           "citations",
                           "toolCalls",
+                          "parts",
                           "tokensIn",
                           "tokensOut",
                           "createdAt"

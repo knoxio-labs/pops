@@ -9,32 +9,19 @@ import { useCallback, useState } from 'react';
 
 import { egoDeleteConversation } from '../ego-api';
 import { unwrap } from '../ego-api-helpers';
+import { useBatchDecisionStream, useSendMessage, useStreamCallbacks } from './useChatStream';
+import { useFrameNavigation } from './useFrameNavigation';
 import { useStreamingChat } from './useStreamingChat';
 
-import type { EgoGetConversationResponses } from '../ego-api/types.gen';
-import type { RetrievedEngram } from './types';
-
-type ConversationDetail = EgoGetConversationResponses[200];
+import type { ChatMessage, RetrievedEngram } from './types';
 
 interface UseChatMutationsParams {
   selectedConversationId: string | null;
   setSelectedConversationId: (id: string | null) => void;
   inputValue: string;
+  /** Current messages for the selected conversation, used to find a resumable batch. */
+  messages: ChatMessage[];
   setInputValue: (value: string) => void;
-}
-
-function buildOptimisticMessage(conversationId: string, content: string) {
-  return {
-    id: `optimistic_${Date.now()}`,
-    conversationId,
-    role: 'user',
-    content,
-    citations: null,
-    toolCalls: null,
-    tokensIn: null,
-    tokensOut: null,
-    createdAt: new Date().toISOString(),
-  };
 }
 
 function useDeleteConversation(
@@ -62,11 +49,26 @@ export function useChatMutations({
   selectedConversationId,
   setSelectedConversationId,
   inputValue,
+  messages,
   setInputValue,
 }: UseChatMutationsParams) {
   const [retrievedEngrams, setRetrievedEngrams] = useState<RetrievedEngram[]>([]);
   const queryClient = useQueryClient();
   const streaming = useStreamingChat();
+  const onNavigate = useFrameNavigation();
+  const streamCallbacks = useStreamCallbacks({
+    onNavigate,
+    queryClient,
+    setRetrievedEngrams,
+    setSelectedConversationId,
+  });
+  const batchDecisions = useBatchDecisionStream({
+    conversationId: selectedConversationId,
+    stream: streaming.stream,
+    callbacks: streamCallbacks,
+    messages,
+    isStreaming: streaming.isStreaming,
+  });
   const { deleteConversation, isDeleting } = useDeleteConversation(
     selectedConversationId,
     setSelectedConversationId,
@@ -74,31 +76,16 @@ export function useChatMutations({
     queryClient
   );
 
-  const sendMessage = useCallback(() => {
-    const trimmed = inputValue.trim();
-    if (!trimmed || streaming.isStreaming) return;
-    setInputValue('');
-    if (selectedConversationId) {
-      const msg = buildOptimisticMessage(selectedConversationId, trimmed);
-      queryClient.setQueryData<ConversationDetail>(
-        ['ego', 'conversations', 'get', { id: selectedConversationId }],
-        (prev) => (prev ? { ...prev, messages: [...prev.messages, msg] } : prev)
-      );
-    }
-    streaming.stream(
-      { conversationId: selectedConversationId, message: trimmed },
-      {
-        onConversation: setSelectedConversationId,
-        onEngrams: setRetrievedEngrams,
-        onInvalidate: (conversationId) => {
-          void queryClient.invalidateQueries({ queryKey: ['ego', 'conversations', 'list'] });
-          void queryClient.invalidateQueries({
-            queryKey: ['ego', 'conversations', 'get', { id: conversationId }],
-          });
-        },
-      }
-    );
-  }, [inputValue, selectedConversationId, streaming, setInputValue, setSelectedConversationId, queryClient]); // prettier-ignore
+  const sendMessage = useSendMessage({
+    batchDecidingId: batchDecisions.decidingBatchId,
+    callbacks: streamCallbacks,
+    inputValue,
+    isStreaming: streaming.isStreaming,
+    queryClient,
+    selectedConversationId,
+    setInputValue,
+    stream: streaming.stream,
+  });
 
   const clearEngrams = useCallback(() => setRetrievedEngrams([]), []);
 
@@ -111,5 +98,8 @@ export function useChatMutations({
     retrievedEngrams,
     clearEngrams,
     streamingContent: streaming.streamingContent,
+    toolActivity: streaming.toolActivity,
+    streamParts: streaming.streamParts,
+    batchDecisions: streaming.isStreaming ? null : batchDecisions,
   };
 }

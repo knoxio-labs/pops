@@ -14,6 +14,7 @@ import type { ToolDef } from './tool-def.js';
 function setAccessTool(name: string, access: 'open' | 'closed'): ToolDef {
   return {
     name,
+    readOnly: false,
     description: `Mark a container item as ${access}.`,
     inputSchema: {
       type: 'object',
@@ -35,6 +36,7 @@ function setAccessTool(name: string, access: 'open' | 'closed'): ToolDef {
 
 const itemsSetFull: ToolDef = {
   name: 'inventory.items.setFull',
+  readOnly: false,
   description: 'Mark a container item as full or not full.',
   inputSchema: {
     type: 'object',
@@ -60,6 +62,7 @@ const itemsSetFull: ToolDef = {
 
 const itemsDiscard: ToolDef = {
   name: 'inventory.items.discard',
+  readOnly: false,
   description: 'Discard an item (soft-deletes it). Restorable with inventory.items.restore.',
   inputSchema: {
     type: 'object',
@@ -89,6 +92,7 @@ const itemsDiscard: ToolDef = {
 
 const itemsRestore: ToolDef = {
   name: 'inventory.items.restore',
+  readOnly: false,
   description:
     'Restore a discarded (soft-deleted) item. Has no effect on an item that is not deleted.',
   inputSchema: {

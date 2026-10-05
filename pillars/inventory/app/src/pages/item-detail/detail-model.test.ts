@@ -269,7 +269,7 @@ describe('item detail model', () => {
     expect(provenance).toMatchObject({
       pricePaid: '$120.50',
       merchant: 'Officeworks',
-      purchase: { href: '/finance/transactions/42' },
+      purchase: { href: '/finance/transactions?transaction=42' },
     });
     expect(
       toDetailDocuments([

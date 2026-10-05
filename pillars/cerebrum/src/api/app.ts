@@ -19,6 +19,7 @@ import { createRegistryServiceAccountVerifier } from '@pops/pillar-sdk/server';
 import { cerebrumContract } from '../contract/rest.js';
 import { type CerebrumApiDeps, makeRequestHandler } from './handlers.js';
 import { createServiceAccountScopeMiddleware } from './middleware/service-account-scope.js';
+import { buildEgoTools } from './modules/ego/gateway/build-ego-tools.js';
 import { AnthropicEgoLlm } from './modules/ego/llm.js';
 import { AnthropicQueryLlm, AnthropicQueryStreamLlm } from './modules/query/llm.js';
 import { makeEgoStreamRouter } from './rest/ego-stream.js';
@@ -58,6 +59,8 @@ const openapiDocument: unknown = JSON.parse(
  * governed by the existing network perimeter.
  */
 export function createCerebrumApiApp(deps: CerebrumApiDeps): Express {
+  const egoTools = deps.egoTools ?? buildEgoTools() ?? undefined;
+  const appDeps = { ...deps, egoTools };
   const app = express();
   const errors = createPillarErrorHandlers({ pillar: 'cerebrum' });
   app.disable('x-powered-by');
@@ -65,7 +68,7 @@ export function createCerebrumApiApp(deps: CerebrumApiDeps): Express {
   app.use(express.json({ limit: JSON_BODY_LIMIT }));
   app.use(errors.bodyParser);
 
-  const handlers = makeRequestHandler(deps);
+  const handlers = makeRequestHandler(appDeps);
 
   app.get('/health', (_req: Request, res: Response) => {
     res.json(handlers.health());
@@ -83,8 +86,15 @@ export function createCerebrumApiApp(deps: CerebrumApiDeps): Express {
     res.json(openapiDocument);
   });
 
+  app.use(
+    createServiceAccountScopeMiddleware(
+      deps.serviceAccountVerifier ?? createRegistryServiceAccountVerifier()
+    )
+  );
+
   // The ego SSE route (`text/event-stream`) can't be modelled in ts-rest, so it
-  // mounts as a plain Express route BEFORE createExpressEndpoints.
+  // mounts as a plain Express route AFTER the scope gate, which scopes it as a
+  // declared raw route, and BEFORE createExpressEndpoints.
   app.use(
     makeEgoStreamRouter({
       db: deps.cerebrumDb.db,
@@ -93,6 +103,7 @@ export function createCerebrumApiApp(deps: CerebrumApiDeps): Express {
       engramRoot: deps.engramRoot,
       templates: deps.templateRegistry,
       llm: deps.egoLlm ?? new AnthropicEgoLlm(),
+      tools: egoTools,
       peers: deps.peerClients,
       embeddingClient: deps.embeddingClient,
     })
@@ -113,13 +124,7 @@ export function createCerebrumApiApp(deps: CerebrumApiDeps): Express {
     })
   );
 
-  app.use(
-    createServiceAccountScopeMiddleware(
-      deps.serviceAccountVerifier ?? createRegistryServiceAccountVerifier()
-    )
-  );
-
-  createExpressEndpoints(cerebrumContract, makeCerebrumRestHandlers(deps), app, {
+  createExpressEndpoints(cerebrumContract, makeCerebrumRestHandlers(appDeps), app, {
     requestValidationErrorHandler: errors.validation,
   });
 

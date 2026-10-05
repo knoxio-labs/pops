@@ -28,9 +28,10 @@ export function mapCallResult<T>(result: CallResult<T>, scope?: string): CallToo
   if (result.kind === 'ok') return ok(result.value);
   const mapped = toolError(formatFailureReason(result));
   if (scope === undefined || result.kind !== 'unauthorized') return mapped;
+  const producer = scope.split('.')[0] ?? scope;
   return toolError(
     `${formatFailureReason(result)}\nThis tool requires service-account scope '${scope}'. ` +
-      'Ask an operator to grant it to the service-account credential presented by this MCP server ' +
+      `Ask an operator to grant it to the service-account credential this MCP server presents to '${producer}' ` +
       '(MCP does not mint or widen scopes itself).'
   );
 }

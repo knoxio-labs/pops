@@ -52,6 +52,7 @@ const thingsList: ToolDef = {
     },
     required: ['tagIds'],
   },
+  readOnly: true,
   handler: async (args) => {
     const tagIds = args['tagIds'];
     if (!isTagIdList(tagIds)) {

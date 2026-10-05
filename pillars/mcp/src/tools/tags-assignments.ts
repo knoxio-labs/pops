@@ -53,6 +53,7 @@ function assignmentTool(operation: 'attach' | 'detach'): ToolDef {
       },
       required: ['pillar', 'entityType', 'entityId', 'tagId'],
     },
+    readOnly: false,
     scope: '<pillar>.tagged',
     handler: async (args) => {
       const pillar = reqStr(args, 'pillar');

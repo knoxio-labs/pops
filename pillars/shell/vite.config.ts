@@ -104,11 +104,9 @@ export default defineConfig({
       // strip the prefix so the orchestrator router sees its natural `/search`.
       // Mirrors the `/<pillar>-api` proxies above.
       '/orchestrator-api': createDevApiProxy('http://localhost:3009', '/orchestrator-api'),
-      // SSE streaming endpoints (ego chat + cerebrum query) live on the
-      // cerebrum pillar. These MUST precede the bare `/api` rule below,
-      // which otherwise sends every `/api/*` request to the legacy
-      // monolith upstream (3000).
-      '/api/ego': createDevApiProxy('http://localhost:3007', undefined),
+      // The cerebrum query stream uses `/api/cerebrum`. This MUST precede
+      // the bare `/api` rule below, which otherwise sends its request to the
+      // legacy monolith upstream (3000).
       '/api/cerebrum': createDevApiProxy('http://localhost:3007', undefined),
       '/media/images': createDevApiProxy('http://localhost:3003', undefined),
       '/inventory/documents': createDevApiProxy('http://localhost:3000', undefined),

@@ -31,6 +31,7 @@ const create: ToolDef = {
     },
     required: ['facet', 'name'],
   },
+  readOnly: false,
   scope: TAGS_SCOPE,
   handler: async (args) => {
     const facet = reqStr(args, 'facet');
@@ -83,6 +84,7 @@ const update: ToolDef = {
     },
     required: ['id'],
   },
+  readOnly: false,
   scope: TAGS_SCOPE,
   handler: async (args) => {
     const id = reqStr(args, 'id');
@@ -127,6 +129,7 @@ const archive: ToolDef = {
     properties: { id: { type: 'string', format: 'uuid', description: 'Shared tag id.' } },
     required: ['id'],
   },
+  readOnly: false,
   scope: TAGS_SCOPE,
   handler: async (args) => {
     const id = reqStr(args, 'id');
@@ -146,6 +149,7 @@ const merge: ToolDef = {
     },
     required: ['id', 'intoId'],
   },
+  readOnly: false,
   scope: TAGS_SCOPE,
   handler: async (args) => {
     const id = reqStr(args, 'id');

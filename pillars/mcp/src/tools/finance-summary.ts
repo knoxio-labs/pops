@@ -19,6 +19,7 @@ const READING_NOTE =
 
 const summaryGet: ToolDef = {
   name: 'finance.summary.get',
+  readOnly: true,
   description:
     'Spend, income and net for one window and the period before it, aggregated by the ' +
     'finance pillar — use this instead of paging finance.transactions.list and adding it up. ' +

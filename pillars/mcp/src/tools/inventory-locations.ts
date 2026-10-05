@@ -1,4 +1,5 @@
 import { getPillar } from '../pillar-client.js';
+import { mapRows, withUri } from './uri.js';
 import { copyOptStr, mapCallResult, nullStr, optBool, optNum, reqStr, toolError } from './utils.js';
 
 import type { PillarHandle } from '@pops/pillar-sdk/client';
@@ -36,6 +37,7 @@ type InventoryShape = {
   locations: {
     tree: () => { data: LocationTreeNode[] };
     list: () => { data: Location[]; total: number };
+    get: (input: { id: string }) => { data: Location };
     create: (input: { name: string; parentId?: string | null; sortOrder?: number }) => {
       data: Location;
       message: string;
@@ -65,21 +67,43 @@ function buildLocationPatch(args: Record<string, unknown>): LocationPatch {
 
 const locationTree: ToolDef = {
   name: 'inventory.locations.tree',
+  readOnly: true,
   description:
     'Get the full location hierarchy as a nested tree. Returns all locations with their children.',
   inputSchema: { type: 'object', properties: {} },
   handler: async () => mapCallResult(await locations().tree()),
 };
 
+const locationsGet: ToolDef = {
+  name: 'inventory.locations.get',
+  readOnly: true,
+  description: 'Get one location by ID.',
+  inputSchema: {
+    type: 'object',
+    properties: { id: { type: 'string', description: 'Location ID' } },
+    required: ['id'],
+  },
+  handler: async (args) => {
+    const id = reqStr(args, 'id');
+    if (!id) return toolError('Missing required field: id');
+    return mapCallResult(
+      mapRows(await locations().get({ id }), 'data', withUri('inventory/location'))
+    );
+  },
+};
+
 const locationsList: ToolDef = {
   name: 'inventory.locations.list',
+  readOnly: true,
   description: 'List all locations as a flat array.',
   inputSchema: { type: 'object', properties: {} },
-  handler: async () => mapCallResult(await locations().list()),
+  handler: async () =>
+    mapCallResult(mapRows(await locations().list(), 'data', withUri('inventory/location'))),
 };
 
 const locationsCreate: ToolDef = {
   name: 'inventory.locations.create',
+  readOnly: false,
   description:
     'Create a new location. Use parentId to nest it under an existing location (omit or null for a root location). Returns the created location including its id.',
   inputSchema: {
@@ -108,6 +132,7 @@ const locationsCreate: ToolDef = {
 
 const locationsUpdate: ToolDef = {
   name: 'inventory.locations.update',
+  readOnly: false,
   description:
     'Update an existing location. Only provided fields are changed. Pass parentId: null to make a location a root node.',
   inputSchema: {
@@ -133,6 +158,7 @@ const locationsUpdate: ToolDef = {
 
 const locationsDelete: ToolDef = {
   name: 'inventory.locations.delete',
+  readOnly: false,
   description:
     'Delete a location. Without force, returns { requiresConfirmation: true, stats } when the location has children or items — re-call with force: true once the user confirms. Child locations are cascade-deleted; items become unlocated (not deleted).',
   inputSchema: {
@@ -155,6 +181,7 @@ const locationsDelete: ToolDef = {
 
 export const locationTools: readonly ToolDef[] = [
   locationTree,
+  locationsGet,
   locationsList,
   locationsCreate,
   locationsUpdate,

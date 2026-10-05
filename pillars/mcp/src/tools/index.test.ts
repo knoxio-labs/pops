@@ -3,8 +3,14 @@ import { describe, expect, it } from 'vitest';
 const { allTools } = await import('./index.js');
 
 describe('allTools', () => {
-  it('exports exactly 82 tools', () => {
-    expect(allTools).toHaveLength(82);
+  it('exports exactly 88 tools', () => {
+    expect(allTools).toHaveLength(88);
+  });
+
+  it('registers purchases inventory proposal tools', () => {
+    const names = new Set(allTools.map((tool) => tool.name));
+    expect(names.has('purchases.inventoryProposals.list')).toBe(true);
+    expect(names.has('purchases.inventoryProposals.accept')).toBe(true);
   });
 
   it('registers cross-pillar shared tag lookup', () => {
@@ -81,6 +87,7 @@ describe('allTools', () => {
       'finance.wishlist.list',
       'finance.wishlist.get',
       'finance.accounts.list',
+      'finance.accounts.get',
       'finance.accounts.checkpoints',
       'finance.imports.getImportProgress',
       'finance.search',

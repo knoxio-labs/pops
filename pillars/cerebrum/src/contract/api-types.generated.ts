@@ -139,6 +139,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/ego/action-batches/{batchId}/decide': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Record an Ego action batch decision. */
+    post: operations['ego.decideActionBatch'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/ego/chat': {
     parameters: {
       query?: never;
@@ -2016,6 +2033,135 @@ export interface operations {
       };
     };
   };
+  'ego.decideActionBatch': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        batchId: string;
+      };
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          alwaysAllow: string[];
+          approve: string[];
+          reject: string[];
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            batch: {
+              actions: {
+                batchId: string;
+                conversationId: string;
+                createdAt: string;
+                id: string;
+                messageId: string;
+                resolvedAt: string | null;
+                result: string | null;
+                /** @enum {string} */
+                status: 'pending' | 'confirmed' | 'rejected' | 'executed' | 'failed';
+                summary: string;
+                tool: string;
+              }[];
+              conversationId: string;
+              createdAt: string;
+              decidedAt: string | null;
+              id: string;
+              messageId: string;
+              /** @enum {string} */
+              status: 'pending' | 'decided' | 'continued' | 'auto';
+            };
+            updatedMessage: {
+              citations: unknown;
+              content: string;
+              conversationId: string;
+              createdAt: string;
+              id: string;
+              parts:
+                | (
+                    | {
+                        text: string;
+                        /** @enum {string} */
+                        type: 'text';
+                      }
+                    | {
+                        subtitle?: string;
+                        title: string;
+                        /** @enum {string} */
+                        type: 'entity';
+                        uri: string;
+                      }
+                    | {
+                        actions: {
+                          actionId: string;
+                          /** @enum {string} */
+                          status: 'pending' | 'confirmed' | 'rejected' | 'executed' | 'failed';
+                          summary: string;
+                          tool: string;
+                        }[];
+                        batchId: string;
+                        /** @enum {string} */
+                        type: 'actions';
+                      }
+                  )[]
+                | null;
+              role: string;
+              tokensIn: number | null;
+              tokensOut: number | null;
+              toolCalls: unknown;
+            } | null;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+    };
+  };
   'ego.chat': {
     parameters: {
       query?: never;
@@ -2033,6 +2179,7 @@ export interface operations {
             entityTitle?: string;
             entityType?: string;
             route?: string;
+            uri?: string;
           };
           /** @enum {string} */
           channel?: 'shell' | 'moltbot' | 'mcp' | 'cli';
@@ -2058,6 +2205,34 @@ export interface operations {
               conversationId: string;
               createdAt: string;
               id: string;
+              parts:
+                | (
+                    | {
+                        text: string;
+                        /** @enum {string} */
+                        type: 'text';
+                      }
+                    | {
+                        subtitle?: string;
+                        title: string;
+                        /** @enum {string} */
+                        type: 'entity';
+                        uri: string;
+                      }
+                    | {
+                        actions: {
+                          actionId: string;
+                          /** @enum {string} */
+                          status: 'pending' | 'confirmed' | 'rejected' | 'executed' | 'failed';
+                          summary: string;
+                          tool: string;
+                        }[];
+                        batchId: string;
+                        /** @enum {string} */
+                        type: 'actions';
+                      }
+                  )[]
+                | null;
               role: string;
               tokensIn: number | null;
               tokensOut: number | null;
@@ -2218,6 +2393,34 @@ export interface operations {
               conversationId: string;
               createdAt: string;
               id: string;
+              parts:
+                | (
+                    | {
+                        text: string;
+                        /** @enum {string} */
+                        type: 'text';
+                      }
+                    | {
+                        subtitle?: string;
+                        title: string;
+                        /** @enum {string} */
+                        type: 'entity';
+                        uri: string;
+                      }
+                    | {
+                        actions: {
+                          actionId: string;
+                          /** @enum {string} */
+                          status: 'pending' | 'confirmed' | 'rejected' | 'executed' | 'failed';
+                          summary: string;
+                          tool: string;
+                        }[];
+                        batchId: string;
+                        /** @enum {string} */
+                        type: 'actions';
+                      }
+                  )[]
+                | null;
               role: string;
               tokensIn: number | null;
               tokensOut: number | null;

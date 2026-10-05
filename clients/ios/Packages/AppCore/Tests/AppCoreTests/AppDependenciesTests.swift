@@ -144,4 +144,44 @@ internal struct AppDependenciesTests {
         #expect(result == .notFound)
         #expect(await lookup.codes == ["9780140328721"])
     }
+
+    @Test("an unbound Ego repository fails rather than returning an empty result")
+    func unboundEgoFails() async {
+        let ego = AppDependencies.unbound.ego
+
+        await #expect(throws: RepositoryError.dependencyNotBound) {
+            try await ego.conversations(limit: 10, offset: 0, query: nil)
+        }
+        await #expect(throws: RepositoryError.dependencyNotBound) {
+            try await ego.conversation(id: "conversation-1")
+        }
+        await #expect(throws: RepositoryError.dependencyNotBound) {
+            try await ego.decideBatch(
+                id: "batch-1", decision: EgoBatchDecision(approve: [], reject: [], alwaysAllow: []))
+        }
+        await #expect(throws: RepositoryError.dependencyNotBound) {
+            for try await _ in ego.streamChat(message: "hello", conversationId: nil, context: nil) {
+            }
+        }
+        await #expect(throws: RepositoryError.dependencyNotBound) {
+            for try await _ in ego.resumeChat(conversationId: "conversation-1", batchId: "batch-1")
+            {}
+        }
+    }
+
+    @Test("a container built without an Ego binding defaults to the unbound repository")
+    func defaultEgoIsUnbound() async {
+        let dependencies = AppDependencies(
+            transactions: AppDependencies.unbound.transactions,
+            pairing: AppDependencies.unbound.pairing,
+            reachability: AppDependencies.unbound.reachability,
+            receiptCapture: AppDependencies.unbound.receiptCapture,
+            purchases: AppDependencies.unbound.purchases,
+            merchants: AppDependencies.unbound.merchants,
+            accounts: AppDependencies.unbound.accounts)
+
+        await #expect(throws: RepositoryError.dependencyNotBound) {
+            try await dependencies.ego.conversations(limit: 10, offset: 0, query: nil)
+        }
+    }
 }

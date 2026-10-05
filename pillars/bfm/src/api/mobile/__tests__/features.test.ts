@@ -53,6 +53,24 @@ describe('deriving features from pillar reachability', () => {
     expect(derived).toContainEqual({ id: 'transactions', reachability: 'unavailable' });
     expect(derived).toContainEqual({ id: 'purchases', reachability: 'unavailable' });
     expect(derived).toContainEqual({ id: 'receipt-capture', reachability: 'unavailable' });
+    expect(derived).toContainEqual({ id: 'ego', reachability: 'unavailable' });
+  });
+
+  describe('Ego, backed by Cerebrum', () => {
+    it.each(['healthy', 'degraded', 'unavailable', 'contract-mismatch'] as const)(
+      'reports Cerebrum as %s for Ego',
+      (reachability) => {
+        const derived = deriveFeatures(pillars({ id: 'cerebrum', reachability }));
+
+        expect(derived).toContainEqual({ id: 'ego', reachability });
+      }
+    );
+
+    it('reports Ego unavailable when Cerebrum is not in the registry', () => {
+      const derived = deriveFeatures(pillars({ id: 'finance', reachability: 'healthy' }));
+
+      expect(derived).toContainEqual({ id: 'ego', reachability: 'unavailable' });
+    });
   });
 
   it('ignores pillars no feature is built on', () => {

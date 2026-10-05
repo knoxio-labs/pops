@@ -36,6 +36,15 @@ import type {
   MobileContactsSearchMerchantsData,
   MobileContactsSearchMerchantsErrors,
   MobileContactsSearchMerchantsResponses,
+  MobileEgoDecideActionBatchData,
+  MobileEgoDecideActionBatchErrors,
+  MobileEgoDecideActionBatchResponses,
+  MobileEgoGetConversationData,
+  MobileEgoGetConversationErrors,
+  MobileEgoGetConversationResponses,
+  MobileEgoListConversationsData,
+  MobileEgoListConversationsErrors,
+  MobileEgoListConversationsResponses,
   MobileFinanceGetAccountData,
   MobileFinanceGetAccountErrors,
   MobileFinanceGetAccountResponses,
@@ -321,6 +330,57 @@ export const mobileContactsCreateMerchantAddress = <ThrowOnError extends boolean
       ...options.headers,
     },
   });
+
+/**
+ * Record a decision for a pending Ego action batch
+ */
+export const mobileEgoDecideActionBatch = <ThrowOnError extends boolean = false>(
+  options: Options<MobileEgoDecideActionBatchData, ThrowOnError>
+): RequestResult<
+  MobileEgoDecideActionBatchResponses,
+  MobileEgoDecideActionBatchErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).post<
+    MobileEgoDecideActionBatchResponses,
+    MobileEgoDecideActionBatchErrors,
+    ThrowOnError
+  >({
+    url: '/mobile/ego/action-batches/{batchId}/decide',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * One page of Ego conversations for the mobile client
+ */
+export const mobileEgoListConversations = <ThrowOnError extends boolean = false>(
+  options?: Options<MobileEgoListConversationsData, ThrowOnError>
+): RequestResult<
+  MobileEgoListConversationsResponses,
+  MobileEgoListConversationsErrors,
+  ThrowOnError
+> =>
+  (options?.client ?? client).get<
+    MobileEgoListConversationsResponses,
+    MobileEgoListConversationsErrors,
+    ThrowOnError
+  >({ url: '/mobile/ego/conversations', ...options });
+
+/**
+ * Read one Ego conversation with its messages and parts
+ */
+export const mobileEgoGetConversation = <ThrowOnError extends boolean = false>(
+  options: Options<MobileEgoGetConversationData, ThrowOnError>
+): RequestResult<MobileEgoGetConversationResponses, MobileEgoGetConversationErrors, ThrowOnError> =>
+  (options.client ?? client).get<
+    MobileEgoGetConversationResponses,
+    MobileEgoGetConversationErrors,
+    ThrowOnError
+  >({ url: '/mobile/ego/conversations/{id}', ...options });
 
 /**
  * One cursor-paginated account page after search and filters

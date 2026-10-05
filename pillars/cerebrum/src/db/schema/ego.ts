@@ -15,6 +15,7 @@ export const conversations = sqliteTable(
     activeScopes: text('active_scopes').notNull(),
     appContext: text('app_context'),
     model: text('model').notNull(),
+    allowedTools: text('allowed_tools'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
@@ -35,6 +36,7 @@ export const messages = sqliteTable(
     content: text('content').notNull(),
     citations: text('citations'),
     toolCalls: text('tool_calls'),
+    parts: text('parts'),
     tokensIn: integer('tokens_in'),
     tokensOut: integer('tokens_out'),
     createdAt: text('created_at').notNull(),
@@ -56,5 +58,56 @@ export const conversationContext = sqliteTable(
     primaryKey({ columns: [table.conversationId, table.engramId] }),
     index('idx_conversation_context_conversation').on(table.conversationId),
     index('idx_conversation_context_engram').on(table.engramId),
+  ]
+);
+
+export const egoActionBatches = sqliteTable(
+  'ego_action_batches',
+  {
+    id: text('id').primaryKey(),
+    conversationId: text('conversation_id')
+      .notNull()
+      .references(() => conversations.id, { onDelete: 'cascade' }),
+    messageId: text('message_id')
+      .notNull()
+      .references(() => messages.id, { onDelete: 'cascade' }),
+    status: text('status').notNull().default('pending'),
+    loopState: text('loop_state'),
+    createdAt: text('created_at').notNull(),
+    decidedAt: text('decided_at'),
+  },
+  (table) => [
+    index('idx_ego_action_batches_conversation').on(table.conversationId),
+    index('idx_ego_action_batches_message').on(table.messageId),
+  ]
+);
+
+export const egoActions = sqliteTable(
+  'ego_actions',
+  {
+    id: text('id').primaryKey(),
+    batchId: text('batch_id')
+      .notNull()
+      .references(() => egoActionBatches.id, { onDelete: 'cascade' }),
+    conversationId: text('conversation_id')
+      .notNull()
+      .references(() => conversations.id, { onDelete: 'cascade' }),
+    messageId: text('message_id')
+      .notNull()
+      .references(() => messages.id, { onDelete: 'cascade' }),
+    toolUseId: text('tool_use_id').notNull(),
+    position: integer('position').notNull(),
+    tool: text('tool').notNull(),
+    args: text('args').notNull(),
+    summary: text('summary').notNull(),
+    status: text('status').notNull().default('pending'),
+    result: text('result'),
+    createdAt: text('created_at').notNull(),
+    resolvedAt: text('resolved_at'),
+  },
+  (table) => [
+    index('idx_ego_actions_conversation').on(table.conversationId),
+    index('idx_ego_actions_message').on(table.messageId),
+    index('idx_ego_actions_batch').on(table.batchId),
   ]
 );

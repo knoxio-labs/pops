@@ -2,6 +2,7 @@ import { getPillar } from '../pillar-client.js';
 import { itemDeleteTool } from './inventory-item-delete.js';
 import { itemOverrideTools } from './inventory-item-overrides.js';
 import { itemWriteTools } from './inventory-items-write.js';
+import { mapRows, withUri } from './uri.js';
 import { mapCallResult, optBool, optNum, optStr, reqStr, toolError } from './utils.js';
 
 import type { PillarHandle } from '@pops/pillar-sdk/client';
@@ -33,6 +34,7 @@ function placementKind(value: unknown): 'location' | 'container' | 'hand' | unde
 
 const itemsList: ToolDef = {
   name: 'inventory.items.list',
+  readOnly: true,
   description:
     'List protocol-2 inventory items with stable typeId, catalogueRevision, fieldValues (stored values and overrides) and computedValues (each computed field: state ok, overridden or unavailable with a reason, failedFieldId and missingInputs naming every input without a value, plus the dependencies and items it read). Read inventory.catalogue.get before interpreting field IDs.',
   inputSchema: {
@@ -50,20 +52,25 @@ const itemsList: ToolDef = {
   },
   handler: async (args) =>
     mapCallResult(
-      await items().list({
-        cursor: optStr(args, 'cursor'),
-        limit: optNum(args, 'limit'),
-        typeKey: optStr(args, 'typeKey'),
-        placementKind: placementKind(args['placementKind']),
-        locationId: optStr(args, 'locationId'),
-        containingItemId: optStr(args, 'containingItemId'),
-        includeInactive: optBool(args, 'includeInactive'),
-      })
+      mapRows(
+        await items().list({
+          cursor: optStr(args, 'cursor'),
+          limit: optNum(args, 'limit'),
+          typeKey: optStr(args, 'typeKey'),
+          placementKind: placementKind(args['placementKind']),
+          locationId: optStr(args, 'locationId'),
+          containingItemId: optStr(args, 'containingItemId'),
+          includeInactive: optBool(args, 'includeInactive'),
+        }),
+        'items',
+        withUri('inventory/item')
+      )
     ),
 };
 
 const itemGet: ToolDef = {
   name: 'inventory.items.get',
+  readOnly: true,
   description:
     'Get one protocol-2 item, including revision, stable typeId, catalogueRevision, fieldValues, computedValues (state ok, overridden or unavailable, with reason, failedFieldId, missingInputs, dependencies and traversedItemIds) and history. Read the matching catalogue revision before editing values; change a computed field only through inventory.items.setOverride and clearOverride.',
   inputSchema: {
@@ -80,11 +87,15 @@ const itemGet: ToolDef = {
     const id = reqStr(args, 'id');
     if (!id) return toolError('Missing required field: id');
     return mapCallResult(
-      await items().get({
-        id,
-        historyCursor: optStr(args, 'historyCursor'),
-        historyLimit: optNum(args, 'historyLimit'),
-      })
+      mapRows(
+        await items().get({
+          id,
+          historyCursor: optStr(args, 'historyCursor'),
+          historyLimit: optNum(args, 'historyLimit'),
+        }),
+        'item',
+        withUri('inventory/item')
+      )
     );
   },
 };
