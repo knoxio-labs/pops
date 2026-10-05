@@ -91,9 +91,10 @@ export interface OpenedCerebrumDb {
  *     against the same DB short-circuits on the `__drizzle_migrations`
  *     hash check).
  *
- * If the migration apply throws (corrupt DB, malformed migration,
- * missing folder), the raw handle is closed before the error is
- * re-thrown so the caller can't leak a locked file descriptor.
+ * If opening or configuring the database, loading the optional extension,
+ * or applying migrations throws (including a pragma failure on a corrupt
+ * DB), the raw handle is closed before the error is re-thrown so the caller
+ * can't leak a locked file descriptor.
  *
  * The apply runs behind `withPreMigrationBackup`: a snapshot is taken
  * first whenever this database has journal entries left to apply AND
@@ -108,34 +109,34 @@ export function openCerebrumDb(
 ): OpenedCerebrumDb {
   mkdirSync(dirname(path), { recursive: true });
   const raw = new Database(path);
-  raw.pragma('journal_mode = WAL');
-  raw.pragma('foreign_keys = ON');
-  raw.pragma('busy_timeout = 5000');
-
-  const shouldLoadVec = options.loadVec !== false;
-  const vecLoaded = shouldLoadVec ? tryLoadVecExtension(raw, options.logger) : false;
-
-  const db = drizzle(raw) as CerebrumDb;
-  const migrations = migrationsDir();
   try {
+    raw.pragma('journal_mode = WAL');
+    raw.pragma('foreign_keys = ON');
+    raw.pragma('busy_timeout = 5000');
+
+    const shouldLoadVec = options.loadVec !== false;
+    const vecLoaded = shouldLoadVec ? tryLoadVecExtension(raw, options.logger) : false;
+
+    const db = drizzle(raw) as CerebrumDb;
+    const migrations = migrationsDir();
     withPreMigrationBackup(
       { connection: raw, databasePath: path, migrationsFolder: migrations },
       () => migrate(db, { migrationsFolder: migrations })
     );
+
+    const vecAvailable =
+      vecLoaded &&
+      ensureAndProbeEmbeddingsVec(
+        raw,
+        options.embeddingDimensions ?? resolveEmbeddingDimensions(),
+        options.logger
+      );
+
+    return { db, raw, vecAvailable };
   } catch (err) {
     raw.close();
     throw err;
   }
-
-  const vecAvailable =
-    vecLoaded &&
-    ensureAndProbeEmbeddingsVec(
-      raw,
-      options.embeddingDimensions ?? resolveEmbeddingDimensions(),
-      options.logger
-    );
-
-  return { db, raw, vecAvailable };
 }
 
 /**

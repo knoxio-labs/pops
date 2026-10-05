@@ -18,7 +18,7 @@
  * with its `dimension_id` intact and `PRAGMA foreign_key_check` must come
  * back empty.
  */
-import { mkdtempSync, readdirSync, rmSync } from 'node:fs';
+import { mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -26,7 +26,7 @@ import { fileURLToPath } from 'node:url';
 import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { readMigrationJournal, stageMigrationsThrough } from '@pops/pillar-sdk/db';
 
@@ -101,6 +101,40 @@ afterEach(() => {
 });
 
 describe('applying the rest of the journal to a populated media database', () => {
+  it('closes the handle when database configuration rejects an invalid SQLite file', () => {
+    const invalidDbPath = join(dir, 'invalid.db');
+    writeFileSync(invalidDbPath, 'not a sqlite database');
+
+    const instances: Database.Database[] = [];
+    let pragmaThrew = false;
+    const originalPragma = Database.prototype.pragma;
+    const pragmaSpy = vi.spyOn(Database.prototype, 'pragma').mockImplementation(function (
+      this: Database.Database,
+      ...args
+    ) {
+      instances.push(this);
+      try {
+        return originalPragma.apply(this, args);
+      } catch (error) {
+        pragmaThrew = true;
+        throw error;
+      }
+    });
+
+    try {
+      expect(() => openMediaDb(invalidDbPath)).toThrow(/not a database/i);
+    } finally {
+      pragmaSpy.mockRestore();
+    }
+
+    expect(pragmaThrew).toBe(true);
+    const captured = instances[0];
+    if (captured === undefined) {
+      throw new Error('openMediaDb did not construct a database handle');
+    }
+    expect(captured.open).toBe(false);
+  });
+
   it('applies every remaining entry exactly once', () => {
     const applied = rows<{ created_at: number }>(
       `SELECT created_at FROM __drizzle_migrations ORDER BY created_at`

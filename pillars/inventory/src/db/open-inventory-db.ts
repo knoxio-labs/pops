@@ -88,9 +88,9 @@ function searchIndexIncomplete(raw: Database.Database): boolean {
  *     was built for another catalogue revision; see
  *     `ensureComputedDependencyIndex`.
  *
- * If the migration apply throws (corrupt DB, malformed migration,
- * missing folder), the raw handle is closed before the error is
- * re-thrown so the caller can't leak a locked file descriptor.
+ * If configuring the connection or applying migrations throws (corrupt DB,
+ * malformed migration, missing folder), the raw handle is closed before the
+ * error is re-thrown so the caller can't leak a locked file descriptor.
  *
  * The apply runs behind `withPreMigrationBackup`: a snapshot is taken
  * first whenever this database has journal entries left to apply AND
@@ -102,22 +102,22 @@ function searchIndexIncomplete(raw: Database.Database): boolean {
 export function openInventoryDb(path: string): OpenedInventoryDb {
   mkdirSync(dirname(path), { recursive: true });
   const raw = new Database(path);
-  raw.pragma('journal_mode = WAL');
-  raw.pragma('foreign_keys = ON');
-  raw.pragma('busy_timeout = 5000');
-  registerPersistedItemTypesMigrationFunctions(raw);
-  const db = drizzle(raw) as InventoryDb;
-  const migrations = migrationsDir();
   try {
+    raw.pragma('journal_mode = WAL');
+    raw.pragma('foreign_keys = ON');
+    raw.pragma('busy_timeout = 5000');
+    registerPersistedItemTypesMigrationFunctions(raw);
+    const db = drizzle(raw) as InventoryDb;
+    const migrations = migrationsDir();
     withPreMigrationBackup(
       { connection: raw, databasePath: path, migrationsFolder: migrations },
       () => migrate(db, { migrationsFolder: migrations })
     );
     if (searchIndexIncomplete(raw)) rebuildSearchIndexFromItems(db);
     ensureComputedDependencyIndex(db);
+    return { db, raw };
   } catch (err) {
     raw.close();
     throw err;
   }
-  return { db, raw };
 }
