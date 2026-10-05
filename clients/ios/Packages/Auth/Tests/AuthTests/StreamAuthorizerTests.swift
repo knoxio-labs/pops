@@ -1,6 +1,4 @@
-import AuthTestSupport
 import BFMClient
-import Foundation
 import Testing
 
 @testable import Auth

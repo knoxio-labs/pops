@@ -1,11 +1,9 @@
 import AppCore
-import Auth
 import BFMClient
 import FeatureAccounts
 import FeatureInventory
 import FeaturePurchases
 import FeatureTransactions
-import Foundation
 import Testing
 
 @testable import Pops

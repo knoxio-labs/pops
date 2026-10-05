@@ -1,10 +1,7 @@
 import AppCore
 import DesignSystem
-import FeatureAccounts
-import FeatureEgo
 import FeatureInventory
 import FeaturePurchases
-import FeatureTransactions
 import SwiftUI
 
 /// The paired app: whatever the BFM said is reachable, and an honest sentence

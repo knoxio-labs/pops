@@ -1,5 +1,4 @@
 import AppCore
-import DesignSystem
 import SwiftUI
 
 /// A transaction opened on its own navigation stack over the current screen.

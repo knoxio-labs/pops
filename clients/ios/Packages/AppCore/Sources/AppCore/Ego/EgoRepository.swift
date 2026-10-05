@@ -1,5 +1,3 @@
-import Foundation
-
 /// Transport-independent access to Ego conversations and streamed turns.
 ///
 /// Implementations own the wire format and transport. Features depend on this

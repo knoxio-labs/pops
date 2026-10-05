@@ -1,5 +1,4 @@
 import AppCore
-import Auth
 import BFMClient
 import FeatureInventory
 import Foundation

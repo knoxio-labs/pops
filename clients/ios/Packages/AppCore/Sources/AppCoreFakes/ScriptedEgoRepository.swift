@@ -1,5 +1,4 @@
 import AppCore
-import Foundation
 
 /// One queued Ego stream, optionally followed by a failure.
 public struct ScriptedEgoChatScript: Sendable {
