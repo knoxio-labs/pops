@@ -1,7 +1,11 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+import { SearchResultsPanel } from '@pops/navigation';
 
 import { TransactionsResultComponent } from './TransactionsResultComponent';
+
+import type { SearchResultSection } from '@pops/navigation';
 
 function makeData(overrides: Record<string, unknown> = {}) {
   return {
@@ -62,6 +66,68 @@ describe('TransactionsResultComponent', () => {
     expect(screen.getByText('mystery')).toBeInTheDocument();
     const amount = screen.getByText('$100.00');
     expect(amount.className).toContain('text-muted-foreground');
+  });
+
+  it('renders a transaction with missing type as unknown and excluded', () => {
+    const { type: _type, ...data } = makeData();
+    render(<TransactionsResultComponent data={data} />);
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
+    const amount = screen.getByText('$42.50');
+    expect(amount.className).toContain('text-muted-foreground');
+  });
+
+  it('keeps good transaction hits and other sections visible beside a missing type', () => {
+    const { type: _type, ...malformedData } = makeData({ description: 'Malformed transaction' });
+    const sections: SearchResultSection[] = [
+      {
+        domain: 'transactions',
+        label: 'Transactions',
+        icon: <span>Transactions</span>,
+        color: 'green',
+        hits: [
+          {
+            uri: 'pops:finance/tx/malformed',
+            score: 0.9,
+            matchField: 'description',
+            matchType: 'contains',
+            data: malformedData,
+          },
+          {
+            uri: 'pops:finance/tx/valid',
+            score: 0.8,
+            matchField: 'description',
+            matchType: 'contains',
+            data: makeData({ description: 'Coffee' }),
+          },
+        ],
+        totalCount: 2,
+        isContext: false,
+      },
+      {
+        domain: 'movies',
+        label: 'Movies',
+        icon: <span>Movies</span>,
+        color: 'purple',
+        hits: [
+          {
+            uri: 'pops:media/movie/1',
+            score: 0.7,
+            matchField: 'title',
+            matchType: 'prefix',
+            data: { title: 'The Matrix' },
+          },
+        ],
+        totalCount: 1,
+        isContext: false,
+      },
+    ];
+
+    render(<SearchResultsPanel sections={sections} query="" onClose={vi.fn()} />);
+
+    expect(screen.getByText('Malformed transaction')).toBeInTheDocument();
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
+    expect(screen.getByText('Coffee')).toBeInTheDocument();
+    expect(screen.getByText('The Matrix')).toBeInTheDocument();
   });
 
   it('renders formatted date', () => {
