@@ -51,7 +51,8 @@ internal struct ModuleBoundaryTests {
     /// repo, per package. Apple's OpenAPI runtime is there because a generated
     /// client does not compile without it. GRDB is the one that is not Apple's:
     /// Inventory ADR-002 D11 chose it for the phone's database, and only the
-    /// package that owns that database may reach for it.
+    /// package that owns that database may reach for it. ViewInspector is
+    /// allowed only for DesignPlayground's test target.
     private let allowedExternalPackages: [String: Set<String>] = [
         "BFMClient": [
             "https://github.com/apple/swift-openapi-runtime",
@@ -59,6 +60,7 @@ internal struct ModuleBoundaryTests {
         ],
         "Auth": ["https://github.com/apple/swift-openapi-runtime"],
         "InventoryReplica": ["https://github.com/groue/GRDB.swift"],
+        "DesignPlayground": ["https://github.com/nalexn/ViewInspector.git"],
     ]
 
     @Test("the scan finds the packages it is asserting about")
