@@ -10,6 +10,7 @@ import type { AnthropicLike, AnthropicMessage } from '../../ai/anthropic.js';
 import type { HandlerContext } from '../types.js';
 
 const ctx: HandlerContext = { isCancelled: () => false };
+type AnthropicCreateParams = Parameters<AnthropicLike['messages']['create']>[0];
 
 function mockMessage(
   text: string,
@@ -369,6 +370,65 @@ describe('runTextIngest — error paths', () => {
 });
 
 describe('extractWithClaudeText — shared surface', () => {
+  it('keeps temperature 0 for Haiku 4.5', async () => {
+    const requests: AnthropicCreateParams[] = [];
+    const create = vi.fn(async (params: AnthropicCreateParams) => {
+      requests.push(params);
+      return mockMessage(JSON.stringify(happyRecipeJson()));
+    });
+    __setTextIngestClientForTests({ messages: { create } });
+
+    const result = await extractWithClaudeText({
+      body: 'transcribed caption',
+      source: 'text',
+      contextId: 'ingest_source:101',
+    });
+
+    expect(result.ok).toBe(true);
+    expect(requests).toHaveLength(1);
+    expect(requests[0]).toHaveProperty('temperature', 0);
+  });
+
+  it('omits temperature for Sonnet 5.5', async () => {
+    process.env['FOOD_TEXT_LLM_MODEL'] = 'claude-sonnet-5-5';
+    const requests: AnthropicCreateParams[] = [];
+    const create = vi.fn(async (params: AnthropicCreateParams) => {
+      requests.push(params);
+      return mockMessage(JSON.stringify(happyRecipeJson()));
+    });
+    __setTextIngestClientForTests({ messages: { create } });
+
+    const result = await extractWithClaudeText({
+      body: 'transcribed caption',
+      source: 'text',
+      contextId: 'ingest_source:102',
+    });
+
+    expect(result.ok).toBe(true);
+    expect(requests).toHaveLength(1);
+    expect(requests[0]).not.toHaveProperty('temperature');
+  });
+
+  it('reads recipe JSON after a leading thinking block', async () => {
+    const rawOutput = JSON.stringify(happyRecipeJson());
+    __setTextIngestClientForTests(
+      buildMockClient(async () => ({
+        ...mockMessage(rawOutput),
+        content: [{ type: 'thinking' }, { type: 'text', text: rawOutput }],
+      }))
+    );
+
+    const result = await extractWithClaudeText({
+      body: 'transcribed caption',
+      source: 'text',
+      contextId: 'ingest_source:103',
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error('unreachable');
+    expect(result.rawOutput).toBe(rawOutput);
+  });
+
   it('writes operation=recipe-extract-ig-text-fallback when called with that source', async () => {
     __setTextIngestClientForTests(
       buildMockClient(async () => mockMessage(JSON.stringify(happyRecipeJson())))
