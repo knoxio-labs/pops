@@ -1,5 +1,7 @@
 import { useTranslation } from 'react-i18next';
 
+import { Tooltip, TooltipContent, TooltipTrigger } from '@pops/ui';
+
 /**
  * The column's heading, and the one place a failed lookup is reported.
  *
@@ -11,8 +13,8 @@ import { useTranslation } from 'react-i18next';
  * heading is the only part of a column that renders exactly once.
  *
  * The short word is visible, so a sighted reader is not required to hover to
- * discover that the column is not answering, and the sentence behind it is the
- * `title` for a pointer.
+ * discover that the column is not answering, and the sentence behind it is a
+ * tooltip for pointer and keyboard users.
  *
  * What assistive tech gets is composed as one string rather than assembled out
  * of the rendered pieces: the name of a heading is the concatenation of its
@@ -31,12 +33,20 @@ export function PurchaseLinkHeader({ unavailable }: { unavailable: boolean }) {
 
   const caveat = t('transactions.purchaseLink.unavailableHint');
   return (
-    <span className="flex items-center gap-1" title={caveat}>
-      <span aria-hidden="true">{label}</span>
-      <span aria-hidden="true" className="text-muted-foreground text-xs font-normal">
-        {t('transactions.purchaseLink.unavailable')}
-      </span>
-      <span className="sr-only">{`${label} ${caveat}`}</span>
-    </span>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          className="flex items-center gap-1 rounded-sm focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2"
+        >
+          <span aria-hidden="true">{label}</span>
+          <span aria-hidden="true" className="text-muted-foreground text-xs font-normal">
+            {t('transactions.purchaseLink.unavailable')}
+          </span>
+          <span className="sr-only">{`${label} ${caveat}`}</span>
+        </button>
+      </TooltipTrigger>
+      <TooltipContent aria-hidden="true">{caveat}</TooltipContent>
+    </Tooltip>
   );
 }
