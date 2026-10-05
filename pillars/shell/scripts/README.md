@@ -7,13 +7,13 @@ header explains what it does; this page is the ordering across them.
 
 ## Lifecycle
 
-| When                    | Entrypoint                                        | Effect                                                                          |
-| ----------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------- |
-| Authoring / CI          | `generate-nginx-conf.ts` (static, `--check`)      | Renders the committed `../nginx.conf`. `--check` fails CI when it drifts.       |
-| Image build             | `bundle-nginx-tools.ts`                           | Bundles the render + watch CLIs for the runtime image.                          |
-| Container boot          | `../docker-entrypoint.sh` → the render bundle     | Re-renders from the live registry, falls back to the baked conf on any failure. |
-| Container life          | `watch-registry-and-reload-cli.ts` (watch bundle) | Re-renders + validates + reloads on each registry SSE event.                    |
-| Deploy, outside the pod | `register-with-registry.ts`                       | Announces the shell to the registry. Never runs in the browser or in the image. |
+| When                    | Entrypoint                                        | Effect                                                                                                  |
+| ----------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Authoring / CI          | `generate-nginx-conf.ts` (static, `--check`)      | Renders the committed `../nginx.conf`. `--check` fails CI when it drifts.                               |
+| Image build             | `bundle-nginx-tools.ts`                           | Bundles the render + watch CLIs for the runtime image.                                                  |
+| Container boot          | `../docker-entrypoint.sh` → the render bundle     | Retries a failed live-registry render twice at one-second intervals, then falls back to the baked conf. |
+| Container life          | `watch-registry-and-reload-cli.ts` (watch bundle) | Re-renders + validates + reloads on each registry SSE event.                                            |
+| Deploy, outside the pod | `register-with-registry.ts`                       | Announces the shell to the registry. Never runs in the browser or in the image.                         |
 
 The boot render and the watcher run the _same_ dynamic renderer; the watcher is
 simply the long-lived repeat. `validate-nginx-conf.sh` is the local smoke check
