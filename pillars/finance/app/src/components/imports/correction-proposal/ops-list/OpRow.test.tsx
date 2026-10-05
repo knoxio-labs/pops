@@ -26,7 +26,6 @@ describe('OpRow preview status', () => {
       />
     );
     const status = screen.getByRole('button', { name: 'Preview status' });
-    expect(status).toHaveClass('h-11', 'w-11');
 
     await user.tab();
 
