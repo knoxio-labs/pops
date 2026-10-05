@@ -249,6 +249,8 @@ internal enum ReceiptResultCopy {
                 + "Nothing was recorded — try again in a moment."
         case .unauthorized:
             return "This device is no longer signed in."
+        case .featureUnavailable:
+            return "This feature isn't available with this device's permissions."
         case .rateLimited:
             return "Too many requests. Wait before trying again."
         case .contractMismatch:

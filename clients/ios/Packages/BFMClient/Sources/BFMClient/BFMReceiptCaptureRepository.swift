@@ -131,8 +131,10 @@ extension BFMReceiptCaptureRepository {
             return try Self.extraction(from: try ok.body.json)
         case .badRequest:
             throw RepositoryError.transport("\(ExtractReceipt.id): invalid request")
-        case .unauthorized, .forbidden:
+        case .unauthorized:
             throw RepositoryError.unauthorized
+        case .forbidden(let forbidden):
+            throw BFMRepositoryFailure.forbiddenFailure(try forbidden.body.json)
         case .contentTooLarge:
             throw RepositoryError.transport("\(ExtractReceipt.id): payload too large")
         case .tooManyRequests:

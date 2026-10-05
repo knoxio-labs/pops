@@ -3,12 +3,12 @@
  * something has already gone wrong — which is exactly when a leaked file
  * handle or a swallowed error costs the most.
  */
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import Database from 'better-sqlite3';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   createPurchase,
@@ -41,6 +41,45 @@ afterEach(() => {
 });
 
 describe('openPurchasesDb', () => {
+  it('closes the handle when database configuration rejects an invalid SQLite file', () => {
+    const invalidDir = mkdtempSync(join(tmpdir(), 'purchases-invalid-db-'));
+    try {
+      const invalidDbPath = join(invalidDir, 'invalid.db');
+      writeFileSync(invalidDbPath, 'not a sqlite database');
+
+      const instances: Database.Database[] = [];
+      let pragmaThrew = false;
+      const originalPragma = Database.prototype.pragma;
+      const pragmaSpy = vi.spyOn(Database.prototype, 'pragma').mockImplementation(function (
+        this: Database.Database,
+        ...args
+      ) {
+        instances.push(this);
+        try {
+          return originalPragma.apply(this, args);
+        } catch (error) {
+          pragmaThrew = true;
+          throw error;
+        }
+      });
+
+      try {
+        expect(() => openPurchasesDb(invalidDbPath)).toThrow(/not a database/i);
+      } finally {
+        pragmaSpy.mockRestore();
+      }
+
+      expect(pragmaThrew).toBe(true);
+      const captured = instances[0];
+      if (captured === undefined) {
+        throw new Error('openPurchasesDb did not construct a database handle');
+      }
+      expect(captured.open).toBe(false);
+    } finally {
+      rmSync(invalidDir, { recursive: true, force: true });
+    }
+  });
+
   it('creates the parent directory rather than failing on a fresh volume', () => {
     const dir = mkdtempSync(join(tmpdir(), 'purchases-nested-'));
     const nested = join(dir, 'a', 'b', 'purchases.db');

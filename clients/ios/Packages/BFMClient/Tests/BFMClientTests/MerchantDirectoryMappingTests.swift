@@ -101,6 +101,32 @@ internal struct MerchantDirectoryMappingTests {
             _ = try await repository.search("anything")
         }
     }
+
+    @Test("merchant directory capability refusals stay feature-unavailable")
+    func capabilityDenialStaysFeatureUnavailable() async throws {
+        let repository = try BFMMerchantDirectoryRepository.stubbed(
+            StubTransport(
+                status: .forbidden,
+                json:
+                    #"{"code":"capability_not_granted","message":"denied","capability":"contacts.merchants.write"}"#
+            ))
+
+        await #expect(throws: RepositoryError.featureUnavailable) {
+            try await repository.search("cafe")
+        }
+        await #expect(throws: RepositoryError.featureUnavailable) {
+            try await repository.get("merchant-1")
+        }
+        await #expect(throws: RepositoryError.featureUnavailable) {
+            try await repository.create(name: "Cafe")
+        }
+        await #expect(throws: RepositoryError.featureUnavailable) {
+            try await repository.addresses(forMerchant: "merchant-1")
+        }
+        await #expect(throws: RepositoryError.featureUnavailable) {
+            try await repository.createAddress(forMerchant: "merchant-1", value: "1 Main Street")
+        }
+    }
 }
 
 extension BFMMerchantDirectoryRepository {

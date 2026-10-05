@@ -9,11 +9,12 @@
  * creates the tables the 0025/0026/0027/0052 entries ALTER or recreate,
  * mirroring inventory's `0006_inventory_pillar_baseline` mechanism.
  */
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import Database from 'better-sqlite3';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { openFinanceDb } from '../open-finance-db.js';
 
@@ -40,6 +41,42 @@ describe('openFinanceDb', () => {
       expect(raw.pragma('busy_timeout', { simple: true })).toBe(5000);
     } finally {
       raw.close();
+    }
+  });
+
+  it('closes the raw handle when a configuration pragma rejects an invalid SQLite file', () => {
+    const path = join(tmpDir, 'invalid.db');
+    writeFileSync(path, 'not a SQLite database');
+
+    const originalPragma = Database.prototype.pragma;
+    const instances: Database.Database[] = [];
+    let pragmaThrew = false;
+    const pragmaSpy = vi.spyOn(Database.prototype, 'pragma').mockImplementation(function (
+      this: Database.Database,
+      source: string,
+      options?: Database.PragmaOptions
+    ): unknown {
+      instances.push(this);
+      try {
+        return originalPragma.call(this, source, options);
+      } catch (error) {
+        pragmaThrew = true;
+        throw error;
+      }
+    });
+
+    try {
+      expect(() => openFinanceDb(path)).toThrow();
+      expect(pragmaThrew).toBe(true);
+      const openedRaw = instances[0];
+      if (openedRaw === undefined) {
+        throw new Error('pragma() was never called — test did not capture the opened handle');
+      }
+      expect(openedRaw.open).toBe(false);
+    } finally {
+      pragmaSpy.mockRestore();
+      const openedRaw = instances[0];
+      if (openedRaw?.open) openedRaw.close();
     }
   });
 

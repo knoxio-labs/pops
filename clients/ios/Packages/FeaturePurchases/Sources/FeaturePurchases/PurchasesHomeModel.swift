@@ -113,6 +113,7 @@ internal enum PurchasesHomeRefresh: Equatable, Sendable {
 internal enum PurchasesHomeFailure: String, CaseIterable, Identifiable, Sendable {
     case unavailable
     case unauthorized
+    case featureUnavailable
     case contractMismatch
     case conflict
     case transport
@@ -123,6 +124,7 @@ internal enum PurchasesHomeFailure: String, CaseIterable, Identifiable, Sendable
         case .unavailable: self = .unavailable
         case .rateLimited: self = .transport
         case .unauthorized: self = .unauthorized
+        case .featureUnavailable: self = .featureUnavailable
         case .contractMismatch: self = .contractMismatch
         case .requestRejected: self = .contractMismatch
         case .conflict: self = .conflict

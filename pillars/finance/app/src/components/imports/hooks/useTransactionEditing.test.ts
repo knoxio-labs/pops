@@ -97,22 +97,48 @@ describe('useTransactionEditing — rule-matched inline edits', () => {
     expect(next.matched[0]).toMatchObject({ description: 'WOOLWORTHS METRO' });
   });
 
-  it('routes to the correction proposal only when the entity actually changes', () => {
-    const { result, generateProposal, setLocalTransactions } = setup();
+  it('keeps an entity edit locally while opening a correction proposal', () => {
+    const { result, generateProposal, setLocalTransactions, recomputeForEntity } = setup();
     const transaction = makeTransaction();
+    const editedFields = {
+      description: 'COLES CITY',
+      amount: -42.1,
+      date: '2026-02-07',
+      entity: { entityId: 'ent-2', entityName: 'Coles', matchType: 'manual' as const },
+    };
 
     act(() => {
-      result.current.handleSaveEdit(transaction, {
-        description: transaction.description,
-        amount: transaction.amount,
-        entity: { entityId: 'ent-2', entityName: 'Coles', matchType: 'manual' },
-      });
+      result.current.handleSaveEdit(transaction, editedFields);
     });
 
     expect(generateProposal).toHaveBeenCalledWith(
       expect.objectContaining({ entityId: 'ent-2', entityName: 'Coles' })
     );
-    expect(setLocalTransactions).not.toHaveBeenCalled();
+    expect(setLocalTransactions).toHaveBeenCalledTimes(1);
+    expect(elementAt(setLocalTransactions.mock.invocationCallOrder, 0)).toBeLessThan(
+      elementAt(generateProposal.mock.invocationCallOrder, 0)
+    );
+
+    const updater = elementAt(setLocalTransactions.mock.calls, 0)[0];
+    if (typeof updater !== 'function') throw new Error('Expected a local transaction updater');
+    const next = updater({ ...emptyLocalTx(), matched: [transaction] });
+
+    expect(next.matched[0]).toMatchObject({
+      description: 'COLES CITY',
+      amount: -42.1,
+      date: '2026-02-07',
+      entity: { entityId: 'ent-2', entityName: 'Coles' },
+      status: 'matched',
+      manuallyEdited: true,
+    });
+    expect(recomputeForEntity).toHaveBeenCalledWith(
+      [
+        expect.objectContaining({
+          entity: expect.objectContaining({ entityId: 'ent-2', entityName: 'Coles' }),
+        }),
+      ],
+      'ent-2'
+    );
   });
 
   it('does not treat a non-entity edit on a rule-matched row as a correction', () => {

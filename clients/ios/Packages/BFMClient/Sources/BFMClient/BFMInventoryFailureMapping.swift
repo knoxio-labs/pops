@@ -41,7 +41,8 @@ internal enum BFMInventoryFailureMapping {
     ) -> RepositoryError {
         switch failure {
         case .badRequest: .contractMismatch
-        case .unauthorized, .capabilityDenied: .unauthorized
+        case .unauthorized: .unauthorized
+        case .capabilityDenied: .featureUnavailable
         case .rateLimited: .transport("\(operation): rate limited")
         case .upstream(let code): BFMRepositoryFailure.upstreamFailure(code, operation: operation)
         case .payloadTooLarge: .transport("\(operation): payload too large")

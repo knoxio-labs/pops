@@ -191,7 +191,7 @@ internal struct InventoryMutationOutcomeMappingTests {
         #expect(isTransport(error))
     }
 
-    @Test("403 capability_not_granted is unauthorized, same as a revoked device")
+    @Test("403 capability denial and device revocation keep different meanings")
     func capabilityDenied() async throws {
         let denied = await failure {
             try await BFMInventoryTransport.stubbed(
@@ -206,7 +206,7 @@ internal struct InventoryMutationOutcomeMappingTests {
             ).submit([Self.mutation(id: "m-1")])
         }
 
-        #expect(denied == .unauthorized)
+        #expect(denied == .featureUnavailable)
         #expect(revoked == .unauthorized)
     }
 

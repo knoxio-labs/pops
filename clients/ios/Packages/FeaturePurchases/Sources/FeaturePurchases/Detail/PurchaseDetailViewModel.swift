@@ -7,6 +7,7 @@ internal enum PurchaseDetailFailure: Hashable, Sendable {
     case unreachable
     case notFound
     case unauthorized
+    case featureUnavailable
     case contractMismatch
 
     internal init(_ error: Error) {
@@ -15,6 +16,7 @@ internal enum PurchaseDetailFailure: Hashable, Sendable {
         case .rateLimited: self = .offline
         case .unavailable: self = .unreachable
         case .unauthorized: self = .unauthorized
+        case .featureUnavailable: self = .featureUnavailable
         case .contractMismatch, .requestRejected, .conflict, .dependencyNotBound:
             self = .contractMismatch
         case nil: self = .offline
@@ -37,6 +39,7 @@ extension PurchaseDetailFailure {
         case .unreachable: "unreachable"
         case .notFound: "not_found"
         case .unauthorized: "unauthorized"
+        case .featureUnavailable: "feature_unavailable"
         case .contractMismatch: "contract_mismatch"
         }
     }
@@ -45,7 +48,7 @@ extension PurchaseDetailFailure {
         switch self {
         case .offline: .offline
         case .unreachable: .server
-        case .notFound, .unauthorized, .contractMismatch: .client
+        case .notFound, .unauthorized, .featureUnavailable, .contractMismatch: .client
         }
     }
 }

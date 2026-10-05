@@ -150,7 +150,17 @@ internal struct BootstrapTests {
         }
         await #expect(throws: RepositoryError.unauthorized) {
             try await service(
-                StubTransport(status: .forbidden, json: #"{"code":"device_revoked","message":"x"}"#)
+                StubTransport(
+                    status: .forbidden, json: #"{"code":"bfm.auth.device_revoked","message":"x"}"#)
+            ).bootstrap()
+        }
+        await #expect(throws: RepositoryError.featureUnavailable) {
+            try await service(
+                StubTransport(
+                    status: .forbidden,
+                    json:
+                        #"{"code":"capability_not_granted","capability":"bootstrap.read","message":"x"}"#
+                )
             ).bootstrap()
         }
     }

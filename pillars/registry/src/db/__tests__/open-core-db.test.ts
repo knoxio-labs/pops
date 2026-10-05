@@ -5,11 +5,12 @@
  * the resulting schema, and confirms the helper is idempotent when
  * re-run against the same DB.
  */
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import Database from 'better-sqlite3';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { openCoreDb } from '../open-core-db.js';
 import { countActiveServiceAccounts, createServiceAccount } from '../services/service-accounts.js';
@@ -225,5 +226,30 @@ describe('openCoreDb', () => {
     } finally {
       second.raw.close();
     }
+  });
+
+  it('closes the handle when setting a pragma fails', () => {
+    const path = join(tmpDir, 'invalid.db');
+    writeFileSync(path, 'this is not a sqlite file');
+
+    const instances: Database.Database[] = [];
+    const original = Database.prototype.pragma;
+    const spy = vi.spyOn(Database.prototype, 'pragma').mockImplementation(function (
+      this: Database.Database,
+      ...args: [string]
+    ) {
+      instances.push(this);
+      return original.apply(this, args);
+    });
+
+    try {
+      expect(() => openCoreDb(path)).toThrow();
+    } finally {
+      spy.mockRestore();
+    }
+
+    const captured = instances[0];
+    if (captured === undefined) throw new Error('pragma() was never called');
+    expect(captured.open, 'the handle openCoreDb constructed was never closed').toBe(false);
   });
 });

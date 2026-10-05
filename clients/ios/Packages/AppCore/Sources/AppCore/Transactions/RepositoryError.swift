@@ -12,6 +12,8 @@ public enum RepositoryError: Error, Hashable, Sendable {
     case unavailable
     /// Credentials were rejected. The session is on its way to `revoked`.
     case unauthorized
+    /// This device is paired, but its grant does not include the requested feature.
+    case featureUnavailable
     /// The server asked the caller to wait before sending another read.
     /// `retryAfterSeconds` is nil when the response had no readable wait value.
     case rateLimited(retryAfterSeconds: Int?)

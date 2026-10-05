@@ -47,8 +47,10 @@ public struct BFMPurchasesRepository: PurchasesRepository {
             )
         case .badRequest:
             throw RepositoryError.transport("\(ListPurchases.id): invalid request")
-        case .unauthorized, .forbidden:
+        case .unauthorized:
             throw RepositoryError.unauthorized
+        case .forbidden(let forbidden):
+            throw BFMRepositoryFailure.forbiddenFailure(try forbidden.body.json)
         case .tooManyRequests:
             throw RepositoryError.transport("\(ListPurchases.id): rate limited")
         case .badGateway(let upstream):
@@ -79,8 +81,10 @@ public struct BFMPurchasesRepository: PurchasesRepository {
             return Self.summary(from: try ok.body.json)
         case .badRequest:
             throw RepositoryError.transport("\(GetMonthSummary.id): invalid request")
-        case .unauthorized, .forbidden:
+        case .unauthorized:
             throw RepositoryError.unauthorized
+        case .forbidden(let forbidden):
+            throw BFMRepositoryFailure.forbiddenFailure(try forbidden.body.json)
         case .tooManyRequests:
             throw RepositoryError.transport("\(GetMonthSummary.id): rate limited")
         case .badGateway(let upstream):

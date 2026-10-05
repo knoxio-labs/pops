@@ -33,10 +33,12 @@ internal struct TransactionsFailureTests {
     @Test("a rejected token ends as unauthorized, whichever way the BFM says it")
     func rejectedCredentials() async {
         let invalidToken = TransactionsWire.failure(code: "invalid_token")
-        let revoked = TransactionsWire.failure(code: "device_revoked")
+        let revoked = TransactionsWire.failure(code: "bfm.auth.device_revoked")
+        let capabilityDenied = TransactionsWire.failure(code: "capability_not_granted")
 
         #expect(await error(status: .unauthorized, json: invalidToken) == .unauthorized)
         #expect(await error(status: .forbidden, json: revoked) == .unauthorized)
+        #expect(await error(status: .forbidden, json: capabilityDenied) == .featureUnavailable)
     }
 
     /// The distinction the BFM went out of its way to keep, kept here too.

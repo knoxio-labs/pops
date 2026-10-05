@@ -119,7 +119,7 @@ public struct BFMAccountsRepository: AccountsRepository {
             forAccount: id, limit: Self.recentTransactionLimit)
 
         return AccountDetail(
-            account: try account(fromDetail: payload.account),
+            account: try account(fromDetail: payload.account, timeZone: timeZone()),
             history: payload.history.map {
                 AccountBalancePoint(month: $0.month, balanceMinorUnits: $0.balanceCents)
             },
@@ -139,8 +139,10 @@ extension BFMAccountsRepository {
             return nil
         case .badRequest:
             throw RepositoryError.transport("\(GetAccount.id): invalid request")
-        case .unauthorized, .forbidden:
+        case .unauthorized:
             throw RepositoryError.unauthorized
+        case .forbidden(let forbidden):
+            throw BFMRepositoryFailure.forbiddenFailure(try forbidden.body.json)
         case .tooManyRequests:
             throw RepositoryError.transport("\(GetAccount.id): rate limited")
         case .badGateway(let upstream):
@@ -155,104 +157,12 @@ extension BFMAccountsRepository {
     }
 }
 
-/// The two account payloads the generator emits — one per operation, because
-/// the contract declares the shape inline on each rather than as a shared
-/// component — reduced to the fields this app reads.
-///
-/// It exists so the mapping below is written once. Without it the identical
-/// twenty lines would appear twice, differing only in a generated type name,
-/// which is the shape of bug where a field gets added to one and not the other.
-private struct AccountWire {
-    let id: String
-    let name: String
-    let kind: String
-    let currency: String
-    let archived: Bool
-    let institutionName: String?
-    let contact: String?
-    let balanceCents: Int
-    let asOf: String
-    let isCheckpointAnchored: Bool
-    let inconsistent: Bool
-    let transactionCount: Int
-}
-
-extension BFMAccountsRepository {
-    private func account(fromList wire: ListAccountRow) throws -> Account {
-        try account(
-            from: AccountWire(
-                id: wire.id,
-                name: wire.name,
-                kind: wire.kind,
-                currency: wire.currency,
-                archived: wire.archived,
-                institutionName: wire.institutionName,
-                contact: wire.contact,
-                balanceCents: wire.balance.balanceCents,
-                asOf: wire.balance.asOf,
-                isCheckpointAnchored: wire.balance.basis == .checkpoint,
-                inconsistent: wire.balance.inconsistent,
-                transactionCount: wire.transactionCount
-            ))
-    }
-
-    private func account(fromDetail wire: DetailAccountPayload) throws -> Account {
-        try account(
-            from: AccountWire(
-                id: wire.id,
-                name: wire.name,
-                kind: wire.kind,
-                currency: wire.currency,
-                archived: wire.archived,
-                institutionName: wire.institutionName,
-                contact: wire.contact,
-                balanceCents: wire.balance.balanceCents,
-                asOf: wire.balance.asOf,
-                isCheckpointAnchored: wire.balance.basis == .checkpoint,
-                inconsistent: wire.balance.inconsistent,
-                transactionCount: wire.transactionCount
-            ))
-    }
-
-    /// One wire account into the app's own vocabulary.
-    ///
-    /// `kind` and `currency` go through as raw values for the reason
-    /// ``AccountKind`` states: a kind added to finance after this build shipped
-    /// must reach the screen, not fail the list.
-    ///
-    /// `asOf` is required to parse. It is not decoration on a balance — it is
-    /// the date the figure is claimed true as of, and a screen that dropped an
-    /// unparseable one would print a number with no date beside it, which reads
-    /// as "current".
-    private func account(from wire: AccountWire) throws -> Account {
-        guard let balanceAsOf = ISO8601Day.parse(wire.asOf, in: timeZone()) else {
-            throw RepositoryError.contractMismatch
-        }
-
-        return Account(
-            id: wire.id,
-            name: wire.name,
-            kind: AccountKind(rawValue: wire.kind),
-            balance: MoneyAmount(minorUnits: wire.balanceCents, currencyCode: wire.currency),
-            archived: wire.archived,
-            institutionName: wire.institutionName,
-            contact: wire.contact,
-            balanceAsOf: balanceAsOf,
-            balanceBasis: wire.isCheckpointAnchored ? .checkpoint : .transactions,
-            balanceInconsistent: wire.inconsistent,
-            transactionCount: wire.transactionCount
-        )
-    }
-}
-
 /// The generated names, shortened — see the note at the foot of
 /// ``BFMTransactionsRepository``.
 private typealias ListAccounts = Operations.MobileFinance_listAccounts
 private typealias ListAccountsQuery = ListAccounts.Input.Query
 private typealias GetAccount = Operations.MobileFinance_getAccount
-private typealias ListAccountRow = ListAccounts.Output.Ok.Body.JsonPayload.AccountsPayloadPayload
 private typealias DetailPayload = GetAccount.Output.Ok.Body.JsonPayload
-private typealias DetailAccountPayload = DetailPayload.AccountPayload
 
 extension BFMAccountsRepository {
     /// Returns `nil` only when the server rejects the cursor.
@@ -300,8 +210,10 @@ extension BFMAccountsRepository {
                 throw RepositoryError.transport("\(ListAccounts.id): invalid request")
             }
             return nil
-        case .unauthorized, .forbidden:
+        case .unauthorized:
             throw RepositoryError.unauthorized
+        case .forbidden(let forbidden):
+            throw BFMRepositoryFailure.forbiddenFailure(try forbidden.body.json)
         case .tooManyRequests:
             throw RepositoryError.transport("\(ListAccounts.id): rate limited")
         case .badGateway(let upstream):
@@ -318,7 +230,7 @@ extension BFMAccountsRepository {
     private func page(from payload: ListAccounts.Output.Ok.Body.JsonPayload) throws -> AccountsPage
     {
         AccountsPage(
-            accounts: try payload.accounts.map(account(fromList:)),
+            accounts: try payload.accounts.map { try account(fromList: $0, timeZone: timeZone()) },
             nextCursor: payload.nextCursor,
             totalCount: payload.totalCount
         )
