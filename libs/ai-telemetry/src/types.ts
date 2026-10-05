@@ -14,10 +14,12 @@ export interface PricingEntry {
 /** Resolves pricing for a provider/model, or null when unknown. */
 export type LookupPricingFn = (provider: string, model: string) => Promise<PricingEntry | null>;
 
-/** What a wrapped non-streaming Claude call must hand back. */
+/** Result returned by a wrapped non-streaming model call. */
 export interface CallResult<T> {
   response: T;
   usage: { inputTokens: number; outputTokens: number };
+  /** Provider-supplied reason the model stopped generating, when available. */
+  stopReason?: string;
 }
 
 /** Dependencies shared by both the request and streaming entrypoints. */
@@ -50,6 +52,7 @@ export interface CallWithLoggingOpts<T> extends InferenceContext {
   call: () => Promise<CallResult<T>>;
 }
 
+/** Options for logging a stream while preserving provider stop reasons. */
 export interface CallWithLoggingStreamOpts<E> extends InferenceContext {
   /** The underlying Claude stream generator. */
   stream: () => AsyncGenerator<E>;
@@ -58,4 +61,6 @@ export interface CallWithLoggingStreamOpts<E> extends InferenceContext {
    * is unavailable (e.g. the stream errored before the terminal event).
    */
   extractUsage: (lastEvent: E | undefined) => { inputTokens: number; outputTokens: number } | null;
+  /** Reads the provider stop reason captured while consuming the stream. */
+  extractStopReason?: () => string | undefined;
 }

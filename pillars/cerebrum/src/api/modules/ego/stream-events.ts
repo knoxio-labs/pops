@@ -23,10 +23,13 @@ export const EGO_REFUSAL_MSG = "I can't help with that request. The model declin
  * is emitted as a closing token after whatever partial text already streamed.
  * A mid-stream processing error degrades to a fallback `done` (tokens 0) rather
  * than throwing, preserving the engine's display-safe contract; the telemetry
- * wrapper reads usage from whichever `done` event terminates the stream.
+ * wrapper reads usage from whichever `done` event terminates the stream. The
+ * optional callback receives the provider stop reason after a final message;
+ * it is not called when final-message processing fails.
  */
 export async function* egoStreamEvents(
-  messageStream: MessageStream
+  messageStream: MessageStream,
+  onStopReason?: (stopReason: string | undefined) => void
 ): AsyncGenerator<EgoStreamEvent> {
   let fullText = '';
   try {
@@ -37,6 +40,7 @@ export async function* egoStreamEvents(
       }
     }
     const finalMessage = await messageStream.finalMessage();
+    onStopReason?.(finalMessage.stop_reason ?? undefined);
     if (isRefusal(finalMessage, 'cerebrum-ego')) {
       const notice = fullText.length > 0 ? `\n\n${EGO_REFUSAL_MSG}` : EGO_REFUSAL_MSG;
       fullText += notice;

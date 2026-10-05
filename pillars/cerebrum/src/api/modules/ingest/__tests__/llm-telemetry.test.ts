@@ -26,6 +26,7 @@ const PRICING: PricingEntry = { input: 2, output: 8 };
 function textResponse(text: string, inputTokens = 50, outputTokens = 10) {
   return {
     content: [{ type: 'text', text }],
+    stop_reason: 'end_turn',
     usage: { input_tokens: inputTokens, output_tokens: outputTokens },
   };
 }
@@ -88,6 +89,7 @@ describe('AnthropicIngestLlm.complete — telemetry', () => {
     expect(record.status).toBe('success');
     expect(record.inputTokens).toBe(50);
     expect(record.outputTokens).toBe(10);
+    expect(record.stopReason).toBe('end_turn');
     expect(record.costUsd).toBeCloseTo(0.00018, 9);
   });
 

@@ -33,14 +33,16 @@ interface TextDelta {
 function fakeMessageStream(
   deltas: string[],
   usage: { input_tokens: number; output_tokens: number }
-): AsyncIterable<TextDelta> & { finalMessage: () => Promise<{ usage: typeof usage }> } {
+): AsyncIterable<TextDelta> & {
+  finalMessage: () => Promise<{ stop_reason: string; usage: typeof usage }>;
+} {
   return {
     async *[Symbol.asyncIterator](): AsyncIterator<TextDelta> {
       for (const text of deltas) {
         yield { type: 'content_block_delta', delta: { type: 'text_delta', text } };
       }
     },
-    finalMessage: () => Promise.resolve({ usage }),
+    finalMessage: () => Promise.resolve({ stop_reason: 'end_turn', usage }),
   };
 }
 
@@ -108,6 +110,7 @@ describe('AnthropicEgoLlm.stream — telemetry', () => {
     expect(record.status).toBe('success');
     expect(record.inputTokens).toBe(12);
     expect(record.outputTokens).toBe(7);
+    expect(record.stopReason).toBe('end_turn');
     expect(record.costUsd).toBeCloseTo(0.000141, 9);
   });
 
@@ -139,5 +142,6 @@ describe('AnthropicEgoLlm.stream — telemetry', () => {
     expect(record.status).toBe('success');
     expect(record.inputTokens).toBe(0);
     expect(record.outputTokens).toBe(0);
+    expect(record.stopReason).toBeUndefined();
   });
 });

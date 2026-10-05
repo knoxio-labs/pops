@@ -1817,6 +1817,7 @@ export interface operations {
           provider: string;
           /** @enum {string} */
           status: 'success' | 'error' | 'timeout' | 'budget-blocked';
+          stopReason?: string;
         };
       };
     };

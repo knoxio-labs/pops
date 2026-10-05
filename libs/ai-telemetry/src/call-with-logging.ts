@@ -37,7 +37,7 @@ export async function callWithLogging<T>(
   const start = Date.now();
 
   try {
-    const { response, usage } = await opts.call();
+    const { response, usage, stopReason } = await opts.call();
     const latencyMs = Date.now() - start;
     void (async (): Promise<void> => {
       const pricing = await deps.lookupPricing(opts.provider, opts.model).catch(() => null);
@@ -50,6 +50,7 @@ export async function callWithLogging<T>(
         latencyMs,
         status: 'success',
         cached: false,
+        ...(stopReason !== undefined ? { stopReason } : {}),
       });
     })().catch((error: unknown) => warn('ai-telemetry: cost/report failed', error));
     return response;

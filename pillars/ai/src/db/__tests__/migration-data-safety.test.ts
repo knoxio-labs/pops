@@ -1,23 +1,11 @@
 /**
  * What the migration chain does to data that was already there.
  *
- * The companion test in finance and purchases stages a database up to the
- * entry *before* a data-mutating migration, seeds it, then reopens with the
- * real opener to prove the rest of the journal doesn't lose or mangle rows.
- * The ai pillar's journal currently holds exactly one entry —
- * `0001_ai_baseline` — so there is no earlier point to stage from and no tail
- * migration to test against yet.
- *
- * What this test proves today is narrower: staging through the only entry
- * that exists, seeding representative rows, and reopening with `openAiDb`
- * shows the opener is idempotent against an already-migrated, populated
- * database (no spurious pre-migration snapshot, no rewritten row), and that
- * `PRAGMA foreign_key_check` / `integrity_check` are clean against this
- * schema. It does not yet prove anything about a migration rewriting
- * existing data, because none exists. The moment a second migration lands,
- * `BASELINE_TAG` stays `0001_ai_baseline`, the seed below becomes the "before"
- * state, and this test starts covering the same ground finance's and
- * purchases's do.
+ * Like the companion tests in finance and purchases, this stages a database
+ * before a later schema migration, seeds it, and reopens with the real opener.
+ * The baseline is staged, populated, and reopened with the full journal. The
+ * stop-reason migration must add its nullable column without rewriting
+ * existing inference rows, and the resulting database must remain intact.
  */
 import { mkdtempSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -43,7 +31,7 @@ const MIGRATIONS_DIR = join(
   'migrations'
 );
 
-/** The only entry in this pillar's journal, as of writing. */
+/** Schema state immediately before the stop-reason migration. */
 const BASELINE_TAG = '0001_ai_baseline';
 
 const METADATA = { promptTokensDetails: { cached: 128 }, retries: 0, "note's": 'quote "test"' };
@@ -200,6 +188,17 @@ describe('applying the rest of the journal to a populated ai database', () => {
     expect(count('ai_alerts')).toBe(2);
     expect(count('ai_model_pricing')).toBe(7);
     expect(count('ai_budgets')).toBe(1);
+  });
+
+  it('adds a nullable stop reason without changing existing inference rows', () => {
+    expect(
+      rows<{ operation: string; stop_reason: string | null }>(
+        'SELECT operation, stop_reason FROM ai_inference_log ORDER BY id'
+      )
+    ).toEqual([
+      { operation: 'categorize', stop_reason: null },
+      { operation: 'summarize', stop_reason: null },
+    ]);
   });
 
   it('keeps a pre-existing price row unchanged when the pricing seed runs over it', () => {

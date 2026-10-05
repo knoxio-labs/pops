@@ -5,6 +5,8 @@
  */
 import { __setCerebrumTelemetryDepsForTests } from '../ai-telemetry-deps.js';
 
+import type { InferenceRecord } from '@pops/ai-telemetry';
+
 export const CURRENT_MODEL = 'claude-sonnet-5-5';
 export const HAIKU_MODEL = 'claude-haiku-4-5-20251001';
 export const LEGACY_SONNET_MODEL = 'claude-sonnet-4-6';
@@ -83,6 +85,19 @@ export function silenceTelemetry(): void {
   __setCerebrumTelemetryDepsForTests({
     lookupPricing: () => Promise.resolve(null),
     report: () => Promise.resolve(),
+  });
+}
+
+/** Capture the next record reported through cerebrum's telemetry wrapper. */
+export function captureTelemetryRecord(): Promise<InferenceRecord> {
+  return new Promise((resolve) => {
+    __setCerebrumTelemetryDepsForTests({
+      lookupPricing: () => Promise.resolve(null),
+      report: (record) => {
+        resolve(record);
+        return Promise.resolve();
+      },
+    });
   });
 }
 

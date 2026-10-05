@@ -247,9 +247,9 @@ with nothing else coupling them, so a test asserts the prompt names every
 field the schema requires. Adding a field without teaching the model about
 it fails there rather than silently producing extractions that lack it.
 
-Usage, cost and latency go to the ai pillar through `@pops/ai-telemetry`,
-so a drop-zone that quietly becomes expensive shows up where everything
-else does.
+Usage, cost, latency and the provider stop reason go to the ai pillar through
+`@pops/ai-telemetry`, so a drop-zone that quietly becomes expensive shows up
+where everything else does.
 
 ## The endpoint
 

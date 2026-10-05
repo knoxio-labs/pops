@@ -7,6 +7,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  captureTelemetryRecord,
   collect,
   CURRENT_MODEL,
   fakeMessageStream,
@@ -108,6 +109,16 @@ describe('AnthropicEgoLlm outcomes', () => {
     createMock.mockResolvedValue(thinkingThenTextMessage('Grounded answer.'));
     const result = await new AnthropicEgoLlm().chat('sys', MESSAGES);
     expect(result.content).toBe('Grounded answer.');
+  });
+
+  it('reports the provider stop reason without adding it to the chat response', async () => {
+    const report = captureTelemetryRecord();
+    createMock.mockResolvedValue(textMessage('Grounded answer.'));
+
+    const result = await new AnthropicEgoLlm().chat('sys', MESSAGES);
+
+    expect(result).toEqual({ content: 'Grounded answer.', tokensIn: 20, tokensOut: 9 });
+    expect((await report).stopReason).toBe('end_turn');
   });
 
   it('answers a refused chat with the refusal message, never an empty reply', async () => {
