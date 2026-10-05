@@ -48,6 +48,9 @@ internal struct InspectorShapeTests {
         )
         let inspector = try view.inspect()
 
+        let bar = try inspector.vStack().view(PlaygroundGlassGroup<EmptyView>.self, 1)
+        _ = try bar.simultaneousGesture(DragGesture.self)
+
         try inspector.find(viewWithAccessibilityLabel: "Close").button().tap()
         #expect(closeCount == 1)
         try inspector.find(viewWithAccessibilityLabel: "Show conditions").button().tap()
