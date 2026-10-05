@@ -20,6 +20,12 @@ extension BFMPurchasesRepository {
             throw BFMRepositoryFailure.failure(error, operation: UpdatePurchaseOperation.id)
         }
 
+        return try updatedPurchase(from: output)
+    }
+
+    private func updatedPurchase(from output: UpdatePurchaseOperation.Output) throws
+        -> PurchaseDetail?
+    {
         switch output {
         case .ok(let ok): return try detail(from: try ok.body.json)
         case .notFound: return nil
@@ -27,7 +33,9 @@ extension BFMPurchasesRepository {
             throw RepositoryError.conflict(try conflict.body.json.code)
         case .badRequest:
             throw RepositoryError.transport("\(UpdatePurchaseOperation.id): invalid request")
-        case .unauthorized, .forbidden: throw RepositoryError.unauthorized
+        case .unauthorized: throw RepositoryError.unauthorized
+        case .forbidden(let forbidden):
+            throw BFMRepositoryFailure.forbiddenFailure(try forbidden.body.json)
         case .tooManyRequests:
             throw RepositoryError.transport("\(UpdatePurchaseOperation.id): rate limited")
         case .badGateway(let upstream):

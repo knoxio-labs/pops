@@ -153,11 +153,10 @@ extension BFMTransactionsRepository {
                 throw RepositoryError.transport("\(ListTransactions.id): invalid request")
             }
             return .cursorRejected
-        // The device, not the request. Both end the session — a `403` through
-        // `AuthenticatingMiddleware` has already destroyed the credentials by
-        // the time this runs — and the screen says the same thing about each.
-        case .unauthorized, .forbidden:
+        case .unauthorized:
             throw RepositoryError.unauthorized
+        case .forbidden(let forbidden):
+            throw BFMRepositoryFailure.forbiddenFailure(try forbidden.body.json)
         case .tooManyRequests(let limited):
             throw RepositoryError.rateLimited(
                 retryAfterSeconds: try limited.body.json.retryAfterSeconds
@@ -252,8 +251,10 @@ extension BFMTransactionsRepository {
             return nil
         case .badRequest:
             throw RepositoryError.transport("\(GetTransaction.id): invalid request")
-        case .unauthorized, .forbidden:
+        case .unauthorized:
             throw RepositoryError.unauthorized
+        case .forbidden(let forbidden):
+            throw BFMRepositoryFailure.forbiddenFailure(try forbidden.body.json)
         case .tooManyRequests(let limited):
             throw RepositoryError.rateLimited(
                 retryAfterSeconds: try limited.body.json.retryAfterSeconds

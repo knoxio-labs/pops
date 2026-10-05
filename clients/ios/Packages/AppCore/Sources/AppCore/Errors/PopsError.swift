@@ -54,40 +54,49 @@ extension PopsError {
     public init(repositoryError: RepositoryError, fallbackMessage: String) {
         if case .transport(let transport) = repositoryError, let popsError = transport.popsError {
             self = popsError
-            return
+        } else {
+            self = Self.classified(repositoryError, fallbackMessage: fallbackMessage)
         }
+    }
 
+    private static func classified(
+        _ repositoryError: RepositoryError, fallbackMessage: String
+    ) -> PopsError {
         switch repositoryError {
         case .unavailable:
-            self.init(
+            PopsError(
                 code: "ios.repository.unavailable", message: fallbackMessage,
                 retryable: true, kind: .server)
         case .rateLimited:
-            self.init(
+            PopsError(
                 code: "ios.http.429", message: fallbackMessage,
                 retryable: true, kind: .client)
         case .unauthorized:
-            self.init(
+            PopsError(
                 code: "ios.auth.unauthorized", message: fallbackMessage,
                 retryable: false, kind: .client)
+        case .featureUnavailable:
+            PopsError(
+                code: "ios.auth.capability_not_granted", message: fallbackMessage,
+                retryable: false, kind: .client)
         case .contractMismatch:
-            self.init(
+            PopsError(
                 code: "ios.contract.mismatch", message: fallbackMessage,
                 retryable: false, kind: .client)
         case .requestRejected:
-            self.init(
+            PopsError(
                 code: "ios.contract.request_rejected", message: fallbackMessage,
                 retryable: false, kind: .client)
         case .conflict:
-            self.init(
+            PopsError(
                 code: "ios.repository.conflict", message: fallbackMessage,
                 retryable: false, kind: .client)
         case .transport:
-            self.init(
+            PopsError(
                 code: "ios.net.transport", message: fallbackMessage,
                 retryable: true, kind: .server)
         case .dependencyNotBound:
-            self.init(
+            PopsError(
                 code: "ios.repository.unbound", message: fallbackMessage,
                 retryable: false, kind: .client)
         }

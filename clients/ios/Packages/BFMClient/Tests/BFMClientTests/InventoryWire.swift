@@ -207,7 +207,7 @@ internal enum InventoryWire {
     }
 
     internal static let deviceRevoked = """
-        {"code":"device_revoked","message":"no"}
+        {"code":"bfm.auth.device_revoked","message":"no"}
         """
 
     internal static func failure(code: String, message: String = "no") -> String {

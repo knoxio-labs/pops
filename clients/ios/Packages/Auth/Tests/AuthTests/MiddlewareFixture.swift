@@ -27,6 +27,7 @@ internal struct MiddlewareFixture {
     internal var session: RecordingSessionEvents { refresher.session }
     internal var keyStore: any DeviceKeyStore { refresher.keyStore }
     internal var tokenStore: any TokenStore { refresher.tokenStore }
+    internal var pairedDeviceStore: any PairedDeviceStore { refresher.pairedDeviceStore }
 
     /// - Returns: The response the middleware settled on. The body is dropped:
     ///   every assertion in these suites is about the status and about what the
@@ -36,6 +37,14 @@ internal struct MiddlewareFixture {
         body: HTTPBody? = nil,
         through transport: RecordingTransport
     ) async throws -> HTTPResponse {
+        try await sendResponse(request, body: body, through: transport).0
+    }
+
+    internal func sendResponse(
+        _ request: HTTPRequest = .mobile(),
+        body: HTTPBody? = nil,
+        through transport: RecordingTransport
+    ) async throws -> (HTTPResponse, HTTPBody?) {
         try await middleware.intercept(
             request,
             body: body,
@@ -43,6 +52,5 @@ internal struct MiddlewareFixture {
             operationID: "mobile.bootstrap",
             next: transport.next
         )
-        .0
     }
 }

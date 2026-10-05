@@ -30,8 +30,10 @@ extension BFMPurchasesRepository {
                 totalCount: body.totalCount)
         case .badRequest:
             throw RepositoryError.transport("\(SearchPurchases.id): invalid request")
-        case .unauthorized, .forbidden:
+        case .unauthorized:
             throw RepositoryError.unauthorized
+        case .forbidden(let forbidden):
+            throw BFMRepositoryFailure.forbiddenFailure(try forbidden.body.json)
         case .tooManyRequests:
             throw RepositoryError.transport("\(SearchPurchases.id): rate limited")
         case .badGateway(let upstream):
@@ -69,8 +71,10 @@ extension BFMPurchasesRepository {
                 totalCount: body.totalCount)
         case .badRequest:
             throw RepositoryError.transport("\(PurchaseTags.id): invalid request")
-        case .unauthorized, .forbidden:
+        case .unauthorized:
             throw RepositoryError.unauthorized
+        case .forbidden(let forbidden):
+            throw BFMRepositoryFailure.forbiddenFailure(try forbidden.body.json)
         case .tooManyRequests:
             throw RepositoryError.transport("\(PurchaseTags.id): rate limited")
         case .badGateway(let upstream):

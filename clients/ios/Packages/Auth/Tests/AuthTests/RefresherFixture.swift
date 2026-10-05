@@ -17,6 +17,7 @@ internal struct RefresherFixture {
     internal let session: RecordingSessionEvents
     internal let keyStore: any DeviceKeyStore
     internal let tokenStore: any TokenStore
+    internal let pairedDeviceStore: InMemoryPairedDeviceStore
 
     /// - Parameter parkingFirstSessionEventOn: holds the refresher inside its
     ///   first `sessionEvents.send(...)` until the gate opens. That send is
@@ -34,12 +35,13 @@ internal struct RefresherFixture {
         if withKey { try keyStore.createKey() }
         let tokenStore = tokenStore ?? InMemoryTokenStore(initial: tokens)
         let session = RecordingSessionEvents()
+        let pairedDeviceStore = InMemoryPairedDeviceStore(initial: .fake())
 
         self.refresher = DeviceSessionRefresher(
             credentialStore: DeviceCredentialStore(
                 keyStore: keyStore,
                 tokenStore: tokenStore,
-                pairedDeviceStore: InMemoryPairedDeviceStore()
+                pairedDeviceStore: pairedDeviceStore
             ),
             exchange: { _ in exchange },
             sessionEvents: gate.map {
@@ -51,6 +53,7 @@ internal struct RefresherFixture {
         self.session = session
         self.keyStore = keyStore
         self.tokenStore = tokenStore
+        self.pairedDeviceStore = pairedDeviceStore
     }
 
     internal func refreshedTokens(replacing staleAccessToken: String) async throws -> DeviceTokens {

@@ -8,7 +8,7 @@ Inventory mutation requests carry the catalogue revision stored with the
 queued edit. `BFMInventoryTransport` forwards that pin as its own wire field;
 it is not command-specific data and therefore does not belong inside `args`.
 
-The same transport relays barcode lookups through `/mobile/barcode/lookup/{code}`. It maps a found response into AppCore's facts-only product and preserves definite misses and unsupported product categories. Failures retain their safe code, request ID and retryability as `PopsError`, including unavailable provider answers, authentication or permission refusals, network failures and unreadable responses. Scanning remains optional: the form records failures in Recent errors and keeps text capture available.
+The same transport relays barcode lookups through `/mobile/barcode/lookup/{code}`. It maps a found response into AppCore's facts-only product and preserves definite misses and unsupported product categories. Failures retain their safe code, request ID and retryability as `PopsError`, including unavailable provider answers, authentication or permission refusals, network failures and unreadable responses. Capability refusals surface as feature-unavailable errors and leave the pairing intact; device revocation ends the session. Scanning remains optional: the form records failures in Recent errors and keeps text capture available.
 
 ## The client is generated, committed, and gated
 

@@ -6,6 +6,7 @@ internal enum InventoryCodeSuggestionFailure: String, Equatable {
     case emptyResponse = "code_suggestion_empty_response"
     case unavailable = "code_suggestion_service_unavailable"
     case unauthorized = "code_suggestion_unauthorized"
+    case featureUnavailable = "code_suggestion_feature_unavailable"
     case contractMismatch = "code_suggestion_contract_mismatch"
     case conflict = "code_suggestion_conflict"
     case transport = "code_suggestion_transport_error"
@@ -19,6 +20,7 @@ internal enum InventoryCodeSuggestionFailure: String, Equatable {
         case RepositoryError.unavailable: self = .unavailable
         case RepositoryError.rateLimited: self = .transport
         case RepositoryError.unauthorized: self = .unauthorized
+        case RepositoryError.featureUnavailable: self = .featureUnavailable
         case RepositoryError.contractMismatch: self = .contractMismatch
         case RepositoryError.requestRejected: self = .clientTooOld
         case RepositoryError.conflict: self = .conflict
@@ -37,6 +39,7 @@ internal enum InventoryCodeSuggestionFailure: String, Equatable {
         case .emptyResponse: "The server returned no code suggestions. Try again."
         case .unavailable: "The inventory service is unavailable. Try again shortly."
         case .unauthorized: "The server denied access to code suggestions. Check your pairing."
+        case .featureUnavailable: "This phone is not allowed to request code suggestions."
         case .contractMismatch:
             "The app and server could not agree on the code request or response."
         case .conflict: "The server reported a conflict while suggesting a code."

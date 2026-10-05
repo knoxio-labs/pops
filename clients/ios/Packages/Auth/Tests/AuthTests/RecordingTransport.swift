@@ -24,9 +24,14 @@ internal final class RecordingTransport: Sendable {
     private let recorded = Mutex<[Attempt]>([])
     private let arrivals = Countdown()
     private let respond: @Sendable (HTTPRequest) async -> HTTPResponse.Status
+    private let responseBody: @Sendable (HTTPRequest) async -> HTTPBody?
 
-    internal init(respond: @escaping @Sendable (HTTPRequest) async -> HTTPResponse.Status) {
+    internal init(
+        respond: @escaping @Sendable (HTTPRequest) async -> HTTPResponse.Status,
+        responseBody: @escaping @Sendable (HTTPRequest) async -> HTTPBody? = { _ in nil }
+    ) {
         self.respond = respond
+        self.responseBody = responseBody
     }
 
     internal var attempts: [Attempt] { recorded.withLock { $0 } }
@@ -71,7 +76,9 @@ internal final class RecordingTransport: Sendable {
                 )
             }
             arrivals.record()
-            return (HTTPResponse(status: await respond(request)), nil)
+            let response = HTTPResponse(status: await respond(request))
+            let body = await responseBody(request)
+            return (response, body)
         }
     }
 }

@@ -124,10 +124,28 @@ internal struct AccountsFailureTests {
                 status: .unauthorized, json: TransactionsWire.failure(code: "invalid_token")))
         let revoked = try BFMAccountsRepository.stubbed(
             StubTransport(
-                status: .forbidden, json: TransactionsWire.failure(code: "device_revoked")))
+                status: .forbidden,
+                json: TransactionsWire.failure(code: "bfm.auth.device_revoked")))
 
         await #expect(throws: RepositoryError.unauthorized) { _ = try await rejected.accounts() }
         await #expect(throws: RepositoryError.unauthorized) { _ = try await revoked.accounts() }
+    }
+
+    @Test("account list and detail capability refusals do not ask the user to pair again")
+    func capabilityDenialStaysFeatureUnavailable() async throws {
+        let repository = try BFMAccountsRepository.stubbed(
+            StubTransport(
+                status: .forbidden,
+                json:
+                    #"{"code":"capability_not_granted","message":"denied","capability":"finance.accounts.read"}"#
+            ))
+
+        await #expect(throws: RepositoryError.featureUnavailable) {
+            _ = try await repository.accounts()
+        }
+        await #expect(throws: RepositoryError.featureUnavailable) {
+            _ = try await repository.accountDetail(id: "acc-1")
+        }
     }
 
     /// The one distinction that must not collapse: "finance is not answering"

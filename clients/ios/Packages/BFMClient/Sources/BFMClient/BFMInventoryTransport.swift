@@ -189,12 +189,7 @@ public struct BFMInventoryTransport: InventorySyncTransport, InventoryCodeSugges
         return BFMRepositoryFailure.failure(error, operation: operation)
     }
 
-    /// Both documented `403` shapes (`device_revoked`, `capability_not_granted`)
-    /// land on ``RepositoryError/unauthorized`` — the same reading every other
-    /// `/mobile/*` repository gives them (`BFMTransactionsRepository`) — but
-    /// each is matched explicitly rather than left to fall through, per the
-    /// slice's own bar: an unmapped case here is one this build never chose
-    /// to treat this way, it merely happened to.
+    /// Maps the documented `403` shapes into their distinct recovery actions.
     internal static func forbiddenFailure<Body: WireForbiddenBody>(
         _ body: Body, operation: String
     ) -> RepositoryError {
@@ -202,7 +197,7 @@ public struct BFMInventoryTransport: InventorySyncTransport, InventoryCodeSugges
             return BFMInventoryFailureMapping.repositoryError(
                 for: .capabilityDenied(capability: capability), operation: operation)
         }
-        return BFMInventoryFailureMapping.repositoryError(for: .unauthorized, operation: operation)
+        return BFMRepositoryFailure.forbiddenFailure(body)
     }
 }
 
