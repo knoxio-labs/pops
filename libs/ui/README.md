@@ -78,5 +78,5 @@ One icon per action, no aliases. Destructive actions use `variant="ghost"` with 
 ## Constraints
 
 - A lib must never import a pillar (`scripts/ci/check-lib-no-pillar-import.mjs`). Storybook is a deliberate exception; how it reaches pillar frontends without a workspace edge, and what a new frontend pillar must add, is in `scripts/check-storybook-coverage.mjs`.
-- Storybook's browser surface is local: no CI job runs `build-storybook`, deploys it, or diffs screenshots. What CI does run is every story as a jsdom smoke test (above), which is a different and weaker claim — it proves a story mounts, not that it looks right.
+- CI serves Storybook locally for targeted Playwright interaction checks on shared UI hit areas, alongside the jsdom story smoke tests above. It does not build or deploy Storybook or diff general screenshots; the browser checks cover the specific interaction geometry they exercise.
 - Coverage thresholds in `vitest.config.ts` are nominal. The story smoke test walks most of the lib, so line coverage now says very little about how well any component is actually asserted on.

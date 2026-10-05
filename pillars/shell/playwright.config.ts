@@ -9,11 +9,9 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
  * Playwright configuration for POPS Shell E2E tests.
  *
  * No backend is booted. Every spec stands the pillar it exercises up at its
- * `/<pillar>-api` proxy path with `page.route`, so a run depends on the two
- * shell dev servers below and nothing else — no pillar process, no SQLite
- * file, no seeding step. What is under test is the shell and the app bundles
- * it mounts: that they ask the REST surface for the right thing and render
- * what came back.
+ * `/<pillar>-api` proxy path with `page.route`; shell tests use the two shell
+ * dev servers below, and shared UI interaction tests use Storybook. No pillar
+ * process, SQLite file, or seeding step is needed.
  *
  * Install-set switching (`POPS_APPS` / `POPS_OVERLAYS`, resolved in
  * `libs/module-registry/src/install-set.ts`):
@@ -46,6 +44,7 @@ const ALL_MODULES_PORT = 5567;
  * collision coming back (POPS-3249).
  */
 const FINANCE_ONLY_PORT = 5571;
+const STORYBOOK_PORT = 6006;
 
 const SHELL_E2E_ENV = { VITE_E2E: 'true' } as const;
 
@@ -71,8 +70,8 @@ export default defineConfig({
    * needs a longer deadline than the next one is a spec racing something it
    * should be awaiting instead.
    *
-   * The default 5s is raised here because both webServers are Vite in DEV
-   * mode: the first navigation to a route transforms that page's module graph
+   * The default 5s is raised here because all webServers are Vite in DEV mode:
+   * the first navigation to a route transforms that page's module graph
    * on demand, and a cold transform of a large lazy chunk (the import wizard,
    * the media library) genuinely costs several seconds on a CI runner before
    * any pixel exists. That cost is paid once per chunk and is not a race — it
@@ -90,8 +89,8 @@ export default defineConfig({
 
   projects: [
     {
-      // Default project — runs every spec EXCEPT the finance-only suite,
-      // which requires a shell built with `POPS_APPS=finance,core`.
+      // Default project — runs every spec EXCEPT the finance-only suite and
+      // shared UI stories, which have their own projects.
       // baseURL is inherited from the global `use` block above.
       name: 'chromium-all-modules',
       use: {
@@ -99,7 +98,11 @@ export default defineConfig({
       },
       // `*.acceptance.spec.ts` boots a real backend and runs only under
       // `playwright.acceptance.config.ts`.
-      testIgnore: ['**/pops-apps-finance-only-*.spec.ts', '**/*.acceptance.spec.ts'],
+      testIgnore: [
+        '**/pops-apps-finance-only-*.spec.ts',
+        '**/*.acceptance.spec.ts',
+        '**/chip-hit-area.spec.ts',
+      ],
     },
     {
       // Restricted install set — only the specs that assert the
@@ -112,6 +115,14 @@ export default defineConfig({
         baseURL: `http://localhost:${FINANCE_ONLY_PORT}`,
       },
       testMatch: ['**/pops-apps-finance-only-*.spec.ts'],
+    },
+    {
+      name: 'chromium-ui-storybook',
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: `http://127.0.0.1:${STORYBOOK_PORT}`,
+      },
+      testMatch: ['**/chip-hit-area.spec.ts'],
     },
   ],
 
@@ -141,6 +152,12 @@ export default defineConfig({
         POPS_APPS: 'finance,core',
         POPS_REGISTRY_SNAPSHOT: FINANCE_ONLY_SNAPSHOT,
       },
+    },
+    {
+      command: `pnpm --filter @pops/ui storybook --ci --no-open --host 127.0.0.1`,
+      url: `http://127.0.0.1:${STORYBOOK_PORT}`,
+      reuseExistingServer: !process.env.CI,
+      timeout: 120000,
     },
   ],
 });

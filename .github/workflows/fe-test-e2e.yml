@@ -3,8 +3,8 @@ run-name: ${{ github.workflow }} for ${{ github.event_name }} into ${{ github.ba
 
 # Playwright against the shell and the app bundles it mounts. No pillar
 # backend is started: every spec fulfils the REST surface it exercises at the
-# `/<pillar>-api` proxy path with `page.route`, so the only processes are the
-# two shell dev servers `pillars/shell/playwright.config.ts` defines.
+# `/<pillar>-api` proxy path with `page.route`; it starts the two shell dev
+# servers and Storybook defined in `pillars/shell/playwright.config.ts`.
 #
 # The build step below is wider than the shell's own dependency closure on
 # purpose. The finance-only webServer runs `scripts/build-registry-snapshot.ts`
