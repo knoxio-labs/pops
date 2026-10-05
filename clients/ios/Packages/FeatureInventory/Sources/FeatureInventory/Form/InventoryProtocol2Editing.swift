@@ -121,11 +121,13 @@ internal enum InventoryProtocol2ValueText {
     private static func string(
         _ input: String, limit: Int, label: String
     ) -> InventoryProtocol2ParseResult {
-        let count = input.unicodeScalars.count
+        let trimmed = InventoryTextNormalization.trimEdges(input)
+        guard !trimmed.isEmpty else { return .value(nil) }
+        let count = trimmed.unicodeScalars.count
         guard count <= limit else {
             return .issue("\(label) must be \(limit.formatted()) characters or fewer.")
         }
-        return .value(.string(input))
+        return .value(.string(trimmed))
     }
 
     private static func integer(_ input: String) -> InventoryProtocol2ParseResult {

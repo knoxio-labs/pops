@@ -43,9 +43,16 @@ extension LocalReducer {
         var entries = Dictionary(uniqueKeysWithValues: baseline.map { ($0.fieldId, $0) })
         for patch in values {
             if let replacement = patch.values {
-                entries[patch.fieldId] = .init(
-                    fieldId: patch.fieldId, state: .value(replacement), source: .stored,
-                    catalogueRevision: catalogueRevision)
+                let kind = type.fields.first(where: { $0.id == patch.fieldId })?.kind
+                let normalized = kind.map { normalizedTextValues(replacement, kind: $0) }
+                    ?? replacement
+                if normalized.isEmpty && !replacement.isEmpty {
+                    entries.removeValue(forKey: patch.fieldId)
+                } else {
+                    entries[patch.fieldId] = .init(
+                        fieldId: patch.fieldId, state: .value(normalized), source: .stored,
+                        catalogueRevision: catalogueRevision)
+                }
             } else {
                 entries.removeValue(forKey: patch.fieldId)
             }
@@ -147,20 +154,45 @@ extension LocalReducer {
         _ values: [InventoryProtocol2FieldValue], overrides: [InventoryProtocol2FieldValue] = [],
         type: InventoryCatalogueType, revision: Int
     ) throws -> [InventoryItemFieldEntry] {
-        let stored = values.map {
-            InventoryItemFieldEntry(
-                fieldId: $0.fieldId, state: .value($0.values), source: .stored,
+        let stored = values.compactMap { value -> InventoryItemFieldEntry? in
+            let kind = type.fields.first(where: { $0.id == value.fieldId })?.kind
+            let normalized = kind.map { normalizedTextValues(value.values, kind: $0) }
+                ?? value.values
+            guard !normalized.isEmpty || value.values.isEmpty else { return nil }
+            return InventoryItemFieldEntry(
+                fieldId: value.fieldId, state: .value(normalized), source: .stored,
                 catalogueRevision: revision)
         }
-        let overridden = try overrides.map { override in
-            try validateCreateOverride(override, type: type)
+        let overridden = try overrides.compactMap { override -> InventoryItemFieldEntry? in
+            let kind = type.fields.first(where: { $0.id == override.fieldId })?.kind
+            let normalized = kind.map { normalizedTextValues(override.values, kind: $0) }
+                ?? override.values
+            guard !normalized.isEmpty || override.values.isEmpty else { return nil }
+            try validateCreateOverride(
+                InventoryProtocol2FieldValue(fieldId: override.fieldId, values: normalized),
+                type: type)
             return InventoryItemFieldEntry(
-                fieldId: override.fieldId, state: .value(override.values), source: .override,
+                fieldId: override.fieldId, state: .value(normalized), source: .override,
                 catalogueRevision: revision)
         }
         let entries = stored + overridden
         try validateProtocol2Entries(entries, type: type, revision: revision)
         return entries
+    }
+
+    private func normalizedTextValues(
+        _ values: [InventoryPrimitiveValue], kind: InventoryPrimitiveKind
+    ) -> [InventoryPrimitiveValue] {
+        switch kind {
+        case .shortText, .longText:
+            return values.compactMap { value in
+                guard case .string(let text) = value else { return value }
+                let trimmed = InventoryTextNormalization.trimEdges(text)
+                return trimmed.isEmpty ? nil : .string(trimmed)
+            }
+        default:
+            return values
+        }
     }
 
     /// `item.create`'s override entries, judged as `item.setOverride` judges

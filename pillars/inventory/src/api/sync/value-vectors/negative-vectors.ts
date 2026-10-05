@@ -61,7 +61,12 @@ interface MalformedSpec {
 }
 
 const MALFORMED: readonly MalformedSpec[] = [
-  { name: 'short_text empty string', kind: 'short_text', fieldKey: 'shortTextOne', value: '' },
+  {
+    name: 'short_text over its scalar limit',
+    kind: 'short_text',
+    fieldKey: 'shortTextOne',
+    value: 'x'.repeat(201),
+  },
   { name: 'short_text as a number', kind: 'short_text', fieldKey: 'shortTextOne', value: 7 },
   { name: 'long_text as a boolean', kind: 'long_text', fieldKey: 'longTextOne', value: true },
   { name: 'integer as a string', kind: 'integer', fieldKey: 'integerOne', value: '42' },
