@@ -24,6 +24,7 @@ internal struct RootView: View {
     /// plain `Bool`, so the alert's title still has the pillar's name once
     /// SwiftUI reads it to render.
     @State private var unsupportedPillar: String?
+    @State private var selectedMoreFeature: MobileFeature?
 
     internal var body: some View {
         content
@@ -31,7 +32,16 @@ internal struct RootView: View {
             .background(Color.popsBackground)
             .environment(\.errorPresenter, composition.errorPresenter)
             .errorBanner(composition.errorPresenter)
+            .sheet(isPresented: moreFeatureSheetPresented) {
+                if let selectedMoreFeature {
+                    moreFeatureSheet(for: selectedMoreFeature)
+                }
+            }
             .task { await composition.shell.restoreSession() }
+            .onChange(of: composition.shell.session.state) { _, state in
+                selectedMoreFeature = Self.moreFeatureSelection(
+                    selectedMoreFeature, after: state)
+            }
             .task(id: pairedDevice) { await composition.shell.loadBootstrap() }
             // Fires on the pairing that just happened and, since `.task(id:)`
             // runs for the initial value too, on a launch that restores a
@@ -102,6 +112,33 @@ internal struct RootView: View {
         )
     }
 
+    private var moreFeatureSheetPresented: Binding<Bool> {
+        Binding(
+            get: { selectedMoreFeature != nil },
+            set: { if !$0 { selectedMoreFeature = nil } }
+        )
+    }
+
+    @ViewBuilder private func moreFeatureSheet(for feature: MobileFeature) -> some View {
+        switch composition.shell.destination {
+        case .content(let surface):
+            ContentView(
+                surface: surface,
+                shell: composition.shell,
+                composition: composition,
+                selectedMoreFeature: $selectedMoreFeature
+            )
+            .screen(for: feature)
+            .safeAreaInset(edge: .top, alignment: .trailing) {
+                Button(RootCopy.done) { selectedMoreFeature = nil }
+                    .buttonStyle(.bordered)
+                    .padding()
+            }
+        case .launching, .pairing:
+            EmptyView()
+        }
+    }
+
     /// What `loadBootstrap` is keyed on. `nil` while unpaired, which is a value
     /// the task sees once and does nothing with.
     private var pairedDevice: PairedDevice? {
@@ -127,8 +164,16 @@ internal struct RootView: View {
                 surface: surface,
                 shell: composition.shell,
                 composition: composition,
+                selectedMoreFeature: $selectedMoreFeature,
                 purchasesCaptureObserver: nil)
         }
+    }
+
+    nonisolated internal static func moreFeatureSelection(
+        _ selected: MobileFeature?, after state: SessionState
+    ) -> MobileFeature? {
+        guard case .paired = state else { return nil }
+        return selected
     }
 }
 
