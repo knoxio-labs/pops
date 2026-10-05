@@ -9,6 +9,8 @@ internal enum EgoConversationListPresentation {
             "Ego is unavailable. Try again."
         case .unauthorized:
             "Your session needs attention before Ego can continue."
+        case .featureUnavailable:
+            "This phone isn't allowed to use Ego."
         case .rateLimited(let retryAfterSeconds):
             "Too many requests. Wait \(waitDuration(retryAfterSeconds)) before trying again."
         case .contractMismatch:
