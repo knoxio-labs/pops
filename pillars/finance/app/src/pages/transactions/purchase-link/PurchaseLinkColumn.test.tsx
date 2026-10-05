@@ -321,7 +321,11 @@ describe('when the purchases pillar does not answer', () => {
 
     await tabTo(userEvent.setup(), trigger);
 
-    expect(await screen.findByText(UNAVAILABLE_CAVEAT)).toBeVisible();
+    const caveatCopies = await screen.findAllByText(UNAVAILABLE_CAVEAT);
+    const visibleCaveat = caveatCopies[0];
+    if (visibleCaveat === undefined) throw new Error('missing purchase-link heading caveat');
+
+    expect(visibleCaveat).toBeVisible();
   });
 
   it('reads differently from a page where no order explains anything', async () => {
