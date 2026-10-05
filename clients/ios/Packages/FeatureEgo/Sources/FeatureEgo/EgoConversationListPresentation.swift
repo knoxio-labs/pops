@@ -24,6 +24,11 @@ internal enum EgoConversationListPresentation {
         }
     }
 
+    /// Keeps list recovery actions aligned with the shared repository failure policy.
+    internal static func failureIsRetryable(for error: RepositoryError) -> Bool {
+        EgoThreadModelFailurePresentation.failureCopy(for: error).retryable
+    }
+
     internal static func title(for conversation: EgoConversation) -> String {
         guard let title = conversation.title,
             !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty

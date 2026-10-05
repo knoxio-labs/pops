@@ -48,12 +48,7 @@ public struct EgoConversationListView: View {
             case .empty:
                 EmptyStateView(message: "No conversations yet.")
             case .failed(let error):
-                ErrorStateView(
-                    message: EgoConversationListPresentation.failureMessage(for: error),
-                    retryAccessibilityIdentifier: EgoConversationListAccessibility.retry
-                ) {
-                    Task { await model.load() }
-                }
+                failureView(for: error)
             }
         }
         .listStyle(.plain)
@@ -66,6 +61,21 @@ public struct EgoConversationListView: View {
         }
         .refreshable { await model.refresh() }
         .task { await model.load() }
+    }
+
+    @ViewBuilder
+    private func failureView(for error: RepositoryError) -> some View {
+        let message = EgoConversationListPresentation.failureMessage(for: error)
+        if EgoConversationListPresentation.failureIsRetryable(for: error) {
+            ErrorStateView(
+                message: message,
+                retryAccessibilityIdentifier: EgoConversationListAccessibility.retry
+            ) {
+                Task { await model.load() }
+            }
+        } else {
+            NonRetryableErrorStateView(message: message)
+        }
     }
 }
 
