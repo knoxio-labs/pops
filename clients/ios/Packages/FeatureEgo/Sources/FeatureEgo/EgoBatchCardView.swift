@@ -97,32 +97,16 @@ internal struct EgoBatchCardView: View {
         .accessibilityLabel("Submitting decision")
     }
 
+    @ViewBuilder
     private var decisionButtons: some View {
-        HStack(spacing: PopsSpacing.sm) {
-            Button(role: presentation.usesDestructiveRole ? .destructive : nil) {
-                Task { await model.approve() }
-            } label: {
-                Text(presentation.approveTitle)
-                    .font(.popsHeadline)
-                    .frame(maxWidth: .infinity, minHeight: PopsSize.touchTarget)
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(presentation.usesDestructiveRole ? Color.popsDestructive : Color.popsAccent)
-            .disabled(!presentation.approveEnabled)
-            .accessibilityIdentifier(EgoBatchCardAccessibility.approve)
-
-            Button(role: .destructive) {
-                Task { await model.rejectAll() }
-            } label: {
-                Text("Reject all")
-                    .font(.popsHeadline)
-                    .frame(maxWidth: .infinity, minHeight: PopsSize.touchTarget)
-            }
-            .buttonStyle(.bordered)
-            .tint(Color.popsDestructive)
-            .disabled(!presentation.rejectEnabled)
-            .accessibilityIdentifier(EgoBatchCardAccessibility.rejectAll)
-        }
+        EgoBatchCardDecisionButtons(
+            approveTitle: presentation.approveTitle,
+            usesDestructiveRole: presentation.usesDestructiveRole,
+            approveEnabled: presentation.approveEnabled,
+            rejectEnabled: presentation.rejectEnabled,
+            onApprove: { Task { await model.approve() } },
+            onRejectAll: { Task { await model.rejectAll() } }
+        )
     }
 
     private var continueAction: some View {
@@ -211,7 +195,7 @@ private struct EgoBatchCardActionRow: View {
     }
 }
 
-private enum EgoBatchCardAccessibility {
+internal enum EgoBatchCardAccessibility {
     static let card = "ego-batch-card"
     static let approve = "ego-batch-approve"
     static let rejectAll = "ego-batch-reject-all"
