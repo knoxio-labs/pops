@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -69,12 +69,16 @@ export const MANIFEST_FORMAT_CONFIG_PATH = resolve(HERE, 'oxfmt-manifest.json');
  */
 export function renderFormattedManifest(version: string): string {
   const dir = mkdtempSync(join(tmpdir(), 'manifest-render-'));
-  const path = join(dir, 'manifest.generated.ts');
-  writeFileSync(path, renderManifest(version));
-  execFileSync(
-    'pnpm',
-    ['exec', 'oxfmt', '--config', MANIFEST_FORMAT_CONFIG_PATH, '--write', path],
-    { stdio: 'ignore' }
-  );
-  return readFileSync(path, 'utf8');
+  try {
+    const path = join(dir, 'manifest.generated.ts');
+    writeFileSync(path, renderManifest(version));
+    execFileSync(
+      'pnpm',
+      ['exec', 'oxfmt', '--config', MANIFEST_FORMAT_CONFIG_PATH, '--write', path],
+      { stdio: 'ignore' }
+    );
+    return readFileSync(path, 'utf8');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 }
