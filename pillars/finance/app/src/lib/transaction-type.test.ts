@@ -55,4 +55,14 @@ describe('fee (POPS-2610)', () => {
     expect(tileForType('transfer')).toBe('excluded');
     expect(tileForType('something-else')).toBe('excluded');
   });
+
+  it('excludes missing or non-string values from both headline tiles', () => {
+    expect(tileForType(undefined)).toBe('excluded');
+    expect(tileForType(42)).toBe('excluded');
+  });
+
+  it('labels missing or non-string values as unknown', () => {
+    expect(labelForType(undefined)).toBe('Unknown');
+    expect(labelForType(42)).toBe('Unknown');
+  });
 });
