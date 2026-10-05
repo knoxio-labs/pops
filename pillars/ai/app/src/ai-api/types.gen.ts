@@ -980,6 +980,7 @@ export type AiIngestRecordData = {
     promptVersion?: string;
     provider: string;
     status: 'success' | 'error' | 'timeout' | 'budget-blocked';
+    stopReason?: string;
   };
   path?: never;
   query?: never;

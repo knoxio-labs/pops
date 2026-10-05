@@ -148,6 +148,7 @@ export class AnthropicQueryLlm implements QueryLlm {
                 inputTokens: created.usage.input_tokens,
                 outputTokens: created.usage.output_tokens,
               },
+              ...(created.stop_reason !== null ? { stopReason: created.stop_reason } : {}),
             };
           },
         },
@@ -164,7 +165,10 @@ export class AnthropicQueryLlm implements QueryLlm {
   }
 }
 
-async function* iterateStream(stream: MessageStream): AsyncGenerator<QueryStreamChunk> {
+async function* iterateStream(
+  stream: MessageStream,
+  onStopReason: (stopReason: string | undefined) => void
+): AsyncGenerator<QueryStreamChunk> {
   let streamedText = false;
   for await (const event of stream) {
     if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
@@ -173,6 +177,7 @@ async function* iterateStream(stream: MessageStream): AsyncGenerator<QueryStream
     }
   }
   const finalMessage = await stream.finalMessage();
+  onStopReason(finalMessage.stop_reason ?? undefined);
   if (isRefusal(finalMessage, LOG_CONTEXT)) {
     yield { kind: 'delta', text: streamedText ? `\n\n${QUERY_REFUSAL_MSG}` : QUERY_REFUSAL_MSG };
   }
@@ -212,6 +217,7 @@ export class AnthropicQueryStreamLlm implements QueryStreamLlm {
       return;
     }
 
+    let stopReason: string | undefined;
     try {
       yield* callWithLoggingStream(
         {
@@ -219,11 +225,15 @@ export class AnthropicQueryStreamLlm implements QueryStreamLlm {
           model,
           operation: QUERY_STREAM_OPERATION,
           domain: CEREBRUM_DOMAIN,
-          stream: () => iterateStream(stream),
+          stream: () =>
+            iterateStream(stream, (reason) => {
+              stopReason = reason;
+            }),
           extractUsage: (last) =>
             last?.kind === 'final'
               ? { inputTokens: last.tokensIn, outputTokens: last.tokensOut }
               : null,
+          extractStopReason: () => stopReason,
         },
         cerebrumTelemetryDeps()
       );

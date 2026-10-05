@@ -188,6 +188,27 @@ describe('POST /ai-usage/record — happy path', () => {
     expect(meta['kind']).toBe('screenshot');
   });
 
+  it('persists a provider stop reason and accepts records without one', async () => {
+    const withStopReason = await requestOn(app)
+      .post('/ai-usage/record')
+      .set('x-pops-internal-credential', FINANCE_CRED)
+      .send(validRecord({ stopReason: 'max_tokens' }));
+    const withoutStopReason = await requestOn(app)
+      .post('/ai-usage/record')
+      .set('x-pops-internal-credential', FINANCE_CRED)
+      .send(validRecord({ operation: 'legacy-emitter' }));
+
+    expect(withStopReason.status).toBe(200);
+    expect(withoutStopReason.status).toBe(200);
+    const rows = aiDb.db.all<{ operation: string; stop_reason: string | null }>(
+      sql.raw('SELECT operation, stop_reason FROM ai_inference_log ORDER BY id')
+    );
+    expect(rows).toEqual([
+      { operation: 'imports.categorize', stop_reason: 'max_tokens' },
+      { operation: 'legacy-emitter', stop_reason: null },
+    ]);
+  });
+
   it('persists null metadata when none is supplied', async () => {
     await requestOn(app)
       .post('/ai-usage/record')

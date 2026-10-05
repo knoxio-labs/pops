@@ -294,4 +294,4 @@ So `test:device` stays a deliberate pre-release ritual. Run it by hand before sh
 
 ### Primary navigation
 
-Purchases, Receipts and Inventory remain in the main tab bar when available. Accounts and Transactions are grouped under More and open in dismissible sheets, preserving each feature’s own navigation. Inventory’s Search uses the native search-role tab, in a separate bubble. The server still determines which features are available; unavailable features are omitted. A single feature other than Inventory fills the screen without a tab bar.
+Purchases, Receipts and Inventory remain in the main tab bar when available. Accounts and Transactions are grouped under More and open in dismissible sheets, preserving each feature’s own navigation. A sheet closes when the paired session ends so the pairing screen and its reason remain visible. Inventory’s Search uses the native search-role tab, in a separate bubble. The server still determines which features are available; unavailable features are omitted. A single feature other than Inventory fills the screen without a tab bar.

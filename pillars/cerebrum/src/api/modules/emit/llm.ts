@@ -102,6 +102,7 @@ export class AnthropicGenerationLlm implements GenerationLlm {
                 inputTokens: created.usage.input_tokens,
                 outputTokens: created.usage.output_tokens,
               },
+              ...(created.stop_reason !== null ? { stopReason: created.stop_reason } : {}),
             };
           },
         },

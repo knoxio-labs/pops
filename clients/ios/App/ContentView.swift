@@ -25,6 +25,7 @@ internal struct ContentView: View {
     internal let surface: FeatureSurface
     internal let shell: AppShellModel
     internal let composition: AppComposition
+    @Binding internal var selectedMoreFeature: MobileFeature?
     internal var purchasesCaptureObserver: (@MainActor (Bool) -> Void)?
 
     /// The tab the person chose, if they chose one. See ``features`` for why
@@ -48,11 +49,13 @@ internal struct ContentView: View {
         surface: FeatureSurface,
         shell: AppShellModel,
         composition: AppComposition,
+        selectedMoreFeature: Binding<MobileFeature?> = .constant(nil),
         purchasesCaptureObserver: (@MainActor (Bool) -> Void)? = nil
     ) {
         self.surface = surface
         self.shell = shell
         self.composition = composition
+        self._selectedMoreFeature = selectedMoreFeature
         self.purchasesCaptureObserver = purchasesCaptureObserver
         let dependencies: AppDependencies
         if case .paired(let device) = shell.session.state {
@@ -138,10 +141,9 @@ internal struct ContentView: View {
                 if !Self.moreFeatures(for: surface.available).isEmpty {
                     Tab(RootCopy.more, systemImage: "ellipsis", value: Self.moreTab) {
                         MoreFeaturesView(
-                            features: Self.moreFeatures(for: surface.available)
-                        ) { feature in
-                            screen(for: feature)
-                        }
+                            features: Self.moreFeatures(for: surface.available),
+                            selectedFeature: $selectedMoreFeature
+                        )
                     }
                     .accessibilityIdentifier(Self.moreTabAccessibilityIdentifier)
                 }
@@ -203,7 +205,7 @@ internal struct ContentView: View {
     /// A feature is asked for its whole flow, not for one of its screens. What
     /// the routes inside it mean is the feature's own business — this only
     /// decides which feature is on screen.
-    @ViewBuilder private func screen(for feature: MobileFeature) -> some View {
+    @ViewBuilder internal func screen(for feature: MobileFeature) -> some View {
         switch feature {
         case FeatureTransactions.feature:
             TransactionsFlowView(

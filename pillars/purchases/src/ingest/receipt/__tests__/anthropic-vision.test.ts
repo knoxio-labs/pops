@@ -42,7 +42,7 @@ function anthropicMessage(
   text: string,
   inputTokens = 100,
   outputTokens = 20,
-  stopReason: string = 'end_turn'
+  stopReason: string | null = 'end_turn'
 ) {
   return {
     stop_reason: stopReason,
@@ -143,6 +143,7 @@ describe('read', () => {
     expect(record.status).toBe('success');
     expect(record.inputTokens).toBe(321);
     expect(record.outputTokens).toBe(88);
+    expect(record.stopReason).toBe('end_turn');
   });
 
   it('sends a pdf part as a base64 document content block', async () => {
@@ -159,6 +160,18 @@ describe('read', () => {
       type: 'document',
       source: { type: 'base64', media_type: 'application/pdf', data: 'ZmFrZQ==' },
     });
+  });
+
+  it('omits the telemetry stop reason when the provider has none', async () => {
+    const captured = captureReports();
+    createMock.mockResolvedValue(anthropicMessage('invoice text', 10, 2, null));
+
+    const result = await createAnthropicVision()?.read([
+      { mediaType: 'application/pdf', dataBase64: 'ZmFrZQ==' },
+    ]);
+
+    expect(result).toBe('invoice text');
+    expect(await captured.nextReport()).not.toHaveProperty('stopReason');
   });
 
   it('sends a text/plain part as a decoded text document content block', async () => {
