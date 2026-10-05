@@ -1,6 +1,6 @@
 import AppCore
 import FeatureEgo
-import Observation
+import FeatureTransactions
 import SwiftUI
 import Testing
 

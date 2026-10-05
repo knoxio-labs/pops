@@ -1,6 +1,6 @@
 import AppCore
+import Auth
 import BFMClient
-import FeatureInventory
 import Foundation
 import InventoryReplica
 import Testing

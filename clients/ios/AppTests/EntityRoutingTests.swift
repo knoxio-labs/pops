@@ -1,5 +1,5 @@
 import AppCore
-import BFMClient
+import Auth
 import FeatureAccounts
 import FeatureInventory
 import FeaturePurchases
