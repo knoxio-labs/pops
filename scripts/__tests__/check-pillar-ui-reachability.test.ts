@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import {
   advertisesLoaderMountedUi,
   evaluateReachability,
+  popsImageNamesFromCompose,
+  uiImageForAssetsBaseUrl,
 } from '../check-pillar-ui-reachability.mjs';
 
 type PillarApp = Parameters<typeof evaluateReachability>[0][number];
@@ -24,6 +26,40 @@ describe('evaluateReachability', () => {
     const result = evaluateReachability(apps, onTheWire);
     expect(result.missing).toEqual([]);
     expect(result.covered).toEqual(['@pops/app-alpha', '@pops/app-beta']);
+  });
+
+  it('requires the UI image for each advertised bundle in compose', () => {
+    const apps = [app('@pops/app-alpha'), app('@pops/app-beta')];
+    const result = evaluateReachability(
+      apps,
+      (candidate) => ({
+        assetsBaseUrl: true,
+        assetsBaseUrlPath: `/${candidate.pillarId}-ui/${candidate.pillarId}.js`,
+        pages: true,
+        nav: true,
+      }),
+      new Set(['pops-alpha-ui'])
+    );
+
+    expect(result.covered).toEqual(['@pops/app-alpha']);
+    expect(result.missing).toEqual(['@pops/app-beta']);
+    expect(result.reasons[0]).toContain('pops-beta-ui');
+  });
+
+  it('fails closed when a loader bundle path does not identify a UI image', () => {
+    const result = evaluateReachability(
+      [app('@pops/app-beta')],
+      () => ({
+        assetsBaseUrl: true,
+        assetsBaseUrlPath: '/bundles/beta.js',
+        pages: true,
+        nav: true,
+      }),
+      new Set(['pops-beta-ui'])
+    );
+
+    expect(result.missing).toEqual(['@pops/app-beta']);
+    expect(result.reasons[0]).toContain('does not declare a supported UI bundle path');
   });
 
   it('reports the exact app that is off the wire', () => {
@@ -122,9 +158,25 @@ describe('advertisesLoaderMountedUi', () => {
     const withNavConst = `const BETA_WIRE_NAV = { ...BETA_NAV, items: [...BETA_NAV.items] };\n${src}`;
     expect(advertisesLoaderMountedUi(withNavConst)).toEqual({
       assetsBaseUrl: true,
+      assetsBaseUrlPath: '/beta-ui/beta.js',
       pages: true,
       nav: true,
     });
+  });
+
+  it('resolves the bundle path from a named string constant', () => {
+    const src = [
+      "const BETA_ASSETS = '/beta-ui/beta.js';",
+      'export function build() {',
+      '  return {',
+      '    assetsBaseUrl: BETA_ASSETS,',
+      '    pages: [1],',
+      '    nav: { items: [1] },',
+      '  };',
+      '}',
+    ].join('\n');
+
+    expect(advertisesLoaderMountedUi(src).assetsBaseUrlPath).toBe('/beta-ui/beta.js');
   });
 
   it('reads an empty page list as no pages', () => {
@@ -134,6 +186,7 @@ describe('advertisesLoaderMountedUi', () => {
     const withNavConst = `const BETA_WIRE_NAV = { ...BETA_NAV, items: [...BETA_NAV.items] };\n${src}`;
     expect(advertisesLoaderMountedUi(withNavConst)).toEqual({
       assetsBaseUrl: true,
+      assetsBaseUrlPath: '/beta-ui/beta.js',
       pages: false,
       nav: true,
     });
@@ -153,6 +206,7 @@ describe('advertisesLoaderMountedUi', () => {
     const withNavConst = `const BETA_WIRE_NAV = { ...BETA_NAV, items: [] };\n${src}`;
     expect(advertisesLoaderMountedUi(withNavConst)).toEqual({
       assetsBaseUrl: true,
+      assetsBaseUrlPath: '/beta-ui/beta.js',
       pages: true,
       nav: false,
     });
@@ -164,6 +218,7 @@ describe('advertisesLoaderMountedUi', () => {
     const src = manifest("    assetsBaseUrl: '/beta-ui/beta.js',\n    pages: [...BETA_PAGES],");
     expect(advertisesLoaderMountedUi(src)).toEqual({
       assetsBaseUrl: true,
+      assetsBaseUrlPath: '/beta-ui/beta.js',
       pages: true,
       nav: false,
     });
@@ -185,6 +240,7 @@ describe('advertisesLoaderMountedUi', () => {
     ].join('\n');
     expect(advertisesLoaderMountedUi(src)).toEqual({
       assetsBaseUrl: true,
+      assetsBaseUrlPath: '/x.js',
       pages: true,
       nav: true,
     });
@@ -220,6 +276,7 @@ describe('advertisesLoaderMountedUi', () => {
       )
     ).toEqual({
       assetsBaseUrl: true,
+      assetsBaseUrlPath: '/x.js',
       pages: true,
       nav: true,
     });
@@ -231,5 +288,42 @@ describe('advertisesLoaderMountedUi', () => {
       pages: false,
       nav: false,
     });
+  });
+});
+
+describe('uiImageForAssetsBaseUrl', () => {
+  it('maps a bundle route to its production UI image', () => {
+    expect(uiImageForAssetsBaseUrl('/finance-ui/finance.js')).toBe('pops-finance-ui');
+  });
+
+  it.each(['/finance/finance.js', '/finance-ui/', 'https://example.com/finance-ui/finance.js'])(
+    'rejects unsupported bundle route %s',
+    (path) => {
+      expect(uiImageForAssetsBaseUrl(path)).toBeUndefined();
+    }
+  );
+});
+
+describe('popsImageNamesFromCompose', () => {
+  it('reads published UI images with literal and environment-based owners', () => {
+    const compose = [
+      'services:',
+      '  finance-ui:',
+      '    image: "ghcr.io/${POPS_IMAGE_OWNER:-knoxio-labs}/pops-finance-ui:${POPS_IMAGE_TAG:-main}"',
+      '  purchases-ui:',
+      '    image: ghcr.io/knoxio-labs/pops-purchases-ui:main',
+      '  redis:',
+      '    image: redis:7',
+    ].join('\n');
+
+    expect(popsImageNamesFromCompose(compose)).toEqual(
+      new Set(['pops-finance-ui', 'pops-purchases-ui'])
+    );
+  });
+
+  it('rejects a compose document without a services mapping', () => {
+    expect(() => popsImageNamesFromCompose('version: "3"')).toThrow(
+      'Compose YAML must contain a services mapping'
+    );
   });
 });

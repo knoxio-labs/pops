@@ -115,7 +115,7 @@ function discoverPillarApps() {
  * ALONE, so a `nav` with no items is a rail entry with nothing to click.
  *
  * @param {string} src Manifest source.
- * @returns {{ assetsBaseUrl: boolean, pages: boolean, nav: boolean }}
+ * @returns {{ assetsBaseUrl: boolean, assetsBaseUrlPath?: string, pages: boolean, nav: boolean }}
  */
 export function advertisesLoaderMountedUi(src) {
   const code = stripComments(src);
@@ -138,11 +138,60 @@ export function advertisesLoaderMountedUi(src) {
   const emptyItems =
     /^\s*items\s*:\s*\[\s*\]/m.test(code) ||
     /\{\s*\.\.\.[\w$]+\s*,\s*items\s*:\s*\[\s*\]/.test(code);
+  const property = /^\s*assetsBaseUrl\s*:\s*([^,\n]+)\s*,?/m.exec(code);
+  const expression = property?.[1]?.trim();
+  const literal = expression === undefined ? undefined : /^(['"])(.*?)\1$/.exec(expression);
+  const constant =
+    expression !== undefined && literal === null && /^[A-Za-z_$][\w$]*$/.test(expression)
+      ? new RegExp(`^\\s*const\\s+${expression}\\s*=\\s*(['"])(.*?)\\1\\s*;?`, 'm').exec(code)
+      : undefined;
+  const assetsBaseUrlPath = literal?.[2] ?? constant?.[2];
   return {
     assetsBaseUrl: declares('assetsBaseUrl'),
+    ...(assetsBaseUrlPath === undefined ? {} : { assetsBaseUrlPath }),
     pages: declares('pages') && !emptyPages,
     nav: declares('nav') && declaresItems && !emptyItems,
   };
+}
+
+/**
+ * Map an `assetsBaseUrl` served by a POPS UI bundle to its production image.
+ * @param {string} assetsBaseUrlPath Root-relative loader bundle path.
+ * @returns {string | undefined} Image name or undefined for a non-UI path.
+ */
+export function uiImageForAssetsBaseUrl(assetsBaseUrlPath) {
+  const match = /^\/([a-z0-9-]+-ui)\/[a-z0-9._-]+$/.exec(assetsBaseUrlPath);
+  return match?.[1] === undefined ? undefined : `pops-${match[1]}`;
+}
+
+/**
+ * Return the published POPS image names declared by a Docker Compose file.
+ * @param {string} source Compose YAML.
+ * @returns {Set<string>}
+ */
+export function popsImageNamesFromCompose(source) {
+  const lines = source.split(/\r?\n/);
+  const servicesIndex = lines.findIndex((line) => /^services:\s*(?:#.*)?$/.test(line));
+  if (servicesIndex === -1) {
+    throw new Error('Compose YAML must contain a services mapping');
+  }
+
+  const images = new Set();
+  let foundService = false;
+  for (const line of lines.slice(servicesIndex + 1)) {
+    if (line.length > 0 && !/^\s/.test(line)) break;
+    if (/^ {2}[\w.-]+:\s*(?:#.*)?$/.test(line)) {
+      foundService = true;
+      continue;
+    }
+    if (!foundService) continue;
+    const imageLine = /^ {4}image:\s*(?:"([^"]+)"|'([^']+)'|([^\s#]+))\s*(?:#.*)?$/.exec(line);
+    const image = imageLine?.[1] ?? imageLine?.[2] ?? imageLine?.[3];
+    if (image === undefined) continue;
+    const match = /^ghcr\.io\/[^/]+\/(pops-[a-z0-9-]+)(?:[:@]|$)/.exec(image);
+    if (match?.[1] !== undefined) images.add(match[1]);
+  }
+  return images;
 }
 
 /**
@@ -153,20 +202,30 @@ export function advertisesLoaderMountedUi(src) {
  */
 
 /**
+ * @typedef {object} LoaderUi
+ * @property {boolean} assetsBaseUrl
+ * @property {string} [assetsBaseUrlPath]
+ * @property {boolean} pages
+ * @property {boolean} nav
+ * @property {boolean} [found]
+ */
+
+/**
  * Pure core: assert every discovered pillar app is reachable through the
  * runtime loader. Pure (no I/O) so the self-test can drive it over in-memory
  * fixtures.
  *
  * @param {PillarApp[]} apps  Discovered pillar apps.
- * @param {(app: PillarApp) => { assetsBaseUrl: boolean, pages: boolean, nav: boolean, found?: boolean }} loaderUiOf
+ * @param {(app: PillarApp) => LoaderUi} loaderUiOf
  *   What the pillar's wire manifest advertises. `found: false` means no wire
  *   manifest could be located at all, which is reported as its own failure
  *   rather than as a manifest that declares nothing — the two need different
  *   fixes, and conflating them sent a reader looking for a missing
  *   `assetsBaseUrl` in a file that was there and correct (POPS-3220).
+ * @param {Set<string>} [composeImages] Published POPS images declared by Compose.
  * @returns {ReachabilityResult}
  */
-export function evaluateReachability(apps, loaderUiOf) {
+export function evaluateReachability(apps, loaderUiOf, composeImages) {
   /** @type {string[]} */
   const missing = [];
   /** @type {string[]} */
@@ -177,6 +236,26 @@ export function evaluateReachability(apps, loaderUiOf) {
   for (const app of apps) {
     const wire = loaderUiOf(app);
     if (wire.assetsBaseUrl && wire.pages && wire.nav) {
+      if (composeImages !== undefined) {
+        const image =
+          wire.assetsBaseUrlPath === undefined
+            ? undefined
+            : uiImageForAssetsBaseUrl(wire.assetsBaseUrlPath);
+        if (image === undefined) {
+          missing.push(app.pkgName);
+          reasons.push(
+            `${app.pkgName} — its wire manifest does not declare a supported UI bundle path`
+          );
+          continue;
+        }
+        if (!composeImages.has(image)) {
+          missing.push(app.pkgName);
+          reasons.push(
+            `${app.pkgName} — its wire manifest points to ${wire.assetsBaseUrlPath}, but infra/docker-compose.yml does not run ${image}`
+          );
+          continue;
+        }
+      }
       covered.push(app.pkgName);
       continue;
     }
@@ -265,28 +344,48 @@ function run() {
     );
     return false;
   }
-  const { missing, covered, reasons } = evaluateReachability(apps, (app) => {
-    const manifestPath = locatePillarManifest(app.pillarId);
-    if (manifestPath === undefined) {
-      return { assetsBaseUrl: false, pages: false, nav: false, found: false };
-    }
-    return { ...advertisesLoaderMountedUi(readFileSync(manifestPath, 'utf8')), found: true };
-  });
+  let composeImages;
+  try {
+    composeImages = popsImageNamesFromCompose(
+      readFileSync(join(repoRoot, 'infra/docker-compose.yml'), 'utf8')
+    );
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    console.error(`FAIL — cannot read POPS images from infra/docker-compose.yml: ${detail}`);
+    return false;
+  }
+  if (composeImages.size === 0) {
+    console.error('FAIL — infra/docker-compose.yml runs no published POPS images.');
+    return false;
+  }
+  const { missing, covered, reasons } = evaluateReachability(
+    apps,
+    (app) => {
+      const manifestPath = locatePillarManifest(app.pillarId);
+      if (manifestPath === undefined) {
+        return { assetsBaseUrl: false, pages: false, nav: false, found: false };
+      }
+      return { ...advertisesLoaderMountedUi(readFileSync(manifestPath, 'utf8')), found: true };
+    },
+    composeImages
+  );
 
   console.log(`Discovered ${apps.length} pillar app(s).`);
   for (const name of covered) console.log(`  OK  ${name}`);
 
   if (missing.length === 0) {
-    console.log('OK — every pillar app reaches the shell through the runtime loader.');
+    console.log(
+      'OK — every pillar app reaches the shell through a UI image in infra/docker-compose.yml.'
+    );
     return true;
   }
 
   console.error(`FAIL — ${missing.length} pillar app(s) the shell cannot reach:`);
   for (const reason of reasons) console.error(`  XX  ${reason}`);
   console.error(
-    `  A pillar's UI arrives one way: an \`assetsBaseUrl\` + \`pages\` + \`nav\` in ` +
-      `its wire manifest, which the shell loads at runtime. Without all three, the ` +
-      `UI silently fails to mount or is unreachable from the app rail.`
+    `  A pillar's UI needs an \`assetsBaseUrl\` + \`pages\` + \`nav\` in its wire ` +
+      `manifest and a matching UI image in infra/docker-compose.yml. Without them, ` +
+      `the shell cannot load the app from the deployed stack.`
   );
   return false;
 }
@@ -432,8 +531,9 @@ function selfTest() {
     'only the pillar off the wire is flagged':
       onlyAlphaOnTheWire.missing.length === 1 && onlyAlphaOnTheWire.missing[0] === '@pops/app-beta',
     'assetsBaseUrl without pages is not enough': halfDeclared.missing.length === 2,
-    'the failure says what the wire lacks':
-      halfDeclared.reasons[0]?.includes('declares no non-empty pages') === true,
+    'the failure says what the wire lacks': halfDeclared.reasons[0]?.includes(
+      'declares no non-empty pages'
+    ),
     'pages and assetsBaseUrl without nav is not enough': navMissing.missing.length === 2,
     'the failure says nav is what the wire lacks': navMissing.reasons[0]?.includes(
       'declares no nav with non-empty items'
@@ -441,27 +541,45 @@ function selfTest() {
     // Both shapes the message can take, because each has been ungrammatical at
     // some point and nothing asserted the wording. `halfDeclared` above drives
     // the one-field sentence; this drives the multi-field one.
-    'every missing field reads as one sentence':
-      bothMissing.reasons[0]?.includes(
-        'declares no assetsBaseUrl and no non-empty pages and no nav with non-empty items'
-      ) === true,
+    'every missing field reads as one sentence': bothMissing.reasons[0]?.includes(
+      'declares no assetsBaseUrl and no non-empty pages and no nav with non-empty items'
+    ),
     'a missing manifest is reported as missing, not as undeclared':
-      noManifestFound.reasons[0]?.includes('no wire manifest could be found') === true &&
-      noManifestFound.reasons[0]?.includes('assetsBaseUrl') === false,
-    'the conventional manifest path is preferred':
-      locatePillarManifest('beta', conventionalFs)?.endsWith('/manifest.ts') === true,
-    'a <pillar>-manifest.ts is found':
-      locatePillarManifest('beta', fakeFs)?.endsWith('/beta-manifest.ts') === true,
-    'any src/api file building a ManifestPayload is found':
-      locatePillarManifest('beta', scannedFs)?.endsWith('/oddly-named.ts') === true,
+      noManifestFound.reasons[0]?.includes('no wire manifest could be found') &&
+      !noManifestFound.reasons[0]?.includes('assetsBaseUrl'),
+    'the conventional manifest path is preferred': locatePillarManifest(
+      'beta',
+      conventionalFs
+    )?.endsWith('/manifest.ts'),
+    'a <pillar>-manifest.ts is found': locatePillarManifest('beta', fakeFs)?.endsWith(
+      '/beta-manifest.ts'
+    ),
+    'any src/api file building a ManifestPayload is found': locatePillarManifest(
+      'beta',
+      scannedFs
+    )?.endsWith('/oddly-named.ts'),
     'no manifest anywhere returns undefined': locatePillarManifest('beta', emptyFs) === undefined,
     'a manifest declaring all three reads as loader-mounted':
-      both.assetsBaseUrl && both.pages && both.nav,
+      both.assetsBaseUrl && both.pages && both.nav && both.assetsBaseUrlPath === '/beta-ui/beta.js',
     'pages: [] reads as no pages': emptyPages.assetsBaseUrl && !emptyPages.pages && emptyPages.nav,
     'nav with items: [] reads as no nav':
       emptyNavItems.assetsBaseUrl && emptyNavItems.pages && !emptyNavItems.nav,
     'a mention in prose or a string is not a declaration':
       !mentioned.assetsBaseUrl && !mentioned.pages && !mentioned.nav,
+    'a deployed UI image missing from compose fails the check': (() => {
+      const onWire = (/** @type {PillarApp} */ app) => ({
+        assetsBaseUrl: true,
+        assetsBaseUrlPath: `/${app.pillarId}-ui/${app.pillarId}.js`,
+        pages: true,
+        nav: true,
+      });
+      const result = evaluateReachability(apps, onWire, new Set(['pops-alpha-ui']));
+      return (
+        result.missing.length === 1 &&
+        result.missing[0] === '@pops/app-beta' &&
+        result.reasons[0]?.includes('pops-beta-ui')
+      );
+    })(),
   };
 
   const ok = Object.values(checks).every(Boolean);
@@ -485,7 +603,7 @@ function main() {
     console.log(
       'Usage: node scripts/check-pillar-ui-reachability.mjs [--self-test]\n' +
         'Asserts every in-repo pillars/*/app package reaches the shell through the\n' +
-        'runtime loader, via an assetsBaseUrl + pages in its wire manifest.'
+        'runtime loader and a matching UI image in infra/docker-compose.yml.'
     );
     process.exit(2);
   }
