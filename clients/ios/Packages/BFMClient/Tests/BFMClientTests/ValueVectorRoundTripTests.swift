@@ -46,7 +46,7 @@ internal struct ValueVectorRoundTripTests {
         "every vector reads back as its catalogue field's kind, in order, with its target's state")
     func everyVectorReadsBack() async throws {
         let (harness, file) = try await Self.downloaded()
-        #expect(file.vectors.count == 38)
+        #expect(file.vectors.count == 40)
 
         for vector in file.vectors {
             let name = try File.require(vector["name"] as? String, "name")
