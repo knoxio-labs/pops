@@ -44,8 +44,8 @@ extension LocalReducer {
         for patch in values {
             if let replacement = patch.values {
                 let kind = type.fields.first(where: { $0.id == patch.fieldId })?.kind
-                let normalized = kind.map { normalizedTextValues(replacement, kind: $0) }
-                    ?? replacement
+                let normalized =
+                    kind.map { normalizedTextValues(replacement, kind: $0) } ?? replacement
                 if normalized.isEmpty && !replacement.isEmpty {
                     entries.removeValue(forKey: patch.fieldId)
                 } else {
@@ -156,18 +156,22 @@ extension LocalReducer {
     ) throws -> [InventoryItemFieldEntry] {
         let stored = values.compactMap { value -> InventoryItemFieldEntry? in
             let kind = type.fields.first(where: { $0.id == value.fieldId })?.kind
-            let normalized = kind.map { normalizedTextValues(value.values, kind: $0) }
-                ?? value.values
-            guard !normalized.isEmpty || value.values.isEmpty else { return nil }
+            let normalized =
+                kind.map { normalizedTextValues(value.values, kind: $0) } ?? value.values
+            guard !normalized.isEmpty || value.values.isEmpty else {
+                return nil
+            }
             return InventoryItemFieldEntry(
                 fieldId: value.fieldId, state: .value(normalized), source: .stored,
                 catalogueRevision: revision)
         }
         let overridden = try overrides.compactMap { override -> InventoryItemFieldEntry? in
             let kind = type.fields.first(where: { $0.id == override.fieldId })?.kind
-            let normalized = kind.map { normalizedTextValues(override.values, kind: $0) }
-                ?? override.values
-            guard !normalized.isEmpty || override.values.isEmpty else { return nil }
+            let normalized =
+                kind.map { normalizedTextValues(override.values, kind: $0) } ?? override.values
+            guard !normalized.isEmpty || override.values.isEmpty else {
+                return nil
+            }
             try validateCreateOverride(
                 InventoryProtocol2FieldValue(fieldId: override.fieldId, values: normalized),
                 type: type)
