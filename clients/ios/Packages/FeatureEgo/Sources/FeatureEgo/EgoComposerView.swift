@@ -42,7 +42,8 @@ internal struct EgoComposerView: View {
                     .foregroundStyle(
                         actionState.action == .stop
                             ? Color.popsDestructive
-                            : Color.popsBackground)
+                            : Color.popsBackground
+                    )
                     .frame(width: PopsSize.touchTarget, height: PopsSize.touchTarget)
                     .background(
                         actionState.action == .stop ? Color.popsSurface : Color.popsAccent,
