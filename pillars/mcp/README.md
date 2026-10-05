@@ -4,7 +4,7 @@ MCP (Model Context Protocol) HTTP gateway for POPS. Exposes inventory, finance, 
 
 - **Transport:** Streamable HTTP (`POST /mcp`), stateless — a fresh server + transport per request
 - **Port:** 3011 (configurable via `MCP_PORT`), listens on `0.0.0.0` inside the container; both compose files publish it on the host as `${MCP_BIND_ADDR:-0.0.0.0}:3011:3011`
-- **Inbound auth:** `POST /mcp` requires `Authorization: Bearer <token>` when `MCP_INBOUND_TOKEN_FILE` or `MCP_INBOUND_TOKEN` is set. The mounted file takes precedence and must be readable and non-empty at startup; `/health` and `/ready` stay open. See `src/auth.ts` for the unset-token behaviour.
+- **Inbound auth:** `POST /mcp` always requires `Authorization: Bearer <token>`. Configure `MCP_INBOUND_TOKEN_FILE` or `MCP_INBOUND_TOKEN`; the mounted file takes precedence and must be readable and contain one bearer token. Startup fails when the setting is missing, blank, or malformed. `/health` and `/ready` stay open; `/ready` reports degraded until both inbound auth and the outbound service-account key are configured.
 - **Outbound auth:** Authenticates to pillars with a service-account key (`POPS_INTERNAL_API_KEY`, legacy `POPS_API_KEY`, or the `POPS_API_KEY_FILE` Docker-secret pattern).
 
 The tool surface — 80 tools over the `inventory`, `finance`, `contacts`, `tags`, `orchestrator`, `media`, `cerebrum`, `purchases`, and `bfm` pillars — lives in [`src/tools/`](src/tools/README.md). `bfm.devicePairing.issueCode` returns only a short-lived code, pairing URL, and expiry; it never returns device credentials or exposes device listing/revocation.
@@ -13,6 +13,7 @@ The tool surface — 80 tools over the `inventory`, `finance`, `contacts`, `tags
 
 1. **Target pillars reachable** — the gateway is a REST client, not a standalone data source. Inventory, finance, contacts, tags, orchestrator, media, cerebrum, purchases, and the registry must be running. The orchestrator reports carrier availability in the `pillars` status list returned by `tags.things.list`.
 2. **A service-account key** — supplied via `POPS_API_KEY_FILE` (the compose secret `pops_mcp_api_key`), `POPS_INTERNAL_API_KEY`, or the legacy `POPS_API_KEY`. Boot fails when none of them yields a key: every tool proxies a pillar, so a keyless server can answer nothing. The production MCP key is separate from moltbot's `pops_api_key` and must include `bfm.operator.issuePairingCode` for the pairing tool, `tags.tags` for shared-tag vocabulary management, and `finance.tagged` and/or `purchases.tagged` for the corresponding assignment tools.
+3. **An inbound bearer token** — supplied through `MCP_INBOUND_TOKEN_FILE` (preferred for mounted secrets) or `MCP_INBOUND_TOKEN`. A configured file takes precedence and never falls through to the environment value when unreadable or malformed. This credential authenticates MCP callers and is separate from the outbound service-account key.
 
 ## Running locally (dev)
 
@@ -25,7 +26,7 @@ Set the service-account key in `pillars/mcp/.env` (the process loads only the `.
 ```env
 POPS_INTERNAL_API_KEY=sa_your_service_account_key_here
 MCP_PORT=3011
-# Optional inbound bearer secret for POST /mcp (see src/auth.ts).
+# Required inbound bearer secret for POST /mcp. A mounted secret file takes precedence.
 MCP_INBOUND_TOKEN_FILE=
 MCP_INBOUND_TOKEN=
 ```
@@ -67,7 +68,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 }
 ```
 
-Point the URL at the gateway's published `host:3011`. Drop the `Authorization` header only when the server runs without `MCP_INBOUND_TOKEN`.
+Point the URL at the gateway's published `host:3011`. The server always requires the `Authorization` header; configure the same inbound token in the MCP client and gateway.
 
 HTTP authentication failures use the ADR-054 envelope
 `{ code, message, requestId, retryable, details? }`. The registered code is
@@ -90,17 +91,19 @@ curl http://localhost:3011/health
 # {"status":"ok","tools":80}
 
 curl http://localhost:3011/ready
-# {"status":"ready","apiKeyConfigured":true,"tools":80}
+# {"status":"ready","apiKeyConfigured":true,"inboundAuthConfigured":true,"tools":80}
 ```
 
 `/health` is liveness and makes no upstream calls, so it answers `ok` even with no
-service-account key. `/ready` is the key-aware one: it calls
+service-account key. `/ready` is credential-aware: it calls
 `resolveServiceAccountKey()` (`src/service-account-key.ts`), which reads
 `POPS_API_KEY_FILE`, then `POPS_INTERNAL_API_KEY`, then `POPS_API_KEY` — so any of
-the three reports `ready`, and only a keyless server reports `503` / `degraded`.
+the three counts as configured. It also checks that inbound authentication
+resolves a usable token. Missing or malformed configuration reports `503` /
+`degraded`; readiness never returns either credential.
 
 The Docker healthcheck probes `/ready`. It used to probe `/health`, which meant a
 container that could not read its mounted secret stayed green while every tool call
-failed (POPS-2760). A keyless process no longer reaches that state anyway:
-`requireServiceAccountKey()` runs before `app.listen` and exits the process when no
-source produces a key.
+failed (POPS-2760). A process with missing credentials no longer reaches that
+state anyway: `requireServiceAccountKey()` and `requireInboundToken()` run before
+`app.listen` and exit the process when either credential is unavailable.
