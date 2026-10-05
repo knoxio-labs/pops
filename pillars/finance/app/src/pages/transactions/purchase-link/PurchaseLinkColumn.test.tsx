@@ -18,7 +18,7 @@ vi.mock('../../../purchases-api/index.js', () => ({
   reconcileLinksBatch: (...args: unknown[]) => reconcileLinksBatchMock(...args),
 }));
 
-import { DataTable } from '@pops/ui';
+import { DataTable, TooltipProvider } from '@pops/ui';
 
 import { buildColumns } from '../columns';
 import {
@@ -93,7 +93,11 @@ function Harness({ transactions }: { transactions: Transaction[] }) {
 
 function withClient(client: QueryClient) {
   return function Wrapper({ children }: { children: ReactNode }) {
-    return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+    return (
+      <QueryClientProvider client={client}>
+        <TooltipProvider>{children}</TooltipProvider>
+      </QueryClientProvider>
+    );
   };
 }
 
@@ -153,6 +157,19 @@ function purchaseHeader(): HTMLElement {
   });
 }
 
+async function tabTo(user: ReturnType<typeof userEvent.setup>, target: HTMLElement): Promise<void> {
+  const tabStopCount = document.querySelectorAll(
+    'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+  ).length;
+
+  for (let attempt = 0; attempt < tabStopCount; attempt += 1) {
+    await user.tab();
+    if (document.activeElement === target) return;
+  }
+
+  throw new Error('Target is not reachable by keyboard.');
+}
+
 afterEach(() => {
   cleanup();
   reconcileLinksBatchMock.mockReset();
@@ -195,15 +212,19 @@ describe('the purchase column', () => {
     expect(indicatorFor('WOOLWORTHS 1234')).toHaveAccessibleName(announced(AUTO_LINKED));
   });
 
-  it("explains a derived link in the panel's own wording", async () => {
+  it('shows the derived-link hint when keyboard focus reaches the indicator', async () => {
     reconcileLinksBatchMock.mockResolvedValue({ data: { transactions: SUMMARIES } });
     renderTable();
 
     await waitFor(() => expect(indicatorFor('WOOLWORTHS 1234')).not.toBeNull());
 
-    // The hint is the panel's key, not this column's. Renaming it there leaves
-    // i18next echoing the raw key, which this assertion catches.
-    expect(indicatorFor('WOOLWORTHS 1234')).toHaveAttribute('title', AUTO_LINKED_HINT);
+    const indicator = indicatorFor('WOOLWORTHS 1234');
+    if (indicator === null) throw new Error('missing purchase-link indicator');
+
+    await tabTo(userEvent.setup(), indicator);
+
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(AUTO_LINKED_HINT);
+    expect(indicator).toHaveAccessibleDescription(AUTO_LINKED_HINT);
   });
 
   it('says the number of orders on a combined settlement', async () => {
@@ -287,6 +308,24 @@ describe('when the purchases pillar does not answer', () => {
     // "Unavailable" alone does not answer the question the reader now has,
     // which is what the empty cells below it mean.
     await waitFor(() => expect(purchaseHeader()).toHaveAccessibleName(UNAVAILABLE_ANNOUNCED));
+  });
+
+  it('shows the unavailable caveat when keyboard focus reaches the heading', async () => {
+    pillarIsDown();
+    renderTable();
+
+    await waitFor(() => expect(purchaseHeader()).toHaveTextContent(UNAVAILABLE));
+
+    const trigger = screen.getByText(UNAVAILABLE).parentElement;
+    if (trigger === null) throw new Error('missing purchase-link heading hint');
+
+    await tabTo(userEvent.setup(), trigger);
+
+    const caveatCopies = await screen.findAllByText(UNAVAILABLE_CAVEAT);
+    const visibleCaveat = caveatCopies[0];
+    if (visibleCaveat === undefined) throw new Error('missing purchase-link heading caveat');
+
+    expect(visibleCaveat).toBeVisible();
   });
 
   it('reads differently from a page where no order explains anything', async () => {
