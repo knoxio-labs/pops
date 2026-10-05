@@ -1,4 +1,4 @@
-import { callWithLogging } from '@pops/ai-telemetry';
+import { callWithLogging, messageText, samplingParams } from '@pops/ai-telemetry';
 
 import { ANTHROPIC_PROVIDER, FOOD_DOMAIN, foodTelemetryDeps } from '../ai/ai-telemetry-deps.js';
 import {
@@ -64,13 +64,6 @@ export interface TextExtractFailure {
 
 export type TextExtractResult = TextExtractSuccess | TextExtractFailure;
 
-function extractTextOutput(message: AnthropicMessage): string | null {
-  for (const block of message.content) {
-    if (block.type === 'text' && typeof block.text === 'string') return block.text;
-  }
-  return null;
-}
-
 function formatZodIssues(error: ZodError): string {
   return error.issues
     .slice(0, 3)
@@ -105,7 +98,7 @@ async function callClaude(
           const created = await client.messages.create({
             model,
             max_tokens: MAX_OUTPUT_TOKENS,
-            temperature: 0,
+            ...samplingParams(model, 0),
             messages: [{ role: 'user', content: prompt }],
           });
           return {
@@ -166,8 +159,8 @@ export async function extractWithClaudeText(input: TextExtractInput): Promise<Te
   if (!callResult.ok) {
     return { ok: false, errorMessage: callResult.errorMessage, durationMs: callResult.durationMs };
   }
-  const rawOutput = extractTextOutput(callResult.message);
-  if (rawOutput == null) {
+  const rawOutput = messageText(callResult.message.content);
+  if (rawOutput === '') {
     return {
       ok: false,
       errorMessage: 'Claude response had no text content',
