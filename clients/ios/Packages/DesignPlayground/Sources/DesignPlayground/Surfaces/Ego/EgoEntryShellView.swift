@@ -17,15 +17,17 @@ internal struct EgoEntryShellView: View {
         TabView {
             ForEach(shellTabs) { tab in
                 EmptyStateView(
-                    message: "\(tab.label) fills the screen here. It has its own surface.")
-                    .tabItem { Label(tab.label, systemImage: tab.symbol) }
-                    .tag(tab.id)
+                    message: "\(tab.label) fills the screen here. It has its own surface."
+                )
+                .tabItem { Label(tab.label, systemImage: tab.symbol) }
+                .tag(tab.id)
             }
         }
     }
 
     private var entryControl: some View {
-        Button {} label: {
+        Button {
+        } label: {
             Image(systemName: "bubble.left")
                 .font(.popsTitle)
                 .foregroundStyle(Color.popsAccent)

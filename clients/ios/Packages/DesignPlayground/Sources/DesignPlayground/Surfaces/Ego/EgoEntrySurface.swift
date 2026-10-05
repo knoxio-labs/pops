@@ -8,7 +8,7 @@ internal enum EgoEntrySurface {
         states: [
             DesignState("closed", "Closed") {
                 EgoEntryShellView()
-            },
+            }
         ]
     )
 }
