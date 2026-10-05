@@ -19,6 +19,15 @@ export const ikeaCombinationComponentsReading: ExtractedReceipt = {
   unreadable: [],
 };
 
+export const ikeaCombinationDoubleCountReading: ExtractedReceipt = {
+  ...ikeaCombinationComponentsReading,
+  discounts: ['$436.00'],
+  lines: [
+    { description: 'Synthetic BESTÅ combination package', amount: '$436.00', listAmount: null },
+    ...ikeaCombinationComponentsReading.lines,
+  ],
+};
+
 export const ikeaZeroPriceClickAndCollectReading: ExtractedReceipt = {
   merchantName: 'IKEA',
   address: null,
@@ -36,4 +45,9 @@ export const ikeaZeroPriceClickAndCollectReading: ExtractedReceipt = {
     { description: 'Collect at IKEA Store', amount: '$0.00', listAmount: null },
   ],
   unreadable: [],
+};
+
+export const ikeaZeroPriceClickAndCollectDoubleDiscountReading: ExtractedReceipt = {
+  ...ikeaZeroPriceClickAndCollectReading,
+  discounts: ['$5.00'],
 };

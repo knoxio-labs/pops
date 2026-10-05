@@ -18,9 +18,12 @@ import { readReceipt } from '../read-receipt.js';
 import { extractionPrompt, kindOf, MEDIA_TYPES, PROMPT_FIELDS } from '../vision.js';
 import {
   ikeaCombinationComponentsReading,
+  ikeaCombinationDoubleCountReading,
   ikeaZeroPriceClickAndCollectReading,
+  ikeaZeroPriceClickAndCollectDoubleDiscountReading,
 } from './__fixtures__/ikea-invoice-readings.js';
 
+import type { ExtractedReceipt } from '../extraction.js';
 import type { ReceiptMediaType, ReceiptPart, ReceiptVision, VisionStop } from '../vision.js';
 
 const IMAGE: ReceiptPart = { mediaType: 'image/jpeg', dataBase64: 'ZmFrZQ==' };
@@ -33,6 +36,19 @@ const saying = (answer: string | null | VisionStop): ReceiptVision => ({
 });
 const failing = (error: unknown): ReceiptVision => ({
   read: () => Promise.reject(error),
+});
+
+const promptConditionedReading = (
+  requirements: readonly string[],
+  corrected: ExtractedReceipt,
+  legacy: ExtractedReceipt
+): ReceiptVision => ({
+  read: async (parts) => {
+    const prompt = extractionPrompt(parts.map(({ mediaType }) => mediaType));
+    return JSON.stringify(
+      requirements.every((requirement) => prompt.includes(requirement)) ? corrected : legacy
+    );
+  },
 });
 
 const GOOD = JSON.stringify({
@@ -179,9 +195,14 @@ describe('what a media type is taken to be', () => {
 
 describe('IKEA invoice readings', () => {
   it('counts a combination package through its component lines once', async () => {
-    const outcome = await readReceipt(saying(JSON.stringify(ikeaCombinationComponentsReading)), [
-      { mediaType: 'application/pdf', dataBase64: 'ZmFrZQ==' },
-    ]);
+    const outcome = await readReceipt(
+      promptConditionedReading(
+        ['components sum to the package price', 'omit the package summary'],
+        ikeaCombinationComponentsReading,
+        ikeaCombinationDoubleCountReading
+      ),
+      [{ mediaType: 'application/pdf', dataBase64: 'ZmFrZQ==' }]
+    );
 
     expect(outcome.kind).toBe('read');
     if (outcome.kind !== 'read') return;
@@ -202,9 +223,17 @@ describe('IKEA invoice readings', () => {
   });
 
   it('does not count a zero-price item discount again at order level', async () => {
-    const outcome = await readReceipt(saying(JSON.stringify(ikeaZeroPriceClickAndCollectReading)), [
-      { mediaType: 'application/pdf', dataBase64: 'ZmFrZQ==' },
-    ]);
+    const outcome = await readReceipt(
+      promptConditionedReading(
+        [
+          'line-specific reduction already applied',
+          'already reflected in the reported net line amount',
+        ],
+        ikeaZeroPriceClickAndCollectReading,
+        ikeaZeroPriceClickAndCollectDoubleDiscountReading
+      ),
+      [{ mediaType: 'application/pdf', dataBase64: 'ZmFrZQ==' }]
+    );
 
     expect(outcome.kind).toBe('read');
     if (outcome.kind !== 'read') return;
