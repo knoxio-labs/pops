@@ -79,15 +79,17 @@ const LABEL_LOOKUP = new Map<string, string>(
 );
 
 /**
- * The headline tile a (possibly capitalized/legacy) stored type value feeds. An
- * unrecognised value is excluded from both tiles rather than silently summed.
+ * The headline tile a stored type value feeds. Unknown or non-string values
+ * are excluded from both tiles rather than silently summed.
  */
-export function tileForType(type: string): StatTile {
+export function tileForType(type: unknown): StatTile {
+  if (typeof type !== 'string') return 'excluded';
   return TILE_LOOKUP.get(type.toLowerCase()) ?? 'excluded';
 }
 
-/** Display label for a stored type value, falling back to the raw value. */
-export function labelForType(type: string): string {
+/** Display a known label or the raw string value; absent and non-string values use "Unknown". */
+export function labelForType(type: unknown): string {
+  if (typeof type !== 'string') return 'Unknown';
   return LABEL_LOOKUP.get(type.toLowerCase()) ?? type;
 }
 
