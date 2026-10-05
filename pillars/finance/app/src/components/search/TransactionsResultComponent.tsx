@@ -10,7 +10,7 @@ interface TransactionHitData extends Record<string, unknown> {
   amount: number;
   date: string;
   entityName: string | null;
-  type: string;
+  type?: string;
 }
 
 /**
@@ -25,6 +25,7 @@ const TILE_DISPLAY: Record<StatTile, { color: string; sign: string }> = {
   excluded: { color: 'text-muted-foreground', sign: '' },
 };
 
+/** Render a transaction search hit with a safe fallback for missing type data. */
 export function TransactionsResultComponent({
   data,
   query,
