@@ -10,6 +10,7 @@ internal enum PurchaseEditCancelAction: Hashable, Sendable {
 internal enum PurchaseEditFailure: Hashable, Sendable {
     case unavailable
     case unauthorized
+    case featureUnavailable
     case contractMismatch
     case notFound
     case invalidDraft
@@ -21,6 +22,7 @@ internal enum PurchaseEditFailure: Hashable, Sendable {
         case .conflict("purchase_locked"): self = .purchaseLocked
         case .conflict("purchase_stale"): self = .purchaseStale
         case .unauthorized: self = .unauthorized
+        case .featureUnavailable: self = .featureUnavailable
         case .contractMismatch, .requestRejected, .conflict, .dependencyNotBound:
             self = .contractMismatch
         case .transport, .rateLimited, .unavailable, nil: self = .unavailable
@@ -33,6 +35,8 @@ internal enum PurchaseEditFailure: Hashable, Sendable {
         case .purchaseStale: "Changed elsewhere. Close and open it again"
         case .unavailable: "No connection. Your changes are still here."
         case .unauthorized: "Sign in again. Your changes are still here."
+        case .featureUnavailable:
+            "This phone isn't allowed to use Purchases. Your changes are still here."
         case .contractMismatch: "This purchase can't be saved by this version."
         case .notFound: "This purchase no longer exists."
         case .invalidDraft: "Check the edited values and try again."
@@ -51,6 +55,7 @@ internal enum PurchaseEditFailure: Hashable, Sendable {
         switch self {
         case .unavailable: "unavailable"
         case .unauthorized: "unauthorized"
+        case .featureUnavailable: "feature_unavailable"
         case .contractMismatch: "contract_mismatch"
         case .notFound: "not_found"
         case .invalidDraft: "invalid_draft"

@@ -161,6 +161,14 @@ internal struct InventoryWriteFailureTests {
         #expect(conflict != transport)
     }
 
+    @Test("a missing capability does not imply a pairing failure")
+    func featureUnavailableCopy() {
+        let message = InventoryCopy.message(for: .repository(.featureUnavailable))
+
+        #expect(message.contains("not allowed"))
+        #expect(!message.contains("signed in"))
+    }
+
     /// Judged by whether *this* task is cancelled, not by the error's shape:
     /// a `CancellationError` an inner operation threw for its own reasons
     /// (an upload superseded by a later one, say) is still a fact the caller

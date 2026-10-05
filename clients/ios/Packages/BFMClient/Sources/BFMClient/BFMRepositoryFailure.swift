@@ -45,6 +45,12 @@ internal enum BFMRepositoryFailure {
         repositoryError(for: popsError, statusCode: nil)
     }
 
+    internal static func forbiddenFailure<Body: WireForbiddenBody>(
+        _ body: Body
+    ) -> RepositoryError {
+        body.capabilityNotGranted == nil ? .unauthorized : .featureUnavailable
+    }
+
     internal static func repositoryError(
         for popsError: PopsError, statusCode: Int?
     ) -> RepositoryError {
@@ -54,8 +60,10 @@ internal enum BFMRepositoryFailure {
 
         guard let fallbackStatus = fallbackStatusCode(in: popsError.code) else {
             switch popsError.code {
-            case "invalid_token", "device_revoked", "capability_not_granted":
+            case "invalid_token", "device_revoked", "bfm.auth.device_revoked":
                 return .unauthorized
+            case "capability_not_granted":
+                return .featureUnavailable
             case "gateway.upstream_unavailable", "gateway.upstream_degraded",
                 "gateway.upstream_misconfigured", "upstream_unavailable", "upstream_degraded",
                 "upstream_misconfigured":
@@ -72,7 +80,7 @@ internal enum BFMRepositoryFailure {
 
         switch statusCode ?? fallbackStatus {
         case 401, 403:
-            return .unauthorized
+            return .transport(popsError)
         case 500...599:
             return .unavailable
         default:

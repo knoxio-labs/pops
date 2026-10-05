@@ -23,6 +23,7 @@ internal struct PurchaseDetailViewModelTests {
             (RepositoryError.transport("offline"), PurchaseDetailFailure.offline),
             (.unavailable, .unreachable),
             (.unauthorized, .unauthorized),
+            (.featureUnavailable, .featureUnavailable),
             (.contractMismatch, .contractMismatch),
             (.dependencyNotBound, .contractMismatch),
         ])

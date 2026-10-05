@@ -41,8 +41,10 @@ extension BFMBootstrapService {
         switch output {
         case .ok(let ok):
             return snapshot(of: try ok.body.json)
-        case .unauthorized, .forbidden:
+        case .unauthorized:
             throw RepositoryError.unauthorized
+        case .forbidden(let forbidden):
+            throw BFMRepositoryFailure.forbiddenFailure(try forbidden.body.json)
         case .tooManyRequests:
             throw RepositoryError.transport("\(Bootstrap.id): rate limited")
         case .undocumented(let statusCode, _):

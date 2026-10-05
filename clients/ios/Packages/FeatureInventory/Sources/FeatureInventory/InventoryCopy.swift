@@ -19,6 +19,8 @@ internal enum InventoryCopy {
             "Too many requests. Wait before trying again. Nothing changed."
         case .unauthorized:
             "This phone is no longer signed in, so nothing changed."
+        case .featureUnavailable:
+            "This phone is not allowed to make that change. Nothing changed."
         case .contractMismatch:
             "The server would not take that change. Nothing changed."
         case .requestRejected:

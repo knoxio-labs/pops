@@ -16,6 +16,7 @@ internal struct TransactionsCopyTests {
     private static let everyFailure: [RepositoryError] = [
         .unavailable,
         .unauthorized,
+        .featureUnavailable,
         .rateLimited(retryAfterSeconds: 30),
         .rateLimited(retryAfterSeconds: nil),
         .contractMismatch,

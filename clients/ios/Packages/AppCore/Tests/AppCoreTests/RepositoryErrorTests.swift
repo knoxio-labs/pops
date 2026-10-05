@@ -54,4 +54,17 @@ internal struct RepositoryErrorTests {
         #expect(!error.retryable)
         #expect(error.kind == .client)
     }
+
+    @Test("a capability refusal is non-retryable in structured diagnostics")
+    func featureUnavailableDiagnostic() {
+        let error = PopsError(
+            repositoryError: .featureUnavailable,
+            fallbackMessage: "This device cannot use Purchases."
+        )
+
+        #expect(error.code == "ios.auth.capability_not_granted")
+        #expect(error.message == "This device cannot use Purchases.")
+        #expect(!error.retryable)
+        #expect(error.kind == .client)
+    }
 }

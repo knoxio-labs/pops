@@ -54,6 +54,8 @@ internal enum AccountsCopy {
                 + "Nothing is lost — try again in a moment."
         case .unauthorized:
             return "This device is no longer signed in."
+        case .featureUnavailable:
+            return "This phone is not allowed to use Accounts."
         case .rateLimited:
             return "Too many requests. Wait before trying again."
         case .contractMismatch:

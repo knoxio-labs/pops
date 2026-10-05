@@ -23,8 +23,8 @@ internal struct AccountsCopyTests {
     @Test("every repository error has its own sentence")
     func everyErrorHasAMessage() {
         let errors: [RepositoryError] = [
-            .unavailable, .unauthorized, .contractMismatch, .conflict("already_saved"),
-            .transport("x"), .dependencyNotBound,
+            .unavailable, .unauthorized, .featureUnavailable, .contractMismatch,
+            .conflict("already_saved"), .transport("x"), .dependencyNotBound,
         ]
 
         for error in errors {

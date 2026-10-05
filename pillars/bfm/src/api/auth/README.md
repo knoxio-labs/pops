@@ -130,13 +130,13 @@ They ask the phone to do different things, and it cannot guess which.
 
 The two 403s share a status because they are the same HTTP fact, and share
 nothing else — which is why the body is a union discriminated on `code` rather
-than one shape with an optional field. `clients/ios` currently folds every 403
-into "end the session", which is right for the first and wrong for the second
-(POPS-2459).
+than one shape with an optional field. `clients/ios` reads this discriminator:
+only the first code ends the session; the second becomes a feature-unavailable
+failure and keeps the pairing.
 
-`clients/ios` already switches on exactly this split — `SessionReducer` maps a
-403 to `.revoked(.revokedByOperator)` and nothing else does. Collapsing the two
-statuses would turn its recovery path into guesswork.
+`clients/ios`'s authentication middleware applies this split before the
+response reaches a repository. Collapsing the two response bodies would turn
+its recovery path into guesswork.
 
 An **absent** device row is a 401, not a 403. Revocation is a soft delete, so a
 missing row cannot mean "revoked" — it means something else entirely (a

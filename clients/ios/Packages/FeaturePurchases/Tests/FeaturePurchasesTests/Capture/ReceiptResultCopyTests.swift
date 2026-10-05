@@ -15,6 +15,7 @@ internal struct ReceiptResultCopyTests {
     private static let everyGatewayFailure: [RepositoryError] = [
         .unavailable,
         .unauthorized,
+        .featureUnavailable,
         .contractMismatch,
         .requestRejected,
         .conflict("already_saved"),

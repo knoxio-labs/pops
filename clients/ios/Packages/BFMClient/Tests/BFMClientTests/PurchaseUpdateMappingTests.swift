@@ -78,9 +78,23 @@ internal struct PurchaseUpdateMappingTests {
         let repository = try BFMPurchasesRepository.stubbed(
             StubTransport(
                 status: .forbidden,
-                json: #"{"code":"device_revoked","message":"revoked"}"#))
+                json: #"{"code":"bfm.auth.device_revoked","message":"revoked"}"#))
 
         await #expect(throws: RepositoryError.unauthorized) {
+            try await repository.updatePurchase(id: "purchase-1", Self.update)
+        }
+    }
+
+    @Test("a purchase update capability refusal does not mean the device is unauthorized")
+    func capabilityDenied() async throws {
+        let repository = try BFMPurchasesRepository.stubbed(
+            StubTransport(
+                status: .forbidden,
+                json:
+                    #"{"code":"capability_not_granted","message":"denied","capability":"purchases.write"}"#
+            ))
+
+        await #expect(throws: RepositoryError.featureUnavailable) {
             try await repository.updatePurchase(id: "purchase-1", Self.update)
         }
     }

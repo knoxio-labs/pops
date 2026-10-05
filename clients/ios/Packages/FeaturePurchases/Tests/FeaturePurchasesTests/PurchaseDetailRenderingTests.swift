@@ -43,6 +43,7 @@ internal struct PurchaseDetailRenderingTests {
             .unreachable,
             .notFound,
             .unauthorized,
+            .featureUnavailable,
             .contractMismatch,
         ])
     func everyFailureRasterises(_ failure: PurchaseDetailFailure) throws {

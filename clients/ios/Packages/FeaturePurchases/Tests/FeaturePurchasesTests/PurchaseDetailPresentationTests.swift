@@ -91,10 +91,22 @@ internal struct PurchaseDetailPresentationTests {
         #expect(PurchaseDetailCopy.receiptLabel(pages: 3) == "Receipt, 3 pages")
     }
 
+    @Test("a session refusal and a missing capability give different recovery copy")
+    func refusalRecoveryCopy() {
+        #expect(PurchaseDetailCopy.title(for: .unauthorized) == "Session ended")
+        #expect(
+            PurchaseDetailCopy.message(for: .unauthorized)
+                == "Pair this phone again to view Purchases.")
+        #expect(
+            PurchaseDetailCopy.message(for: .featureUnavailable)
+                == "This phone isn't allowed to use Purchases.")
+    }
+
     @Test("every refresh failure has exact retained-content copy")
     func refreshFailureCopy() {
         let failures: [PurchaseDetailFailure] = [
-            .offline, .unreachable, .notFound, .unauthorized, .contractMismatch,
+            .offline, .unreachable, .notFound, .unauthorized, .featureUnavailable,
+            .contractMismatch,
         ]
         let notices = failures.map(PurchaseDetailCopy.refreshNotice)
 
@@ -103,7 +115,8 @@ internal struct PurchaseDetailPresentationTests {
                 "Offline, showing the saved copy",
                 "Couldn't refresh",
                 "Deleted elsewhere",
-                "No longer allowed to refresh",
+                "Sign in again to refresh",
+                "Purchases aren't available to this phone",
                 "Update Pops to refresh",
             ])
         #expect(Set(notices).count == failures.count)

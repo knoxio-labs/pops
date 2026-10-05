@@ -17,7 +17,7 @@ internal enum PurchaseReviewCopy {
             "This version of Pops can't save this purchase. Update the app."
         case .transport:
             "No connection, so nothing was saved."
-        case .unauthorized, .contractMismatch, .dependencyNotBound:
+        case .unauthorized, .featureUnavailable, .contractMismatch, .dependencyNotBound:
             ReceiptResultCopy.message(for: error)
         }
     }
