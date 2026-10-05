@@ -150,6 +150,29 @@ export const RemovableSuccess: Story = {
   },
 };
 
+export const RemovableClickable: Story = {
+  render: () => {
+    const [clickCount, setClickCount] = useState(0);
+    const [removed, setRemoved] = useState(false);
+
+    return (
+      <div className="flex items-center gap-4">
+        {!removed && (
+          <Chip
+            removable
+            removeLabel="Remove clickable tag"
+            onClick={() => setClickCount((count) => count + 1)}
+            onRemove={() => setRemoved(true)}
+          >
+            Clickable tag
+          </Chip>
+        )}
+        <output aria-label="Chip click count">{clickCount}</output>
+      </div>
+    );
+  },
+};
+
 // Icon examples
 const TagIcon = () => (
   <svg

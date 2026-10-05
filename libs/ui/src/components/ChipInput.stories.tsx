@@ -52,6 +52,21 @@ export const WithDefaultValues: Story = {
   },
 };
 
+export const WrappedRemovableValues: Story = {
+  render: () => {
+    const [values, setValues] = useState(['alpha', 'bravo', 'charlie', 'delta', 'echo']);
+
+    return (
+      <div className="w-full">
+        <ChipInput aria-label="Wrapped values" value={values} onChange={setValues} />
+        <output aria-label="Current values" className="mt-2 block">
+          {values.join(', ')}
+        </output>
+      </div>
+    );
+  },
+};
+
 // Variants
 export const Ghost: Story = {
   args: {
