@@ -1,10 +1,10 @@
 /// What a repository call can fail with, in terms a screen can act on.
 ///
 /// Shared across every repository seam in ``AppCore`` rather than one enum
-/// per feature — the failure modes a screen has to render around (the pillar
-/// is down, the session is gone, the response does not match this build) do
-/// not change shape with the domain behind the call, so a second copy would
-/// only be a second set of cases to keep in step with this one.
+/// per feature — whether the server is down, the session ended, a response
+/// cannot be read or a request was rejected does not change with the domain
+/// behind the call, so a second copy would only be a second set of cases to
+/// keep in step with this one.
 public enum RepositoryError: Error, Hashable, Sendable {
     /// The pillar behind this call is down and said so. Distinct from an
     /// empty result, which means there is genuinely nothing — rendering "you
@@ -18,6 +18,9 @@ public enum RepositoryError: Error, Hashable, Sendable {
     /// The response did not match what this build expects. An old app meeting a
     /// newer contract lands here rather than showing half a screen.
     case contractMismatch
+    /// The server rejected a request from this build. Sending the same request
+    /// again cannot succeed; an app and server contract mismatch is a likely cause.
+    case requestRejected
     /// The write collided with something already on file: a repeated idempotency key, or a
     /// receipt whose checksum already belongs to a purchase. The payload preserves the server's
     /// machine-readable reason for domain-specific recovery. Retrying the same input cannot get

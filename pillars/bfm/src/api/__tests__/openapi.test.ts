@@ -145,6 +145,7 @@ describe('GET /openapi', () => {
       '/mobile/ego/conversations/{id}',
       '/mobile/finance/accounts',
       '/mobile/finance/accounts/{id}',
+      '/mobile/finance/summary',
       '/mobile/finance/transactions',
       '/mobile/finance/transactions/{id}',
       '/mobile/inventory/codes/suggest',
@@ -177,6 +178,9 @@ describe('GET /openapi', () => {
     expect(body.paths?.['/mobile/bootstrap']?.['get']?.operationId).toBe('mobile.bootstrap');
     expect(body.paths?.['/mobile/finance/transactions']?.['get']?.operationId).toBe(
       'mobileFinance.listTransactions'
+    );
+    expect(body.paths?.['/mobile/finance/summary']?.['get']?.operationId).toBe(
+      'mobileFinance.getSummary'
     );
     expect(body.paths?.['/mobile/barcode/lookup/{code}']?.['get']?.operationId).toBe(
       'mobileBarcode.lookup'

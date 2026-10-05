@@ -4,7 +4,12 @@ import { describe, expect, it } from 'vitest';
 
 import { itemFieldValues } from '../../db/schema.js';
 import { mutation, openHarness, seedItem } from '../../domain/commands/__tests__/test-utils.js';
-import { ItemFieldSetError, readItemFieldValues, validateItemFieldValues } from '../item-values.js';
+import {
+  ItemFieldSetError,
+  readItemFieldValues,
+  replaceValidatedItemFieldValues,
+  validateItemFieldValues,
+} from '../item-values.js';
 import { ValueValidationError } from '../value-codec.js';
 import { publishItemTypeTree } from './type-tree-fixture.js';
 
@@ -26,7 +31,10 @@ const FIELD_IDS = {
   reference: '30000000-0000-5000-8000-000000000011',
 } as const;
 
-function publishRevisionTwo(harness: ReturnType<typeof openHarness>): void {
+function publishRevisionTwo(
+  harness: ReturnType<typeof openHarness>,
+  options: { shortTextRequired?: boolean; shortTextArchivedAt?: string | null } = {}
+): void {
   harness.raw
     .prepare(
       `INSERT INTO catalogue_revisions
@@ -43,10 +51,10 @@ function publishRevisionTwo(harness: ReturnType<typeof openHarness>): void {
     .run(TYPE_ID);
   const insertField = harness.raw.prepare(
     `INSERT INTO item_type_fields
-       (revision, id, type_id, key, label, sort_order, kind, cardinality, required,
+     (revision, id, type_id, key, label, sort_order, kind, cardinality, required,
         storage, fixed_unit, reference_kinds_json, reference_type_ids_json, allow_override,
         presentation_json, archived_at)
-     VALUES (2, ?, ?, ?, ?, ?, ?, ?, 0, 'stored', ?, ?, ?, 0, '{}', ?)`
+     VALUES (2, ?, ?, ?, ?, ?, ?, ?, ?, 'stored', ?, ?, ?, 0, '{}', ?)`
   );
   const definitions = [
     [FIELD_IDS.short, 'short', 'short_text', 'one', null, '[]', '[]', null],
@@ -79,10 +87,13 @@ function publishRevisionTwo(harness: ReturnType<typeof openHarness>): void {
       sortOrder,
       definition[2],
       definition[3],
+      options.shortTextRequired && definition[1] === 'short' ? 1 : 0,
       definition[4],
       definition[5],
       definition[6],
-      definition[7]
+      options.shortTextArchivedAt !== undefined && definition[1] === 'short'
+        ? options.shortTextArchivedAt
+        : definition[7]
     );
   });
   harness.raw
@@ -195,6 +206,146 @@ describe('validateItemFieldValues', () => {
     expect(values.find((entry) => entry.fieldId === FIELD_IDS.url)?.values[0]?.value).toBe(
       'https://example.com/a%20b'
     );
+  });
+
+  it('trims text edges, drops blank members, and preserves interior whitespace', () => {
+    const harness = openHarness();
+    const itemId = '40000000-0000-4000-8000-000000000020';
+    seedItem(harness, { id: itemId });
+    publishRevisionTwo(harness);
+
+    const values = validateItemFieldValues(harness.db, {
+      typeId: TYPE_ID,
+      catalogueRevision: 2,
+      fields: [
+        { fieldId: FIELD_IDS.short, source: 'stored', values: [' Ihomdec '] },
+        {
+          fieldId: FIELD_IDS.long,
+          source: 'stored',
+          values: [' \nfirst line\nsecond  line\n ', '  '],
+        },
+      ],
+    });
+
+    expect(values.find((entry) => entry.fieldId === FIELD_IDS.short)?.values[0]?.value).toBe(
+      'Ihomdec'
+    );
+    expect(
+      values.find((entry) => entry.fieldId === FIELD_IDS.long)?.values.map(({ value }) => value)
+    ).toEqual(['first line\nsecond  line']);
+  });
+
+  it('clears an optional field when its text value is blank after trimming', () => {
+    const harness = openHarness();
+    const itemId = '40000000-0000-4000-8000-000000000021';
+    seedItem(harness, { id: itemId });
+    publishRevisionTwo(harness);
+    harness.db
+      .insert(itemFieldValues)
+      .values({
+        itemId,
+        fieldId: FIELD_IDS.short,
+        source: 'stored',
+        ordinal: 0,
+        valueJson: JSON.stringify('Ihomdec'),
+        catalogueRevision: 2,
+        createdAt: 'now',
+        updatedAt: 'now',
+      })
+      .run();
+
+    replaceValidatedItemFieldValues(harness.db, {
+      itemId,
+      typeId: TYPE_ID,
+      catalogueRevision: 2,
+      fields: [{ fieldId: FIELD_IDS.short, source: 'stored', values: [' \t\n '] }],
+      now: 'later',
+    });
+
+    expect(readItemFieldValues(harness.db, itemId)).toEqual([]);
+  });
+
+  it('reports the existing required error for text that is blank after trimming', () => {
+    const harness = openHarness();
+    const itemId = '40000000-0000-4000-8000-000000000022';
+    seedItem(harness, { id: itemId });
+    publishRevisionTwo(harness, { shortTextRequired: true });
+
+    let caught: unknown;
+    try {
+      validateItemFieldValues(harness.db, {
+        typeId: TYPE_ID,
+        catalogueRevision: 2,
+        fields: [{ fieldId: FIELD_IDS.short, source: 'stored', values: [' \t\n '] }],
+      });
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(caught).toBeInstanceOf(ItemFieldSetError);
+    expect(caught).toMatchObject({
+      code: 'required_missing',
+      fieldId: FIELD_IDS.short,
+      message: expect.stringContaining('requires a value'),
+    });
+  });
+
+  it('retains an existing edge-whitespace text value on an archived field', () => {
+    const harness = openHarness();
+    const itemId = '40000000-0000-4000-8000-000000000024';
+    seedItem(harness, { id: itemId });
+    publishRevisionTwo(harness, { shortTextArchivedAt: '2026-09-01T00:00:00.000Z' });
+    harness.db
+      .insert(itemFieldValues)
+      .values({
+        itemId,
+        fieldId: FIELD_IDS.short,
+        source: 'stored',
+        ordinal: 0,
+        valueJson: JSON.stringify(' Ihomdec '),
+        catalogueRevision: 2,
+        createdAt: 'now',
+        updatedAt: 'now',
+      })
+      .run();
+
+    const values = validateItemFieldValues(harness.db, {
+      typeId: TYPE_ID,
+      catalogueRevision: 2,
+      existingItemId: itemId,
+      fields: [{ fieldId: FIELD_IDS.short, source: 'stored', values: [' Ihomdec '] }],
+    });
+
+    expect(values[0]?.values[0]?.value).toBe(' Ihomdec ');
+  });
+
+  it('reads existing canonical text rows with edge whitespace without rewriting them', () => {
+    const harness = openHarness();
+    const itemId = '40000000-0000-4000-8000-000000000023';
+    seedItem(harness, { id: itemId });
+    publishRevisionTwo(harness);
+    harness.db
+      .insert(itemFieldValues)
+      .values({
+        itemId,
+        fieldId: FIELD_IDS.short,
+        source: 'stored',
+        ordinal: 0,
+        valueJson: JSON.stringify(' Ihomdec '),
+        catalogueRevision: 2,
+        createdAt: 'now',
+        updatedAt: 'now',
+      })
+      .run();
+
+    expect(readItemFieldValues(harness.db, itemId)[0]?.values).toEqual([' Ihomdec ']);
+    expect(
+      harness.db
+        .select({ valueJson: itemFieldValues.valueJson })
+        .from(itemFieldValues)
+        .all()
+        .map((row) => row.valueJson)
+    ).toEqual([JSON.stringify(' Ihomdec ')]);
   });
 
   it('rejects empty cardinality, duplicate fields, impossible references and wrong target types', () => {

@@ -1,3 +1,4 @@
+import { FinanceSummaryResponseSchema } from '../../contract/mobile-finance-summary-schemas.js';
 import { FALLBACK_MOBILE_CURRENCY } from '../../contract/rest-schemas.js';
 /**
  * bfm's finance leg: the mobile transaction screens, expressed as calls to the
@@ -34,6 +35,10 @@ import {
 import type { z } from 'zod';
 
 import type {
+  MobileFinanceSummary,
+  MobileFinanceSummaryQuery,
+} from '../../contract/mobile-finance-summary-schemas.js';
+import type {
   MobileAccountDetail,
   MobileAccountsPage,
   MobileTransactionDetail,
@@ -63,6 +68,13 @@ export type FinanceTransactionsRouter = {
   };
 };
 
+/** Finance's analytical summary operation used by the mobile fee summary route. */
+export type FinanceSummaryRouter = {
+  summary: {
+    get: (input: MobileFinanceSummaryQuery) => Promise<unknown>;
+  };
+};
+
 /** The finance pillar id — see `accounts-client.ts` for why there are two. */
 export const FINANCE_PILLAR_ID = 'finance';
 
@@ -75,6 +87,7 @@ export interface ListTransactionsRequest {
   readonly accountId: string | null;
 }
 
+/** Finance operations available to BFM's device-gated mobile routes. */
 export interface MobileFinanceClient {
   listTransactions(
     request: ListTransactionsRequest
@@ -82,6 +95,8 @@ export interface MobileFinanceClient {
   getTransaction(id: string): Promise<GatewayOutcome<MobileTransactionDetail>>;
   listAccounts(request: ListAccountsRequest): Promise<GatewayOutcome<MobileAccountsPage>>;
   getAccount(id: string): Promise<GatewayOutcome<MobileAccountDetail>>;
+  /** Reads Finance's cost-of-credit measure for the requested window. */
+  getSummary(query: MobileFinanceSummaryQuery): Promise<GatewayOutcome<MobileFinanceSummary>>;
 }
 
 export function createMobileFinanceClient(gateway: PillarGateway): MobileFinanceClient {
@@ -147,7 +162,27 @@ export function createMobileFinanceClient(gateway: PillarGateway): MobileFinance
 
     listAccounts: (request) => listAccounts(gateway, request),
     getAccount: (id: string) => getAccountDetail(gateway, id),
+    getSummary: (query) => getFinanceSummary(gateway, query),
   };
+}
+
+async function getFinanceSummary(
+  gateway: PillarGateway,
+  query: MobileFinanceSummaryQuery
+): Promise<GatewayOutcome<MobileFinanceSummary>> {
+  const outcome = await gateway.call<FinanceSummaryRouter, unknown>(FINANCE_PILLAR_ID, (handle) =>
+    handle.summary.get(query)
+  );
+
+  const summary = parseOrMismatch(
+    FINANCE_PILLAR_ID,
+    outcome,
+    FinanceSummaryResponseSchema,
+    'summary.get'
+  );
+  if (!isGatewayOk(summary)) return summary;
+
+  return { kind: 'ok', value: summary.value.data };
 }
 
 type FinanceListRows = z.infer<typeof FinanceTransactionListResponseSchema>['data'];

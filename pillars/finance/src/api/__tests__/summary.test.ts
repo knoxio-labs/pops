@@ -133,6 +133,9 @@ describe('GET /summary — windows and the previous period', () => {
     expect(data.previousTotal).toBeNull();
     expect(data.deltaCents).toBeNull();
     expect(data.deltaRatio).toBeNull();
+    expect(data.costOfCredit.previousTotal).toBeNull();
+    expect(data.costOfCredit.deltaCents).toBeNull();
+    expect(data.costOfCredit.deltaRatio).toBeNull();
   });
 
   it('rejects a window it does not offer', async () => {
@@ -149,6 +152,10 @@ describe('GET /summary — measuring nothing', () => {
     expect(data.empty).toBe(true);
     expect(data.total).toEqual({ cents: 0, transactionCount: 0 });
     expect(data.byAccount).toEqual([]);
+    expect(data.costOfCredit.total).toEqual({ cents: 0, transactionCount: 0 });
+    expect(data.costOfCredit.deltaRatio).toBeNull();
+    expect(data.costOfCredit.byAccount).toEqual([]);
+    expect(data.costOfCredit.byTag).toEqual([]);
     // The axis still exists — a 30-day window spans two months whether or not
     // anything happened in them — but every bar is explicitly unmeasured.
     expect(data.byMonth.map((month) => month.month)).toEqual(['2026-08', '2026-09']);
@@ -239,6 +246,81 @@ describe('GET /summary — breakdowns', () => {
     const { data } = await client().summary.get();
 
     expect(data.total).toEqual({ cents: 10_000, transactionCount: 1 });
+  });
+
+  it('reports cost of credit by account, month and fee tag for current and previous periods', async () => {
+    const amex = await anAccount('Test Card Alpha');
+    const anz = await anAccount('Test Card Beta', 'USD');
+    ledger(
+      { accountId: amex, date: '2026-09-01', amountCents: -50_000 },
+      {
+        accountId: amex,
+        date: '2026-09-02',
+        amountCents: -1_700,
+        type: 'fee',
+        tags: ['fee:interest', 'source:bank'],
+      },
+      {
+        accountId: amex,
+        date: '2026-09-03',
+        amountCents: -450,
+        type: 'fee',
+        tags: ['fee:membership'],
+      },
+      {
+        accountId: anz,
+        date: '2026-09-04',
+        amountCents: -1_480,
+        type: 'fee',
+        tags: ['fee:interest'],
+      },
+      {
+        accountId: amex,
+        date: '2026-08-02',
+        amountCents: -1_000,
+        type: 'fee',
+        tags: ['fee:interest'],
+      },
+      { accountId: anz, date: '2026-08-10', amountCents: -500, type: 'fee', tags: ['fee:late'] },
+      {
+        accountId: anz,
+        date: '2026-09-14',
+        amountCents: -3_000,
+        type: 'fee',
+        tags: ['fee:interest'],
+      }
+    );
+
+    const { data } = await client().summary.get({ window: 'month' });
+    const costOfCredit = data.costOfCredit;
+
+    expect(costOfCredit.total).toEqual({ cents: 3_630, transactionCount: 3 });
+    expect(costOfCredit.previousTotal).toEqual({ cents: 1_500, transactionCount: 2 });
+    expect(costOfCredit.deltaCents).toBe(2_130);
+    expect(costOfCredit.deltaRatio).toBe(1.42);
+    expect(
+      Object.fromEntries(costOfCredit.byAccount.map(({ accountId, fees }) => [accountId, fees]))
+    ).toEqual({
+      [amex]: { cents: 2_150, transactionCount: 2 },
+      [anz]: { cents: 1_480, transactionCount: 1 },
+    });
+    expect(costOfCredit.byMonth).toEqual([
+      {
+        month: '2026-09',
+        fees: { cents: 3_630, transactionCount: 3 },
+        byAccount: [
+          { accountId: amex, fees: { cents: 2_150, transactionCount: 2 } },
+          { accountId: anz, fees: { cents: 1_480, transactionCount: 1 } },
+        ].toSorted((left, right) => left.accountId.localeCompare(right.accountId)),
+      },
+    ]);
+    expect(costOfCredit.byTag.map(({ tag, fees }) => ({ tag, fees }))).toEqual([
+      { tag: 'fee:interest', fees: { cents: 3_180, transactionCount: 2 } },
+      { tag: 'fee:membership', fees: { cents: 450, transactionCount: 1 } },
+    ]);
+    expect(data.currencies).toEqual(['AUD', 'USD']);
+    expect(data.total).toEqual({ cents: 50_000, transactionCount: 1 });
+    expect(data.net.cents).toBe(-50_000);
   });
 
   it('gives the trend a dense month axis, stacked by account', async () => {

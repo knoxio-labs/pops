@@ -1694,7 +1694,7 @@ export const settingsResetKey = <ThrowOnError extends boolean = false>(
   });
 
 /**
- * Spend for a window and the period before it, broken down by account, month, tag and entity, with the largest charge, concentration, subscriptions and foreign spend
+ * Spend for a window and the period before it, broken down by account, month, tag and entity, plus income, cost of credit, net, the largest charge, concentration, subscriptions and foreign spend
  */
 export const summaryGet = <ThrowOnError extends boolean = false>(
   options?: Options<SummaryGetData, ThrowOnError>

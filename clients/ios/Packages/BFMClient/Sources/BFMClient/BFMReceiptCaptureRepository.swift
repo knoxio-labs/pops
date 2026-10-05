@@ -71,7 +71,7 @@ public struct BFMReceiptCaptureRepository: ReceiptCaptureRepository {
                 body: .json(Self.saveDraftBody(from: payload))
             )
         } catch let error as ClientError {
-            throw BFMRepositoryFailure.failure(error, operation: SaveReceiptDraft.id)
+            throw Self.writeFailure(error, operation: SaveReceiptDraft.id)
         }
         return try purchase(from: output, operation: SaveReceiptDraft.id)
     }
@@ -85,7 +85,7 @@ public struct BFMReceiptCaptureRepository: ReceiptCaptureRepository {
                 body: .json(Self.manualBody(from: payload))
             )
         } catch let error as ClientError {
-            throw BFMRepositoryFailure.failure(error, operation: CreateManualPurchase.id)
+            throw Self.writeFailure(error, operation: CreateManualPurchase.id)
         }
         return try purchase(from: output, operation: CreateManualPurchase.id)
     }
@@ -176,6 +176,13 @@ extension BFMReceiptCaptureRepository {
         from output: Output, operation: String
     ) throws -> ReceiptPurchase where Output: WriteOutput {
         try output.asPurchase(operation: operation)
+    }
+
+    private static func writeFailure(_ error: ClientError, operation: String) -> RepositoryError {
+        guard BFMRepositoryFailure.statusCode(in: error) == 400 else {
+            return BFMRepositoryFailure.failure(error, operation: operation)
+        }
+        return .requestRejected
     }
 }
 

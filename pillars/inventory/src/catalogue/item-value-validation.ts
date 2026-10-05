@@ -3,6 +3,7 @@ import { and, eq } from 'drizzle-orm';
 import { itemFieldValues, items } from '../db/schema.js';
 import { loadPublishedCatalogue } from './catalogue.js';
 import { assertReferenceTarget } from './item-value-references.js';
+import { normalizeItemValueText } from './item-value-text-normalization.js';
 import { ItemFieldSetError } from './item-value-types.js';
 import { ValueValidationError } from './value-codec.js';
 import { canonicalizeValue } from './value-dispatch.js';
@@ -40,6 +41,18 @@ function canonicalizeWrite(
   value: unknown,
   remainingExisting: Map<string, number>
 ): CanonicalValue {
+  if (
+    field.archivedAt !== null &&
+    (field.kind === 'short_text' || field.kind === 'long_text') &&
+    typeof value === 'string'
+  ) {
+    const valueJson = JSON.stringify(value);
+    const remaining = remainingExisting.get(valueJson) ?? 0;
+    if (remaining > 0) {
+      remainingExisting.set(valueJson, remaining - 1);
+      return { value, valueJson };
+    }
+  }
   try {
     return canonicalizeValue(field, value);
   } catch (error) {
@@ -58,16 +71,23 @@ function canonicalizeWrite(
   }
 }
 
-function assertShape(field: PersistedItemTypeField, entry: ItemFieldValueInput): void {
+function assertWritableSource(field: PersistedItemTypeField, entry: ItemFieldValueInput): void {
   const sourceValid =
     (field.storage === 'stored' && entry.source === 'stored') ||
     (field.storage === 'computed' && field.allowOverride && entry.source === 'override');
   if (!sourceValid) {
     throw new ItemFieldSetError('source_invalid', field.id, `${entry.source} is not writable`);
   }
+}
+
+function assertCardinality(
+  field: PersistedItemTypeField,
+  entry: ItemFieldValueInput,
+  allowEmpty: boolean
+): void {
   const countValid =
     field.cardinality === 'one' ? entry.values.length === 1 : entry.values.length > 0;
-  if (!countValid) {
+  if (!countValid && !(allowEmpty && entry.values.length === 0)) {
     const message =
       field.cardinality === 'one' ? 'requires exactly one value' : 'requires at least one value';
     throw new ItemFieldSetError('cardinality_invalid', field.id, message);
@@ -80,8 +100,14 @@ function validateEntry(
   entry: ItemFieldValueInput,
   existingItemId?: string
 ): CanonicalItemFieldValueInput {
-  assertShape(field, entry);
+  assertWritableSource(field, entry);
   const existing = existingValueJson(db, existingItemId, field.id, entry.source);
+  const { values, emptyTextClear } = normalizeItemValueText(field, entry.values, existing);
+  const normalizedEntry = { ...entry, values };
+  if (emptyTextClear && field.storage === 'stored' && field.required) {
+    throw new ItemFieldSetError('required_missing', field.id, 'requires a value');
+  }
+  assertCardinality(field, normalizedEntry, emptyTextClear);
   const existingSet = new Set(existing);
   const remainingExisting = new Map<string, number>();
   for (const valueJson of existing) {
@@ -90,19 +116,19 @@ function validateEntry(
   if (field.archivedAt !== null && existing.length === 0) {
     throw new ItemFieldSetError('field_archived', field.id, 'cannot receive new values');
   }
-  const values = entry.values.map((value) => {
+  const canonicalValues = values.map((value) => {
     const canonical = canonicalizeWrite(field, value, remainingExisting);
     if (!existingSet.has(canonical.valueJson)) assertReferenceTarget(db, field, canonical.value);
     return canonical;
   });
   if (
     field.archivedAt !== null &&
-    (values.length !== existing.length ||
-      values.some((value, index) => value.valueJson !== existing[index]))
+    (canonicalValues.length !== existing.length ||
+      canonicalValues.some((value, index) => value.valueJson !== existing[index]))
   ) {
     throw new ItemFieldSetError('field_archived', field.id, 'can only retain its existing values');
   }
-  return { fieldId: entry.fieldId, source: entry.source, values };
+  return { fieldId: entry.fieldId, source: entry.source, values: canonicalValues };
 }
 
 function assertTypeAssignable(db: CommandDb, type: PersistedItemType, itemId?: string): void {

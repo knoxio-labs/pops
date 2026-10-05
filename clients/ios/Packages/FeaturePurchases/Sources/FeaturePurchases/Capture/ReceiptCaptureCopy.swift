@@ -253,6 +253,8 @@ internal enum ReceiptResultCopy {
             return "Too many requests. Wait before trying again."
         case .contractMismatch:
             return "This version of Pops cannot read what the server sent. Update the app."
+        case .requestRejected:
+            return "This version of Pops can't save this receipt. Update the app."
         case .conflict:
             return "This looks like it was already saved."
         case .transport:

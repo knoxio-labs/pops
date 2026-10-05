@@ -472,6 +472,12 @@ export const BFM_ROUTES = [
   },
   {
     method: 'get',
+    path: '/mobile/finance/summary',
+    handlerFile: 'pillars/bfm/src/api/rest/mobile-finance-handlers.ts',
+    handlerKey: 'getSummary',
+  },
+  {
+    method: 'get',
     path: '/mobile/purchases',
     handlerFile: 'pillars/bfm/src/api/rest/mobile-purchases-handlers.ts',
     handlerKey: 'listPurchases',

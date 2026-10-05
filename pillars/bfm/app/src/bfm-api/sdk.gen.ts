@@ -48,6 +48,9 @@ import type {
   MobileFinanceGetAccountData,
   MobileFinanceGetAccountErrors,
   MobileFinanceGetAccountResponses,
+  MobileFinanceGetSummaryData,
+  MobileFinanceGetSummaryErrors,
+  MobileFinanceGetSummaryResponses,
   MobileFinanceGetTransactionData,
   MobileFinanceGetTransactionErrors,
   MobileFinanceGetTransactionResponses,
@@ -406,6 +409,18 @@ export const mobileFinanceGetAccount = <ThrowOnError extends boolean = false>(
     MobileFinanceGetAccountErrors,
     ThrowOnError
   >({ url: '/mobile/finance/accounts/{id}', ...options });
+
+/**
+ * Finance cost of credit for a window and the period before it
+ */
+export const mobileFinanceGetSummary = <ThrowOnError extends boolean = false>(
+  options?: Options<MobileFinanceGetSummaryData, ThrowOnError>
+): RequestResult<MobileFinanceGetSummaryResponses, MobileFinanceGetSummaryErrors, ThrowOnError> =>
+  (options?.client ?? client).get<
+    MobileFinanceGetSummaryResponses,
+    MobileFinanceGetSummaryErrors,
+    ThrowOnError
+  >({ url: '/mobile/finance/summary', ...options });
 
 /**
  * One cursor-paginated page of transaction list rows

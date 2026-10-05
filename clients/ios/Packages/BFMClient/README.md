@@ -119,6 +119,8 @@ Purchase detail reads preserve the contract's complete ordered `receiptUris` lis
 
 `POST /mobile/purchases/receipts` answers with one of three outcomes, and every one of them is a `200` — the BFM's own contract treats "purchases read this receipt and could not reconcile it" as an answer, not a failure. Only a call that never got that far throws.
 
+For the two write calls, `saveReceiptDraft` and `createManualPurchase`, a `400` maps to `RepositoryError.requestRejected`: the server received the request but would not accept it. It stays distinct from a transport failure, which means the request did not get an answer.
+
 Each arm carries what its screen draws: `created` the purchase summary the confirmation is built from, `needs-review` the gate's objections **and** the reading they are about. The one thing no arm carries is a photo reference — the stored parts are addressed by `pops://` URIs into the purchases pillar's own store and no mobile route serves those bytes, so `MobileReceiptOutcomeSchema` publishes `receiptCount` and `ReceiptOutcome` holds a count rather than a pointer this app could only ignore.
 
 A submission also carries the phone's current timestamp with its UTC offset and IANA zone. If the app already has location permission, it adds the last known WGS-84 coordinate without ever requesting permission from the capture flow. The timestamp is an offset-preserving wire string rather than a generated `Date`, because normalising it to `Z` would erase the zone evidence `purchases` uses when the paper does not settle it.

@@ -50,6 +50,9 @@ export interface InventoryContract {
 
 export const MANIFEST_OUTPUT_PATH = resolve(HERE, '..', 'src', 'contract', 'manifest.generated.ts');
 
+// Keep codegen output stable in the EX-2 sandbox, where the repo-root formatter config is absent.
+export const MANIFEST_FORMAT_CONFIG_PATH = resolve(HERE, 'oxfmt-manifest.json');
+
 /**
  * {@link renderManifest} put through `oxfmt`, which is the form the committed
  * file is in — `generate:manifest` formats after writing, so the raw render
@@ -70,6 +73,10 @@ export function renderFormattedManifest(version: string): string {
   const dir = mkdtempSync(join(tmpdir(), 'manifest-render-'));
   const path = join(dir, 'manifest.generated.ts');
   writeFileSync(path, renderManifest(version));
-  execFileSync('pnpm', ['exec', 'oxfmt', '--write', path], { stdio: 'ignore' });
+  execFileSync(
+    'pnpm',
+    ['exec', 'oxfmt', '--config', MANIFEST_FORMAT_CONFIG_PATH, '--write', path],
+    { stdio: 'ignore' }
+  );
   return readFileSync(path, 'utf8');
 }

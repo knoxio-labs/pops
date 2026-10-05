@@ -13,10 +13,13 @@
  * broken manifest. The server API layer (`src/api`) is internal and is
  * deliberately NOT part of the contract surface the manifest describes.
  */
-import { execFileSync } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
 
-import { MANIFEST_OUTPUT_PATH, readContractVersion, renderManifest } from './render-manifest.js';
+import {
+  MANIFEST_OUTPUT_PATH,
+  readContractVersion,
+  renderFormattedManifest,
+} from './render-manifest.js';
 
 import type { PurchasesError } from '../src/contract/errors.js';
 import type { PurchaseSource } from '../src/contract/types/purchase-source.js';
@@ -25,9 +28,5 @@ import type { Purchase } from '../src/contract/types/purchase.js';
 export type SurfaceAssertion = [Purchase, PurchaseSource, PurchasesError];
 
 const version = readContractVersion();
-const rendered = renderManifest(version);
-writeFileSync(MANIFEST_OUTPUT_PATH, rendered);
-execFileSync('pnpm', ['exec', 'oxfmt', '--write', MANIFEST_OUTPUT_PATH], {
-  stdio: 'inherit',
-});
+writeFileSync(MANIFEST_OUTPUT_PATH, renderFormattedManifest(version));
 process.stdout.write(`[purchases-contract] wrote ${MANIFEST_OUTPUT_PATH} (version=${version})\n`);

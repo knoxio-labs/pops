@@ -34,6 +34,7 @@ export const financeSummaryContract = c.router({
     responses: { 200: z.object({ data: FinanceSummarySchema }), ...ERR_RESPONSES },
     summary:
       'Spend for a window and the period before it, broken down by account, month, tag and ' +
-      'entity, with the largest charge, concentration, subscriptions and foreign spend',
+      'entity, plus income, cost of credit, net, the largest charge, concentration, subscriptions ' +
+      'and foreign spend',
   },
 });

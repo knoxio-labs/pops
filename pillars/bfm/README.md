@@ -8,7 +8,7 @@ It listens on port **3014**.
 It owns a database — the device allow-list, described under
 [Persistence](#persistence) below — which makes it a data pillar by kind
 (ADR-035). Its mobile surfaces include the Ego conversation list and thread
-and action decisions under `/mobile/ego/*`, the transaction list and detail under
+and action decisions under `/mobile/ego/*`, the transaction list, detail and cost-of-credit summary under
 `/mobile/finance/*`, the purchase list, detail and receipt upload under
 `/mobile/purchases/*`, and barcode metadata lookup under `/mobile/barcode/*`,
 behind the perimeter that guards them — and the whole path a phone takes to
@@ -42,6 +42,7 @@ It also holds a service-account credential and one way to spend it — see
 | `POST /mobile/ego/chat/stream`                    | Relays Ego's SSE stream; omitted from OpenAPI because ts-rest cannot describe event streams, and read by iOS outside the generated client.       |
 | `GET /mobile/finance/transactions`                | One cursor-paginated page of list rows — see [The mobile shape](#the-mobile-shape).                                                              |
 | `GET /mobile/finance/accounts`                    | One cursor-paginated page of accounts after search and filters — see [The mobile shape](#the-mobile-shape).                                      |
+| `GET /mobile/finance/summary`                     | Cost-of-credit totals for one window, by account, month and fee tag.                                                                             |
 | `GET /mobile/finance/transactions/:id`            | The fuller record behind one row, for the detail screen.                                                                                         |
 | `GET /mobile/inventory/items`                     | One cursor-paginated Items browser page, using Inventory's `/web/items` filters and ordering.                                                    |
 | `GET /mobile/barcode/lookup/:code`                | Book metadata for a scanned barcode; `found`, `not_found` and `unavailable` are all 200 outcomes, with optional ADR-054 detail on `unavailable`. |

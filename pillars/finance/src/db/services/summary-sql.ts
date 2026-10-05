@@ -57,6 +57,12 @@ export const INCOME: LedgerMeasure = {
   types: INCOME_TRANSACTION_TYPES,
 };
 
+/** Transaction fees, negated like spend because outflows are stored negative. */
+export const COST_OF_CREDIT: LedgerMeasure = {
+  cents: sql<number>`COALESCE(SUM(-${transactions.amountCents}), 0)`,
+  types: ['fee'],
+};
+
 export const SPEND_CENTS = SPEND.cents;
 
 export const ROW_COUNT = sql<number>`COUNT(*)`;

@@ -18,7 +18,8 @@ internal struct AppShellDegradationTests {
     @Test(
         "a bootstrap that fails still opens the app on what this build can draw",
         arguments: [
-            RepositoryError.unavailable, .contractMismatch, .transport("dead"), .unauthorized,
+            RepositoryError.unavailable, .contractMismatch, .requestRejected, .transport("dead"),
+            .unauthorized,
         ]
     )
     func failureDegradesRatherThanBlocking(error: RepositoryError) async {

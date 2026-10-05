@@ -20,6 +20,7 @@ import {
   type AccountSpend,
   type MonthSpend,
 } from './summary-breakdowns.js';
+import { costOfCreditSummary, type CostOfCreditSummary } from './summary-cost-of-credit.js';
 import { spendByEntity, spendByTag, type EntitySpend, type TagSpend } from './summary-facets.js';
 import {
   incomeSummary,
@@ -53,7 +54,7 @@ import type { FinanceDb } from './internal.js';
 
 export interface SummaryOptions {
   window?: SummaryWindowKey;
-  /** Rows returned in the tag and entity breakdowns. */
+  /** Rows returned in the tag, entity and cost-of-credit breakdowns. */
   topLimit?: number;
   /** Injected so the window arithmetic is testable at a month boundary. */
   now?: Date;
@@ -75,7 +76,7 @@ export interface FinanceSummary extends MeasureComparison {
    */
   empty: boolean;
   /**
-   * Every currency the accounts behind spend or income are denominated in.
+   * Every currency the accounts behind spend, income or cost of credit are denominated in.
    * More than one means the totals add unlike units — the ledger has no
    * conversion, so the figure is reported with the fact rather than without it.
    */
@@ -86,6 +87,8 @@ export interface FinanceSummary extends MeasureComparison {
   byTag: TagSpend[];
   byEntity: EntitySpend[];
   income: IncomeSummary;
+  /** Transaction-type fees excluded from spend and net. */
+  costOfCredit: CostOfCreditSummary;
   net: NetSummary;
   inference: SummaryInference;
 }
@@ -112,12 +115,22 @@ export function financeSummary(db: FinanceDb, options: SummaryOptions = {}): Fin
   const byAccount = spendByAccount(db, range, total.cents);
   const byMonth = spendByMonth(db, range, months);
   const income = incomeSummary(db, { range, previous: window.previous, months, topLimit });
+  const costOfCredit = costOfCreditSummary(db, {
+    range,
+    previous: window.previous,
+    months,
+    topLimit,
+  });
 
   return {
     window,
     empty: transactionsInRange(db, range) === 0,
     currencies: [
-      ...new Set([...byAccount, ...income.byAccount].flatMap((account) => account.currency ?? [])),
+      ...new Set(
+        [...byAccount, ...income.byAccount, ...costOfCredit.byAccount].flatMap(
+          (account) => account.currency ?? []
+        )
+      ),
     ].toSorted(),
     total,
     ...compareMeasures(total, previousTotal),
@@ -126,6 +139,7 @@ export function financeSummary(db: FinanceDb, options: SummaryOptions = {}): Fin
     byTag: spendByTag(db, range, total.cents, topLimit),
     byEntity: spendByEntity(db, range, total.cents, topLimit),
     income,
+    costOfCredit,
     net: netSummary({ total, previousTotal, byMonth }, income),
     inference: {
       largestCharge: largestCharge(db, range),

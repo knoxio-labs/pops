@@ -1311,7 +1311,7 @@ describe('against the live repo', () => {
   it("discovers bfm's finance calls through PillarGateway.call, not a literal pillar() token", () => {
     const { sites } = liveTree;
     const bfmFinanceSites = sites.filter((s) => s.consumer === 'bfm' && s.producer === 'finance');
-    expect(bfmFinanceSites).toHaveLength(7);
+    expect(bfmFinanceSites).toHaveLength(8);
     expect(new Set(bfmFinanceSites.map((s) => s.file)).size).toBe(4);
   });
 

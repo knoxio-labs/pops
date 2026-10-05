@@ -105,6 +105,21 @@ export function readAliases(storybookDir = STORYBOOK_DIR) {
 }
 
 /**
+ * Cross-pillar alias coverage applies only in the monorepo. EX-2 extracts
+ * libs/ui at its original relative depth but intentionally omits pillars/;
+ * an existing pillars directory with zero frontend apps remains an error.
+ *
+ * @param {string} pillarsDir
+ * @param {{ name: string, replacement: string }[]} aliases
+ * @returns {{ applicable: boolean, packages: { name: string, srcDir: string }[], errors: string[] }}
+ */
+export function checkMonorepoAliases(pillarsDir, aliases) {
+  if (!existsSync(pillarsDir)) return { applicable: false, packages: [], errors: [] };
+  const packages = listFrontendAppPackages(pillarsDir);
+  return { applicable: true, packages, errors: checkAliasCoverage(packages, aliases) };
+}
+
+/**
  * Compare discovered frontend packages against the parsed aliases.
  *
  * @param {{ name: string, srcDir: string }[]} packages
@@ -156,8 +171,11 @@ function report(heading, errors, remedy) {
  * @returns {boolean} true when both invariants hold
  */
 export function run() {
-  const packages = listFrontendAppPackages();
-  const aliasErrors = checkAliasCoverage(packages, readAliases());
+  const {
+    applicable: aliasesApplicable,
+    packages,
+    errors: aliasErrors,
+  } = checkMonorepoAliases(PILLARS_DIR, readAliases());
 
   const componentModules = listExportedComponentModules(UI_SRC_DIR);
   const storyFiles = listStoryFiles(UI_SRC_DIR);
@@ -182,9 +200,12 @@ export function run() {
   if (aliasErrors.length > 0 || coverageErrors.length > 0) return false;
 
   const allowlisted = Object.keys(STORY_COVERAGE_ALLOWLIST).length;
+  const aliasSummary = aliasesApplicable
+    ? `storybook aliases all ${packages.length} frontend @pops/app-* packages to their app/src`
+    : 'pillar storybook alias coverage skipped outside the monorepo';
   process.stdout.write(
-    `@pops/ui storybook aliases all ${packages.length} frontend @pops/app-* packages to their app/src, ` +
-      `and ${componentModules.length - allowlisted} of ${componentModules.length} exported component ` +
+    `@pops/ui ${aliasSummary}; ` +
+      `${componentModules.length - allowlisted} of ${componentModules.length} exported component ` +
       `modules are storied (${allowlisted} allowlisted) across ${storyFiles.length} story files.\n`
   );
   return true;
