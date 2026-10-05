@@ -126,13 +126,12 @@ export function listProducts(
 }
 
 /**
- * One product with its wordings, or undefined where no such product exists.
+ * One product with its wordings, or undefined where no wording reaches it.
  *
  * Separate from {@link listProducts} because a caller holding an id wants one
  * row: reading the whole dictionary and picking through it would grow with a
- * table the caller is not asking about, and — since the listing withholds a
- * product no wording reaches — would report a product that is there as
- * missing.
+ * table the caller is not asking about. Products with no wordings are
+ * withheld by both read paths to keep responses within `ProductSchema`.
  */
 export function getProduct(db: PurchasesDb, productId: string): ProductWithAliases | undefined {
   const product = db
@@ -148,6 +147,7 @@ export function getProduct(db: PurchasesDb, productId: string): ProductWithAlias
     .where(eq(purchaseProductAliases.productId, productId))
     .all()
     .toSorted((a, b) => (a.normalisedName < b.normalisedName ? -1 : 1));
+  if (aliases.length === 0) return undefined;
   return { product, aliases };
 }
 

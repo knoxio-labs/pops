@@ -731,22 +731,20 @@ describe('listing the dictionary', () => {
     ).toEqual(['CHK BRST 1KG']);
   });
 
-  it('reads one product by id, including one the listing withholds', () => {
+  it('withholds a product by id when no wording reaches it', () => {
     const known = productIdFor('LATTE');
     const [unreached] = opened.db
       .insert(purchaseProducts)
       .values({ label: 'Nothing resolves here' })
       .returning()
       .all();
+    if (unreached === undefined) throw new Error('Expected orphan product insert to return a row');
 
     expect(getProduct(opened.db, known)?.aliases.map((alias) => alias.printedName)).toEqual([
       'LATTE',
     ]);
     expect(getProduct(opened.db, 'nope')).toBeUndefined();
-    // The listing withholds a product no wording reaches, so picking one out
-    // of it would report a product that is there as missing.
-    expect(getProduct(opened.db, unreached?.id ?? 'missing')?.product.label).toBe(
-      'Nothing resolves here'
-    );
+    expect(getProduct(opened.db, unreached.id)).toBeUndefined();
+    expect(listProducts(opened.db).map((entry) => entry.product.id)).not.toContain(unreached.id);
   });
 });

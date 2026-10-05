@@ -65,6 +65,9 @@ export function makeProductHandlers(db: PurchasesDb) {
     propose: async () => ({ status: 200 as const, body: proposeProducts(db) }),
 
     rename: async ({ params, body }: { params: { productId: string }; body: RenameBody }) => {
+      if (getProduct(db, params.productId) === undefined) {
+        return notFound(`Product '${params.productId}' not found`);
+      }
       try {
         renameProduct(db, params.productId, body.label);
       } catch (err) {

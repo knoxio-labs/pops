@@ -161,7 +161,7 @@ A supermarket receipt says `CHK BRST 1KG`; an invoice for the same thing says `C
 | a wrong product      | `DELETE /products/:id` — takes every wording with it                                                |
 | a wrong name         | `PATCH /products/:id` again — the product stays a human's either way                                |
 
-A product left with no wordings is deleted in the same write: a product nothing resolves to is a label no read path can reach, and one a caller could still confirm and rename.
+A product left with no wordings is normally deleted in the same write. If one is inserted outside that path, the list and read endpoints withhold it so responses stay within `ProductSchema`; a rename answers 404 without changing it, while `DELETE /products/:id` can still remove it by id.
 
 Each row of that table is a control on `/purchases/products` — the frontend's own README states how the page presents them, and what a correction does to figures already derived from the old grouping.
 

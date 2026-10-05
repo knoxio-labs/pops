@@ -71,8 +71,8 @@ export const ProductSchema = z.object({
   createdAt: IsoTimestampSchema,
   /**
    * Every wording that resolves to this product, normalised name ascending.
-   * At least one: a product no wording reaches is deleted rather than
-   * listed, because nothing could ever group under it.
+   * At least one: a product no wording reaches is withheld by read paths,
+   * while normal write paths delete it.
    */
   aliases: z.array(ProductAliasSchema).min(1),
 });
