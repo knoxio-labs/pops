@@ -23,7 +23,9 @@ extension BFMPurchasesRepository {
         case .notFound, .unsupportedMediaType: return nil
         case .badRequest:
             throw RepositoryError.transport("\(GetReceiptThumbnail.id): invalid request")
-        case .unauthorized, .forbidden: throw RepositoryError.unauthorized
+        case .unauthorized: throw RepositoryError.unauthorized
+        case .forbidden(let forbidden):
+            throw BFMRepositoryFailure.forbiddenFailure(try forbidden.body.json)
         case .tooManyRequests:
             throw RepositoryError.transport("\(GetReceiptThumbnail.id): rate limited")
         case .badGateway(let upstream):
@@ -57,7 +59,9 @@ extension BFMPurchasesRepository {
         case .notFound: return nil
         case .badRequest:
             throw RepositoryError.transport("\(GetReceipt.id): invalid request")
-        case .unauthorized, .forbidden: throw RepositoryError.unauthorized
+        case .unauthorized: throw RepositoryError.unauthorized
+        case .forbidden(let forbidden):
+            throw BFMRepositoryFailure.forbiddenFailure(try forbidden.body.json)
         case .tooManyRequests:
             throw RepositoryError.transport("\(GetReceipt.id): rate limited")
         case .badGateway(let upstream):

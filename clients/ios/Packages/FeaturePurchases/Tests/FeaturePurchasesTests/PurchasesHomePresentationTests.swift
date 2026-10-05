@@ -8,8 +8,8 @@ import Testing
 internal struct PurchasesHomePresentationTests {
     @Test("every repository failure has its own symbol and title")
     func failuresStayDistinct() {
-        #expect(Set(PurchasesHomeFailure.allCases.map(\.symbol)).count == 6)
-        #expect(Set(PurchasesHomeFailure.allCases.map(\.title)).count == 6)
+        #expect(Set(PurchasesHomeFailure.allCases.map(\.symbol)).count == 7)
+        #expect(Set(PurchasesHomeFailure.allCases.map(\.title)).count == 7)
     }
 
     @Test("failure actions only offer a step that can help")
@@ -17,6 +17,7 @@ internal struct PurchasesHomePresentationTests {
         #expect(PurchasesHomeFailure.unavailable.action == .retry)
         #expect(PurchasesHomeFailure.transport.action == .retry)
         #expect(PurchasesHomeFailure.unauthorized.action == .pair)
+        #expect(PurchasesHomeFailure.featureUnavailable.action == nil)
         #expect(PurchasesHomeFailure.contractMismatch.action == nil)
         #expect(PurchasesHomeFailure.conflict.action == nil)
         #expect(PurchasesHomeFailure.dependencyNotBound.action == nil)

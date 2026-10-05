@@ -233,8 +233,10 @@ extension Operations.MobilePurchases_saveReceiptDraft.Output: WriteOutput {
             return BFMReceiptCaptureRepository.purchase(from: try ok.body.json)
         case .badRequest:
             throw RepositoryError.requestRejected
-        case .unauthorized, .forbidden:
+        case .unauthorized:
             throw RepositoryError.unauthorized
+        case .forbidden(let forbidden):
+            throw BFMRepositoryFailure.forbiddenFailure(try forbidden.body.json)
         case .tooManyRequests:
             throw RepositoryError.transport("\(operation): rate limited")
         case .badGateway(let upstream):
@@ -256,8 +258,10 @@ extension Operations.MobilePurchases_createManualPurchase.Output: WriteOutput {
             return BFMReceiptCaptureRepository.purchase(from: try ok.body.json)
         case .badRequest:
             throw RepositoryError.requestRejected
-        case .unauthorized, .forbidden:
+        case .unauthorized:
             throw RepositoryError.unauthorized
+        case .forbidden(let forbidden):
+            throw BFMRepositoryFailure.forbiddenFailure(try forbidden.body.json)
         case .tooManyRequests:
             throw RepositoryError.transport("\(operation): rate limited")
         case .badGateway(let upstream):

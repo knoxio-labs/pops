@@ -20,7 +20,7 @@ internal enum TransactionsCopy {
 
     internal static func offersRetry(for error: RepositoryError) -> Bool {
         switch error {
-        case .contractMismatch, .requestRejected, .dependencyNotBound:
+        case .contractMismatch, .requestRejected, .featureUnavailable, .dependencyNotBound:
             false
         case .unavailable, .unauthorized, .rateLimited, .conflict, .transport:
             true
@@ -79,6 +79,8 @@ internal enum TransactionsCopy {
                 + "Nothing is lost — try again in a moment."
         case .unauthorized:
             return "This device is no longer signed in."
+        case .featureUnavailable:
+            return "This feature isn't available with this device's permissions."
         case .rateLimited(let retryAfterSeconds):
             return "Too many requests. Wait \(waitDuration(retryAfterSeconds)) before trying again."
         case .contractMismatch:

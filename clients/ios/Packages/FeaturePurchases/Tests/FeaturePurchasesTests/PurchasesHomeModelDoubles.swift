@@ -6,6 +6,7 @@ import Foundation
 internal let homeFailureCases: [(RepositoryError, PurchasesHomeFailure)] = [
     (.unavailable, .unavailable),
     (.unauthorized, .unauthorized),
+    (.featureUnavailable, .featureUnavailable),
     (.contractMismatch, .contractMismatch),
     (.conflict("already_saved"), .conflict),
     (.transport("offline"), .transport),

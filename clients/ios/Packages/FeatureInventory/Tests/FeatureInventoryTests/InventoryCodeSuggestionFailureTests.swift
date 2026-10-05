@@ -9,7 +9,8 @@ import Testing
 internal struct InventoryCodeSuggestionFailureTests {
     @Test(arguments: [
         (RepositoryError.unavailable, InventoryCodeSuggestionFailure.unavailable),
-        (.unauthorized, .unauthorized), (.contractMismatch, .contractMismatch),
+        (.unauthorized, .unauthorized), (.featureUnavailable, .featureUnavailable),
+        (.contractMismatch, .contractMismatch),
         (RepositoryError.requestRejected, .clientTooOld),
         (.conflict("private diagnostic"), .conflict),
         (.transport("private diagnostic"), .transport), (.dependencyNotBound, .dependencyNotBound),

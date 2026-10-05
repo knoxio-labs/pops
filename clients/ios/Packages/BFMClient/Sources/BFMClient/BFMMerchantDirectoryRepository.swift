@@ -39,8 +39,10 @@ public struct BFMMerchantDirectoryRepository: MerchantDirectoryRepository {
             return try ok.body.json.data.map(Self.entry(from:))
         case .badRequest:
             throw RepositoryError.transport("\(SearchMerchants.id): invalid request")
-        case .unauthorized, .forbidden:
+        case .unauthorized:
             throw RepositoryError.unauthorized
+        case .forbidden(let forbidden):
+            throw BFMRepositoryFailure.forbiddenFailure(try forbidden.body.json)
         case .tooManyRequests:
             throw RepositoryError.transport("\(SearchMerchants.id): rate limited")
         case .badGateway(let upstream):
@@ -72,8 +74,10 @@ public struct BFMMerchantDirectoryRepository: MerchantDirectoryRepository {
             return nil
         case .badRequest:
             throw RepositoryError.transport("\(GetMerchant.id): invalid request")
-        case .unauthorized, .forbidden:
+        case .unauthorized:
             throw RepositoryError.unauthorized
+        case .forbidden(let forbidden):
+            throw BFMRepositoryFailure.forbiddenFailure(try forbidden.body.json)
         case .tooManyRequests:
             throw RepositoryError.transport("\(GetMerchant.id): rate limited")
         case .badGateway(let upstream):
@@ -104,8 +108,10 @@ public struct BFMMerchantDirectoryRepository: MerchantDirectoryRepository {
             return Self.entry(from: try ok.body.json)
         case .badRequest:
             throw RepositoryError.transport("\(CreateMerchant.id): invalid request")
-        case .unauthorized, .forbidden:
+        case .unauthorized:
             throw RepositoryError.unauthorized
+        case .forbidden(let forbidden):
+            throw BFMRepositoryFailure.forbiddenFailure(try forbidden.body.json)
         case .tooManyRequests:
             throw RepositoryError.transport("\(CreateMerchant.id): rate limited")
         case .badGateway(let upstream):
@@ -141,8 +147,10 @@ public struct BFMMerchantDirectoryRepository: MerchantDirectoryRepository {
             throw RepositoryError.transport("\(GetMerchantAddresses.id): no such merchant")
         case .badRequest:
             throw RepositoryError.transport("\(GetMerchantAddresses.id): invalid request")
-        case .unauthorized, .forbidden:
+        case .unauthorized:
             throw RepositoryError.unauthorized
+        case .forbidden(let forbidden):
+            throw BFMRepositoryFailure.forbiddenFailure(try forbidden.body.json)
         case .tooManyRequests:
             throw RepositoryError.transport("\(GetMerchantAddresses.id): rate limited")
         case .badGateway(let upstream):
@@ -181,8 +189,10 @@ public struct BFMMerchantDirectoryRepository: MerchantDirectoryRepository {
             throw RepositoryError.transport("\(CreateMerchantAddress.id): no such merchant")
         case .badRequest:
             throw RepositoryError.transport("\(CreateMerchantAddress.id): invalid request")
-        case .unauthorized, .forbidden:
+        case .unauthorized:
             throw RepositoryError.unauthorized
+        case .forbidden(let forbidden):
+            throw BFMRepositoryFailure.forbiddenFailure(try forbidden.body.json)
         case .tooManyRequests:
             throw RepositoryError.transport("\(CreateMerchantAddress.id): rate limited")
         case .badGateway(let upstream):

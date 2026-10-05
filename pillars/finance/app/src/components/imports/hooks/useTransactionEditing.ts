@@ -137,16 +137,6 @@ function buildSaveEdit(deps: SaveEditDeps) {
     const hasChanges = detectChange(transaction, editedFields);
     const entityChanged = detectEntityChange(transaction, editedFields);
 
-    // Repointing the merchant on a rule-matched row is itself a correction —
-    // always route it to the proposal flow. A plain field edit (e.g. fixing
-    // the transaction type) only does when the user opted to learn a rule
-    // ("Save & Learn"); "Save Once" must save the row outright.
-    if (isRuleMatched && entityChanged) {
-      deps.setEditingTransaction(null);
-      void deps.generateProposal(buildLearnArgs(transaction, editedFields));
-      return;
-    }
-
     const updatedTx: ProcessedTransaction = {
       ...transaction,
       ...editedFields,
@@ -157,6 +147,11 @@ function buildSaveEdit(deps: SaveEditDeps) {
 
     const repointedTo = repointedEntityId(transaction, editedFields);
     if (repointedTo) void deps.recomputeForEntity([updatedTx], repointedTo);
+
+    if (isRuleMatched && entityChanged) {
+      void deps.generateProposal(buildLearnArgs(transaction, editedFields));
+      return;
+    }
 
     if (shouldLearn && hasChanges) {
       void deps.generateProposal(buildLearnArgs(transaction, editedFields));

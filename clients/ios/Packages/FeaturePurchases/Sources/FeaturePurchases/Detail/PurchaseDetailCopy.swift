@@ -8,6 +8,7 @@ internal enum PurchaseDetailCopy {
         case .unreachable: "exclamationmark.icloud"
         case .notFound: "doc.questionmark"
         case .unauthorized: "lock"
+        case .featureUnavailable: "lock"
         case .contractMismatch: "arrow.down.app"
         }
     }
@@ -17,7 +18,8 @@ internal enum PurchaseDetailCopy {
         case .offline: "Offline"
         case .unreachable: "Purchases didn't answer"
         case .notFound: "Purchase not found"
-        case .unauthorized: "No access to purchases"
+        case .unauthorized: "Session ended"
+        case .featureUnavailable: "Purchases unavailable"
         case .contractMismatch: "Update Pops"
         }
     }
@@ -27,7 +29,8 @@ internal enum PurchaseDetailCopy {
         case .offline: "It opens once this phone is back online."
         case .unreachable: "Nothing was lost."
         case .notFound: "It may have been deleted."
-        case .unauthorized: "This phone's key doesn't include Purchases."
+        case .unauthorized: "Pair this phone again to view Purchases."
+        case .featureUnavailable: "This phone isn't allowed to use Purchases."
         case .contractMismatch: "This version can't read this purchase."
         }
     }
@@ -35,7 +38,7 @@ internal enum PurchaseDetailCopy {
     internal static func isRetryable(_ failure: PurchaseDetailFailure) -> Bool {
         switch failure {
         case .offline, .unreachable: true
-        case .notFound, .unauthorized, .contractMismatch: false
+        case .notFound, .unauthorized, .featureUnavailable, .contractMismatch: false
         }
     }
 
@@ -44,7 +47,8 @@ internal enum PurchaseDetailCopy {
         case .offline: "Offline, showing the saved copy"
         case .unreachable: "Couldn't refresh"
         case .notFound: "Deleted elsewhere"
-        case .unauthorized: "No longer allowed to refresh"
+        case .unauthorized: "Sign in again to refresh"
+        case .featureUnavailable: "Purchases aren't available to this phone"
         case .contractMismatch: "Update Pops to refresh"
         }
     }

@@ -102,19 +102,22 @@ internal struct TransactionsRequestTests {
         #expect(await transport.recorded.all.count == 1)
     }
 
-    /// The generated deserializer decodes eagerly, so a documented status
-    /// carrying a body it cannot read — the HTML page an intermediary returns —
-    /// never reaches the response switch. The status is the actionable half and
-    /// it survives.
-    @Test("a documented status with an unreadable body keeps its meaning")
+    /// The generated deserializer decodes eagerly, so an unreadable refusal
+    /// body does not identify either revocation or capability denial.
+    @Test("an unreadable refusal body does not end the session")
     func documentedStatusWithHTMLBody() async {
         let html = "<html><body>Forbidden</body></html>"
 
-        await #expect(throws: RepositoryError.unauthorized) {
+        let forbidden = await #expect(throws: RepositoryError.self) {
             try await BFMTransactionsRepository
                 .stubbed(StubTransport(status: .forbidden, json: html))
                 .transactions(after: nil)
         }
+        guard case .transport(let failure) = forbidden else {
+            Issue.record("expected an unreadable refusal to remain a transport failure")
+            return
+        }
+        #expect(failure.popsError?.code == "ios.http.403")
         await #expect(throws: RepositoryError.unavailable) {
             try await BFMTransactionsRepository
                 .stubbed(StubTransport(status: .serviceUnavailable, json: html))

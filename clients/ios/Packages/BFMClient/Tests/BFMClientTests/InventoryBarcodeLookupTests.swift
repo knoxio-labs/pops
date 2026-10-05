@@ -95,7 +95,13 @@ internal struct InventoryBarcodeLookupTests {
 
         for (status, expectedMessage) in responses {
             let code = "bfm.test.status_\(status.code)"
-            let body = """
+            let body =
+                status == .forbidden
+                ? #"""
+                {"code":"capability_not_granted","message":"Request refused",
+                 "capability":"inventory.barcode.lookup"}
+                """#
+                : """
                 {"code":"\(code)","message":"Request refused","requestId":"refusal-42",
                  "retryable":\(status == .tooManyRequests)}
                 """
@@ -105,8 +111,10 @@ internal struct InventoryBarcodeLookupTests {
                 _ = try await transport.lookUp(code: "9780140328721")
                 Issue.record("Expected HTTP refusal")
             } catch let error as PopsError {
-                #expect(error.code == code)
-                #expect(error.requestID == "refusal-42")
+                #expect(
+                    error.code
+                        == (status == .forbidden ? "ios.auth.capability_not_granted" : code))
+                #expect(error.requestID == (status == .forbidden ? nil : "refusal-42"))
                 #expect(error.message.contains(expectedMessage))
                 #expect(error.retryable == (status == .tooManyRequests))
             }

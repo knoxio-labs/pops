@@ -50,10 +50,27 @@ internal struct ReceiptCaptureFailureTests {
     @Test("a rejected or absent credential ends as unauthorized")
     func rejectedCredentials() async {
         let invalidToken = ReceiptCaptureWire.failure(code: "invalid_token")
-        let revoked = ReceiptCaptureWire.failure(code: "device_revoked")
+        let revoked = ReceiptCaptureWire.failure(code: "bfm.auth.device_revoked")
+        let capabilityDenied = ReceiptCaptureWire.failure(code: "capability_not_granted")
 
         #expect(await error(status: .unauthorized, json: invalidToken) == .unauthorized)
         #expect(await error(status: .forbidden, json: revoked) == .unauthorized)
+        #expect(await error(status: .forbidden, json: capabilityDenied) == .featureUnavailable)
+    }
+
+    @Test("receipt draft and manual purchase capability refusals keep their distinct meaning")
+    func writeCapabilityDenialsStayFeatureUnavailable() async {
+        let capabilityDenied =
+            #"{"code":"capability_not_granted","message":"denied","capability":"purchases.write"}"#
+        let draftFailure = await writeFailure {
+            try await saveDraft(.forbidden, json: capabilityDenied)
+        }
+        let manualFailure = await writeFailure {
+            try await createManualPurchase(.forbidden, json: capabilityDenied)
+        }
+
+        #expect(draftFailure == .featureUnavailable)
+        #expect(manualFailure == .featureUnavailable)
     }
 
     @Test("purchases not answering and purchases answering unreadably stay separate facts")

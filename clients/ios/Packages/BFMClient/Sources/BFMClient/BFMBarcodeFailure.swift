@@ -18,7 +18,9 @@ internal enum BFMBarcodeFailure {
             ?? BFMErrorDecodingMiddleware.requestID(from: error.response)
         let original = failure?.popsError
         return PopsError(
-            code: original?.code ?? status.map { "ios.http.\($0)" } ?? "ios.barcode.transport",
+            code: original?.code == "capability_not_granted"
+                ? "ios.auth.capability_not_granted"
+                : original?.code ?? status.map { "ios.http.\($0)" } ?? "ios.barcode.transport",
             message: message(status: status, kind: original?.kind),
             requestID: requestID,
             retryable: original?.retryable ?? (status.map { $0 >= 500 } ?? true),
@@ -31,6 +33,15 @@ internal enum BFMBarcodeFailure {
             code: "ios.http.\(status)", message: message(status: status, kind: nil),
             retryable: status == 408 || status == 429 || status >= 500,
             kind: status >= 500 ? .server : .client)
+    }
+
+    internal static func capabilityDenied() -> PopsError {
+        PopsError(
+            code: "ios.auth.capability_not_granted",
+            message: message(status: 403, kind: nil),
+            retryable: false,
+            kind: .client
+        )
     }
 
     private static func message(status: Int?, kind: PopsError.Kind?) -> String {

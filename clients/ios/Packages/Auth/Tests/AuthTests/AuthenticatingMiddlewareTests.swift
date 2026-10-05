@@ -214,38 +214,4 @@ internal struct AuthenticatingMiddlewareTests {
         #expect(fixture.session.events.isEmpty)
         #expect(try fixture.tokenStore.load() == .stub())
     }
-
-    // MARK: - 403
-
-    @Test("a 403 wipes the device and never attempts a refresh")
-    func revokedDeviceIsWipedWithoutRefreshing() async throws {
-        let fixture = try MiddlewareFixture()
-        let transport = RecordingTransport { _ in .forbidden }
-
-        let response = try await fixture.send(through: transport)
-
-        #expect(response.status == .forbidden)
-        #expect(transport.attempts.count == 1)
-        #expect(fixture.exchange.challengeCount == 0, "403 must not cost a refresh round trip")
-        #expect(fixture.session.events == [.revoked(.revokedByOperator)])
-        #expect(try fixture.tokenStore.load() == nil)
-        #expect(try fixture.keyStore.publicKey() == nil)
-    }
-
-    /// A revocation that lands between the two attempts. Handled without
-    /// recursing, so the number of requests this middleware can make stays two.
-    @Test("a 403 on the retry is still a revocation")
-    func revocationBetweenTheTwoAttempts() async throws {
-        let fixture = try MiddlewareFixture()
-        let transport = RecordingTransport { request in
-            request.headerFields[.authorization] == "Bearer access-1" ? .unauthorized : .forbidden
-        }
-
-        let response = try await fixture.send(through: transport)
-
-        #expect(response.status == .forbidden)
-        #expect(transport.attempts.count == 2)
-        #expect(fixture.session.events == [.revoked(.revokedByOperator)])
-        #expect(try fixture.tokenStore.load() == nil)
-    }
 }

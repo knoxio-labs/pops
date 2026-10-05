@@ -64,9 +64,9 @@ internal struct InventoryCodeSuggestTests {
         }
     }
 
-    @Test("403 capability_not_granted is unauthorized, same as every other /mobile/inventory route")
+    @Test("403 capability_not_granted is a feature-unavailable failure")
     func capabilityDenied() async throws {
-        await #expect(throws: RepositoryError.unauthorized) {
+        await #expect(throws: RepositoryError.featureUnavailable) {
             _ = try await BFMInventoryTransport.stubbed(
                 StubTransport(
                     status: .forbidden, json: InventoryWire.forbidden(capability: "inventory.write")

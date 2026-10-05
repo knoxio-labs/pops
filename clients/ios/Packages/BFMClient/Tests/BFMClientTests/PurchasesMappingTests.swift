@@ -42,6 +42,42 @@ internal struct PurchasesMappingTests {
         #expect(page.totalCount == nil)
     }
 
+    @Test("purchase reads report a capability refusal without treating the session as ended")
+    func capabilityDenialStaysFeatureUnavailable() async throws {
+        let repository = try BFMPurchasesRepository.stubbed(
+            StubTransport(
+                status: .forbidden,
+                json:
+                    #"{"code":"capability_not_granted","message":"denied","capability":"purchases.read"}"#
+            ))
+
+        await #expect(throws: RepositoryError.featureUnavailable) {
+            try await repository.purchases(after: nil, statusFilter: .all)
+        }
+        await #expect(throws: RepositoryError.featureUnavailable) {
+            try await repository.monthSummary(for: .distantPast)
+        }
+        await #expect(throws: RepositoryError.featureUnavailable) {
+            try await repository.purchaseDetail(id: "purchase-1")
+        }
+        await #expect(throws: RepositoryError.featureUnavailable) {
+            try await repository.search(
+                query: PurchaseSearchQuery(text: "cafe", kind: .all, status: .any, tags: []),
+                after: nil,
+                limit: 20
+            )
+        }
+        await #expect(throws: RepositoryError.featureUnavailable) {
+            try await repository.purchaseTags(search: "", after: nil, limit: 20)
+        }
+        await #expect(throws: RepositoryError.featureUnavailable) {
+            try await repository.receiptImage(sha256: "abc")
+        }
+        await #expect(throws: RepositoryError.featureUnavailable) {
+            try await repository.receiptThumbnail(sha256: "abc")
+        }
+    }
+
     @Test("a purchase list row becomes the app's own vocabulary")
     func mapsAListRow() async throws {
         let repository = try BFMPurchasesRepository.stubbed(

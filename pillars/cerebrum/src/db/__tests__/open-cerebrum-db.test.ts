@@ -6,11 +6,12 @@
  * re-run against the same DB. Covers both the nudge_log slice and the
  * engrams baseline.
  */
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import Database from 'better-sqlite3';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { openCerebrumDb } from '../open-cerebrum-db.js';
 import {
@@ -35,6 +36,32 @@ afterEach(() => {
 });
 
 describe('openCerebrumDb', () => {
+  it('closes the database handle when a pragma rejects an invalid SQLite file', () => {
+    const path = join(tmpDir, 'cerebrum.db');
+    writeFileSync(path, 'this is not a sqlite file');
+
+    const instances: Database.Database[] = [];
+    const original = Database.prototype.pragma;
+    const spy = vi.spyOn(Database.prototype, 'pragma').mockImplementation(function (
+      this: Database.Database,
+      ...args: [string]
+    ) {
+      instances.push(this);
+      return original.apply(this, args);
+    });
+
+    try {
+      expect(() => openCerebrumDb(path, { loadVec: false })).toThrow();
+    } finally {
+      spy.mockRestore();
+    }
+
+    const captured = instances[0];
+    if (captured === undefined)
+      throw new Error('pragma() was never called — test did not capture the opened handle');
+    expect(captured.open).toBe(false);
+  });
+
   it('creates the parent directory and opens a fresh DB', () => {
     const path = join(tmpDir, 'nested', 'sub', 'cerebrum.db');
     expect(existsSync(path)).toBe(false);

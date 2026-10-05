@@ -36,16 +36,17 @@ Leaving out **Late** is how a request queued behind twenty others triggers a sec
 
 ## The status codes are the contract
 
-| Status | Means                           | This app                                                       |
-| ------ | ------------------------------- | -------------------------------------------------------------- |
-| `401`  | this access token is not usable | refresh once, retry once. A second `401` is **not** retried    |
-| `403`  | this _device_ is not usable     | destroy the key and the tokens, drive the session to `revoked` |
+| Status                        | Means                                    | This app                                                         |
+| ----------------------------- | ---------------------------------------- | ---------------------------------------------------------------- |
+| `401`                         | this access token is not usable          | refresh once, retry once. A second `401` is **not** retried      |
+| `403 bfm.auth.device_revoked` | an operator revoked this device          | destroy credentials and drive the session to `revoked`           |
+| `403 capability_not_granted`  | this route is outside the device's grant | keep the paired session and return a feature-unavailable failure |
 
 There is no retry counter, because there is no loop: the retried request is sent once and its answer is returned whatever it is.
 
 A revocation and a rotation can be in flight together, and the rotation can finish **second** — request A's refresh is accepted just before the revocation reaches the row, request B's `/mobile` call meets the guard just after. The refresh then returns a perfectly valid new pair for a device that has just been wiped. `DeviceSessionRefresher` carries a credential epoch for exactly this: a rotation that started before a wipe does not write what it obtained, because doing so would leave a token pair with no Enclave key behind it — the half-state `DeviceCredentialStore.wipe()` exists to make impossible.
 
-The `403` path is the only one that destroys anything on a refusal. A rejected _grant_ does not wipe — re-pairing is what replaces those credentials and re-pairing wipes first, so destroying them eagerly would only add a way for a misread `401` to cost a device its identity. And a `401` or `403` whose body this build cannot decode is treated as a transport failure rather than as either refusal: Cloudflare Access answers exactly those two statuses with exactly such a page, and this BFM's device surface is one misapplied policy away from serving them to every handset at once. `BFMClient`'s `DeviceRefresh.swift` argues that asymmetry against pairing's, which does infer from a bare status.
+Only the explicit `bfm.auth.device_revoked` body destroys credentials. A rejected _grant_ does not wipe — re-pairing is what replaces those credentials and re-pairing wipes first, so destroying them eagerly would only add a way for a misread refusal to cost a device its identity. An unreadable `403` is not evidence of revocation, so the middleware leaves the session intact and returns the response for `BFMClient` to classify.
 
 ## A middleware, not a transport
 

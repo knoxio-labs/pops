@@ -17,7 +17,9 @@ extension BFMPurchasesRepository {
         case .notFound: return nil
         case .badRequest:
             throw RepositoryError.transport("\(GetPurchase.id): invalid request")
-        case .unauthorized, .forbidden: throw RepositoryError.unauthorized
+        case .unauthorized: throw RepositoryError.unauthorized
+        case .forbidden(let forbidden):
+            throw BFMRepositoryFailure.forbiddenFailure(try forbidden.body.json)
         case .tooManyRequests:
             throw RepositoryError.transport("\(GetPurchase.id): rate limited")
         case .badGateway(let upstream):

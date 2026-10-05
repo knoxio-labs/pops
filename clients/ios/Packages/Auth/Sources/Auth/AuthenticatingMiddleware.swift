@@ -23,9 +23,12 @@ import OpenAPIRuntime
 ///   trying again cannot fix. It is returned to the caller as the `401` it is.
 ///   That is the whole of the loop protection, and it is structural — there is
 ///   no counter to get wrong, because there is no loop.
-/// - **`403`** — this *device* is not usable. An operator revoked it, and no
-///   token will ever work again. Refreshing would burn a round trip to be told
-///   the same thing; the credentials are destroyed and the session ends.
+/// - **`403 bfm.auth.device_revoked`** — an operator revoked this device. The
+///   credentials are destroyed and the session ends.
+/// - **`403 capability_not_granted`** — the device remains paired but cannot
+///   use this route. The response is returned without changing the session.
+///   Other or unreadable `403` bodies are also returned without destroying
+///   credentials; only the explicit revocation code ends the session.
 ///
 /// ## What it will not touch
 ///
@@ -60,6 +63,8 @@ import OpenAPIRuntime
 /// request renders no token. That is a property of the runtime rather than of
 /// this file, so it is asserted by a test rather than assumed.
 public struct AuthenticatingMiddleware: ClientMiddleware {
+    private static let maximumRefusalBodyBytes = 1_048_576
+
     /// Every request path this middleware authenticates. The BFM's device
     /// surface — pairing, challenge, refresh — and `/health` are unauthenticated
     /// by definition and are deliberately absent.
@@ -140,12 +145,34 @@ extension AuthenticatingMiddleware {
             // The retry can meet a revocation that landed between the two
             // attempts. Handled here rather than by recursing, so the number of
             // requests this middleware can make stays two.
-            if retried.0.status.code == 403 { await refresher.deviceWasRevoked() }
-            return retried
+            return await preservingSessionUnlessRevoked(retried)
         case 403:
-            await refresher.deviceWasRevoked()
-            return answered
+            return await preservingSessionUnlessRevoked(answered)
         default:
+            return answered
+        }
+    }
+
+    private func preservingSessionUnlessRevoked(
+        _ answered: (HTTPResponse, HTTPBody?)
+    ) async -> (HTTPResponse, HTTPBody?) {
+        guard answered.0.status.code == 403, let body = answered.1 else { return answered }
+        if body.iterationBehavior == .single {
+            guard case .known(let length) = body.length,
+                length <= Int64(Self.maximumRefusalBodyBytes)
+            else { return answered }
+        }
+
+        do {
+            let bytes = try await [UInt8](collecting: body, upTo: Self.maximumRefusalBodyBytes)
+            let replayedBody = HTTPBody(bytes)
+            if let refusal = try? JSONDecoder().decode(BFMRefusalBody.self, from: Data(bytes)),
+                refusal.code == "bfm.auth.device_revoked"
+            {
+                await refresher.deviceWasRevoked()
+            }
+            return (answered.0, replayedBody)
+        } catch {
             return answered
         }
     }
@@ -159,4 +186,8 @@ extension AuthenticatingMiddleware {
         stripped.headerFields[.authorization] = nil
         return stripped
     }
+}
+
+private struct BFMRefusalBody: Decodable {
+    let code: String
 }
