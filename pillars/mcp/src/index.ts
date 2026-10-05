@@ -11,7 +11,7 @@ import { createPillarErrorHandlers } from '@pops/pillar-express';
 import { shutdownPillar, type ClosableServer } from '@pops/pillar-sdk/bootstrap';
 import { assertSecretFilesReadable } from '@pops/pillar-sdk/pillar-env';
 
-import { inboundAuth, resolveInboundToken } from './auth.js';
+import { inboundAuth, isInboundAuthConfigured, requireInboundToken } from './auth.js';
 import { requireServiceAccountKey, resolveServiceAccountKey } from './service-account-key.js';
 import { allTools } from './tools/index.js';
 
@@ -128,7 +128,7 @@ app.post('/mcp', inboundAuth, async (req, res) => {
 
 // Liveness vs readiness:
 //   /health  — fast, no upstream calls, used by Docker HEALTHCHECK
-//   /ready   — verifies POPS_API_KEY is set (the most common misconfig);
+//   /ready   — verifies both outbound and inbound credentials are configured;
 //              returns 503 when degraded so orchestrators can route around.
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', tools: allTools.length });
@@ -136,9 +136,12 @@ app.get('/health', (_req, res) => {
 
 app.get('/ready', (_req, res) => {
   const apiKeyConfigured = resolveServiceAccountKey() !== undefined;
-  res.status(apiKeyConfigured ? 200 : 503).json({
-    status: apiKeyConfigured ? 'ready' : 'degraded',
+  const inboundAuthConfigured = isInboundAuthConfigured();
+  const ready = apiKeyConfigured && inboundAuthConfigured;
+  res.status(ready ? 200 : 503).json({
+    status: ready ? 'ready' : 'degraded',
     apiKeyConfigured,
+    inboundAuthConfigured,
     tools: allTools.length,
   });
 });
@@ -204,8 +207,9 @@ export function installShutdownHandlers(
 // pillar, so a keyless process would bind the port, pass its healthcheck and
 // fail every call.
 if (process.env['NODE_ENV'] !== 'test') {
-  // Validate the token file's contents before binding; readability alone does not reject an empty file.
-  resolveInboundToken();
+  // Inbound access is bearer-protected. Fail before binding if no usable token
+  // is configured; a declared file never falls through to the env token.
+  requireInboundToken();
   // Before the key is resolved. `requireServiceAccountKey` is fatal when no
   // source yields a value, but a `*_FILE` variable naming a file this process
   // cannot open is not that case — the file source falls through to the

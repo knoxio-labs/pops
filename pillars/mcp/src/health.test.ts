@@ -10,11 +10,17 @@ import type { AddressInfo } from 'node:net';
 // Snapshot before module-level mutation so the suite restores cleanly even
 // when run alongside other tests in the same vitest worker.
 const originalNodeEnv = process.env['NODE_ENV'];
-const KEY_VARS = ['POPS_API_KEY', 'POPS_INTERNAL_API_KEY', 'POPS_API_KEY_FILE'] as const;
+const KEY_VARS = [
+  'POPS_API_KEY',
+  'POPS_INTERNAL_API_KEY',
+  'POPS_API_KEY_FILE',
+  'MCP_INBOUND_TOKEN',
+  'MCP_INBOUND_TOKEN_FILE',
+] as const;
 const originalKeyVars = Object.fromEntries(KEY_VARS.map((k) => [k, process.env[k]]));
 
-/** Clear every source `/ready` consults, so a test asserts on what it sets alone. */
-function clearKeySources(): void {
+/** Clear every credential source `/ready` consults, so tests assert on what they set alone. */
+function clearCredentialSources(): void {
   for (const name of KEY_VARS) delete process.env[name];
 }
 process.env['NODE_ENV'] = 'test';
@@ -33,10 +39,9 @@ beforeAll(async () => {
 });
 
 afterEach(() => {
-  // Every test below toggles a key source — reset to the snapshot per-test so
+  // Every test below toggles a credential source — reset to the snapshot per-test so
   // the next one starts from the same baseline regardless of which ran last
-  // (or whether one threw mid-assert). All three are restored, not just
-  // POPS_API_KEY: `/ready` consults the file and the internal var too.
+  // (or whether one threw mid-assert).
   for (const name of KEY_VARS) {
     const original = originalKeyVars[name];
     if (original === undefined) delete process.env[name];
@@ -54,7 +59,7 @@ afterAll(async () => {
 
 describe('GET /health', () => {
   it('returns 200 with status ok regardless of API key configuration', async () => {
-    clearKeySources();
+    clearCredentialSources();
     const res = await fetch(`${baseUrl}/health`);
     expect(res.status).toBe(200);
     const body = (await res.json()) as { status: string; tools: number };
@@ -64,28 +69,52 @@ describe('GET /health', () => {
 });
 
 describe('GET /ready', () => {
-  it('returns 200 ready when POPS_API_KEY is configured', async () => {
-    clearKeySources();
+  it('returns 200 ready when outbound and inbound credentials are configured', async () => {
+    clearCredentialSources();
     process.env['POPS_API_KEY'] = 'sa_test';
+    process.env['MCP_INBOUND_TOKEN'] = 'inbound_test';
     const res = await fetch(`${baseUrl}/ready`);
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
       status: string;
       apiKeyConfigured: boolean;
+      inboundAuthConfigured: boolean;
       tools: number;
     };
     expect(body.status).toBe('ready');
     expect(body.apiKeyConfigured).toBe(true);
+    expect(body.inboundAuthConfigured).toBe(true);
     expect(body.tools).toBeGreaterThan(0);
   });
 
-  it('returns 503 degraded when POPS_API_KEY is missing', async () => {
-    clearKeySources();
+  it('returns 503 degraded when outbound credentials are missing', async () => {
+    clearCredentialSources();
+    process.env['MCP_INBOUND_TOKEN'] = 'inbound_test';
     const res = await fetch(`${baseUrl}/ready`);
     expect(res.status).toBe(503);
-    const body = (await res.json()) as { status: string; apiKeyConfigured: boolean };
+    const body = (await res.json()) as {
+      status: string;
+      apiKeyConfigured: boolean;
+      inboundAuthConfigured: boolean;
+    };
     expect(body.status).toBe('degraded');
     expect(body.apiKeyConfigured).toBe(false);
+    expect(body.inboundAuthConfigured).toBe(true);
+  });
+
+  it('returns 503 degraded when inbound auth is missing', async () => {
+    clearCredentialSources();
+    process.env['POPS_API_KEY'] = 'sa_test';
+    const res = await fetch(`${baseUrl}/ready`);
+    expect(res.status).toBe(503);
+    const body = (await res.json()) as {
+      status: string;
+      apiKeyConfigured: boolean;
+      inboundAuthConfigured: boolean;
+    };
+    expect(body.status).toBe('degraded');
+    expect(body.apiKeyConfigured).toBe(true);
+    expect(body.inboundAuthConfigured).toBe(false);
   });
 });
 
@@ -105,10 +134,11 @@ describe('GET /ready — the production shape, a mounted secret file', () => {
   });
 
   it('is ready when only POPS_API_KEY_FILE is set and the file is readable', async () => {
-    clearKeySources();
+    clearCredentialSources();
     const path = join(dir, 'pops_api_key');
     writeFileSync(path, 'pops_sa_live.abc123\n');
     process.env['POPS_API_KEY_FILE'] = path;
+    process.env['MCP_INBOUND_TOKEN'] = 'inbound_test';
 
     const res = await fetch(`${baseUrl}/ready`);
 
@@ -117,8 +147,9 @@ describe('GET /ready — the production shape, a mounted secret file', () => {
   });
 
   it('is degraded when POPS_API_KEY_FILE points at a file it cannot read', async () => {
-    clearKeySources();
+    clearCredentialSources();
     process.env['POPS_API_KEY_FILE'] = join(dir, 'does-not-exist');
+    process.env['MCP_INBOUND_TOKEN'] = 'inbound_test';
 
     const res = await fetch(`${baseUrl}/ready`);
 

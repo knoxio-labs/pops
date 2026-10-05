@@ -32,11 +32,11 @@ vi.mock('@modelcontextprotocol/sdk/server/streamableHttp.js', () => ({
 
 vi.mock('dotenv', () => ({ config: vi.fn() }));
 
-const { mockListen } = vi.hoisted(() => ({ mockListen: vi.fn() }));
+const { mockListen, mockGet } = vi.hoisted(() => ({ mockListen: vi.fn(), mockGet: vi.fn() }));
 
 vi.mock('express', () => {
   const express = Object.assign(
-    vi.fn(() => ({ use: vi.fn(), post: vi.fn(), get: vi.fn(), listen: mockListen })),
+    vi.fn(() => ({ use: vi.fn(), post: vi.fn(), get: mockGet, listen: mockListen })),
     { json: vi.fn(() => vi.fn()) }
   );
   return { default: express };
@@ -76,6 +76,11 @@ const { ListToolsRequestSchema, CallToolRequestSchema } =
   await import('@modelcontextprotocol/sdk/types.js');
 const { createMcpServer, resolvePort, DEFAULT_MCP_PORT } = await import('./index.js');
 
+type ReadyResponse = {
+  status: (status: number) => ReadyResponse;
+  json: (body: Record<string, unknown>) => void;
+};
+
 const INVENTORY_PORT = 3002;
 
 describe('resolvePort', () => {
@@ -94,6 +99,37 @@ describe('resolvePort', () => {
       expect(() => resolvePort({ MCP_PORT: value })).toThrow(/Invalid MCP_PORT/);
     }
   );
+});
+
+describe('MCP readiness', () => {
+  it('requires both outbound credentials and inbound bearer authentication', () => {
+    const readyRoute = mockGet.mock.calls.find((call) => call[0] === '/ready')?.[1] as
+      | ((request: unknown, response: ReadyResponse) => void)
+      | undefined;
+    expect(readyRoute).toBeDefined();
+    const status = vi.fn<(status: number) => ReadyResponse>();
+    const json = vi.fn<(body: Record<string, unknown>) => void>();
+    status.mockImplementation(() => ({ status, json }));
+    const response: ReadyResponse = { status, json };
+
+    delete process.env['MCP_INBOUND_TOKEN'];
+    delete process.env['MCP_INBOUND_TOKEN_FILE'];
+    readyRoute?.({}, response);
+    expect(status).toHaveBeenCalledWith(503);
+    expect(json).toHaveBeenLastCalledWith(
+      expect.objectContaining({ status: 'degraded', inboundAuthConfigured: false })
+    );
+
+    status.mockClear();
+    json.mockClear();
+    process.env['MCP_INBOUND_TOKEN'] = 'readiness-test-token';
+    readyRoute?.({}, response);
+    expect(status).toHaveBeenCalledWith(200);
+    expect(json).toHaveBeenLastCalledWith(
+      expect.objectContaining({ status: 'ready', inboundAuthConfigured: true })
+    );
+    delete process.env['MCP_INBOUND_TOKEN'];
+  });
 });
 
 describe('createMcpServer — ListTools handler', () => {
@@ -261,12 +297,13 @@ describe('createMcpServer — CallTool structured logging (CF087)', () => {
 });
 
 describe('inbound token startup validation', () => {
-  it.each(['missing', 'empty'])(
+  it.each(['missing', 'empty', 'malformed'])(
     'rejects a %s configured token file before listening',
     async (kind) => {
       const dir = mkdtempSync(join(tmpdir(), 'mcp-inbound-token-startup-'));
       const tokenFile = join(dir, 'token');
       if (kind === 'empty') writeFileSync(tokenFile, '  \n');
+      if (kind === 'malformed') writeFileSync(tokenFile, 'first-token\nsecond-token');
       const configuredPath = kind === 'missing' ? join(dir, 'missing-token') : tokenFile;
       const previousEnv = {
         nodeEnv: process.env['NODE_ENV'],
@@ -281,7 +318,16 @@ describe('inbound token startup validation', () => {
         process.env['MCP_INBOUND_TOKEN_FILE'] = configuredPath;
         process.env['MCP_INBOUND_TOKEN'] = 'test-fallback-token';
 
-        await expect(import('./index.js')).rejects.toThrow(/MCP_INBOUND_TOKEN_FILE/);
+        let startupError: unknown;
+        try {
+          await import('./index.js');
+        } catch (error) {
+          startupError = error;
+        }
+        expect(startupError).toBeInstanceOf(Error);
+        expect((startupError as Error).message).toContain('MCP_INBOUND_TOKEN_FILE');
+        expect((startupError as Error).message).not.toContain(configuredPath);
+        expect((startupError as Error).message).not.toContain('test-fallback-token');
         expect(mockListen).not.toHaveBeenCalled();
       } finally {
         if (previousEnv.nodeEnv === undefined) delete process.env['NODE_ENV'];
@@ -295,4 +341,71 @@ describe('inbound token startup validation', () => {
       }
     }
   );
+
+  it.each([undefined, '', '   '])(
+    'rejects a missing or blank inbound token before listening (%j)',
+    async (token) => {
+      const previousEnv = {
+        nodeEnv: process.env['NODE_ENV'],
+        tokenFile: process.env['MCP_INBOUND_TOKEN_FILE'],
+        token: process.env['MCP_INBOUND_TOKEN'],
+      };
+
+      try {
+        vi.resetModules();
+        mockListen.mockClear();
+        process.env['NODE_ENV'] = 'production';
+        delete process.env['MCP_INBOUND_TOKEN_FILE'];
+        if (token === undefined) delete process.env['MCP_INBOUND_TOKEN'];
+        else process.env['MCP_INBOUND_TOKEN'] = token;
+
+        await expect(import('./index.js')).rejects.toThrow(/inbound authentication is required/);
+        expect(mockListen).not.toHaveBeenCalled();
+      } finally {
+        if (previousEnv.nodeEnv === undefined) delete process.env['NODE_ENV'];
+        else process.env['NODE_ENV'] = previousEnv.nodeEnv;
+        if (previousEnv.tokenFile === undefined) delete process.env['MCP_INBOUND_TOKEN_FILE'];
+        else process.env['MCP_INBOUND_TOKEN_FILE'] = previousEnv.tokenFile;
+        if (previousEnv.token === undefined) delete process.env['MCP_INBOUND_TOKEN'];
+        else process.env['MCP_INBOUND_TOKEN'] = previousEnv.token;
+        vi.resetModules();
+      }
+    }
+  );
+
+  it('rejects a malformed environment token without echoing it or listening', async () => {
+    const previousEnv = {
+      nodeEnv: process.env['NODE_ENV'],
+      tokenFile: process.env['MCP_INBOUND_TOKEN_FILE'],
+      token: process.env['MCP_INBOUND_TOKEN'],
+    };
+    const malformedToken = 'secret-with whitespace';
+
+    try {
+      vi.resetModules();
+      mockListen.mockClear();
+      process.env['NODE_ENV'] = 'production';
+      delete process.env['MCP_INBOUND_TOKEN_FILE'];
+      process.env['MCP_INBOUND_TOKEN'] = malformedToken;
+
+      let startupError: unknown;
+      try {
+        await import('./index.js');
+      } catch (error) {
+        startupError = error;
+      }
+      expect(startupError).toBeInstanceOf(Error);
+      expect((startupError as Error).message).toContain('MCP_INBOUND_TOKEN');
+      expect((startupError as Error).message).not.toContain(malformedToken);
+      expect(mockListen).not.toHaveBeenCalled();
+    } finally {
+      if (previousEnv.nodeEnv === undefined) delete process.env['NODE_ENV'];
+      else process.env['NODE_ENV'] = previousEnv.nodeEnv;
+      if (previousEnv.tokenFile === undefined) delete process.env['MCP_INBOUND_TOKEN_FILE'];
+      else process.env['MCP_INBOUND_TOKEN_FILE'] = previousEnv.tokenFile;
+      if (previousEnv.token === undefined) delete process.env['MCP_INBOUND_TOKEN'];
+      else process.env['MCP_INBOUND_TOKEN'] = previousEnv.token;
+      vi.resetModules();
+    }
+  });
 });
