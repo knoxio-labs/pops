@@ -66,13 +66,15 @@ the catch-all included. So a green run means "nothing unstubbed fired in time",
 not "this spec stubs everything its pages read", and the opt-outs still have to
 be written deliberately rather than read off a red run. POPS-4033 closes it.
 
-## Two shells, two projects
+## Two shells and Storybook, three projects
 
-`playwright.config.ts` boots two Vite dev servers so one run can cross the
-build-time install-set boundary: `chromium-all-modules` against the canonical
-workspace registry, and `chromium-finance-only` against a snapshot built with
-`POPS_APPS=finance,core`. Only `pops-apps-finance-only-*.spec.ts` runs against
-the second.
+`playwright.config.ts` boots two shell Vite dev servers so one run can cross
+the build-time install-set boundary: `chromium-all-modules` against the
+canonical workspace registry, and `chromium-finance-only` against a snapshot
+built with `POPS_APPS=finance,core`. Only `pops-apps-finance-only-*.spec.ts`
+runs against the second. The `chromium-ui-storybook` project runs targeted
+browser interaction checks against the shared UI library's Storybook, currently
+covering the expanded remove-button hit areas on wrapped and clickable chips.
 
 The finance-only server builds that snapshot first, which discovers every
 pillar's `./manifest` export from its built `dist/`. So a local run needs every
