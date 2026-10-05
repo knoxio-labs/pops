@@ -37,7 +37,7 @@ export function PurchaseLinkHeader({ unavailable }: { unavailable: boolean }) {
       <TooltipTrigger asChild>
         <button
           type="button"
-          className="flex items-center gap-1 rounded-sm focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2"
+          className="flex min-h-11 min-w-11 items-center gap-1 rounded-sm focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2"
         >
           <span aria-hidden="true">{label}</span>
           <span aria-hidden="true" className="text-muted-foreground text-xs font-normal">
