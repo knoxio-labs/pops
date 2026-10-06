@@ -5,6 +5,7 @@ import { vi, describe, expect, it } from 'vitest';
 import {
   issueAndOpenPairingLink,
   redactPairingOutput,
+  runSimulatorPairing,
   simulatorPairingURL,
 } from '../ios-e2e/simulator-pairing.mjs';
 
@@ -92,6 +93,50 @@ describe('issueAndOpenPairingLink', () => {
 
     expect(exitCode).toBe(1);
     expect(fetchImpl).not.toHaveBeenCalled();
+  });
+});
+
+describe('runSimulatorPairing', () => {
+  it('rejects an invalid simulator ID before requesting a pairing link', async () => {
+    const issuePairingLink = vi.fn(async () => 1);
+    const writeStdout = vi.fn();
+    const writeStderr = vi.fn();
+
+    const exitCode = await runSimulatorPairing({
+      endpoint: 'https://mcp.example.com/mcp',
+      deviceId: 'not-a-simulator',
+      issuePairingLink,
+      writeStdout,
+      writeStderr,
+    });
+
+    expect(exitCode).toBe(1);
+    expect(issuePairingLink).not.toHaveBeenCalled();
+    expect(writeStdout).not.toHaveBeenCalled();
+    expect(writeStderr).toHaveBeenCalledWith(
+      'ios-e2e: selected simulator ID is invalid; no pairing request was sent.\n'
+    );
+  });
+
+  it('reports a simulator delivery failure without pairing material', async () => {
+    const issuePairingLink = vi.fn(async () => 7);
+    const writeStdout = vi.fn();
+    const writeStderr = vi.fn();
+
+    const exitCode = await runSimulatorPairing({
+      endpoint: 'https://mcp.example.com/mcp',
+      deviceId: 'F4EF06D4-FD8B-452A-B460-199993ABDCF1',
+      issuePairingLink,
+      writeStdout,
+      writeStderr,
+    });
+
+    expect(exitCode).toBe(7);
+    expect(issuePairingLink).toHaveBeenCalledOnce();
+    expect(writeStdout).not.toHaveBeenCalled();
+    expect(writeStderr).toHaveBeenCalledWith(
+      'ios-e2e: pairing code was issued, but simulator link delivery failed (exit 7).\n'
+    );
   });
 });
 

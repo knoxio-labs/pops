@@ -70,6 +70,57 @@ export async function issueAndOpenPairingLink({
 }
 
 /**
+ * Validates the command inputs, issues one simulator pairing link, and writes only a fixed status.
+ *
+ * @param {{
+ *   endpoint?: string,
+ *   token?: string,
+ *   deviceId?: string,
+ *   issuePairingLink?: (options: { endpoint: string, token?: string, deviceId: string }) => Promise<number>,
+ *   writeStdout?: (message: string) => void,
+ *   writeStderr?: (message: string) => void
+ * }} options
+ * @returns {Promise<number>}
+ */
+export async function runSimulatorPairing({
+  endpoint = process.env['POPS_MCP_URL']?.trim(),
+  token = process.env['MCP_INBOUND_TOKEN'],
+  deviceId = process.env['POPS_IOS_SIMULATOR_UDID']?.trim(),
+  issuePairingLink = issueAndOpenPairingLink,
+  writeStdout = (message) => {
+    process.stdout.write(message);
+  },
+  writeStderr = (message) => {
+    process.stderr.write(message);
+  },
+} = {}) {
+  if (!endpoint || !deviceId) {
+    writeStderr('ios-e2e: MCP endpoint and simulator ID are required.\n');
+    return 1;
+  }
+
+  if (!/^[A-Fa-f0-9-]{36}$/u.test(deviceId)) {
+    writeStderr('ios-e2e: selected simulator ID is invalid; no pairing request was sent.\n');
+    return 1;
+  }
+
+  try {
+    const exitCode = await issuePairingLink({ endpoint, token, deviceId });
+    if (exitCode === 0) {
+      writeStdout('ios-e2e: native simulator pairing link delivered.\n');
+    } else {
+      writeStderr(
+        `ios-e2e: pairing code was issued, but simulator link delivery failed (exit ${exitCode}).\n`
+      );
+    }
+    return exitCode;
+  } catch (error) {
+    writeStderr(`${formatPairingMcpFailure(error)}\n`);
+    return 1;
+  }
+}
+
+/**
  * Opens a URL in Simulator while keeping process output out of logs and files.
  *
  * @param {string} deviceId
@@ -132,35 +183,5 @@ export function runSimctlOpenURL(deviceId, link, secrets, spawnImpl = spawn) {
 }
 
 if (invokedDirectly) {
-  const endpoint = process.env['POPS_MCP_URL']?.trim();
-  const deviceId = process.env['POPS_IOS_SIMULATOR_UDID']?.trim();
-
-  if (!endpoint || !deviceId) {
-    process.stderr.write('ios-e2e: MCP endpoint and simulator ID are required.\n');
-    process.exitCode = 1;
-  } else if (!/^[A-Fa-f0-9-]{36}$/u.test(deviceId)) {
-    process.stderr.write(
-      'ios-e2e: selected simulator ID is invalid; no pairing request was sent.\n'
-    );
-    process.exitCode = 1;
-  } else {
-    try {
-      const exitCode = await issueAndOpenPairingLink({
-        endpoint,
-        token: process.env['MCP_INBOUND_TOKEN'],
-        deviceId,
-      });
-      if (exitCode === 0) {
-        process.stdout.write('ios-e2e: native simulator pairing link delivered.\n');
-      } else {
-        process.stderr.write(
-          `ios-e2e: pairing code was issued, but simulator link delivery failed (exit ${exitCode}).\n`
-        );
-      }
-      process.exitCode = exitCode;
-    } catch (error) {
-      process.stderr.write(`${formatPairingMcpFailure(error)}\n`);
-      process.exitCode = 1;
-    }
-  }
+  process.exitCode = await runSimulatorPairing();
 }
