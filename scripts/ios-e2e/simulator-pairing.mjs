@@ -3,7 +3,7 @@ import { spawn } from 'node:child_process';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { issuePairingCodeViaMcp } from './mcp-pairing-code.mjs';
+import { formatPairingMcpFailure, issuePairingCodeViaMcp } from './mcp-pairing-code.mjs';
 
 /** @typedef {(command: string, args: string[], options: import('node:child_process').SpawnOptions) => import('node:child_process').ChildProcess} SpawnImplementation */
 
@@ -138,6 +138,11 @@ if (invokedDirectly) {
   if (!endpoint || !deviceId) {
     process.stderr.write('ios-e2e: MCP endpoint and simulator ID are required.\n');
     process.exitCode = 1;
+  } else if (!/^[A-Fa-f0-9-]{36}$/u.test(deviceId)) {
+    process.stderr.write(
+      'ios-e2e: selected simulator ID is invalid; no pairing request was sent.\n'
+    );
+    process.exitCode = 1;
   } else {
     try {
       const exitCode = await issueAndOpenPairingLink({
@@ -148,11 +153,13 @@ if (invokedDirectly) {
       if (exitCode === 0) {
         process.stdout.write('ios-e2e: native simulator pairing link delivered.\n');
       } else {
-        process.stderr.write('ios-e2e: native simulator pairing link delivery failed.\n');
+        process.stderr.write(
+          `ios-e2e: pairing code was issued, but simulator link delivery failed (exit ${exitCode}).\n`
+        );
       }
       process.exitCode = exitCode;
-    } catch {
-      process.stderr.write('ios-e2e: MCP pairing handoff failed.\n');
+    } catch (error) {
+      process.stderr.write(`${formatPairingMcpFailure(error)}\n`);
       process.exitCode = 1;
     }
   }
