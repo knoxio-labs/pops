@@ -9,6 +9,8 @@ import {
   pickShipSha,
   QUALITY_JOB_NAME,
   QUALITY_WORKFLOW_NAME,
+  PROMOTION_QUALITY_JOB_NAME,
+  PROMOTION_QUALITY_WORKFLOW_NAME,
   verdictFor,
 } from '../testflight-ship-sha.mjs';
 
@@ -59,9 +61,15 @@ describe('pickShipSha', () => {
 });
 
 describe('verdictFor', () => {
-  const run = (id: number, runNumber: number, attempt: number, status = 'completed') => ({
+  const run = (
+    id: number,
+    runNumber: number,
+    attempt: number,
+    status = 'completed',
+    workflowName = QUALITY_WORKFLOW_NAME
+  ) => ({
     id,
-    name: QUALITY_WORKFLOW_NAME,
+    name: workflowName,
     run_number: runNumber,
     run_attempt: attempt,
     status,
@@ -166,6 +174,64 @@ describe('verdictFor', () => {
     );
   });
 
+  it('uses Promotion Quality when the standalone iOS lane is skipped', async () => {
+    const a = api(
+      [],
+      {
+        6: [{ name: QUALITY_JOB_NAME, conclusion: 'skipped' }],
+        7: [{ name: PROMOTION_QUALITY_JOB_NAME, conclusion: 'success' }],
+      },
+      {
+        pulls: [merged('abc', 'head')],
+        prRuns: [
+          run(6, 5, 1, 'completed'),
+          run(
+            7,
+            8,
+            1,
+            'completed',
+            `${PROMOTION_QUALITY_WORKFLOW_NAME} for pull_request into main`
+          ),
+        ],
+      }
+    );
+    expect(await verdictFor('abc', a)).toBe('success');
+    expect(
+      a.paths.filter((path) => path.includes('head_sha=head&event=pull_request'))
+    ).toHaveLength(2);
+  });
+
+  it('preserves a failed Promotion Quality iOS lane verdict', async () => {
+    const a = api(
+      [],
+      {
+        6: [{ name: QUALITY_JOB_NAME, conclusion: 'skipped' }],
+        7: [{ name: PROMOTION_QUALITY_JOB_NAME, conclusion: 'failure' }],
+      },
+      {
+        pulls: [merged('abc', 'head')],
+        prRuns: [run(6, 5, 1), run(7, 8, 1, 'completed', PROMOTION_QUALITY_WORKFLOW_NAME)],
+      }
+    );
+    expect(await verdictFor('abc', a)).toBe('failure');
+  });
+
+  it('does not let Promotion Quality override a failed standalone iOS lane', async () => {
+    const a = api(
+      [],
+      {
+        6: [{ name: QUALITY_JOB_NAME, conclusion: 'failure' }],
+        7: [{ name: PROMOTION_QUALITY_JOB_NAME, conclusion: 'success' }],
+      },
+      {
+        pulls: [merged('abc', 'head')],
+        prRuns: [run(6, 5, 1), run(7, 8, 1, 'completed', PROMOTION_QUALITY_WORKFLOW_NAME)],
+      }
+    );
+    expect(await verdictFor('abc', a)).toBe('failure');
+    expect(a.paths.filter((path) => path.includes('/runs/7/jobs'))).toHaveLength(0);
+  });
+
   it('carries a failed PR lane through the fallback', async () => {
     const a = api(
       [],
@@ -213,6 +279,16 @@ describe('the names it looks up are the real ones', () => {
     expect(isMapping(jobs) && isMapping(jobs.quality) ? jobs.quality.name : undefined).toBe(
       QUALITY_JOB_NAME
     );
+  });
+
+  it('matches the full-validation iOS job in promotion-quality.yml', () => {
+    const doc = workflow('promotion-quality.yml');
+    expect(doc.name).toBe(PROMOTION_QUALITY_WORKFLOW_NAME);
+    const jobs = doc.jobs;
+    const iosJob = isMapping(jobs) && isMapping(jobs.ios) ? jobs.ios : undefined;
+    const inputs = iosJob && isMapping(iosJob.with) ? iosJob.with : undefined;
+    expect(inputs?.['full-validation']).toBe(true);
+    expect(PROMOTION_QUALITY_JOB_NAME).toBe(`ios / ${QUALITY_JOB_NAME}`);
   });
 
   it('is what ios-testflight.yml runs on a push', () => {

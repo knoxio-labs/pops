@@ -10,9 +10,10 @@
  *
  * When the merge queue is off (POPS-4439) no commit has a merge-group run, so
  * a commit without one falls back to the `pull_request` verdict on the head of
- * the PR it landed from. That lane is narrower — no analyzer, no UI flow — but
- * it is exactly what gated the merge, and without the fallback TestFlight
- * shipped nothing at all.
+ * the PR it landed from. Promotion and integration PRs intentionally skip
+ * that standalone iOS lane; for them the reusable full-validation job in
+ * `Promotion Quality` is the iOS verdict. Ordinary PRs still need their own
+ * iOS Quality run.
  *
  * A push can carry several commits (the queue merges a batch in one push),
  * and which of their merge groups selected the iOS lane depends on each
@@ -39,9 +40,15 @@ export const QUALITY_JOB_NAME = 'build + test + lint + UI flow';
 /** The `name:` of `ios-quality.yml` itself. */
 export const QUALITY_WORKFLOW_NAME = 'iOS Quality';
 
-/** @param {string} name */
-function isQualityWorkflowRunName(name) {
-  return name === QUALITY_WORKFLOW_NAME || name.startsWith(`${QUALITY_WORKFLOW_NAME} for `);
+/** The reusable iOS job name under `Promotion Quality`. */
+export const PROMOTION_QUALITY_JOB_NAME = `ios / ${QUALITY_JOB_NAME}`;
+
+/** The `name:` of `promotion-quality.yml` itself. */
+export const PROMOTION_QUALITY_WORKFLOW_NAME = 'Promotion Quality';
+
+/** @param {string} name @param {string} workflowName */
+function isWorkflowRunName(name, workflowName) {
+  return name === workflowName || name.startsWith(`${workflowName} for `);
 }
 
 /**
@@ -73,37 +80,54 @@ export function pickShipSha(commitsNewestFirst, verdicts) {
 /**
  * Reads the `quality` job's verdict for one landed commit from the API: the
  * merge-group run's when there is one, otherwise the `pull_request` run's on
- * the head of the merged PR whose merge commit it is.
+ * the head of the merged PR whose merge commit it is. A skipped or absent
+ * standalone lane falls back to Promotion Quality's reusable iOS job. That
+ * job only runs for promotion/integration branches; ordinary PRs therefore
+ * remain ineligible unless their own iOS Quality lane ran.
  *
  * @param {string} sha
  * @param {Api} api
  * @returns {Promise<string>}
  */
 export async function verdictFor(sha, api) {
-  const mergeGroup = await laneVerdict(sha, 'merge_group', api);
+  const mergeGroup = await laneVerdict(sha, 'merge_group', api, {
+    workflowName: QUALITY_WORKFLOW_NAME,
+    jobName: QUALITY_JOB_NAME,
+  });
   if (mergeGroup !== 'absent') return mergeGroup;
   const pulls = await api.requestPulls(`/repos/${api.repo}/commits/${sha}/pulls`);
   const landed = pulls.find((pull) => pull.merged_at !== null && pull.merge_commit_sha === sha);
-  return landed ? laneVerdict(landed.head.sha, 'pull_request', api) : 'absent';
+  if (!landed) return 'absent';
+
+  const pullRequest = await laneVerdict(landed.head.sha, 'pull_request', api, {
+    workflowName: QUALITY_WORKFLOW_NAME,
+    jobName: QUALITY_JOB_NAME,
+  });
+  if (pullRequest !== 'absent' && pullRequest !== 'skipped') return pullRequest;
+  return laneVerdict(landed.head.sha, 'pull_request', api, {
+    workflowName: PROMOTION_QUALITY_WORKFLOW_NAME,
+    jobName: PROMOTION_QUALITY_JOB_NAME,
+  });
 }
 
 /**
  * @param {string} sha
  * @param {'merge_group' | 'pull_request'} event
  * @param {Api} api
+ * @param {{ workflowName: string, jobName: string }} lane
  * @returns {Promise<string>}
  */
-async function laneVerdict(sha, event, { repo, request }) {
+async function laneVerdict(sha, event, { repo, request }, { workflowName, jobName }) {
   const { workflow_runs: runs = [] } = await request(
     `/repos/${repo}/actions/runs?head_sha=${sha}&event=${event}&per_page=100`
   );
   const latest = runs
-    .filter((run) => isQualityWorkflowRunName(run.name))
+    .filter((run) => isWorkflowRunName(run.name, workflowName))
     .toSorted((a, b) => b.run_number - a.run_number || b.run_attempt - a.run_attempt)[0];
   if (!latest) return 'absent';
   if (latest.status !== 'completed') return 'pending';
   const { jobs = [] } = await request(`/repos/${repo}/actions/runs/${latest.id}/jobs?per_page=100`);
-  const job = jobs.find((candidate) => candidate.name === QUALITY_JOB_NAME);
+  const job = jobs.find((candidate) => candidate.name === jobName);
   return job?.conclusion ?? 'absent';
 }
 
@@ -138,7 +162,7 @@ async function main() {
   for (const sha of commitsNewestFirst) {
     const verdict = await verdictFor(sha, api);
     verdicts.set(sha, verdict);
-    console.log(`${sha}: ${QUALITY_JOB_NAME} → ${verdict}`);
+    console.log(`${sha}: iOS shipping verdict → ${verdict}`);
     if (verdict !== 'absent' && verdict !== 'skipped') break;
   }
 
