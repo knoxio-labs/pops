@@ -1,6 +1,5 @@
 import AppCore
 import Auth
-import DesignSystem
 import FeatureEgo
 import FeaturePurchases
 import Foundation
