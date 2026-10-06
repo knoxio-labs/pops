@@ -50,9 +50,10 @@ why it does not use port 3014.
 
 For a simulator paired against a live BFM, use
 `mise -C clients/ios run e2e:pair:mcp`. It requires the local Debug app to be
-installed and unpaired on the selected simulator. The host requests one code
-through MCP and opens the existing BFM pairing link through a Debug-only native
-URL route. The code and link stay out of Maestro variables, its input actions,
+installed and unpaired on the selected simulator. `Pops` alone registers the
+`pops://` scheme. The host requests one code through MCP and opens the existing
+BFM pairing link through a native URL route compiled only for Debug simulator
+builds. The code and link stay out of Maestro variables, its input actions,
 logs and artifacts; the command captures and discards redacted `simctl` output.
 This task only delivers the link. It does not run a Maestro flow or verify that
 the BFM accepted the code.
