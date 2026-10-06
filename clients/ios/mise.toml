@@ -1113,6 +1113,45 @@ fi
 echo "e2e: all flows passed."
 '''
 
+[tasks."e2e:pair:mcp"]
+description = "Open one MCP-issued pairing link in the unpaired local iOS Simulator without sending it through Maestro"
+depends = ["verify:xcode-version"]
+run = '''
+set -eu
+set -o pipefail
+
+if [ -z "${POPS_MCP_URL:-}" ]; then
+  echo "e2e: POPS_MCP_URL is required for the native simulator pairing handoff." >&2
+  exit 1
+fi
+
+udid=$(xcrun simctl list devices available -j \
+  | jq -r --arg name "$POPS_IOS_SIMULATOR" \
+    '[.devices[][] | select(.name == $name)] | (map(select(.state == "Booted")) + .) | .[0].udid // empty')
+if [ -z "$udid" ]; then
+  echo "e2e: no simulator named '$POPS_IOS_SIMULATOR' is available." >&2
+  exit 1
+fi
+
+if ! xcrun simctl bootstatus "$udid" -b >/dev/null 2>&1; then
+  echo "e2e: the iOS Simulator could not be started." >&2
+  exit 1
+fi
+if ! xcrun simctl get_app_container "$udid" com.knoxiolabs.pops.local app >/dev/null 2>&1; then
+  echo "e2e: install the local Debug app on the selected simulator before pairing." >&2
+  exit 1
+fi
+
+if ! token=$("$HOME/.local/bin/pops-mcp-headers" 2>/dev/null \
+  | jq -er '.Authorization | sub("^Bearer "; "")' 2>/dev/null); then
+  echo "e2e: stored MCP authorization is unavailable." >&2
+  exit 1
+fi
+POPS_IOS_SIMULATOR_UDID="$udid" MCP_INBOUND_TOKEN="$token" \
+  node ../../scripts/ios-e2e/simulator-pairing.mjs
+unset token
+'''
+
 [tasks."fixture:device-signature:generate"]
 description = "Regenerate this client's copy of the iOS↔BFM signature fixture (the repo root's `fixture:device-signature` also re-vendors)"
 run = "swift Tools/generate-device-signature-fixture.swift > Contracts/device-signature-v1.json"

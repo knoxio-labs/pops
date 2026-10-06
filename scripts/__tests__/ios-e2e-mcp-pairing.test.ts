@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { issuePairingCodeViaMcp, parsePairingCodeResponse } from '../ios-e2e/mcp-pairing-code.mjs';
+import {
+  callMcpTool,
+  formatPairingMcpFailure,
+  issuePairingCodeViaMcp,
+  parsePairingCodeResponse,
+} from '../ios-e2e/mcp-pairing-code.mjs';
 
 const pairingPayload = {
   code: 'fixture-code',
@@ -30,12 +35,50 @@ describe('parsePairingCodeResponse', () => {
   });
 
   it('rejects extra fields so the bridge cannot pass through credentials', () => {
-    expect(() =>
+    let failure: unknown;
+    try {
       parsePairingCodeResponse(
         rpcBody({ ...pairingPayload, token: 'unexpected' }),
         'application/json'
-      )
-    ).toThrow(/invalid pairing metadata/iu);
+      );
+    } catch (error) {
+      failure = error;
+    }
+
+    expect(failure).toMatchObject({ stage: 'mcp-metadata' });
+    expect(formatPairingMcpFailure(failure)).toContain('mcp-metadata');
+    expect(formatPairingMcpFailure(failure)).not.toContain('unexpected');
+  });
+
+  it('classifies a tool error without exposing its response text', () => {
+    const secret = 'synthetic-private-error-payload';
+    const body = JSON.stringify({
+      jsonrpc: '2.0',
+      id: 1,
+      result: { isError: true, content: [{ type: 'text', text: secret }] },
+    });
+    let failure: unknown;
+    try {
+      parsePairingCodeResponse(body, 'application/json');
+    } catch (error) {
+      failure = error;
+    }
+
+    expect(failure).toMatchObject({ stage: 'mcp-tool' });
+    expect(formatPairingMcpFailure(failure)).not.toContain(secret);
+  });
+
+  it('classifies malformed protocol responses without exposing their body', () => {
+    const secret = 'synthetic-private-protocol-body';
+    let failure: unknown;
+    try {
+      parsePairingCodeResponse(secret, 'application/json');
+    } catch (error) {
+      failure = error;
+    }
+
+    expect(failure).toMatchObject({ stage: 'mcp-response' });
+    expect(formatPairingMcpFailure(failure)).not.toContain(secret);
   });
 });
 
@@ -66,12 +109,65 @@ describe('issuePairingCodeViaMcp', () => {
     });
   });
 
-  it('does not copy an error response body into diagnostics', async () => {
-    const fetchImpl: typeof fetch = async () =>
-      new Response('contains a credential that must not be printed', { status: 403 });
+  it('shares the decoded MCP transport for a read-only tool call', async () => {
+    let request: RequestInit | undefined;
+    const fetchImpl: typeof fetch = async (_input, init) => {
+      request = init;
+      return new Response(
+        JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          result: { content: [{ type: 'text', text: '[{"name":"synthetic"}]' }] },
+        }),
+        { status: 200, headers: { 'content-type': 'application/json' } }
+      );
+    };
 
-    await expect(
-      issuePairingCodeViaMcp({ endpoint: 'http://127.0.0.1:3011/mcp', fetchImpl })
-    ).rejects.toThrow('MCP pairing tool HTTP 403');
+    const result = await callMcpTool({
+      endpoint: 'http://127.0.0.1:3011/mcp',
+      name: 'tags.tags.list',
+      arguments: {},
+      fetchImpl,
+    });
+
+    expect(result.isError).toBe(false);
+    expect(result.content).toEqual([{ type: 'text', text: '[{"name":"synthetic"}]' }]);
+    expect(JSON.parse(String(request?.body))).toMatchObject({
+      method: 'tools/call',
+      params: { name: 'tags.tags.list', arguments: {} },
+    });
+  });
+
+  it('reports HTTP status without copying the error response body', async () => {
+    const secret = 'synthetic-private-http-body';
+    const fetchImpl: typeof fetch = async () => new Response(secret, { status: 403 });
+
+    let failure: unknown;
+    try {
+      await issuePairingCodeViaMcp({ endpoint: 'http://127.0.0.1:3011/mcp', fetchImpl });
+    } catch (error) {
+      failure = error;
+    }
+
+    expect(failure).toMatchObject({ stage: 'mcp-http', httpStatus: 403 });
+    expect(formatPairingMcpFailure(failure)).toContain('(HTTP 403)');
+    expect(formatPairingMcpFailure(failure)).not.toContain(secret);
+  });
+
+  it('classifies transport failures without copying their messages', async () => {
+    const secret = 'synthetic-private-transport-detail';
+    const fetchImpl: typeof fetch = async () => {
+      throw new Error(secret);
+    };
+
+    let failure: unknown;
+    try {
+      await issuePairingCodeViaMcp({ endpoint: 'http://127.0.0.1:3011/mcp', fetchImpl });
+    } catch (error) {
+      failure = error;
+    }
+
+    expect(failure).toMatchObject({ stage: 'mcp-transport' });
+    expect(formatPairingMcpFailure(failure)).not.toContain(secret);
   });
 });

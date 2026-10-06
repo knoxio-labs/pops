@@ -19,11 +19,25 @@ internal struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
     internal let composition: AppComposition
 
+    @State private var pairingModel: PairingViewModel
+    #if DEBUG && targetEnvironment(simulator)
+        @State private var pendingSimulatorPairing = false
+    #endif
+
     /// The pillar named by the last `pops` URL this build could not route
     /// anywhere. Drives ``unsupportedPillarAlertPresented`` rather than a
     /// plain `Bool`, so the alert's title still has the pillar's name once
     /// SwiftUI reads it to render.
     @State private var unsupportedPillar: String?
+
+    internal init(composition: AppComposition) {
+        self.composition = composition
+        _pairingModel = State(
+            initialValue: PairingViewModel(
+                session: composition.session,
+                dependencies: composition.pairingDependencies,
+                initialBaseURL: composition.suggestedBaseURL))
+    }
 
     internal var body: some View {
         content
@@ -51,6 +65,16 @@ internal struct RootView: View {
                     AppComposition.pruneStaleInventoryReplicas(keeping: pairedDevice)
                 }.value
             }
+            #if DEBUG && targetEnvironment(simulator)
+                .onChange(of: simulatorPairingReady) { _, ready in
+                    guard ready else { return }
+                    pendingSimulatorPairing = false
+                    Task {
+                        await pairingModel.pair()
+                        pairingModel.codeText = ""
+                    }
+                }
+            #endif
             // Coming back to the app is the one moment worth asking again: a
             // pillar that was down at launch may not be now, and nothing on
             // the screen the app is stuck on would ever find that out.
@@ -79,6 +103,12 @@ internal struct RootView: View {
                 }
             }
             .onOpenURL { url in
+                #if DEBUG && targetEnvironment(simulator)
+                    if SimulatorPairingURL.handle(url, consume: { pairingModel.didScan($0) }) {
+                        pendingSimulatorPairing = true
+                        return
+                    }
+                #endif
                 let outcome = handleOpenPopsURL(url, router: composition.entityRouter)
                 guard case .unsupported(let pillar)? = outcome else { return }
                 unsupportedPillar = pillar
@@ -109,17 +139,22 @@ internal struct RootView: View {
         return device
     }
 
+    #if DEBUG && targetEnvironment(simulator)
+        private var simulatorPairingReady: Bool {
+            guard pendingSimulatorPairing, case .pairing = composition.shell.destination else {
+                return false
+            }
+            return pairingModel.canSubmit
+        }
+    #endif
+
     @ViewBuilder private var content: some View {
         switch composition.shell.destination {
         case .launching:
             LaunchView()
         case .pairing(let reason):
             PairingView(
-                model: PairingViewModel(
-                    session: composition.session,
-                    dependencies: composition.pairingDependencies,
-                    initialBaseURL: composition.suggestedBaseURL
-                ),
+                model: pairingModel,
                 returningBecause: reason
             )
         case .content(let surface):

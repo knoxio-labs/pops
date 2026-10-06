@@ -137,7 +137,8 @@ No certificate, profile or key is in the tree, and none should be: automatic sig
 
 Every build is the **local** flavour unless it says otherwise: `com.knoxiolabs.pops.local` (and `com.knoxiolabs.pops.playground.local`), an icon with an amber LOCAL band, and "Pops Local" / "Design Local" on the home screen. So a build from a laptop installs beside the TestFlight app instead of replacing it, pairs separately, and keeps its own keychain. One build setting decides it, `POPS_FLAVOR` in `project.yml`; only `scripts/testflight.sh` passes `POPS_FLAVOR=testflight`, and it reads the archived identifier back and refuses to upload anything but the exact shipped one. Tests and the Maestro flows run the local flavour, which is why they name `com.knoxiolabs.pops.local`.
 
-Both apps register the `pops://` URL scheme, so with both installed iOS picks one of them to open such a link (POPS-4183).
+`Pops` alone registers the `pops://` URL scheme; `PopsPlayground` does not. The
+simulator pairing URL handler is compiled only for Debug simulator builds.
 
 ### On the phone
 
