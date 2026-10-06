@@ -64,7 +64,14 @@ extension EgoThreadModel {
 
     /// Sends the non-empty draft unless a turn is already streaming.
     public func send() {
-        let message = draft
+        send(message: draft, clearingDraft: true)
+    }
+
+    func send(prompt: String) {
+        send(message: prompt, clearingDraft: false)
+    }
+
+    private func send(message: String, clearingDraft: Bool) {
         guard !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         guard !isBatchDecisionInFlight else { return }
         if let turn, case .streaming = turn.phase { return }
@@ -73,13 +80,10 @@ extension EgoThreadModel {
             EgoMessage(
                 id: UUID().uuidString, role: .user, parts: [.text(message)], createdAt: now())
         )
-        draft = ""
+        if clearingDraft {
+            draft = ""
+        }
         startTurn(message: message)
-    }
-
-    func send(prompt: String) {
-        draft = prompt
-        send()
     }
 
     /// Retries the last user message after a failed turn without duplicating it.
