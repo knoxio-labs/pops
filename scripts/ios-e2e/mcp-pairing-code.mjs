@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { randomUUID } from 'node:crypto';
 /**
  * Request an iOS pairing code through the POPS MCP gateway.
  *
@@ -13,6 +14,24 @@ const MCP_PROTOCOL_VERSION = '2025-06-18';
 const TOOL_NAME = 'bfm.devicePairing.issueCode';
 
 /** @typedef {{ code: string, pairingUrl: string, expiresAt: string }} PairingCode */
+
+/**
+ * Create an isolated, per-run inbound credential for the locally spawned MCP
+ * gateway. The explicit empty file setting prevents an inherited mounted-token
+ * path from taking precedence over this test-only token.
+ *
+ * @returns {{ token: string, environment: NodeJS.ProcessEnv }}
+ */
+export function createMcpInboundAuth() {
+  const token = randomUUID();
+  return {
+    token,
+    environment: {
+      MCP_INBOUND_TOKEN: token,
+      MCP_INBOUND_TOKEN_FILE: '',
+    },
+  };
+}
 
 /**
  * Parse the JSON-RPC result emitted by a Streamable HTTP MCP response.

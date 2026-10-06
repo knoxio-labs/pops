@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { issuePairingCodeViaMcp, parsePairingCodeResponse } from '../ios-e2e/mcp-pairing-code.mjs';
+import {
+  createMcpInboundAuth,
+  issuePairingCodeViaMcp,
+  parsePairingCodeResponse,
+} from '../ios-e2e/mcp-pairing-code.mjs';
 
 const pairingPayload = {
   code: 'fixture-code',
@@ -36,6 +40,23 @@ describe('parsePairingCodeResponse', () => {
         'application/json'
       )
     ).toThrow(/invalid pairing metadata/iu);
+  });
+});
+
+describe('createMcpInboundAuth', () => {
+  it('uses a run-scoped token and disables any inherited token-file override', () => {
+    const auth = createMcpInboundAuth();
+    const childEnvironment = {
+      MCP_INBOUND_TOKEN_FILE: '/inherited/token-file',
+      MCP_INBOUND_TOKEN: 'inherited-token',
+      ...auth.environment,
+    };
+
+    expect(auth.token).toMatch(/^[0-9a-f-]{36}$/u);
+    expect(childEnvironment).toEqual({
+      MCP_INBOUND_TOKEN_FILE: '',
+      MCP_INBOUND_TOKEN: auth.token,
+    });
   });
 });
 

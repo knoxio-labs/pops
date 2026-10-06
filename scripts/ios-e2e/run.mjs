@@ -80,7 +80,7 @@ import { seededAccounts } from './accounts-fixture.mjs';
 import { startControlPlane } from './control-plane.mjs';
 import { spawnInventoryPillar, startInventoryGate } from './inventory-pillar.mjs';
 import { publishUserDefinedType } from './inventory-user-type.mjs';
-import { issuePairingCodeViaMcp } from './mcp-pairing-code.mjs';
+import { createMcpInboundAuth, issuePairingCodeViaMcp } from './mcp-pairing-code.mjs';
 import { startPurchasesStub } from './purchases-stub.mjs';
 import { boundAddress } from './server-address.mjs';
 import { seededTransactions } from './transactions-fixture.mjs';
@@ -602,8 +602,9 @@ async function main() {
     await waitForHealth(baseURL, buildVersion, bfm);
     process.stdout.write(`ios-e2e: bfm on ${baseURL.origin}, database under ${dataDir}\n`);
 
+    const mcpAuth = pairingIssuer === 'mcp' ? createMcpInboundAuth() : undefined;
     let mcpBaseURL;
-    if (pairingIssuer === 'mcp') {
+    if (mcpAuth !== undefined) {
       await run('pnpm', ['--filter', '@pops/mcp...', 'build']);
       const mcpPort = await allocatePort();
       mcpBaseURL = new URL(`http://${HOST}:${mcpPort}`);
@@ -619,7 +620,7 @@ async function main() {
           POPS_API_KEY: SERVICE_ACCOUNT_KEY,
           POPS_BFM_API_URL: baseURL.origin,
           POPS_REGISTRY_URL: upstream.url,
-          MCP_INBOUND_TOKEN: process.env['MCP_INBOUND_TOKEN'] ?? '',
+          ...mcpAuth.environment,
         },
       });
       teardown.unshift(() => stop(mcp));
@@ -656,7 +657,7 @@ async function main() {
         pairingIssuer === 'mcp'
           ? await issuePairingCodeViaMcp({
               endpoint: new URL('/mcp', mcpBaseURL).toString(),
-              token: process.env['MCP_INBOUND_TOKEN'],
+              token: mcpAuth?.token,
             })
           : await mintPairingCode(baseURL);
       process.stdout.write(
@@ -678,8 +679,9 @@ async function main() {
       POPS_E2E_CONTROL_URL: control.url,
       POPS_E2E_PAIRING_ISSUER: pairingIssuer,
     };
-    if (mcpBaseURL !== undefined) {
+    if (mcpBaseURL !== undefined && mcpAuth !== undefined) {
       iosEnv.POPS_MCP_URL = new URL('/mcp', mcpBaseURL).toString();
+      Object.assign(iosEnv, mcpAuth.environment);
     }
     await run('mise', ['-C', 'clients/ios', 'run', 'e2e'], { env: iosEnv });
   } finally {
