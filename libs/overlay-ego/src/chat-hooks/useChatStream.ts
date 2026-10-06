@@ -18,6 +18,7 @@ interface StreamCallbackParams {
   queryClient: QueryClient;
   setRetrievedEngrams: (engrams: RetrievedEngram[]) => void;
   setSelectedConversationId: (id: string | null) => void;
+  clearPendingUserMessage: () => void;
 }
 
 /** Memoize one stream callback set for both message and resume entry points. */
@@ -26,6 +27,7 @@ export function useStreamCallbacks({
   queryClient,
   setRetrievedEngrams,
   setSelectedConversationId,
+  clearPendingUserMessage,
 }: StreamCallbackParams): StreamCallbacks {
   return useMemo(
     () => ({
@@ -39,9 +41,16 @@ export function useStreamCallbacks({
             queryKey: ['ego', 'conversations', 'get', { id: conversationId }],
           }),
         ]);
+        clearPendingUserMessage();
       },
     }),
-    [onNavigate, queryClient, setRetrievedEngrams, setSelectedConversationId]
+    [
+      clearPendingUserMessage,
+      onNavigate,
+      queryClient,
+      setRetrievedEngrams,
+      setSelectedConversationId,
+    ]
   );
 }
 
@@ -104,6 +113,7 @@ interface SendMessageParams {
   isStreaming: boolean;
   queryClient: QueryClient;
   selectedConversationId: string | null;
+  setPendingUserMessage: (message: string | null) => void;
   setInputValue: (value: string) => void;
   stream: Stream;
 }
@@ -116,6 +126,7 @@ export function useSendMessage({
   isStreaming,
   queryClient,
   selectedConversationId,
+  setPendingUserMessage,
   setInputValue,
   stream,
 }: SendMessageParams) {
@@ -125,12 +136,15 @@ export function useSendMessage({
 
     setInputValue('');
     if (selectedConversationId !== null) {
+      setPendingUserMessage(null);
       const message = buildOptimisticMessage(selectedConversationId, trimmed);
       queryClient.setQueryData<ConversationDetail>(
         ['ego', 'conversations', 'get', { id: selectedConversationId }],
         (previous) =>
           previous ? { ...previous, messages: [...previous.messages, message] } : previous
       );
+    } else {
+      setPendingUserMessage(trimmed);
     }
     stream({ conversationId: selectedConversationId, message: trimmed }, callbacks);
   }, [
@@ -140,6 +154,7 @@ export function useSendMessage({
     isStreaming,
     queryClient,
     selectedConversationId,
+    setPendingUserMessage,
     setInputValue,
     stream,
   ]);

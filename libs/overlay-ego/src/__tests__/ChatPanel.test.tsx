@@ -1,24 +1,34 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { withQueryClient } from '../test-utils';
 
 // ── Streaming chat mock ─────────────────────────────────────────────
 
 const mockStream = vi.fn();
+const streamTestConfig = vi.hoisted(() => ({ useRealStream: false }));
 
-vi.mock('../chat-hooks/useStreamingChat', () => ({
-  useStreamingChat: () => ({
-    stream: mockStream,
-    isStreaming: false,
-    error: null,
-    streamingContent: null,
-    toolActivity: [],
-    streamParts: [],
-    abort: vi.fn(),
-  }),
-}));
+vi.mock('../chat-hooks/useStreamingChat', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../chat-hooks/useStreamingChat')>();
+  return {
+    ...actual,
+    useStreamingChat: () => {
+      const real = actual.useStreamingChat();
+      return streamTestConfig.useRealStream
+        ? real
+        : {
+            ...real,
+            stream: mockStream,
+            isStreaming: false,
+            error: null,
+            streamingContent: null,
+            toolActivity: [],
+            streamParts: [],
+          };
+    },
+  };
+});
 
 // ── ego SDK mock ─────────────────────────────────────────────────────
 
@@ -39,9 +49,11 @@ vi.mock('react-markdown', () => ({
 
 // ── react-router mock ────────────────────────────────────────────────
 
-vi.mock('react-router', async () => {
+vi.mock('react-router', async (importOriginal) => {
   const React = await import('react');
+  const actual = await importOriginal<typeof import('react-router')>();
   return {
+    ...actual,
     Link: ({ children, to }: { children: React.ReactNode; to: string }) =>
       React.createElement('a', { href: to }, children),
   };
@@ -49,6 +61,8 @@ vi.mock('react-router', async () => {
 
 vi.mock('@pops/navigation', () => ({
   useSearchResultNavigation: () => ({ navigateTo: vi.fn() }),
+  useAppContext: () => ({ app: null }),
+  useCurrentEntity: () => undefined,
 }));
 
 // ── UI mock ──────────────────────────────────────────────────────────
@@ -190,6 +204,33 @@ vi.mock('@pops/ui', async () => {
     }) => (asChild ? children : React.createElement('button', null, children)),
     CollapsibleContent: ({ children }: { children: React.ReactNode }) =>
       React.createElement('div', { 'data-testid': 'collapsible-content' }, children),
+    Sheet: ({
+      children,
+      open,
+      onOpenChange,
+      title,
+      description,
+    }: {
+      children: React.ReactNode;
+      open: boolean;
+      onOpenChange: (open: boolean) => void;
+      title: string;
+      description?: string;
+    }) =>
+      open
+        ? React.createElement(
+            'div',
+            { role: 'dialog', 'aria-label': title },
+            React.createElement('h2', null, title),
+            description && React.createElement('p', null, description),
+            React.createElement(
+              'button',
+              { onClick: () => onOpenChange(false), 'aria-label': 'Close history' },
+              'Close'
+            ),
+            children
+          )
+        : null,
     cn: (...args: unknown[]) =>
       args
         .filter((a) => typeof a === 'string')
@@ -205,16 +246,43 @@ vi.mock('@pops/ui', async () => {
   };
 });
 
+import { MemoryRouter } from 'react-router';
+
 import { ChatPanel } from '../chat-components/ChatPanel';
 import { useChatPageModel } from '../chat-hooks/useChatPageModel';
 
-function ChatHarness() {
+function ChatHarness({ historyLayout = 'sidebar' }: { historyLayout?: 'sidebar' | 'drawer' }) {
   const model = useChatPageModel();
-  return <ChatPanel model={model} />;
+  return <ChatPanel model={model} historyLayout={historyLayout} />;
 }
 
-function renderHarness() {
-  return render(withQueryClient(<ChatHarness />));
+function renderHarness(historyLayout: 'sidebar' | 'drawer' = 'sidebar') {
+  return render(
+    withQueryClient(
+      <MemoryRouter>
+        <ChatHarness historyLayout={historyLayout} />
+      </MemoryRouter>
+    )
+  );
+}
+
+function createControlledResponse() {
+  let controller!: ReadableStreamDefaultController<Uint8Array>;
+  const body = new ReadableStream<Uint8Array>({
+    start(streamController) {
+      controller = streamController;
+    },
+  });
+
+  return {
+    response: new Response(body),
+    send(frame: Record<string, unknown>) {
+      controller.enqueue(new TextEncoder().encode('data: ' + JSON.stringify(frame) + '\n\n'));
+    },
+    close() {
+      controller.close();
+    },
+  };
 }
 
 // ── Mock data ────────────────────────────────────────────────────────
@@ -288,9 +356,12 @@ function setupWithSelectedConversation() {
 // ── Tests ────────────────────────────────────────────────────────────
 
 beforeEach(() => {
+  streamTestConfig.useRealStream = false;
   vi.clearAllMocks();
   setupDefaultMocks();
 });
+
+afterEach(() => vi.unstubAllGlobals());
 
 describe('ChatPanel (overlay-ego)', () => {
   it('renders conversation list with items', async () => {
@@ -299,10 +370,20 @@ describe('ChatPanel (overlay-ego)', () => {
     expect(screen.getByText('Movie recommendations')).toBeInTheDocument();
   });
 
-  it('shows empty state when no conversation is selected', () => {
+  it('shows welcome prompts when no conversation is selected', () => {
     renderHarness();
-    expect(screen.getByTestId('empty-state')).toBeInTheDocument();
-    expect(screen.getByText('Start a conversation')).toBeInTheDocument();
+    expect(screen.getByText('What can I help you with?')).toBeInTheDocument();
+  });
+
+  it('fills the composer from a supported starter prompt', async () => {
+    const user = userEvent.setup();
+    renderHarness();
+
+    await user.click(screen.getByRole('button', { name: /Explore my inventory/ }));
+
+    expect(screen.getByLabelText('Message input')).toHaveValue(
+      'Help me find an item in my inventory.'
+    );
   });
 
   it('displays messages when a conversation is selected', async () => {
@@ -371,7 +452,198 @@ describe('ChatPanel (overlay-ego)', () => {
     const newButton = screen.getByLabelText('New conversation');
     await user.click(newButton);
 
-    expect(screen.getByTestId('empty-state')).toBeInTheDocument();
+    expect(screen.getByText('What can I help you with?')).toBeInTheDocument();
+  });
+
+  it('opens conversation history in a drawer and closes it after selection', async () => {
+    setupWithSelectedConversation();
+    const user = userEvent.setup();
+    renderHarness('drawer');
+
+    expect(screen.queryByText('Budget discussion')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Conversation history' }));
+    expect(await screen.findByRole('dialog', { name: 'Conversations' })).toBeInTheDocument();
+    await user.click(screen.getByText('Budget discussion'));
+
+    expect(screen.queryByRole('dialog', { name: 'Conversations' })).not.toBeInTheDocument();
+    expect(await screen.findByText('What is my budget?')).toBeInTheDocument();
+  });
+
+  it('shows a first-turn prompt and stream tokens before done, then persisted messages', async () => {
+    streamTestConfig.useRealStream = true;
+    const controlled = createControlledResponse();
+    const fetchMock = vi.fn().mockResolvedValue(controlled.response);
+    vi.stubGlobal('fetch', fetchMock);
+    sdk.egoListConversations.mockResolvedValue({
+      data: {
+        conversations: [{ ...mockConversations[0], id: 'conv_new', title: 'First turn' }],
+        total: 1,
+      },
+    });
+    sdk.egoGetConversation.mockImplementation(async ({ path }: { path: { id: string } }) => ({
+      data: {
+        conversation: { ...mockConversations[0], id: path.id, title: 'First turn' },
+        messages: [
+          {
+            ...mockMessages[0],
+            id: 'persisted_user',
+            conversationId: path.id,
+            content: 'How many items are in my inventory?',
+          },
+          {
+            ...mockMessages[1],
+            id: 'persisted_assistant',
+            conversationId: path.id,
+            content: 'There are 83 items.',
+          },
+        ],
+      },
+    }));
+    const user = userEvent.setup();
+    renderHarness('drawer');
+
+    await user.type(screen.getByLabelText('Message input'), 'How many items are in my inventory?');
+    await user.click(screen.getByLabelText('Send message'));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+
+    expect(screen.getAllByText('How many items are in my inventory?')).toHaveLength(1);
+    expect(screen.getByTestId('typing-indicator')).toBeInTheDocument();
+    act(() => controlled.send({ type: 'token', text: 'There are ' }));
+    expect(await screen.findByText('There are', { exact: false })).toBeInTheDocument();
+    act(() => controlled.send({ type: 'token', text: '83 items.' }));
+    expect(await screen.findByText('There are 83 items.')).toBeInTheDocument();
+    expect(screen.getAllByText('How many items are in my inventory?')).toHaveLength(1);
+
+    act(() => {
+      controlled.send({
+        type: 'done',
+        conversationId: 'conv_new',
+        messageId: 'persisted_assistant',
+        retrievedEngrams: [],
+        parts: [],
+      });
+      controlled.close();
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('streaming-bubble')).not.toBeInTheDocument();
+      expect(screen.getAllByText('How many items are in my inventory?')).toHaveLength(1);
+      expect(screen.getByText('There are 83 items.')).toBeInTheDocument();
+    });
+    expect(sdk.egoGetConversation).toHaveBeenCalledWith({ path: { id: 'conv_new' } });
+  });
+
+  it('keeps an active reply visible when it repeats an earlier assistant answer', async () => {
+    streamTestConfig.useRealStream = true;
+    const controlled = createControlledResponse();
+    const fetchMock = vi.fn().mockResolvedValue(controlled.response);
+    vi.stubGlobal('fetch', fetchMock);
+    setupWithSelectedConversation();
+    let completed = false;
+    const earlierReply = {
+      ...mockMessages[1],
+      id: 'msg_repeated',
+      content: 'That answer is unchanged.',
+    };
+    const persistedUserMessage = {
+      ...mockMessages[0],
+      id: 'msg_user_latest',
+      content: 'Repeat the previous answer',
+    };
+    const persistedAssistantMessage = {
+      ...mockMessages[1],
+      id: 'msg_latest',
+      content: 'That answer is unchanged.',
+    };
+    sdk.egoGetConversation.mockImplementation(async () => ({
+      data: {
+        conversation: mockConversations[0],
+        messages: completed
+          ? [...mockMessages, earlierReply, persistedUserMessage, persistedAssistantMessage]
+          : [...mockMessages, earlierReply],
+      },
+    }));
+    const user = userEvent.setup();
+    renderHarness();
+
+    await user.click(await screen.findByText('Budget discussion'));
+    await screen.findByText('What is my budget?');
+    await user.type(screen.getByLabelText('Message input'), 'Repeat the previous answer');
+    await user.click(screen.getByLabelText('Send message'));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+
+    act(() => controlled.send({ type: 'token', text: 'That answer is unchanged.' }));
+
+    expect(await screen.findByTestId('streaming-bubble')).toBeInTheDocument();
+    expect(screen.getAllByText('That answer is unchanged.')).toHaveLength(2);
+
+    act(() => {
+      completed = true;
+      controlled.send({
+        type: 'done',
+        conversationId: 'conv_1',
+        messageId: 'msg_latest',
+        retrievedEngrams: [],
+        parts: [],
+      });
+      controlled.close();
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('streaming-bubble')).not.toBeInTheDocument();
+      expect(screen.getAllByText('That answer is unchanged.')).toHaveLength(2);
+    });
+  });
+
+  it('keeps a first-turn prompt visible after a stream error', async () => {
+    streamTestConfig.useRealStream = true;
+    const controlled = createControlledResponse();
+    const fetchMock = vi.fn().mockResolvedValue(controlled.response);
+    vi.stubGlobal('fetch', fetchMock);
+    const user = userEvent.setup();
+    renderHarness('drawer');
+
+    await user.type(screen.getByLabelText('Message input'), 'Keep this question visible');
+    await user.click(screen.getByLabelText('Send message'));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+
+    act(() => {
+      controlled.send({ type: 'error', message: 'Gateway unavailable' });
+      controlled.close();
+    });
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Gateway unavailable');
+    expect(screen.getByText('Keep this question visible')).toBeInTheDocument();
+    expect(screen.queryByText('What can I help you with?')).not.toBeInTheDocument();
+  });
+
+  it('keeps an existing-turn optimistic message and reports a stream error', async () => {
+    streamTestConfig.useRealStream = true;
+    const controlled = createControlledResponse();
+    const fetchMock = vi.fn().mockResolvedValue(controlled.response);
+    vi.stubGlobal('fetch', fetchMock);
+    setupWithSelectedConversation();
+    const user = userEvent.setup();
+    renderHarness('drawer');
+
+    await user.click(screen.getByRole('button', { name: 'Conversation history' }));
+    await user.click(await screen.findByText('Budget discussion'));
+    await screen.findByText('What is my budget?');
+    await user.type(screen.getByLabelText('Message input'), 'Show one more detail');
+    await user.click(screen.getByLabelText('Send message'));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(screen.getAllByText('Show one more detail')).toHaveLength(1);
+
+    act(() => {
+      controlled.send({ type: 'error', message: 'Gateway unavailable' });
+      controlled.close();
+    });
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Gateway unavailable');
+    expect(screen.getAllByText('Show one more detail')).toHaveLength(1);
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
+      body: expect.stringContaining('"conversationId":"conv_1"'),
+    });
   });
 
   it('shows delete confirmation dialog and calls delete', async () => {

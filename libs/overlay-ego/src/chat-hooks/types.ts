@@ -50,6 +50,8 @@ export interface ChatPageModel {
   selectConversation: (id: string) => void;
   /** Messages for the selected conversation. */
   messages: ChatMessage[];
+  /** First-turn user prompt shown until the newly created conversation is fetched. */
+  pendingUserMessage: string | null;
   /** Whether messages are loading. */
   messagesLoading: boolean;
   /** Current input text. */
@@ -80,6 +82,8 @@ export interface ChatPageModel {
   retrievedEngrams: RetrievedEngram[];
   /** Partial streaming content being received (null when not streaming). */
   streamingContent: string | null;
+  /** Persisted assistant message id for the active stream, when available. */
+  persistedMessageId: string | null;
   /** Tool activity from the current stream. */
   toolActivity: ToolActivity[];
   /** Rich content parts received in the current stream. */
