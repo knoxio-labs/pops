@@ -77,6 +77,11 @@ extension EgoThreadModel {
         startTurn(message: message)
     }
 
+    func send(prompt: String) {
+        draft = prompt
+        send()
+    }
+
     /// Retries the last user message after a failed turn without duplicating it.
     public func retry() {
         guard !isBatchDecisionInFlight else { return }

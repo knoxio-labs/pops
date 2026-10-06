@@ -1,5 +1,7 @@
 import AppCore
 import FeatureEgo
+import FeatureInventory
+import FeaturePurchases
 import FeatureTransactions
 import SwiftUI
 import Testing
@@ -9,7 +11,7 @@ import Testing
 @MainActor
 @Suite("Ego placement")
 internal struct EgoPlacementTests {
-    @Test("Ego stays out of the tabs with or without availability")
+    @Test("Ego stays out of selectable feature tabs with or without availability")
     func egoIsExcludedFromTabs() {
         let existing: [MobileFeature] = [FeatureTransactions.feature]
         let withEgo = existing + [FeatureEgo.feature]
@@ -19,8 +21,8 @@ internal struct EgoPlacementTests {
         #expect(ContentView.tabFeatures(for: withEgo) == existing)
     }
 
-    @Test("the sheet entry and tab accessory follow Ego availability")
-    func entryAndAccessoryFollowAvailability() {
+    @Test("the sheet entry and action tab follow Ego availability")
+    func entryAndActionTabFollowAvailability() {
         #expect(ContentView.showsEgoEntry(available: [FeatureEgo.feature]))
         #expect(
             !ContentView.showsEgoEntry(available: [FeatureTransactions.feature]))
@@ -34,6 +36,16 @@ internal struct EgoPlacementTests {
         let available = [FeatureTransactions.feature, FeatureEgo.feature]
 
         #expect(ContentView.tabFeatures(for: available).count == 1)
+    }
+
+    @Test("the Ego launcher is an action tab outside feature selection")
+    func launcherDoesNotBecomeASelectedFeature() {
+        let available = [FeaturePurchases.feature, FeatureInventory.feature, FeatureEgo.feature]
+        let selectable = ContentView.tabs(for: available)
+
+        #expect(!selectable.contains(ContentView.egoLauncherTab))
+        #expect(ContentView.egoLauncherTab != ContentView.searchTab)
+        #expect(selectable.last == ContentView.searchTab)
     }
 
     @Test("entity sheet bindings are inert while Ego is closed")

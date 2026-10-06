@@ -35,6 +35,21 @@ internal struct EgoThreadModelTests {
         #expect(model.conversationId == "conversation-1")
     }
 
+    @Test("a welcome prompt is sent through the normal thread path")
+    func sendsWelcomePrompt() async {
+        let prompt = "Summarize my recent purchases and spending."
+        let repository = ScriptedEgoRepository(
+            chatScripts: [EgoThreadModelFixtures.script(doneID: "assistant-1")])
+        let model = EgoThreadModelFixtures.model(repository: repository)
+
+        model.send(prompt: prompt)
+        await awaitObservedCondition { model.turn == nil && model.messages.count == 2 }
+
+        #expect(model.messages[0].role == .user)
+        #expect(model.messages[0].plainText == prompt)
+        #expect(await repository.streamChatCalls.map(\.message) == [prompt])
+    }
+
     @Test("the next send continues the conversation returned by done")
     func secondSendUsesConversationID() async {
         let repository = ScriptedEgoRepository(

@@ -5,6 +5,7 @@ import FeatureTransactions
 
 extension ContentView {
     nonisolated internal static let moreTab = MobileFeature(rawValue: "shell.more")
+    nonisolated internal static let egoLauncherTab = MobileFeature(rawValue: "shell.ego-launcher")
     nonisolated internal static let moreTabAccessibilityIdentifier = "more-tab"
 
     nonisolated internal static func tabFeatures(for available: [MobileFeature])
