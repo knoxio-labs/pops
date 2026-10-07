@@ -304,6 +304,21 @@ import type {
   TagRulesUpdateResponses,
   TagRulesVocabularyData,
   TagRulesVocabularyResponses,
+  TransactionAttachmentsAttachData,
+  TransactionAttachmentsAttachErrors,
+  TransactionAttachmentsAttachResponses,
+  TransactionAttachmentsDetachData,
+  TransactionAttachmentsDetachErrors,
+  TransactionAttachmentsDetachResponses,
+  TransactionAttachmentsListData,
+  TransactionAttachmentsListErrors,
+  TransactionAttachmentsListResponses,
+  TransactionAttachmentsReadData,
+  TransactionAttachmentsReadErrors,
+  TransactionAttachmentsReadResponses,
+  TransactionAttachmentsThumbnailData,
+  TransactionAttachmentsThumbnailErrors,
+  TransactionAttachmentsThumbnailResponses,
   TransactionHistoryForAccountData,
   TransactionHistoryForAccountErrors,
   TransactionHistoryForAccountResponses,
@@ -2148,6 +2163,93 @@ export const transactionsUpdate = <ThrowOnError extends boolean = false>(
       ...options.headers,
     },
   });
+
+/**
+ * The files attached to a transaction, in order
+ */
+export const transactionAttachmentsList = <ThrowOnError extends boolean = false>(
+  options: Options<TransactionAttachmentsListData, ThrowOnError>
+): RequestResult<
+  TransactionAttachmentsListResponses,
+  TransactionAttachmentsListErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    TransactionAttachmentsListResponses,
+    TransactionAttachmentsListErrors,
+    ThrowOnError
+  >({ url: '/transactions/{id}/attachments', ...options });
+
+/**
+ * Attach files to a transaction: new files to store, or receipt URIs already stored. Answers every file named, in order; one the transaction already holds is not added twice
+ */
+export const transactionAttachmentsAttach = <ThrowOnError extends boolean = false>(
+  options: Options<TransactionAttachmentsAttachData, ThrowOnError>
+): RequestResult<
+  TransactionAttachmentsAttachResponses,
+  TransactionAttachmentsAttachErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).post<
+    TransactionAttachmentsAttachResponses,
+    TransactionAttachmentsAttachErrors,
+    ThrowOnError
+  >({
+    url: '/transactions/{id}/attachments',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Remove one file from a transaction
+ */
+export const transactionAttachmentsDetach = <ThrowOnError extends boolean = false>(
+  options: Options<TransactionAttachmentsDetachData, ThrowOnError>
+): RequestResult<
+  TransactionAttachmentsDetachResponses,
+  TransactionAttachmentsDetachErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).delete<
+    TransactionAttachmentsDetachResponses,
+    TransactionAttachmentsDetachErrors,
+    ThrowOnError
+  >({ url: '/transactions/{id}/attachments/{attachmentId}', ...options });
+
+/**
+ * The bytes of one attached file
+ */
+export const transactionAttachmentsRead = <ThrowOnError extends boolean = false>(
+  options: Options<TransactionAttachmentsReadData, ThrowOnError>
+): RequestResult<
+  TransactionAttachmentsReadResponses,
+  TransactionAttachmentsReadErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    TransactionAttachmentsReadResponses,
+    TransactionAttachmentsReadErrors,
+    ThrowOnError
+  >({ url: '/transactions/{id}/attachments/{attachmentId}', ...options });
+
+/**
+ * One attached file at a size a list row can afford. 415 for a file that is not an image
+ */
+export const transactionAttachmentsThumbnail = <ThrowOnError extends boolean = false>(
+  options: Options<TransactionAttachmentsThumbnailData, ThrowOnError>
+): RequestResult<
+  TransactionAttachmentsThumbnailResponses,
+  TransactionAttachmentsThumbnailErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    TransactionAttachmentsThumbnailResponses,
+    TransactionAttachmentsThumbnailErrors,
+    ThrowOnError
+  >({ url: '/transactions/{id}/attachments/{attachmentId}/thumbnail', ...options });
 
 /**
  * Who created, changed, deleted or restored a transaction, newest first. Still answers for a deleted transaction; 404s an id that never had a row or an event

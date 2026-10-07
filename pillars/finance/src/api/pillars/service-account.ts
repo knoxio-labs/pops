@@ -30,12 +30,15 @@ export const FINANCE_SERVICE_ACCOUNT_NAME = 'finance';
  *
  * - `contacts.entities` — the entity matcher, the usage rollup and the
  *   create-or-fetch pre-create, `src/api/contacts/client.ts`.
+ * - `purchases.receipt` — storing, pinning and reading the files attached to
+ *   a transaction, `src/api/purchases/client.ts`.
  * - `registry.users` — the nightly owner-URI reconciliation cron,
  *   `src/api/cron/pillar-lookup.ts`.
  * - `tags.tags` — shared vocabulary reads and creates,
  *   `src/api/tags/client.ts`.
  *
- * The tags API enforces `tags.tags`. Registry's `users.get` handler reads no
+ * The tags API enforces `tags.tags` and purchases enforces `purchases.receipt`.
+ * Registry's `users.get` handler reads no
  * principal, and the Rust `contacts` pillar has no auth middleware — see the
  * note in `pillars/finance/src/api/pillars/outbound.ts`. Those grants are
  * declared too, so either producer can enforce them later without a second
@@ -43,6 +46,7 @@ export const FINANCE_SERVICE_ACCOUNT_NAME = 'finance';
  */
 export const FINANCE_SERVICE_ACCOUNT_SCOPES: readonly string[] = [
   'contacts.entities',
+  'purchases.receipt',
   'registry.users',
   'tags.tags',
 ];

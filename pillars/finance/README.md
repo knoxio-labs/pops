@@ -87,24 +87,25 @@ than its traffic will see the `403` above (POPS-1551).
 
 ## Who it calls, and as whom
 
-The mirror of the section above (POPS-2021). Finance has three outbound
+The mirror of the section above (POPS-2021). Finance has four outbound
 cross-pillar clients, all through `pillar()` from `@pops/pillar-sdk/server`,
 which attaches the pillar's service-account key as `X-API-Key`:
 
-| Leg                                        | Call                                                                     | Scope needed        | Where                                                        |
-| ------------------------------------------ | ------------------------------------------------------------------------ | ------------------- | ------------------------------------------------------------ |
-| entity matcher / usage rollup / pre-create | `entities.list`, `entities.get`, `entities.create`                       | `contacts.entities` | `src/api/contacts/client.ts`                                 |
-| owner-URI reconciliation cron              | `users.get`                                                              | `registry.users`    | `src/api/cron/pillar-lookup.ts`                              |
-| shared tag vocabulary and carrier sync     | `tags.list`, `tags.create`; one sync retry for an unknown carrier tag id | `tags.tags`         | `src/api/tags/client.ts`, `src/api/cron/sync-shared-tags.ts` |
+| Leg                                        | Call                                                                                                      | Scope needed        | Where                                                        |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------------- | ------------------- | ------------------------------------------------------------ |
+| entity matcher / usage rollup / pre-create | `entities.list`, `entities.get`, `entities.create`                                                        | `contacts.entities` | `src/api/contacts/client.ts`                                 |
+| owner-URI reconciliation cron              | `users.get`                                                                                               | `registry.users`    | `src/api/cron/pillar-lookup.ts`                              |
+| shared tag vocabulary and carrier sync     | `tags.list`, `tags.create`; one sync retry for an unknown carrier tag id                                  | `tags.tags`         | `src/api/tags/client.ts`, `src/api/cron/sync-shared-tags.ts` |
+| files attached to a transaction            | `receipt.store`, `receipt.addReferences`, `receipt.removeReferences`, `receipt.read`, `receipt.thumbnail` | `purchases.receipt` | `src/api/purchases/client.ts`                                |
 
-The grant is those three and nothing wider; `src/api/pillars/service-account.ts`
+The grant is those four and nothing wider; `src/api/pillars/service-account.ts`
 is its source of truth and a test pins the list. Minting the account is an
 operator step against the registry's `userOnly` admin surface — the same
 runbook as
 [`pillars/bfm/README.md`](../bfm/README.md#provisioning-the-service-account),
 with `"name":"finance"` and these scopes.
 
-**The tags producer enforces its grant.** `registry`'s `users.get` handler
+**The tags and purchases producers enforce their grants.** `registry`'s `users.get` handler
 reads no principal, and the Rust `contacts` pillar has no auth middleware.
 Finance still sends the key to every leg so those producers can enforce their
 declared grants later without a second migration, instead of silently going
@@ -131,8 +132,17 @@ cron and tags client, and never issues the call.
 finance entry under `infra/secrets.example/` (compare `purchases`'s, which
 exists) and no `POPS_INTERNAL_API_KEY_FILE` in `infra/docker-compose.yml`'s
 `finance-api` service, unlike `purchases` (POPS-1967). Until provisioning,
-the tags client reports `no-credential` without making an anonymous call;
-provisioning remains an operator step.
+the tags client reports `no-credential` without making an anonymous call
+and the attachment routes answer `503`; provisioning remains an operator step.
+
+**Attached files live in purchases.** `transaction_attachments` holds a
+`pops://purchases/receipt/<sha256>` link and nothing else. Attaching stores
+the file, pins it under `pops://finance/transaction/<id>` so the receipt
+store's retention sweep keeps it, and only then writes the row; detaching and
+deleting a transaction remove the row first and release the pin after, best
+effort. A crash can leave a pin nothing uses, never a row whose file the sweep
+may delete. While purchases cannot be reached the routes that touch a file
+answer `503 finance.dependency.unavailable` and write nothing.
 
 ## Domains
 

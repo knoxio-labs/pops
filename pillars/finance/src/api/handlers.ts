@@ -15,6 +15,7 @@ import type { PillarRegistryEntry } from '@pops/types';
 
 import type { OpenedFinanceDb } from '../db/index.js';
 import type { ContactsClient } from './contacts/client.js';
+import type { PurchasesReceiptsClient } from './purchases/client.js';
 
 /**
  * Threshold past which the health response flags import staleness. No
@@ -41,6 +42,12 @@ export interface FinanceApiDeps {
    * Defaults to a `pillar('contacts')`-backed impl; tests inject a fake.
    */
   contacts: ContactsClient;
+  /**
+   * Client for the purchases receipt store, which holds the files attached to
+   * transactions. Defaults to a `pillar('purchases')`-backed impl; tests
+   * inject a fake.
+   */
+  purchases?: PurchasesReceiptsClient;
   /**
    * Resolves a presented `X-API-Key` to its service account. Defaults to a
    * registry-backed verifier; tests inject a fake so no test needs a live
