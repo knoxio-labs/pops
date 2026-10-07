@@ -31,6 +31,9 @@ import type {
   ServiceAccountsRevokeData,
   ServiceAccountsRevokeErrors,
   ServiceAccountsRevokeResponses,
+  SessionGetData,
+  SessionGetErrors,
+  SessionGetResponses,
   SettingsAggregateData,
   SettingsAggregateErrors,
   SettingsAggregateResponses,
@@ -232,6 +235,17 @@ export const serviceAccountsRevoke = <ThrowOnError extends boolean = false>(
       'Content-Type': 'application/json',
       ...options.headers,
     },
+  });
+
+/**
+ * Read who is signed in: the operator or a guest, and their verified email
+ */
+export const sessionGet = <ThrowOnError extends boolean = false>(
+  options?: Options<SessionGetData, ThrowOnError>
+): RequestResult<SessionGetResponses, SessionGetErrors, ThrowOnError> =>
+  (options?.client ?? client).get<SessionGetResponses, SessionGetErrors, ThrowOnError>({
+    url: '/session',
+    ...options,
   });
 
 /**

@@ -65,3 +65,15 @@ export class UnauthorizedError extends HttpError {
     this.name = 'UnauthorizedError';
   }
 }
+
+/**
+ * Caller is a known person the route refuses: a guest on a route only the
+ * operator may use. Distinct from {@link UnauthorizedError} because signing in
+ * again would not help.
+ */
+export class ForbiddenError extends HttpError {
+  constructor(message: string) {
+    super(403, message);
+    this.name = 'ForbiddenError';
+  }
+}

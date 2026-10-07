@@ -93,6 +93,16 @@ account, then (non-production) a dev fallback user, then — **only when
 `CLOUDFLARE_ACCESS_TEAM_NAME` is unset** — a `tunnel-authenticated@pops.local`
 principal, then a verified `cf-access-jwt-assertion`, then anonymous.
 
+A verified email is the **operator** when it is in `POPS_OPERATOR_EMAILS`
+(comma-separated, compared trimmed and lower-cased) and a **guest** otherwise.
+Both fallback users are the operator. `requireUser` and `requireProtected`
+answer a guest 403, so the service-account, feature and settings routes stay
+the operator's; `GET /session` is the one identity-gated route a guest may
+call, and returns `{ kind, email }` with `email: null` for a fallback user.
+While `POPS_OPERATOR_EMAILS` is unset nobody is a guest: every verified email
+is the operator, as before the list existed, and in production the pillar logs one warning
+at startup saying so.
+
 The tunnel-user fallback is deliberate, not a placeholder: the registry is
 reachable only from inside the `pops-backend`/`pops-frontend` Docker networks
 and through the shell's Cloudflare Access-protected proxy, so "no team name

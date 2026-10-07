@@ -151,6 +151,16 @@
             },
             "description": "401"
           },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "403"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -287,6 +297,16 @@
             },
             "description": "401"
           },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "403"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -363,6 +383,16 @@
               }
             },
             "description": "401"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "403"
           },
           "404": {
             "content": {
@@ -456,6 +486,16 @@
             },
             "description": "401"
           },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "403"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -544,6 +584,16 @@
               }
             },
             "description": "401"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "403"
           },
           "404": {
             "content": {
@@ -636,6 +686,16 @@
               }
             },
             "description": "401"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "403"
           },
           "404": {
             "content": {
@@ -742,6 +802,16 @@
               }
             },
             "description": "401"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "403"
           },
           "404": {
             "content": {
@@ -876,6 +946,16 @@
             },
             "description": "401"
           },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "403"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -966,6 +1046,16 @@
             },
             "description": "401"
           },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "403"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -989,6 +1079,48 @@
         },
         "summary": "Revoke a service account by id (admin only)",
         "tags": ["serviceAccounts"]
+      }
+    },
+    "/session": {
+      "get": {
+        "operationId": "session.get",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "email": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "kind": {
+                      "enum": ["operator", "guest"],
+                      "type": "string"
+                    }
+                  },
+                  "required": ["kind", "email"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "401"
+          }
+        },
+        "summary": "Read who is signed in: the operator or a guest, and their verified email",
+        "tags": ["session"]
       }
     },
     "/settings": {
@@ -1045,6 +1177,16 @@
               }
             },
             "description": "401"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "403"
           },
           "404": {
             "content": {
@@ -1146,6 +1288,16 @@
             },
             "description": "401"
           },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "403"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -1235,6 +1387,16 @@
               }
             },
             "description": "401"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "403"
           },
           "404": {
             "content": {
@@ -1330,6 +1492,16 @@
               }
             },
             "description": "401"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "403"
           },
           "404": {
             "content": {
@@ -1430,6 +1602,16 @@
               }
             },
             "description": "401"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "403"
           },
           "404": {
             "content": {
@@ -1534,6 +1716,16 @@
             },
             "description": "401"
           },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "403"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -1633,6 +1825,16 @@
               }
             },
             "description": "401"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "403"
           },
           "404": {
             "content": {
@@ -1753,6 +1955,16 @@
             },
             "description": "401"
           },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "403"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -1871,6 +2083,16 @@
             },
             "description": "401"
           },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "403"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -1986,6 +2208,16 @@
               }
             },
             "description": "401"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "403"
           },
           "404": {
             "content": {
