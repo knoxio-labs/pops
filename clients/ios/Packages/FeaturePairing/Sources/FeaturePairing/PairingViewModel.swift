@@ -92,6 +92,31 @@ extension PairingViewModel {
         return true
     }
 
+    /// Loads pairing details received through the Debug simulator's loopback handoff.
+    ///
+    /// The caller supplies the BFM origin and code separately so a code-bearing
+    /// pairing URL never needs to be created or persisted by the handoff.
+    @discardableResult
+    public func receivePairingDetails(baseURL: URL, code rawCode: String) -> Bool {
+        guard
+            let components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false),
+            components.path.isEmpty || components.path == "/",
+            components.query == nil,
+            components.fragment == nil,
+            components.user == nil,
+            components.password == nil,
+            let origin = PairingField.baseURL(baseURL.absoluteString),
+            let code = PairingField.trimmed(rawCode),
+            PairingField.withinBounds(code)
+        else { return false }
+
+        baseURLText = origin.absoluteString
+        codeText = code
+        failure = nil
+        isScannerPresented = false
+        return canSubmit
+    }
+
     public func dismissScanner() {
         isScannerPresented = false
     }

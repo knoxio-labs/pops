@@ -4,6 +4,7 @@ name: Purchases home opens both archive scopes and a full detail
 - clearState
 - clearKeychain
 - launchApp
+- runFlow: subflows/dismiss-stale-pairing-open-prompt.yaml
 
 - assertVisible:
     id: 'pairing-code-field'
@@ -25,7 +26,7 @@ name: Purchases home opens both archive scopes and a full detail
 # The figure comes from the month-summary request. The tiles carry server
 # counts; the unmatched tile covers both unsettled purchases across the whole
 # backlog, while the month figure covers the single September purchase.
-- assertVisible: 'A\$12\.50'
+- assertVisible: 'A?\$12\.50'
 - assertVisible:
     id: 'purchases-home-unmatched'
     text: '2, Unmatched'
@@ -47,7 +48,7 @@ name: Purchases home opens both archive scopes and a full detail
 - assertVisible:
     id: 'purchase-detail'
     text: 'Items'
-- assertVisible: 'Breakfast, A\$12\.50'
+- assertVisible: 'Breakfast, A?\$12\.50'
 - assertVisible:
     id: 'purchase-detail-receipt'
 

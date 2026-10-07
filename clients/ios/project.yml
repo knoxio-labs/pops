@@ -98,6 +98,14 @@ targets:
   Pops:
     type: application
     platform: iOS
+    preBuildScripts:
+      - path: scripts/prepare-info-plist.sh
+        name: Prepare app Info.plist
+        inputFiles:
+          - $(SRCROOT)/App/Info.plist
+        outputFiles:
+          - $(DERIVED_FILE_DIR)/Pops-Info.plist
+        basedOnDependencyAnalysis: false
     sources:
       # XcodeGen 2.46 predates Icon Composer, so it does not know `.icon` is a
       # bundle and walks into it as a source directory. Excluded from the glob
@@ -107,6 +115,7 @@ targets:
         excludes:
           - AppIcon.icon/**
           - AppIconLocal.icon/**
+          - Info.plist
       - path: App/AppIcon.icon
         type: file
         buildPhase: resources
@@ -172,7 +181,7 @@ targets:
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES
-        INFOPLIST_FILE: App/Info.plist
+        INFOPLIST_FILE: $(DERIVED_FILE_DIR)/Pops-Info.plist
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_NSCameraUsageDescription: Pops uses the camera to scan pairing QR codes, item and location labels, scan product barcodes and labels, photograph receipts, and photograph inventory items.
@@ -196,8 +205,6 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon$(POPS_APPICON_SUFFIX_$(POPS_FLAVOR))
         CODE_SIGN_STYLE: Automatic
       configs:
-        # Read through App/Info.plist, which is the only way to reach a key Xcode's
-        # INFOPLIST_KEY_ allowlist does not cover.
         Debug:
           POPS_BFM_BASE_URL: http://localhost:3014
         # Empty on purpose, and asserted by `mise run verify:release-carries-no-host`.

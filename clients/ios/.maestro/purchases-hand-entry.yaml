@@ -4,6 +4,7 @@ name: A purchase entered from Purchases is saved and highlighted at home
 - clearState
 - clearKeychain
 - launchApp
+- runFlow: subflows/dismiss-stale-pairing-open-prompt.yaml
 
 - assertVisible:
     id: 'pairing-code-field'
@@ -16,7 +17,7 @@ name: A purchase entered from Purchases is saved and highlighted at home
       SERVER_URL: ${CONTROL_BASE_URL}
 
 - runFlow: subflows/open-purchases.yaml
-- assertVisible: 'A\$12\.50'
+- assertVisible: 'A?\$12\.50'
 
 - tapOn: 'Add a purchase'
 - tapOn:

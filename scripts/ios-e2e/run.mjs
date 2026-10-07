@@ -38,11 +38,10 @@
  * happened while this file was being written, to a `pnpm dev` process left
  * running in a sibling worktree the day before.
  *
- * So this binds a free port, and the flow types that address into the pairing
- * form's server field rather than accepting the Debug prefill. Two things
- * follow, both good: two runs on one machine cannot collide, and the flow
- * exercises the manual-entry path — which is the one a simulator has, having no
- * camera to scan a QR with.
+ * So this binds a free port. The host control plane delivers pairing through
+ * the Debug-simulator-only URL route, keeping the code out of Maestro's
+ * process, logs and artifacts while still exercising the real BFM pairing
+ * exchange.
  *
  * The `/health` identity check below is the belt to that brace: a port can be
  * taken between this process choosing it and the pillar binding it, and a
@@ -61,7 +60,8 @@
  * Usage:
  *   node scripts/ios-e2e/run.mjs                         run every flow, then tear everything down
  *   node scripts/ios-e2e/run.mjs --pairing-issuer=mcp     run the MCP pairing path
- *   node scripts/ios-e2e/run.mjs --serve-only             boot, print addresses/code, and wait
+ *   node scripts/ios-e2e/run.mjs --serve-only             pair the selected simulator and keep servers up
+ *   POPS_IOS_E2E_SIMULATOR_UDID=<id> node scripts/ios-e2e/run.mjs
  *
  * Exit 0 = the flow passed. Exit 1 = it did not, or the federation would not
  * come up. Exit 2 = usage error.
@@ -71,7 +71,7 @@ import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { createServer } from 'node:http';
-import { tmpdir } from 'node:os';
+import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
@@ -80,9 +80,24 @@ import { seededAccounts } from './accounts-fixture.mjs';
 import { startControlPlane } from './control-plane.mjs';
 import { spawnInventoryPillar, startInventoryGate } from './inventory-pillar.mjs';
 import { publishUserDefinedType } from './inventory-user-type.mjs';
-import { createMcpInboundAuth, issuePairingCodeViaMcp } from './mcp-pairing-code.mjs';
+import {
+  createMcpInboundAuth,
+  hasPairingCodeIssuerTool,
+  isMcpReadyResponse,
+} from './mcp-pairing-code.mjs';
+import {
+  formatPairingRunLifecycleSummary,
+  PairingArtifactScanFailure,
+  primaryPairingRunFailure,
+  scanPairingArtifacts,
+} from './pairing-artifact-guard.mjs';
+import { createPairingHandoff } from './pairing-handoff.mjs';
+import { createProcessRunner } from './process-runner.mjs';
 import { startPurchasesStub } from './purchases-stub.mjs';
+import { formatServeOnlyStatus, pairSimulatorForServeOnly } from './serve-only-pairing.mjs';
 import { boundAddress } from './server-address.mjs';
+import { issueAndOpenPairingLink } from './simulator-pairing.mjs';
+import { hasLocalHarnessOrigins, readDisposableSimulator } from './simulator-target.mjs';
 import { seededTransactions } from './transactions-fixture.mjs';
 import { startUpstreamStub } from './upstream-stub.mjs';
 
@@ -106,6 +121,42 @@ const BOOT_POLL_MS = 100;
 
 /** How long the pillar gets to shut down cleanly before it is killed. */
 const SHUTDOWN_GRACE_MS = 5_000;
+/** @type {ReturnType<typeof createProcessRunner> | undefined} */
+let processRunner;
+
+/**
+ * @type {{
+ *   phase: 'preflight' | 'fixtures' | 'bfm-startup' | 'mcp-startup' | 'mcp-readiness' | 'ios-e2e' | 'artifact-scan' | 'complete',
+ *   issuedCount: number,
+ *   claimedCount: number,
+ *   completedCount: number,
+ *   pairedCount: number,
+ *   scannedRoots: number,
+ *   totalRoots: number,
+ *   scannedFiles: number,
+ *   artifactScan: 'not-run' | 'clean' | 'matched' | 'failed',
+ *   artifactScanStage: 'required-root-missing' | 'required-root-no-new-files' | 'root-read-failed' | 'file-stat-failed' | 'file-read-failed' | 'unknown' | null
+ * }}
+ */
+let pairingLifecycle = {
+  phase: 'preflight',
+  issuedCount: 0,
+  claimedCount: 0,
+  completedCount: 0,
+  pairedCount: 0,
+  scannedRoots: 0,
+  totalRoots: 2,
+  scannedFiles: 0,
+  artifactScan: 'not-run',
+  artifactScanStage: null,
+};
+let pairingLifecycleSummaryPrinted = false;
+
+function reportPairingLifecycleFailure() {
+  if (pairingLifecycleSummaryPrinted) return;
+  pairingLifecycleSummaryPrinted = true;
+  process.stderr.write(formatPairingRunLifecycleSummary(pairingLifecycle));
+}
 
 /** Satisfies the BFM's boot check, which refuses anything under 32 characters. */
 const ACCESS_TOKEN_SECRET = 'ios-e2e-access-token-secret-not-a-real-key';
@@ -126,26 +177,6 @@ const ACCESS_TOKEN_SECRET = 'ios-e2e-access-token-secret-not-a-real-key';
  * variable; every real deployment leaves it unset.
  */
 const PAIRING_CODE_ISSUANCE_LIMIT = 50;
-
-/**
- * Raises how long a code minted for this run stays redeemable, past the
- * production default of five minutes (`pillars/bfm/src/db/services/pairing-
- * codes.ts`'s `DEFAULT_PAIRING_CODE_TTL_MS`).
- *
- * A code is minted here and handed to a FRESH `maestro test` invocation — see
- * `clients/ios/mise.toml`'s `e2e` task, which mints one right before starting
- * Maestro for that flow. Installing Maestro's own XCTest driver and settling
- * the simulator both happen after the code already exists and before the
- * flow's first step runs, so on a slow CI host that overhead alone can spend
- * the five-minute default before the app ever submits the code. The pillar
- * cannot tell an expired code from a wrong one — `redeemPairingCode`'s own
- * doc comment says why — so the failure reads as a rejected pairing on the
- * pairing screen rather than as what it is: driver startup, not app or BFM
- * behaviour, eating the code's window. `resolvePairingCodeTtlMs` in
- * `pillars/bfm/src/api/boot-env.ts` is the one place production reads this
- * variable; every real deployment leaves it unset.
- */
-const PAIRING_CODE_TTL_MS = 30 * 60 * 1000;
 
 /**
  * Raises the discovery cache's per-fetch abort deadline past the SDK's own
@@ -228,14 +259,20 @@ function allocatePort() {
  * @returns {Promise<void>}
  */
 function run(command, args, options = {}) {
-  return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { stdio: 'inherit', cwd: REPO_ROOT, ...options });
-    child.on('error', reject);
-    child.on('exit', (code, signal) => {
-      if (code === 0) return resolve();
-      reject(new HarnessError(`${command} ${args.join(' ')} ${describeEnd(code, signal)}`));
+  if (processRunner === undefined) throw new HarnessError('the process runner is not ready.');
+  return processRunner
+    .run(command, args, { cwd: REPO_ROOT, ...options })
+    .then(({ code, signal }) => {
+      if (code === 0) return;
+      throw new HarnessError(`${command} ${args.join(' ')} ${describeEnd(code, signal)}`);
     });
-  });
+}
+
+function throwIfStopping() {
+  const signal = processRunner?.signal();
+  if (signal !== null && signal !== undefined) {
+    throw new HarnessError(`the iOS E2E was stopped by ${signal}.`);
+  }
 }
 
 /**
@@ -284,6 +321,7 @@ async function waitForHealth(baseURL, expectedVersion, child, who = 'the BFM') {
   const health = new URL('/health', baseURL);
 
   while (Date.now() < deadline) {
+    throwIfStopping();
     // Both are null while it runs, and exactly one is set once it has not —
     // a pillar killed by a signal has no exit code, so watching the code alone
     // would poll a dead port until the ceiling.
@@ -363,13 +401,15 @@ async function probeHealth(health) {
  *
  * @param {URL} baseURL
  * @param {import('node:child_process').ChildProcess} child
+ * @param {string} token
  * @returns {Promise<void>}
  */
-async function waitForMcpReady(baseURL, child) {
+async function waitForMcpReady(baseURL, child, token) {
   const deadline = Date.now() + BOOT_TIMEOUT_MS;
   const ready = new URL('/ready', baseURL);
 
   while (Date.now() < deadline) {
+    throwIfStopping();
     if (child.exitCode !== null || child.signalCode !== null) {
       throw new HarnessError(
         `the MCP server ${describeEnd(child.exitCode, child.signalCode)} before answering ${ready}. ` +
@@ -381,8 +421,13 @@ async function waitForMcpReady(baseURL, child) {
       const response = await fetch(ready, { signal: AbortSignal.timeout(1000) });
       if (response.ok) {
         const body = await response.json();
-        if (body?.status === 'ready' && body?.apiKeyConfigured === true && body?.tools === 70) {
-          return;
+        if (isMcpReadyResponse(body)) {
+          const hasPairingIssuer = await hasPairingCodeIssuerTool({
+            endpoint: new URL('/mcp', baseURL).toString(),
+            token,
+            signal: AbortSignal.timeout(1000),
+          });
+          if (hasPairingIssuer) return;
         }
       }
     } catch {
@@ -392,37 +437,6 @@ async function waitForMcpReady(baseURL, child) {
   }
 
   throw new HarnessError(`the MCP server did not answer ${ready} within ${BOOT_TIMEOUT_MS}ms`);
-}
-
-/**
- * Asks the BFM directly for a pairing code, the way the operator's Devices
- * page does. The MCP path uses {@link issuePairingCodeViaMcp} instead.
- *
- * `/operator/*` needs no credential outside production — `resolveOperator` in
- * `pillars/bfm/src/api/middleware/identity.ts` falls back to a development
- * operator whenever `NODE_ENV` is not `production` — and this harness sets
- * `NODE_ENV=test` for exactly that reason.
- *
- * Only the direct `--serve-only` path calls this. The flow's code is minted by
- * the `clients/ios` half, which selects the direct or MCP HTTP endpoint without
- * importing anything from a pillar.
- *
- * @param {URL} baseURL
- * @returns {Promise<{ code: string, expiresAt: string }>}
- */
-async function mintPairingCode(baseURL) {
-  const response = await fetch(new URL('/operator/pairing/codes', baseURL), {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: '{}',
-  });
-
-  if (!response.ok) {
-    throw new HarnessError(
-      `POST /operator/pairing/codes answered ${response.status}. Body: ${await response.text()}`
-    );
-  }
-  return response.json();
 }
 
 /**
@@ -452,6 +466,19 @@ function stop(child) {
 }
 
 async function main() {
+  pairingLifecycle = {
+    phase: 'preflight',
+    issuedCount: 0,
+    claimedCount: 0,
+    completedCount: 0,
+    pairedCount: 0,
+    scannedRoots: 0,
+    totalRoots: 2,
+    scannedFiles: 0,
+    artifactScan: 'not-run',
+    artifactScanStage: null,
+  };
+  pairingLifecycleSummaryPrinted = false;
   const args = process.argv.slice(2);
   const serveOnly = args.includes('--serve-only');
   const issuerArgument = args.find((arg) => arg.startsWith('--pairing-issuer='));
@@ -463,11 +490,13 @@ async function main() {
     (arg) => arg !== '--serve-only' && !arg.startsWith('--pairing-issuer=')
   );
   if (unknown.length > 0) {
+    reportPairingLifecycleFailure();
     process.stderr.write(`ios-e2e: unknown argument(s): ${unknown.join(' ')}\n`);
     process.exitCode = 2;
     return;
   }
   if (pairingIssuer !== 'direct' && pairingIssuer !== 'mcp') {
+    reportPairingLifecycleFailure();
     process.stderr.write(
       `ios-e2e: unsupported pairing issuer '${pairingIssuer}'. Use direct or mcp.\n`
     );
@@ -475,6 +504,74 @@ async function main() {
     return;
   }
 
+  /** @type {{ deviceId: string, name: string } | undefined} */
+  let simulatorTarget;
+  try {
+    simulatorTarget = readDisposableSimulator(process.env['POPS_IOS_E2E_SIMULATOR_UDID']);
+  } catch (error) {
+    throw new HarnessError(error instanceof Error ? error.message : 'simulator selection failed.');
+  }
+  pairingLifecycle.phase = 'fixtures';
+  const pairingHandoff = createPairingHandoff({ deviceId: simulatorTarget.deviceId });
+  /** @type {Array<{ code: string, pairingUrl: string }>} */
+  const pairingMaterials = [];
+  const artifactScanStartedAt = Date.now() - 5_000;
+  const simulatorLogRoot = join(
+    homedir(),
+    'Library',
+    'Logs',
+    'CoreSimulator',
+    simulatorTarget.deviceId
+  );
+  const scanCurrentPairingArtifacts = async () => {
+    const previousPhase = pairingLifecycle.phase;
+    pairingLifecycle.phase = 'artifact-scan';
+    const counts = pairingHandoff.readCounts();
+    pairingLifecycle.claimedCount = counts.claims;
+    pairingLifecycle.completedCount = counts.completions;
+    pairingLifecycle.pairedCount = counts.paired;
+    /** @type {Awaited<ReturnType<typeof scanPairingArtifacts>>} */
+    let result;
+    try {
+      result = await scanPairingArtifacts({
+        root: join(homedir(), '.maestro', 'tests'),
+        additionalRoots: [simulatorLogRoot],
+        requiredRoots: [join(homedir(), '.maestro', 'tests'), simulatorLogRoot],
+        afterMs: artifactScanStartedAt,
+        materials: pairingMaterials,
+      });
+    } catch (error) {
+      pairingLifecycle.artifactScan = 'failed';
+      pairingLifecycle.scannedFiles =
+        error instanceof PairingArtifactScanFailure ? error.scannedFiles : 0;
+      pairingLifecycle.scannedRoots =
+        error instanceof PairingArtifactScanFailure ? error.scannedRoots : 0;
+      pairingLifecycle.totalRoots =
+        error instanceof PairingArtifactScanFailure ? error.totalRoots : 2;
+      pairingLifecycle.artifactScanStage =
+        error instanceof PairingArtifactScanFailure ? error.stage : 'unknown';
+      throw new HarnessError(
+        `ios-e2e artifact scan failed${error instanceof PairingArtifactScanFailure ? ` at ${error.stage}` : ''}.`
+      );
+    }
+    pairingLifecycle.scannedFiles = result.scannedFiles;
+    pairingLifecycle.scannedRoots = result.scannedRoots;
+    pairingLifecycle.totalRoots = result.totalRoots;
+    if (result.filesWithPairingMaterial > 0) {
+      pairingLifecycle.artifactScan = 'matched';
+      throw new HarnessError(
+        'pairing material was found in a test artifact or simulator log; contents were not printed.'
+      );
+    }
+    pairingLifecycle.artifactScan = 'clean';
+    pairingLifecycle.artifactScanStage = null;
+    process.stdout.write(
+      `ios-e2e: checked issued=${pairingLifecycle.issuedCount} claims=${counts.claims} completions=${counts.completions} paired=${counts.paired} scannedRoots=${result.scannedRoots}/${result.totalRoots} scannedFiles=${result.scannedFiles} matches=${result.filesWithPairingMaterial}.\n`
+    );
+    pairingLifecycle.phase = previousPhase;
+  };
+
+  pairingLifecycle.phase = 'fixtures';
   const port = await allocatePort();
   const baseURL = new URL(`http://${HOST}:${port}`);
   const buildVersion = `ios-e2e-${randomUUID()}`;
@@ -482,6 +579,7 @@ async function main() {
   /** @type {Array<() => Promise<void>>} */
   const teardown = [async () => rmSync(dataDir, { recursive: true, force: true })];
   let tornDown = false;
+  let succeeded = false;
 
   /**
    * Every step runs even when one throws. They are independent — a pillar, a
@@ -491,6 +589,11 @@ async function main() {
   const tearDown = async () => {
     if (tornDown) return;
     tornDown = true;
+    try {
+      await processRunner?.close();
+    } catch (error) {
+      process.stderr.write(`ios-e2e: teardown step failed: ${String(error)}\n`);
+    }
     for (const step of teardown) {
       try {
         await step();
@@ -500,18 +603,7 @@ async function main() {
     }
   };
 
-  // A signal has to reach the teardown, not just this process. Ctrl-C happens
-  // to work without this — the terminal signals the whole foreground group, so
-  // the pillar dies with its parent — but `kill` on this pid alone does not,
-  // and it leaves a BFM listening on a port with nobody left who knows it is
-  // there. That is the exact state that made this harness pair against a
-  // stranger's pillar once already; see this file's note on the port.
-  for (const signal of ['SIGINT', 'SIGTERM']) {
-    process.once(signal, () => {
-      process.stderr.write(`\nios-e2e: ${signal} — tearing down.\n`);
-      void tearDown().then(() => process.exit(130));
-    });
-  }
+  processRunner = createProcessRunner({ graceMs: SHUTDOWN_GRACE_MS });
 
   try {
     // Started before the registry that advertises it, because the address it
@@ -565,6 +657,7 @@ async function main() {
     // Nothing else in this job builds the workspace, so the pillar's own
     // dependencies have to be built here — the same reason the Dockerfiles
     // build `@pops/bfm^...` before the pillar.
+    pairingLifecycle.phase = 'bfm-startup';
     await run('pnpm', ['--filter', '@pops/bfm...', 'build']);
 
     const bfm = spawn('node', [join(REPO_ROOT, 'pillars/bfm/dist/api/server.js')], {
@@ -579,7 +672,6 @@ async function main() {
         BFM_PUBLIC_BASE_URL: baseURL.origin,
         BFM_ACCESS_TOKEN_SECRET: ACCESS_TOKEN_SECRET,
         BFM_PAIRING_CODE_ISSUANCE_LIMIT: String(PAIRING_CODE_ISSUANCE_LIMIT),
-        BFM_PAIRING_CODE_TTL_MS: String(PAIRING_CODE_TTL_MS),
         // The BFM crashes at boot without one. The stub ignores the header it
         // ends up on.
         POPS_INTERNAL_API_KEY: SERVICE_ACCOUNT_KEY,
@@ -603,8 +695,10 @@ async function main() {
     process.stdout.write(`ios-e2e: bfm on ${baseURL.origin}, database under ${dataDir}\n`);
 
     const mcpAuth = pairingIssuer === 'mcp' ? createMcpInboundAuth() : undefined;
+    /** @type {URL | undefined} */
     let mcpBaseURL;
     if (mcpAuth !== undefined) {
+      pairingLifecycle.phase = 'mcp-startup';
       await run('pnpm', ['--filter', '@pops/mcp...', 'build']);
       const mcpPort = await allocatePort();
       mcpBaseURL = new URL(`http://${HOST}:${mcpPort}`);
@@ -624,15 +718,43 @@ async function main() {
         },
       });
       teardown.unshift(() => stop(mcp));
-      await waitForMcpReady(mcpBaseURL, mcp);
+      pairingLifecycle.phase = 'mcp-readiness';
+      await waitForMcpReady(mcpBaseURL, mcp, mcpAuth.token);
       process.stdout.write(`ios-e2e: MCP on ${mcpBaseURL.origin}, pairing issuer enabled\n`);
     }
 
+    if (pairingIssuer === 'mcp' && mcpBaseURL === undefined) {
+      throw new HarnessError('MCP pairing endpoint is unavailable.');
+    }
+    const pairingEndpoint =
+      pairingIssuer === 'mcp' ? new URL('/mcp', mcpBaseURL).toString() : baseURL.origin;
+
+    pairingLifecycle.phase = 'fixtures';
     const control = await startControlPlane({
       bfmBaseUrl: baseURL.origin,
       accessTokenSecret: ACCESS_TOKEN_SECRET,
       upstream,
       purchases,
+      simulatorDeviceId: simulatorTarget?.deviceId,
+      pairingHandoff,
+      pairSimulator:
+        simulatorTarget === undefined || pairingHandoff === undefined
+          ? undefined
+          : async ({ deviceId, pairingBaseUrl, brokerUrl }) => {
+              return issueAndOpenPairingLink({
+                issuer: pairingIssuer,
+                endpoint: pairingEndpoint,
+                pairingBaseUrl,
+                brokerUrl,
+                handoff: pairingHandoff,
+                onPairingIssued: (material) => {
+                  pairingMaterials.push(material);
+                  pairingLifecycle.issuedCount = pairingMaterials.length;
+                },
+                token: mcpAuth?.token,
+                deviceId,
+              });
+            },
       inventory: {
         ...inventory,
         // Straight at the pillar, not through the gate: seeding must not
@@ -650,51 +772,120 @@ async function main() {
     // against it and fails on a screen twenty minutes later; asking it for the
     // BFM's own `/health` proves the whole path before anything is driven.
     await waitForHealth(new URL(control.url), buildVersion, bfm);
+    if (!hasLocalHarnessOrigins(baseURL.origin, control.url)) {
+      throw new HarnessError('the iOS E2E requires a loopback test BFM and control plane.');
+    }
     process.stdout.write(`ios-e2e: control plane on ${control.url}, proxying to the bfm\n`);
 
     if (serveOnly) {
-      const { code, expiresAt } =
-        pairingIssuer === 'mcp'
-          ? await issuePairingCodeViaMcp({
-              endpoint: new URL('/mcp', mcpBaseURL).toString(),
-              token: mcpAuth?.token,
-            })
-          : await mintPairingCode(baseURL);
+      pairingLifecycle.phase = 'ios-e2e';
+      /** @type {unknown} */
+      let pairingError;
+      try {
+        await pairSimulatorForServeOnly({
+          controlUrl: control.url,
+          deviceId: simulatorTarget.deviceId,
+          handoff: pairingHandoff,
+        });
+      } catch (error) {
+        pairingError = error;
+      }
+      /** @type {unknown} */
+      let artifactScanError;
+      try {
+        await scanCurrentPairingArtifacts();
+      } catch (error) {
+        artifactScanError = error;
+      }
+      if (pairingError !== undefined && artifactScanError !== undefined) {
+        pairingLifecycle.phase = 'ios-e2e';
+      }
+      const primaryError = primaryPairingRunFailure(pairingError, artifactScanError);
+      if (primaryError !== undefined) throw primaryError;
       process.stdout.write(
-        `\nios-e2e: server address ${baseURL.origin}\n` +
-          `ios-e2e: recovery-flow server address ${control.url} (same bfm, switchable)\n` +
-          `ios-e2e: pairing code ${code}, good until ${expiresAt}\n` +
-          'ios-e2e: type either address and the code into the app; Ctrl-C to tear this down.\n\n'
+        formatServeOnlyStatus({ bfmUrl: baseURL.origin, controlUrl: control.url })
       );
-      // Waits for a signal, which the handlers above turn into a teardown and
-      // an exit. Nothing resolves this.
-      await new Promise(() => {});
-      return;
+      await new Promise((resolve) => {
+        if (processRunner !== undefined && processRunner.signal() !== null) {
+          resolve(undefined);
+          return;
+        }
+        const onInterrupt = () => {
+          process.removeListener('SIGTERM', onTerminate);
+          resolve(undefined);
+        };
+        const onTerminate = () => {
+          process.removeListener('SIGINT', onInterrupt);
+          resolve(undefined);
+        };
+        process.once('SIGINT', onInterrupt);
+        process.once('SIGTERM', onTerminate);
+      });
+      throwIfStopping();
     }
-
     /** @type {NodeJS.ProcessEnv} */
     const iosEnv = {
       ...process.env,
       POPS_BFM_BASE_URL: baseURL.origin,
       POPS_E2E_CONTROL_URL: control.url,
-      POPS_E2E_PAIRING_ISSUER: pairingIssuer,
+      POPS_IOS_E2E_SIMULATOR_UDID: simulatorTarget.deviceId,
     };
-    if (mcpBaseURL !== undefined && mcpAuth !== undefined) {
-      iosEnv.POPS_MCP_URL = new URL('/mcp', mcpBaseURL).toString();
-      Object.assign(iosEnv, mcpAuth.environment);
+    delete iosEnv.MCP_INBOUND_TOKEN;
+    delete iosEnv.MCP_INBOUND_TOKEN_FILE;
+    delete iosEnv.POPS_MCP_URL;
+    pairingLifecycle.phase = 'ios-e2e';
+    /** @type {unknown} */
+    let flowError;
+    try {
+      await run('mise', ['-C', 'clients/ios', 'run', 'e2e'], { env: iosEnv });
+    } catch (error) {
+      flowError = error;
     }
-    await run('mise', ['-C', 'clients/ios', 'run', 'e2e'], { env: iosEnv });
+    /** @type {unknown} */
+    let artifactScanError;
+    try {
+      await scanCurrentPairingArtifacts();
+    } catch (error) {
+      artifactScanError = error;
+    }
+    if (flowError !== undefined && artifactScanError !== undefined) {
+      pairingLifecycle.phase = 'ios-e2e';
+    }
+    const primaryError = primaryPairingRunFailure(flowError, artifactScanError);
+    if (primaryError !== undefined) throw primaryError;
+    pairingLifecycle.phase = 'complete';
+    succeeded = true;
   } finally {
+    const signal = processRunner?.signal();
+    if (signal !== null && signal !== undefined) succeeded = false;
+    if (
+      !succeeded &&
+      (pairingLifecycle.issuedCount > 0 || pairingLifecycle.phase === 'ios-e2e') &&
+      pairingLifecycle.artifactScan === 'not-run'
+    ) {
+      try {
+        await scanCurrentPairingArtifacts();
+      } catch {
+        // The lifecycle summary below carries the scan outcome without replacing the run failure.
+      }
+    }
+    if (!succeeded) reportPairingLifecycleFailure();
     await tearDown();
+    if (signal === 'SIGINT') process.exitCode = 130;
+    if (signal === 'SIGTERM') process.exitCode = 143;
   }
 }
 
 try {
   await main();
 } catch (error) {
+  reportPairingLifecycleFailure();
   if (error instanceof HarnessError) {
     process.stderr.write(`ios-e2e: ${error.message}\n`);
-    process.exitCode = 1;
+    const signal = processRunner?.signal();
+    if (signal === 'SIGINT') process.exitCode = 130;
+    else if (signal === 'SIGTERM') process.exitCode = 143;
+    else process.exitCode = 1;
   } else {
     throw error;
   }

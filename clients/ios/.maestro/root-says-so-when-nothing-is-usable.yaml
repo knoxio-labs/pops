@@ -6,6 +6,7 @@ name: The root screen says why nothing is usable, and Try again leaves it
 - clearState
 - clearKeychain
 - launchApp
+- runFlow: subflows/dismiss-stale-pairing-open-prompt.yaml
 
 - assertVisible:
     id: 'pairing-code-field'

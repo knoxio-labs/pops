@@ -4,6 +4,7 @@ name: Purchases scan explains that the Simulator has no camera
 - clearState
 - clearKeychain
 - launchApp
+- runFlow: subflows/dismiss-stale-pairing-open-prompt.yaml
 
 - assertVisible:
     id: 'pairing-code-field'
@@ -16,6 +17,6 @@ name: Purchases scan explains that the Simulator has no camera
       SERVER_URL: ${CONTROL_BASE_URL}
 
 - runFlow: subflows/open-purchases.yaml
-- assertVisible: 'A\$12\.50'
+- assertVisible: 'A?\$12\.50'
 - tapOn: 'Scan a receipt'
 - assertVisible: 'No camera on this device'

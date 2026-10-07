@@ -9,6 +9,7 @@ name: S8.1 A user-defined type syncs to the phone, an item of it is created and 
 - clearState
 - clearKeychain
 - launchApp
+- runFlow: ../subflows/dismiss-stale-pairing-open-prompt.yaml
 
 - assertVisible:
     id: 'pairing-code-field'
