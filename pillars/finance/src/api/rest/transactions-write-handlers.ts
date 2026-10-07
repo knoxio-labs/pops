@@ -9,6 +9,11 @@
  *
  * Each write passes the request's principal to the service as the actor, so it
  * is recorded in the audit log (POPS-5865).
+ *
+ * A `create` or `update` that leaves the row typed `transfer` tries to pair it
+ * straight away (POPS-5868). That is the same for every caller, so a guest can
+ * be handed a `relatedTransactionId` naming a row on an account they hold no
+ * grant on; fetching it answers 404.
  */
 import { readPrincipal } from '@pops/pillar-express';
 
@@ -32,6 +37,7 @@ import {
   toTransactionSnapshot,
   toUpdateTransactionInput,
 } from '../modules/transactions-types.js';
+import { pairSavedTransfer } from '../modules/transfers/pair-on-save.js';
 import { ConflictError, NotFoundError, ValidationError } from '../shared/errors.js';
 import { runHttp } from './error-mapping.js';
 import {
@@ -165,10 +171,9 @@ export function makeTransactionWriteHandlers(db: FinanceDb) {
         requireAccountRole(access, body.accountId, 'edit');
         refuseOperatorOnlyFields(access, body, true);
         try {
-          const row = transactionsService.createTransaction(
+          const row = pairSavedTransfer(
             db,
-            toCreateTransactionInput(body),
-            actorOf(res)
+            transactionsService.createTransaction(db, toCreateTransactionInput(body), actorOf(res))
           );
           return {
             status: 201 as const,
@@ -189,11 +194,14 @@ export function makeTransactionWriteHandlers(db: FinanceDb) {
             if (body.accountId !== undefined) requireAccountRole(access, body.accountId, 'edit');
             refuseOperatorOnlyFields(access, body, false);
           }
-          const row = transactionsService.updateTransaction(
+          const row = pairSavedTransfer(
             db,
-            params.id,
-            toUpdateTransactionInput(body),
-            actorOf(res)
+            transactionsService.updateTransaction(
+              db,
+              params.id,
+              toUpdateTransactionInput(body),
+              actorOf(res)
+            )
           );
           return {
             status: 200 as const,

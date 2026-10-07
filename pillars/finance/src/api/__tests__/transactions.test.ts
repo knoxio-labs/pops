@@ -164,6 +164,170 @@ describe('transactions — unlink transfer', () => {
   });
 });
 
+describe('transactions — a saved transfer is paired straight away (POPS-5868)', () => {
+  const ENABLED = 'FINANCE_TRANSFER_PAIR_ENABLED';
+  const WINDOW = 'FINANCE_TRANSFER_PAIR_WINDOW_DAYS';
+  let previous: Record<string, string | undefined>;
+
+  beforeEach(() => {
+    previous = { [ENABLED]: process.env[ENABLED], [WINDOW]: process.env[WINDOW] };
+    process.env[ENABLED] = 'true';
+    delete process.env[WINDOW];
+  });
+
+  afterEach(() => {
+    for (const [name, value] of Object.entries(previous)) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
+  });
+
+  async function personAccountId(): Promise<string> {
+    const created = await client().accounts.create({
+      name: 'Rosane',
+      kind: 'person',
+      currency: 'AUD',
+    });
+    return created.data.id;
+  }
+
+  function transfer(accountId: string, amount: number, date = '2026-01-02') {
+    return { ...base(), description: 'Repayment', type: 'transfer', accountId, amount, date };
+  }
+
+  async function linkOf(id: string): Promise<string | null> {
+    return (await client().transactions.get(id)).data.relatedTransactionId;
+  }
+
+  it('links a repayment typed on a person account to the bank credit already there', async () => {
+    const bank = await client().transactions.create(transfer(idFor('Everyday'), 50));
+    expect(bank.data.relatedTransactionId).toBeNull();
+
+    const manual = await client().transactions.create(transfer(await personAccountId(), -50));
+
+    expect(manual.data.relatedTransactionId).toBe(bank.data.id);
+    expect(await linkOf(manual.data.id)).toBe(bank.data.id);
+    expect(await linkOf(bank.data.id)).toBe(manual.data.id);
+  });
+
+  it('links the other direction: a positive person-account row to a bank debit', async () => {
+    const bank = await client().transactions.create(transfer(idFor('Everyday'), -50));
+
+    const manual = await client().transactions.create(transfer(await personAccountId(), 50));
+
+    expect(manual.data.relatedTransactionId).toBe(bank.data.id);
+    expect(await linkOf(bank.data.id)).toBe(manual.data.id);
+  });
+
+  it('makes no attempt while the flag is off', async () => {
+    delete process.env[ENABLED];
+    const bank = await client().transactions.create(transfer(idFor('Everyday'), 50));
+
+    const manual = await client().transactions.create(transfer(await personAccountId(), -50));
+
+    expect(manual.data.relatedTransactionId).toBeNull();
+    expect(await linkOf(bank.data.id)).toBeNull();
+  });
+
+  it('leaves the row unpaired, and the save successful, when two rows could be its counterpart', async () => {
+    const first = await client().transactions.create(transfer(idFor('Everyday'), 50));
+    const second = await client().transactions.create(transfer(idFor('Savings'), 50));
+
+    const manual = await client().transactions.create(transfer(await personAccountId(), -50));
+
+    expect(manual.data.relatedTransactionId).toBeNull();
+    expect(await linkOf(first.data.id)).toBeNull();
+    expect(await linkOf(second.data.id)).toBeNull();
+  });
+
+  it('pairs on the last day of the window and not the day after', async () => {
+    const person = await personAccountId();
+    const outside = await client().transactions.create(
+      transfer(idFor('Everyday'), 50, '2026-01-06')
+    );
+    const late = await client().transactions.create(transfer(person, -50, '2026-01-02'));
+    expect(late.data.relatedTransactionId).toBeNull();
+    expect(await linkOf(outside.data.id)).toBeNull();
+
+    const edge = await client().transactions.create(transfer(idFor('Savings'), 70, '2026-01-05'));
+    const onTheEdge = await client().transactions.create(transfer(person, -70, '2026-01-02'));
+    expect(onTheEdge.data.relatedTransactionId).toBe(edge.data.id);
+  });
+
+  it('does not pair a different amount or the same sign', async () => {
+    const person = await personAccountId();
+    await client().transactions.create(transfer(idFor('Everyday'), 50));
+
+    const otherAmount = await client().transactions.create(transfer(person, -50.01));
+    const sameSign = await client().transactions.create(transfer(person, 50));
+
+    expect(otherAmount.data.relatedTransactionId).toBeNull();
+    expect(sameSign.data.relatedTransactionId).toBeNull();
+  });
+
+  it('makes no attempt for a row that is not a transfer', async () => {
+    const bank = await client().transactions.create(transfer(idFor('Everyday'), -50));
+
+    const refund = await client().transactions.create({
+      ...transfer(await personAccountId(), 50),
+      type: 'refund',
+    });
+
+    expect(refund.data).toMatchObject({ type: 'refund', relatedTransactionId: null });
+    expect(await linkOf(bank.data.id)).toBeNull();
+  });
+
+  it('pairs when a PATCH retypes a row to transfer', async () => {
+    const bank = await client().transactions.create(transfer(idFor('Everyday'), -50));
+    const refund = await client().transactions.create({
+      ...transfer(await personAccountId(), 50),
+      type: 'refund',
+    });
+
+    const retyped = await client().transactions.update(refund.data.id, { type: 'transfer' });
+
+    expect(retyped.data).toMatchObject({ type: 'transfer', relatedTransactionId: bank.data.id });
+    expect(await linkOf(bank.data.id)).toBe(refund.data.id);
+  });
+
+  it('pairs when a PATCH corrects the amount of a transfer', async () => {
+    const bank = await client().transactions.create(transfer(idFor('Everyday'), 50));
+    const manual = await client().transactions.create(transfer(await personAccountId(), -45));
+    expect(manual.data.relatedTransactionId).toBeNull();
+
+    const corrected = await client().transactions.update(manual.data.id, { amount: -50 });
+
+    expect(corrected.data.relatedTransactionId).toBe(bank.data.id);
+  });
+
+  it('does not pair on a PATCH that leaves the row a non-transfer, or with the flag off', async () => {
+    const bank = await client().transactions.create(transfer(idFor('Everyday'), -50));
+    const refund = await client().transactions.create({
+      ...transfer(await personAccountId(), 50),
+      type: 'refund',
+    });
+
+    const renamed = await client().transactions.update(refund.data.id, { description: 'Lunch' });
+    expect(renamed.data.relatedTransactionId).toBeNull();
+
+    delete process.env[ENABLED];
+    const retyped = await client().transactions.update(refund.data.id, { type: 'transfer' });
+    expect(retyped.data).toMatchObject({ type: 'transfer', relatedTransactionId: null });
+    expect(await linkOf(bank.data.id)).toBeNull();
+  });
+
+  it('keeps an existing link when a paired row is edited next to a second candidate', async () => {
+    const bank = await client().transactions.create(transfer(idFor('Everyday'), 50));
+    const manual = await client().transactions.create(transfer(await personAccountId(), -50));
+    await client().transactions.create(transfer(idFor('Savings'), 50));
+
+    const renamed = await client().transactions.update(manual.data.id, { description: 'Paid' });
+
+    expect(renamed.data.relatedTransactionId).toBe(bank.data.id);
+    expect(await linkOf(bank.data.id)).toBe(manual.data.id);
+  });
+});
+
 describe('transactions — delete / restore handshake', () => {
   it('delete returns a raw snapshot; restore re-creates; a second restore conflicts', async () => {
     const created = await client().transactions.create({ ...base(), tags: ['food'] });

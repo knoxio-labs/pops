@@ -568,6 +568,72 @@ describe('a guest restore, with Access enforced', () => {
   });
 });
 
+describe('a guest saving a repayment, with Access enforced (POPS-5868)', () => {
+  beforeEach(enforceAccess);
+
+  /** The bank leg of a repayment, on an account the guest was never granted. */
+  function bankCredit(): string {
+    return transactionsService.createTransaction(financeDb.db, {
+      description: 'OSKO FROM CARLOS',
+      accountId: privateAccount,
+      amountCents: 1250,
+      date: '2026-03-09',
+      type: 'transfer',
+      rawRow: RAW_ROW,
+      checksum: CHECKSUM,
+    }).id;
+  }
+
+  const relatedOf = (id: string) =>
+    financeDb.raw.prepare('SELECT related_transaction_id FROM transactions WHERE id = ?').get(id);
+
+  it('pairs the entry with the bank leg, names it, and still cannot read it', async () => {
+    vi.stubEnv('FINANCE_TRANSFER_PAIR_ENABLED', 'true');
+    const bank = bankCredit();
+
+    const response = await create({ as: CARLOS }, shared, { type: 'transfer' });
+
+    expect(response.status).toBe(201);
+    expect(response.body.data).toMatchObject({ accountId: shared, relatedTransactionId: bank });
+    expect(JSON.stringify(response.body)).not.toMatch(PRIVATE_DATA);
+    expect(relatedOf(bank)).toEqual({ related_transaction_id: response.body.data.id });
+
+    const counterpart = await call('get', `/transactions/${bank}`, { as: CARLOS });
+    expect(counterpart.status).toBe(404);
+    expect(JSON.stringify(counterpart.body)).not.toMatch(PRIVATE_DATA);
+  });
+
+  it('pairs when the guest retypes their own entry to a transfer', async () => {
+    vi.stubEnv('FINANCE_TRANSFER_PAIR_ENABLED', 'true');
+    const bank = bankCredit();
+    const created = await create({ as: CARLOS }, shared);
+
+    const response = await update({ as: CARLOS }, created.body.data.id, { type: 'transfer' });
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.relatedTransactionId).toBe(bank);
+  });
+
+  it('pairs nothing for a guest refused the write', async () => {
+    vi.stubEnv('FINANCE_TRANSFER_PAIR_ENABLED', 'true');
+    const bank = bankCredit();
+
+    expect((await create({ as: ROSANE }, shared, { type: 'transfer' })).status).toBe(403);
+    expect(relatedOf(bank)).toEqual({ related_transaction_id: null });
+  });
+
+  it('leaves the entry unpaired while the pairing flag is unset', async () => {
+    vi.stubEnv('FINANCE_TRANSFER_PAIR_ENABLED', '');
+    const bank = bankCredit();
+
+    const response = await create({ as: CARLOS }, shared, { type: 'transfer' });
+
+    expect(response.status).toBe(201);
+    expect(response.body.data.relatedTransactionId).toBeNull();
+    expect(relatedOf(bank)).toEqual({ related_transaction_id: null });
+  });
+});
+
 describe('a route that stays the operator’s, with Access enforced', () => {
   beforeEach(enforceAccess);
 
