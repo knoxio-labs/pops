@@ -68,7 +68,9 @@ export function sendAuthFailure({
   next,
 }: SendAuthFailureOptions): void {
   const { status, details } = failure;
-  if (options.errors !== undefined) {
+  // A malformed delegated subject has no registered handler: the three a
+  // pillar registers are ADR-044's, and this one is the gate's own.
+  if (options.errors !== undefined && status !== 400) {
     try {
       if (status === 401) options.errors.invalid(details);
       if (status === 403) options.errors.forbidden(details);
@@ -84,6 +86,15 @@ export function sendAuthFailure({
 }
 
 function authFailure(rootScope: string, status: number, details?: unknown): PopsError {
+  if (status === 400) {
+    return new PopsError({
+      code: `${rootScope}.auth.subject_invalid`,
+      status,
+      message: 'The delegated subject is not a valid email address.',
+      retryable: false,
+      details,
+    });
+  }
   if (status === 401) {
     return new PopsError({
       code: `${rootScope}.auth.invalid`,

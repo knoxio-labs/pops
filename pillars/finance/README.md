@@ -85,6 +85,15 @@ the `pops_api_key` shared by the `mcp` and `moltbot` compose profiles — are no
 visible from this repo, so a profile that reaches finance with a narrower grant
 than its traffic will see the `403` above (POPS-1551).
 
+A service account that also holds `finance.delegatedSubject` may call on behalf
+of a guest by sending the guest's email as `X-Pops-Subject-Email`. The request
+is then answered as that guest: only the accounts granted to that email, only
+the routes a guest may reach, and the email recorded as the `guest` actor on
+any write. The header from a caller without the scope is `403`, and a value
+that is not one email address is `400`. Without the header a key behaves as
+described above. See
+[`@pops/pillar-express`](../../libs/pillar-express/README.md#a-guest-a-service-account-speaks-for).
+
 ## Who it calls, and as whom
 
 The mirror of the section above (POPS-2021). Finance has three outbound

@@ -36,6 +36,26 @@ Two edges worth knowing:
 - A key is the caller's identity only where the gate verifies it. On a path outside the scope table a key is never checked, so there a token riding beside it decides instead; otherwise a guest could attach a made-up key to reach every unscoped path.
 - An Access service token carries no email, so with classification on it is 401 unless the request also presents an `X-API-Key` on a scoped route.
 
+### A guest a service account speaks for
+
+bfm's hostname bypasses Access, so a guest's phone has no token to classify. A pillar that passes `delegatedSubjectScope` lets a service account name the guest instead:
+
+```ts
+createServiceAccountScopeGate({ ..., delegatedSubjectScope: 'finance.delegatedSubject' });
+```
+
+A request whose key holds that scope and which carries `X-Pops-Subject-Email` is answered as `{ kind: 'guest', email }`, the email trimmed and lower-cased, and every guest rule above applies to it. The key must still cover the route's own scope.
+
+| request                                                     | answer                               |
+| ----------------------------------------------------------- | ------------------------------------ |
+| no header                                                   | exactly as without the option        |
+| header, key holds the scope                                 | the named guest                      |
+| header, key lacks the scope                                 | 403                                  |
+| header, no key (a browser session, LAN, a path never keyed) | 403                                  |
+| header is not one email address                             | 400, `<pillar>.auth.subject_invalid` |
+
+The header is refused rather than ignored from a caller that may not delegate, so nothing can quietly be answered as the service when it asked to be answered as a guest. Delegation does not wait for `POPS_OPERATOR_EMAILS`: it only narrows what the key could already do, and a named guest must never see the service's reach. A pillar that omits the option does not read the header at all.
+
 `readPrincipal` throws on a response the gate never saw. A route mounted ahead of the middleware has no principal, and answering "operator" there would be a mounting mistake handing a guest the owner's access.
 
 ## Why this package exists rather than a subpath of the SDK
