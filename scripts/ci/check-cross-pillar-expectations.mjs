@@ -1014,6 +1014,14 @@ export const UNPINNABLE_CALL_SITES = [
       'own `pillar()`. The operations actually called through the resulting ' +
       'handle are pinned where they are called, in `client.ts`.',
   },
+  {
+    file: 'pillars/bfm/src/api/pillars/handle-factory.ts',
+    reason:
+      "The gateway's default handle: forwards whatever pillar id a gateway call " +
+      "supplies and adds a guest device's subject header on the finance handle. " +
+      'It calls no operation — each one is pinned at the `gateway.call` site ' +
+      'that makes it.',
+  },
 ];
 
 /**

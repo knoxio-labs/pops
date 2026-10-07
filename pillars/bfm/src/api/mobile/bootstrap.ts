@@ -37,7 +37,11 @@ import { retryOnce } from './retry.js';
 
 import type { PillarSnapshot, RegistrySnapshot } from '@pops/pillar-sdk/discovery';
 
-import type { MobileBootstrapResponse, RegistrySource } from '../../contract/rest-schemas.js';
+import type {
+  BootstrapSession,
+  MobileBootstrapResponse,
+  RegistrySource,
+} from '../../contract/rest-schemas.js';
 import type { BfmDb, DeviceRow } from '../../db/index.js';
 
 export interface MobileBootstrapDeps {
@@ -74,6 +78,7 @@ export async function buildMobileBootstrap(
 
   const registry = await readRegistry(deps.readRegistry);
   const pillars = await probeFederation(withoutSelf(registry.pillars), deps.probe);
+  const session = sessionOf(device);
 
   return {
     device: {
@@ -88,10 +93,17 @@ export async function buildMobileBootstrap(
       // that 403s, which is the defect this resolution exists for.
       capabilities: [...resolveDeviceCapabilities(device)],
     },
+    session,
     registry: { source: registry.source },
     pillars,
-    features: deriveFeatures(pillars),
+    features: deriveFeatures(pillars, session.kind),
   };
+}
+
+function sessionOf(device: DeviceRow): BootstrapSession {
+  return device.subjectEmail === null
+    ? { kind: 'operator', email: null }
+    : { kind: 'guest', email: device.subjectEmail };
 }
 
 /**

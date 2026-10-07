@@ -379,6 +379,10 @@ export type MobileBootstrapResponses = {
     registry: {
       source: 'fresh' | 'cached' | 'stale-fallback' | 'unavailable';
     };
+    session?: {
+      email: string | null;
+      kind: 'operator' | 'guest';
+    };
   };
 };
 
@@ -1489,6 +1493,7 @@ export type MobileFinanceListAccountsResponses = {
       kind: string;
       name: string;
       transactionCount: number;
+      viewerRole?: string;
     }>;
     nextCursor: string | null;
     totalCount?: number;
@@ -1627,6 +1632,7 @@ export type MobileFinanceGetAccountResponses = {
       kind: string;
       name: string;
       transactionCount: number;
+      viewerRole?: string;
     };
     history: Array<{
       balanceCents: number;

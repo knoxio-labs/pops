@@ -239,6 +239,11 @@ export const FinanceAccountRowSchema = z.object({
   balance: FinanceAccountBalanceSchema,
   /** Every transaction on the account (POPS-2924) — finance's own literal count. */
   transactionCount: z.number().int(),
+  /**
+   * What the caller may do with this account. An open string, and optional so
+   * a finance build that predates it still decodes.
+   */
+  viewerRole: z.string().optional(),
 });
 
 export type FinanceAccountRow = z.infer<typeof FinanceAccountRowSchema>;
@@ -285,6 +290,7 @@ export function toMobileAccount(row: FinanceAccountRow): MobileAccount {
     institutionName: isPersonAccount ? null : row.entityDisplayName,
     contact: isPersonAccount ? row.entityDisplayName : null,
     transactionCount: row.transactionCount,
+    ...(row.viewerRole === undefined ? {} : { viewerRole: row.viewerRole }),
     balance: {
       balanceCents: row.balance.balanceCents,
       asOf: row.balance.asOf,
