@@ -11,10 +11,13 @@
  * The stored snapshot also holds the import's raw row, its dedup checksum and
  * the rule-match columns, and none of those is ever returned here.
  *
- * Neither route is marked `guestRoute()`.
+ * Both routes are open to a guest (POPS-5866), who is shown only events lying
+ * wholly on accounts granted to them.
  */
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
+
+import { guestRoute } from '@pops/pillar-sdk/server';
 
 import { TRANSACTION_EVENT_ACTIONS, TRANSACTION_EVENT_ACTOR_KINDS } from '../db/index.js';
 import { TransactionTypeSchema } from './rest-corrections-schemas.js';
@@ -72,6 +75,7 @@ export const financeTransactionHistoryContract = c.router({
   forTransaction: {
     method: 'GET',
     path: '/transactions/:id/history',
+    metadata: guestRoute(),
     pathParams: z.object({ id: z.string() }),
     responses: {
       200: z.object({ data: z.array(TransactionHistoryEventSchema) }),
@@ -84,6 +88,7 @@ export const financeTransactionHistoryContract = c.router({
   forAccount: {
     method: 'GET',
     path: '/accounts/:id/history',
+    metadata: guestRoute(),
     pathParams: z.object({ id: z.string() }),
     query: z.object({ limit: LimitQuery, offset: OffsetQuery }),
     responses: {

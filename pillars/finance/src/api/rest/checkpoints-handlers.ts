@@ -24,9 +24,11 @@ import {
 import { toCheckpoint } from '../modules/checkpoints-types.js';
 import { ConflictError, NotFoundError, UnprocessableEntityError } from '../shared/errors.js';
 import { runHttp } from './error-mapping.js';
+import { accountAccess, requireAccountRole } from './guest-access.js';
 import { requireAccount } from './require-account.js';
 
 import type { ServerInferRequest } from '@ts-rest/core';
+import type { Response } from 'express';
 
 import type { financeCheckpointsContract } from '../../contract/rest-checkpoints.js';
 
@@ -34,11 +36,17 @@ type Req = ServerInferRequest<typeof financeCheckpointsContract>;
 
 const DEFAULT_HISTORY_MONTHS = 12;
 
+/** 404 unless the account exists and the caller may read it; a guest's ungranted id is a missing one. */
+function requireReadableAccount(db: FinanceDb, res: Response, id: string): void {
+  requireAccountRole(accountAccess(res, db), id, 'view');
+  requireAccount(db, id);
+}
+
 export function makeCheckpointsHandlers(db: FinanceDb) {
   return {
-    list: ({ params }: Req['list']) =>
+    list: ({ params, res }: Req['list'] & { res: Response }) =>
       runHttp(() => {
-        requireAccount(db, params.id);
+        requireReadableAccount(db, res, params.id);
         const rows = accountCheckpointsService.listCheckpoints(db, params.id);
         return {
           status: 200 as const,
@@ -94,18 +102,18 @@ export function makeCheckpointsHandlers(db: FinanceDb) {
         return { status: 204 as const, body: undefined };
       }),
 
-    balance: ({ params, query }: Req['balance']) =>
+    balance: ({ params, query, res }: Req['balance'] & { res: Response }) =>
       runHttp(() => {
-        requireAccount(db, params.id);
+        requireReadableAccount(db, res, params.id);
         return {
           status: 200 as const,
           body: { data: balanceAsOf(db, params.id, query.asOf ?? today()) },
         };
       }),
 
-    history: ({ params, query }: Req['history']) =>
+    history: ({ params, query, res }: Req['history'] & { res: Response }) =>
       runHttp(() => {
-        requireAccount(db, params.id);
+        requireReadableAccount(db, res, params.id);
         return {
           status: 200 as const,
           body: { data: balanceHistory(db, params.id, query.months ?? DEFAULT_HISTORY_MONTHS) },

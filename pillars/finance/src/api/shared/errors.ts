@@ -38,6 +38,12 @@ export const financeDomainErrors = defineErrors('finance', {
     message: 'The request cannot be applied in the current state.',
     retryable: false,
   },
+  forbidden: {
+    area: 'resource',
+    status: 403,
+    message: 'The caller may see this resource but not do this to it.',
+    retryable: false,
+  },
 });
 
 interface HttpErrorOptions {
@@ -128,5 +134,16 @@ export class UnprocessableEntityError extends HttpError {
 export class PreconditionError extends HttpError {
   constructor(message: string) {
     super({ statusCode: 412, code: 'finance.request.precondition_failed', message });
+  }
+}
+
+/**
+ * 403 Forbidden: the caller can see the resource but holds too low a role on
+ * it for the operation. A resource the caller cannot see at all is a
+ * {@link NotFoundError} instead, so its existence is not disclosed.
+ */
+export class ForbiddenError extends HttpError {
+  constructor(message: string) {
+    super({ statusCode: 403, code: 'finance.resource.forbidden', message });
   }
 }

@@ -366,7 +366,7 @@ export const FINANCE_ROUTES = [
   {
     method: 'get',
     path: '/transactions',
-    handlerFile: 'pillars/finance/src/api/rest/transactions-handlers.ts',
+    handlerFile: 'pillars/finance/src/api/rest/transactions-read-handlers.ts',
     handlerKey: 'list',
   },
   {

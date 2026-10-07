@@ -321,7 +321,7 @@ function sortKey(row) {
   return { date, id };
 }
 
-/** finance's own defaults, from `pillars/finance/src/api/rest/transactions-handlers.ts`. */
+/** finance's own defaults, from `pillars/finance/src/api/rest/transactions-read-handlers.ts`. */
 const DEFAULT_LIMIT = 50;
 const DEFAULT_OFFSET = 0;
 

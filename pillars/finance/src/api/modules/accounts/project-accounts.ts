@@ -1,10 +1,11 @@
 /**
  * Project account rows to their wire shape, resolving the things a row does
  * not carry: the contact display name (live from contacts, POPS-2771), the
- * checkpoint-anchored balance (finance ADR-002), the import status (POPS-2917), and
- * the transaction count (POPS-2924).
+ * checkpoint-anchored balance (finance ADR-002), the import status (POPS-2917),
+ * the transaction count (POPS-2924), and the caller's standing on the account
+ * (POPS-5866).
  *
- * All four are resolved for the WHOLE set at once. `balancesFor` costs three
+ * The first four are resolved for the WHOLE set at once. `balancesFor` costs three
  * grouped queries regardless of how many accounts are on the page, where a
  * per-row `balanceAsOf` would cost a handful each; `resolveAccountEntityDisplays`
  * already batched its side, and `transactionCountsFor` is one more grouped
@@ -22,6 +23,7 @@ import {
   type AccountEntityDisplay,
   type ImportStatus,
 } from '../../../db/index.js';
+import { viewerRole, type AccountAccess } from '../../rest/guest-access.js';
 import { toAccount, type Account } from '../accounts-types.js';
 
 import type { AccountRow, FinanceDb } from '../../../db/index.js';
@@ -61,14 +63,21 @@ const NO_IMPORT_STATUS: ImportStatus = {
   source: null,
 };
 
-/** Batched projections of account rows to their wire shape. */
+/**
+ * Batched projections of account rows to their wire shape. `access` is the
+ * caller's reach, and every row handed in must lie within it.
+ */
 export interface AccountProjector {
-  many: (rows: AccountRow[], date?: string) => Promise<Account[]>;
-  one: (row: AccountRow) => Promise<Account>;
+  many: (rows: AccountRow[], access: AccountAccess, date?: string) => Promise<Account[]>;
+  one: (row: AccountRow, access: AccountAccess) => Promise<Account>;
 }
 
 export function makeAccountProjector(db: FinanceDb, contacts: ContactsClient): AccountProjector {
-  async function many(rows: AccountRow[], date = today()): Promise<Account[]> {
+  async function many(
+    rows: AccountRow[],
+    access: AccountAccess,
+    date = today()
+  ): Promise<Account[]> {
     const displays = await resolveAccountEntityDisplays(contacts, rows);
     const ids = rows.map((row) => row.id);
     const balances = balancesFor(db, ids, date);
@@ -79,18 +88,20 @@ export function makeAccountProjector(db: FinanceDb, contacts: ContactsClient): A
         balance: balances.get(row.id) ?? NO_BALANCE,
         importStatus: statuses.get(row.id) ?? NO_IMPORT_STATUS,
         transactionCount: transactionCounts.get(row.id) ?? 0,
+        viewerRole: viewerRole(access, row.id),
       })
     );
   }
 
-  async function one(row: AccountRow): Promise<Account> {
-    const [account] = await many([row]);
+  async function one(row: AccountRow, access: AccountAccess): Promise<Account> {
+    const [account] = await many([row], access);
     return (
       account ??
       toAccount(row, NO_ISSUER, {
         balance: NO_BALANCE,
         importStatus: NO_IMPORT_STATUS,
         transactionCount: 0,
+        viewerRole: viewerRole(access, row.id),
       })
     );
   }

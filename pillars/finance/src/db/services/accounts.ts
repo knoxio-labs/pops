@@ -52,6 +52,8 @@ export interface ListAccountsOptions {
   search?: string | undefined;
   kind?: AccountKind | undefined;
   archived?: boolean | undefined;
+  /** Only these accounts. An empty list matches nothing; omitted, every account is a candidate. */
+  ids?: readonly string[] | undefined;
   limit: number;
   offset: number;
 }
@@ -108,6 +110,7 @@ export function listAccounts(db: FinanceDb, opts: ListAccountsOptions): AccountL
   if (opts.kind) conditions.push(eq(accounts.kind, opts.kind));
   if (opts.archived === true) conditions.push(isNotNull(accounts.archivedAt));
   if (opts.archived === false) conditions.push(isNull(accounts.archivedAt));
+  if (opts.ids !== undefined) conditions.push(inArray(accounts.id, [...opts.ids]));
   const where = conditions.length > 0 ? and(...conditions) : undefined;
 
   const rows = db

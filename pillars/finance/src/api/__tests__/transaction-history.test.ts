@@ -212,7 +212,7 @@ describe('who a write is recorded as, with Access enforced', () => {
     ]);
   });
 
-  it('403s a guest on both history routes, and on a write, which records nothing', async () => {
+  it('404s a guest with no grant on both history routes and 403s its write, which records nothing', async () => {
     const id = await createDinner({ as: OPERATOR });
 
     const responses = [
@@ -221,8 +221,8 @@ describe('who a write is recorded as, with Access enforced', () => {
       await call('patch', `/transactions/${id}`, { as: GUEST }, { amount: -1 }),
     ];
 
-    expect(responses.map((r) => r.status)).toEqual([403, 403, 403]);
-    expect(responses[0]?.body).toMatchObject({
+    expect(responses.map((r) => r.status)).toEqual([404, 404, 403]);
+    expect(responses[2]?.body).toMatchObject({
       code: 'finance.auth.forbidden',
       details: { principal: 'guest' },
     });

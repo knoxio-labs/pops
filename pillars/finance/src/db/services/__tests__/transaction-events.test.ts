@@ -293,8 +293,8 @@ describe('listAccountEvents', () => {
     updateTransaction(db, created.id, { accountId: other }, OPERATOR);
     const elsewhere = createAccount(db, { name: 'Elsewhere', kind: 'cash', currency: 'AUD' }).id;
 
-    const fromOld = listAccountEvents(db, shared, 50, 0);
-    const fromNew = listAccountEvents(db, other, 50, 0);
+    const fromOld = listAccountEvents(db, shared, { limit: 50, offset: 0 });
+    const fromNew = listAccountEvents(db, other, { limit: 50, offset: 0 });
 
     expect(fromOld.rows.map((event) => [event.action, event.accountId])).toEqual([
       ['update', other],
@@ -305,14 +305,17 @@ describe('listAccountEvents', () => {
       ['update', other],
     ]);
     expect(fromNew.total).toBe(1);
-    expect(listAccountEvents(db, elsewhere, 50, 0)).toEqual({ rows: [], total: 0 });
+    expect(listAccountEvents(db, elsewhere, { limit: 50, offset: 0 })).toEqual({
+      rows: [],
+      total: 0,
+    });
   });
 
   it('keeps the events of a deleted transaction', () => {
     const created = createTransaction(db, dinner(), OPERATOR);
     deleteTransaction(db, created.id, GUEST);
 
-    const page = listAccountEvents(db, shared, 50, 0);
+    const page = listAccountEvents(db, shared, { limit: 50, offset: 0 });
     expect(page.rows.map((event) => event.action)).toEqual(['delete', 'create']);
     expect(page.total).toBe(2);
   });
@@ -323,16 +326,16 @@ describe('listAccountEvents', () => {
     );
     const newestFirst = ids.toReversed();
 
-    const pageOne = listAccountEvents(db, shared, 2, 0);
-    const pageTwo = listAccountEvents(db, shared, 2, 2);
-    const pageThree = listAccountEvents(db, shared, 2, 4);
+    const pageOne = listAccountEvents(db, shared, { limit: 2, offset: 0 });
+    const pageTwo = listAccountEvents(db, shared, { limit: 2, offset: 2 });
+    const pageThree = listAccountEvents(db, shared, { limit: 2, offset: 4 });
 
     expect(
       [...pageOne.rows, ...pageTwo.rows, ...pageThree.rows].map((e) => e.transactionId)
     ).toEqual(newestFirst);
     expect([pageOne.rows.length, pageTwo.rows.length, pageThree.rows.length]).toEqual([2, 2, 1]);
     expect([pageOne.total, pageTwo.total, pageThree.total]).toEqual([5, 5, 5]);
-    expect(listAccountEvents(db, shared, 2, 5)).toEqual({ rows: [], total: 5 });
-    expect(listAccountEvents(db, shared, 5, 0).rows).toHaveLength(5);
+    expect(listAccountEvents(db, shared, { limit: 2, offset: 5 })).toEqual({ rows: [], total: 5 });
+    expect(listAccountEvents(db, shared, { limit: 5, offset: 0 }).rows).toHaveLength(5);
   });
 });

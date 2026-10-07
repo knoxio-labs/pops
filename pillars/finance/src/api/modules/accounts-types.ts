@@ -4,6 +4,7 @@
  * the row → response projection and its TS shape.
  */
 import type { AccountKind } from '../../contract/account-kind.js';
+import type { VIEWER_ROLES } from '../../contract/rest-accounts.js';
 import type {
   AccountBalance,
   AccountEntityDisplay,
@@ -45,6 +46,8 @@ export interface Account {
    * historical size, not a reading as of a date.
    */
   transactionCount: number;
+  /** The caller's standing on the account (POPS-5866). */
+  viewerRole: (typeof VIEWER_ROLES)[number];
   createdAt: string;
   updatedAt: string;
 }
@@ -69,15 +72,16 @@ export interface UpdateAccountBody {
 }
 
 /**
- * The three things a row does not itself carry and `project-accounts.ts`
- * resolves per response: the checkpoint-anchored balance, the import status,
- * and the transaction count. Grouped into one parameter so `toAccount` stays
+ * The things a row does not itself carry and `project-accounts.ts` resolves
+ * per response: the checkpoint-anchored balance, the import status, the
+ * transaction count, and the caller's standing on the account. Grouped into one parameter so `toAccount` stays
  * under this codebase's parameter cap as the set of derived reads grows.
  */
 export interface AccountDerivedFields {
   balance: AccountBalance;
   importStatus: ImportStatus;
   transactionCount: number;
+  viewerRole: Account['viewerRole'];
 }
 
 /** Map a SQLite row (plus its resolved contact display, from
@@ -91,6 +95,7 @@ export function toAccount(
     balance: derived.balance,
     importStatus: derived.importStatus,
     transactionCount: derived.transactionCount,
+    viewerRole: derived.viewerRole,
     id: row.id,
     name: row.name,
     kind: row.kind,

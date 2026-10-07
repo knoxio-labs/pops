@@ -10,7 +10,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** List accounts with optional search / kind / archived filters and pagination */
+    /** List accounts with optional search / kind / archived filters and pagination. A guest is listed only the accounts granted to them, and the total counts only those */
     get: operations['accounts.list'];
     put?: never;
     /** Create a new account; rejects a reserved kind with 422 */
@@ -45,7 +45,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Get a single account */
+    /** Get a single account; 404s one a guest holds no grant on, as it does a missing one */
     get: operations['accounts.get'];
     put?: never;
     post?: never;
@@ -1364,7 +1364,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** List transactions with optional filters and pagination */
+    /** List transactions with optional filters and pagination. A guest is listed only transactions on accounts granted to them; an `accountId` they hold no grant on is a 404 */
     get: operations['transactions.list'];
     put?: never;
     /** Create a transaction */
@@ -1433,7 +1433,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Get a single transaction */
+    /** Get a single transaction; 404s one on an account a guest holds no grant on, as it does a missing one */
     get: operations['transactions.get'];
     put?: never;
     post?: never;
@@ -1632,6 +1632,8 @@ export interface operations {
               resolvedEntityId: string | null;
               transactionCount: number;
               updatedAt: string;
+              /** @enum {string} */
+              viewerRole: 'owner' | 'view' | 'edit';
             }[];
             pagination: {
               hasMore: boolean;
@@ -1746,6 +1748,8 @@ export interface operations {
               resolvedEntityId: string | null;
               transactionCount: number;
               updatedAt: string;
+              /** @enum {string} */
+              viewerRole: 'owner' | 'view' | 'edit';
             };
             message: string;
           };
@@ -1923,6 +1927,8 @@ export interface operations {
               resolvedEntityId: string | null;
               transactionCount: number;
               updatedAt: string;
+              /** @enum {string} */
+              viewerRole: 'owner' | 'view' | 'edit';
             }[];
             message: string;
           };
@@ -2083,6 +2089,8 @@ export interface operations {
               resolvedEntityId: string | null;
               transactionCount: number;
               updatedAt: string;
+              /** @enum {string} */
+              viewerRole: 'owner' | 'view' | 'edit';
             };
           };
         };
@@ -2247,6 +2255,8 @@ export interface operations {
               resolvedEntityId: string | null;
               transactionCount: number;
               updatedAt: string;
+              /** @enum {string} */
+              viewerRole: 'owner' | 'view' | 'edit';
             };
             message: string;
           };
@@ -2431,6 +2441,8 @@ export interface operations {
               resolvedEntityId: string | null;
               transactionCount: number;
               updatedAt: string;
+              /** @enum {string} */
+              viewerRole: 'owner' | 'view' | 'edit';
             };
             message: string;
           };
@@ -5185,6 +5197,8 @@ export interface operations {
               resolvedEntityId: string | null;
               transactionCount: number;
               updatedAt: string;
+              /** @enum {string} */
+              viewerRole: 'owner' | 'view' | 'edit';
             };
             message: string;
           };
@@ -5365,6 +5379,8 @@ export interface operations {
                 resolvedEntityId: string | null;
                 transactionCount: number;
                 updatedAt: string;
+                /** @enum {string} */
+                viewerRole: 'owner' | 'view' | 'edit';
               };
               target: {
                 archivedAt: string | null;
@@ -5429,6 +5445,8 @@ export interface operations {
                 resolvedEntityId: string | null;
                 transactionCount: number;
                 updatedAt: string;
+                /** @enum {string} */
+                viewerRole: 'owner' | 'view' | 'edit';
               };
               transactionCount: number;
             };

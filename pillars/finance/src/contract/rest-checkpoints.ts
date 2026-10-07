@@ -12,9 +12,14 @@
  * is a new row — and `remove` only accepts a `manual` one: an `import` or
  * `statement` figure is what a file said, so the fix for a wrong one is a
  * newer checkpoint, not a delete that the next import would undo.
+ *
+ * The three reads are open to a guest holding a grant on the account
+ * (POPS-5866); `create` and `remove` are not.
  */
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
+
+import { guestRoute } from '@pops/pillar-sdk/server';
 
 import {
   AccountBalanceSchema,
@@ -34,6 +39,7 @@ export const financeCheckpointsContract = c.router({
   list: {
     method: 'GET',
     path: '/accounts/:id/checkpoints',
+    metadata: guestRoute(),
     pathParams: AccountParams,
     responses: { 200: z.object({ data: z.array(CheckpointSchema) }), ...ERR_RESPONSES },
     summary:
@@ -65,6 +71,7 @@ export const financeCheckpointsContract = c.router({
   balance: {
     method: 'GET',
     path: '/accounts/:id/balance',
+    metadata: guestRoute(),
     pathParams: AccountParams,
     query: BalanceQuerySchema,
     responses: { 200: z.object({ data: AccountBalanceSchema }), ...ERR_RESPONSES },
@@ -73,6 +80,7 @@ export const financeCheckpointsContract = c.router({
   history: {
     method: 'GET',
     path: '/accounts/:id/balance-history',
+    metadata: guestRoute(),
     pathParams: AccountParams,
     query: BalanceHistoryQuerySchema,
     responses: {

@@ -98,6 +98,7 @@ export type AccountsListResponses = {
       resolvedEntityId: string | null;
       transactionCount: number;
       updatedAt: string;
+      viewerRole: 'owner' | 'view' | 'edit';
     }>;
     pagination: {
       hasMore: boolean;
@@ -240,6 +241,7 @@ export type AccountsCreateResponses = {
       resolvedEntityId: string | null;
       transactionCount: number;
       updatedAt: string;
+      viewerRole: 'owner' | 'view' | 'edit';
     };
     message: string;
   };
@@ -361,6 +363,7 @@ export type AccountsReorderResponses = {
       resolvedEntityId: string | null;
       transactionCount: number;
       updatedAt: string;
+      viewerRole: 'owner' | 'view' | 'edit';
     }>;
     message: string;
   };
@@ -481,6 +484,7 @@ export type AccountsDeleteResponses = {
       resolvedEntityId: string | null;
       transactionCount: number;
       updatedAt: string;
+      viewerRole: 'owner' | 'view' | 'edit';
     };
     message: string;
   };
@@ -596,6 +600,7 @@ export type AccountsGetResponses = {
       resolvedEntityId: string | null;
       transactionCount: number;
       updatedAt: string;
+      viewerRole: 'owner' | 'view' | 'edit';
     };
   };
 };
@@ -735,6 +740,7 @@ export type AccountsUpdateResponses = {
       resolvedEntityId: string | null;
       transactionCount: number;
       updatedAt: string;
+      viewerRole: 'owner' | 'view' | 'edit';
     };
     message: string;
   };
@@ -2505,6 +2511,7 @@ export type AccountsMergeResponses = {
       resolvedEntityId: string | null;
       transactionCount: number;
       updatedAt: string;
+      viewerRole: 'owner' | 'view' | 'edit';
     };
     message: string;
   };
@@ -2634,6 +2641,7 @@ export type AccountsPreviewMergeResponses = {
         resolvedEntityId: string | null;
         transactionCount: number;
         updatedAt: string;
+        viewerRole: 'owner' | 'view' | 'edit';
       };
       target: {
         archivedAt: string | null;
@@ -2692,6 +2700,7 @@ export type AccountsPreviewMergeResponses = {
         resolvedEntityId: string | null;
         transactionCount: number;
         updatedAt: string;
+        viewerRole: 'owner' | 'view' | 'edit';
       };
       transactionCount: number;
     };

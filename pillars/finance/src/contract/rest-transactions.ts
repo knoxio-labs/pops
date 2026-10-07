@@ -4,9 +4,14 @@
  *
  * `restore` is `POST /transactions/restore` (a literal segment) so it does
  * not collide with the `:id` param routes.
+ *
+ * `list` and `get` are open to a guest (POPS-5866), who sees only
+ * transactions on the accounts granted to them.
  */
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
+
+import { guestRoute } from '@pops/pillar-sdk/server';
 
 import { SuggestedTagSchema } from './rest-imports-schemas.js';
 import { ERR_RESPONSES } from './rest-schemas.js';
@@ -26,6 +31,7 @@ export const financeTransactionsContract = c.router({
   list: {
     method: 'GET',
     path: '/transactions',
+    metadata: guestRoute(),
     query: TransactionQuery,
     responses: {
       200: z.object({
@@ -39,7 +45,9 @@ export const financeTransactionsContract = c.router({
       }),
       ...ERR_RESPONSES,
     },
-    summary: 'List transactions with optional filters and pagination',
+    summary:
+      'List transactions with optional filters and pagination. A guest is listed only ' +
+      'transactions on accounts granted to them; an `accountId` they hold no grant on is a 404',
   },
   // Literal sub-paths declared BEFORE `:id` so they are never shadowed by the param route.
   suggestTags: {
@@ -71,9 +79,12 @@ export const financeTransactionsContract = c.router({
   get: {
     method: 'GET',
     path: '/transactions/:id',
+    metadata: guestRoute(),
     pathParams: z.object({ id: z.string() }),
     responses: { 200: z.object({ data: TransactionSchema }), ...ERR_RESPONSES },
-    summary: 'Get a single transaction',
+    summary:
+      'Get a single transaction; 404s one on an account a guest holds no grant on, ' +
+      'as it does a missing one',
   },
   create: {
     method: 'POST',

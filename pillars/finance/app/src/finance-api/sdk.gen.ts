@@ -370,7 +370,7 @@ export type Options<
 };
 
 /**
- * List accounts with optional search / kind / archived filters and pagination
+ * List accounts with optional search / kind / archived filters and pagination. A guest is listed only the accounts granted to them, and the total counts only those
  */
 export const accountsList = <ThrowOnError extends boolean = false>(
   options?: Options<AccountsListData, ThrowOnError>
@@ -426,7 +426,7 @@ export const accountsDelete = <ThrowOnError extends boolean = false>(
   });
 
 /**
- * Get a single account
+ * Get a single account; 404s one a guest holds no grant on, as it does a missing one
  */
 export const accountsGet = <ThrowOnError extends boolean = false>(
   options: Options<AccountsGetData, ThrowOnError>
@@ -2029,7 +2029,7 @@ export const taggedAttach = <ThrowOnError extends boolean = false>(
   });
 
 /**
- * List transactions with optional filters and pagination
+ * List transactions with optional filters and pagination. A guest is listed only transactions on accounts granted to them; an `accountId` they hold no grant on is a 404
  */
 export const transactionsList = <ThrowOnError extends boolean = false>(
   options?: Options<TransactionsListData, ThrowOnError>
@@ -2120,7 +2120,7 @@ export const transactionsDelete = <ThrowOnError extends boolean = false>(
   });
 
 /**
- * Get a single transaction
+ * Get a single transaction; 404s one on an account a guest holds no grant on, as it does a missing one
  */
 export const transactionsGet = <ThrowOnError extends boolean = false>(
   options: Options<TransactionsGetData, ThrowOnError>

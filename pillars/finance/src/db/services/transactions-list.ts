@@ -18,6 +18,13 @@ import type { FinanceDb, TransactionRow } from './internal.js';
 export interface TransactionFilters {
   search?: string | undefined;
   accountId?: string | undefined;
+  /**
+   * Only transactions on these accounts, applied beside `accountId` rather
+   * than instead of it. An empty list matches nothing. This is how a caller
+   * who may see only some accounts is held to them, so it narrows `total` and
+   * every page alike.
+   */
+  accountIds?: readonly string[] | undefined;
   startDate?: string | undefined;
   endDate?: string | undefined;
   tag?: string | undefined;
@@ -48,6 +55,9 @@ function buildListConditions(filters: TransactionFilters): SQL[] {
   }
   if (filters.accountId) {
     conditions.push(eq(transactions.accountId, filters.accountId));
+  }
+  if (filters.accountIds !== undefined) {
+    conditions.push(inArray(transactions.accountId, [...filters.accountIds]));
   }
   if (filters.startDate) {
     conditions.push(gte(transactions.date, filters.startDate));
