@@ -32,7 +32,7 @@ internal struct GuestEntryDetailView: View {
             .padding(PopsSpacing.lg)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .scrollBounceBehavior(.basedOnSize)
+        .scrollBounceBehavior(.basedOnSize, axes: .vertical)
         .background(Color.popsBackground)
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {

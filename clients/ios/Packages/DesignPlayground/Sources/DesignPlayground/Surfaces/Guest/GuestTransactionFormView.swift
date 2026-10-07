@@ -102,7 +102,7 @@ internal struct GuestTransactionFormView: View {
             .padding(PopsSpacing.lg)
             .disabled(save == .saving)
         }
-        .scrollBounceBehavior(.basedOnSize)
+        .scrollBounceBehavior(.basedOnSize, axes: .vertical)
         .background(Color.popsBackground)
         .safeAreaInset(edge: .top, spacing: PopsSpacing.zero) { status }
         .navigationTitle(mode == .new ? GuestFormCopy.newTitle : GuestFormCopy.editTitle)
