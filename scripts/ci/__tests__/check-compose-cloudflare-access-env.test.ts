@@ -2,9 +2,9 @@
  * `infra/docker-compose.yml` only forwards an environment variable into a
  * container if that service's own `environment:` block names it — setting
  * `CLOUDFLARE_ACCESS_TEAM_NAME` in the deployer's `.env` does nothing for a
- * service whose compose block never references it. Every service that
- * resolves a browser principal must forward the Access pair and the operator
- * list, and the shell's nginx must forward the operator list.
+ * service whose compose block never references it. Every pillar API, the
+ * registry, bfm, design and the orchestrator must forward the Access pair and
+ * the operator list, and the shell must forward the operator list.
  *
  * Parses the real compose YAML with `js-yaml` rather than scanning lines, so
  * this cannot be fooled by the same shape (indentation, block-vs-flow
@@ -37,13 +37,9 @@ function loadCompose(path: string): ComposeFile {
 }
 
 const OPERATOR_EMAILS_VAR = 'POPS_OPERATOR_EMAILS';
-const PRINCIPAL_VARS = [
-  'CLOUDFLARE_ACCESS_TEAM_NAME',
-  'CLOUDFLARE_ACCESS_AUD',
-  OPERATOR_EMAILS_VAR,
-];
+const API_VARS = ['CLOUDFLARE_ACCESS_TEAM_NAME', 'CLOUDFLARE_ACCESS_AUD', OPERATOR_EMAILS_VAR];
 
-const PRINCIPAL_SERVICES = [
+const API_SERVICES = [
   'registry-api',
   'inventory-api',
   'documents-api',
@@ -62,7 +58,7 @@ const PRINCIPAL_SERVICES = [
 ];
 
 const REQUIRED_VARS_BY_SERVICE: ReadonlyMap<string, readonly string[]> = new Map([
-  ...PRINCIPAL_SERVICES.map((service): [string, readonly string[]] => [service, PRINCIPAL_VARS]),
+  ...API_SERVICES.map((service): [string, readonly string[]] => [service, API_VARS]),
   ['pops-shell', [OPERATOR_EMAILS_VAR]],
 ]);
 
@@ -114,12 +110,12 @@ describe('infra/docker-compose.yml Cloudflare Access and operator wiring', () =>
     vars.map((key): [string, string] => [service, key])
   );
 
-  it('forwards every required variable to every service that resolves a browser principal', () => {
+  it('forwards every required variable to every listed service', () => {
     expect(findWiringViolations(compose, REQUIRED_VARS_BY_SERVICE)).toEqual([]);
   });
 
   it('requires all three variables of every pillar API and only the operator list of the shell', () => {
-    expect(requiredPairs).toHaveLength(PRINCIPAL_SERVICES.length * 3 + 1);
+    expect(requiredPairs).toHaveLength(API_SERVICES.length * 3 + 1);
     expect(REQUIRED_VARS_BY_SERVICE.get('pops-shell')).toEqual([OPERATOR_EMAILS_VAR]);
   });
 
@@ -159,10 +155,10 @@ describe('infra/docker-compose.yml Cloudflare Access and operator wiring', () =>
 });
 
 describe('infra/docker-compose.dev.yml', () => {
-  it('forwards none of the variables, so dev traffic resolves to the local operator', () => {
+  it('forwards none of the variables', () => {
     const dev = loadCompose(devComposePath);
     const forwarded = Object.entries(dev.services).flatMap(([serviceName, service]) =>
-      PRINCIPAL_VARS.filter((key) => Object.hasOwn(service?.environment ?? {}, key)).map(
+      API_VARS.filter((key) => Object.hasOwn(service?.environment ?? {}, key)).map(
         (key) => `${serviceName}: ${key}`
       )
     );
