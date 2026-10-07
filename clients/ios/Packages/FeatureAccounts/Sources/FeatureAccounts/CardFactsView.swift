@@ -12,17 +12,19 @@ internal struct CardFactsView: View {
         if let card, let facts = CardFacts(account: account, card: card) {
             PopsCard {
                 VStack(alignment: .leading, spacing: PopsSpacing.md) {
-                    Text("This cycle")
+                    Text(AccountsCopy.cycleTitle)
                         .font(.popsTitle)
                         .foregroundStyle(Color.popsForeground)
-                    Text("Due \(card.dueOn.formatted(date: .abbreviated, time: .omitted))")
+                    Text(AccountsCopy.due(card.dueOn.formatted(date: .abbreviated, time: .omitted)))
                         .font(.popsSubheadline)
                         .foregroundStyle(
                             facts.isDueSoon ? Color.popsDestructive : Color.popsMutedForeground)
                     spend(facts)
                     meter(fraction: facts.fraction)
                     Text(
-                        "\(facts.percentUsed)% of \(facts.limit) used · \(facts.available) available"
+                        AccountsCopy.limitUse(
+                            percent: facts.percentUsed, limit: facts.limit,
+                            available: facts.available)
                     )
                     .font(.popsCaption)
                     .foregroundStyle(Color.popsMutedForeground)
@@ -33,13 +35,13 @@ internal struct CardFactsView: View {
 
     private func spend(_ facts: CardFacts) -> some View {
         VStack(alignment: .leading, spacing: PopsSpacing.xs) {
-            Text("Spent this cycle")
+            Text(AccountsCopy.spentThisCycle)
                 .font(.popsCaption)
                 .foregroundStyle(Color.popsMutedForeground)
             Text(facts.cycleSpend)
                 .font(.popsHeadline)
                 .foregroundStyle(Color.popsForeground)
-            Text("\(facts.changeDirection) \(facts.changeAmount) on last cycle")
+            Text(AccountsCopy.cycleChange(rose: facts.cycleSpendRose, by: facts.changeAmount))
                 .font(.popsCaption)
                 .foregroundStyle(Color.popsMutedForeground)
         }
@@ -68,7 +70,7 @@ internal struct CardFacts: Hashable, Sendable {
     internal let limit: String
     internal let available: String
     internal let cycleSpend: String
-    internal let changeDirection: String
+    internal let cycleSpendRose: Bool
     internal let changeAmount: String
 
     internal init?(account: Account, card: AccountCardCycle) {
@@ -84,7 +86,7 @@ internal struct CardFacts: Hashable, Sendable {
         cycleSpend = Self.money(card.cycleSpendMinorUnits, currency)
 
         let change = card.cycleSpendMinorUnits - card.previousCycleSpendMinorUnits
-        changeDirection = change > 0 ? "Up" : "Down"
+        cycleSpendRose = change > 0
         changeAmount = Self.money(abs(change), currency)
 
         let daysUntilDue =

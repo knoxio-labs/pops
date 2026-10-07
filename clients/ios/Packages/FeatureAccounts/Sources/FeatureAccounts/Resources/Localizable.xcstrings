@@ -1,0 +1,960 @@
+{
+  "sourceLanguage" : "en-AU",
+  "strings" : {
+    "%@ in %@" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ em %2$@"
+          }
+        }
+      }
+    },
+    "%@ left of %@" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restam %1$@ de %2$@"
+          }
+        }
+      }
+    },
+    "%@ owes you" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ deve a você"
+          }
+        }
+      }
+    },
+    "%lld accounts" : {
+      "localizations" : {
+        "en-AU" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld account"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld accounts"
+                }
+              }
+            }
+          }
+        },
+        "pt-BR" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld conta"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld contas"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld archived" : {
+      "localizations" : {
+        "pt-BR" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld arquivada"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld arquivadas"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld entries with %@" : {
+      "localizations" : {
+        "pt-BR" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%1$lld lançamento com %2$@"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%1$lld lançamentos com %2$@"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld pts" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld pts"
+          }
+        }
+      }
+    },
+    "%lld transactions" : {
+      "localizations" : {
+        "en-AU" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld transaction"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld transactions"
+                }
+              }
+            }
+          }
+        },
+        "pt-BR" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld transação"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld transações"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld%% of %@ used · %@ available" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld%% de %2$@ usado · %3$@ disponível"
+          }
+        }
+      }
+    },
+    "%lld/yr at this rate" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld/ano neste ritmo"
+          }
+        }
+      }
+    },
+    "Account" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conta"
+          }
+        }
+      }
+    },
+    "Accounts" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Contas"
+          }
+        }
+      }
+    },
+    "Accounts could not be refreshed. %@" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível atualizar as contas. %@"
+          }
+        }
+      }
+    },
+    "Archived" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arquivadas"
+          }
+        }
+      }
+    },
+    "As of %@" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Em %@"
+          }
+        }
+      }
+    },
+    "Average month" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Média mensal"
+          }
+        }
+      }
+    },
+    "Balance held" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saldo em posse"
+          }
+        }
+      }
+    },
+    "Biggest single move: %@" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Maior movimento individual: %@"
+          }
+        }
+      }
+    },
+    "Cash" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dinheiro"
+          }
+        }
+      }
+    },
+    "Checked against a statement" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conferido com um extrato"
+          }
+        }
+      }
+    },
+    "Checking" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conta corrente"
+          }
+        }
+      }
+    },
+    "Could not load more accounts." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível carregar mais contas."
+          }
+        }
+      }
+    },
+    "Could not load the full picture." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível carregar o quadro completo."
+          }
+        }
+      }
+    },
+    "Could not reach the server. Check your connection and try again." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível acessar o servidor. Verifique sua conexão e tente novamente."
+          }
+        }
+      }
+    },
+    "Credit card" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cartão de crédito"
+          }
+        }
+      }
+    },
+    "Crypto" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cripto"
+          }
+        }
+      }
+    },
+    "Derived from transactions" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Calculado a partir das transações"
+          }
+        }
+      }
+    },
+    "Derived from transactions, never checked" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Calculado a partir das transações, nunca conferido"
+          }
+        }
+      }
+    },
+    "Done" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OK"
+          }
+        }
+      }
+    },
+    "Down %@ on last cycle" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Queda de %@ em relação ao último ciclo"
+          }
+        }
+      }
+    },
+    "Down %@ over 12 months" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Queda de %@ em 12 meses"
+          }
+        }
+      }
+    },
+    "Due %@" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vence em %@"
+          }
+        }
+      }
+    },
+    "Earned in 90 days" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ganhos em 90 dias"
+          }
+        }
+      }
+    },
+    "Expires %@" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Expira em %@"
+          }
+        }
+      }
+    },
+    "Expiring" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A expirar"
+          }
+        }
+      }
+    },
+    "From closing balances, not transactions: money in and out are not counted apart." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A partir dos saldos de fechamento, não das transações: entradas e saídas não são contadas separadamente."
+          }
+        }
+      }
+    },
+    "Gift card" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cartão-presente"
+          }
+        }
+      }
+    },
+    "Held" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Em posse"
+          }
+        }
+      }
+    },
+    "Hide archived" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ocultar arquivadas"
+          }
+        }
+      }
+    },
+    "In credit on this account" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Com crédito nesta conta"
+          }
+        }
+      }
+    },
+    "Ledger" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Livro-razão"
+          }
+        }
+      }
+    },
+    "Loading accounts…" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carregando contas…"
+          }
+        }
+      }
+    },
+    "Loading account…" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carregando conta…"
+          }
+        }
+      }
+    },
+    "Loading more accounts…" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carregando mais contas…"
+          }
+        }
+      }
+    },
+    "Loan" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Empréstimo"
+          }
+        }
+      }
+    },
+    "Lowest it went (%@)" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ponto mais baixo (%@)"
+          }
+        }
+      }
+    },
+    "Month on month" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mês a mês"
+          }
+        }
+      }
+    },
+    "Net in %@" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Líquido em %@"
+          }
+        }
+      }
+    },
+    "No accounts match this search." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nenhuma conta corresponde a esta busca."
+          }
+        }
+      }
+    },
+    "No accounts yet. Accounts are created on the desktop; this is where they are read." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ainda não há contas. As contas são criadas no computador; aqui elas são consultadas."
+          }
+        }
+      }
+    },
+    "No active accounts. Try showing archived accounts." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nenhuma conta ativa. Experimente mostrar as contas arquivadas."
+          }
+        }
+      }
+    },
+    "No recent transactions." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nenhuma transação recente."
+          }
+        }
+      }
+    },
+    "Novated lease" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leasing novado"
+          }
+        }
+      }
+    },
+    "Open with %@" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Em aberto com %@"
+          }
+        }
+      }
+    },
+    "Other" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Outra"
+          }
+        }
+      }
+    },
+    "Owed" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Em dívida"
+          }
+        }
+      }
+    },
+    "Owed on this account" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Devido nesta conta"
+          }
+        }
+      }
+    },
+    "Person" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pessoa"
+          }
+        }
+      }
+    },
+    "Points" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pontos"
+          }
+        }
+      }
+    },
+    "Pops is not set up correctly on this device." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O Pops não está configurado corretamente neste dispositivo."
+          }
+        }
+      }
+    },
+    "Recent transactions" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Transações recentes"
+          }
+        }
+      }
+    },
+    "Refreshing accounts" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Atualizando contas"
+          }
+        }
+      }
+    },
+    "Remaining stored value" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saldo armazenado restante"
+          }
+        }
+      }
+    },
+    "Retry" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tentar novamente"
+          }
+        }
+      }
+    },
+    "Savings" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Poupança"
+          }
+        }
+      }
+    },
+    "Search accounts" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buscar contas"
+          }
+        }
+      }
+    },
+    "Settled up with %@" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tudo acertado com %@"
+          }
+        }
+      }
+    },
+    "Shared" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Compartilhada"
+          }
+        }
+      }
+    },
+    "Show archived" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mostrar arquivadas"
+          }
+        }
+      }
+    },
+    "Spent this cycle" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gasto neste ciclo"
+          }
+        }
+      }
+    },
+    "Stored value" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saldo armazenado"
+          }
+        }
+      }
+    },
+    "That change conflicts with something already saved." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Essa alteração entra em conflito com algo já salvo."
+          }
+        }
+      }
+    },
+    "This account no longer exists." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esta conta não existe mais."
+          }
+        }
+      }
+    },
+    "This cycle" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Este ciclo"
+          }
+        }
+      }
+    },
+    "This device is no longer signed in." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Este dispositivo não está mais conectado."
+          }
+        }
+      }
+    },
+    "This phone is not allowed to use Accounts." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Este telefone não tem permissão para usar Contas."
+          }
+        }
+      }
+    },
+    "This version of Pops cannot read what the server sent. Update the app." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esta versão do Pops não consegue ler o que o servidor enviou. Atualize o app."
+          }
+        }
+      }
+    },
+    "This version of Pops sent a request the server cannot accept. Update the app." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esta versão do Pops enviou uma solicitação que o servidor não pode aceitar. Atualize o app."
+          }
+        }
+      }
+    },
+    "Too many requests. Wait before trying again." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Muitas solicitações. Aguarde antes de tentar novamente."
+          }
+        }
+      }
+    },
+    "Twelve months" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Doze meses"
+          }
+        }
+      }
+    },
+    "Up %@ on last cycle" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alta de %@ em relação ao último ciclo"
+          }
+        }
+      }
+    },
+    "Up %@ over 12 months" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alta de %@ em 12 meses"
+          }
+        }
+      }
+    },
+    "Worth about %@ · Indicative only" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Valem cerca de %@ · Apenas indicativo"
+          }
+        }
+      }
+    },
+    "You owe %@" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Você deve a %@"
+          }
+        }
+      }
+    },
+    "Your accounts are temporarily unreachable. Nothing is lost — try again in a moment." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suas contas estão temporariamente inacessíveis. Nada foi perdido — tente novamente em instantes."
+          }
+        }
+      }
+    },
+    "owed to you" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "devem a você"
+          }
+        }
+      }
+    },
+    "you owe" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "você deve"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

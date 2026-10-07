@@ -10,22 +10,8 @@ import AppCore
 /// A kind this build has never heard of still gets a label: its own raw value,
 /// title-cased word by word, rather than a blank subtitle nobody can explain.
 internal enum AccountKindLabel {
-    private static let known: [AccountKind: String] = [
-        .checking: "Checking",
-        .savings: "Savings",
-        .creditCard: "Credit card",
-        .cash: "Cash",
-        .giftCard: "Gift card",
-        .person: "Person",
-        .shared: "Shared",
-        .loan: "Loan",
-        .novatedLease: "Novated lease",
-        .crypto: "Crypto",
-        .other: "Other",
-    ]
-
     internal static func label(for kind: AccountKind) -> String {
-        if let label = known[kind] { return label }
+        if let label = AccountsCopy.kindLabel(kind) { return label }
         return kind.rawValue
             .split(separator: "-")
             .map { $0.prefix(1).uppercased() + $0.dropFirst() }

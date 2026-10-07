@@ -16,18 +16,20 @@ internal struct PointsFactsView: View {
             let worth = Int((Double(account.balance.minorUnits) * points.centsPerPoint).rounded())
             PopsCard {
                 VStack(alignment: .leading, spacing: PopsSpacing.md) {
-                    Text("Points")
+                    Text(AccountsCopy.pointsTitle)
                         .font(.popsTitle)
                         .foregroundStyle(Color.popsForeground)
                     HStack(spacing: PopsSpacing.lg) {
                         stat(
-                            label: "Expiring", value: "\(points.expiringPoints) pts",
+                            label: AccountsCopy.pointsExpiring,
+                            value: AccountsCopy.points(points.expiringPoints),
                             hint: points.expiresOn.formatted(date: .abbreviated, time: .omitted))
                         stat(
-                            label: "Earned in 90 days", value: "\(points.earnedLast90Days) pts",
-                            hint: "\(perYear)/yr at this rate")
+                            label: AccountsCopy.pointsEarned,
+                            value: AccountsCopy.points(points.earnedLast90Days),
+                            hint: AccountsCopy.pointsPerYear(perYear))
                     }
-                    Text("Worth about \(money(worth)) · Indicative only")
+                    Text(AccountsCopy.pointsWorth(money(worth)))
                         .font(.popsSubheadline)
                         .foregroundStyle(Color.popsMutedForeground)
                 }

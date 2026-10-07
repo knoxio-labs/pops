@@ -14,6 +14,7 @@ let strictSwiftSettings: [SwiftSetting] = [
 // `@Observable` is unavailable and the package only builds through Xcode.
 let package = Package(
     name: "FeatureAccounts",
+    defaultLocalization: "en-AU",
     platforms: [.iOS("27.0"), .macOS("15.0")],
     products: [.library(name: "FeatureAccounts", targets: ["FeatureAccounts"])],
     dependencies: [
@@ -24,6 +25,7 @@ let package = Package(
         .target(
             name: "FeatureAccounts",
             dependencies: ["AppCore", "DesignSystem"],
+            resources: [.process("Resources/Localizable.xcstrings")],
             swiftSettings: strictSwiftSettings
         ),
         .testTarget(

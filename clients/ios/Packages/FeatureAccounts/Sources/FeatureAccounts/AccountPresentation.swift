@@ -60,7 +60,8 @@ internal struct AccountPresentation: Sendable {
         guard account.kind.side == .either, account.balance.minorUnits != 0 else {
             return BalanceReading(amount: amount, note: nil, tone: tone)
         }
-        let note = account.balance.minorUnits < 0 ? "you owe" : "owed to you"
+        let note =
+            account.balance.minorUnits < 0 ? AccountsCopy.noteYouOwe : AccountsCopy.noteOwedToYou
         return BalanceReading(amount: amount, note: note, tone: tone)
     }
 
@@ -83,14 +84,15 @@ internal struct AccountPresentation: Sendable {
         let kind = account.kind
         let who = account.contact ?? account.name
         if kind.side == .either {
-            return account.balance.minorUnits >= 0 ? "\(who) owes you" : "You owe \(who)"
+            return account.balance.minorUnits >= 0
+                ? AccountsCopy.owesYou(who) : AccountsCopy.youOwe(who)
         }
-        if kind.isStoredValue { return "Remaining stored value" }
+        if kind.isStoredValue { return AccountsCopy.remainingStoredValue }
         if kind.side == .liability {
             return account.balance.minorUnits < 0
-                ? "Owed on this account" : "In credit on this account"
+                ? AccountsCopy.owedOnAccount : AccountsCopy.inCreditOnAccount
         }
-        return "Balance held"
+        return AccountsCopy.balanceHeld
     }
 
     /// When the number was last true, phrased so a derived balance never
@@ -106,12 +108,12 @@ internal struct AccountPresentation: Sendable {
         switch account.balanceBasis {
         case .checkpoint:
             guard let balanceAsOf = account.balanceAsOf else {
-                return "Checked against a statement"
+                return AccountsCopy.checkedAgainstStatement
             }
-            return "As of \(day(balanceAsOf))"
+            return AccountsCopy.asOf(day(balanceAsOf))
         case .transactions:
             return account.kind.isCheckpointable
-                ? "Derived from transactions, never checked" : "Derived from transactions"
+                ? AccountsCopy.derivedNeverChecked : AccountsCopy.derived
         }
     }
 

@@ -1,0 +1,326 @@
+{
+  "sourceLanguage" : "en-AU",
+  "strings" : {
+    "Camera access is restricted on this device. Type the details below instead." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O acesso à câmera está restrito neste dispositivo. Digite os dados abaixo."
+          }
+        }
+      }
+    },
+    "Cancel" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancelar"
+          }
+        }
+      }
+    },
+    "Could not reach that server. Check the address and your connection." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível acessar esse servidor. Verifique o endereço e a sua conexão."
+          }
+        }
+      }
+    },
+    "Device name" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nome do dispositivo"
+          }
+        }
+      }
+    },
+    "Enter a name for this device first." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Informe primeiro um nome para este dispositivo."
+          }
+        }
+      }
+    },
+    "Enter the pairing code first." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Informe primeiro o código de pareamento."
+          }
+        }
+      }
+    },
+    "Enter the server address first." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Informe primeiro o endereço do servidor."
+          }
+        }
+      }
+    },
+    "Open Settings" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abrir Ajustes"
+          }
+        }
+      }
+    },
+    "Open the Devices page on your Pops server and scan the code it shows." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abra a página Dispositivos no seu servidor Pops e escaneie o código exibido."
+          }
+        }
+      }
+    },
+    "Pair" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Parear"
+          }
+        }
+      }
+    },
+    "Pair this device" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Parear este dispositivo"
+          }
+        }
+      }
+    },
+    "Paired, but this device could not store its credentials. Revoke it on the Devices page and pair again." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pareado, mas este dispositivo não conseguiu guardar as credenciais. Revogue-o na página Dispositivos e pareie novamente."
+          }
+        }
+      }
+    },
+    "Pairing code" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Código de pareamento"
+          }
+        }
+      }
+    },
+    "Pairing…" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pareando…"
+          }
+        }
+      }
+    },
+    "Point the camera at the QR code." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aponte a câmera para o código QR."
+          }
+        }
+      }
+    },
+    "Pops cannot use the camera. Allow it in Settings, or type the details below." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O Pops não pode usar a câmera. Permita o acesso em Ajustes ou digite os dados abaixo."
+          }
+        }
+      }
+    },
+    "Pops is not set up correctly on this device." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O Pops não está configurado corretamente neste dispositivo."
+          }
+        }
+      }
+    },
+    "Scan QR code" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Escanear código QR"
+          }
+        }
+      }
+    },
+    "Server address" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Endereço do servidor"
+          }
+        }
+      }
+    },
+    "That code did not work. Generate a new one and try again." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esse código não funcionou. Gere um novo e tente outra vez."
+          }
+        }
+      }
+    },
+    "The pairing code and device name must be 64 characters or fewer." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O código de pareamento e o nome do dispositivo devem ter no máximo 64 caracteres."
+          }
+        }
+      }
+    },
+    "This device could not create its security key. Unlock it and try again." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Este dispositivo não conseguiu criar a chave de segurança. Desbloqueie-o e tente novamente."
+          }
+        }
+      }
+    },
+    "This device has no camera. Type the details below instead." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Este dispositivo não tem câmera. Digite os dados abaixo."
+          }
+        }
+      }
+    },
+    "This device was removed on your Pops server. Pair it again to continue." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Este dispositivo foi removido do seu servidor Pops. Pareie-o novamente para continuar."
+          }
+        }
+      }
+    },
+    "This device's sign-in expired and could not be renewed. Pair it again." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O acesso deste dispositivo expirou e não pôde ser renovado. Pareie-o novamente."
+          }
+        }
+      }
+    },
+    "This iPhone" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Este iPhone"
+          }
+        }
+      }
+    },
+    "This version of Pops sent something the server refused. Update the app." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esta versão do Pops enviou algo que o servidor recusou. Atualize o app."
+          }
+        }
+      }
+    },
+    "Too many attempts. Try again in %lld seconds." : {
+      "localizations" : {
+        "en-AU" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Too many attempts. Try again in %lld second."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Too many attempts. Try again in %lld seconds."
+                }
+              }
+            }
+          }
+        },
+        "pt-BR" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Muitas tentativas. Tente novamente em %lld segundo."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Muitas tentativas. Tente novamente em %lld segundos."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Too many attempts. Wait a minute and try again." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Muitas tentativas. Aguarde um minuto e tente novamente."
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

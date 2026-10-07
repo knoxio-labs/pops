@@ -206,6 +206,17 @@ xcrun actool clients/ios/App/AppIcon.icon --compile tmp/icon-preview \
 
 [`scripts/__tests__/ios-app-icon.test.ts`](../../scripts/__tests__/ios-app-icon.test.ts) checks weave topology, proportions, touching crossings, shadow placement, manifest effects and exact agreement between generated and committed bundles. These tests protect geometry and reproducibility; native renders remain the visual check.
 
+## Localisation
+
+The app shell, `FeaturePairing`, `FeatureAccounts` and `FeatureTransactions` are in en-AU and pt-BR; they are what a guest session shows. `FeaturePurchases`, `FeatureInventory`, `FeatureEgo` and `FeatureSearch` are English only. The app follows the system language and has no switch of its own.
+
+Each localised module keeps every sentence in its copy enum, in English, and resolves it through `AppCore`'s `LocalizedCopy` against a `Localizable.xcstrings` in its own bundle. The English sentence is the catalogue key, so the catalogue holds only the pt-BR value and the plural forms.
+
+- **The catalogues are edited by hand.** Xcode's extraction does not see through `LocalizedCopy`. Adding a sentence means adding its key to the module's catalogue with a pt-BR value; each module's `…LocalizationTests` fails on a sentence the catalogue lacks, an entry no code uses, or an entry with no pt-BR value.
+- **A count is interpolated as a number, never as text.** `localized("\(count) accounts")` gives each language its own plural rule and digit grouping. Amounts and dates are formatted before they are interpolated, with the reader's locale.
+- **A call must be `localized("…")` with a literal**, on one line or as a multi-line literal. The audit reads the source and reports any other shape as unreadable.
+- **A stored `static let` must not hold resolved copy.** It would keep the language of whoever read it first.
+
 ## Module boundaries
 
 `App/` is the entry point and the composition root, and the only place that knows every module exists. Everything else is a local SPM package under `Packages/`, one per concern.

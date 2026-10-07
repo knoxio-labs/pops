@@ -160,7 +160,7 @@ extension AccountsListView {
     }
 
     private var archivedToggle: some View {
-        PopsButton(model.showArchived ? "Hide archived" : "Show archived") {
+        PopsButton(model.showArchived ? AccountsCopy.hideArchived : AccountsCopy.showArchived) {
             model.showArchived.toggle()
         }
     }

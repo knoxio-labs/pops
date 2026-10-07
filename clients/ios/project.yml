@@ -15,6 +15,11 @@ options:
     iOS: '27.0'
   createIntermediateGroups: true
   groupSortPosition: none
+  # The language the copy enums are written in, and the one every String
+  # Catalog names as its `sourceLanguage`. The second language, pt-BR, is not
+  # listed here: XcodeGen has no option for it and writes `knownRegions` from
+  # the languages App/Localizable.xcstrings carries.
+  developmentLanguage: en-AU
 
 settings:
   base:

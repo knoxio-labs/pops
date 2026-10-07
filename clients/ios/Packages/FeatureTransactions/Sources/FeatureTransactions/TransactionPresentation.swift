@@ -75,7 +75,8 @@ internal struct TransactionPresentation: Sendable {
     /// type is always there, so this line always says something — an untagged
     /// transaction reads as its type alone rather than as a gap.
     internal func caption(_ transaction: Transaction) -> String {
-        ([transaction.type.rawValue] + transaction.tags).joined(separator: separator)
+        ([TransactionsCopy.typeName(transaction.type)] + transaction.tags).joined(
+            separator: separator)
     }
 
     /// The row as one sentence, because VoiceOver reads a row as one utterance
@@ -87,7 +88,7 @@ internal struct TransactionPresentation: Sendable {
     internal func accessibilityLabel(_ transaction: Transaction) -> String {
         var parts = [transaction.description, amount(transaction), date(transaction)]
         if let entityName = transaction.entityName { parts.append(entityName) }
-        parts.append(transaction.type.rawValue)
+        parts.append(TransactionsCopy.typeName(transaction.type))
         if !transaction.tags.isEmpty { parts.append(TransactionsCopy.tagList(transaction.tags)) }
         return parts.joined(separator: ", ")
     }
