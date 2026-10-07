@@ -67,8 +67,8 @@ export interface SolvableCharge {
   /** Per-source window override; falls back to the caller's default. */
   readonly settlementWindowDays: number | null;
   /**
-   * The parent order's `purchases.paymentHint` — the merchant's name for the
-   * card it charged, such as `Visa - 7373`. Null when the source states none.
+   * The charge's `purchase_charges.payment_hint` — the merchant's name for
+   * the card it used, such as `Visa - 7373`. Explicit null means no card hint.
    *
    * Finance accounts carry no card number, so the hint says nothing on its
    * own. It narrows blocking only through {@link SolverInput.cardAccounts}.

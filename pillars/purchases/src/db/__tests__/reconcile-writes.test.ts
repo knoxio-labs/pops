@@ -11,7 +11,12 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createPurchase, getPurchase, mintDerivedCharge } from '../index.js';
+import {
+  createPurchase,
+  getPurchase,
+  listOrdersNeedingDerivedCharge,
+  mintDerivedCharge,
+} from '../index.js';
 import { amazonOrder, openTempDb, seedAmazonSource, type TempDb } from './helpers.js';
 
 import type { OpenedPurchasesDb } from '../index.js';
@@ -46,6 +51,7 @@ describe('mintDerivedCharge position', () => {
       id: orderId,
       totalCents: 1000,
       currency: 'AUD',
+      paymentHint: null,
     });
 
     const detail = getPurchase(opened.db, orderId);
@@ -55,6 +61,27 @@ describe('mintDerivedCharge position', () => {
     if (refund === undefined || minted === undefined) throw new Error('expected two charges');
 
     expect(minted.charge.position).toBeGreaterThan(refund.charge.position);
+  });
+
+  it('carries the order payment hint onto a derived charge', () => {
+    const orderId = createPurchase(
+      opened.db,
+      amazonOrder({
+        checksum: 'amazon:derived-payment-hint',
+        sourceOrderId: 'amazon-derived-payment-hint',
+        totalCents: 1000,
+        paymentHint: 'Visa - 7373',
+      })
+    );
+    const order = listOrdersNeedingDerivedCharge(opened.db).find(({ id }) => id === orderId);
+    if (order === undefined) throw new Error('expected the order to need a derived charge');
+
+    const mintedId = mintDerivedCharge(opened.db, order);
+
+    expect(getPurchase(opened.db, orderId)?.charges[0]?.charge).toMatchObject({
+      id: mintedId,
+      paymentHint: 'Visa - 7373',
+    });
   });
 
   it('gives two successive mints on the same purchase distinct, increasing positions', () => {
@@ -71,11 +98,13 @@ describe('mintDerivedCharge position', () => {
       id: orderId,
       totalCents: 2000,
       currency: 'AUD',
+      paymentHint: null,
     });
     const secondId = mintDerivedCharge(opened.db, {
       id: orderId,
       totalCents: 2000,
       currency: 'AUD',
+      paymentHint: null,
     });
 
     const detail = getPurchase(opened.db, orderId);
@@ -116,6 +145,7 @@ describe('mintDerivedCharge position', () => {
       id: orderId,
       totalCents: 1500,
       currency: 'AUD',
+      paymentHint: null,
     });
     expect(mintedId).toBe(forcedId);
 
@@ -150,6 +180,7 @@ describe('mintDerivedCharge position', () => {
           id: orderId,
           totalCents: 800,
           currency: 'AUD',
+          paymentHint: null,
         });
 
         const firstRead = getPurchase(local.opened.db, orderId)?.charges.map((c) => c.charge.id);
