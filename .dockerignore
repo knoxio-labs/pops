@@ -5,6 +5,7 @@ node_modules
 .vscode
 
 dist
+**/*.tsbuildinfo
 build
 coverage
 
