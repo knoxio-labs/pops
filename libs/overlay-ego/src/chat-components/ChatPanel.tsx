@@ -1,15 +1,15 @@
 /**
- * ChatPanel — main chat panel component.
+ * ChatPanel — composes conversation history, the thread, and the composer.
  *
- * Composes ConversationList, MessageThread, ChatInput, and ContextIndicator
- * into a two-column layout (sidebar + thread) for the chat page.
+ * The full page keeps its history sidebar. The shell overlay opens history in
+ * a modal sheet so the thread keeps the full width of the narrow panel.
  */
-import { MessageSquare } from 'lucide-react';
+import { useState } from 'react';
 
-import { EmptyState, cn } from '@pops/ui';
+import { Sheet, cn } from '@pops/ui';
 
-import { ChatInput } from './ChatInput';
-import { ContextIndicator } from './ContextIndicator';
+import { ThreadComposer, ThreadFeedback, ThreadHeader } from './ChatPanel.parts';
+import { ChatWelcome } from './ChatWelcome';
 import { ConversationList } from './ConversationList';
 import { MessageThread } from './MessageThread';
 
@@ -20,80 +20,160 @@ export interface ChatPanelProps {
   model: ChatPageModel;
   /** Additional CSS classes for the outer wrapper. */
   className?: string;
+  /** Use a modal history sheet instead of a persistent sidebar. */
+  historyLayout?: 'sidebar' | 'drawer';
 }
 
-function ThreadArea({ model }: { model: ChatPageModel }) {
-  const showEmpty = model.selectedConversationId === null && model.messages.length === 0;
+function shouldShowWelcome(model: ChatPageModel) {
+  return (
+    model.selectedConversationId === null &&
+    model.messages.length === 0 &&
+    model.pendingUserMessage === null &&
+    !model.isSending &&
+    model.streamingContent === null
+  );
+}
+
+function ThreadConversation({ model, compact }: { model: ChatPageModel; compact: boolean }) {
+  if (shouldShowWelcome(model)) return <ChatWelcome onPrompt={model.setInputValue} />;
+
+  return (
+    <MessageThread
+      messages={model.messages}
+      pendingUserMessage={model.pendingUserMessage}
+      isLoading={
+        model.messagesLoading &&
+        model.selectedConversationId !== null &&
+        model.pendingUserMessage === null &&
+        !model.isSending
+      }
+      isSending={model.isSending}
+      streamParts={model.streamParts}
+      streamingContent={model.streamingContent}
+      persistedMessageId={model.persistedMessageId}
+      toolActivity={model.toolActivity}
+      decisions={model.batchDecisions}
+      compact={compact}
+    />
+  );
+}
+
+function ThreadArea({
+  model,
+  historyLayout,
+  onOpenHistory,
+}: {
+  model: ChatPageModel;
+  historyLayout: 'sidebar' | 'drawer';
+  onOpenHistory: () => void;
+}) {
+  const compact = historyLayout === 'drawer';
+  const selectedConversation = model.conversations.find(
+    (conversation) => conversation.id === model.selectedConversationId
+  );
+  const title =
+    model.selectedConversationId === null
+      ? 'New conversation'
+      : (selectedConversation?.title ?? 'Conversation');
 
   return (
     <div className="flex min-w-0 flex-1 flex-col bg-background">
-      {showEmpty ? (
-        <div className="flex flex-1 items-center justify-center">
-          <EmptyState
-            icon={MessageSquare}
-            title="Start a conversation"
-            description="Send a message to begin chatting with Ego, or select an existing conversation from the sidebar."
-            size="lg"
-          />
-        </div>
-      ) : (
-        <MessageThread
-          messages={model.messages}
-          isLoading={model.messagesLoading}
-          isSending={model.isSending}
-          streamParts={model.streamParts}
-          streamingContent={model.streamingContent}
-          toolActivity={model.toolActivity}
-          decisions={model.batchDecisions}
+      {compact && (
+        <ThreadHeader
+          title={title}
+          onOpenHistory={onOpenHistory}
+          onNew={model.startNewConversation}
         />
       )}
-
-      <div className="space-y-2 px-4">
-        <ContextIndicator
-          activeScopes={model.activeScopes}
-          contextEngrams={model.retrievedEngrams}
-        />
-        {model.sendError && (
-          <div
-            className="rounded-md bg-destructive/10 px-3 py-2 text-xs text-destructive"
-            role="alert"
-          >
-            {model.sendError}
-          </div>
-        )}
-      </div>
-
-      <div className="border-t border-border/50 p-4">
-        <ChatInput
-          value={model.inputValue}
-          onChange={model.setInputValue}
-          onSend={model.sendMessage}
-          isSending={model.isSending}
-        />
-      </div>
+      <ThreadConversation model={model} compact={compact} />
+      <ThreadFeedback model={model} />
+      <ThreadComposer model={model} compact={compact} />
     </div>
   );
 }
 
-export function ChatPanel({ model, className }: ChatPanelProps) {
+function ConversationListForModel({
+  model,
+  className,
+  onSelect,
+  onNew,
+}: {
+  model: ChatPageModel;
+  className?: string;
+  onSelect: (id: string) => void;
+  onNew: () => void;
+}) {
+  return (
+    <ConversationList
+      conversations={model.conversations}
+      isLoading={model.conversationsLoading}
+      selectedId={model.selectedConversationId}
+      onSelect={onSelect}
+      onNew={onNew}
+      onDelete={model.deleteConversation}
+      isDeleting={model.isDeleting}
+      searchQuery={model.searchQuery}
+      onSearchChange={model.setSearchQuery}
+      className={className}
+    />
+  );
+}
+
+/** Render Ego chat with persistent sidebar history or a modal history drawer. */
+export function ChatPanel({ model, className, historyLayout = 'sidebar' }: ChatPanelProps) {
+  const [historyOpen, setHistoryOpen] = useState(false);
+
+  if (historyLayout === 'drawer') {
+    return (
+      <div
+        className={cn(
+          'relative flex h-full min-w-0 flex-col overflow-hidden rounded-lg border border-border/50',
+          className
+        )}
+      >
+        <ThreadArea
+          model={model}
+          historyLayout="drawer"
+          onOpenHistory={() => setHistoryOpen(true)}
+        />
+        <Sheet
+          open={historyOpen}
+          onOpenChange={setHistoryOpen}
+          title="Conversations"
+          description="Open a conversation or start a new one."
+        >
+          <ConversationListForModel
+            model={model}
+            className="min-h-0 flex-1"
+            onSelect={(id) => {
+              model.selectConversation(id);
+              setHistoryOpen(false);
+            }}
+            onNew={() => {
+              model.startNewConversation();
+              setHistoryOpen(false);
+            }}
+          />
+        </Sheet>
+      </div>
+    );
+  }
+
   return (
     <div
-      className={cn('flex h-full overflow-hidden rounded-lg border border-border/50', className)}
+      className={cn(
+        'flex h-full min-w-0 overflow-hidden rounded-lg border border-border/50',
+        className
+      )}
     >
       <div className="w-72 shrink-0 border-r border-border/50 bg-card">
-        <ConversationList
-          conversations={model.conversations}
-          isLoading={model.conversationsLoading}
-          selectedId={model.selectedConversationId}
+        <ConversationListForModel
+          model={model}
           onSelect={model.selectConversation}
           onNew={model.startNewConversation}
-          onDelete={model.deleteConversation}
-          isDeleting={model.isDeleting}
-          searchQuery={model.searchQuery}
-          onSearchChange={model.setSearchQuery}
         />
       </div>
-      <ThreadArea model={model} />
+      <ThreadArea model={model} historyLayout="sidebar" onOpenHistory={() => undefined} />
     </div>
   );
 }

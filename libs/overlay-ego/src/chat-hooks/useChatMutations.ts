@@ -45,6 +45,12 @@ function useDeleteConversation(
   return { deleteConversation, isDeleting: mutation.isPending };
 }
 
+function usePendingUserMessage() {
+  const [message, setMessage] = useState<string | null>(null);
+  const clear = useCallback(() => setMessage(null), []);
+  return { message, setMessage, clear };
+}
+
 export function useChatMutations({
   selectedConversationId,
   setSelectedConversationId,
@@ -53,14 +59,15 @@ export function useChatMutations({
   setInputValue,
 }: UseChatMutationsParams) {
   const [retrievedEngrams, setRetrievedEngrams] = useState<RetrievedEngram[]>([]);
+  const pendingUserMessage = usePendingUserMessage();
   const queryClient = useQueryClient();
   const streaming = useStreamingChat();
-  const onNavigate = useFrameNavigation();
   const streamCallbacks = useStreamCallbacks({
-    onNavigate,
+    onNavigate: useFrameNavigation(),
     queryClient,
     setRetrievedEngrams,
     setSelectedConversationId,
+    clearPendingUserMessage: pendingUserMessage.clear,
   });
   const batchDecisions = useBatchDecisionStream({
     conversationId: selectedConversationId,
@@ -83,6 +90,7 @@ export function useChatMutations({
     isStreaming: streaming.isStreaming,
     queryClient,
     selectedConversationId,
+    setPendingUserMessage: pendingUserMessage.setMessage,
     setInputValue,
     stream: streaming.stream,
   });
@@ -96,8 +104,11 @@ export function useChatMutations({
     deleteConversation,
     isDeleting,
     retrievedEngrams,
+    pendingUserMessage: pendingUserMessage.message,
+    clearPendingUserMessage: pendingUserMessage.clear,
     clearEngrams,
     streamingContent: streaming.streamingContent,
+    persistedMessageId: streaming.persistedMessageId,
     toolActivity: streaming.toolActivity,
     streamParts: streaming.streamParts,
     batchDecisions: streaming.isStreaming ? null : batchDecisions,

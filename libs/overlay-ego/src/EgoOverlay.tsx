@@ -41,7 +41,7 @@ function EgoOverlayPanel({ onClose }: { onClose: () => void }) {
           </Button>
         </div>
       </div>
-      <ChatPanel model={model} className="flex-1 rounded-none border-0" />
+      <ChatPanel model={model} historyLayout="drawer" className="flex-1 rounded-none border-0" />
     </div>
   );
 }
