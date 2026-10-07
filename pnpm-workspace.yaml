@@ -25,8 +25,8 @@ allowBuilds:
   sharp: true
   msgpackr-extract: false
 
-# `@types/node` is pinned to the Node major the fleet actually runs (24), and
-# the override is what makes that pin hold. Declaring `^24.13.3` in each
+# `@types/node` follows the root package.json pin, and the override is what
+# makes that range hold for transitive dependencies. Declaring a range in each
 # package.json only binds the workspace's own resolutions; a dozen
 # DefinitelyTyped packages (`@types/express-serve-static-core`, `@types/jsdom`,
 # `@types/papaparse`, ...) depend on `@types/node` at `*`, which pnpm resolves
@@ -35,7 +35,7 @@ allowBuilds:
 # moves on its own whenever DefinitelyTyped publishes — so the manifests alone
 # make the resolution undeclared, not wrong. Only an override reaches it.
 overrides:
-  '@types/node': ^24.13.3
+  '@types/node': ^24.13.4
   cssstyle: 6.0.2
   ioredis: 5.11.0
 
