@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { orderTagsByFacet } from '../../../lib/tags';
@@ -129,5 +130,54 @@ describe('EntityGroup header past three tags (POPS-252)', () => {
     expect(
       await screen.findByText(new RegExp(`PATTERN-${hidden!.toUpperCase()}`))
     ).toBeInTheDocument();
+  });
+
+  function renderWithSuggestions() {
+    const txn: ConfirmedTransaction = {
+      date: '2026-03-01',
+      description: 'WOOLWORTHS METRO',
+      amount: -40,
+      dialectAccountLabel: 'Amex',
+      rawRow: '{}',
+      checksum: 'w1',
+      entityId: 'woolworths-id',
+      entityName: 'Woolworths',
+      tags: [],
+    };
+    return render(
+      <EntityGroup
+        group={{ entityName: 'Woolworths', transactions: [txn] }}
+        localTags={{ w1: [] }}
+        suggestedTagMeta={{ w1: [{ tag: 'Groceries', source: 'rule', pattern: 'WOOLWORTHS' }] }}
+        availableTags={['Groceries']}
+        facets={[]}
+        onUpdateTag={vi.fn()}
+        onApplyGroupTags={vi.fn()}
+        onRemoveGroupTag={vi.fn()}
+        onSaveTagRule={vi.fn()}
+        onSaveTagRuleForTransaction={vi.fn()}
+      />
+    );
+  }
+
+  it('shows the suggested tags on keyboard focus', async () => {
+    const user = userEvent.setup();
+    renderWithSuggestions();
+    const applyButton = screen.getByRole('button', { name: 'Apply suggestions' });
+
+    await user.tab();
+    await user.tab();
+
+    expect(applyButton).toHaveFocus();
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Apply suggestions: Groceries');
+  });
+
+  it('shows the suggested tags on pointer hover', async () => {
+    const user = userEvent.setup();
+    renderWithSuggestions();
+
+    await user.hover(screen.getByRole('button', { name: 'Apply suggestions' }));
+
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Apply suggestions: Groceries');
   });
 });

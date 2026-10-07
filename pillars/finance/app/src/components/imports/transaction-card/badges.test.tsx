@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
 import { labelForType } from '../../../lib/transaction-type';
@@ -101,11 +102,45 @@ describe('HeaderBadges — AI-matched badge (CF037/#3655)', () => {
         })}
       />
     );
-    const badge = screen.getByText(/AI-matched/);
-    expect(badge.closest('[data-slot="badge"]')).toHaveAttribute('data-variant', 'destructive');
-    expect(badge.closest('[data-slot="badge"]')).toHaveAttribute(
-      'title',
-      expect.stringContaining('low confidence')
+    const badge = screen.getByRole('button', { name: /AI-matched/ });
+    expect(badge).toHaveClass('min-h-11', 'min-w-11');
+    expect(badge).toHaveAttribute('data-variant', 'destructive');
+    expect(badge).not.toHaveAttribute('title');
+  });
+
+  it('exposes the AI confidence explanation on keyboard focus', async () => {
+    const user = userEvent.setup();
+    render(
+      <HeaderBadges
+        transaction={makeTx('ai', {
+          entity: { matchType: 'ai', confidence: 0.4, entityId: 'ent_1', entityName: 'Woolworths' },
+        })}
+      />
+    );
+
+    const badge = screen.getByRole('button', { name: /AI-matched/ });
+    await user.tab();
+
+    expect(badge).toHaveFocus();
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+      'Entity resolved by AI — low confidence (40%), review before trusting'
+    );
+  });
+
+  it('keeps the AI confidence explanation available on pointer hover', async () => {
+    const user = userEvent.setup();
+    render(
+      <HeaderBadges
+        transaction={makeTx('ai', {
+          entity: { matchType: 'ai', confidence: 0.9, entityId: 'ent_1', entityName: 'Woolworths' },
+        })}
+      />
+    );
+
+    await user.hover(screen.getByRole('button', { name: /AI-matched/ }));
+
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+      'Entity resolved by AI — confidence 90%'
     );
   });
 

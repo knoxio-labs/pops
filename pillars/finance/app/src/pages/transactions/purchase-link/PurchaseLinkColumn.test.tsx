@@ -318,6 +318,7 @@ describe('when the purchases pillar does not answer', () => {
 
     const trigger = screen.getByText(UNAVAILABLE).parentElement;
     if (trigger === null) throw new Error('missing purchase-link heading hint');
+    expect(trigger).toHaveClass('min-h-11', 'min-w-11');
 
     await tabTo(userEvent.setup(), trigger);
 
