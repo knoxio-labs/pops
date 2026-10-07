@@ -33,7 +33,7 @@
  */
 import { test as base, expect } from '@playwright/test';
 
-import { PILLAR_REST_URL } from '../helpers/pillar-rest';
+import { PILLAR_REST_URL, REGISTRY_HEALTH_URL } from '../helpers/pillar-rest';
 
 import type { Route } from '@playwright/test';
 
@@ -80,6 +80,14 @@ export const test = base.extend<PillarRestGuardOptions>({
         }),
       });
     });
+
+    await page.route(REGISTRY_HEALTH_URL, (route: Route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ version: 'test' }),
+      })
+    );
 
     await runTest(page);
 
