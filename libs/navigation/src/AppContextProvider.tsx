@@ -50,26 +50,24 @@ interface AppContextProviderProps {
 export function AppContextProvider({ children }: AppContextProviderProps) {
   const { pathname } = useLocation();
 
-  const [pageContext, setPageContextState] = useState<
-    Partial<Pick<AppContext, 'page' | 'pageType' | 'entity' | 'filters'>>
-  >({});
+  const [pageContext, setPageContextState] = useState<{
+    pathname: string;
+    value: Partial<Pick<AppContext, 'page' | 'pageType' | 'entity' | 'filters'>>;
+  } | null>(null);
+  const previousPathname = useRef(pathname);
 
-  // Reset page-level context when the user navigates to a new path.
-  // Skip on initial mount — child useLayoutEffect (useSetPageContext) fires before parent
-  // and would be overwritten if we reset unconditionally on every pathname value.
-  const isMounted = useRef(false);
   useLayoutEffect(() => {
-    if (!isMounted.current) {
-      isMounted.current = true;
-      return;
-    }
-    setPageContextState({});
+    const previous = previousPathname.current;
+    previousPathname.current = pathname;
+    if (previous === pathname) return;
+
+    setPageContextState((current) => (current?.pathname === previous ? null : current));
   }, [pathname]);
 
   const context = useMemo<AppContext>(
     () => ({
       ...DEFAULT_APP_CONTEXT,
-      ...pageContext,
+      ...(pageContext?.pathname === pathname ? pageContext.value : {}),
       app: detectApp(pathname),
     }),
     [pathname, pageContext]
@@ -77,9 +75,12 @@ export function AppContextProvider({ children }: AppContextProviderProps) {
 
   const setPageContext = useCallback(
     (partial: Partial<Pick<AppContext, 'page' | 'pageType' | 'entity' | 'filters'>>) => {
-      setPageContextState((prev) => ({ ...prev, ...partial }));
+      setPageContextState((current) => ({
+        pathname,
+        value: current?.pathname === pathname ? { ...current.value, ...partial } : partial,
+      }));
     },
-    []
+    [pathname]
   );
 
   const value = useMemo(() => ({ context, setPageContext }), [context, setPageContext]);

@@ -1,9 +1,9 @@
 import { act, render, screen } from '@testing-library/react';
-import { MemoryRouter, useNavigate } from 'react-router';
+import { MemoryRouter, useLocation, useNavigate } from 'react-router';
 import { describe, expect, it } from 'vitest';
 
 import { AppContextProvider } from './AppContextProvider';
-import { useAppContext } from './hooks';
+import { useAppContext, useSetPageContext } from './hooks';
 
 /** Renders children inside a MemoryRouter + AppContextProvider at the given path. */
 function renderAt(path: string, ui: React.ReactNode) {
@@ -150,6 +150,73 @@ describe('AppContextProvider', () => {
       });
 
       expect(screen.getByTestId('app')).toHaveTextContent('null');
+    });
+
+    it('keeps the destination page context when navigating between pages', async () => {
+      const entity = { uri: 'pops:inventory/item/box-1', type: 'item', title: 'Box' };
+
+      function ContextDisplay() {
+        const context = useAppContext();
+        return (
+          <div>
+            <span data-testid="page">{context.page ?? 'null'}</span>
+            <span data-testid="entity">{context.entity?.uri ?? 'none'}</span>
+          </div>
+        );
+      }
+
+      function ContainersPage() {
+        useSetPageContext({ page: 'containers' });
+        const navigate = useNavigate();
+        return (
+          <>
+            <button onClick={() => navigate('/inventory/items/box-1')}>open item</button>
+            <ContextDisplay />
+          </>
+        );
+      }
+
+      function ItemDetailPage() {
+        useSetPageContext({ page: 'item-detail', pageType: 'drill-down', entity });
+        const navigate = useNavigate();
+        return (
+          <>
+            <button onClick={() => navigate('/inventory/overview')}>open overview</button>
+            <ContextDisplay />
+          </>
+        );
+      }
+
+      function RouteContextTester() {
+        const { pathname } = useLocation();
+        if (pathname === '/inventory/items/box-1') return <ItemDetailPage />;
+        if (pathname === '/inventory/overview') return <ContextDisplay />;
+        return <ContainersPage />;
+      }
+
+      render(
+        <MemoryRouter initialEntries={['/inventory/containers']}>
+          <AppContextProvider>
+            <RouteContextTester />
+          </AppContextProvider>
+        </MemoryRouter>
+      );
+
+      expect(screen.getByTestId('page')).toHaveTextContent('containers');
+
+      await act(async () => {
+        screen.getByRole('button', { name: 'open item' }).click();
+      });
+
+      expect(screen.getByTestId('page')).toHaveTextContent('item-detail');
+      expect(screen.getByTestId('entity')).toHaveTextContent('pops:inventory/item/box-1');
+
+      await act(async () => {
+        screen.getByRole('button', { name: 'open overview' }).click();
+      });
+
+      expect(screen.getByTestId('page')).toHaveTextContent('null');
+      expect(screen.getByTestId('entity')).toHaveTextContent('none');
     });
   });
 });
