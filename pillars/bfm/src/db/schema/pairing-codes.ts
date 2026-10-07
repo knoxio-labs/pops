@@ -53,6 +53,16 @@ export const pairingCodes = sqliteTable(
     expiresAt: text('expires_at').notNull(),
     /** Null while unredeemed. Set once, in the same transaction as the device insert. */
     consumedAt: text('consumed_at'),
+    /**
+     * Who the device this code pairs will belong to. Null means the operator,
+     * which is every code minted before this column existed and every code the
+     * operator route and the MCP tool mint today.
+     *
+     * A normalised email otherwise, written at issuance and copied onto the
+     * device at redemption. Nothing updates it: the person a code was minted
+     * for is decided once, by whoever minted it.
+     */
+    subjectEmail: text('subject_email'),
     createdAt: text('created_at')
       .notNull()
       .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),

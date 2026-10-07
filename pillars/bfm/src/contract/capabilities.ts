@@ -236,6 +236,23 @@ export const MOBILE_CAPABILITY_SCOPES: Readonly<Record<MobileCapability, readonl
  */
 export const DEFAULT_DEVICE_CAPABILITIES: readonly MobileCapability[] = MOBILE_CAPABILITIES;
 
+/**
+ * What pairing grants a guest's handset, and all it will ever hold.
+ *
+ * A fixed list rather than a subset computed from the vocabulary: a guest may
+ * read the session and the finance accounts and transactions shared with
+ * them, and nothing under any other pillar. Pairing writes it as an `explicit`
+ * grant, so a capability added to {@link MOBILE_CAPABILITIES} or to
+ * {@link DEFAULT_DEVICE_CAPABILITIES} later does not reach a guest device.
+ * Widening what a guest may do is an edit to this list and a decision about
+ * the devices already paired, never a side effect of growing the vocabulary.
+ */
+export const GUEST_DEVICE_CAPABILITIES: readonly MobileCapability[] = [
+  'session.read',
+  'finance.accounts.read',
+  'finance.transactions.read',
+];
+
 const CAPABILITY_SET: ReadonlySet<string> = new Set<string>(MOBILE_CAPABILITIES);
 
 /** Whether a string is a capability this build knows about. */
@@ -352,6 +369,11 @@ export interface DeviceGrantRow {
   readonly id: string;
   readonly capabilities: string;
   readonly capabilityMode: string;
+  /**
+   * The guest the device is bound to, `null` for the operator's own. Optional
+   * so a caller that has no subject to report reads as the operator.
+   */
+  readonly subjectEmail?: string | null;
 }
 
 /**
@@ -381,6 +403,11 @@ export interface DeviceGrantRow {
  * An unknown mode yields the empty grant — the same fail-closed direction as
  * an unparseable column, and for the same reason.
  *
+ * A device bound to a guest never resolves through the default set. Pairing
+ * writes such a device as `explicit`, so a guest row carrying `tracks-default`
+ * is one nobody decided on, and reading it as the default set would hand a
+ * guest the operator's grant. It yields the empty grant instead.
+ *
  * @param defaults Injectable so a test can drive a default set that differs
  *   from the vocabulary. Production passes nothing.
  */
@@ -388,7 +415,15 @@ export function resolveDeviceCapabilities(
   device: DeviceGrantRow,
   defaults: readonly MobileCapability[] = DEFAULT_DEVICE_CAPABILITIES
 ): readonly string[] {
-  if (device.capabilityMode === 'tracks-default') return defaults;
+  if (device.capabilityMode === 'tracks-default') {
+    if (device.subjectEmail !== undefined && device.subjectEmail !== null) {
+      console.warn(
+        `[bfm-api] guest device ${device.id} is marked as tracking the default grant; treating its grant as empty`
+      );
+      return [];
+    }
+    return defaults;
+  }
   if (device.capabilityMode === 'explicit') {
     return parseDeviceCapabilities(device.capabilities, device.id);
   }

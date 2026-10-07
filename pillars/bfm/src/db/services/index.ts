@@ -37,8 +37,10 @@ export {
   PAIRING_CODE_GROUP_SIZE,
   PAIRING_CODE_LENGTH,
   redeemPairingCode,
+  spendPairingCode,
   type IssuedPairingCode,
   type IssuePairingCodeOptions,
+  type SpentPairingCode,
 } from './pairing-codes.js';
 
 export {

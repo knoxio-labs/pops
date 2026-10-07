@@ -14,6 +14,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   DEFAULT_DEVICE_CAPABILITIES,
+  GUEST_DEVICE_CAPABILITIES,
+  MOBILE_CAPABILITIES,
   resolveDeviceCapabilities,
   serialiseDeviceCapabilities,
   type MobileCapability,
@@ -123,5 +125,67 @@ describe('a mode this build does not know', () => {
     expect(resolveDeviceCapabilities(row({ capabilityMode: '' }))).toEqual([]);
 
     warn.mockRestore();
+  });
+});
+
+describe('a device bound to a guest', () => {
+  function guestRow(overrides: Partial<DeviceGrantRow> = {}): DeviceGrantRow {
+    return row({
+      id: 'd-guest',
+      capabilityMode: 'explicit',
+      capabilities: serialiseDeviceCapabilities(GUEST_DEVICE_CAPABILITIES),
+      subjectEmail: 'rosane@example.test',
+      ...overrides,
+    });
+  }
+
+  it('is granted exactly the three read capabilities, written out', () => {
+    // Pinned as a literal: the guest set is a decision, and a test that read
+    // it back from the constant would agree with whatever it became.
+    expect([...GUEST_DEVICE_CAPABILITIES]).toEqual([
+      'session.read',
+      'finance.accounts.read',
+      'finance.transactions.read',
+    ]);
+  });
+
+  it('holds nothing under purchases, inventory, contacts, barcode or ego', () => {
+    const resolved = resolveDeviceCapabilities(guestRow());
+
+    for (const capability of MOBILE_CAPABILITIES) {
+      if (/^(?:purchases|inventory|contacts|barcode|ego)\./u.test(capability)) {
+        expect(resolved).not.toContain(capability);
+      }
+    }
+  });
+
+  it('is not reached by a capability the vocabulary gains after it paired', () => {
+    // The whole vocabulary stands in for "the default set after it grew": it
+    // holds every capability the guest set lacks, and none of them may arrive.
+    const grown: readonly MobileCapability[] = MOBILE_CAPABILITIES;
+    expect(grown.length).toBeGreaterThan(GUEST_DEVICE_CAPABILITIES.length);
+
+    const resolved = resolveDeviceCapabilities(guestRow(), grown);
+
+    expect([...resolved]).toEqual([...GUEST_DEVICE_CAPABILITIES]);
+  });
+
+  it('gets the empty grant, not the default one, if its row claims to track the default', () => {
+    // Pairing never writes this. A guest row in this mode is a hand edit or a
+    // bug, and reading it as the default set would be a guest holding the
+    // operator's grant.
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    expect(resolveDeviceCapabilities(guestRow({ capabilityMode: 'tracks-default' }))).toEqual([]);
+    expect(warn).toHaveBeenCalledTimes(1);
+
+    warn.mockRestore();
+  });
+
+  it('does not take the default grant from an operator device, with a null or an absent subject', () => {
+    expect([...resolveDeviceCapabilities(row({ subjectEmail: null }))]).toEqual([
+      ...DEFAULT_DEVICE_CAPABILITIES,
+    ]);
+    expect([...resolveDeviceCapabilities(row())]).toEqual([...DEFAULT_DEVICE_CAPABILITIES]);
   });
 });

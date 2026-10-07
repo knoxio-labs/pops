@@ -58,6 +58,7 @@ describe('listDevices', () => {
       'model',
       'name',
       'revokedAt',
+      'subjectEmail',
     ]);
   });
 

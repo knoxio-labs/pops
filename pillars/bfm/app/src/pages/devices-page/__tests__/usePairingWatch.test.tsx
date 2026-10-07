@@ -13,6 +13,7 @@ function handset(id: string, overrides: Partial<PairedHandset> = {}): PairedHand
     createdAt: '2026-08-08T12:00:00.000Z',
     lastSeenAt: '2026-08-08T12:00:00.000Z',
     revokedAt: null,
+    subjectEmail: null,
     ...overrides,
   };
 }

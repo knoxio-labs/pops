@@ -206,6 +206,31 @@ describe('reopening a populated bfm database against the current journal', () =>
     );
   });
 
+  it('leaves the devices that predate the subject column as operator devices', () => {
+    // Null is the operator. A backfill to anything else would turn the
+    // operator's own handset into a guest's on the next deploy, and it would
+    // lose every capability outside the guest set with it.
+    const stored = rows<{ id: string; subject_email: string | null; capability_mode: string }>(
+      `SELECT id, subject_email, capability_mode FROM devices ORDER BY id`
+    );
+
+    expect(stored).toHaveLength(DEVICES.length);
+    for (const device of stored) {
+      expect(device.subject_email).toBeNull();
+      expect(device.capability_mode).toBe('tracks-default');
+    }
+  });
+
+  it('adds the subject column to pairing codes as nullable, so a code with none still mints', () => {
+    opened.raw
+      .prepare(`INSERT INTO pairing_codes (code_hash, expires_at, created_at) VALUES (?, ?, ?)`)
+      .run('hash-with-no-subject', CURRENT_EXPIRES_AT, CREATED_AT);
+
+    expect(
+      rows<{ subject_email: string | null }>(`SELECT subject_email FROM pairing_codes`)
+    ).toEqual([{ subject_email: null }]);
+  });
+
   it('keeps every device column byte-identical, quotes and unicode included', () => {
     const stored = rows<{ id: string; name: string; model: string; public_key_der: string }>(
       `SELECT id, name, model, public_key_der FROM devices ORDER BY id`

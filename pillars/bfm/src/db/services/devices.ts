@@ -40,6 +40,8 @@ export interface DeviceSummary {
   createdAt: string;
   lastSeenAt: string;
   revokedAt: string | null;
+  /** The guest this device is bound to, or `null` for the operator's own. */
+  subjectEmail: string | null;
 }
 
 /**
@@ -58,6 +60,7 @@ export function listDevices(db: BfmDb): DeviceSummary[] {
       createdAt: devices.createdAt,
       lastSeenAt: devices.lastSeenAt,
       revokedAt: devices.revokedAt,
+      subjectEmail: devices.subjectEmail,
     })
     .from(devices)
     .orderBy(desc(devices.createdAt))
@@ -104,6 +107,13 @@ export interface InsertDeviceValues {
    * say so.
    */
   capabilityMode: DeviceCapabilityMode;
+  /**
+   * The guest this device belongs to, or `null` for the operator's own.
+   *
+   * Required rather than defaulted, like the grant: null is the operator, and
+   * a caller that ends up with an operator device has to have said so.
+   */
+  subjectEmail: string | null;
 }
 
 /** Write one device row. Takes a {@link BfmDb}, so a transaction handle composes. */
@@ -118,6 +128,7 @@ export function insertDevice(db: BfmDb, values: InsertDeviceValues): void {
       lastSeenAt: values.createdAt,
       capabilities: serialiseDeviceCapabilities(values.capabilities),
       capabilityMode: values.capabilityMode,
+      subjectEmail: values.subjectEmail,
     })
     .run();
 }

@@ -6284,6 +6284,7 @@ export type OperatorListDevicesResponses = {
       model: string;
       name: string;
       revokedAt: string | null;
+      subjectEmail: string | null;
     }>;
   };
 };

@@ -35,6 +35,8 @@ import { createHash, randomBytes } from 'node:crypto';
 
 import { and, eq, gt, isNull } from 'drizzle-orm';
 
+import { normalizeEmail } from '@pops/pillar-sdk/access';
+
 import { pairingCodes } from '../schema.js';
 
 import type { BfmDb } from '../open-bfm-db.js';
@@ -120,6 +122,14 @@ export interface IssuePairingCodeOptions {
   now?: () => Date;
   /** Injectable generator, for tests. Defaults to {@link generatePairingCode}. */
   generate?: () => string;
+  /**
+   * The guest the paired device will belong to. Absent means the operator.
+   *
+   * Stored normalised. An email that normalises to nothing is refused rather
+   * than read as absent: a caller that meant a guest must never be handed a
+   * code that pairs an operator device.
+   */
+  subjectEmail?: string;
 }
 
 /**
@@ -149,6 +159,12 @@ export function issuePairingCode(
     generate = generatePairingCode,
   } = options;
 
+  const subjectEmail =
+    options.subjectEmail === undefined ? null : normalizeEmail(options.subjectEmail);
+  if (subjectEmail === '') {
+    throw new Error('[bfm] a pairing code cannot be bound to an empty subject email');
+  }
+
   const issuedAt = now();
   const createdAt = issuedAt.toISOString();
   const expiresAt = new Date(issuedAt.getTime() + ttlMs).toISOString();
@@ -166,7 +182,7 @@ export function issuePairingCode(
       // either side of an enforced inequality is a constraint violation
       // waiting for a caller that passes its own `now`.
       db.insert(pairingCodes)
-        .values({ codeHash: hashPairingCode(canonical), createdAt, expiresAt })
+        .values({ codeHash: hashPairingCode(canonical), createdAt, expiresAt, subjectEmail })
         .run();
       return { code, expiresAt };
     } catch (err) {
@@ -194,11 +210,34 @@ export function issuePairingCode(
  * be indistinguishable to a caller, or a short code becomes an oracle.
  */
 export function redeemPairingCode(db: BfmDb, presented: string, now: Date = new Date()): boolean {
+  return spendPairingCode(db, presented, now) !== null;
+}
+
+/** What a spent code says about the device it buys. */
+export interface SpentPairingCode {
+  /** The guest the code was minted for, or `null` for the operator. */
+  subjectEmail: string | null;
+}
+
+/**
+ * {@link redeemPairingCode}, also returning who the code was minted for.
+ *
+ * The subject comes back from the same `UPDATE` that spends the code rather
+ * than from a read beside it, so the code that was spent and the subject that
+ * is copied onto the device cannot be two different rows.
+ *
+ * `null` when the code was not spent by this call, for every reason alike.
+ */
+export function spendPairingCode(
+  db: BfmDb,
+  presented: string,
+  now: Date = new Date()
+): SpentPairingCode | null {
   const canonical = normalizePairingCode(presented);
-  if (canonical === null) return false;
+  if (canonical === null) return null;
 
   const at = now.toISOString();
-  const result = db
+  const spent = db
     .update(pairingCodes)
     .set({ consumedAt: at })
     .where(
@@ -208,7 +247,8 @@ export function redeemPairingCode(db: BfmDb, presented: string, now: Date = new 
         gt(pairingCodes.expiresAt, at)
       )
     )
-    .run();
+    .returning({ subjectEmail: pairingCodes.subjectEmail })
+    .get();
 
-  return result.changes === 1;
+  return spent ?? null;
 }

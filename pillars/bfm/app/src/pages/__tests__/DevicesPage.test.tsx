@@ -53,6 +53,7 @@ function device(overrides: Partial<Record<string, unknown>> = {}) {
     createdAt: '2026-08-01T10:00:00.000Z',
     lastSeenAt: '2026-08-08T09:00:00.000Z',
     revokedAt: null,
+    subjectEmail: null,
     ...overrides,
   };
 }
@@ -115,6 +116,26 @@ describe('DevicesPage — the device list', () => {
     expect(within(row).getByText('iPhone 17 Pro')).toBeInTheDocument();
     expect(within(row).getByText('1 Aug 2026')).toBeInTheDocument();
     expect(within(row).getByText('Trusted')).toBeInTheDocument();
+  });
+
+  it('labels a device with no subject as belonging to the operator', async () => {
+    listDevicesMock.mockResolvedValue(devicesResponse(device()));
+    renderPage();
+
+    const row = await screen.findByRole('row', { name: /Joao's iPhone/ });
+    expect(within(row).getByText('Operator')).toBeInTheDocument();
+  });
+
+  it('names the guest a device is bound to, and still offers to revoke it', async () => {
+    listDevicesMock.mockResolvedValue(
+      devicesResponse(device({ name: 'Guest iPhone', subjectEmail: 'guest@example.test' }))
+    );
+    renderPage();
+
+    const row = await screen.findByRole('row', { name: /Guest iPhone/ });
+    expect(within(row).getByText('guest@example.test')).toBeInTheDocument();
+    expect(within(row).queryByText('Operator')).not.toBeInTheDocument();
+    expect(within(row).getByRole('button', { name: 'Revoke Guest iPhone' })).toBeInTheDocument();
   });
 
   it('marks a revoked device and offers no way to revoke it again', async () => {
