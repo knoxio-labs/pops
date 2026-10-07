@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { NotFoundError, TooManyRequestsError, UnauthorizedError } from '../../shared/errors.js';
+import {
+  ForbiddenError,
+  NotFoundError,
+  TooManyRequestsError,
+  UnauthorizedError,
+} from '../../shared/errors.js';
 import { mapHttpError } from '../error-mapping.js';
 
 describe('operator HTTP error mapping', () => {
@@ -9,6 +14,17 @@ describe('operator HTTP error mapping', () => {
       status: 401,
       body: {
         code: 'bfm.auth.operator_unauthorized',
+        retryable: false,
+        requestId: expect.any(String),
+      },
+    });
+  });
+
+  it('uses a registered envelope for a refused guest', () => {
+    expect(mapHttpError(new ForbiddenError())).toMatchObject({
+      status: 403,
+      body: {
+        code: 'bfm.auth.operator_forbidden',
         retryable: false,
         requestId: expect.any(String),
       },

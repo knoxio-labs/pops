@@ -15,10 +15,12 @@ export const ErrorBodySchema = SharedErrorBodySchema;
  * the principal gate is what makes them operator-only: bfm's hostname has
  * Cloudflare Access bypassed for the device-facing routes, so these handlers
  * are reachable from the public internet and their gate is load-bearing rather
- * than defence in depth.
+ * than defence in depth. `403` is the same gate refusing a verified Access
+ * user who is not on the operator list.
  */
 export const OPERATOR_ERR_RESPONSES = {
   401: ErrorBodySchema,
+  403: ErrorBodySchema,
 } as const;
 
 /** Additional failures produced when a caller presents a service account. */

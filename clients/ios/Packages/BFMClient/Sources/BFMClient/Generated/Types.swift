@@ -71362,6 +71362,57 @@ internal enum Operations {
                     }
                 }
             }
+            internal struct Forbidden: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/operator/devices/GET/responses/403/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/operator/devices/GET/responses/403/content/application\/json`.
+                    case json(Components.Schemas.ErrorBody)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.ErrorBody {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.Operator_listDevices.Output.Forbidden.Body
+                /// Creates a new `Forbidden`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.Operator_listDevices.Output.Forbidden.Body) {
+                    self.body = body
+                }
+            }
+            /// 403
+            ///
+            /// - Remark: Generated from `#/paths//operator/devices/get(operator.listDevices)/responses/403`.
+            ///
+            /// HTTP response code: `403 forbidden`.
+            case forbidden(Operations.Operator_listDevices.Output.Forbidden)
+            /// The associated value of the enum case if `self` is `.forbidden`.
+            ///
+            /// - Throws: An error if `self` is not `.forbidden`.
+            /// - SeeAlso: `.forbidden`.
+            internal var forbidden: Operations.Operator_listDevices.Output.Forbidden {
+                get throws {
+                    switch self {
+                    case let .forbidden(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "forbidden",
+                            response: self
+                        )
+                    }
+                }
+            }
             /// Undocumented response.
             ///
             /// A response with a code that is not documented in the OpenAPI document.
@@ -71585,6 +71636,57 @@ internal enum Operations {
                     default:
                         try throwUnexpectedResponseStatus(
                             expectedStatus: "unauthorized",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Forbidden: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/operator/devices/{id}/DELETE/responses/403/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/operator/devices/{id}/DELETE/responses/403/content/application\/json`.
+                    case json(Components.Schemas.ErrorBody)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.ErrorBody {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.Operator_revokeDevice.Output.Forbidden.Body
+                /// Creates a new `Forbidden`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.Operator_revokeDevice.Output.Forbidden.Body) {
+                    self.body = body
+                }
+            }
+            /// 403
+            ///
+            /// - Remark: Generated from `#/paths//operator/devices/{id}/delete(operator.revokeDevice)/responses/403`.
+            ///
+            /// HTTP response code: `403 forbidden`.
+            case forbidden(Operations.Operator_revokeDevice.Output.Forbidden)
+            /// The associated value of the enum case if `self` is `.forbidden`.
+            ///
+            /// - Throws: An error if `self` is not `.forbidden`.
+            /// - SeeAlso: `.forbidden`.
+            internal var forbidden: Operations.Operator_revokeDevice.Output.Forbidden {
+                get throws {
+                    switch self {
+                    case let .forbidden(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "forbidden",
                             response: self
                         )
                     }
