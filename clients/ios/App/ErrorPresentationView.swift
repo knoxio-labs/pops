@@ -36,7 +36,7 @@ private struct ErrorPresentationModifier: ViewModifier {
                     RecentErrorsView(errors: presenter.recentErrors)
                         .toolbar {
                             ToolbarItem(placement: .confirmationAction) {
-                                Button("Done") { presenter.showsRecentErrors = false }
+                                Button(RootCopy.done) { presenter.showsRecentErrors = false }
                             }
                         }
                 }
@@ -78,7 +78,7 @@ private struct FailedActionBanner: View {
                 .contentShape(.rect)
             }
             .buttonStyle(.plain)
-            .accessibilityHint("Shows error details")
+            .accessibilityHint(RootCopy.showsErrorDetails)
 
             if error.bannerLifetime == .untilDismissed {
                 Button(action: dismiss) {
@@ -89,7 +89,7 @@ private struct FailedActionBanner: View {
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(Color.popsMutedForeground)
-                .accessibilityLabel("Dismiss error")
+                .accessibilityLabel(RootCopy.dismissError)
             }
         }
         .padding(PopsSpacing.md)
@@ -106,7 +106,7 @@ private struct ErrorDetailSheet: View {
 
     var body: some View {
         List {
-            Section("What happened") {
+            Section(RootCopy.whatHappened) {
                 Label {
                     Text(error.error.message)
                         .font(.popsBody)
@@ -117,18 +117,18 @@ private struct ErrorDetailSheet: View {
                 }
                 .accessibilityElement(children: .combine)
             }
-            Section("Diagnostics") {
-                diagnosticRow("Code", value: error.error.code)
-                diagnosticRow("Request ID", value: error.requestID)
-                LabeledContent("Operation", value: error.operation)
-                LabeledContent("Time", value: error.occurredAtText)
-                LabeledContent("Build", value: error.build)
+            Section(RootCopy.diagnostics) {
+                diagnosticRow(RootCopy.DiagnosticLabel.code, value: error.error.code)
+                diagnosticRow(RootCopy.DiagnosticLabel.requestID, value: error.requestID)
+                LabeledContent(RootCopy.DiagnosticLabel.operation, value: error.operation)
+                LabeledContent(RootCopy.DiagnosticLabel.time, value: error.occurredAtText)
+                LabeledContent(RootCopy.DiagnosticLabel.build, value: error.build)
             }
         }
         .scrollContentBackground(.hidden)
         .background(Color.popsBackground)
         .listStyle(.insetGrouped)
-        .navigationTitle("Error details")
+        .navigationTitle(RootCopy.errorDetailsTitle)
         .popsTitleDisplay(large: false)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
@@ -137,10 +137,10 @@ private struct ErrorDetailSheet: View {
                     copied = true
                 } label: {
                     Label(
-                        copied ? "Copied" : "Copy",
+                        copied ? RootCopy.copied : RootCopy.copy,
                         systemImage: copied ? "checkmark" : "doc.on.doc")
                 }
-                .accessibilityHint("Copies the message and diagnostics")
+                .accessibilityHint(RootCopy.copyHint)
             }
         }
     }
@@ -164,9 +164,9 @@ private struct RecentErrorsView: View {
         Group {
             if errors.entries.isEmpty {
                 ContentUnavailableView {
-                    Label("No recent errors", systemImage: "checkmark.circle")
+                    Label(RootCopy.noRecentErrors, systemImage: "checkmark.circle")
                 } description: {
-                    Text("Failures from this device will appear here.")
+                    Text(RootCopy.recentErrorsEmpty)
                 }
             } else {
                 List(errors.entries) { error in
@@ -182,7 +182,7 @@ private struct RecentErrorsView: View {
                 .listStyle(.insetGrouped)
             }
         }
-        .navigationTitle("Recent errors")
+        .navigationTitle(RootCopy.recentErrorsTitle)
         .sheet(item: $detail) { error in
             NavigationStack {
                 ErrorDetailSheet(error: error)
@@ -227,6 +227,6 @@ private struct RecentErrorRow: View {
         .padding(.vertical, PopsSpacing.xs)
         .contentShape(.rect)
         .accessibilityElement(children: .combine)
-        .accessibilityHint("Shows error details")
+        .accessibilityHint(RootCopy.showsErrorDetails)
     }
 }

@@ -76,9 +76,8 @@ internal struct AccountDetailHeaderView: View {
         guard let transactionCount = account.transactionCount else {
             return presentation.asOfNote(account)
         }
-        let count = transactionCount.formatted(.number.locale(Locale(identifier: "en_AU")))
-        let noun = transactionCount == 1 ? "transaction" : "transactions"
-        return "\(presentation.asOfNote(account)) · \(count) \(noun)"
+        let count = AccountsCopy.transactionCount(transactionCount)
+        return "\(presentation.asOfNote(account)) · \(count)"
     }
 }
 

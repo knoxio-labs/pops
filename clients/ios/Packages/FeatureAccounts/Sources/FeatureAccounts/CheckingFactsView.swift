@@ -14,21 +14,21 @@ internal struct CheckingFactsView: View {
         if let facts = CheckingFacts(history: history) {
             PopsCard {
                 VStack(alignment: .leading, spacing: PopsSpacing.md) {
-                    Text("Month on month")
+                    Text(AccountsCopy.monthOnMonthTitle)
                         .font(.popsTitle)
                         .foregroundStyle(Color.popsForeground)
                     HStack(spacing: PopsSpacing.lg) {
-                        stat(label: "Net in \(facts.lastMonth)", minorUnits: facts.netThisMonth)
-                        stat(label: "Average month", minorUnits: facts.averageMonth)
+                        stat(
+                            label: AccountsCopy.netIn(facts.lastMonth),
+                            minorUnits: facts.netThisMonth)
+                        stat(label: AccountsCopy.averageMonth, minorUnits: facts.averageMonth)
                     }
                     stat(
-                        label: "Lowest it went (\(facts.floorMonth))",
+                        label: AccountsCopy.lowestItWent(facts.floorMonth),
                         minorUnits: facts.floorBalance)
-                    Text(
-                        "From closing balances, not transactions: money in and out are not counted apart."
-                    )
-                    .font(.popsCaption)
-                    .foregroundStyle(Color.popsMutedForeground)
+                    Text(AccountsCopy.closingBalancesNote)
+                        .font(.popsCaption)
+                        .foregroundStyle(Color.popsMutedForeground)
                 }
             }
         }

@@ -52,23 +52,29 @@ internal enum RootFeature {
     /// to add it to `renderable` above: both are noticed the moment the
     /// feature is wired in, not rediscovered by whoever next edits the tab
     /// bar.
-    internal static let presentation: [MobileFeature: FeaturePresentation] = [
-        FeatureTransactions.feature: FeaturePresentation(
-            displayName: FeatureTransactions.displayName,
-            symbolName: FeatureTransactions.symbolName),
-        FeatureAccounts.feature: FeaturePresentation(
-            displayName: FeatureAccounts.displayName,
-            symbolName: FeatureAccounts.symbolName),
-        FeaturePurchases.feature: FeaturePresentation(
-            displayName: FeaturePurchases.displayName,
-            symbolName: FeaturePurchases.symbolName),
-        FeatureInventory.feature: FeaturePresentation(
-            displayName: FeatureInventory.displayName,
-            symbolName: FeatureInventory.symbolName),
-        FeatureEgo.feature: FeaturePresentation(
-            displayName: FeatureEgo.displayName,
-            symbolName: FeatureEgo.symbolName),
-    ]
+    ///
+    /// Computed, not stored: a name is resolved in the reader's language when
+    /// it is asked for, and a stored dictionary would keep whichever language
+    /// the first reader happened to be in.
+    internal static var presentation: [MobileFeature: FeaturePresentation] {
+        [
+            FeatureTransactions.feature: FeaturePresentation(
+                displayName: FeatureTransactions.displayName,
+                symbolName: FeatureTransactions.symbolName),
+            FeatureAccounts.feature: FeaturePresentation(
+                displayName: FeatureAccounts.displayName,
+                symbolName: FeatureAccounts.symbolName),
+            FeaturePurchases.feature: FeaturePresentation(
+                displayName: FeaturePurchases.displayName,
+                symbolName: FeaturePurchases.symbolName),
+            FeatureInventory.feature: FeaturePresentation(
+                displayName: FeatureInventory.displayName,
+                symbolName: FeatureInventory.symbolName),
+            FeatureEgo.feature: FeaturePresentation(
+                displayName: FeatureEgo.displayName,
+                symbolName: FeatureEgo.symbolName),
+        ]
+    }
 }
 
 /// A feature's display name and SF Symbol, as its own module declares them.

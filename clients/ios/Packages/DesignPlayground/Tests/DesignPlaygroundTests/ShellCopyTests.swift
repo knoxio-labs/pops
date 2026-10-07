@@ -50,7 +50,8 @@ internal struct ShellCopyTests {
             ("retry", ShellCopy.retry), ("degraded", ShellCopy.degraded),
             ("dismissDegraded", ShellCopy.dismissDegraded),
         ] {
-            let pattern = try Regex("static let \(name)\\s*=\\s*\"([^\"]*)\"")
+            let pattern = try Regex(
+                "static var \(name): String \\{\\s*localized\\(\\s*\"([^\"]*)\"")
             guard let match = try pattern.firstMatch(in: source), let literal = match[1].substring
             else {
                 Issue.record("RootCopy has no string literal named \(name)")

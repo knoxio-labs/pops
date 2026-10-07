@@ -22,7 +22,7 @@ public struct AccountEntityView: View {
             AccountDetailView(model: model)
                 .toolbar {
                     ToolbarItem(placement: .confirmationAction) {
-                        Button("Done") {
+                        Button(AccountsCopy.done) {
                             dismiss()
                         }
                     }

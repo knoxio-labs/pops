@@ -22,7 +22,7 @@ public enum FeatureTransactions {
     public static let feature: MobileFeature = .transactions
 
     /// The tab bar's label for this feature.
-    public static let displayName = "Transactions"
+    public static var displayName: String { TransactionsCopy.title }
 
     /// The tab bar's icon for this feature.
     public static let symbolName = "list.bullet.rectangle"

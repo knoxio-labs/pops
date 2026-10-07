@@ -17,18 +17,23 @@ internal struct GiftCardFactsView: View {
             let fraction = Double(account.balance.minorUnits) / Double(originalValueMinorUnits)
             PopsCard {
                 VStack(alignment: .leading, spacing: PopsSpacing.md) {
-                    Text("Stored value")
+                    Text(AccountsCopy.storedValueTitle)
                         .font(.popsTitle)
                         .foregroundStyle(Color.popsForeground)
                     meter(fraction: fraction)
                     Text(
-                        "\(money(account.balance.minorUnits)) left of \(money(originalValueMinorUnits))"
+                        AccountsCopy.storedValue(
+                            left: money(account.balance.minorUnits),
+                            of: money(originalValueMinorUnits))
                     )
                     .font(.popsSubheadline)
                     .foregroundStyle(Color.popsForeground)
-                    Text("Expires \(expiresOn.formatted(date: .abbreviated, time: .omitted))")
-                        .font(.popsSubheadline)
-                        .foregroundStyle(Color.popsMutedForeground)
+                    Text(
+                        AccountsCopy.expires(
+                            expiresOn.formatted(date: .abbreviated, time: .omitted))
+                    )
+                    .font(.popsSubheadline)
+                    .foregroundStyle(Color.popsMutedForeground)
                 }
             }
         }

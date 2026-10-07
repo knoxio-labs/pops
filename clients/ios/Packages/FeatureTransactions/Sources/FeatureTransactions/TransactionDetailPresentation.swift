@@ -59,7 +59,7 @@ extension TransactionDetailPresentation {
         tags: [String]
     ) -> [TransactionDetailContent.Field] {
         [
-            field(TransactionsCopy.FieldLabel.type, type.rawValue),
+            field(TransactionsCopy.FieldLabel.type, TransactionsCopy.typeName(type)),
             field(TransactionsCopy.FieldLabel.entity, entityName),
             field(
                 TransactionsCopy.FieldLabel.tags, tags.isEmpty ? nil : tags.joined(separator: ", ")),

@@ -1,73 +1,93 @@
 import AppCore
+import Foundation
 
 /// Every word this module shows, across the list, the picker and the
 /// dashboard, in one place — the same reason `TransactionsCopy` gathers
 /// `FeatureTransactions`'s.
+///
+/// Each sentence is written here in English and resolved through this
+/// package's String Catalog, where the English is the key and `pt-BR` is the
+/// translation. The dashboard's cards are in `AccountsCopy+Facts.swift`.
 internal enum AccountsCopy {
-    internal static let title = "Accounts"
-    internal static let loading = "Loading accounts…"
-    internal static let empty =
-        "No accounts yet. Accounts are created on the desktop; this is where they are read."
-    internal static let noActiveAccounts = "No active accounts. Try showing archived accounts."
-    internal static let noMatches = "No accounts match this search."
-    internal static let retry = "Retry"
-    internal static let searchPlaceholder = "Search accounts"
-    internal static let refreshing = "Refreshing accounts"
-    internal static let loadingMore = "Loading more accounts…"
-    internal static let loadMoreFailed = "Could not load more accounts."
+    internal static let localized = LocalizedCopy(bundle: .module)
 
-    internal static let sectionHeld = "Held"
-    internal static let sectionOwed = "Owed"
-    internal static let sectionArchived = "Archived"
+    internal static var title: String { localized("Accounts") }
+    internal static var done: String { localized("Done") }
+    internal static var loading: String { localized("Loading accounts…") }
+    internal static var empty: String {
+        localized(
+            "No accounts yet. Accounts are created on the desktop; this is where they are read.")
+    }
+    internal static var noActiveAccounts: String {
+        localized("No active accounts. Try showing archived accounts.")
+    }
+    internal static var noMatches: String { localized("No accounts match this search.") }
+    internal static var retry: String { localized("Retry") }
+    internal static var searchPlaceholder: String { localized("Search accounts") }
+    internal static var refreshing: String { localized("Refreshing accounts") }
+    internal static var loadingMore: String { localized("Loading more accounts…") }
+    internal static var loadMoreFailed: String { localized("Could not load more accounts.") }
 
-    internal static let archivedTag = "Archived"
+    internal static var sectionHeld: String { localized("Held") }
+    internal static var sectionOwed: String { localized("Owed") }
+    internal static var sectionArchived: String { localized("Archived") }
+
+    internal static var archivedTag: String { localized("Archived") }
+    internal static var showArchived: String { localized("Show archived") }
+    internal static var hideArchived: String { localized("Hide archived") }
 
     /// The subtitle under the screen title: how many accounts, and how many of
     /// those are archived.
     internal static func countLine(active: Int, archived: Int) -> String {
-        let noun = active == 1 ? "account" : "accounts"
-        guard archived > 0 else { return "\(active) \(noun)" }
-        return "\(active) \(noun) · \(archived) archived"
+        let accounts = localized("\(active) accounts")
+        guard archived > 0 else { return accounts }
+        let archivedClause = localized("\(archived) archived")
+        return "\(accounts) · \(archivedClause)"
     }
 
     internal static func refreshFailure(_ error: RepositoryError) -> String {
-        "Accounts could not be refreshed. \(message(for: error))"
+        let reason = message(for: error)
+        return localized("Accounts could not be refreshed. \(reason)")
     }
 
     internal static func loadMoreFailure(_ error: RepositoryError) -> String {
         "\(loadMoreFailed) \(message(for: error))"
     }
 
-    internal static let pickerTitle = "Account"
+    internal static var pickerTitle: String { localized("Account") }
 
-    internal static let loadingDetail = "Loading account…"
-    internal static let detailNotFound = "This account no longer exists."
-    internal static let detailFailed = "Could not load the full picture."
-    internal static let recentTransactionsTitle = "Recent transactions"
-    internal static let noRecentTransactions = "No recent transactions."
+    internal static var loadingDetail: String { localized("Loading account…") }
+    internal static var detailNotFound: String { localized("This account no longer exists.") }
+    internal static var detailFailed: String { localized("Could not load the full picture.") }
+    internal static var recentTransactionsTitle: String { localized("Recent transactions") }
+    internal static var noRecentTransactions: String { localized("No recent transactions.") }
 
     internal static func message(for error: RepositoryError) -> String {
         switch error {
         case .unavailable:
-            return
-                "Your accounts are temporarily unreachable. "
-                + "Nothing is lost — try again in a moment."
+            return localized(
+                """
+                Your accounts are temporarily unreachable. \
+                Nothing is lost — try again in a moment.
+                """)
         case .unauthorized:
-            return "This device is no longer signed in."
+            return localized("This device is no longer signed in.")
         case .featureUnavailable:
-            return "This phone is not allowed to use Accounts."
+            return localized("This phone is not allowed to use Accounts.")
         case .rateLimited:
-            return "Too many requests. Wait before trying again."
+            return localized("Too many requests. Wait before trying again.")
         case .contractMismatch:
-            return "This version of Pops cannot read what the server sent. Update the app."
+            return localized(
+                "This version of Pops cannot read what the server sent. Update the app.")
         case .requestRejected:
-            return "This version of Pops sent a request the server cannot accept. Update the app."
+            return localized(
+                "This version of Pops sent a request the server cannot accept. Update the app.")
         case .conflict:
-            return "That change conflicts with something already saved."
+            return localized("That change conflicts with something already saved.")
         case .transport:
-            return "Could not reach the server. Check your connection and try again."
+            return localized("Could not reach the server. Check your connection and try again.")
         case .dependencyNotBound:
-            return "Pops is not set up correctly on this device."
+            return localized("Pops is not set up correctly on this device.")
         }
     }
 

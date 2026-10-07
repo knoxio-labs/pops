@@ -22,7 +22,7 @@ public enum FeatureAccounts {
     public static let feature: MobileFeature = .accounts
 
     /// The tab bar's label for this feature.
-    public static let displayName = "Accounts"
+    public static var displayName: String { AccountsCopy.title }
 
     /// The tab bar's icon for this feature.
     public static let symbolName = "building.columns"
