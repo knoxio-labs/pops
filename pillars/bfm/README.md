@@ -848,6 +848,7 @@ pnpm --filter @pops/bfm build
 | `BUILD_VERSION`                          | `dev`                      | Verbatim on `/health`; coerced in the manifest — see below.                                 |
 | `CLOUDFLARE_ACCESS_TEAM_NAME`            | —                          | **Required in production**, or `/operator/*` answers 401 to all.                            |
 | `CLOUDFLARE_ACCESS_AUD`                  | —                          | Access application `aud`. Set it wherever the team hosts more than one.                     |
+| `POPS_OPERATOR_EMAILS`                   | —                          | Comma-separated operator emails. Empty means nobody is classified as a guest.               |
 | `POPS_REGISTRY_ENABLED`                  | `false`                    | Opt-in self-registration with the `registry` pillar.                                        |
 | `POPS_REGISTRY_URL`                      | `http://registry-api:3001` | Registry base URL — where bfm both registers and discovers.                                 |
 | `POPS_INTERNAL_API_KEY_FILE`             | —                          | Path to the mounted service-account secret. Preferred over the next row.                    |
