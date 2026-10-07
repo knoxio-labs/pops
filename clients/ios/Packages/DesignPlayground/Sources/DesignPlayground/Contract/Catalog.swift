@@ -38,7 +38,8 @@ internal enum Catalog {
     /// Registration order is editorial. The shell first, because it is what
     /// the app opens into; then the three features in the order a paired
     /// phone's tab bar puts them; then accounts, which is built and not yet
-    /// offered; then pairing, which a paired phone never sees again.
+    /// offered; then pairing, which a paired phone never sees again; then the
+    /// guest surfaces, which only a phone bound to a guest ever shows.
     static let surfaces: [DesignSurface] =
         ShellSurfaces.surfaces
         + ErrorPresentationSurfaces.surfaces
@@ -65,6 +66,7 @@ internal enum Catalog {
         + EgoSurfaces.surfaces
         + AccountsSurfaces.surfaces
         + PairingSurfaces.surfaces
+        + GuestSurfaces.surfaces
 
     static let experiments: [DesignExperiment] = ExperimentCatalog.all
 

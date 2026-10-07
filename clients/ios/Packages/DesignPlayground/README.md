@@ -177,6 +177,24 @@ instead returns its supported label vocabulary. Neither establishes accuracy
 for cover versus insert: candidates need confirmation, an unknown outcome,
 and evaluation on representative photos before production use (POPS-5249).
 
+### Guest surfaces
+
+Open **Screens → Guest** for what a guest's phone shows: someone the operator
+shared specific finance accounts with. They are drawn in this package rather
+than staged from the feature packages, because the app has no guest wording,
+entry form or history (POPS-5889) and no receipt strip (POPS-5890). The
+unpaired screen and the degradation banner are the app's own views.
+
+A person account stores its balance from the operator's side, where positive
+means the guest owes. `GuestPresentation` turns that around: the words carry
+the direction and the figure is printed without a sign. The form's Type row
+does the same for writing, each option fixing both the stored transaction type
+and the sign, so an amount is always typed as a plain positive figure.
+
+The phone adds, edits and attaches. It never deletes an entry, restores one or
+removes a saved receipt; a page added in the open form can still be dropped
+before saving.
+
 ### Build and test
 
 `PopsPlayground` is its own app target and its own installable app, sharing the
