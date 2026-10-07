@@ -3,7 +3,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createTestApp, PRODUCTION_ENV, type TestApp, type TestAppOptions } from './harness.js';
 import { requestOn } from './test-http.js';
 
-vi.mock('@pops/pillar-sdk/access', () => ({
+vi.mock('@pops/pillar-sdk/access', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@pops/pillar-sdk/access')>()),
   verifyCloudflareAccessPrincipal: vi.fn(),
 }));
 

@@ -16,6 +16,12 @@ const BFM_ERROR_DEFINITIONS = {
     message: 'This endpoint requires an operator session.',
     retryable: false,
   },
+  operator_forbidden: {
+    area: 'auth',
+    status: 403,
+    message: 'This endpoint is not available to this account.',
+    retryable: false,
+  },
   device_revoked: {
     area: 'auth',
     status: 403,
@@ -68,6 +74,10 @@ export function bfmErrorBody(
   reason: 'operator_unauthorized',
   options?: { readonly details?: unknown; readonly requestId?: string }
 ): ErrorBody & { readonly code: 'bfm.auth.operator_unauthorized' };
+export function bfmErrorBody(
+  reason: 'operator_forbidden',
+  options?: { readonly details?: unknown; readonly requestId?: string }
+): ErrorBody & { readonly code: 'bfm.auth.operator_forbidden' };
 export function bfmErrorBody(
   reason: 'device_revoked',
   options?: { readonly details?: unknown; readonly requestId?: string }

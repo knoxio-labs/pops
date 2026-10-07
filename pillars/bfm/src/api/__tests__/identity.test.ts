@@ -13,9 +13,9 @@ import {
   readPairingServiceAccount,
   requireOperator,
   requirePairingIssuer,
-  resolveOperator,
+  resolvePrincipal,
 } from '../middleware/identity.js';
-import { UnauthorizedError } from '../shared/errors.js';
+import { ForbiddenError, UnauthorizedError } from '../shared/errors.js';
 
 import type { Request, Response } from 'express';
 
@@ -32,23 +32,26 @@ const PROD_WITH_ACCESS: NodeJS.ProcessEnv = {
   CLOUDFLARE_ACCESS_TEAM_NAME: 'pops-test-team',
 };
 
-describe('resolveOperator', () => {
+describe('resolvePrincipal', () => {
   it.each(['development', 'test', undefined])(
     'falls back to the dev operator when NODE_ENV is %s',
     async (nodeEnv) => {
       const env = nodeEnv === undefined ? {} : { NODE_ENV: nodeEnv };
 
-      await expect(resolveOperator(req(), env)).resolves.toEqual({ email: DEV_OPERATOR_EMAIL });
+      await expect(resolvePrincipal(req(), env)).resolves.toEqual({
+        kind: 'operator',
+        email: DEV_OPERATOR_EMAIL,
+      });
     }
   );
 
   it('is anonymous in production when no Access assertion is presented', async () => {
-    await expect(resolveOperator(req(), PROD_WITH_ACCESS)).resolves.toBeNull();
+    await expect(resolvePrincipal(req(), PROD_WITH_ACCESS)).resolves.toBeNull();
   });
 
   it('is anonymous in production when the assertion does not verify', async () => {
     await expect(
-      resolveOperator(req({ 'cf-access-jwt-assertion': 'not-a-jwt' }), PROD_WITH_ACCESS)
+      resolvePrincipal(req({ 'cf-access-jwt-assertion': 'not-a-jwt' }), PROD_WITH_ACCESS)
     ).resolves.toBeNull();
   });
 
@@ -59,9 +62,9 @@ describe('resolveOperator', () => {
    * leg over would hand every caller on the internet an operator session.
    */
   it('is anonymous in production when Access is unconfigured — never a tunnel user', async () => {
-    await expect(resolveOperator(req(), { NODE_ENV: 'production' })).resolves.toBeNull();
+    await expect(resolvePrincipal(req(), { NODE_ENV: 'production' })).resolves.toBeNull();
     await expect(
-      resolveOperator(req(), { NODE_ENV: 'production', CLOUDFLARE_ACCESS_TEAM_NAME: '' })
+      resolvePrincipal(req(), { NODE_ENV: 'production', CLOUDFLARE_ACCESS_TEAM_NAME: '' })
     ).resolves.toBeNull();
   });
 
@@ -72,22 +75,28 @@ describe('resolveOperator', () => {
    */
   it('ignores an x-api-key header entirely', async () => {
     await expect(
-      resolveOperator(req({ 'x-api-key': 'pops_sa_abcdefgh.some-secret' }), PROD_WITH_ACCESS)
+      resolvePrincipal(req({ 'x-api-key': 'pops_sa_abcdefgh.some-secret' }), PROD_WITH_ACCESS)
     ).resolves.toBeNull();
   });
 
   it('ignores an empty assertion header', async () => {
     await expect(
-      resolveOperator(req({ 'cf-access-jwt-assertion': '' }), PROD_WITH_ACCESS)
+      resolvePrincipal(req({ 'cf-access-jwt-assertion': '' }), PROD_WITH_ACCESS)
     ).resolves.toBeNull();
   });
 });
 
 describe('readPrincipal', () => {
   it('returns the principal the middleware attached', () => {
-    expect(readPrincipal(res({ operator: { email: 'operator@pops.local' } }))).toEqual({
-      email: 'operator@pops.local',
-    });
+    const principal = { kind: 'operator', email: 'operator@pops.local' };
+
+    expect(readPrincipal(res({ principal }))).toEqual(principal);
+  });
+
+  it('keeps a guest readable, email included', () => {
+    const principal = { kind: 'guest', email: 'guest@example.com' };
+
+    expect(readPrincipal(res({ principal }))).toEqual(principal);
   });
 
   /** A middleware that was never mounted must fail closed, not open. */
@@ -96,7 +105,7 @@ describe('readPrincipal', () => {
   });
 
   it('reads an explicitly anonymous resolution as anonymous', () => {
-    expect(readPrincipal(res({ operator: null }))).toBeNull();
+    expect(readPrincipal(res({ principal: null }))).toBeNull();
   });
 });
 
@@ -105,7 +114,7 @@ describe('pairing issuer', () => {
     expect(
       requirePairingIssuer(
         res({
-          operator: { email: 'operator@pops.local' },
+          principal: { kind: 'operator', email: 'operator@pops.local' },
           pairingServiceAccount: { id: 'sa-pairing', name: 'mcp', scopes: [] },
         })
       )
@@ -132,13 +141,40 @@ describe('pairing issuer', () => {
   it('fails closed when neither identity is present', () => {
     expect(() => requirePairingIssuer(res())).toThrow(UnauthorizedError);
   });
+
+  it('refuses a guest with a 403 rather than a 401', () => {
+    const response = res({ principal: { kind: 'guest', email: 'guest@example.com' } });
+
+    expect(() => requirePairingIssuer(response)).toThrow(ForbiddenError);
+  });
+
+  /**
+   * The pairing route's scope gate reads a presented key as the caller, so a
+   * verified service account is not demoted by a guest session riding along.
+   */
+  it('accepts the service account when a guest session accompanies it', () => {
+    expect(
+      requirePairingIssuer(
+        res({
+          principal: { kind: 'guest', email: 'guest@example.com' },
+          pairingServiceAccount: { id: 'sa-pairing', name: 'mcp', scopes: [] },
+        })
+      )
+    ).toEqual({ kind: 'service-account', id: 'sa-pairing', name: 'mcp' });
+  });
 });
 
 describe('requireOperator', () => {
   it('passes a resolved operator through', () => {
-    expect(requireOperator({ email: 'operator@pops.local' })).toEqual({
-      email: 'operator@pops.local',
-    });
+    const operator = { kind: 'operator', email: 'operator@pops.local' } as const;
+
+    expect(requireOperator(operator)).toEqual(operator);
+  });
+
+  it('throws a 403 for a guest', () => {
+    expect(() => requireOperator({ kind: 'guest', email: 'guest@example.com' })).toThrow(
+      expect.objectContaining({ name: 'ForbiddenError', statusCode: 403 })
+    );
   });
 
   it('throws a 401 for an anonymous caller', () => {

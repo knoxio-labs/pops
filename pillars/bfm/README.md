@@ -243,6 +243,11 @@ split is load-bearing. In short:
 - **The remaining operator routes stay human-only.** Device listing and
   revocation continue to require the Cloudflare Access operator principal,
   even when the caller presents a valid service-account key.
+- **A verified email is not the operator by itself.** Access admits guests as
+  well as the owner, so once `POPS_OPERATOR_EMAILS` is set, a verified email
+  outside it resolves to a guest and every `/operator/*` route answers 403.
+  With the list unset every verified email is the operator, as it was before
+  guests existed, and the pillar logs one warning at boot.
 - **No "trust the tunnel" fallback.** The registry reads a missing
   `CLOUDFLARE_ACCESS_TEAM_NAME` as "we are only reachable through a protected
   tunnel". On a hostname that bypasses Access, that would resolve every caller
@@ -848,6 +853,7 @@ pnpm --filter @pops/bfm build
 | `BUILD_VERSION`                          | `dev`                      | Verbatim on `/health`; coerced in the manifest — see below.                                 |
 | `CLOUDFLARE_ACCESS_TEAM_NAME`            | —                          | **Required in production**, or `/operator/*` answers 401 to all.                            |
 | `CLOUDFLARE_ACCESS_AUD`                  | —                          | Access application `aud`. Set it wherever the team hosts more than one.                     |
+| `POPS_OPERATOR_EMAILS`                   | —                          | Operator emails, comma-separated. Set, any other verified email is a guest.                 |
 | `POPS_REGISTRY_ENABLED`                  | `false`                    | Opt-in self-registration with the `registry` pillar.                                        |
 | `POPS_REGISTRY_URL`                      | `http://registry-api:3001` | Registry base URL — where bfm both registers and discovers.                                 |
 | `POPS_INTERNAL_API_KEY_FILE`             | —                          | Path to the mounted service-account secret. Preferred over the next row.                    |

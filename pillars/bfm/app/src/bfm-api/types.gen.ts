@@ -6264,6 +6264,10 @@ export type OperatorListDevicesErrors = {
    * 401
    */
   401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
 };
 
 export type OperatorListDevicesError = OperatorListDevicesErrors[keyof OperatorListDevicesErrors];
@@ -6301,6 +6305,10 @@ export type OperatorRevokeDeviceErrors = {
    * 401
    */
   401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */

@@ -62,16 +62,27 @@ pillar being down is never a 500.
 
 ## Runtime configuration
 
-| Env                          | Default                                  | Notes                                                                  |
-| ---------------------------- | ---------------------------------------- | ---------------------------------------------------------------------- |
-| `PORT`                       | `3009`                                   | Integer 1–65535.                                                       |
-| `BUILD_VERSION`              | `dev`                                    | Surfaced on `/health` and in the registered manifest.                  |
-| `ORCHESTRATOR_SELF_BASE_URL` | `http://localhost:${PORT}`               | Published as the synthetic `orchestrator` entry's `baseUrl`.           |
-| `POPS_REGISTRY_URL`          | SDK default (`http://registry-api:3001`) | Points the discovery client at the registry pillar.                    |
-| `POPS_REGISTRY_ENABLED`      | unset                                    | `true` self-registers on boot and deregisters on SIGTERM/SIGINT.       |
-| `POPS_PILLARS`               | empty                                    | `id:baseUrl[,…]` seed; backfills `/pillars` only for unknown ids.      |
-| `POPS_INTERNAL_API_KEY`      | unset                                    | Development Compose maps `POPS_ORCHESTRATOR_API_KEY` to this variable. |
-| `POPS_INTERNAL_API_KEY_FILE` | unset                                    | Production Compose mounts `pops_orchestrator_api_key` here.            |
+| Env                           | Default                                  | Notes                                                                           |
+| ----------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------- |
+| `PORT`                        | `3009`                                   | Integer 1–65535.                                                                |
+| `BUILD_VERSION`               | `dev`                                    | Surfaced on `/health` and in the registered manifest.                           |
+| `ORCHESTRATOR_SELF_BASE_URL`  | `http://localhost:${PORT}`               | Published as the synthetic `orchestrator` entry's `baseUrl`.                    |
+| `POPS_REGISTRY_URL`           | SDK default (`http://registry-api:3001`) | Points the discovery client at the registry pillar.                             |
+| `POPS_REGISTRY_ENABLED`       | unset                                    | `true` self-registers on boot and deregisters on SIGTERM/SIGINT.                |
+| `POPS_PILLARS`                | empty                                    | `id:baseUrl[,…]` seed; backfills `/pillars` only for unknown ids.               |
+| `POPS_INTERNAL_API_KEY`       | unset                                    | Development Compose maps `POPS_ORCHESTRATOR_API_KEY` to this variable.          |
+| `POPS_INTERNAL_API_KEY_FILE`  | unset                                    | Production Compose mounts `pops_orchestrator_api_key` here.                     |
+| `POPS_OPERATOR_EMAILS`        | unset                                    | Comma-separated operator emails. With the team name, turns the Access guard on. |
+| `CLOUDFLARE_ACCESS_TEAM_NAME` | unset                                    | Access team whose signing keys verify a presented session.                      |
+| `CLOUDFLARE_ACCESS_AUD`       | unset                                    | Access application `aud`, checked when set.                                     |
+
+Once `POPS_OPERATOR_EMAILS` and `CLOUDFLARE_ACCESS_TEAM_NAME` are both set, a
+request carrying `cf-access-jwt-assertion` is verified on every route except
+`/health`: a token that does not verify answers 401 and a verified email
+outside the list 403. A request with no such header, which is every sibling
+pillar and every LAN caller, is served as before, and so is an Access service
+token. With either variable unset the guard does nothing and logs one warning
+at boot.
 
 An out-of-range `PORT` or a non-bare origin in either URL (a path, query or
 fragment) throws at boot — a bad published `baseUrl` is much harder to diagnose

@@ -29,6 +29,19 @@ export class UnauthorizedError extends HttpError {
   }
 }
 
+/**
+ * The caller is a verified Cloudflare Access user who is not the operator.
+ *
+ * As opaque as {@link UnauthorizedError}, for the same reason: it says the
+ * route is closed to this caller and nothing about who it is open to.
+ */
+export class ForbiddenError extends HttpError {
+  constructor(message = 'This endpoint is not available to this account.') {
+    super(403, message);
+    this.name = 'ForbiddenError';
+  }
+}
+
 export class NotFoundError extends HttpError {
   constructor(resource: string, id: string) {
     super(404, `${resource} '${id}' not found`);

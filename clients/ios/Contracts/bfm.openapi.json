@@ -20047,6 +20047,16 @@
               }
             },
             "description": "401"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "403"
           }
         },
         "summary": "List paired devices, revoked ones included. Never returns a token or a key",
@@ -20102,6 +20112,16 @@
               }
             },
             "description": "401"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "403"
           },
           "404": {
             "content": {

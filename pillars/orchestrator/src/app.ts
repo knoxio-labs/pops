@@ -20,6 +20,7 @@ import { z } from 'zod';
 
 import { createPillarErrorHandlers, defineErrors } from '@pops/pillar-express';
 
+import { createAccessGuard } from './access-guard.js';
 import { type BuildToolList, createAiToolsHandler } from './ai-tools/index.js';
 import { orchestratorContract } from './contract/rest.js';
 import { type OrchestratorDeps, makeRequestHandler } from './handlers.js';
@@ -101,6 +102,11 @@ export interface CreateOrchestratorAppOptions {
   readonly buildToolList?: BuildToolList;
   /** Shared-tag query override. Production uses the live tag federation. */
   readonly taggedQuerySource?: (request: TagFederationRequest) => Promise<TagFederationResponse>;
+  /**
+   * Environment the Cloudflare Access guard reads. Production omits this so
+   * the guard reads `process.env`; tests pass their own to turn it on.
+   */
+  readonly env?: NodeJS.ProcessEnv;
 }
 
 function createTaggedQueryHandlers(
@@ -151,6 +157,10 @@ export function createOrchestratorApp(
   app.get('/health', (_req: Request, res: Response) => {
     res.json(handlers.health());
   });
+
+  // After `/health`, which a container probe must reach with no session, and
+  // ahead of everything else so no route can be added outside it.
+  app.use(createAccessGuard(options.env));
 
   app.get('/openapi', (_req: Request, res: Response) => {
     res.json(openapiDocument);

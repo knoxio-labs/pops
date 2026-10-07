@@ -23,12 +23,27 @@
  *      no `email` at all.
  *   4. otherwise → anonymous.
  *
- * The middleware RESOLVES identity and never rejects; `requireIdentity` in
- * the handlers is the gate. There is no moderator tier: every principal that
- * gets past Access is the operator or something the operator minted, and a
- * second tier here would be a permission check with one subject.
+ * A verified human is not necessarily the operator: Access admits guests too.
+ * Once `POPS_OPERATOR_EMAILS` is set, a verified email outside it resolves to
+ * a guest and the middleware answers 403 itself, so every route mounted after
+ * it is closed to a guest without each handler having to remember. Service
+ * tokens are unaffected: the operator minted them. With the list unset every
+ * verified email is the operator, which is what this pillar did before guests
+ * existed, so a deployment that has not been given the variable keeps working.
+ *
+ * Everyone else is RESOLVED and never rejected here; `requireIdentity` in the
+ * handlers is the gate for an anonymous caller. There is no moderator tier:
+ * what gets past this middleware is the operator or something the operator
+ * minted, and a second tier would be a permission check with one subject.
  */
-import { verifyCloudflareAccessPrincipal } from '@pops/pillar-sdk/access';
+import {
+  normalizeEmail,
+  OPERATOR_EMAILS_ENV,
+  readOperatorEmails,
+  verifyCloudflareAccessPrincipal,
+} from '@pops/pillar-sdk/access';
+
+import { fail } from '../shared/http.js';
 
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
 
@@ -36,6 +51,12 @@ import type { NextFunction, Request, RequestHandler, Response } from 'express';
 export type DesignPrincipal =
   | { kind: 'user'; email: string }
   | { kind: 'service'; commonName: string };
+
+/** A verified Access user who is not on the operator list. No route admits one. */
+export interface GuestPrincipal {
+  kind: 'guest';
+  email: string;
+}
 
 export interface IdentityLocals {
   principal?: DesignPrincipal | null;
@@ -53,14 +74,20 @@ const TUNNEL_EMAIL = 'tunnel-authenticated@pops.local';
 export async function resolvePrincipal(
   req: RequestHeaders,
   env: NodeJS.ProcessEnv = process.env
-): Promise<DesignPrincipal | null> {
+): Promise<DesignPrincipal | GuestPrincipal | null> {
   if (env['NODE_ENV'] !== 'production') return { kind: 'user', email: DEV_EMAIL };
   if (!env['CLOUDFLARE_ACCESS_TEAM_NAME']) return { kind: 'user', email: TUNNEL_EMAIL };
 
   const token = req.headers['cf-access-jwt-assertion'];
   if (typeof token !== 'string') return null;
   try {
-    return await verifyCloudflareAccessPrincipal(token, env);
+    const principal = await verifyCloudflareAccessPrincipal(token, env);
+    if (principal.kind !== 'user') return principal;
+    const operators = readOperatorEmails(env);
+    if (operators.size > 0 && !operators.has(normalizeEmail(principal.email))) {
+      return { kind: 'guest', email: principal.email };
+    }
+    return principal;
   } catch (error) {
     console.error('[design-api] Access JWT verification failed:', error);
     return null;
@@ -72,11 +99,24 @@ export async function resolvePrincipal(
  * every handler sees `res.locals.principal`. A failure inside resolution
  * propagates to `next` so Express surfaces a 500 rather than a silently
  * anonymous request.
+ *
+ * A guest is answered 403 here and reaches no route. Warns once, when built,
+ * if no operator list is configured.
  */
 export function createIdentityMiddleware(env: NodeJS.ProcessEnv = process.env): RequestHandler {
+  if (readOperatorEmails(env).size === 0) {
+    console.warn(
+      `[design-api] ${OPERATOR_EMAILS_ENV} is not set, so guests are not refused: every ` +
+        `verified Cloudflare Access email is treated as the operator.`
+    );
+  }
   return (req: Request, res: Response, next: NextFunction): void => {
     void resolvePrincipal(req, env)
       .then((principal) => {
+        if (principal?.kind === 'guest') {
+          fail(res, 403, 'design.auth.forbidden', 'This API is not available to this account.');
+          return;
+        }
         (res.locals as IdentityLocals).principal = principal;
         next();
       })

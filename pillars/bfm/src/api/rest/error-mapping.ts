@@ -2,17 +2,22 @@
  * Map bfm domain errors to ts-rest response envelopes.
  *
  * Handlers throw `HttpError` subclasses carrying a real `statusCode`; the
- * statuses this pillar declares on its contract (`401`, `404`, `429`) are
+ * statuses this pillar declares on its contract (`401`, `403`, `404`, `429`) are
  * turned into a typed `{ status, body }` envelope. Anything else — a
  * 500-class `HttpError`, or a non-`HttpError` — is re-thrown so Express's
  * error pipeline surfaces the real stack rather than a swallowed 500.
  */
 import { bfmErrorBody } from '../errors.js';
-import { NotFoundError, TooManyRequestsError, UnauthorizedError } from '../shared/errors.js';
+import {
+  ForbiddenError,
+  NotFoundError,
+  TooManyRequestsError,
+  UnauthorizedError,
+} from '../shared/errors.js';
 
 import type { ErrorBody } from '@pops/types';
 
-export type ErrorStatus = 401 | 404 | 429;
+export type ErrorStatus = 401 | 403 | 404 | 429;
 
 export interface MappedHttpError {
   status: ErrorStatus;
@@ -22,6 +27,9 @@ export interface MappedHttpError {
 export function mapHttpError(err: unknown): MappedHttpError | null {
   if (err instanceof UnauthorizedError) {
     return { status: 401, body: bfmErrorBody('operator_unauthorized') };
+  }
+  if (err instanceof ForbiddenError) {
+    return { status: 403, body: bfmErrorBody('operator_forbidden') };
   }
   if (err instanceof NotFoundError) {
     return { status: 404, body: bfmErrorBody('not_found') };
