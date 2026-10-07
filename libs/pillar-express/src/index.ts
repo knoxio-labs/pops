@@ -1,4 +1,6 @@
 export { createServiceAccountScopeGate } from './service-account-scope-gate.js';
+export { ACCESS_JWT_HEADER, readPrincipal } from './request-principal.js';
+export type { AccessIdentityOptions, RequestPrincipal } from './request-principal.js';
 export {
   createBodyParserErrorHandler,
   createPillarErrorHandlers,
@@ -21,7 +23,7 @@ export type {
 export type {
   RawRouteDeclaration,
   RawRouteTree,
-  ServiceAccountErrorHandlers,
   ServiceAccountScopeGate,
   ServiceAccountScopeGateOptions,
 } from './service-account-scope-gate.js';
+export type { ServiceAccountErrorHandlers } from './scope-gate-rejection.js';

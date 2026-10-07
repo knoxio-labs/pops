@@ -2,7 +2,7 @@
 
 Express bindings for the decisions `@pops/pillar-sdk` makes without an HTTP framework.
 
-Today that is one thing: `createServiceAccountScopeGate`, the inbound service-account gate [ADR-044](../../docs/architecture/adr-044-inbound-service-account-scope-enforcement.md) requires of every producer.
+The centre of it is `createServiceAccountScopeGate`: the inbound service-account gate [ADR-044](../../docs/architecture/adr-044-inbound-service-account-scope-enforcement.md) requires of every producer, which also resolves who a browser request is.
 
 ```ts
 const gate = createServiceAccountScopeGate({
@@ -16,6 +16,27 @@ app.use(gate.createMiddleware(createRegistryServiceAccountVerifier()));
 ```
 
 Mount it **before** `createExpressEndpoints` and after any raw route (`/health`, `/pillars`, `/openapi`) — those are outside the contract, so the scope table has nothing to say about them and they pass untouched either way.
+
+## Who the request is
+
+The same middleware resolves a principal and puts it on the response; a handler reads it with `readPrincipal(res)`.
+
+| request carries                                 | principal                           |
+| ----------------------------------------------- | ----------------------------------- |
+| `X-API-Key`                                     | `{ kind: 'service' }`               |
+| a verified `cf-access-jwt-assertion`            | `operator` or `guest`, by its email |
+| neither (LAN, Tailscale, dev, never via Access) | `{ kind: 'operator', email: null }` |
+
+An email in `POPS_OPERATOR_EMAILS` (comma-separated, compared trimmed and lower-cased) is the operator. Any other verified email is a guest, and a guest is refused with 403 before any handler runs on everything except a contract route whose metadata is `guestRoute()` (from `@pops/pillar-sdk/server`) and `/health`. That includes declared raw routes and paths outside the contract, so a route mounted after the gate is closed to guests until its contract entry says otherwise. A token that does not verify is 401.
+
+**Classification is off until both `POPS_OPERATOR_EMAILS` and `CLOUDFLARE_ACCESS_TEAM_NAME` are set.** Until then the token is not read, nobody is a guest, every request without a key is the operator, and the gate logs one warning when its first middleware is built. An unset variable never refuses anyone; it means a guest added to the Access policy would be treated as the operator, so set both before adding one.
+
+Two edges worth knowing:
+
+- A key is the caller's identity only where the gate verifies it. On a path outside the scope table a key is never checked, so there a token riding beside it decides instead; otherwise a guest could attach a made-up key to reach every unscoped path.
+- An Access service token carries no email, so with classification on it is 401 unless the request also presents an `X-API-Key` on a scoped route.
+
+`readPrincipal` throws on a response the gate never saw. A route mounted ahead of the middleware has no principal, and answering "operator" there would be a mounting mistake handing a guest the owner's access.
 
 ## Why this package exists rather than a subpath of the SDK
 

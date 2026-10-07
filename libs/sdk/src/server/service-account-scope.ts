@@ -37,6 +37,35 @@ export interface ContractScopeRoute {
   readonly path: string;
   /** Dotted scope: the root scope plus the route's position in the router. */
   readonly scope: string;
+  /**
+   * Present, and `true`, only on a route whose metadata carries
+   * {@link guestRoute}. Absent everywhere else, so an unmarked route is not
+   * guest-capable by omission.
+   */
+  readonly guest?: true;
+}
+
+const GUEST_ROUTE_METADATA_KEY = 'popsGuestRoute';
+
+/** The metadata shape {@link guestRoute} returns. */
+export interface GuestRouteMetadata {
+  readonly popsGuestRoute: true;
+}
+
+/**
+ * Mark a contract route as reachable by a guest: `metadata: guestRoute()` on
+ * the ts-rest route, spread beside other metadata where a route has some.
+ * Every route without it refuses a guest, so opening one is always a visible
+ * line in the contract.
+ */
+export function guestRoute(): GuestRouteMetadata {
+  return { [GUEST_ROUTE_METADATA_KEY]: true };
+}
+
+/** What a request resolved to: its scope, and whether a guest may reach it. */
+export interface ResolvedContractRoute {
+  readonly scope: string;
+  readonly guest: boolean;
 }
 
 /**
@@ -46,6 +75,8 @@ export interface ContractScopeRoute {
 export interface ContractScopeMap {
   readonly routes: readonly ContractScopeRoute[];
   readonly literal: ReadonlyMap<string, string>;
+  /** Scopes of the routes marked with {@link guestRoute}. */
+  readonly guestScopes: ReadonlySet<string>;
   readonly patterns: readonly {
     readonly method: string;
     readonly regex: RegExp;
@@ -61,6 +92,17 @@ function isRouteLeaf(value: unknown): value is { method: string; path: string } 
   return (
     isRecord(value) && typeof value['method'] === 'string' && typeof value['path'] === 'string'
   );
+}
+
+/**
+ * Only the literal `true` counts. A truthy string or `1` under the key is a
+ * hand-written metadata object, not the marker, and reading it as one would
+ * open a route nobody decided to open.
+ */
+function isGuestLeaf(leaf: unknown): boolean {
+  if (!isRecord(leaf)) return false;
+  const metadata = leaf['metadata'];
+  return isRecord(metadata) && metadata[GUEST_ROUTE_METADATA_KEY] === true;
 }
 
 const REGEX_SPECIALS = /[.*+?^${}()|[\]\\]/g;
@@ -88,7 +130,12 @@ function collectRoutes(
   into: ContractScopeRoute[]
 ): void {
   if (isRouteLeaf(node)) {
-    into.push({ method: node.method.toUpperCase(), path: node.path, scope: scopeTrail.join('.') });
+    const route = {
+      method: node.method.toUpperCase(),
+      path: node.path,
+      scope: scopeTrail.join('.'),
+    };
+    into.push(isGuestLeaf(node) ? { ...route, guest: true } : route);
     return;
   }
   if (!isRecord(node)) return;
@@ -110,7 +157,9 @@ export function buildContractScopeMap(router: unknown, rootScope: string): Contr
 
   const literal = new Map<string, string>();
   const patterns: { method: string; regex: RegExp; scope: string }[] = [];
+  const guestScopes = new Set<string>();
   for (const route of routes) {
+    if (route.guest === true) guestScopes.add(route.scope);
     if (route.path.includes('/:')) {
       patterns.push({ method: route.method, regex: compilePath(route.path), scope: route.scope });
     } else {
@@ -126,7 +175,7 @@ export function buildContractScopeMap(router: unknown, rootScope: string): Contr
       literal.set(key, route.scope);
     }
   }
-  return { routes, literal, patterns };
+  return { routes, literal, patterns, guestScopes };
 }
 
 function resolveForMethod(map: ContractScopeMap, method: string, path: string): string | undefined {
@@ -160,4 +209,20 @@ export function resolveContractScope(
   const scope = resolveForMethod(map, upper, normalised);
   if (scope !== undefined || upper !== 'HEAD') return scope;
   return resolveForMethod(map, 'GET', normalised);
+}
+
+/**
+ * {@link resolveContractScope} plus the route's guest flag, for a gate that
+ * must decide who may reach a route as well as which grant it needs. Resolves
+ * by the same rules, so the two can never disagree about which route a
+ * request is.
+ */
+export function resolveContractRoute(
+  map: ContractScopeMap,
+  method: string,
+  path: string
+): ResolvedContractRoute | undefined {
+  const scope = resolveContractScope(map, method, path);
+  if (scope === undefined) return undefined;
+  return { scope, guest: map.guestScopes.has(scope) };
 }

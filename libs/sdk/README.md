@@ -37,6 +37,8 @@ Nothing in it imports `better-sqlite3` or `drizzle-orm`. The connection is a str
 
 Three properties in `createCloudflareAccessVerifier` are load-bearing, each with its own way of being lost, and the file states them at length: the algorithm is **pinned** to RS256 rather than read from the token header (the `alg: none` and HMAC-with-the-public-key confusion classes); the `aud` is checked whenever one is configured, because Access mints one JWT per application off the same team keys, so a token for a _sibling_ protected app carries a perfectly valid signature; and the JWKS cache is per-verifier rather than module-global. Widening any of them is a security change, not a refactor — `src/access/__tests__/cloudflare-jwt.test.ts` asserts each against real generated keypairs.
 
+`/access` also owns the operator list: `readOperatorEmails` parses `POPS_OPERATOR_EMAILS` and `normalizeEmail` is the one comparison form (trimmed, lower-cased, nothing folded). A verified email on the list is the operator and any other is a guest; the gate in `@pops/pillar-express` applies that. A test that needs a signed Access token uses `createAccessJwtFixture` from `/testing` rather than generating its own keys.
+
 It is the only subpath that pulls a non-`zod` runtime dependency (`jsonwebtoken`), and it is Node-only. Import it from a pillar's API layer, never from a frontend app.
 
 ## The two inbound guards
