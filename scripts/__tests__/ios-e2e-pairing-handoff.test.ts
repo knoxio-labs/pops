@@ -58,6 +58,128 @@ describe('pairing handoff', () => {
     });
     expect(replay.status).toBe(409);
     expect(replay.body).not.toContain(code);
+    expect(handoff.readCounts()).toEqual({ claims: 1, completions: 0, paired: 0 });
+  });
+
+  it('accepts one completion only after the matching simulator claims and stores its session', async () => {
+    const handoff = createPairingHandoff({ deviceId: simulatorId, now: () => nowMs });
+    const generation = handoff.offer({
+      deviceId: simulatorId,
+      pairingBaseUrl: 'http://127.0.0.1:3014',
+      code,
+      expiresAt,
+    });
+    const broker = await startPairingHandoffServer(handoff);
+    closeServer = broker.close;
+    const paired = handoff.waitForPairing(5_000);
+
+    const unclaimed = await complete(broker.url, {
+      deviceId: simulatorId,
+      instanceId: handoff.instanceId,
+      generation,
+      paired: true,
+    });
+    await claim(broker.url, simulatorId, handoff.instanceId, generation);
+    const wrongDevice = await complete(broker.url, {
+      deviceId: otherSimulatorId,
+      instanceId: handoff.instanceId,
+      generation,
+      paired: true,
+    });
+    const wrongInstance = await complete(broker.url, {
+      deviceId: simulatorId,
+      instanceId: '12345-1800000000000-2',
+      generation,
+      paired: true,
+    });
+    const wrongGeneration = await complete(broker.url, {
+      deviceId: simulatorId,
+      instanceId: handoff.instanceId,
+      generation: generation + 1,
+      paired: true,
+    });
+    const accepted = await complete(broker.url, {
+      deviceId: simulatorId,
+      instanceId: handoff.instanceId,
+      generation,
+      paired: true,
+    });
+    const replay = await complete(broker.url, {
+      deviceId: simulatorId,
+      instanceId: handoff.instanceId,
+      generation,
+      paired: true,
+    });
+
+    expect(unclaimed.status).toBe(409);
+    expect(wrongDevice.status).toBe(409);
+    expect(wrongInstance.status).toBe(409);
+    expect(wrongGeneration.status).toBe(409);
+    expect(accepted.status).toBe(204);
+    expect(accepted.headers.get('cache-control')).toBe('no-store');
+    expect(replay.status).toBe(409);
+    expect(await paired).toBe(true);
+    expect(handoff.readCounts()).toEqual({ claims: 1, completions: 1, paired: 1 });
+    for (const response of [unclaimed, wrongDevice, wrongInstance, wrongGeneration, replay]) {
+      expect(response.body).not.toContain(code);
+    }
+  });
+
+  it('rejects malformed and oversized completion reports and resolves a failed pairing as false', async () => {
+    const handoff = createPairingHandoff({ deviceId: simulatorId, now: () => nowMs });
+    const generation = handoff.offer({
+      deviceId: simulatorId,
+      pairingBaseUrl: 'https://bfm.example.com',
+      code,
+      expiresAt,
+    });
+    const broker = await startPairingHandoffServer(handoff);
+    closeServer = broker.close;
+
+    const method = await fetch(`${broker.url}/__e2e/pair/complete`);
+    const malformed = await fetch(`${broker.url}/__e2e/pair/complete`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{',
+    });
+    const oversized = await fetch(`${broker.url}/__e2e/pair/complete`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: ' '.repeat(1025),
+    });
+    const wrongShape = await fetch(`${broker.url}/__e2e/pair/complete`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        deviceId: simulatorId,
+        instanceId: handoff.instanceId,
+        generation,
+        paired: true,
+        code,
+      }),
+    });
+    for (const response of [method, malformed, oversized, wrongShape]) {
+      expect(response.headers.get('cache-control')).toBe('no-store');
+      expect(await response.text()).not.toContain(code);
+    }
+    expect(method.status).toBe(405);
+    expect(malformed.status).toBe(400);
+    expect(oversized.status).toBe(400);
+    expect(wrongShape.status).toBe(400);
+
+    const claimResponse = await claim(broker.url, simulatorId, handoff.instanceId, generation);
+    expect(claimResponse.status).toBe(200);
+    const waiting = handoff.waitForPairing(5_000);
+    const rejected = await complete(broker.url, {
+      deviceId: simulatorId,
+      instanceId: handoff.instanceId,
+      generation,
+      paired: false,
+    });
+
+    expect(rejected.status).toBe(204);
+    expect(await waiting).toBe(false);
+    expect(handoff.readCounts()).toEqual({ claims: 1, completions: 1, paired: 0 });
   });
 
   it('rejects malformed, oversized, and non-POST claims without exposing the pending code', async () => {
@@ -265,4 +387,16 @@ async function claim(url: string, deviceId: string, instanceId: string, generati
     body,
     json: body.length === 0 ? undefined : JSON.parse(body),
   };
+}
+
+async function complete(
+  url: string,
+  details: { deviceId: string; instanceId: string; generation: number; paired: boolean }
+) {
+  const response = await fetch(`${url}/__e2e/pair/complete`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(details),
+  });
+  return { status: response.status, headers: response.headers, body: await response.text() };
 }

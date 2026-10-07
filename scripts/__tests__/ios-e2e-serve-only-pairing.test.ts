@@ -18,7 +18,7 @@ describe('serve-only simulator pairing', () => {
     closeServer = undefined;
   });
 
-  it('prints only server addresses and claim status', () => {
+  it('prints only server addresses and stored-session status', () => {
     const status = formatServeOnlyStatus({
       bfmUrl: 'http://127.0.0.1:3014',
       controlUrl: 'http://127.0.0.1:3015',
@@ -26,11 +26,11 @@ describe('serve-only simulator pairing', () => {
 
     expect(status).toContain('server address http://127.0.0.1:3014');
     expect(status).toContain('server address http://127.0.0.1:3015');
-    expect(status).toContain('claimed its pairing handoff');
+    expect(status).toContain('stored a session for this BFM');
     expect(status).not.toContain(code);
   });
 
-  it('waits for a local handoff claim without returning or sending pairing material', async () => {
+  it('waits for a local handoff claim and stored session without returning pairing material', async () => {
     const handoff = createPairingHandoff({ deviceId: simulatorId });
     const generation = handoff.offer({
       deviceId: simulatorId,
@@ -49,7 +49,7 @@ describe('serve-only simulator pairing', () => {
         pairingBaseUrl: broker.url,
       });
       expect(JSON.stringify(body)).not.toContain(code);
-      return new Response('{"delivered":true}', { status: 200 });
+      return new Response('{"paired":true}', { status: 200 });
     };
     let settled = false;
     const pairing = pairSimulatorForServeOnly({
@@ -76,6 +76,17 @@ describe('serve-only simulator pairing', () => {
     expect(claim.status).toBe(200);
     const claimBody = await claim.text();
     expect(claimBody).toContain(code);
+    const completion = await fetch(`${broker.url}/__e2e/pair/complete`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        deviceId: simulatorId,
+        instanceId: handoff.instanceId,
+        generation,
+        paired: true,
+      }),
+    });
+    expect(completion.status).toBe(204);
     await pairing;
     expect(settled).toBe(true);
   });

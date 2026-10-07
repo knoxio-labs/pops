@@ -80,9 +80,19 @@ import { seededAccounts } from './accounts-fixture.mjs';
 import { startControlPlane } from './control-plane.mjs';
 import { spawnInventoryPillar, startInventoryGate } from './inventory-pillar.mjs';
 import { publishUserDefinedType } from './inventory-user-type.mjs';
-import { createMcpInboundAuth } from './mcp-pairing-code.mjs';
-import { scanPairingArtifacts } from './pairing-artifact-guard.mjs';
+import {
+  createMcpInboundAuth,
+  hasPairingCodeIssuerTool,
+  isMcpReadyResponse,
+} from './mcp-pairing-code.mjs';
+import {
+  formatPairingRunLifecycleSummary,
+  PairingArtifactScanFailure,
+  primaryPairingRunFailure,
+  scanPairingArtifacts,
+} from './pairing-artifact-guard.mjs';
 import { createPairingHandoff } from './pairing-handoff.mjs';
+import { createProcessRunner } from './process-runner.mjs';
 import { startPurchasesStub } from './purchases-stub.mjs';
 import { formatServeOnlyStatus, pairSimulatorForServeOnly } from './serve-only-pairing.mjs';
 import { boundAddress } from './server-address.mjs';
@@ -111,6 +121,42 @@ const BOOT_POLL_MS = 100;
 
 /** How long the pillar gets to shut down cleanly before it is killed. */
 const SHUTDOWN_GRACE_MS = 5_000;
+/** @type {ReturnType<typeof createProcessRunner> | undefined} */
+let processRunner;
+
+/**
+ * @type {{
+ *   phase: 'preflight' | 'fixtures' | 'bfm-startup' | 'mcp-startup' | 'mcp-readiness' | 'ios-e2e' | 'artifact-scan' | 'complete',
+ *   issuedCount: number,
+ *   claimedCount: number,
+ *   completedCount: number,
+ *   pairedCount: number,
+ *   scannedRoots: number,
+ *   totalRoots: number,
+ *   scannedFiles: number,
+ *   artifactScan: 'not-run' | 'clean' | 'matched' | 'failed',
+ *   artifactScanStage: 'required-root-missing' | 'required-root-no-new-files' | 'root-read-failed' | 'file-stat-failed' | 'file-read-failed' | 'unknown' | null
+ * }}
+ */
+let pairingLifecycle = {
+  phase: 'preflight',
+  issuedCount: 0,
+  claimedCount: 0,
+  completedCount: 0,
+  pairedCount: 0,
+  scannedRoots: 0,
+  totalRoots: 2,
+  scannedFiles: 0,
+  artifactScan: 'not-run',
+  artifactScanStage: null,
+};
+let pairingLifecycleSummaryPrinted = false;
+
+function reportPairingLifecycleFailure() {
+  if (pairingLifecycleSummaryPrinted) return;
+  pairingLifecycleSummaryPrinted = true;
+  process.stderr.write(formatPairingRunLifecycleSummary(pairingLifecycle));
+}
 
 /** Satisfies the BFM's boot check, which refuses anything under 32 characters. */
 const ACCESS_TOKEN_SECRET = 'ios-e2e-access-token-secret-not-a-real-key';
@@ -213,14 +259,20 @@ function allocatePort() {
  * @returns {Promise<void>}
  */
 function run(command, args, options = {}) {
-  return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { stdio: 'inherit', cwd: REPO_ROOT, ...options });
-    child.on('error', reject);
-    child.on('exit', (code, signal) => {
-      if (code === 0) return resolve();
-      reject(new HarnessError(`${command} ${args.join(' ')} ${describeEnd(code, signal)}`));
+  if (processRunner === undefined) throw new HarnessError('the process runner is not ready.');
+  return processRunner
+    .run(command, args, { cwd: REPO_ROOT, ...options })
+    .then(({ code, signal }) => {
+      if (code === 0) return;
+      throw new HarnessError(`${command} ${args.join(' ')} ${describeEnd(code, signal)}`);
     });
-  });
+}
+
+function throwIfStopping() {
+  const signal = processRunner?.signal();
+  if (signal !== null && signal !== undefined) {
+    throw new HarnessError(`the iOS E2E was stopped by ${signal}.`);
+  }
 }
 
 /**
@@ -269,6 +321,7 @@ async function waitForHealth(baseURL, expectedVersion, child, who = 'the BFM') {
   const health = new URL('/health', baseURL);
 
   while (Date.now() < deadline) {
+    throwIfStopping();
     // Both are null while it runs, and exactly one is set once it has not —
     // a pillar killed by a signal has no exit code, so watching the code alone
     // would poll a dead port until the ceiling.
@@ -348,13 +401,15 @@ async function probeHealth(health) {
  *
  * @param {URL} baseURL
  * @param {import('node:child_process').ChildProcess} child
+ * @param {string} token
  * @returns {Promise<void>}
  */
-async function waitForMcpReady(baseURL, child) {
+async function waitForMcpReady(baseURL, child, token) {
   const deadline = Date.now() + BOOT_TIMEOUT_MS;
   const ready = new URL('/ready', baseURL);
 
   while (Date.now() < deadline) {
+    throwIfStopping();
     if (child.exitCode !== null || child.signalCode !== null) {
       throw new HarnessError(
         `the MCP server ${describeEnd(child.exitCode, child.signalCode)} before answering ${ready}. ` +
@@ -366,8 +421,13 @@ async function waitForMcpReady(baseURL, child) {
       const response = await fetch(ready, { signal: AbortSignal.timeout(1000) });
       if (response.ok) {
         const body = await response.json();
-        if (body?.status === 'ready' && body?.apiKeyConfigured === true && body?.tools === 70) {
-          return;
+        if (isMcpReadyResponse(body)) {
+          const hasPairingIssuer = await hasPairingCodeIssuerTool({
+            endpoint: new URL('/mcp', baseURL).toString(),
+            token,
+            signal: AbortSignal.timeout(1000),
+          });
+          if (hasPairingIssuer) return;
         }
       }
     } catch {
@@ -406,6 +466,19 @@ function stop(child) {
 }
 
 async function main() {
+  pairingLifecycle = {
+    phase: 'preflight',
+    issuedCount: 0,
+    claimedCount: 0,
+    completedCount: 0,
+    pairedCount: 0,
+    scannedRoots: 0,
+    totalRoots: 2,
+    scannedFiles: 0,
+    artifactScan: 'not-run',
+    artifactScanStage: null,
+  };
+  pairingLifecycleSummaryPrinted = false;
   const args = process.argv.slice(2);
   const serveOnly = args.includes('--serve-only');
   const issuerArgument = args.find((arg) => arg.startsWith('--pairing-issuer='));
@@ -417,11 +490,13 @@ async function main() {
     (arg) => arg !== '--serve-only' && !arg.startsWith('--pairing-issuer=')
   );
   if (unknown.length > 0) {
+    reportPairingLifecycleFailure();
     process.stderr.write(`ios-e2e: unknown argument(s): ${unknown.join(' ')}\n`);
     process.exitCode = 2;
     return;
   }
   if (pairingIssuer !== 'direct' && pairingIssuer !== 'mcp') {
+    reportPairingLifecycleFailure();
     process.stderr.write(
       `ios-e2e: unsupported pairing issuer '${pairingIssuer}'. Use direct or mcp.\n`
     );
@@ -436,10 +511,67 @@ async function main() {
   } catch (error) {
     throw new HarnessError(error instanceof Error ? error.message : 'simulator selection failed.');
   }
+  pairingLifecycle.phase = 'fixtures';
   const pairingHandoff = createPairingHandoff({ deviceId: simulatorTarget.deviceId });
   /** @type {Array<{ code: string, pairingUrl: string }>} */
   const pairingMaterials = [];
+  const artifactScanStartedAt = Date.now() - 5_000;
+  const simulatorLogRoot = join(
+    homedir(),
+    'Library',
+    'Logs',
+    'CoreSimulator',
+    simulatorTarget.deviceId
+  );
+  const scanCurrentPairingArtifacts = async () => {
+    const previousPhase = pairingLifecycle.phase;
+    pairingLifecycle.phase = 'artifact-scan';
+    const counts = pairingHandoff.readCounts();
+    pairingLifecycle.claimedCount = counts.claims;
+    pairingLifecycle.completedCount = counts.completions;
+    pairingLifecycle.pairedCount = counts.paired;
+    /** @type {Awaited<ReturnType<typeof scanPairingArtifacts>>} */
+    let result;
+    try {
+      result = await scanPairingArtifacts({
+        root: join(homedir(), '.maestro', 'tests'),
+        additionalRoots: [simulatorLogRoot],
+        requiredRoots: [join(homedir(), '.maestro', 'tests'), simulatorLogRoot],
+        afterMs: artifactScanStartedAt,
+        materials: pairingMaterials,
+      });
+    } catch (error) {
+      pairingLifecycle.artifactScan = 'failed';
+      pairingLifecycle.scannedFiles =
+        error instanceof PairingArtifactScanFailure ? error.scannedFiles : 0;
+      pairingLifecycle.scannedRoots =
+        error instanceof PairingArtifactScanFailure ? error.scannedRoots : 0;
+      pairingLifecycle.totalRoots =
+        error instanceof PairingArtifactScanFailure ? error.totalRoots : 2;
+      pairingLifecycle.artifactScanStage =
+        error instanceof PairingArtifactScanFailure ? error.stage : 'unknown';
+      throw new HarnessError(
+        `ios-e2e artifact scan failed${error instanceof PairingArtifactScanFailure ? ` at ${error.stage}` : ''}.`
+      );
+    }
+    pairingLifecycle.scannedFiles = result.scannedFiles;
+    pairingLifecycle.scannedRoots = result.scannedRoots;
+    pairingLifecycle.totalRoots = result.totalRoots;
+    if (result.filesWithPairingMaterial > 0) {
+      pairingLifecycle.artifactScan = 'matched';
+      throw new HarnessError(
+        'pairing material was found in a test artifact or simulator log; contents were not printed.'
+      );
+    }
+    pairingLifecycle.artifactScan = 'clean';
+    pairingLifecycle.artifactScanStage = null;
+    process.stdout.write(
+      `ios-e2e: checked issued=${pairingLifecycle.issuedCount} claims=${counts.claims} completions=${counts.completions} paired=${counts.paired} scannedRoots=${result.scannedRoots}/${result.totalRoots} scannedFiles=${result.scannedFiles} matches=${result.filesWithPairingMaterial}.\n`
+    );
+    pairingLifecycle.phase = previousPhase;
+  };
 
+  pairingLifecycle.phase = 'fixtures';
   const port = await allocatePort();
   const baseURL = new URL(`http://${HOST}:${port}`);
   const buildVersion = `ios-e2e-${randomUUID()}`;
@@ -447,6 +579,7 @@ async function main() {
   /** @type {Array<() => Promise<void>>} */
   const teardown = [async () => rmSync(dataDir, { recursive: true, force: true })];
   let tornDown = false;
+  let succeeded = false;
 
   /**
    * Every step runs even when one throws. They are independent — a pillar, a
@@ -456,6 +589,11 @@ async function main() {
   const tearDown = async () => {
     if (tornDown) return;
     tornDown = true;
+    try {
+      await processRunner?.close();
+    } catch (error) {
+      process.stderr.write(`ios-e2e: teardown step failed: ${String(error)}\n`);
+    }
     for (const step of teardown) {
       try {
         await step();
@@ -465,18 +603,7 @@ async function main() {
     }
   };
 
-  // A signal has to reach the teardown, not just this process. Ctrl-C happens
-  // to work without this — the terminal signals the whole foreground group, so
-  // the pillar dies with its parent — but `kill` on this pid alone does not,
-  // and it leaves a BFM listening on a port with nobody left who knows it is
-  // there. That is the exact state that made this harness pair against a
-  // stranger's pillar once already; see this file's note on the port.
-  for (const signal of ['SIGINT', 'SIGTERM']) {
-    process.once(signal, () => {
-      process.stderr.write(`\nios-e2e: ${signal} — tearing down.\n`);
-      void tearDown().then(() => process.exit(130));
-    });
-  }
+  processRunner = createProcessRunner({ graceMs: SHUTDOWN_GRACE_MS });
 
   try {
     // Started before the registry that advertises it, because the address it
@@ -530,6 +657,7 @@ async function main() {
     // Nothing else in this job builds the workspace, so the pillar's own
     // dependencies have to be built here — the same reason the Dockerfiles
     // build `@pops/bfm^...` before the pillar.
+    pairingLifecycle.phase = 'bfm-startup';
     await run('pnpm', ['--filter', '@pops/bfm...', 'build']);
 
     const bfm = spawn('node', [join(REPO_ROOT, 'pillars/bfm/dist/api/server.js')], {
@@ -570,6 +698,7 @@ async function main() {
     /** @type {URL | undefined} */
     let mcpBaseURL;
     if (mcpAuth !== undefined) {
+      pairingLifecycle.phase = 'mcp-startup';
       await run('pnpm', ['--filter', '@pops/mcp...', 'build']);
       const mcpPort = await allocatePort();
       mcpBaseURL = new URL(`http://${HOST}:${mcpPort}`);
@@ -589,7 +718,8 @@ async function main() {
         },
       });
       teardown.unshift(() => stop(mcp));
-      await waitForMcpReady(mcpBaseURL, mcp);
+      pairingLifecycle.phase = 'mcp-readiness';
+      await waitForMcpReady(mcpBaseURL, mcp, mcpAuth.token);
       process.stdout.write(`ios-e2e: MCP on ${mcpBaseURL.origin}, pairing issuer enabled\n`);
     }
 
@@ -599,6 +729,7 @@ async function main() {
     const pairingEndpoint =
       pairingIssuer === 'mcp' ? new URL('/mcp', mcpBaseURL).toString() : baseURL.origin;
 
+    pairingLifecycle.phase = 'fixtures';
     const control = await startControlPlane({
       bfmBaseUrl: baseURL.origin,
       accessTokenSecret: ACCESS_TOKEN_SECRET,
@@ -616,9 +747,10 @@ async function main() {
                 pairingBaseUrl,
                 brokerUrl,
                 handoff: pairingHandoff,
-                onPairingIssued: serveOnly
-                  ? undefined
-                  : (material) => pairingMaterials.push(material),
+                onPairingIssued: (material) => {
+                  pairingMaterials.push(material);
+                  pairingLifecycle.issuedCount = pairingMaterials.length;
+                },
                 token: mcpAuth?.token,
                 deviceId,
               });
@@ -646,18 +778,50 @@ async function main() {
     process.stdout.write(`ios-e2e: control plane on ${control.url}, proxying to the bfm\n`);
 
     if (serveOnly) {
-      await pairSimulatorForServeOnly({
-        controlUrl: control.url,
-        deviceId: simulatorTarget.deviceId,
-        handoff: pairingHandoff,
-      });
+      pairingLifecycle.phase = 'ios-e2e';
+      /** @type {unknown} */
+      let pairingError;
+      try {
+        await pairSimulatorForServeOnly({
+          controlUrl: control.url,
+          deviceId: simulatorTarget.deviceId,
+          handoff: pairingHandoff,
+        });
+      } catch (error) {
+        pairingError = error;
+      }
+      /** @type {unknown} */
+      let artifactScanError;
+      try {
+        await scanCurrentPairingArtifacts();
+      } catch (error) {
+        artifactScanError = error;
+      }
+      if (pairingError !== undefined && artifactScanError !== undefined) {
+        pairingLifecycle.phase = 'ios-e2e';
+      }
+      const primaryError = primaryPairingRunFailure(pairingError, artifactScanError);
+      if (primaryError !== undefined) throw primaryError;
       process.stdout.write(
         formatServeOnlyStatus({ bfmUrl: baseURL.origin, controlUrl: control.url })
       );
-      // Waits for a signal, which the handlers above turn into a teardown and
-      // an exit. Nothing resolves this.
-      await new Promise(() => {});
-      return;
+      await new Promise((resolve) => {
+        if (processRunner !== undefined && processRunner.signal() !== null) {
+          resolve(undefined);
+          return;
+        }
+        const onInterrupt = () => {
+          process.removeListener('SIGTERM', onTerminate);
+          resolve(undefined);
+        };
+        const onTerminate = () => {
+          process.removeListener('SIGINT', onInterrupt);
+          resolve(undefined);
+        };
+        process.once('SIGINT', onInterrupt);
+        process.once('SIGTERM', onTerminate);
+      });
+      throwIfStopping();
     }
     /** @type {NodeJS.ProcessEnv} */
     const iosEnv = {
@@ -669,7 +833,7 @@ async function main() {
     delete iosEnv.MCP_INBOUND_TOKEN;
     delete iosEnv.MCP_INBOUND_TOKEN_FILE;
     delete iosEnv.POPS_MCP_URL;
-    const artifactScanStartedAt = Date.now() - 5_000;
+    pairingLifecycle.phase = 'ios-e2e';
     /** @type {unknown} */
     let flowError;
     try {
@@ -677,31 +841,51 @@ async function main() {
     } catch (error) {
       flowError = error;
     }
-    const artifactScan = await scanPairingArtifacts({
-      root: join(homedir(), '.maestro', 'tests'),
-      afterMs: artifactScanStartedAt,
-      materials: pairingMaterials,
-    });
-    if (artifactScan.filesWithPairingMaterial > 0) {
-      throw new HarnessError(
-        'pairing material was found in a Maestro artifact; artifact contents were not printed.'
-      );
+    /** @type {unknown} */
+    let artifactScanError;
+    try {
+      await scanCurrentPairingArtifacts();
+    } catch (error) {
+      artifactScanError = error;
     }
-    process.stdout.write(
-      `ios-e2e: checked ${pairingMaterials.length} issued pairing material item(s) against ${artifactScan.scannedFiles} new Maestro artifact file(s); no match found.\n`
-    );
-    if (flowError !== undefined) throw flowError;
+    if (flowError !== undefined && artifactScanError !== undefined) {
+      pairingLifecycle.phase = 'ios-e2e';
+    }
+    const primaryError = primaryPairingRunFailure(flowError, artifactScanError);
+    if (primaryError !== undefined) throw primaryError;
+    pairingLifecycle.phase = 'complete';
+    succeeded = true;
   } finally {
+    const signal = processRunner?.signal();
+    if (signal !== null && signal !== undefined) succeeded = false;
+    if (
+      !succeeded &&
+      (pairingLifecycle.issuedCount > 0 || pairingLifecycle.phase === 'ios-e2e') &&
+      pairingLifecycle.artifactScan === 'not-run'
+    ) {
+      try {
+        await scanCurrentPairingArtifacts();
+      } catch {
+        // The lifecycle summary below carries the scan outcome without replacing the run failure.
+      }
+    }
+    if (!succeeded) reportPairingLifecycleFailure();
     await tearDown();
+    if (signal === 'SIGINT') process.exitCode = 130;
+    if (signal === 'SIGTERM') process.exitCode = 143;
   }
 }
 
 try {
   await main();
 } catch (error) {
+  reportPairingLifecycleFailure();
   if (error instanceof HarnessError) {
     process.stderr.write(`ios-e2e: ${error.message}\n`);
-    process.exitCode = 1;
+    const signal = processRunner?.signal();
+    if (signal === 'SIGINT') process.exitCode = 130;
+    else if (signal === 'SIGTERM') process.exitCode = 143;
+    else process.exitCode = 1;
   } else {
     throw error;
   }

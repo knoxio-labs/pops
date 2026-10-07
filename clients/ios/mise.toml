@@ -694,6 +694,11 @@ description = "Concurrent local simulator runs cannot enter together"
 hide = true
 run = "bash scripts/with-simulator-lock.sh --self-test"
 
+[tasks."verify:simulator-ats-policy"]
+description = "Only Debug simulator app plists permit ATS local networking"
+hide = true
+run = "scripts/test-prepare-info-plist.sh"
+
 # The one entry point. `.github/workflows/ios-quality.yml` invokes this task
 # rather than restating the commands, because the moment the two are written
 # out separately they drift and a green local run means nothing.
@@ -744,6 +749,7 @@ mise run verify:camera-purpose || status=1
 mise run verify:app-package-pin || status=1
 mise run verify:app-test-linkage || status=1
 mise run verify:simulator-lock || status=1
+mise run verify:simulator-ats-policy || status=1
 
 if mise run verify:xcode-version; then
   mise run swift-format lint || status=1
@@ -995,9 +1001,9 @@ echo "e2e: driving $(echo "$flows" | wc -l | tr -d ' ') flow(s)."
 # of aborting the loop, so one bad flow no longer costs the signal
 # from the other five. The private native pairing handoff is a harness
 # precondition every flow shares, so an issuance or delivery failure fails that
-# flow without exposing the code to Maestro. A Maestro assertion failure is
-# specific to its own flow and does not tell us anything about the others, so
-# it must not stop them from running.
+# flow unless the app reports that it stored credentials for the expected BFM
+# origin. A Maestro assertion failure is specific to its own flow and does not
+# tell us anything about the others, so it must not stop them from running.
 failed_flows=""
 
 for flow in $flows; do

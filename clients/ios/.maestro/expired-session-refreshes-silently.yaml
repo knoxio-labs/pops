@@ -7,6 +7,7 @@ name: An expired access token is renewed without the screen noticing
 - clearState
 - clearKeychain
 - launchApp
+- runFlow: subflows/dismiss-stale-pairing-open-prompt.yaml
 
 - assertVisible:
     id: 'pairing-code-field'

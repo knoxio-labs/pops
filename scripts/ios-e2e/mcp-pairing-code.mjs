@@ -45,6 +45,24 @@ export function createMcpInboundAuth() {
 }
 
 /**
+ * Checks that the local gateway is ready with both credentials and at least one registered tool.
+ *
+ * @param {unknown} value
+ * @returns {boolean}
+ */
+export function isMcpReadyResponse(value) {
+  return (
+    isRecord(value) &&
+    value['status'] === 'ready' &&
+    value['apiKeyConfigured'] === true &&
+    value['inboundAuthConfigured'] === true &&
+    typeof value['tools'] === 'number' &&
+    Number.isSafeInteger(value['tools']) &&
+    value['tools'] > 0
+  );
+}
+
+/**
  * Parse the JSON-RPC result emitted by a Streamable HTTP MCP response.
  *
  * Both direct JSON responses and server-sent-event responses are accepted so
@@ -79,6 +97,59 @@ export async function callMcpTool({
   arguments: toolArguments,
   fetchImpl = fetch,
 }) {
+  const { body, contentType } = await sendMcpRequest({
+    endpoint,
+    token,
+    method: 'tools/call',
+    params: { name, arguments: toolArguments },
+    fetchImpl,
+  });
+  return parseMcpToolResult(body, contentType);
+}
+
+/**
+ * Checks the authenticated MCP tool list for the pairing-code issuer without calling it.
+ *
+ * @param {{ endpoint: string, token?: string, fetchImpl?: typeof fetch, signal?: AbortSignal }} options
+ * @returns {Promise<boolean>}
+ */
+export async function hasPairingCodeIssuerTool({ endpoint, token, fetchImpl = fetch, signal }) {
+  const { body, contentType } = await sendMcpRequest({
+    endpoint,
+    token,
+    method: 'tools/list',
+    params: {},
+    fetchImpl,
+    signal,
+  });
+  const message = parseJsonRpcMessage(body, contentType);
+  const toolList =
+    isRecord(message) && isRecord(message['result']) ? message['result']['tools'] : null;
+  if (
+    !isRecord(message) ||
+    !isRecord(message['result']) ||
+    message['error'] !== undefined ||
+    !Array.isArray(toolList) ||
+    toolList.some(
+      /** @param {unknown} tool */
+      (tool) => !isRecord(tool) || typeof tool['name'] !== 'string'
+    )
+  ) {
+    throw new PairingMcpFailure('mcp-response');
+  }
+  return toolList.some(
+    /** @param {unknown} tool */
+    (tool) => isRecord(tool) && tool['name'] === TOOL_NAME
+  );
+}
+
+/**
+ * Sends one stateless Streamable HTTP MCP request and reads its private response body.
+ *
+ * @param {{ endpoint: string, token?: string, method: 'tools/call' | 'tools/list', params: Record<string, unknown>, fetchImpl: typeof fetch, signal?: AbortSignal }} options
+ * @returns {Promise<{ body: string, contentType: string | null }>}
+ */
+async function sendMcpRequest({ endpoint, token, method, params, fetchImpl, signal }) {
   const headers = {
     accept: 'application/json, text/event-stream',
     'content-type': 'application/json',
@@ -95,9 +166,10 @@ export async function callMcpTool({
       body: JSON.stringify({
         jsonrpc: '2.0',
         id: 1,
-        method: 'tools/call',
-        params: { name, arguments: toolArguments },
+        method,
+        params,
       }),
+      ...(signal === undefined ? {} : { signal }),
     });
   } catch {
     throw new PairingMcpFailure('mcp-transport');
@@ -110,7 +182,7 @@ export async function callMcpTool({
   } catch {
     throw new PairingMcpFailure('mcp-response');
   }
-  return parseMcpToolResult(body, response.headers.get('content-type'));
+  return { body, contentType: response.headers.get('content-type') };
 }
 
 /**

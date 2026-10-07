@@ -3,3 +3,12 @@ name: Pair this simulator through the host handoff
 ---
 - runScript:
     file: ../scripts/pair-this-simulator.js
+
+- runFlow:
+    when:
+      visible: 'Open in “Pops Local”\?'
+    commands:
+      - tapOn: Open
+
+- runScript:
+    file: ../scripts/await-simulator-pairing.js

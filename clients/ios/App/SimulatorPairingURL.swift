@@ -52,22 +52,29 @@
 
         internal static func claim(_ handoff: Handoff) async -> PairingDetails? {
             guard let request = claimRequest(for: handoff) else { return nil }
-            let configuration = URLSessionConfiguration.ephemeral
-            configuration.urlCache = nil
-            configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
-            configuration.httpShouldSetCookies = false
-            let session = URLSession(
-                configuration: configuration,
-                delegate: RejectPairingRedirects(),
-                delegateQueue: nil
-            )
-            defer { session.invalidateAndCancel() }
             do {
-                let (data, response) = try await session.data(for: request)
+                let (data, response) = try await SimulatorPairingRequest.send(request)
                 return parseClaim(data, response: response, handoff: handoff, now: Date())
             } catch {
                 return nil
             }
+        }
+
+        internal static func hasSameOrigin(_ lhs: URL, _ rhs: URL) -> Bool {
+            guard
+                let lhs = pairingBaseURL(lhs.absoluteString),
+                let rhs = pairingBaseURL(rhs.absoluteString)
+            else { return false }
+            return lhs == rhs
+        }
+
+        internal static func brokerURL(for handoff: Handoff) -> URL? {
+            guard
+                isSimulatorID(handoff.deviceID),
+                isHandoffInstanceID(handoff.instanceID),
+                handoff.generation > 0
+            else { return nil }
+            return loopbackBrokerURL(handoff.brokerURL.absoluteString)
         }
 
         private static func handoff(from url: URL) -> Handoff? {
@@ -114,7 +121,7 @@
                 components.fragment == nil,
                 components.user == nil,
                 components.password == nil,
-                let url = components.url
+                components.url != nil
             else { return nil }
 
             return URL(string: "http://127.0.0.1:\(port)", relativeTo: nil)
@@ -122,10 +129,7 @@
 
         private static func claimRequest(for handoff: Handoff) -> URLRequest? {
             guard
-                isSimulatorID(handoff.deviceID),
-                isHandoffInstanceID(handoff.instanceID),
-                handoff.generation > 0,
-                let brokerURL = loopbackBrokerURL(handoff.brokerURL.absoluteString),
+                let brokerURL = brokerURL(for: handoff),
                 var components = URLComponents(url: brokerURL, resolvingAgainstBaseURL: false)
             else { return nil }
             components.path = claimPath
@@ -229,15 +233,4 @@
         }
     }
 
-    private final class RejectPairingRedirects: NSObject, URLSessionTaskDelegate {
-        func urlSession(
-            _ session: URLSession,
-            task: URLSessionTask,
-            willPerformHTTPRedirection response: HTTPURLResponse,
-            newRequest request: URLRequest,
-            completionHandler: @escaping (URLRequest?) -> Void
-        ) {
-            completionHandler(nil)
-        }
-    }
 #endif

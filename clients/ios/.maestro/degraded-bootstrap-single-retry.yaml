@@ -4,6 +4,7 @@ name: A degraded bootstrap and failed transactions load present one recovery act
 - clearState
 - clearKeychain
 - launchApp
+- runFlow: subflows/dismiss-stale-pairing-open-prompt.yaml
 - runScript: scripts/receipts-become-available.js
 - assertTrue: ${output.receipts.status == 200}
 - assertTrue: ${output.receipts.state.purchasesReachable == true}

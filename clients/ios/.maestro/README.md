@@ -52,8 +52,8 @@ keeps each code and pairing URL in memory, then opens a broker trigger through
 broker-instance and generation metadata. The app claims the details in a
 single no-store response and submits them through its real pairing flow.
 Maestro receives only server addresses and the simulator identifier; the
-harness scans new artifacts against the issued pairing material before the run
-completes.
+harness scans new artifacts and that simulator's CoreSimulator logs against
+the issued pairing material before the run completes.
 `scripts/ios-e2e/run.mjs` is that command and carries the reasoning for each
 part of it, including why it runs the pillar with Node rather than Docker and
 why it does not use port 3014.
@@ -65,8 +65,10 @@ installed and unpaired on an explicitly selected disposable simulator via
 host requests one code through MCP and opens a non-secret broker trigger
 through a native URL route compiled only for Debug simulator builds. The app
 claims the code from the loopback broker once, with caching and redirects
-disabled. This task waits for the app to claim the handoff; it does not run a
-Maestro flow or verify that the BFM accepted the code.
+disabled. Debug simulator builds allow ATS local networking for this loopback
+request; device and Release builds carry no such exception. This task waits for
+the app to report a stored session for the expected BFM origin; it does not run
+a Maestro flow.
 
 `mise run e2e:ios -- --serve-only` starts the same local fixture without running
 Maestro. It requires the selected disposable simulator to have the unpaired
@@ -77,9 +79,12 @@ addresses and keeps the fixture running until Ctrl-C.
 `POPS_BFM_BASE_URL`, `POPS_E2E_CONTROL_URL` and the exact disposable simulator
 ID, and speaks HTTP to the local loopback control plane. For each flow, the
 host privately issues a code and opens a non-secret broker trigger through a
-Debug-simulator-only `pops://` route. The app claims the code once and pairs
-before the flow continues; the pairing screen stays hidden until the handoff
-finishes so a failed handoff cannot capture the code in a screenshot.
+Debug-simulator-only `pops://` route. A flow dismisses only a stale “Open in
+Pops Local?” confirmation before checking the unpaired screen, then accepts
+that confirmation only after dispatching its current trigger. The app claims
+the code once and the flow waits for stored-session completion before
+continuing; the pairing screen stays hidden until the handoff finishes so a
+failed handoff cannot capture the code in a screenshot.
 The task rejects missing, malformed, or non-disposable simulator IDs before
 booting or installing the app; the root harness passes the ID it validated.
 
@@ -202,12 +207,13 @@ assertion is worth only as much as the positive one in front of it. Every
 first; moving one above it turns it into a line that cannot fail.
 
 The pairing preamble lives in `subflows/enter-the-pairing-details.yaml`, where
-`runScript` asks the host control plane to issue and deliver a private pairing
-handoff. The code and pairing URL stay in host memory; the simulator argument
-contains only the loopback broker and public instance/generation metadata. `simctl` output
-is discarded, the app claims the code once over HTTP, and the script response
-contains only delivery status. The flow continues against its real BFM
-fixture, so its later screen assertions verify that pairing succeeded.
+one `runScript` asks the host control plane to issue and dispatch a private
+pairing handoff, and a later one waits for its completion. The code and pairing
+URL stay in host memory; the simulator argument contains only the loopback
+broker and public instance/generation metadata. `simctl` output is discarded,
+and the app claims the code once over HTTP. The control plane reports dispatch
+separately and reports pairing success only after the app stores credentials
+for the expected BFM origin.
 
 The transaction rows the flows expect come from
 `scripts/ios-e2e/transactions-fixture.mjs`. Purchase rows and month figures

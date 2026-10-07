@@ -11,6 +11,17 @@
         private let generation = 7
         private let now = Date(timeIntervalSince1970: 1_800_000_000)
 
+        @Test("debug simulator app permits only local networking for the pairing broker")
+        func debugSimulatorNetworkingPolicy() throws {
+            let info = try #require(Bundle.main.infoDictionary)
+            let transportSecurity = try #require(
+                info["NSAppTransportSecurity"] as? [String: Any]
+            )
+
+            #expect(transportSecurity["NSAllowsLocalNetworking"] as? Bool == true)
+            #expect(transportSecurity["NSAllowsArbitraryLoads"] as? Bool != true)
+        }
+
         @Test("a loopback trigger carries only public simulator and broker metadata")
         func handlesValidHandoff() throws {
             let url = try #require(triggerURL())
@@ -79,7 +90,7 @@
             #expect(requestSeen?.httpMethod == "POST")
             #expect(requestSeen?.url?.absoluteString == "http://127.0.0.1:3011/__e2e/pair/claim")
             let requestBody = try #require(requestSeen?.httpBody)
-            let requestText = String(decoding: requestBody, as: UTF8.self)
+            let requestText = try #require(String(bytes: requestBody, encoding: .utf8))
             #expect(requestText.contains(deviceID))
             #expect(requestText.contains(instanceID))
             #expect(requestText.contains("\"generation\":\(generation)"))
@@ -101,39 +112,23 @@
             let unsafeOrigin = try claimData(pairingBaseUrl: "http://bfm.example.com")
             let pathOrigin = try claimData(pairingBaseUrl: "https://bfm.example.com/prefix")
 
-            let wrongTargetClaim = await SimulatorPairingURL.claim(handoff, now: now) { _ in
-                (wrongTarget, noStore)
-            }
-            let wrongInstanceClaim = await SimulatorPairingURL.claim(handoff, now: now) { _ in
-                (wrongInstance, noStore)
-            }
-            let wrongGenerationClaim = await SimulatorPairingURL.claim(handoff, now: now) { _ in
-                (wrongGeneration, noStore)
-            }
-            let expiredClaim = await SimulatorPairingURL.claim(handoff, now: now) { _ in
-                (expired, noStore)
-            }
-            let unsafeOriginClaim = await SimulatorPairingURL.claim(handoff, now: now) { _ in
-                (unsafeOrigin, noStore)
-            }
-            let pathOriginClaim = await SimulatorPairingURL.claim(handoff, now: now) { _ in
-                (pathOrigin, noStore)
-            }
-            let cacheableClaim = await SimulatorPairingURL.claim(handoff, now: now) { _ in
-                (validData, cacheable)
-            }
-            let redirectClaim = await SimulatorPairingURL.claim(handoff, now: now) { _ in
-                (validData, redirect)
-            }
+            let invalidResponses = [
+                (wrongTarget, noStore),
+                (wrongInstance, noStore),
+                (wrongGeneration, noStore),
+                (expired, noStore),
+                (unsafeOrigin, noStore),
+                (pathOrigin, noStore),
+                (validData, cacheable),
+                (validData, redirect),
+            ]
 
-            #expect(wrongTargetClaim == nil)
-            #expect(wrongInstanceClaim == nil)
-            #expect(wrongGenerationClaim == nil)
-            #expect(expiredClaim == nil)
-            #expect(unsafeOriginClaim == nil)
-            #expect(pathOriginClaim == nil)
-            #expect(cacheableClaim == nil)
-            #expect(redirectClaim == nil)
+            for (data, response) in invalidResponses {
+                let result = await SimulatorPairingURL.claim(handoff, now: now) { _ in
+                    (data, response)
+                }
+                #expect(result == nil)
+            }
         }
 
         @Test("claim transport errors do not surface response content")
@@ -194,10 +189,13 @@
             ])
         }
 
-        private func httpResponse(status: Int, headers: [String: String]) throws -> HTTPURLResponse
-        {
-            let url = try #require(URL(string: "http://127.0.0.1:3011/__e2e/pair/claim"))
-            try #require(
+        private func httpResponse(
+            status: Int,
+            headers: [String: String],
+            path: String = "/__e2e/pair/claim"
+        ) throws -> HTTPURLResponse {
+            let url = try #require(URL(string: "http://127.0.0.1:3011\(path)"))
+            return try #require(
                 HTTPURLResponse(
                     url: url,
                     statusCode: status,

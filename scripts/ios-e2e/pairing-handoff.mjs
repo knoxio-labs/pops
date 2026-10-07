@@ -8,6 +8,7 @@ const PAIRING_CODE = /^[2-9A-HJ-NP-Z]{4}(?:-[2-9A-HJ-NP-Z]{4}){2}$/u;
 const CLAIM_PATH = '/__e2e/pair/claim';
 const COMPLETION_PATH = '/__e2e/pair/complete';
 const MAX_BODY_BYTES = 1024;
+const PAIRING_HANDOFF_TIMEOUT_MS = 5 * 60 * 1000;
 const PAIRING_COMPLETION_TIMEOUT_MS = 120_000;
 let nextHandoffInstance = 1;
 
@@ -27,11 +28,12 @@ export function isHandoffInstanceIdentifier(instanceId) {
 }
 
 /**
- * Holds one simulator's pairing details in process memory until the exact
- * handoff generation claims them once or the code expires.
+ * Holds one simulator's pairing details in process memory until its exact
+ * handoff generation claims them once or the code expires, then records whether
+ * the app stored a session for that BFM origin.
  *
  * @param {{ deviceId: string, now?: () => number }} options
- * @returns {{ instanceId: string, offer: (details: { deviceId: string, pairingBaseUrl: string, code: string, expiresAt: string }) => number, claim: (request: { deviceId: string, instanceId: string, generation: number }) => { deviceId: string, instanceId: string, generation: number, pairingBaseUrl: string, code: string, expiresAt: string } | null, complete: (request: { deviceId: string, instanceId: string, generation: number, paired: boolean }) => boolean, clear: (generation?: number) => void, reset: () => void, waitForClaim: (timeoutMs: number) => Promise<boolean>, waitForPairing: (timeoutMs: number) => Promise<boolean> }}
+ * @returns {{ instanceId: string, offer: (details: { deviceId: string, pairingBaseUrl: string, code: string, expiresAt: string }) => number, claim: (request: { deviceId: string, instanceId: string, generation: number }) => { deviceId: string, instanceId: string, generation: number, pairingBaseUrl: string, code: string, expiresAt: string } | null, complete: (request: { deviceId: string, instanceId: string, generation: number, paired: boolean }) => boolean, readCounts: () => { claims: number, completions: number, paired: number }, clear: (generation?: number) => void, reset: () => void, waitForClaim: (timeoutMs: number) => Promise<boolean>, waitForPairing: (timeoutMs?: number) => Promise<boolean> }}
  */
 export function createPairingHandoff({ deviceId, now = Date.now }) {
   if (!SIMULATOR_ID.test(deviceId)) throw new Error('ios-e2e simulator ID is invalid.');
@@ -41,21 +43,27 @@ export function createPairingHandoff({ deviceId, now = Date.now }) {
 
   /** @type {{ deviceId: string, generation: number, pairingBaseUrl: string, code: string, expiresAt: string, expiresAtMs: number } | null} */
   let pending = null;
+  /** @type {number | null} */
   let activeGeneration = null;
+  /** @type {number | null} */
   let activeCodeExpiresAtMs = null;
+  /** @type {number | null} */
   let completionExpiresAtMs = null;
   /** @type {Set<(claimed: boolean) => void>} */
   const claimWaiters = new Set();
   /** @type {Set<(paired: boolean) => void>} */
   const pairingWaiters = new Set();
   let hasClaimed = false;
+  let claimCount = 0;
+  let completionCount = 0;
+  let pairedCount = 0;
   /** @type {boolean | null} */
   let pairingResult = null;
   let nextGeneration = 0;
 
+  /** @param {number} [generation] */
   const clear = (generation) => {
     if (generation !== undefined && generation !== activeGeneration) return;
-    const previousGeneration = activeGeneration;
     pending = null;
     activeGeneration = null;
     activeCodeExpiresAtMs = null;
@@ -64,16 +72,12 @@ export function createPairingHandoff({ deviceId, now = Date.now }) {
     pairingResult = null;
     for (const waiter of claimWaiters) waiter(false);
     for (const waiter of pairingWaiters) waiter(false);
-    if (previousGeneration === null) return;
   };
 
+  /** @param {number} timeoutMs */
   const waitForClaim = (timeoutMs) => {
     if (hasClaimed) return Promise.resolve(true);
-    if (
-      timeoutMs <= 0 ||
-      pending === null ||
-      activeCodeExpiresAtMs === null
-    ) {
+    if (timeoutMs <= 0 || pending === null || activeCodeExpiresAtMs === null) {
       return Promise.resolve(false);
     }
     const remainingMs = Math.min(timeoutMs, activeCodeExpiresAtMs - now());
@@ -92,7 +96,8 @@ export function createPairingHandoff({ deviceId, now = Date.now }) {
     });
   };
 
-  const waitForPairing = async (timeoutMs) => {
+  /** @param {number} [timeoutMs] */
+  const waitForPairing = async (timeoutMs = PAIRING_HANDOFF_TIMEOUT_MS) => {
     if (!(await waitForClaim(timeoutMs))) return false;
     if (pairingResult !== null) return pairingResult;
     if (timeoutMs <= 0 || completionExpiresAtMs === null) return false;
@@ -114,6 +119,9 @@ export function createPairingHandoff({ deviceId, now = Date.now }) {
 
   return {
     instanceId,
+    readCounts() {
+      return { claims: claimCount, completions: completionCount, paired: pairedCount };
+    },
     offer({ deviceId: targetDeviceId, pairingBaseUrl, code, expiresAt }) {
       if (
         targetDeviceId !== deviceId ||
@@ -148,12 +156,11 @@ export function createPairingHandoff({ deviceId, now = Date.now }) {
         throw new Error('ios-e2e pairing handoff is expired.');
       }
       if (
-        pending !== null &&
-        pending.expiresAtMs > now() ||
-        hasClaimed &&
-        pairingResult === null &&
-        completionExpiresAtMs !== null &&
-        completionExpiresAtMs > now()
+        (pending !== null && pending.expiresAtMs > now()) ||
+        (hasClaimed &&
+          pairingResult === null &&
+          completionExpiresAtMs !== null &&
+          completionExpiresAtMs > now())
       ) {
         throw new Error('ios-e2e pairing handoff is already pending.');
       }
@@ -195,6 +202,7 @@ export function createPairingHandoff({ deviceId, now = Date.now }) {
       const current = pending;
       pending = null;
       hasClaimed = true;
+      claimCount += 1;
       completionExpiresAtMs = now() + PAIRING_COMPLETION_TIMEOUT_MS;
       for (const waiter of claimWaiters) waiter(true);
       return {
@@ -220,6 +228,8 @@ export function createPairingHandoff({ deviceId, now = Date.now }) {
         return false;
       }
       pairingResult = paired;
+      completionCount += 1;
+      if (paired) pairedCount += 1;
       for (const waiter of pairingWaiters) waiter(paired);
       return true;
     },

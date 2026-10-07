@@ -50,7 +50,7 @@
 import { createServer } from 'node:http';
 
 import { deviceIdFrom, mintAgedAccessToken } from './aged-access-token.mjs';
-import { handlePairingClaim } from './pairing-handoff.mjs';
+import { handlePairingClaim, handlePairingCompletion } from './pairing-handoff.mjs';
 import { boundAddress } from './server-address.mjs';
 import { isSimulatorIdentifier } from './simulator-pairing.mjs';
 
@@ -65,6 +65,7 @@ const CONTROL_PREFIX = '/__e2e/';
  * switch here, because it is a sequence of real calls to the pillar.
  */
 const USER_DEFINED_TYPE_PATH = '/__e2e/inventory/user-defined-type';
+const PAIRING_STATUS_PATH = '/__e2e/pair/status';
 
 /** The only prefix that carries a bearer token — `AuthenticatingMiddleware` agrees. */
 const AUTHENTICATED_PREFIX = '/mobile/';
@@ -474,13 +475,15 @@ export async function startControlPlane({
 
     const target = new URL(request.url, bfmBaseUrl);
 
-    if (target.pathname === '/__e2e/pair/claim') {
+    if (target.pathname === '/__e2e/pair/claim' || target.pathname === '/__e2e/pair/complete') {
       if (pairingHandoff === undefined || host !== '127.0.0.1') {
         return json(503, { message: 'ios-e2e pairing handoff is unavailable.' });
       }
-      void handlePairingClaim(request, response, pairingHandoff).then((handled) => {
+      const handle =
+        target.pathname === '/__e2e/pair/claim' ? handlePairingClaim : handlePairingCompletion;
+      void handle(request, response, pairingHandoff).then((handled) => {
         if (!handled && !response.writableEnded) {
-          json(400, { message: 'ios-e2e pairing claim is invalid.' });
+          json(400, { message: 'ios-e2e pairing handoff request is invalid.' });
         }
       });
       return;
@@ -567,7 +570,58 @@ export async function startControlPlane({
           return;
         }
 
-        json(200, { delivered: true });
+        json(202, { triggerDispatched: true });
+      })();
+      return;
+    }
+
+    if (request.method === 'POST' && target.pathname === PAIRING_STATUS_PATH) {
+      void (async () => {
+        if (
+          host !== '127.0.0.1' ||
+          simulatorDeviceId === undefined ||
+          pairingHandoff === undefined
+        ) {
+          json(503, { message: 'ios-e2e native pairing is unavailable.' });
+          return;
+        }
+
+        let rawBody;
+        try {
+          rawBody = await readBody(request);
+        } catch {
+          json(400, { message: 'ios-e2e native pairing status request is invalid.' });
+          return;
+        }
+        if (rawBody.byteLength > 1024) {
+          json(400, { message: 'ios-e2e native pairing status request is invalid.' });
+          return;
+        }
+
+        /** @type {unknown} */
+        let body;
+        try {
+          body = JSON.parse(rawBody.toString('utf8'));
+        } catch {
+          json(400, { message: 'ios-e2e native pairing status request is invalid.' });
+          return;
+        }
+        if (
+          !isRecord(body) ||
+          Object.keys(body).length !== 1 ||
+          body['deviceId'] !== simulatorDeviceId
+        ) {
+          json(400, { message: 'ios-e2e native pairing status request is invalid.' });
+          return;
+        }
+
+        if (!(await pairingHandoff.waitForPairing())) {
+          pairingHandoff.reset();
+          json(502, { message: 'ios-e2e simulator did not store a session for this BFM.' });
+          return;
+        }
+
+        json(200, { paired: true });
       })();
       return;
     }

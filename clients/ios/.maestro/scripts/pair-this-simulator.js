@@ -6,6 +6,8 @@ const pairing = http.post(CONTROL_BASE_URL + '/__e2e/pair', {
   }),
 });
 
-if (pairing.status !== 200) throw new Error('native simulator pairing failed');
+if (pairing.status !== 202 || json(pairing.body).triggerDispatched !== true) {
+  throw new Error('native simulator pairing trigger was not dispatched');
+}
 
-output.pairing = { delivered: true };
+output.pairingTrigger = { dispatched: true };

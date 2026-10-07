@@ -15,7 +15,7 @@ export function formatServeOnlyStatus({ bfmUrl, controlUrl }) {
   return (
     `\nios-e2e: server address ${bfmUrl}\n` +
     `ios-e2e: recovery-flow server address ${controlUrl} (same bfm, switchable)\n` +
-    'ios-e2e: the selected simulator claimed its pairing handoff; Ctrl-C to tear this down.\n\n'
+    'ios-e2e: the selected simulator stored a session for this BFM; Ctrl-C to tear this down.\n\n'
   );
 }
 
@@ -73,13 +73,13 @@ export async function pairSimulatorForServeOnly({
   }
   if (
     !isRecord(body) ||
-    Object.keys(body).toSorted().join(',') !== 'delivered' ||
-    body['delivered'] !== true
+    Object.keys(body).toSorted().join(',') !== 'paired' ||
+    body['paired'] !== true
   ) {
     throw new Error('ios-e2e serve-only pairing delivery failed.');
   }
 
-  if (!(await handoff.waitForClaim(timeoutMs))) {
-    throw new Error('ios-e2e serve-only simulator did not claim the pairing handoff.');
+  if (!(await handoff.waitForPairing(timeoutMs))) {
+    throw new Error('ios-e2e serve-only simulator did not store a session for this BFM.');
   }
 }

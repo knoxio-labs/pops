@@ -284,11 +284,11 @@ export async function runSimulatorPairing({
       return exitCode;
     }
 
-    if (!(await handoff.waitForClaim(5 * 60 * 1000))) {
-      writeStderr('ios-e2e: simulator did not claim the pairing handoff before it expired.\n');
+    if (!(await handoff.waitForPairing(5 * 60 * 1000))) {
+      writeStderr('ios-e2e: simulator did not store a session for this BFM.\n');
       return 1;
     }
-    writeStdout('ios-e2e: simulator claimed the pairing handoff.\n');
+    writeStdout('ios-e2e: simulator stored a session for this BFM.\n');
     return 0;
   } catch (error) {
     writeStderr(`${formatPairingFailure(error)}\n`);

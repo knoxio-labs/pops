@@ -1,0 +1,8 @@
+appId: com.knoxiolabs.pops.local
+name: Dismiss a stale app-open confirmation before pairing
+---
+- runFlow:
+    when:
+      visible: 'Open in “Pops Local”\?'
+    commands:
+      - tapOn: Cancel

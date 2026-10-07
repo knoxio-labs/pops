@@ -154,6 +154,13 @@ internal struct RootView: View {
             else { return }
 
             await pairingModel.pair()
+            let pairedForOrigin: Bool
+            if case .paired(let device) = composition.session.state {
+                pairedForOrigin = SimulatorPairingURL.hasSameOrigin(device.baseURL, baseURL)
+            } else {
+                pairedForOrigin = false
+            }
+            _ = await SimulatorPairingCompletion.send(handoff, paired: pairedForOrigin)
         }
     #endif
 

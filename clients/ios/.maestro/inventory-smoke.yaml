@@ -6,6 +6,7 @@ name: Inventory automatically downloads, then creates, moves, discards and undoe
 - clearState
 - clearKeychain
 - launchApp
+- runFlow: subflows/dismiss-stale-pairing-open-prompt.yaml
 
 - assertVisible:
     id: 'pairing-code-field'

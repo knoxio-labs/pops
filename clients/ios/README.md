@@ -155,7 +155,7 @@ simulator pairing URL handler is compiled only for Debug simulator builds.
 
 Debug bakes in `http://localhost:3014` so simulator work does not have to pair against a real deployment first, and honours a `POPS_BFM_BASE_URL` environment variable — set one on the scheme's Run action to aim a single run somewhere else. Release ignores the override, so a shipped app cannot be re-pointed by whoever launches it.
 
-The value is a per-configuration build setting in `project.yml`, read through `App/Info.plist`. It needs a real `Info.plist` because Xcode honours `INFOPLIST_KEY_*` only for keys on its own allowlist and drops the rest silently — a generated plist cannot carry a custom key. `BuiltInBaseURL` in `Packages/BFMClient` resolves it, rejecting anything that is not an absolute HTTP(S) URL so an unexpanded build setting fails at launch rather than at the first request.
+The value is a per-configuration build setting in `project.yml`, read through `App/Info.plist`. Xcode honours `INFOPLIST_KEY_*` only for keys on its own allowlist and drops the rest silently, so `prepare-info-plist.sh` copies the source plist into `DERIVED_FILE_DIR` before Xcode processes it. The same step permits ATS local networking only for Debug simulator builds, where the pairing broker uses loopback HTTP. `BuiltInBaseURL` in `Packages/BFMClient` resolves the base URL, rejecting anything that is not an absolute HTTP(S) URL so an unexpanded build setting fails at launch rather than at the first request.
 
 `mise run verify:release-carries-no-host` builds Release and greps the result for the host Debug uses, reading that host out of the Debug configuration rather than repeating it, so the check cannot drift.
 

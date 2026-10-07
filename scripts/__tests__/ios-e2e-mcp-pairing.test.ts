@@ -4,6 +4,8 @@ import {
   callMcpTool,
   createMcpInboundAuth,
   formatPairingMcpFailure,
+  hasPairingCodeIssuerTool,
+  isMcpReadyResponse,
   issuePairingCodeViaMcp,
   parsePairingCodeResponse,
 } from '../ios-e2e/mcp-pairing-code.mjs';
@@ -96,6 +98,71 @@ describe('createMcpInboundAuth', () => {
     expect(childEnvironment['MCP_INBOUND_TOKEN_FILE'] === '').toBe(true);
     expect(childEnvironment['MCP_INBOUND_TOKEN'] === auth.token).toBe(true);
     expect(childEnvironment['MCP_INBOUND_TOKEN'] === 'inherited-token').toBe(false);
+  });
+});
+
+describe('MCP pairing readiness', () => {
+  it('accepts additive tool growth while requiring both configured credentials and a non-empty tool list', () => {
+    const ready = {
+      status: 'ready',
+      apiKeyConfigured: true,
+      inboundAuthConfigured: true,
+      tools: 70,
+    };
+
+    expect(isMcpReadyResponse(ready)).toBe(true);
+    expect(isMcpReadyResponse({ ...ready, tools: 88 })).toBe(true);
+    expect(isMcpReadyResponse({ ...ready, tools: 89 })).toBe(true);
+    expect(isMcpReadyResponse({ ...ready, apiKeyConfigured: false })).toBe(false);
+    expect(isMcpReadyResponse({ ...ready, inboundAuthConfigured: false })).toBe(false);
+    expect(isMcpReadyResponse({ ...ready, tools: 0 })).toBe(false);
+    expect(isMcpReadyResponse({ ...ready, tools: 1.5 })).toBe(false);
+  });
+
+  it('requires the authenticated tool list to include the pairing issuer', async () => {
+    let request: RequestInit | undefined;
+    const token = createMcpInboundAuth().token;
+    const toolList = Array.from({ length: 88 }, (_, index) => ({ name: `tool.${index}` }));
+    toolList.push({ name: 'bfm.devicePairing.issueCode' });
+    const responseBody = JSON.stringify({
+      jsonrpc: '2.0',
+      id: 1,
+      result: { tools: toolList },
+    });
+    const fetchImpl: typeof fetch = async (_input, init) => {
+      request = init;
+      return new Response(responseBody, {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    };
+
+    await expect(
+      hasPairingCodeIssuerTool({
+        endpoint: 'http://127.0.0.1:3011/mcp',
+        token,
+        fetchImpl,
+      })
+    ).resolves.toBe(true);
+
+    expect(request?.method).toBe('POST');
+    const headers = new Headers(request?.headers);
+    expect(headers.get('authorization') === `Bearer ${token}`).toBe(true);
+    expect(headers.get('mcp-protocol-version')).toBe('2025-06-18');
+    expect(JSON.parse(String(request?.body))).toMatchObject({
+      method: 'tools/list',
+      params: {},
+    });
+
+    const missingIssuer = await hasPairingCodeIssuerTool({
+      endpoint: 'http://127.0.0.1:3011/mcp',
+      fetchImpl: async () =>
+        new Response(
+          JSON.stringify({ jsonrpc: '2.0', id: 1, result: { tools: [{ name: 'tags.list' }] } }),
+          { status: 200, headers: { 'content-type': 'application/json' } }
+        ),
+    });
+    expect(missingIssuer).toBe(false);
   });
 });
 

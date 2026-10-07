@@ -1,6 +1,6 @@
 import { spawn, type ChildProcess, type SpawnOptions } from 'node:child_process';
 import { readdir, readFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runInNewContext } from 'node:vm';
 
@@ -21,12 +21,21 @@ const pairing = {
 };
 const simulatorId = '11111111-1111-4111-8111-111111111111';
 const wrongSimulatorId = '33333333-3333-4333-8333-333333333333';
-const maestroRoot = fileURLToPath(new URL('../../clients/ios/.maestro/', import.meta.url));
+const maestroRoot = resolve(fileURLToPath(new URL('../../clients/ios/.maestro/', import.meta.url)));
 const pairingScriptPath = fileURLToPath(
   new URL('../../clients/ios/.maestro/scripts/pair-this-simulator.js', import.meta.url)
 );
+const pairingCompletionScriptPath = fileURLToPath(
+  new URL('../../clients/ios/.maestro/scripts/await-simulator-pairing.js', import.meta.url)
+);
 const pairingSubflowPath = fileURLToPath(
   new URL('../../clients/ios/.maestro/subflows/enter-the-pairing-details.yaml', import.meta.url)
+);
+const stalePromptSubflowPath = fileURLToPath(
+  new URL(
+    '../../clients/ios/.maestro/subflows/dismiss-stale-pairing-open-prompt.yaml',
+    import.meta.url
+  )
 );
 const iosTasksPath = fileURLToPath(new URL('../../clients/ios/mise.toml', import.meta.url));
 
@@ -116,7 +125,7 @@ describe('simulatorPairingURL', () => {
   });
 });
 
-describe('issueAndOpenPairingLink', () => {
+describe('issueAndOpenPairingLink', { timeout: 30_000 }, () => {
   it('keeps issued pairing details in the host handoff and sends only a non-secret trigger', async () => {
     const handoff = createPairingHandoff({ deviceId: simulatorId });
     const argsSeen: string[][] = [];
@@ -249,7 +258,7 @@ describe('issueAndOpenPairingLink', () => {
   });
 });
 
-describe('runSimctlOpenURL', () => {
+describe('runSimctlOpenURL', { timeout: 30_000 }, () => {
   it('discards simulator command output and never places the pairing link in a captured stream', async () => {
     const link = 'pops://e2e-pairing?broker=http%3A%2F%2F127.0.0.1%3A3011';
     const output = vi.spyOn(process.stdout, 'write');
@@ -280,7 +289,7 @@ describe('runSimctlOpenURL', () => {
   });
 });
 
-describe('runSimulatorPairing', () => {
+describe('runSimulatorPairing', { timeout: 30_000 }, () => {
   it('rejects an invalid simulator ID before opening a broker or requesting a pairing link', async () => {
     const issuePairingLink = vi.fn(async () => 1);
     const writeStdout = vi.fn();
@@ -302,7 +311,7 @@ describe('runSimulatorPairing', () => {
     );
   });
 
-  it('waits for the exact selected simulator to claim before reporting success', async () => {
+  it('waits for the exact selected simulator to store a session before reporting success', async () => {
     const writeStdout = vi.fn();
     const writeStderr = vi.fn();
     const issuePairingLink = vi.fn(
@@ -327,6 +336,17 @@ describe('runSimulatorPairing', () => {
           body: JSON.stringify({ deviceId, instanceId: handoff.instanceId, generation }),
         });
         expect(response.status).toBe(200);
+        const completion = await fetch(`${brokerUrl}/__e2e/pair/complete`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            deviceId,
+            instanceId: handoff.instanceId,
+            generation,
+            paired: true,
+          }),
+        });
+        expect(completion.status).toBe(204);
         return 0;
       }
     );
@@ -340,7 +360,7 @@ describe('runSimulatorPairing', () => {
     });
 
     expect(exitCode).toBe(0);
-    expect(writeStdout).toHaveBeenCalledWith('ios-e2e: simulator claimed the pairing handoff.\n');
+    expect(writeStdout).toHaveBeenCalledWith('ios-e2e: simulator stored a session for this BFM.\n');
     expect(writeStderr).not.toHaveBeenCalled();
   });
 
@@ -369,38 +389,55 @@ describe('runSimulatorPairing', () => {
 describe('Maestro pairing flows', () => {
   it('uses the private handoff without putting a pairing code in Maestro sources or arguments', async () => {
     const flowPaths = await maestroYamlFiles(maestroRoot);
-    const [pairingScript, pairingSubflow, iosTasks] = await Promise.all([
-      readFile(pairingScriptPath, 'utf8'),
-      readFile(pairingSubflowPath, 'utf8'),
-      readFile(iosTasksPath, 'utf8'),
-    ]);
+    const [pairingScript, pairingCompletionScript, pairingSubflow, stalePromptSubflow, iosTasks] =
+      await Promise.all([
+        readFile(pairingScriptPath, 'utf8'),
+        readFile(pairingCompletionScriptPath, 'utf8'),
+        readFile(pairingSubflowPath, 'utf8'),
+        readFile(stalePromptSubflowPath, 'utf8'),
+        readFile(iosTasksPath, 'utf8'),
+      ]);
 
     expect(flowPaths.length).toBeGreaterThan(0);
+    const rootFlowPaths = flowPaths.filter((flowPath) => dirname(flowPath) === maestroRoot);
+    expect(rootFlowPaths.length).toBeGreaterThan(0);
     for (const flowPath of flowPaths) {
       const flow = await readFile(flowPath, 'utf8');
       expect(flow).not.toContain('PAIRING_CODE');
       expect(flow).not.toContain('inputText: ${output.pairing');
     }
+    for (const flowPath of rootFlowPaths) {
+      const flow = await readFile(flowPath, 'utf8');
+      const stalePromptGuard = flow.indexOf(
+        'runFlow: subflows/dismiss-stale-pairing-open-prompt.yaml'
+      );
+      const pairingScreenAssertion = flow.indexOf("id: 'pairing-code-field'");
+      expect(stalePromptGuard).toBeGreaterThanOrEqual(0);
+      expect(pairingScreenAssertion).toBeGreaterThan(stalePromptGuard);
+    }
     expect(pairingScript).toContain("'/__e2e/pair'");
-    expect(pairingScript).toContain('output.pairing = { delivered: true }');
+    expect(pairingScript).toContain('output.pairingTrigger = { dispatched: true }');
     expect(pairingScript).not.toContain('PAIRING_CODE');
+    expect(pairingCompletionScript).toContain("'/__e2e/pair/status'");
+    expect(pairingCompletionScript).toContain('output.pairing = { paired: true }');
+    expect(pairingCompletionScript).not.toContain('PAIRING_CODE');
     expect(pairingSubflow).toContain('file: ../scripts/pair-this-simulator.js');
+    expect(pairingSubflow).toContain('file: ../scripts/await-simulator-pairing.js');
+    expect(pairingSubflow).toContain("visible: 'Open in “Pops Local”\\?'");
+    expect(pairingSubflow).toContain('- tapOn: Open');
     expect(pairingSubflow).not.toContain('inputText');
+    expect(stalePromptSubflow).toContain("visible: 'Open in “Pops Local”\\?'");
+    expect(stalePromptSubflow).toContain('- tapOn: Cancel');
     expect(iosTasks).not.toContain('PAIRING_CODE');
   });
 
-  it('keeps the synthetic pairing response out of the Maestro script output and errors', async () => {
+  it('keeps trigger dispatch separate from the session completion status', async () => {
     const script = await readFile(pairingScriptPath, 'utf8');
     const code = pairing.code;
-    const pairingResponseBody = JSON.stringify({
-      code,
-      pairingUrl: pairing.pairingUrl,
-      expiresAt: pairing.expiresAt,
-    });
     const controlUrl = 'http://127.0.0.1:3011';
     const serverUrl = 'http://127.0.0.1:3012';
 
-    for (const status of [200, 502]) {
+    for (const status of [202, 200, 502]) {
       const output: Record<string, unknown> = {};
       const requests: Array<{ url: string; body: string }> = [];
       const run = () =>
@@ -411,17 +448,18 @@ describe('Maestro pairing flows', () => {
           http: {
             post(url: string, options: { body: string }) {
               requests.push({ url, body: options.body });
-              return { status, body: pairingResponseBody };
+              return { status, body: JSON.stringify({ triggerDispatched: true }) };
             },
           },
+          json: (body: string) => JSON.parse(body),
           output,
         });
 
-      if (status === 200) {
+      if (status === 202) {
         run();
-        expect(output).toEqual({ pairing: { delivered: true } });
+        expect(output).toEqual({ pairingTrigger: { dispatched: true } });
       } else {
-        expect(run).toThrow('native simulator pairing failed');
+        expect(run).toThrow('native simulator pairing trigger was not dispatched');
         expect(output).toEqual({});
       }
 
@@ -434,6 +472,50 @@ describe('Maestro pairing flows', () => {
       const serialized = JSON.stringify({ output, requests });
       expect(serialized).not.toContain(code);
       expect(serialized).not.toContain(pairing.pairingUrl);
+    }
+  });
+
+  it('reports pairing completion only after the control plane returns the stored-session result', async () => {
+    const script = await readFile(pairingCompletionScriptPath, 'utf8');
+    const code = pairing.code;
+    const controlUrl = 'http://127.0.0.1:3011';
+    const responses = [
+      { status: 200, body: JSON.stringify({ paired: true }) },
+      { status: 502, body: JSON.stringify({ message: 'pairing failed' }) },
+    ];
+
+    for (const response of responses) {
+      const output: Record<string, unknown> = {};
+      const requests: Array<{ url: string; body: string }> = [];
+      const run = () =>
+        runInNewContext(script, {
+          CONTROL_BASE_URL: controlUrl,
+          SIMULATOR_UDID: simulatorId,
+          http: {
+            post(url: string, options: { body: string }) {
+              requests.push({ url, body: options.body });
+              return response;
+            },
+          },
+          json: (body: string) => JSON.parse(body),
+          output,
+        });
+
+      if (response.status === 200) {
+        run();
+        expect(output).toEqual({ pairing: { paired: true } });
+      } else {
+        expect(run).toThrow('native simulator pairing did not store a session');
+        expect(output).toEqual({});
+      }
+
+      expect(requests).toEqual([
+        {
+          url: `${controlUrl}/__e2e/pair/status`,
+          body: JSON.stringify({ deviceId: simulatorId }),
+        },
+      ]);
+      expect(JSON.stringify({ output, requests })).not.toContain(code);
     }
   });
 });
