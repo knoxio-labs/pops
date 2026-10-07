@@ -20,6 +20,11 @@ import {
 } from './finance-http-fake-routes.js';
 
 import type { FinanceFakeAccountRow, FinanceFakeRow } from './finance-fake.js';
+import type {
+  FakeAttachment,
+  FakeHistoryEvent,
+  FinanceHttpWrite,
+} from './finance-http-fake-shared.js';
 
 /** One call bfm made to a finance data route. */
 export interface FinanceHttpCall {
@@ -32,6 +37,16 @@ export interface FinanceHttpCall {
 export interface FinanceHttpFake {
   baseUrl: string;
   calls: FinanceHttpCall[];
+  /** Every call that carried a body, with the body finance received. */
+  writes: FinanceHttpWrite[];
+  /** The live store: what a write changed, and what a test can seed after start. */
+  state: {
+    transactions: FinanceFakeRow[];
+    events: FakeHistoryEvent[];
+    attachments: FakeAttachment[];
+    extractAnswer: unknown;
+    forced: { status: number; code: string } | null;
+  };
   /** Give `email` a role on `accountId`, as the operator's sharing screen would. */
   grant: (email: string, accountId: string, role: GuestRole) => void;
   revoke: (email: string, accountId: string) => void;
@@ -89,10 +104,15 @@ function controls(
 
 export async function startFinanceHttpFake(seed: FinanceHttpFakeSeed): Promise<FinanceHttpFake> {
   const calls: FinanceHttpCall[] = [];
+  const writes: FinanceHttpWrite[] = [];
   const pillars = new Map<string, string>();
   const state: FinanceHttpState = {
     accounts: seed.accounts,
-    transactions: seed.transactions,
+    transactions: [...seed.transactions],
+    events: [],
+    attachments: [],
+    extractAnswer: { outcome: 'unavailable', receiptUris: [] },
+    forced: null,
     grants: new Map(),
     keyScopes: BFM_SERVICE_ACCOUNT_SCOPES,
     outage: false,
@@ -107,7 +127,15 @@ export async function startFinanceHttpFake(seed: FinanceHttpFakeSeed): Promise<F
       subject: req.headers[SUBJECT_HEADER],
       apiKey: req.headers['x-api-key'],
     });
-    answerFinanceRoute(state, req, url, res);
+    if (req.method === 'GET') return answerFinanceRoute(state, { req, url }, res);
+    const chunks: Buffer[] = [];
+    req.on('data', (chunk: Buffer) => chunks.push(chunk));
+    req.on('end', () => {
+      const text = Buffer.concat(chunks).toString('utf8');
+      const body: unknown = text === '' ? undefined : JSON.parse(text);
+      writes.push({ method: req.method ?? '', path: url.pathname, body });
+      answerFinanceRoute(state, { req, url, body }, res);
+    });
   });
 
   await new Promise<void>((resolve) => {
@@ -121,6 +149,8 @@ export async function startFinanceHttpFake(seed: FinanceHttpFakeSeed): Promise<F
   return {
     baseUrl,
     calls,
+    writes,
+    state,
     ...controls(state, pillars),
     close: () =>
       new Promise<void>((resolve, reject) => {

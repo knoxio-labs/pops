@@ -31,6 +31,10 @@ import {
   toMobileTransaction,
   toMobileTransactionDetail,
 } from './wire.js';
+import {
+  createMobileFinanceWriteOperations,
+  type MobileFinanceWriteOperations,
+} from './write-operations.js';
 
 import type { z } from 'zod';
 
@@ -88,7 +92,7 @@ export interface ListTransactionsRequest {
 }
 
 /** Finance operations available to BFM's device-gated mobile routes. */
-export interface MobileFinanceClient {
+export interface MobileFinanceClient extends MobileFinanceWriteOperations {
   listTransactions(
     request: ListTransactionsRequest
   ): Promise<GatewayOutcome<MobileTransactionsPage>>;
@@ -163,6 +167,7 @@ export function createMobileFinanceClient(gateway: PillarGateway): MobileFinance
     listAccounts: (request) => listAccounts(gateway, request),
     getAccount: (id: string) => getAccountDetail(gateway, id),
     getSummary: (query) => getFinanceSummary(gateway, query),
+    ...createMobileFinanceWriteOperations(gateway),
   };
 }
 

@@ -25,33 +25,40 @@ It also holds a service-account credential and one way to spend it — see
 [Reaching sibling pillars](#reaching-sibling-pillars) and
 [`src/api/pillars/README.md`](src/api/pillars/README.md).
 
-| Surface                                           | What it does                                                                                                                                     |
-| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `GET /health`                                     | Liveness shape. Served from the ts-rest contract, so it cannot drift from the doc.                                                               |
-| `GET /openapi`                                    | The committed contract projection, served verbatim so peers build a route map.                                                                   |
-| `POST /devices/pair`                              | Spends a pairing code for a device identity. Unauthenticated by definition.                                                                      |
-| `POST /devices/challenge`                         | Mints a single-use nonce for a refresh. Carries no credential and needs none.                                                                    |
-| `POST /devices/refresh`                           | Rotates a refresh token against a Secure Enclave signature. Detects reuse.                                                                       |
-| `POST /operator/pairing/codes`                    | Mints a single-use pairing code for a human operator or the exact registry-backed MCP scope. The plaintext is returned once and never again.     |
-| `GET /operator/devices`                           | Paired handsets, revoked ones included. Never returns a token or a key.                                                                          |
-| `DELETE /operator/devices/:id`                    | Soft-revokes, and kills the device's refresh-token family in the same transaction.                                                               |
-| `GET /mobile/bootstrap`                           | What the app should render, and who bfm says it is talking to. See below.                                                                        |
-| `GET /mobile/ego/conversations`                   | One page of Ego conversations, optionally searched.                                                                                              |
-| `GET /mobile/ego/conversations/:id`               | One stored Ego conversation with its messages and parts.                                                                                         |
-| `POST /mobile/ego/action-batches/:batchId/decide` | Records an action-batch decision; the phone then resumes the existing chat stream.                                                               |
-| `POST /mobile/ego/chat/stream`                    | Relays Ego's SSE stream; omitted from OpenAPI because ts-rest cannot describe event streams, and read by iOS outside the generated client.       |
-| `GET /mobile/finance/transactions`                | One cursor-paginated page of list rows — see [The mobile shape](#the-mobile-shape).                                                              |
-| `GET /mobile/finance/accounts`                    | One cursor-paginated page of accounts after search and filters — see [The mobile shape](#the-mobile-shape).                                      |
-| `GET /mobile/finance/summary`                     | Cost-of-credit totals for one window, by account, month and fee tag.                                                                             |
-| `GET /mobile/finance/transactions/:id`            | The fuller record behind one row, for the detail screen.                                                                                         |
-| `GET /mobile/inventory/items`                     | One cursor-paginated Items browser page, using Inventory's `/web/items` filters and ordering.                                                    |
-| `GET /mobile/barcode/lookup/:code`                | Book metadata for a scanned barcode; `found`, `not_found` and `unavailable` are all 200 outcomes, with optional ADR-054 detail on `unavailable`. |
-| `GET /mobile/purchases`                           | One cursor-paginated page of purchase list rows — see [The mobile shape](#the-mobile-shape).                                                     |
-| `GET /mobile/purchases/search`                    | One bounded cursor page of purchase and line matches after text and structured filters.                                                          |
-| `GET /mobile/purchases/tags`                      | One bounded cursor page of item tags, optionally filtered by search text.                                                                        |
-| `GET /mobile/purchases/:id`                       | One order with its lines and Inventory-link flags, for the detail screen.                                                                        |
-| `POST /mobile/purchases/receipts`                 | Hands a captured receipt to `purchases` — see [The mobile write](#the-mobile-write).                                                             |
-| `/mobile/*`                                       | Everything the phone calls, gated by `requireDevice` and then `requireCapability`.                                                               |
+| Surface                                             | What it does                                                                                                                                     |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `GET /health`                                       | Liveness shape. Served from the ts-rest contract, so it cannot drift from the doc.                                                               |
+| `GET /openapi`                                      | The committed contract projection, served verbatim so peers build a route map.                                                                   |
+| `POST /devices/pair`                                | Spends a pairing code for a device identity. Unauthenticated by definition.                                                                      |
+| `POST /devices/challenge`                           | Mints a single-use nonce for a refresh. Carries no credential and needs none.                                                                    |
+| `POST /devices/refresh`                             | Rotates a refresh token against a Secure Enclave signature. Detects reuse.                                                                       |
+| `POST /operator/pairing/codes`                      | Mints a single-use pairing code for a human operator or the exact registry-backed MCP scope. The plaintext is returned once and never again.     |
+| `GET /operator/devices`                             | Paired handsets, revoked ones included. Never returns a token or a key.                                                                          |
+| `DELETE /operator/devices/:id`                      | Soft-revokes, and kills the device's refresh-token family in the same transaction.                                                               |
+| `GET /mobile/bootstrap`                             | What the app should render, and who bfm says it is talking to. See below.                                                                        |
+| `GET /mobile/ego/conversations`                     | One page of Ego conversations, optionally searched.                                                                                              |
+| `GET /mobile/ego/conversations/:id`                 | One stored Ego conversation with its messages and parts.                                                                                         |
+| `POST /mobile/ego/action-batches/:batchId/decide`   | Records an action-batch decision; the phone then resumes the existing chat stream.                                                               |
+| `POST /mobile/ego/chat/stream`                      | Relays Ego's SSE stream; omitted from OpenAPI because ts-rest cannot describe event streams, and read by iOS outside the generated client.       |
+| `GET /mobile/finance/transactions`                  | One cursor-paginated page of list rows — see [The mobile shape](#the-mobile-shape).                                                              |
+| `GET /mobile/finance/accounts`                      | One cursor-paginated page of accounts after search and filters — see [The mobile shape](#the-mobile-shape).                                      |
+| `GET /mobile/finance/summary`                       | Cost-of-credit totals for one window, by account, month and fee tag.                                                                             |
+| `GET /mobile/finance/transactions/:id`              | The fuller record behind one row, for the detail screen.                                                                                         |
+| `POST /mobile/finance/transactions`                 | Creates a transaction. Needs `finance.transactions.write`, as every finance write below does.                                                    |
+| `PATCH /mobile/finance/transactions/:id`            | Changes the fields sent.                                                                                                                         |
+| `POST /mobile/finance/transactions/receipt-extract` | Stores a receipt and suggests a new entry's date, description and amount. Writes no transaction.                                                 |
+| `POST /mobile/finance/transactions/:id/attachments` | Attaches new files, or receipt URIs the extract route returned.                                                                                  |
+| `GET /mobile/finance/transactions/:id/attachments`  | The attached files; `/:attachmentId` and `/:attachmentId/thumbnail` serve one file's bytes.                                                      |
+| `GET /mobile/finance/transactions/:id/history`      | Who created or changed a transaction, and what it said either side.                                                                              |
+| `GET /mobile/finance/accounts/:id/history`          | One cursor-paginated page of the changes to an account's transactions.                                                                           |
+| `GET /mobile/inventory/items`                       | One cursor-paginated Items browser page, using Inventory's `/web/items` filters and ordering.                                                    |
+| `GET /mobile/barcode/lookup/:code`                  | Book metadata for a scanned barcode; `found`, `not_found` and `unavailable` are all 200 outcomes, with optional ADR-054 detail on `unavailable`. |
+| `GET /mobile/purchases`                             | One cursor-paginated page of purchase list rows — see [The mobile shape](#the-mobile-shape).                                                     |
+| `GET /mobile/purchases/search`                      | One bounded cursor page of purchase and line matches after text and structured filters.                                                          |
+| `GET /mobile/purchases/tags`                        | One bounded cursor page of item tags, optionally filtered by search text.                                                                        |
+| `GET /mobile/purchases/:id`                         | One order with its lines and Inventory-link flags, for the detail screen.                                                                        |
+| `POST /mobile/purchases/receipts`                   | Hands a captured receipt to `purchases` — see [The mobile write](#the-mobile-write).                                                             |
+| `/mobile/*`                                         | Everything the phone calls, gated by `requireDevice` and then `requireCapability`.                                                               |
 
 The barcode relay preserves an ADR-054 envelope supplied by the barcode
 pillar. The mobile caller opts into additive diagnostic fields with
@@ -173,6 +180,17 @@ granted is a `404`, and a route no guest may reach, such as the summary, is a
 `502` carrying finance's own `finance.auth.forbidden`. An operator device
 sends no header. No other pillar's handle can send it. A finance call that
 starts outside a device request throws instead of going out as the operator.
+
+The finance write routes work the same way. A guest with `view` on the account
+is answered `403 finance.resource.forbidden`, a request finance validates and
+refuses is a `400` with finance's code, and both are relayed under their own
+status. bfm converts `amountMinorUnits` to the account's currency and decides
+nothing else. There is no mobile route that deletes or restores a transaction
+or removes an attachment
+([ADR-048](../../docs/architecture/adr-048-mobile-capability-scopes.md)).
+`GUEST_DEVICE_CAPABILITIES` is copied onto a guest device when it pairs, so one
+paired before `finance.transactions.write` joined the list keeps the grant it
+was given.
 
 Finance refuses the header from a key without `finance.delegatedSubject`. A
 `bfm` account minted before that scope existed leaves operator devices working
@@ -681,7 +699,7 @@ and send it in that header, against the registry's admin surface reachable
 externally through the shell proxy:
 
 ```bash
-curl -sS -X POST https://pops.local/registry-api/service-accounts -H 'Content-Type: application/json' -H "cf-access-jwt-assertion: $ACCESS_JWT" -d '{"name":"bfm","scopes":["finance.transactions","finance.accounts","finance.checkpoints","finance.delegatedSubject","purchases.purchase","purchases.search","purchases.receipt","inventory.sync","inventory.types.catalogue","inventory.types.read","inventory.codes","inventory.media","barcode.lookup","cerebrum.ego"]}'
+curl -sS -X POST https://pops.local/registry-api/service-accounts -H 'Content-Type: application/json' -H "cf-access-jwt-assertion: $ACCESS_JWT" -d '{"name":"bfm","scopes":["finance.transactions","finance.transactionHistory","finance.transactionAttachments","finance.accounts","finance.checkpoints","finance.delegatedSubject","purchases.purchase","purchases.search","purchases.receipt","inventory.sync","inventory.types.catalogue","inventory.types.read","inventory.codes","inventory.media","barcode.lookup","cerebrum.ego"]}'
 ```
 
 Two deployment shapes let a bare `curl` through, which is why this can work on

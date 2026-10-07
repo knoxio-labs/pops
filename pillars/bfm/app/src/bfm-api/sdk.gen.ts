@@ -45,21 +45,48 @@ import type {
   MobileEgoListConversationsData,
   MobileEgoListConversationsErrors,
   MobileEgoListConversationsResponses,
+  MobileFinanceAttachToTransactionData,
+  MobileFinanceAttachToTransactionErrors,
+  MobileFinanceAttachToTransactionResponses,
+  MobileFinanceCreateTransactionData,
+  MobileFinanceCreateTransactionErrors,
+  MobileFinanceCreateTransactionResponses,
+  MobileFinanceExtractTransactionReceiptData,
+  MobileFinanceExtractTransactionReceiptErrors,
+  MobileFinanceExtractTransactionReceiptResponses,
   MobileFinanceGetAccountData,
   MobileFinanceGetAccountErrors,
+  MobileFinanceGetAccountHistoryData,
+  MobileFinanceGetAccountHistoryErrors,
+  MobileFinanceGetAccountHistoryResponses,
   MobileFinanceGetAccountResponses,
   MobileFinanceGetSummaryData,
   MobileFinanceGetSummaryErrors,
   MobileFinanceGetSummaryResponses,
+  MobileFinanceGetTransactionAttachmentData,
+  MobileFinanceGetTransactionAttachmentErrors,
+  MobileFinanceGetTransactionAttachmentResponses,
+  MobileFinanceGetTransactionAttachmentThumbnailData,
+  MobileFinanceGetTransactionAttachmentThumbnailErrors,
+  MobileFinanceGetTransactionAttachmentThumbnailResponses,
   MobileFinanceGetTransactionData,
   MobileFinanceGetTransactionErrors,
+  MobileFinanceGetTransactionHistoryData,
+  MobileFinanceGetTransactionHistoryErrors,
+  MobileFinanceGetTransactionHistoryResponses,
   MobileFinanceGetTransactionResponses,
   MobileFinanceListAccountsData,
   MobileFinanceListAccountsErrors,
   MobileFinanceListAccountsResponses,
+  MobileFinanceListTransactionAttachmentsData,
+  MobileFinanceListTransactionAttachmentsErrors,
+  MobileFinanceListTransactionAttachmentsResponses,
   MobileFinanceListTransactionsData,
   MobileFinanceListTransactionsErrors,
   MobileFinanceListTransactionsResponses,
+  MobileFinanceUpdateTransactionData,
+  MobileFinanceUpdateTransactionErrors,
+  MobileFinanceUpdateTransactionResponses,
   MobileInventoryCatalogueData,
   MobileInventoryCatalogueErrors,
   MobileInventoryCatalogueResponses,
@@ -411,6 +438,22 @@ export const mobileFinanceGetAccount = <ThrowOnError extends boolean = false>(
   >({ url: '/mobile/finance/accounts/{id}', ...options });
 
 /**
+ * One page of the changes made to an account’s transactions, newest first
+ */
+export const mobileFinanceGetAccountHistory = <ThrowOnError extends boolean = false>(
+  options: Options<MobileFinanceGetAccountHistoryData, ThrowOnError>
+): RequestResult<
+  MobileFinanceGetAccountHistoryResponses,
+  MobileFinanceGetAccountHistoryErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    MobileFinanceGetAccountHistoryResponses,
+    MobileFinanceGetAccountHistoryErrors,
+    ThrowOnError
+  >({ url: '/mobile/finance/accounts/{id}/history', ...options });
+
+/**
  * Finance cost of credit for a window and the period before it
  */
 export const mobileFinanceGetSummary = <ThrowOnError extends boolean = false>(
@@ -439,6 +482,52 @@ export const mobileFinanceListTransactions = <ThrowOnError extends boolean = fal
   >({ url: '/mobile/finance/transactions', ...options });
 
 /**
+ * Create a transaction on an account the caller may edit
+ */
+export const mobileFinanceCreateTransaction = <ThrowOnError extends boolean = false>(
+  options?: Options<MobileFinanceCreateTransactionData, ThrowOnError>
+): RequestResult<
+  MobileFinanceCreateTransactionResponses,
+  MobileFinanceCreateTransactionErrors,
+  ThrowOnError
+> =>
+  (options?.client ?? client).post<
+    MobileFinanceCreateTransactionResponses,
+    MobileFinanceCreateTransactionErrors,
+    ThrowOnError
+  >({
+    url: '/mobile/finance/transactions',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
+
+/**
+ * Store a receipt and suggest the date, description and amount of a new transaction. Writes no transaction
+ */
+export const mobileFinanceExtractTransactionReceipt = <ThrowOnError extends boolean = false>(
+  options?: Options<MobileFinanceExtractTransactionReceiptData, ThrowOnError>
+): RequestResult<
+  MobileFinanceExtractTransactionReceiptResponses,
+  MobileFinanceExtractTransactionReceiptErrors,
+  ThrowOnError
+> =>
+  (options?.client ?? client).post<
+    MobileFinanceExtractTransactionReceiptResponses,
+    MobileFinanceExtractTransactionReceiptErrors,
+    ThrowOnError
+  >({
+    url: '/mobile/finance/transactions/receipt-extract',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
+
+/**
  * The fuller record behind one list row, for the detail screen
  */
 export const mobileFinanceGetTransaction = <ThrowOnError extends boolean = false>(
@@ -453,6 +542,118 @@ export const mobileFinanceGetTransaction = <ThrowOnError extends boolean = false
     MobileFinanceGetTransactionErrors,
     ThrowOnError
   >({ url: '/mobile/finance/transactions/{id}', ...options });
+
+/**
+ * Change fields of a transaction the caller may edit
+ */
+export const mobileFinanceUpdateTransaction = <ThrowOnError extends boolean = false>(
+  options: Options<MobileFinanceUpdateTransactionData, ThrowOnError>
+): RequestResult<
+  MobileFinanceUpdateTransactionResponses,
+  MobileFinanceUpdateTransactionErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).patch<
+    MobileFinanceUpdateTransactionResponses,
+    MobileFinanceUpdateTransactionErrors,
+    ThrowOnError
+  >({
+    url: '/mobile/finance/transactions/{id}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * The files attached to a transaction, in order
+ */
+export const mobileFinanceListTransactionAttachments = <ThrowOnError extends boolean = false>(
+  options: Options<MobileFinanceListTransactionAttachmentsData, ThrowOnError>
+): RequestResult<
+  MobileFinanceListTransactionAttachmentsResponses,
+  MobileFinanceListTransactionAttachmentsErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    MobileFinanceListTransactionAttachmentsResponses,
+    MobileFinanceListTransactionAttachmentsErrors,
+    ThrowOnError
+  >({ url: '/mobile/finance/transactions/{id}/attachments', ...options });
+
+/**
+ * Attach files to a transaction: new ones to store, or receipt URIs already stored. Answers every file named, in order
+ */
+export const mobileFinanceAttachToTransaction = <ThrowOnError extends boolean = false>(
+  options: Options<MobileFinanceAttachToTransactionData, ThrowOnError>
+): RequestResult<
+  MobileFinanceAttachToTransactionResponses,
+  MobileFinanceAttachToTransactionErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).post<
+    MobileFinanceAttachToTransactionResponses,
+    MobileFinanceAttachToTransactionErrors,
+    ThrowOnError
+  >({
+    url: '/mobile/finance/transactions/{id}/attachments',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * One attached file, full size
+ */
+export const mobileFinanceGetTransactionAttachment = <ThrowOnError extends boolean = false>(
+  options: Options<MobileFinanceGetTransactionAttachmentData, ThrowOnError>
+): RequestResult<
+  MobileFinanceGetTransactionAttachmentResponses,
+  MobileFinanceGetTransactionAttachmentErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    MobileFinanceGetTransactionAttachmentResponses,
+    MobileFinanceGetTransactionAttachmentErrors,
+    ThrowOnError
+  >({ url: '/mobile/finance/transactions/{id}/attachments/{attachmentId}', ...options });
+
+/**
+ * One attached file at a size a list row can afford
+ */
+export const mobileFinanceGetTransactionAttachmentThumbnail = <
+  ThrowOnError extends boolean = false,
+>(
+  options: Options<MobileFinanceGetTransactionAttachmentThumbnailData, ThrowOnError>
+): RequestResult<
+  MobileFinanceGetTransactionAttachmentThumbnailResponses,
+  MobileFinanceGetTransactionAttachmentThumbnailErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    MobileFinanceGetTransactionAttachmentThumbnailResponses,
+    MobileFinanceGetTransactionAttachmentThumbnailErrors,
+    ThrowOnError
+  >({ url: '/mobile/finance/transactions/{id}/attachments/{attachmentId}/thumbnail', ...options });
+
+/**
+ * Who created or changed a transaction and what it said either side, newest first
+ */
+export const mobileFinanceGetTransactionHistory = <ThrowOnError extends boolean = false>(
+  options: Options<MobileFinanceGetTransactionHistoryData, ThrowOnError>
+): RequestResult<
+  MobileFinanceGetTransactionHistoryResponses,
+  MobileFinanceGetTransactionHistoryErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    MobileFinanceGetTransactionHistoryResponses,
+    MobileFinanceGetTransactionHistoryErrors,
+    ThrowOnError
+  >({ url: '/mobile/finance/transactions/{id}/history', ...options });
 
 /**
  * Free codes for a new item: a stem followed by the next unused numbers

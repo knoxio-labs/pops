@@ -7,6 +7,7 @@ import {
   MobileFinanceSummaryQuerySchema,
   MobileFinanceSummarySchema,
 } from './mobile-finance-summary-schemas.js';
+import { mobileFinanceWriteRoutes } from './rest-mobile-finance-writes.js';
 import {
   MOBILE_PERIMETER_RESPONSES,
   MOBILE_REQUEST_RESPONSES,
@@ -111,4 +112,5 @@ export const mobileFinanceContract = c.router({
     summary: 'Finance cost of credit for a window and the period before it',
     metadata: requires('finance.transactions.read'),
   },
+  ...mobileFinanceWriteRoutes,
 });

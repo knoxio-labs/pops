@@ -1644,6 +1644,162 @@ export type MobileFinanceGetAccountResponses = {
 export type MobileFinanceGetAccountResponse =
   MobileFinanceGetAccountResponses[keyof MobileFinanceGetAccountResponses];
 
+export type MobileFinanceGetAccountHistoryData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: {
+    limit?: number;
+    cursor?: string;
+  };
+  url: '/mobile/finance/accounts/{id}/history';
+};
+
+export type MobileFinanceGetAccountHistoryErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code: 'invalid_cursor' | 'bfm.request.invalid';
+    details?: unknown;
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 403
+   */
+  403:
+    | {
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
+        message: string;
+        requestId: string;
+        retryable: boolean;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      };
+  /**
+   * 404
+   */
+  404: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+  /**
+   * 502
+   */
+  502: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+};
+
+export type MobileFinanceGetAccountHistoryError =
+  MobileFinanceGetAccountHistoryErrors[keyof MobileFinanceGetAccountHistoryErrors];
+
+export type MobileFinanceGetAccountHistoryResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: Array<{
+      accountId: string;
+      action: string;
+      actorEmail: string | null;
+      actorKind: string;
+      after: {
+        accountId: string;
+        amountMinorUnits: number;
+        currency: string;
+        date: string;
+        description: string;
+        entityId: string | null;
+        entityName: string | null;
+        notes: string | null;
+        tags: Array<string>;
+        type: string;
+      } | null;
+      at: string;
+      before: {
+        accountId: string;
+        amountMinorUnits: number;
+        currency: string;
+        date: string;
+        description: string;
+        entityId: string | null;
+        entityName: string | null;
+        notes: string | null;
+        tags: Array<string>;
+        type: string;
+      } | null;
+      changed: Array<string>;
+      id: string;
+      transactionId: string;
+    }>;
+    nextCursor: string | null;
+  };
+};
+
+export type MobileFinanceGetAccountHistoryResponse =
+  MobileFinanceGetAccountHistoryResponses[keyof MobileFinanceGetAccountHistoryResponses];
+
 export type MobileFinanceGetSummaryData = {
   body?: never;
   path?: never;
@@ -1916,6 +2072,302 @@ export type MobileFinanceListTransactionsResponses = {
 export type MobileFinanceListTransactionsResponse =
   MobileFinanceListTransactionsResponses[keyof MobileFinanceListTransactionsResponses];
 
+export type MobileFinanceCreateTransactionData = {
+  /**
+   * Body
+   */
+  body?: {
+    accountId: string;
+    amountMinorUnits: number;
+    country?: string | null;
+    date: string;
+    description: string;
+    entityId?: string | null;
+    entityName?: string | null;
+    location?: string | null;
+    notes?: string | null;
+    tags?: Array<string>;
+    type: string;
+  };
+  path?: never;
+  query?: never;
+  url: '/mobile/finance/transactions';
+};
+
+export type MobileFinanceCreateTransactionErrors = {
+  /**
+   * 400
+   */
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: {
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 403
+   */
+  403:
+    | {
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
+        message: string;
+        requestId: string;
+        retryable: boolean;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      }
+    | {
+        code: 'finance.resource.forbidden';
+        details?: unknown;
+        message: string;
+        requestId: string;
+        retryable: boolean;
+      };
+  /**
+   * 404
+   */
+  404: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+  /**
+   * 502
+   */
+  502: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+};
+
+export type MobileFinanceCreateTransactionError =
+  MobileFinanceCreateTransactionErrors[keyof MobileFinanceCreateTransactionErrors];
+
+export type MobileFinanceCreateTransactionResponses = {
+  /**
+   * 200
+   */
+  200: {
+    account: string;
+    amountMinorUnits: number;
+    country: string | null;
+    currency: string;
+    date: string;
+    description: string;
+    entityId: string | null;
+    entityName: string | null;
+    id: string;
+    lastEditedTime: string;
+    location: string | null;
+    notes: string | null;
+    relatedTransactionId: string | null;
+    tags: Array<string>;
+    type: string;
+  };
+};
+
+export type MobileFinanceCreateTransactionResponse =
+  MobileFinanceCreateTransactionResponses[keyof MobileFinanceCreateTransactionResponses];
+
+export type MobileFinanceExtractTransactionReceiptData = {
+  /**
+   * Body
+   */
+  body?: {
+    accountId: string;
+    parts: Array<{
+      dataBase64: string;
+      mediaType:
+        | 'image/jpeg'
+        | 'image/png'
+        | 'image/webp'
+        | 'image/gif'
+        | 'application/pdf'
+        | 'text/plain';
+    }>;
+  };
+  path?: never;
+  query?: never;
+  url: '/mobile/finance/transactions/receipt-extract';
+};
+
+export type MobileFinanceExtractTransactionReceiptErrors = {
+  /**
+   * 400
+   */
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: {
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 403
+   */
+  403:
+    | {
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
+        message: string;
+        requestId: string;
+        retryable: boolean;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      }
+    | {
+        code: 'finance.resource.forbidden';
+        details?: unknown;
+        message: string;
+        requestId: string;
+        retryable: boolean;
+      };
+  /**
+   * 404
+   */
+  404: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 413
+   */
+  413: {
+    code: 'payload_too_large';
+    maxBytes: number;
+    message: string;
+  };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+  /**
+   * 502
+   */
+  502: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+};
+
+export type MobileFinanceExtractTransactionReceiptError =
+  MobileFinanceExtractTransactionReceiptErrors[keyof MobileFinanceExtractTransactionReceiptErrors];
+
+export type MobileFinanceExtractTransactionReceiptResponses = {
+  /**
+   * 200
+   */
+  200: {
+    outcome: string;
+    receiptUris: Array<string>;
+    suggestion: {
+      amountMinorUnits: number;
+      currency: string;
+      currencyMismatch: boolean;
+      date: string;
+      description: string | null;
+    } | null;
+  };
+};
+
+export type MobileFinanceExtractTransactionReceiptResponse =
+  MobileFinanceExtractTransactionReceiptResponses[keyof MobileFinanceExtractTransactionReceiptResponses];
+
 export type MobileFinanceGetTransactionData = {
   body?: never;
   path: {
@@ -2048,6 +2500,845 @@ export type MobileFinanceGetTransactionResponses = {
 
 export type MobileFinanceGetTransactionResponse =
   MobileFinanceGetTransactionResponses[keyof MobileFinanceGetTransactionResponses];
+
+export type MobileFinanceUpdateTransactionData = {
+  /**
+   * Body
+   */
+  body?: {
+    accountId?: string;
+    amountMinorUnits?: number;
+    country?: string | null;
+    date?: string;
+    description?: string;
+    entityId?: string | null;
+    entityName?: string | null;
+    location?: string | null;
+    notes?: string | null;
+    tags?: Array<string>;
+    type?: string;
+  };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/mobile/finance/transactions/{id}';
+};
+
+export type MobileFinanceUpdateTransactionErrors = {
+  /**
+   * 400
+   */
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: {
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 403
+   */
+  403:
+    | {
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
+        message: string;
+        requestId: string;
+        retryable: boolean;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      }
+    | {
+        code: 'finance.resource.forbidden';
+        details?: unknown;
+        message: string;
+        requestId: string;
+        retryable: boolean;
+      };
+  /**
+   * 404
+   */
+  404: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+  /**
+   * 502
+   */
+  502: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+};
+
+export type MobileFinanceUpdateTransactionError =
+  MobileFinanceUpdateTransactionErrors[keyof MobileFinanceUpdateTransactionErrors];
+
+export type MobileFinanceUpdateTransactionResponses = {
+  /**
+   * 200
+   */
+  200: {
+    account: string;
+    amountMinorUnits: number;
+    country: string | null;
+    currency: string;
+    date: string;
+    description: string;
+    entityId: string | null;
+    entityName: string | null;
+    id: string;
+    lastEditedTime: string;
+    location: string | null;
+    notes: string | null;
+    relatedTransactionId: string | null;
+    tags: Array<string>;
+    type: string;
+  };
+};
+
+export type MobileFinanceUpdateTransactionResponse =
+  MobileFinanceUpdateTransactionResponses[keyof MobileFinanceUpdateTransactionResponses];
+
+export type MobileFinanceListTransactionAttachmentsData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/mobile/finance/transactions/{id}/attachments';
+};
+
+export type MobileFinanceListTransactionAttachmentsErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code: 'invalid_cursor' | 'bfm.request.invalid';
+    details?: unknown;
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 403
+   */
+  403:
+    | {
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
+        message: string;
+        requestId: string;
+        retryable: boolean;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      };
+  /**
+   * 404
+   */
+  404: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+  /**
+   * 502
+   */
+  502: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+};
+
+export type MobileFinanceListTransactionAttachmentsError =
+  MobileFinanceListTransactionAttachmentsErrors[keyof MobileFinanceListTransactionAttachmentsErrors];
+
+export type MobileFinanceListTransactionAttachmentsResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: Array<{
+      createdAt: string;
+      createdBy: string | null;
+      id: string;
+      mediaType: string;
+      position: number;
+      transactionId: string;
+    }>;
+  };
+};
+
+export type MobileFinanceListTransactionAttachmentsResponse =
+  MobileFinanceListTransactionAttachmentsResponses[keyof MobileFinanceListTransactionAttachmentsResponses];
+
+export type MobileFinanceAttachToTransactionData = {
+  /**
+   * Body
+   */
+  body?: {
+    parts?: Array<{
+      dataBase64: string;
+      mediaType:
+        | 'image/jpeg'
+        | 'image/png'
+        | 'image/webp'
+        | 'image/gif'
+        | 'application/pdf'
+        | 'text/plain';
+    }>;
+    receiptUris?: Array<string>;
+  };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/mobile/finance/transactions/{id}/attachments';
+};
+
+export type MobileFinanceAttachToTransactionErrors = {
+  /**
+   * 400
+   */
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: {
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 403
+   */
+  403:
+    | {
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
+        message: string;
+        requestId: string;
+        retryable: boolean;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      }
+    | {
+        code: 'finance.resource.forbidden';
+        details?: unknown;
+        message: string;
+        requestId: string;
+        retryable: boolean;
+      };
+  /**
+   * 404
+   */
+  404: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 413
+   */
+  413: {
+    code: 'payload_too_large';
+    maxBytes: number;
+    message: string;
+  };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+  /**
+   * 502
+   */
+  502: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+};
+
+export type MobileFinanceAttachToTransactionError =
+  MobileFinanceAttachToTransactionErrors[keyof MobileFinanceAttachToTransactionErrors];
+
+export type MobileFinanceAttachToTransactionResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: Array<{
+      createdAt: string;
+      createdBy: string | null;
+      id: string;
+      mediaType: string;
+      position: number;
+      transactionId: string;
+    }>;
+  };
+};
+
+export type MobileFinanceAttachToTransactionResponse =
+  MobileFinanceAttachToTransactionResponses[keyof MobileFinanceAttachToTransactionResponses];
+
+export type MobileFinanceGetTransactionAttachmentData = {
+  body?: never;
+  path: {
+    id: string;
+    attachmentId: string;
+  };
+  query?: never;
+  url: '/mobile/finance/transactions/{id}/attachments/{attachmentId}';
+};
+
+export type MobileFinanceGetTransactionAttachmentErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code: 'invalid_cursor' | 'bfm.request.invalid';
+    details?: unknown;
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 403
+   */
+  403:
+    | {
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
+        message: string;
+        requestId: string;
+        retryable: boolean;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      };
+  /**
+   * 404
+   */
+  404: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+  /**
+   * 502
+   */
+  502: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+};
+
+export type MobileFinanceGetTransactionAttachmentError =
+  MobileFinanceGetTransactionAttachmentErrors[keyof MobileFinanceGetTransactionAttachmentErrors];
+
+export type MobileFinanceGetTransactionAttachmentResponses = {
+  /**
+   * 200
+   */
+  200: {
+    byteLength: number;
+    dataBase64: string;
+    mediaType: string;
+    sha256: string;
+  };
+};
+
+export type MobileFinanceGetTransactionAttachmentResponse =
+  MobileFinanceGetTransactionAttachmentResponses[keyof MobileFinanceGetTransactionAttachmentResponses];
+
+export type MobileFinanceGetTransactionAttachmentThumbnailData = {
+  body?: never;
+  path: {
+    id: string;
+    attachmentId: string;
+  };
+  query?: never;
+  url: '/mobile/finance/transactions/{id}/attachments/{attachmentId}/thumbnail';
+};
+
+export type MobileFinanceGetTransactionAttachmentThumbnailErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code: 'invalid_cursor' | 'bfm.request.invalid';
+    details?: unknown;
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 403
+   */
+  403:
+    | {
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
+        message: string;
+        requestId: string;
+        retryable: boolean;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      };
+  /**
+   * 404
+   */
+  404: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 415
+   */
+  415: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+  /**
+   * 502
+   */
+  502: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+};
+
+export type MobileFinanceGetTransactionAttachmentThumbnailError =
+  MobileFinanceGetTransactionAttachmentThumbnailErrors[keyof MobileFinanceGetTransactionAttachmentThumbnailErrors];
+
+export type MobileFinanceGetTransactionAttachmentThumbnailResponses = {
+  /**
+   * 200
+   */
+  200: {
+    byteLength: number;
+    dataBase64: string;
+    mediaType: string;
+    sha256: string;
+  };
+};
+
+export type MobileFinanceGetTransactionAttachmentThumbnailResponse =
+  MobileFinanceGetTransactionAttachmentThumbnailResponses[keyof MobileFinanceGetTransactionAttachmentThumbnailResponses];
+
+export type MobileFinanceGetTransactionHistoryData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/mobile/finance/transactions/{id}/history';
+};
+
+export type MobileFinanceGetTransactionHistoryErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code: 'invalid_cursor' | 'bfm.request.invalid';
+    details?: unknown;
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 403
+   */
+  403:
+    | {
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
+        message: string;
+        requestId: string;
+        retryable: boolean;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      };
+  /**
+   * 404
+   */
+  404: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+  /**
+   * 502
+   */
+  502: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+};
+
+export type MobileFinanceGetTransactionHistoryError =
+  MobileFinanceGetTransactionHistoryErrors[keyof MobileFinanceGetTransactionHistoryErrors];
+
+export type MobileFinanceGetTransactionHistoryResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: Array<{
+      accountId: string;
+      action: string;
+      actorEmail: string | null;
+      actorKind: string;
+      after: {
+        accountId: string;
+        amountMinorUnits: number;
+        currency: string;
+        date: string;
+        description: string;
+        entityId: string | null;
+        entityName: string | null;
+        notes: string | null;
+        tags: Array<string>;
+        type: string;
+      } | null;
+      at: string;
+      before: {
+        accountId: string;
+        amountMinorUnits: number;
+        currency: string;
+        date: string;
+        description: string;
+        entityId: string | null;
+        entityName: string | null;
+        notes: string | null;
+        tags: Array<string>;
+        type: string;
+      } | null;
+      changed: Array<string>;
+      id: string;
+      transactionId: string;
+    }>;
+  };
+};
+
+export type MobileFinanceGetTransactionHistoryResponse =
+  MobileFinanceGetTransactionHistoryResponses[keyof MobileFinanceGetTransactionHistoryResponses];
 
 export type MobileInventorySuggestCodesData = {
   /**

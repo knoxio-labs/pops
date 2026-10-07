@@ -319,6 +319,96 @@ export const EXPECTATIONS = [
   },
   {
     consumer: 'bfm',
+    producer: 'finance',
+    operationId: 'transactions.create',
+    path: '/transactions',
+    method: 'post',
+    query: [],
+    usedBy: 'pillars/bfm/src/api/finance/write-client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'finance',
+    operationId: 'transactions.update',
+    path: '/transactions/{id}',
+    method: 'patch',
+    query: [],
+    pathParams: ['id'],
+    usedBy: 'pillars/bfm/src/api/finance/write-client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'finance',
+    operationId: 'transactionHistory.forTransaction',
+    path: '/transactions/{id}/history',
+    method: 'get',
+    query: [],
+    pathParams: ['id'],
+    usedBy: 'pillars/bfm/src/api/finance/history-client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'finance',
+    operationId: 'transactionHistory.forAccount',
+    path: '/accounts/{id}/history',
+    method: 'get',
+    // `offset` is what the mobile cursor decodes to. Losing it serves the
+    // first page again for every cursor, with a 200 each time.
+    query: ['limit', 'offset'],
+    pathParams: ['id'],
+    usedBy: 'pillars/bfm/src/api/finance/history-client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'finance',
+    operationId: 'transactionAttachments.extractReceipt',
+    path: '/transactions/receipt-extract',
+    method: 'post',
+    query: [],
+    usedBy: 'pillars/bfm/src/api/finance/attachments-client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'finance',
+    operationId: 'transactionAttachments.attach',
+    path: '/transactions/{id}/attachments',
+    method: 'post',
+    query: [],
+    pathParams: ['id'],
+    usedBy: 'pillars/bfm/src/api/finance/attachments-client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'finance',
+    operationId: 'transactionAttachments.list',
+    path: '/transactions/{id}/attachments',
+    method: 'get',
+    query: [],
+    pathParams: ['id'],
+    usedBy: 'pillars/bfm/src/api/finance/attachments-client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'finance',
+    operationId: 'transactionAttachments.read',
+    path: '/transactions/{id}/attachments/{attachmentId}',
+    method: 'get',
+    query: [],
+    pathParams: ['id', 'attachmentId'],
+    usedBy: 'pillars/bfm/src/api/finance/attachments-client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'finance',
+    operationId: 'transactionAttachments.thumbnail',
+    path: '/transactions/{id}/attachments/{attachmentId}/thumbnail',
+    method: 'get',
+    query: [],
+    pathParams: ['id', 'attachmentId'],
+    usedBy: 'pillars/bfm/src/api/finance/attachments-client.ts',
+  },
+  {
+    consumer: 'bfm',
     producer: 'purchases',
     operationId: 'receipt.upload',
     path: '/receipts',
@@ -3179,13 +3269,13 @@ function selfTest() {
   // made is about resolution, not about file layout.
   const bfmFinanceSites = sites.filter((s) => s.consumer === 'bfm' && s.producer === 'finance');
   assert(
-    bfmFinanceSites.length === 8,
+    bfmFinanceSites.length === 18,
     "discovery must follow bfm's PillarGateway.call wrapper into finance, not just a literal " +
-      'pillar() token — these eight calls resolve their producer through gateway.call, not pillar()'
+      'pillar() token — these eighteen calls resolve their producer through gateway.call, not pillar()'
   );
   assert(
-    new Set(bfmFinanceSites.map((s) => s.file)).size === 4,
-    'and it must follow the wrapper into EVERY file that uses it: bfm reaches finance from four ' +
+    new Set(bfmFinanceSites.map((s) => s.file)).size === 7,
+    'and it must follow the wrapper into EVERY file that uses it: bfm reaches finance from seven ' +
       'files of its finance leg, and a scan that found only one of them could still satisfy the ' +
       'count above'
   );

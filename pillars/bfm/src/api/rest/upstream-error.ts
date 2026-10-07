@@ -15,7 +15,7 @@ export interface UpstreamErrorResponse {
   readonly body: MobileUpstreamError;
 }
 
-interface Classification {
+export interface Classification {
   readonly status: ClassifiedStatus;
   readonly fallback: 'unavailable' | 'contract_mismatch' | 'misconfigured';
 }
@@ -28,6 +28,9 @@ function classify(failure: GatewayFailure): Classification {
     case 'degraded':
       return { status: 503, fallback: 'unavailable' };
     case 'gateway-misconfigured':
+    // A route that declares no 403 of its own has no role to refuse on, so a
+    // producer refusing one there means bfm asked for the wrong thing.
+    case 'forbidden':
       return { status: 502, fallback: 'misconfigured' };
     case 'not-found':
       return { status: 404, fallback: 'contract_mismatch' };
@@ -76,7 +79,8 @@ function fallbackBody(
   return { ...envelope, details };
 }
 
-function relayBody(
+/** The producer's own envelope when it sent one, bfm's fallback for the failure otherwise. */
+export function relayBody(
   failure: GatewayFailure,
   fallback: Classification['fallback']
 ): MobileUpstreamError {

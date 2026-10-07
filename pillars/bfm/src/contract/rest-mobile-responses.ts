@@ -1,6 +1,12 @@
 import { z } from 'zod';
 
 import {
+  MobileFinanceForbiddenErrorSchema,
+  MobileFinanceRequestErrorSchema,
+} from './mobile-finance-write-schemas.js';
+import {
+  DeviceRevokedErrorSchema,
+  MobileCapabilityDeniedErrorSchema,
   MobileForbiddenErrorSchema,
   MobileInvalidTokenErrorSchema,
   MobileRequestErrorSchema,
@@ -59,3 +65,25 @@ export const MOBILE_UPSTREAM_RESPONSES = {
  * for a thousand rows is asking for a screen it cannot draw.
  */
 export const MobilePageLimit = z.coerce.number().int().positive().max(100).optional();
+
+/**
+ * Every status a `/mobile/finance` write answers besides its success.
+ *
+ * Finance decides each write, and four of its answers reach the phone under
+ * their own status because each selects a different recovery: `400` fix the
+ * entry, `403` the account is shared to view only, `404` the account or
+ * transaction is not one this caller has, `503` try again. The `403` joins the
+ * perimeter's two and is told from them by its `code`.
+ */
+export const MOBILE_FINANCE_WRITE_RESPONSES = {
+  400: MobileFinanceRequestErrorSchema,
+  401: MobileInvalidTokenErrorSchema,
+  403: z.discriminatedUnion('code', [
+    DeviceRevokedErrorSchema,
+    MobileCapabilityDeniedErrorSchema,
+    MobileFinanceForbiddenErrorSchema,
+  ]),
+  404: MobileUpstreamErrorSchema,
+  429: RateLimitErrorSchema,
+  ...MOBILE_UPSTREAM_RESPONSES,
+} as const;

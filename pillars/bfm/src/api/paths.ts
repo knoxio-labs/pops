@@ -102,3 +102,10 @@ export const REFRESH_PATH = bfmDeviceContract.refresh.path;
  * place to be added rather than several to be remembered.
  */
 export const DEVICE_FACING_PATHS = [PAIRING_PATH, CHALLENGE_PATH, REFRESH_PATH] as const;
+
+/** Where a receipt is read into a suggested finance transaction. Carries files. */
+export const MOBILE_FINANCE_RECEIPT_EXTRACT_PATH =
+  bfmContract.mobileFinance.extractTransactionReceipt.path;
+
+/** Where files are attached to a finance transaction. Carries files. */
+export const MOBILE_FINANCE_ATTACH_PATH = bfmContract.mobileFinance.attachToTransaction.path;

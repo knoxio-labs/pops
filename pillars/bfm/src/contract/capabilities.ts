@@ -41,6 +41,13 @@ export const MOBILE_CAPABILITIES = [
   'session.read',
   'finance.transactions.read',
   /**
+   * Create a transaction, edit one, attach a receipt to one, and have a
+   * receipt read into a suggested entry. Not implied by
+   * `finance.transactions.read`. Deleting, restoring and detaching have no
+   * capability at all: ADR-048 keeps destructive operations on the web.
+   */
+  'finance.transactions.write',
+  /**
    * Read every account this device can see, active and archived alike — the
    * accounts list, and the balance, provenance and month-end history behind
    * one account's dashboard.
@@ -149,7 +156,26 @@ export const MOBILE_SESSION_CAPABILITY: MobileCapability = 'session.read';
  */
 export const MOBILE_CAPABILITY_SCOPES: Readonly<Record<MobileCapability, readonly string[]>> = {
   'session.read': [],
-  'finance.transactions.read': ['finance.transactions'],
+  /**
+   * Three prefixes because finance derives a scope per sub-router: the list
+   * and detail are `transactions.*`, the audit log is `transactionHistory.*`
+   * and the attached files are `transactionAttachments.*`.
+   */
+  'finance.transactions.read': [
+    'finance.transactions',
+    'finance.transactionHistory',
+    'finance.transactionAttachments',
+  ],
+  /**
+   * `finance.accounts` as well as the two it writes through: an amount
+   * arrives in minor units and finance takes it in the account's currency, so
+   * every write reads the account first.
+   */
+  'finance.transactions.write': [
+    'finance.transactions',
+    'finance.transactionAttachments',
+    'finance.accounts',
+  ],
   'finance.accounts.read': ['finance.accounts', 'finance.checkpoints'],
   /**
    * Two prefixes: reading an order and reading the page it sits on is
@@ -241,7 +267,9 @@ export const DEFAULT_DEVICE_CAPABILITIES: readonly MobileCapability[] = MOBILE_C
  *
  * A fixed list rather than a subset computed from the vocabulary: a guest may
  * read the session and the finance accounts and transactions shared with
- * them, and nothing under any other pillar. Pairing writes it as an `explicit`
+ * them, write those transactions, and nothing under any other pillar. Finance
+ * decides on every call whether the guest's role on the account allows the
+ * write; holding the capability only lets the request reach it. Pairing writes it as an `explicit`
  * grant, so a capability added to {@link MOBILE_CAPABILITIES} or to
  * {@link DEFAULT_DEVICE_CAPABILITIES} later does not reach a guest device.
  * Widening what a guest may do is an edit to this list and a decision about
@@ -251,6 +279,7 @@ export const GUEST_DEVICE_CAPABILITIES: readonly MobileCapability[] = [
   'session.read',
   'finance.accounts.read',
   'finance.transactions.read',
+  'finance.transactions.write',
 ];
 
 const CAPABILITY_SET: ReadonlySet<string> = new Set<string>(MOBILE_CAPABILITIES);

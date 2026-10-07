@@ -46,6 +46,8 @@ import { createMobileNoStore } from './mobile-no-store.js';
 import {
   CHALLENGE_PATH,
   MOBILE_EGO_CHAT_STREAM_PATH,
+  MOBILE_FINANCE_ATTACH_PATH,
+  MOBILE_FINANCE_RECEIPT_EXTRACT_PATH,
   MOBILE_INVENTORY_LEDGER_PATH,
   MOBILE_INVENTORY_MEDIA_UPLOAD_PATH,
   MOBILE_INVENTORY_MUTATIONS_PATH,
@@ -211,6 +213,12 @@ export function createBfmApiApp(deps: BfmApiDeps, options: CreateBfmApiAppOption
   // `requireDevice`, so the megabytes it will buffer are a paired handset's.
   // Its refusal is reshaped below (ADR-046).
   app.use(MOBILE_RECEIPT_UPLOAD_PATH, express.json({ limit: MOBILE_UPLOAD_MAX_BYTES }));
+
+  // The two finance routes that carry files, under the same ceiling and for
+  // the same reason. The attach mount is a prefix, so it also sits in front of
+  // the attachment reads, which send no body.
+  app.use(MOBILE_FINANCE_RECEIPT_EXTRACT_PATH, express.json({ limit: MOBILE_UPLOAD_MAX_BYTES }));
+  app.use(MOBILE_FINANCE_ATTACH_PATH, express.json({ limit: MOBILE_UPLOAD_MAX_BYTES }));
 
   // Same reasoning as the receipt upload's own mount above: a batch of 50
   // mutations carrying real field values is comfortably past Express's

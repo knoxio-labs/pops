@@ -120,6 +120,8 @@ describe('the granted scopes', () => {
   it('grants only what bfm calls today', () => {
     expect(BFM_SERVICE_ACCOUNT_SCOPES).toEqual([
       'finance.transactions',
+      'finance.transactionHistory',
+      'finance.transactionAttachments',
       'finance.accounts',
       'finance.checkpoints',
       'finance.delegatedSubject',
