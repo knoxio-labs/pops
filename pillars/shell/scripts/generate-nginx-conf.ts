@@ -61,13 +61,17 @@ import { parseCliArgs, type CliOptions } from './nginx-cli-args.js';
 import { assertDynamicNotCheck, runDynamic, runStatic } from './nginx-cli-main.js';
 import { NGINX_CONF_ORCHESTRATOR, ORCHESTRATOR_PILLAR_ID } from './nginx-conf-orchestrator.js';
 import { NGINX_CONF_TAIL } from './nginx-conf-tail.js';
-import { renderNginxConfHead } from './nginx-conf-template.js';
+import { NGINX_CONF_SERVER_HEAD, renderNginxConfHead } from './nginx-conf-template.js';
 import {
   guestGateFromEnv,
   rejectedOperatorEmailsWarning,
   type GuestGateOptions,
 } from './nginx-guest-gate.js';
-import { renderPillarSections, type PillarUpstream } from './nginx-pillar-blocks.js';
+import {
+  renderPillarSections,
+  renderPillarUiUpstreams,
+  type PillarUpstream,
+} from './nginx-pillar-blocks.js';
 import { DEFAULT_REGISTRY_URL, resolveRegistryUrl } from './registry-url-env.js';
 
 /**
@@ -200,8 +204,9 @@ export function renderNginxConfFromUpstreams(
   gate: GuestGateOptions = {}
 ): string {
   const rendered = upstreams.filter((upstream) => !FIXED_BLOCK_IDS.has(upstream.pillarId));
+  const uiUpstreams = renderPillarUiUpstreams(rendered);
   const sections = renderPillarSections(rendered, gate.guestPathPrefixes);
-  return `${renderNginxConfHead(gate.operatorEmails)}\n${sections}${NGINX_CONF_ORCHESTRATOR}\n${NGINX_CONF_TAIL}`;
+  return `${renderNginxConfHead(gate.operatorEmails)}\n${uiUpstreams}\n${NGINX_CONF_SERVER_HEAD}\n${sections}${NGINX_CONF_ORCHESTRATOR}\n${NGINX_CONF_TAIL}`;
 }
 
 /**

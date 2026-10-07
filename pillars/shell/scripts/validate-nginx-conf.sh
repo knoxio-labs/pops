@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Validate pillars/shell/nginx.conf + the shared `_pillar-proxy.conf`
-# partial by running `nginx -t` inside the same image we ship in
+# Validate pillars/shell/nginx.conf and its proxy partials by running
+# `nginx -t` inside the same image we ship in
 # production. Theme 13 PRD-190 split the dispatcher into a top-level
 # config plus a snippet partial; this script is the smoke harness that
 # catches typos before they reach a deploy.
@@ -16,6 +16,8 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 NGINX_CONF="$REPO_ROOT/pillars/shell/nginx.conf"
 PARTIAL="$REPO_ROOT/pillars/shell/nginx/conf.d/_pillar-proxy.conf"
+UI_PARTIAL="$REPO_ROOT/pillars/shell/nginx/conf.d/_ui-proxy.conf"
+COMMON_PARTIAL="$REPO_ROOT/pillars/shell/nginx/conf.d/_proxy-common.conf"
 
 if [[ ! -f "$NGINX_CONF" ]]; then
   echo "FAIL: missing $NGINX_CONF" >&2
@@ -23,6 +25,10 @@ if [[ ! -f "$NGINX_CONF" ]]; then
 fi
 if [[ ! -f "$PARTIAL" ]]; then
   echo "FAIL: missing $PARTIAL" >&2
+  exit 1
+fi
+if [[ ! -f "$UI_PARTIAL" || ! -f "$COMMON_PARTIAL" ]]; then
+  echo "FAIL: missing a shared proxy partial" >&2
   exit 1
 fi
 
@@ -38,5 +44,7 @@ fi
 docker run --rm \
   -v "$NGINX_CONF":/etc/nginx/conf.d/default.conf:ro \
   -v "$PARTIAL":/etc/nginx/snippets/_pillar-proxy.conf:ro \
-  nginx:1.31.3-alpine \
+  -v "$UI_PARTIAL":/etc/nginx/snippets/_ui-proxy.conf:ro \
+  -v "$COMMON_PARTIAL":/etc/nginx/snippets/_proxy-common.conf:ro \
+  nginx:1.31.6-alpine \
   nginx -t

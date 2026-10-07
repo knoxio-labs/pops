@@ -4,7 +4,7 @@
  * Split out so the generator's renderer stays small and the literal
  * blocks (which are essentially data) live next to each other. Order:
  * the renderer concatenates
- *   guest map → HEAD → REST_INTRO → <per-pillar /<id>-api/ blocks> → orchestrator → TAIL,
+ *   guest map → HEAD → upstreams → server head → REST/UI blocks → orchestrator → TAIL,
  * with the last two in `nginx-conf-orchestrator.ts` and `nginx-conf-tail.ts`.
  *
  * Editing any text below changes the committed `nginx.conf` — the
@@ -18,8 +18,10 @@ export const NGINX_CONF_HEAD = `map $http_x_request_id $pops_request_id {
 }
 
 log_format pops_json escape=json '{"timestamp":"$time_iso8601","remoteAddress":"$remote_addr","request":"$request","status":$status,"bytesSent":$body_bytes_sent,"requestTime":$request_time,"upstreamAddress":"$upstream_addr","upstreamStatus":"$upstream_status","requestId":"$pops_request_id"}';
+`;
 
-server {
+/** Fixed server-context configuration that follows generated upstream groups. */
+export const NGINX_CONF_SERVER_HEAD = `server {
     listen 80;
     server_name _;
     root /usr/share/nginx/html;
@@ -62,13 +64,8 @@ ${NGINX_CONF_GUEST_FORBIDDEN}
     # one limit governs, and it is the one the application states.
     client_max_body_size 20m;
 
-    # Resolver for variable-form \`proxy_pass\`. Upstreams held in an
-    # nginx variable defer DNS resolution to request time (vs. config-
-    # load time for literal \`proxy_pass <name>\`), letting nginx boot
-    # even when an optional pillar container is missing. Every \`proxy_pass\`
-    # in this file uses the variable form so the shell always boots — a
-    # registry-driven boot-render must never hard-fail on an absent
-    # pillar — and new upstreams must adopt the same form.
+    # Resolver for variable-form REST \`proxy_pass\`. UI bundles use shared
+    # upstream groups so workers share DNS state and refresh it asynchronously.
     resolver 127.0.0.11 valid=30s ipv6=off;
 
     # Gzip compression
@@ -111,8 +108,8 @@ ${NGINX_CONF_GUEST_FORBIDDEN}
 `;
 
 /**
- * Everything ahead of the per-pillar blocks: the guest map for the given raw
- * operator list, then the fixed head.
+ * Renders the guest map from operator emails and the fixed HTTP directives
+ * that precede generated upstream and server blocks.
  */
 export function renderNginxConfHead(rawOperatorEmails: string | undefined): string {
   return `${renderGuestMap(rawOperatorEmails)}\n${NGINX_CONF_HEAD}`;
@@ -157,7 +154,7 @@ export const NGINX_CONF_UI_INTRO = `    # ── Per-pillar UI bundles (runtime-
     #
     # One block per pillar, from the convention \`<pillar>-ui:80\`, not a
     # list of the pillars that have a UI today: such a list is the central
-    # enumeration the federation model removes. Variable-form
-    # \`proxy_pass\` means an absent UI container 502s on its own path
-    # instead of stopping the shell from booting.
+    # enumeration the federation model removes. Shared-memory upstream
+    # groups resolve optional UI containers asynchronously and keep absence
+    # local to that route.
 `;

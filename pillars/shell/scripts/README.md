@@ -1,6 +1,6 @@
 # nginx render pipeline
 
-The shell's production image is `nginx:1.31.3-alpine` plus a node binary — nginx serves
+The shell's production image is `nginx:1.31.6-alpine` plus a node binary — nginx serves
 the requests, Node only renders and reloads the conf — so everything that
 decides nginx routing happens here, at one of the moments below. Each file's own
 header explains what it does; this page is the ordering across them.
@@ -36,11 +36,14 @@ config.
 
 ## Invariants that span files
 
-- Every `proxy_pass` uses the variable form so nginx boots with an absent
-  upstream. New upstreams must follow (`nginx-conf-template.ts`).
-- Every proxied request carries the preserved-or-minted `X-Request-Id`. Shared
-  pillar routes inherit it from `_pillar-proxy.conf`; fixed routes declare it
-  beside their other proxy headers.
+- REST `proxy_pass` directives use the variable form so nginx boots with an
+  absent upstream. UI bundles use shared-memory `resolve` upstream groups so
+  workers share DNS state and refresh it asynchronously
+  (`nginx-pillar-blocks.ts`).
+- Every proxied request carries the preserved-or-minted `X-Request-Id`. REST
+  routes use `_pillar-proxy.conf`, UI bundle routes use `_ui-proxy.conf`, and
+  both inherit their shared headers and read/send timeouts from
+  `_proxy-common.conf`.
 - Gateway error pages cover only nginx-generated 502, 503, and 504 responses.
   `proxy_intercept_errors` remains off so producer-owned bodies pass through.
 - The dynamic renderer must skip the orchestrator's registry id — see
