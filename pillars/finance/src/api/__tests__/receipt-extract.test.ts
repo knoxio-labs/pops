@@ -294,7 +294,7 @@ describe('a receipt that yields no suggestion', () => {
     });
   });
 
-  it.each<FakeReading['kind']>(['unreadable', 'no-reader', 'already-a-purchase'])(
+  it.each(['unreadable', 'no-reader', 'already-a-purchase'] as const)(
     'writes nothing and pins nothing on %s',
     async (kind) => {
       purchases.willRead({ kind });
