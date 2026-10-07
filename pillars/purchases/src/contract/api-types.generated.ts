@@ -365,6 +365,41 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/receipts/references': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** Pin stored receipt files for an owner on another pillar so the retention sweep keeps them. Idempotent. */
+    put: operations['receipt.addReferences'];
+    post?: never;
+    /** Release an owner's pins on the named receipt files, or on all of them when none are named. A pin that does not exist is not an error. */
+    delete: operations['receipt.removeReferences'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/receipts/store': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Store receipt files without reading them. Needs no vision model and creates no purchase; an unreferenced file is swept after the retention window. */
+    post: operations['receipt.store'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/receipts/{sha256}': {
     parameters: {
       query?: never;
@@ -4013,6 +4048,143 @@ export interface operations {
       };
       /** @description 503 */
       503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+    };
+  };
+  'receipt.addReferences': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          ownerUri: string;
+          receiptUris: string[];
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            /** @enum {boolean} */
+            ok: true;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+    };
+  };
+  'receipt.removeReferences': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          ownerUri: string;
+          receiptUris?: string[];
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            /** @enum {boolean} */
+            ok: true;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+    };
+  };
+  'receipt.store': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          parts: {
+            dataBase64: string;
+            /** @enum {string} */
+            mediaType:
+              | 'image/jpeg'
+              | 'image/png'
+              | 'image/webp'
+              | 'image/gif'
+              | 'application/pdf'
+              | 'text/plain';
+          }[];
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            receiptUris: string[];
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
         headers: {
           [name: string]: unknown;
         };

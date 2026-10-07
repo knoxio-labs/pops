@@ -73,15 +73,24 @@ import type {
   PurchaseUpdateData,
   PurchaseUpdateErrors,
   PurchaseUpdateResponses,
+  ReceiptAddReferencesData,
+  ReceiptAddReferencesErrors,
+  ReceiptAddReferencesResponses,
   ReceiptExtractData,
   ReceiptExtractErrors,
   ReceiptExtractResponses,
   ReceiptReadData,
   ReceiptReadErrors,
   ReceiptReadResponses,
+  ReceiptRemoveReferencesData,
+  ReceiptRemoveReferencesErrors,
+  ReceiptRemoveReferencesResponses,
   ReceiptSaveDraftData,
   ReceiptSaveDraftErrors,
   ReceiptSaveDraftResponses,
+  ReceiptStoreData,
+  ReceiptStoreErrors,
+  ReceiptStoreResponses,
   ReceiptThumbnailData,
   ReceiptThumbnailErrors,
   ReceiptThumbnailResponses,
@@ -568,6 +577,59 @@ export const receiptExtract = <ThrowOnError extends boolean = false>(
 ): RequestResult<ReceiptExtractResponses, ReceiptExtractErrors, ThrowOnError> =>
   (options?.client ?? client).post<ReceiptExtractResponses, ReceiptExtractErrors, ThrowOnError>({
     url: '/receipts/extract',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
+
+/**
+ * Release an owner's pins on the named receipt files, or on all of them when none are named. A pin that does not exist is not an error.
+ */
+export const receiptRemoveReferences = <ThrowOnError extends boolean = false>(
+  options?: Options<ReceiptRemoveReferencesData, ThrowOnError>
+): RequestResult<ReceiptRemoveReferencesResponses, ReceiptRemoveReferencesErrors, ThrowOnError> =>
+  (options?.client ?? client).delete<
+    ReceiptRemoveReferencesResponses,
+    ReceiptRemoveReferencesErrors,
+    ThrowOnError
+  >({
+    url: '/receipts/references',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
+
+/**
+ * Pin stored receipt files for an owner on another pillar so the retention sweep keeps them. Idempotent.
+ */
+export const receiptAddReferences = <ThrowOnError extends boolean = false>(
+  options?: Options<ReceiptAddReferencesData, ThrowOnError>
+): RequestResult<ReceiptAddReferencesResponses, ReceiptAddReferencesErrors, ThrowOnError> =>
+  (options?.client ?? client).put<
+    ReceiptAddReferencesResponses,
+    ReceiptAddReferencesErrors,
+    ThrowOnError
+  >({
+    url: '/receipts/references',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
+
+/**
+ * Store receipt files without reading them. Needs no vision model and creates no purchase; an unreferenced file is swept after the retention window.
+ */
+export const receiptStore = <ThrowOnError extends boolean = false>(
+  options?: Options<ReceiptStoreData, ThrowOnError>
+): RequestResult<ReceiptStoreResponses, ReceiptStoreErrors, ThrowOnError> =>
+  (options?.client ?? client).post<ReceiptStoreResponses, ReceiptStoreErrors, ThrowOnError>({
+    url: '/receipts/store',
     ...options,
     headers: {
       'Content-Type': 'application/json',

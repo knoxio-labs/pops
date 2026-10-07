@@ -28,10 +28,16 @@ import { MEDIA_TYPES } from '../ingest/receipt/vision.js';
 import {
   CreatePurchaseBodySchema,
   ErrorBodySchema,
+  OkSchema,
   SaveReceiptDraftBodySchema,
 } from './rest-schemas.js';
 import { PurchaseDetailSchema } from './schemas/purchase-detail.js';
 import { PopsUriSchema } from './schemas/purchase.js';
+import {
+  AddReceiptReferencesBodySchema,
+  RemoveReceiptReferencesBodySchema,
+  StoredReceiptUrisSchema,
+} from './schemas/receipt-references.js';
 
 const c = initContract();
 
@@ -306,7 +312,46 @@ const ReceiptSha256ParamSchema = z.object({
   sha256: z.string().regex(/^[0-9a-f]{64}$/u),
 });
 
+/** The files in a store-only upload, without the capture facts a reading uses. */
+export const StoreReceiptBodySchema = UploadReceiptBodySchema.pick({ parts: true });
+
 export const purchasesReceiptContract = c.router({
+  store: {
+    method: 'POST',
+    path: '/receipts/store',
+    body: StoreReceiptBodySchema,
+    responses: {
+      200: StoredReceiptUrisSchema,
+      // Not the type it claims; nothing is stored.
+      400: ErrorBodySchema,
+    },
+    summary:
+      'Store receipt files without reading them. Needs no vision model and creates no purchase; ' +
+      'an unreferenced file is swept after the retention window.',
+  },
+  addReferences: {
+    method: 'PUT',
+    path: '/receipts/references',
+    body: AddReceiptReferencesBodySchema,
+    responses: {
+      200: OkSchema,
+      400: ErrorBodySchema,
+      // A URI names a file the store does not hold. Nothing is pinned.
+      404: ErrorBodySchema,
+    },
+    summary:
+      'Pin stored receipt files for an owner on another pillar so the retention sweep keeps them. ' +
+      'Idempotent.',
+  },
+  removeReferences: {
+    method: 'DELETE',
+    path: '/receipts/references',
+    body: RemoveReceiptReferencesBodySchema,
+    responses: { 200: OkSchema, 400: ErrorBodySchema },
+    summary:
+      "Release an owner's pins on the named receipt files, or on all of them when none are named. " +
+      'A pin that does not exist is not an error.',
+  },
   upload: {
     method: 'POST',
     path: '/receipts',
