@@ -41,6 +41,13 @@ export type GatewayFailure =
   | (GatewayFailureBase & { readonly kind: 'unsupported-media'; readonly status: 415 })
   | (GatewayFailureBase & { readonly kind: 'gateway-misconfigured'; readonly status: 502 })
   /**
+   * The producer knows the caller, shows it the resource, and will not let it
+   * do this to it: a guest holding `view` where the operation needs `edit`.
+   * Apart from `gateway-misconfigured`, which is bfm's own credential being
+   * refused and is nothing the person holding the phone can change.
+   */
+  | (GatewayFailureBase & { readonly kind: 'forbidden'; readonly status: 403 })
+  /**
    * This pillar's own `Pops-Inventory-Protocol` is below the inventory
    * pillar's current minimum. The route that answers 426 throws
    * `InventoryProtocolTooOldError` instead of switching on this kind through

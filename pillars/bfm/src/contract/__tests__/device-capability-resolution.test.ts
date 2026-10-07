@@ -139,13 +139,14 @@ describe('a device bound to a guest', () => {
     });
   }
 
-  it('is granted exactly the three read capabilities, written out', () => {
+  it('is granted exactly the session, the finance reads and the transaction write, written out', () => {
     // Pinned as a literal: the guest set is a decision, and a test that read
     // it back from the constant would agree with whatever it became.
     expect([...GUEST_DEVICE_CAPABILITIES]).toEqual([
       'session.read',
       'finance.accounts.read',
       'finance.transactions.read',
+      'finance.transactions.write',
     ]);
   });
 

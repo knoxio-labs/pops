@@ -13,6 +13,7 @@
 import { decodeAccountsCursor } from '../finance/accounts-cursor.js';
 import { decodePageCursor } from '../finance/cursor.js';
 import { isGatewayOk } from '../pillars/gateway.js';
+import { makeMobileFinanceWriteHandlers } from './mobile-finance-write-handlers.js';
 import { invalidMobileCursorResponse } from './mobile-request-error.js';
 import { toCollectionUpstreamErrorResponse, toUpstreamErrorResponse } from './upstream-error.js';
 
@@ -113,5 +114,7 @@ export function makeMobileFinanceHandlers(deps: MobileFinanceHandlerDeps) {
 
       return { status: 200 as const, body: outcome.value };
     },
+
+    ...makeMobileFinanceWriteHandlers(deps.finance),
   };
 }

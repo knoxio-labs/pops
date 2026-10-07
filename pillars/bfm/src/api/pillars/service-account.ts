@@ -26,7 +26,9 @@ export const BFM_SERVICE_ACCOUNT_NAME = 'bfm';
  * What the account is granted, and nothing more.
  *
  * One entry per sibling module bfm actually calls: the mobile transactions
- * screens read finance's `transactions.*`, the mobile accounts screen reads
+ * screens read and write finance's `transactions.*`, read its
+ * `transactionHistory.*` and read and attach through its
+ * `transactionAttachments.*`, the mobile accounts screen reads
  * finance's `accounts.*` and `checkpoints.*`, the receipt upload writes to
  * purchases' `receipt.*`, the mobile purchases screens read purchases'
  * `purchase.*`, the mobile search box calls purchases' separate `search.*`
@@ -70,6 +72,8 @@ export const BFM_SERVICE_ACCOUNT_NAME = 'bfm';
  */
 export const BFM_SERVICE_ACCOUNT_SCOPES: readonly string[] = [
   'finance.transactions',
+  'finance.transactionHistory',
+  'finance.transactionAttachments',
   'finance.accounts',
   'finance.checkpoints',
   'finance.delegatedSubject',

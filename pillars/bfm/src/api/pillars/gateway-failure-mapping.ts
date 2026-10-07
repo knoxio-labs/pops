@@ -105,10 +105,29 @@ function mapRateLimited(
   };
 }
 
+/**
+ * The SDK folds a producer 401 and 403 into one `unauthorized` failure with no
+ * status, so the producer's own code is what separates them. Only the ADR-054
+ * `resource.forbidden` code is a role refusal; every `auth.*` code is the
+ * producer refusing bfm's credential.
+ */
+function isRoleRefusal(failure: Extract<CallFailure, { kind: 'unauthorized' }>): boolean {
+  return failure.code === `${failure.pillar}.resource.forbidden`;
+}
+
 function mapUnauthorized(
   failure: Extract<CallFailure, { kind: 'unauthorized' }>,
   target: string
 ): GatewayFailure {
+  if (isRoleRefusal(failure)) {
+    return {
+      kind: 'forbidden',
+      pillar: target,
+      status: 403,
+      upstreamStatus: 403,
+      ...producerEnvelopeFields(failure),
+    };
+  }
   return {
     kind: 'gateway-misconfigured',
     pillar: target,

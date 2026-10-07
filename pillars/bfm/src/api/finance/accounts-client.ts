@@ -55,7 +55,7 @@ export const FINANCE_PILLAR_ID = 'finance';
 const BALANCE_HISTORY_MONTHS = 12;
 
 /** One raw finance account row, before any mobile shaping. */
-async function fetchAccountRow(
+export async function fetchAccountRow(
   gateway: PillarGateway,
   id: string
 ): Promise<GatewayOutcome<FinanceAccountRow>> {

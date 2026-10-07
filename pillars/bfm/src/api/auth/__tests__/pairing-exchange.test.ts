@@ -320,6 +320,7 @@ describe('whose device a code buys', () => {
         'session.read',
         'finance.accounts.read',
         'finance.transactions.read',
+        'finance.transactions.write',
       ]);
     });
   });

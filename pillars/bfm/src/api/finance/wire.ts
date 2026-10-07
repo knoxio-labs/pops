@@ -109,7 +109,8 @@ type DecimalAmount = {
   decimalPlaces: number;
 };
 
-function currencyFractionDigits(currency: string): number {
+/** How many minor-unit digits `currency` has, 2 for a code the runtime does not know. */
+export function currencyFractionDigits(currency: string): number {
   try {
     return (
       new Intl.NumberFormat('en', { style: 'currency', currency }).resolvedOptions()
@@ -149,7 +150,11 @@ function scaleDecimalAmount(amount: DecimalAmount, fractionDigits: number): stri
   return /[^0]/u.test(discarded) ? null : amount.digits.slice(0, retainedLength);
 }
 
-function toMinorUnits(amount: number, currency: string): number | null {
+/**
+ * A finance decimal amount as integer minor units of `currency`, or `null`
+ * when it cannot be represented exactly at that precision.
+ */
+export function toMinorUnits(amount: number, currency: string): number | null {
   const decimalAmount = parseDecimalAmount(amount);
   if (decimalAmount === null) return null;
 
