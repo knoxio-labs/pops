@@ -783,6 +783,18 @@ export const EXPECTATIONS = [
   {
     consumer: 'finance',
     producer: 'purchases',
+    operationId: 'receipt.extract',
+    path: '/receipts/extract',
+    method: 'post',
+    // Reads a receipt into a suggestion for a new ledger entry. Extract, not
+    // upload: a moved route here must never land on the one that creates a
+    // household purchase from a guest's file.
+    query: [],
+    usedBy: 'pillars/finance/src/api/purchases/client.ts',
+  },
+  {
+    consumer: 'finance',
+    producer: 'purchases',
     operationId: 'receipt.addReferences',
     path: '/receipts/references',
     method: 'put',

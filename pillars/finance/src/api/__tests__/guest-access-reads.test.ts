@@ -548,6 +548,7 @@ const GUEST_ROUTES = new Set([
   'PATCH /transactions/:id',
   'DELETE /transactions/:id',
   'POST /transactions/restore',
+  'POST /transactions/receipt-extract',
   'POST /transactions/:id/attachments',
   'GET /transactions/:id/attachments',
   'GET /transactions/:id/attachments/:attachmentId',

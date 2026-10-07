@@ -86,7 +86,7 @@ function requireAttachment(
 }
 
 /** Map a receipt-store failure to its HTTP failure. */
-function translatePurchasesError(err: unknown): never {
+export function translatePurchasesError(err: unknown): never {
   if (err instanceof PurchasesUnavailableError) {
     throw new DependencyUnavailableError(
       'The receipt store is not available; nothing was changed',

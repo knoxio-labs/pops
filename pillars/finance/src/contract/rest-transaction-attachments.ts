@@ -10,6 +10,10 @@
  * transaction sits on now, attaching and detaching need `edit`. An attachment
  * id that belongs to a different transaction is a 404.
  *
+ * `extractReceipt` (POPS-5871) is the one route here that names an account
+ * instead of a transaction: it reads a receipt before the entry it will be
+ * attached to exists, and needs `edit` on that account.
+ *
  * Bytes travel base64 in JSON, as they do on the purchases routes these
  * proxy: one representation the OpenAPI document and every generated client
  * describe without a special case.
@@ -56,9 +60,66 @@ export const AttachToTransactionBody = z.union([
   }),
 ]);
 
+export const ExtractReceiptBody = z.strictObject({
+  /** The account the new entry will sit on. Decides who may ask and which currency is expected. */
+  accountId: z.string().min(1),
+  /** One receipt, in order. The request body limit bounds how many. */
+  parts: z.array(ReceiptPartSchema).min(1),
+});
+
+/** What a read receipt proposes for a new entry. The person reviews it before saving. */
+export const ReceiptSuggestionSchema = z.object({
+  /** The day of the purchase where it was made, `YYYY-MM-DD`. */
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/u),
+  /** The merchant as printed. Null when the receipt names none. */
+  description: z.string().nullable(),
+  /** The receipt's full total as money out: negative for an ordinary receipt. */
+  amountCents: z.int(),
+  /** The currency the receipt is in, which may not be the account's. */
+  currency: z.string(),
+  /** True when the receipt's currency is not the account's, so the amount needs converting by hand. */
+  currencyMismatch: z.boolean(),
+});
+
+const StoredReceiptUris = z.array(ReceiptUriSchema).min(1);
+
+/**
+ * `receiptUris` is present on every outcome, so the files can be attached to
+ * the transaction the caller creates next whether or not they could be read.
+ */
+export const ExtractReceiptResultSchema = z.discriminatedUnion('outcome', [
+  z.object({
+    outcome: z.literal('suggested'),
+    receiptUris: StoredReceiptUris,
+    suggestion: ReceiptSuggestionSchema,
+  }),
+  z.object({
+    /**
+     * `unreadable`: nothing usable could be made of the files.
+     * `unavailable`: receipt reading is not running; the files are stored.
+     * `already-a-purchase`: these files were already recorded as a household purchase.
+     */
+    outcome: z.enum(['unreadable', 'unavailable', 'already-a-purchase']),
+    receiptUris: StoredReceiptUris,
+  }),
+]);
+
 const AttachmentParams = z.object({ id: z.string(), attachmentId: z.string() });
 
 export const financeTransactionAttachmentsContract = c.router({
+  extractReceipt: {
+    method: 'POST',
+    path: '/transactions/receipt-extract',
+    metadata: guestRoute(),
+    body: ExtractReceiptBody,
+    responses: {
+      200: z.object({ data: ExtractReceiptResultSchema }),
+      ...ERR_RESPONSES,
+    },
+    summary:
+      'Read a receipt and suggest the date, description and amount of a new entry on an account. ' +
+      'Stores the files and writes nothing else; the caller creates the transaction',
+  },
   attach: {
     method: 'POST',
     path: '/transactions/:id/attachments',

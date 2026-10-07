@@ -310,6 +310,9 @@ import type {
   TransactionAttachmentsDetachData,
   TransactionAttachmentsDetachErrors,
   TransactionAttachmentsDetachResponses,
+  TransactionAttachmentsExtractReceiptData,
+  TransactionAttachmentsExtractReceiptErrors,
+  TransactionAttachmentsExtractReceiptResponses,
   TransactionAttachmentsListData,
   TransactionAttachmentsListErrors,
   TransactionAttachmentsListResponses,
@@ -2084,6 +2087,29 @@ export const transactionsDescriptionsForPreview = <ThrowOnError extends boolean 
     unknown,
     ThrowOnError
   >({ url: '/transactions/descriptions-preview', ...options });
+
+/**
+ * Read a receipt and suggest the date, description and amount of a new entry on an account. Stores the files and writes nothing else; the caller creates the transaction
+ */
+export const transactionAttachmentsExtractReceipt = <ThrowOnError extends boolean = false>(
+  options?: Options<TransactionAttachmentsExtractReceiptData, ThrowOnError>
+): RequestResult<
+  TransactionAttachmentsExtractReceiptResponses,
+  TransactionAttachmentsExtractReceiptErrors,
+  ThrowOnError
+> =>
+  (options?.client ?? client).post<
+    TransactionAttachmentsExtractReceiptResponses,
+    TransactionAttachmentsExtractReceiptErrors,
+    ThrowOnError
+  >({
+    url: '/transactions/receipt-extract',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
 
 /**
  * Restore a previously-deleted transaction from its snapshot. For a guest only the snapshot's `id` is read: the entry is rebuilt from its latest recorded delete, which must be on an account they hold `edit` on, and is a 404 when there is none

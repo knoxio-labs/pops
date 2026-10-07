@@ -1392,6 +1392,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/transactions/receipt-extract': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Read a receipt and suggest the date, description and amount of a new entry on an account. Stores the files and writes nothing else; the caller creates the transaction */
+    post: operations['transactionAttachments.extractReceipt'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/transactions/restore': {
     parameters: {
       query?: never;
@@ -17390,6 +17407,128 @@ export interface operations {
             total: number;
             truncated: boolean;
           };
+        };
+      };
+    };
+  };
+  'transactionAttachments.extractReceipt': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          accountId: string;
+          parts: {
+            dataBase64: string;
+            mediaType: string;
+          }[];
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data:
+              | {
+                  /** @enum {string} */
+                  outcome: 'suggested';
+                  receiptUris: string[];
+                  suggestion: {
+                    amountCents: number;
+                    currency: string;
+                    currencyMismatch: boolean;
+                    date: string;
+                    description: string | null;
+                  };
+                }
+              | {
+                  /** @enum {string} */
+                  outcome: 'unreadable' | 'unavailable' | 'already-a-purchase';
+                  receiptUris: string[];
+                };
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
