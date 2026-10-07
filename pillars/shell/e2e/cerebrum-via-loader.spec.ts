@@ -20,8 +20,7 @@ test.describe('cerebrum — mounted by the runtime loader', () => {
     await stubShellBoot(page);
   });
 
-  test.afterEach(async ({ page }) => {
-    await page.unrouteAll({ behavior: 'ignoreErrors' });
+  test.afterEach(() => {
     expect(errors).toHaveLength(0);
   });
 

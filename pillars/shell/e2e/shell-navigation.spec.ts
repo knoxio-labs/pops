@@ -51,8 +51,7 @@ test.describe('Shell — app-rail navigation', () => {
     await expect(page.getByRole('button', { name: 'Finance' })).toBeVisible();
   });
 
-  test.afterEach(async ({ page }) => {
-    await page.unrouteAll({ behavior: 'ignoreErrors' });
+  test.afterEach(() => {
     expect(errors).toHaveLength(0);
   });
 

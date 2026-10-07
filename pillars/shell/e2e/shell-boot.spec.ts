@@ -28,8 +28,7 @@ test.describe('Shell — boot install set', () => {
     page.on('pageerror', (err) => errors.push(err.message));
   });
 
-  test.afterEach(async ({ page }) => {
-    await page.unrouteAll({ behavior: 'ignoreErrors' });
+  test.afterEach(() => {
     expect(errors).toHaveLength(0);
   });
 

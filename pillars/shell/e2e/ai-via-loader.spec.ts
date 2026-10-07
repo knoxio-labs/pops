@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 /**
  * The ai pillar, mounted through the shell's runtime loader (POPS-3220).
  *
@@ -14,7 +16,43 @@
  * shell built — exactly the coupling the loader sits in the middle of.
  */
 import { expect, test } from './fixtures/pillar-rest-guard';
-import { stubShellBoot } from './helpers/pillar-rest';
+import { AccountsListResponseSchema } from './helpers/finance-accounts';
+import { fulfilWith, stubShellBoot } from './helpers/pillar-rest';
+
+import type { Page } from '@playwright/test';
+
+const EmptyPagedListResponseSchema = z
+  .object({
+    data: z.array(z.unknown()),
+    pagination: z
+      .object({
+        hasMore: z.boolean(),
+        limit: z.number().int(),
+        offset: z.number().int(),
+        total: z.number().int(),
+      })
+      .strict(),
+  })
+  .strict();
+
+function emptyPage(limit: number) {
+  return { data: [], pagination: { total: 0, limit, offset: 0, hasMore: false } };
+}
+
+async function stubFinanceRules(page: Page): Promise<void> {
+  await page.route(
+    /\/contacts-api\/entities\?/,
+    fulfilWith(200, EmptyPagedListResponseSchema, emptyPage(200), 'entities.list')
+  );
+  await page.route(
+    /\/finance-api\/accounts\?/,
+    fulfilWith(200, AccountsListResponseSchema, emptyPage(500), 'accounts.list')
+  );
+  await page.route(
+    /\/finance-api\/corrections\?/,
+    fulfilWith(200, EmptyPagedListResponseSchema, emptyPage(50), 'corrections.list')
+  );
+}
 
 test.describe('ai — mounted by the runtime loader', () => {
   let errors: string[] = [];
@@ -25,8 +63,7 @@ test.describe('ai — mounted by the runtime loader', () => {
     await stubShellBoot(page);
   });
 
-  test.afterEach(async ({ page }) => {
-    await page.unrouteAll({ behavior: 'ignoreErrors' });
+  test.afterEach(() => {
     expect(errors).toHaveLength(0);
   });
 
@@ -63,9 +100,11 @@ test.describe('ai — mounted by the runtime loader', () => {
    * wrong. This is the only tier that can tell the two apart.
    */
   test('a redirect page mounted from the bundle navigates out of the pillar', async ({ page }) => {
+    await stubFinanceRules(page);
     await page.goto('/ai/rules');
 
     await expect(page).toHaveURL(/\/finance\/rules/);
+    await expect(page.getByRole('heading', { name: 'Categorisation Rules' })).toBeVisible();
   });
 
   test('the settings redirect keeps its fragment', async ({ page }) => {

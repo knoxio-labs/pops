@@ -42,29 +42,28 @@ registered match — which silently fed the boot resolver the wrong body.
 ## An unstubbed pillar REST call fails the test
 
 Every spec's `test`/`expect` come from `./fixtures/pillar-rest-guard`, not
-`@playwright/test` directly. It installs a catch-all `page.route` for the
-pillar REST URL pattern (`PILLAR_REST_URL` in `helpers/pillar-rest.ts`) before
-any spec code runs, so it is the fallback of last resort — any stub a spec (or
-`pillar-rest.ts`) registers afterwards still wins for that URL, the same way
-`failRegistry(page)`'s `route.abort()` always did. A request nothing more
-specific claims is recorded and fulfilled with a 599, and the fixture's
-teardown throws if that record isn't empty, naming every method and URL that
-got through — closing the trap this file used to only describe.
+`@playwright/test` directly. The fixture installs a context-level catch-all
+for the pillar REST URL pattern (`PILLAR_REST_URL` in
+`helpers/pillar-rest.ts`). Page-level stubs take precedence, and the
+context-level fallback survives a spec's `page.unrouteAll()` cleanup. A
+request nothing more specific claims is recorded and fulfilled with a 599;
+the fixture reports every recorded method and URL after the page settles.
+The registry-health test response also uses context routing so page cleanup
+does not forward background health checks to the unavailable backend.
+
+When a script or pillar REST request is still in flight after a test and its
+hooks finish, teardown waits for the tracked requests to finish and then for
+100ms without another relevant request. The event-driven wait has a five-second
+upper bound. Tests with no recent script or pillar REST request do not wait,
+and a page that fails to settle within the bound fails with its remaining
+requests listed.
 
 A spec whose actual subject is the shell's behaviour when a pillar answers
 nothing (a rail-navigation smoke test, a "mounts even with a dead API" case)
 opts out with `test.use({ allowUnroutedPillarRest: '<why>' })`, scoped as
-narrowly as the resilience claim itself — see `shell-navigation.spec.ts` for a
-file-wide example and `ai-via-loader.spec.ts` for a single-test one. Anywhere
-else, an unrouted call means a missing stub, not a reason to opt out.
-
-What it does not catch yet: only a request issued before the test body ends is
-recorded. A spec whose last assertion resolves on the router can finish while
-the page it mounted is still resolving its lazy chunk, and the query that chunk
-fires lands after `afterEach` has called `page.unrouteAll` — past every handler,
-the catch-all included. So a green run means "nothing unstubbed fired in time",
-not "this spec stubs everything its pages read", and the opt-outs still have to
-be written deliberately rather than read off a red run. POPS-4033 closes it.
+narrowly as the resilience claim itself — see `shell-navigation.spec.ts` for
+a file-wide example and `ai-via-loader.spec.ts` for a single-test one.
+Anywhere else, an unrouted call means a missing stub, not a reason to opt out.
 
 ## Two shells and Storybook, three projects
 
