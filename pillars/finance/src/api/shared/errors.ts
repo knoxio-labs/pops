@@ -44,6 +44,18 @@ export const financeDomainErrors = defineErrors('finance', {
     message: 'The caller may see this resource but not do this to it.',
     retryable: false,
   },
+  unsupported_media_type: {
+    area: 'resource',
+    status: 415,
+    message: 'The resource is not of a type this operation applies to.',
+    retryable: false,
+  },
+  unavailable: {
+    area: 'dependency',
+    status: 503,
+    message: 'A service this operation depends on is not available.',
+    retryable: true,
+  },
 });
 
 interface HttpErrorOptions {
@@ -145,5 +157,32 @@ export class PreconditionError extends HttpError {
 export class ForbiddenError extends HttpError {
   constructor(message: string) {
     super({ statusCode: 403, code: 'finance.resource.forbidden', message });
+  }
+}
+
+/**
+ * 415 Unsupported Media Type: the resource exists and is not of a type the
+ * operation applies to, such as a thumbnail of a PDF. A settled answer, not a
+ * transient one.
+ */
+export class UnsupportedMediaTypeError extends HttpError {
+  constructor(message: string) {
+    super({ statusCode: 415, code: 'finance.resource.unsupported_media_type', message });
+  }
+}
+
+/**
+ * 503 Service Unavailable: another pillar this operation depends on gave no
+ * usable answer, and nothing was written. Retryable.
+ */
+export class DependencyUnavailableError extends HttpError {
+  constructor(message: string, details?: unknown) {
+    super({
+      statusCode: 503,
+      code: 'finance.dependency.unavailable',
+      message,
+      details,
+      retryable: true,
+    });
   }
 }

@@ -770,6 +770,57 @@ export const EXPECTATIONS = [
     usedBy: 'pillars/finance/src/api/cron/pillar-lookup.ts',
   },
   {
+    consumer: 'finance',
+    producer: 'purchases',
+    operationId: 'receipt.store',
+    path: '/receipts/store',
+    method: 'post',
+    // Files attached to a transaction live in the receipt store. Finance
+    // stores without reading, so no purchase is created from an attachment.
+    query: [],
+    usedBy: 'pillars/finance/src/api/purchases/client.ts',
+  },
+  {
+    consumer: 'finance',
+    producer: 'purchases',
+    operationId: 'receipt.addReferences',
+    path: '/receipts/references',
+    method: 'put',
+    // The pin that stops the retention sweep deleting an attached file. A
+    // moved route is an attachment whose file disappears after the window.
+    query: [],
+    usedBy: 'pillars/finance/src/api/purchases/client.ts',
+  },
+  {
+    consumer: 'finance',
+    producer: 'purchases',
+    operationId: 'receipt.removeReferences',
+    path: '/receipts/references',
+    method: 'delete',
+    query: [],
+    usedBy: 'pillars/finance/src/api/purchases/client.ts',
+  },
+  {
+    consumer: 'finance',
+    producer: 'purchases',
+    operationId: 'receipt.read',
+    path: '/receipts/{sha256}',
+    method: 'get',
+    query: [],
+    pathParams: ['sha256'],
+    usedBy: 'pillars/finance/src/api/purchases/client.ts',
+  },
+  {
+    consumer: 'finance',
+    producer: 'purchases',
+    operationId: 'receipt.thumbnail',
+    path: '/receipts/{sha256}/thumbnail',
+    method: 'get',
+    query: [],
+    pathParams: ['sha256'],
+    usedBy: 'pillars/finance/src/api/purchases/client.ts',
+  },
+  {
     consumer: 'inventory',
     producer: 'documents',
     operationId: 'paperless.status',

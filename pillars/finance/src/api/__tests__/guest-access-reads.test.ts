@@ -548,6 +548,11 @@ const GUEST_ROUTES = new Set([
   'PATCH /transactions/:id',
   'DELETE /transactions/:id',
   'POST /transactions/restore',
+  'POST /transactions/:id/attachments',
+  'GET /transactions/:id/attachments',
+  'GET /transactions/:id/attachments/:attachmentId',
+  'GET /transactions/:id/attachments/:attachmentId/thumbnail',
+  'DELETE /transactions/:id/attachments/:attachmentId',
 ]);
 
 const routeKey = (route: { method: string; path: string }): string =>

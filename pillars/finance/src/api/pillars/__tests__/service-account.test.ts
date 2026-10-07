@@ -110,6 +110,7 @@ describe('the account grant', () => {
   it('names exactly the domains the outbound legs call', () => {
     expect([...FINANCE_SERVICE_ACCOUNT_SCOPES]).toEqual([
       'contacts.entities',
+      'purchases.receipt',
       'registry.users',
       'tags.tags',
     ]);

@@ -1,6 +1,6 @@
 /**
  * Sharing an account with someone else: the grant service, the transaction
- * audit log, and the value sets both tables constrain their columns to. The tables themselves
+ * audit log, transaction attachments, and the value sets the tables constrain their columns to. The tables themselves
  * come through `./core.ts` with the rest of the schema.
  *
  * One of the groups re-exported by `../index.ts` — see that file's header for
@@ -27,3 +27,10 @@ export type {
   TransactionEventInput,
   TransactionEventRow,
 } from '../services/transaction-events.js';
+
+export * as transactionAttachmentsService from '../services/transaction-attachments.js';
+
+export type {
+  AttachmentFile,
+  TransactionAttachmentRow,
+} from '../services/transaction-attachments.js';

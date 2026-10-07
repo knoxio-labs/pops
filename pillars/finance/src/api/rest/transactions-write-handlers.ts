@@ -14,6 +14,11 @@
  * straight away (POPS-5868). That is the same for every caller, so a guest can
  * be handed a `relatedTransactionId` naming a row on an account they hold no
  * grant on; fetching it answers 404.
+ *
+ * Deleting a transaction that held attachments releases its pins in the
+ * purchases receipt store once the delete has committed (POPS-5870). The
+ * attachment rows go with the transaction and a restore does not bring them
+ * back.
  */
 import { readPrincipal } from '@pops/pillar-express';
 
@@ -25,6 +30,7 @@ import {
   PositiveAmountPurchaseError,
   type TransactionActor,
   TransactionAlreadyExistsError,
+  transactionAttachmentsService,
   transactionEventsService,
   TransactionNotFoundError,
   type TransactionRow,
@@ -38,6 +44,8 @@ import {
   toUpdateTransactionInput,
 } from '../modules/transactions-types.js';
 import { pairSavedTransfer } from '../modules/transfers/pair-on-save.js';
+import { type PurchasesReceiptsClient } from '../purchases/client.js';
+import { releaseReceiptReferences } from '../purchases/references.js';
 import { ConflictError, NotFoundError, ValidationError } from '../shared/errors.js';
 import { runHttp } from './error-mapping.js';
 import {
@@ -74,7 +82,7 @@ export function translateTransactionError(err: unknown, id?: string): never {
 }
 
 /** A service presents a key, not a session, so it has no email to record. */
-function actorOf(res: Response): TransactionActor {
+export function actorOf(res: Response): TransactionActor {
   const principal = readPrincipal(res);
   return principal.kind === 'service'
     ? { kind: 'service', email: null }
@@ -163,7 +171,7 @@ function deletedRowFromLog(db: FinanceDb, access: AccountAccess, id: string): Tr
   return transactionEventsService.parseTransactionSnapshot(deletion.before);
 }
 
-export function makeTransactionWriteHandlers(db: FinanceDb) {
+export function makeTransactionWriteHandlers(db: FinanceDb, purchases: PurchasesReceiptsClient) {
   return {
     create: ({ body, res }: Req['create'] & { res: Response }) =>
       runHttp(() => {
@@ -213,14 +221,17 @@ export function makeTransactionWriteHandlers(db: FinanceDb) {
       }),
 
     delete: ({ params, res }: Req['delete'] & { res: Response }) =>
-      runHttp(() => {
+      runHttp(async () => {
         try {
           const access = accountAccess(res, db);
           if (access !== 'all') {
             const stored = transactionsService.getTransaction(db, params.id);
             requireEditOnTransaction(access, params.id, stored.accountId);
           }
+          const hadAttachments =
+            transactionAttachmentsService.listAttachments(db, params.id).length > 0;
           const row = transactionsService.deleteTransaction(db, params.id, actorOf(res));
+          if (hadAttachments) await releaseReceiptReferences(purchases, params.id);
           return {
             status: 200 as const,
             body: {
