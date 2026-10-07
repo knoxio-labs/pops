@@ -65,16 +65,6 @@ internal struct RootView: View {
                     AppComposition.pruneStaleInventoryReplicas(keeping: pairedDevice)
                 }.value
             }
-            #if DEBUG && targetEnvironment(simulator)
-                .onChange(of: simulatorPairingReady) { _, ready in
-                    guard ready else { return }
-                    pendingSimulatorPairing = false
-                    Task {
-                        await pairingModel.pair()
-                        pairingModel.codeText = ""
-                    }
-                }
-            #endif
             // Coming back to the app is the one moment worth asking again: a
             // pillar that was down at launch may not be now, and nothing on
             // the screen the app is stuck on would ever find that out.
@@ -104,8 +94,16 @@ internal struct RootView: View {
             }
             .onOpenURL { url in
                 #if DEBUG && targetEnvironment(simulator)
-                    if SimulatorPairingURL.handle(url, consume: { pairingModel.didScan($0) }) {
-                        pendingSimulatorPairing = true
+                    if SimulatorPairingURL.handle(
+                        url,
+                        consume: { handoff in
+                            guard !pendingSimulatorPairing else { return true }
+                            if case .paired = composition.session.state { return true }
+                            pendingSimulatorPairing = true
+                            Task { await completeSimulatorPairing(handoff) }
+                            return true
+                        })
+                    {
                         return
                     }
                 #endif
@@ -140,11 +138,22 @@ internal struct RootView: View {
     }
 
     #if DEBUG && targetEnvironment(simulator)
-        private var simulatorPairingReady: Bool {
-            guard pendingSimulatorPairing, case .pairing = composition.shell.destination else {
-                return false
+        @MainActor
+        private func completeSimulatorPairing(_ handoff: SimulatorPairingURL.Handoff) async {
+            defer {
+                pairingModel.codeText = ""
+                pendingSimulatorPairing = false
             }
-            return pairingModel.canSubmit
+
+            await composition.shell.restoreSession()
+            if case .paired = composition.session.state { return }
+            guard
+                let details = await SimulatorPairingURL.claim(handoff),
+                let baseURL = URL(string: details.pairingBaseUrl),
+                pairingModel.receivePairingDetails(baseURL: baseURL, code: details.code)
+            else { return }
+
+            await pairingModel.pair()
         }
     #endif
 
@@ -153,10 +162,21 @@ internal struct RootView: View {
         case .launching:
             LaunchView()
         case .pairing(let reason):
-            PairingView(
-                model: pairingModel,
-                returningBecause: reason
-            )
+            #if DEBUG && targetEnvironment(simulator)
+                if pendingSimulatorPairing {
+                    ProgressView("Pairing this simulator")
+                } else {
+                    PairingView(
+                        model: pairingModel,
+                        returningBecause: reason
+                    )
+                }
+            #else
+                PairingView(
+                    model: pairingModel,
+                    returningBecause: reason
+                )
+            #endif
         case .content(let surface):
             ContentView(
                 surface: surface,

@@ -84,7 +84,7 @@ describe('parsePairingCodeResponse', () => {
 });
 
 describe('createMcpInboundAuth', () => {
-  it('uses a run-scoped token and disables any inherited token-file override', () => {
+  it('uses a run-scoped token and disables an inherited token-file override', () => {
     const auth = createMcpInboundAuth();
     const childEnvironment = {
       MCP_INBOUND_TOKEN_FILE: '/inherited/token-file',
@@ -92,11 +92,10 @@ describe('createMcpInboundAuth', () => {
       ...auth.environment,
     };
 
-    expect(auth.token).toMatch(/^[0-9a-f-]{36}$/u);
-    expect(childEnvironment).toEqual({
-      MCP_INBOUND_TOKEN_FILE: '',
-      MCP_INBOUND_TOKEN: auth.token,
-    });
+    expect(/^[0-9a-f-]{36}$/u.test(auth.token)).toBe(true);
+    expect(childEnvironment['MCP_INBOUND_TOKEN_FILE'] === '').toBe(true);
+    expect(childEnvironment['MCP_INBOUND_TOKEN'] === auth.token).toBe(true);
+    expect(childEnvironment['MCP_INBOUND_TOKEN'] === 'inherited-token').toBe(false);
   });
 });
 

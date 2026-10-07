@@ -70,6 +70,42 @@ internal struct PairingViewModelTests {
         #expect(fixture.model.baseURLText == "http://localhost:3014")
     }
 
+    @Test("the simulator handoff supplies the origin and code separately")
+    func receivesPairingDetailsWithoutALink() throws {
+        let fixture = fixture()
+        let baseURL = try #require(URL(string: "http://127.0.0.1:3014"))
+
+        let received = fixture.model.receivePairingDetails(
+            baseURL: baseURL,
+            code: "7QK4-9M2X-P3ND"
+        )
+
+        #expect(received)
+        #expect(fixture.model.baseURLText == "http://127.0.0.1:3014")
+        #expect(fixture.model.codeText == "7QK4-9M2X-P3ND")
+        #expect(fixture.model.canSubmit)
+    }
+
+    @Test("the simulator handoff rejects a non-origin URL and an oversized code")
+    func rejectsInvalidPairingDetails() throws {
+        let fixture = fixture()
+        let pathURL = try #require(URL(string: "http://127.0.0.1:3014/prefix"))
+        let queryURL = try #require(URL(string: "http://127.0.0.1:3014?unexpected=value"))
+        let origin = try #require(URL(string: "https://bfm.example.com"))
+
+        #expect(!fixture.model.receivePairingDetails(baseURL: pathURL, code: "SYNTHETIC"))
+        #expect(!fixture.model.receivePairingDetails(baseURL: queryURL, code: "SYNTHETIC"))
+        #expect(
+            !fixture.model.receivePairingDetails(
+                baseURL: origin,
+                code: String(repeating: "A", count: 65)
+            )
+        )
+        #expect(fixture.model.baseURLText.isEmpty)
+        #expect(fixture.model.codeText.isEmpty)
+        #expect(!fixture.model.canSubmit)
+    }
+
     @Test("the happy path commits the session")
     func happyPath() async throws {
         let fixture = fixture(result: .success(.fake(id: "device-7")))

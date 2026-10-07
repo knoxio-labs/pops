@@ -38,11 +38,10 @@
  * happened while this file was being written, to a `pnpm dev` process left
  * running in a sibling worktree the day before.
  *
- * So this binds a free port, and the flow types that address into the pairing
- * form's server field rather than accepting the Debug prefill. Two things
- * follow, both good: two runs on one machine cannot collide, and the flow
- * exercises the manual-entry path — which is the one a simulator has, having no
- * camera to scan a QR with.
+ * So this binds a free port. The host control plane delivers pairing through
+ * the Debug-simulator-only URL route, keeping the code out of Maestro's
+ * process, logs and artifacts while still exercising the real BFM pairing
+ * exchange.
  *
  * The `/health` identity check below is the belt to that brace: a port can be
  * taken between this process choosing it and the pillar binding it, and a
@@ -61,7 +60,8 @@
  * Usage:
  *   node scripts/ios-e2e/run.mjs                         run every flow, then tear everything down
  *   node scripts/ios-e2e/run.mjs --pairing-issuer=mcp     run the MCP pairing path
- *   node scripts/ios-e2e/run.mjs --serve-only             boot, print addresses/code, and wait
+ *   node scripts/ios-e2e/run.mjs --serve-only             pair the selected simulator and keep servers up
+ *   POPS_IOS_E2E_SIMULATOR_UDID=<id> node scripts/ios-e2e/run.mjs
  *
  * Exit 0 = the flow passed. Exit 1 = it did not, or the federation would not
  * come up. Exit 2 = usage error.
@@ -71,7 +71,7 @@ import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { createServer } from 'node:http';
-import { tmpdir } from 'node:os';
+import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
@@ -80,9 +80,14 @@ import { seededAccounts } from './accounts-fixture.mjs';
 import { startControlPlane } from './control-plane.mjs';
 import { spawnInventoryPillar, startInventoryGate } from './inventory-pillar.mjs';
 import { publishUserDefinedType } from './inventory-user-type.mjs';
-import { createMcpInboundAuth, issuePairingCodeViaMcp } from './mcp-pairing-code.mjs';
+import { createMcpInboundAuth } from './mcp-pairing-code.mjs';
+import { scanPairingArtifacts } from './pairing-artifact-guard.mjs';
+import { createPairingHandoff } from './pairing-handoff.mjs';
 import { startPurchasesStub } from './purchases-stub.mjs';
+import { formatServeOnlyStatus, pairSimulatorForServeOnly } from './serve-only-pairing.mjs';
 import { boundAddress } from './server-address.mjs';
+import { issueAndOpenPairingLink } from './simulator-pairing.mjs';
+import { hasLocalHarnessOrigins, readDisposableSimulator } from './simulator-target.mjs';
 import { seededTransactions } from './transactions-fixture.mjs';
 import { startUpstreamStub } from './upstream-stub.mjs';
 
@@ -126,26 +131,6 @@ const ACCESS_TOKEN_SECRET = 'ios-e2e-access-token-secret-not-a-real-key';
  * variable; every real deployment leaves it unset.
  */
 const PAIRING_CODE_ISSUANCE_LIMIT = 50;
-
-/**
- * Raises how long a code minted for this run stays redeemable, past the
- * production default of five minutes (`pillars/bfm/src/db/services/pairing-
- * codes.ts`'s `DEFAULT_PAIRING_CODE_TTL_MS`).
- *
- * A code is minted here and handed to a FRESH `maestro test` invocation — see
- * `clients/ios/mise.toml`'s `e2e` task, which mints one right before starting
- * Maestro for that flow. Installing Maestro's own XCTest driver and settling
- * the simulator both happen after the code already exists and before the
- * flow's first step runs, so on a slow CI host that overhead alone can spend
- * the five-minute default before the app ever submits the code. The pillar
- * cannot tell an expired code from a wrong one — `redeemPairingCode`'s own
- * doc comment says why — so the failure reads as a rejected pairing on the
- * pairing screen rather than as what it is: driver startup, not app or BFM
- * behaviour, eating the code's window. `resolvePairingCodeTtlMs` in
- * `pillars/bfm/src/api/boot-env.ts` is the one place production reads this
- * variable; every real deployment leaves it unset.
- */
-const PAIRING_CODE_TTL_MS = 30 * 60 * 1000;
 
 /**
  * Raises the discovery cache's per-fetch abort deadline past the SDK's own
@@ -395,37 +380,6 @@ async function waitForMcpReady(baseURL, child) {
 }
 
 /**
- * Asks the BFM directly for a pairing code, the way the operator's Devices
- * page does. The MCP path uses {@link issuePairingCodeViaMcp} instead.
- *
- * `/operator/*` needs no credential outside production — `resolveOperator` in
- * `pillars/bfm/src/api/middleware/identity.ts` falls back to a development
- * operator whenever `NODE_ENV` is not `production` — and this harness sets
- * `NODE_ENV=test` for exactly that reason.
- *
- * Only the direct `--serve-only` path calls this. The flow's code is minted by
- * the `clients/ios` half, which selects the direct or MCP HTTP endpoint without
- * importing anything from a pillar.
- *
- * @param {URL} baseURL
- * @returns {Promise<{ code: string, expiresAt: string }>}
- */
-async function mintPairingCode(baseURL) {
-  const response = await fetch(new URL('/operator/pairing/codes', baseURL), {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: '{}',
-  });
-
-  if (!response.ok) {
-    throw new HarnessError(
-      `POST /operator/pairing/codes answered ${response.status}. Body: ${await response.text()}`
-    );
-  }
-  return response.json();
-}
-
-/**
  * Ends the pillar, and does not wait forever for it to agree.
  *
  * Its `SIGTERM` handler calls `server.close()`, which drains in-flight requests
@@ -474,6 +428,17 @@ async function main() {
     process.exitCode = 2;
     return;
   }
+
+  /** @type {{ deviceId: string, name: string } | undefined} */
+  let simulatorTarget;
+  try {
+    simulatorTarget = readDisposableSimulator(process.env['POPS_IOS_E2E_SIMULATOR_UDID']);
+  } catch (error) {
+    throw new HarnessError(error instanceof Error ? error.message : 'simulator selection failed.');
+  }
+  const pairingHandoff = createPairingHandoff({ deviceId: simulatorTarget.deviceId });
+  /** @type {Array<{ code: string, pairingUrl: string }>} */
+  const pairingMaterials = [];
 
   const port = await allocatePort();
   const baseURL = new URL(`http://${HOST}:${port}`);
@@ -579,7 +544,6 @@ async function main() {
         BFM_PUBLIC_BASE_URL: baseURL.origin,
         BFM_ACCESS_TOKEN_SECRET: ACCESS_TOKEN_SECRET,
         BFM_PAIRING_CODE_ISSUANCE_LIMIT: String(PAIRING_CODE_ISSUANCE_LIMIT),
-        BFM_PAIRING_CODE_TTL_MS: String(PAIRING_CODE_TTL_MS),
         // The BFM crashes at boot without one. The stub ignores the header it
         // ends up on.
         POPS_INTERNAL_API_KEY: SERVICE_ACCOUNT_KEY,
@@ -603,6 +567,7 @@ async function main() {
     process.stdout.write(`ios-e2e: bfm on ${baseURL.origin}, database under ${dataDir}\n`);
 
     const mcpAuth = pairingIssuer === 'mcp' ? createMcpInboundAuth() : undefined;
+    /** @type {URL | undefined} */
     let mcpBaseURL;
     if (mcpAuth !== undefined) {
       await run('pnpm', ['--filter', '@pops/mcp...', 'build']);
@@ -628,11 +593,36 @@ async function main() {
       process.stdout.write(`ios-e2e: MCP on ${mcpBaseURL.origin}, pairing issuer enabled\n`);
     }
 
+    if (pairingIssuer === 'mcp' && mcpBaseURL === undefined) {
+      throw new HarnessError('MCP pairing endpoint is unavailable.');
+    }
+    const pairingEndpoint =
+      pairingIssuer === 'mcp' ? new URL('/mcp', mcpBaseURL).toString() : baseURL.origin;
+
     const control = await startControlPlane({
       bfmBaseUrl: baseURL.origin,
       accessTokenSecret: ACCESS_TOKEN_SECRET,
       upstream,
       purchases,
+      simulatorDeviceId: simulatorTarget?.deviceId,
+      pairingHandoff,
+      pairSimulator:
+        simulatorTarget === undefined || pairingHandoff === undefined
+          ? undefined
+          : async ({ deviceId, pairingBaseUrl, brokerUrl }) => {
+              return issueAndOpenPairingLink({
+                issuer: pairingIssuer,
+                endpoint: pairingEndpoint,
+                pairingBaseUrl,
+                brokerUrl,
+                handoff: pairingHandoff,
+                onPairingIssued: serveOnly
+                  ? undefined
+                  : (material) => pairingMaterials.push(material),
+                token: mcpAuth?.token,
+                deviceId,
+              });
+            },
       inventory: {
         ...inventory,
         // Straight at the pillar, not through the gate: seeding must not
@@ -650,40 +640,57 @@ async function main() {
     // against it and fails on a screen twenty minutes later; asking it for the
     // BFM's own `/health` proves the whole path before anything is driven.
     await waitForHealth(new URL(control.url), buildVersion, bfm);
+    if (!hasLocalHarnessOrigins(baseURL.origin, control.url)) {
+      throw new HarnessError('the iOS E2E requires a loopback test BFM and control plane.');
+    }
     process.stdout.write(`ios-e2e: control plane on ${control.url}, proxying to the bfm\n`);
 
     if (serveOnly) {
-      const { code, expiresAt } =
-        pairingIssuer === 'mcp'
-          ? await issuePairingCodeViaMcp({
-              endpoint: new URL('/mcp', mcpBaseURL).toString(),
-              token: mcpAuth?.token,
-            })
-          : await mintPairingCode(baseURL);
+      await pairSimulatorForServeOnly({
+        controlUrl: control.url,
+        deviceId: simulatorTarget.deviceId,
+        handoff: pairingHandoff,
+      });
       process.stdout.write(
-        `\nios-e2e: server address ${baseURL.origin}\n` +
-          `ios-e2e: recovery-flow server address ${control.url} (same bfm, switchable)\n` +
-          `ios-e2e: pairing code ${code}, good until ${expiresAt}\n` +
-          'ios-e2e: type either address and the code into the app; Ctrl-C to tear this down.\n\n'
+        formatServeOnlyStatus({ bfmUrl: baseURL.origin, controlUrl: control.url })
       );
       // Waits for a signal, which the handlers above turn into a teardown and
       // an exit. Nothing resolves this.
       await new Promise(() => {});
       return;
     }
-
     /** @type {NodeJS.ProcessEnv} */
     const iosEnv = {
       ...process.env,
       POPS_BFM_BASE_URL: baseURL.origin,
       POPS_E2E_CONTROL_URL: control.url,
-      POPS_E2E_PAIRING_ISSUER: pairingIssuer,
+      POPS_IOS_E2E_SIMULATOR_UDID: simulatorTarget.deviceId,
     };
-    if (mcpBaseURL !== undefined && mcpAuth !== undefined) {
-      iosEnv.POPS_MCP_URL = new URL('/mcp', mcpBaseURL).toString();
-      Object.assign(iosEnv, mcpAuth.environment);
+    delete iosEnv.MCP_INBOUND_TOKEN;
+    delete iosEnv.MCP_INBOUND_TOKEN_FILE;
+    delete iosEnv.POPS_MCP_URL;
+    const artifactScanStartedAt = Date.now() - 5_000;
+    /** @type {unknown} */
+    let flowError;
+    try {
+      await run('mise', ['-C', 'clients/ios', 'run', 'e2e'], { env: iosEnv });
+    } catch (error) {
+      flowError = error;
     }
-    await run('mise', ['-C', 'clients/ios', 'run', 'e2e'], { env: iosEnv });
+    const artifactScan = await scanPairingArtifacts({
+      root: join(homedir(), '.maestro', 'tests'),
+      afterMs: artifactScanStartedAt,
+      materials: pairingMaterials,
+    });
+    if (artifactScan.filesWithPairingMaterial > 0) {
+      throw new HarnessError(
+        'pairing material was found in a Maestro artifact; artifact contents were not printed.'
+      );
+    }
+    process.stdout.write(
+      `ios-e2e: checked ${pairingMaterials.length} issued pairing material item(s) against ${artifactScan.scannedFiles} new Maestro artifact file(s); no match found.\n`
+    );
+    if (flowError !== undefined) throw flowError;
   } finally {
     await tearDown();
   }

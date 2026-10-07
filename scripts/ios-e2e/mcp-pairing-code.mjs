@@ -1,14 +1,11 @@
-#!/usr/bin/env node
 import { randomUUID } from 'node:crypto';
+
 /**
  * Request an iOS pairing code through the POPS MCP gateway.
  *
- * The bridge stays on the host because the simulator flow must not carry the
- * MCP bearer secret. It prints only the pairing code on stdout; diagnostics
- * are deliberately generic so an MCP error body cannot become a secret sink.
+ * The caller stays on the host because neither pairing material nor the MCP
+ * bearer secret belongs in a simulator-facing process.
  */
-import { resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 const MCP_PROTOCOL_VERSION = '2025-06-18';
 const TOOL_NAME = 'bfm.devicePairing.issueCode';
@@ -32,9 +29,7 @@ export class PairingMcpFailure extends Error {
 }
 
 /**
- * Create an isolated, per-run inbound credential for the locally spawned MCP
- * gateway. The explicit empty file setting prevents an inherited mounted-token
- * path from taking precedence over this test-only token.
+ * Creates an isolated inbound credential for the locally spawned MCP gateway.
  *
  * @returns {{ token: string, environment: NodeJS.ProcessEnv }}
  */
@@ -222,10 +217,12 @@ function parsePairingToolContent(result) {
 }
 
 /**
+ * Checks the exact response shape the BFM pairing issuers return.
+ *
  * @param {unknown} value
  * @returns {value is PairingCode}
  */
-function isPairingCode(value) {
+export function isPairingCode(value) {
   return (
     isRecord(value) &&
     typeof value['code'] === 'string' &&
@@ -241,26 +238,4 @@ function isPairingCode(value) {
  */
 function isRecord(value) {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-const invokedDirectly =
-  process.argv[1] !== undefined && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
-
-if (invokedDirectly) {
-  const endpoint = process.env['POPS_MCP_URL']?.trim();
-  if (endpoint === undefined || endpoint.length === 0) {
-    process.stderr.write('ios-e2e: POPS_MCP_URL is required for MCP pairing.\n');
-    process.exitCode = 1;
-  } else {
-    try {
-      const pairing = await issuePairingCodeViaMcp({
-        endpoint,
-        token: process.env['MCP_INBOUND_TOKEN'],
-      });
-      process.stdout.write(`${pairing.code}\n`);
-    } catch (error) {
-      process.stderr.write(`${formatPairingMcpFailure(error)}\n`);
-      process.exitCode = 1;
-    }
-  }
 }
