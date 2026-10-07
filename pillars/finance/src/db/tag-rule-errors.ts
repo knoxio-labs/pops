@@ -28,6 +28,20 @@ export class MarkerFacetTagRuleError extends Error {
 }
 
 /**
+ * A tag-rule write that supplies an empty tag set.
+ *
+ * Every stored tag rule must be able to propose at least one tag; an empty
+ * rule is still counted and displayed despite having no effect.
+ */
+export class EmptyTagRuleTagsError extends Error {
+  override readonly name = 'EmptyTagRuleTagsError' as const;
+
+  constructor() {
+    super('A tag rule must carry at least one tag');
+  }
+}
+
+/**
  * A tag-rule or correction write scoped to an unresolved `temp:` placeholder
  * entity id.
  *

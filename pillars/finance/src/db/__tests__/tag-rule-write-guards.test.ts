@@ -6,7 +6,11 @@
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { MarkerFacetTagRuleError, PlaceholderEntityScopeError } from '../errors.js';
+import {
+  EmptyTagRuleTagsError,
+  MarkerFacetTagRuleError,
+  PlaceholderEntityScopeError,
+} from '../errors.js';
 import { transactionTagRules } from '../schema.js';
 import { isPlaceholderEntityId, markerFacetTags } from '../services/tag-rule-write-guards.js';
 import {
@@ -79,7 +83,12 @@ describe('isPlaceholderEntityId', () => {
   );
 });
 
-describe('tag-rule create refuses marker tags and placeholder scopes', () => {
+describe('tag-rule create refuses empty tags, marker tags and placeholder scopes', () => {
+  it('refuses an empty tag set', () => {
+    expect(() => create([])).toThrow(EmptyTagRuleTagsError);
+    expect(ruleCount()).toBe(0);
+  });
+
   it.each(['flag:needs-review', 'person:x', 'Flag:needs-review'])('refuses %s', (marker) => {
     expect(() => create(['contains:software', marker])).toThrow(MarkerFacetTagRuleError);
     expect(ruleCount()).toBe(0);
@@ -135,7 +144,16 @@ describe('tag-rule create refuses marker tags and placeholder scopes', () => {
   });
 });
 
-describe('tag-rule update refuses marker tags and placeholder scopes', () => {
+describe('tag-rule update refuses empty tags, marker tags and placeholder scopes', () => {
+  it('refuses an empty tag set and leaves the rule unchanged', () => {
+    const rule = create(['contains:software']);
+
+    expect(() => updateTransactionTagRule(opened.db, rule.id, { tags: [] })).toThrow(
+      EmptyTagRuleTagsError
+    );
+    expect(storedTags(rule.id)).toEqual(['contains:software']);
+  });
+
   it.each(['flag:needs-review', 'person:x'])('refuses tags carrying %s', (marker) => {
     const rule = create(['contains:software']);
 
