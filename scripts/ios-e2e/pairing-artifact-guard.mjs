@@ -57,8 +57,8 @@ export function primaryPairingRunFailure(runFailure, artifactScanFailure) {
 }
 
 /**
- * Scans newly written test and selected-simulator logs for pairing material held
- * by the harness in memory.
+ * Scans recent test and selected-simulator logs for in-memory pairing material,
+ * allowing for coarse filesystem timestamp precision at the run boundary.
  *
  * @param {{ root: string, additionalRoots?: string[], requiredRoots?: string[], afterMs: number, materials: Array<{ code: string, pairingUrl: string }> }} options
  * @returns {Promise<{ scannedFiles: number, scannedRoots: number, totalRoots: number, filesWithPairingMaterial: number } >}
@@ -70,6 +70,7 @@ export async function scanPairingArtifacts({
   afterMs,
   materials,
 }) {
+  const timestampPrecisionBufferMs = 1_000;
   const variants = new Set(materials.flatMap(pairingMaterialVariants));
   const required = new Set(requiredRoots);
   let scannedFiles = 0;
@@ -107,7 +108,7 @@ export async function scanPairingArtifacts({
             1 + additionalRoots.length
           );
         }
-        if (modifiedAt < afterMs) continue;
+        if (modifiedAt < afterMs - timestampPrecisionBufferMs) continue;
 
         let contents;
         try {
