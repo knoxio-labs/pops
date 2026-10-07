@@ -29,12 +29,12 @@
  * whatever permissions the first mount established and would pass regardless —
  * the volumes being new on every run is the whole assertion.
  *
- * The environment supplied is deliberately minimal and is documented on the
- * constants below: `PORT` and placeholders for the secrets some pillars
- * choose to crash on at boot. Nothing else — in particular no database path,
- * because each image now defaults its own onto the mount. A pillar that needs
- * more than that to answer a health probe is a finding, not a smoke-test
- * configuration problem.
+ * The environment supplied is deliberately minimal: `PORT` and placeholders
+ * for the secrets some pillars choose to crash on at boot. The MCP image gets
+ * a fresh inbound token because startup requires one; the health probe never
+ * sends it. Nothing else — in particular no database path, because each image
+ * now defaults its own onto the mount. A pillar that needs more than that to
+ * answer a health probe is a finding, not a smoke-test configuration problem.
  *
  * Usage:
  *   node scripts/ci/smoke-image.mjs <dockerfile> <image-ref>
@@ -93,13 +93,18 @@ export const BOOT_PLACEHOLDER_SECRETS = {
 };
 
 /**
- * Placeholders supplied to one image smoke. The orchestrator's credential is
- * optional: its smoke deliberately boots without a key to guard degraded mode.
+ * Return boot placeholders for one image smoke. The orchestrator's credential
+ * is optional: its smoke deliberately boots without a key to guard degraded
+ * mode. MCP requires an inbound token at startup, so its smoke gets a fresh
+ * token that is never sent by the health probe.
  * @param {string} dockerfilePath
  * @returns {Record<string, string>}
  */
 export function bootPlaceholdersForDockerfile(dockerfilePath) {
   const placeholders = { ...BOOT_PLACEHOLDER_SECRETS };
+  if (basename(dirname(dockerfilePath)) === 'mcp' && basename(dockerfilePath) === 'Dockerfile') {
+    return { ...placeholders, MCP_INBOUND_TOKEN: randomUUID() };
+  }
   if (
     basename(dirname(dockerfilePath)) === 'orchestrator' &&
     basename(dockerfilePath) === 'Dockerfile'
