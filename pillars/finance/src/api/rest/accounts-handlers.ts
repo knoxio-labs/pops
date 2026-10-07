@@ -15,6 +15,10 @@
  * decides whether `createAccount` gets a real `entityId` or the
  * `allowPendingEntity` outbox path. `list`/`get`/`reorder` all resolve each
  * row's `entityDisplayName` afterwards via `resolveAccountEntityDisplays`.
+ *
+ * `list` and `get` are the two routes a guest reaches (POPS-5866) and narrow
+ * to the accounts granted to them. The rest are the operator's, so they
+ * project with full reach.
  */
 import {
   AccountMergeCheckpointCollisionError,
@@ -45,8 +49,15 @@ import { resolvePersonAccountEntity } from '../modules/accounts/resolve-person-a
 import { ConflictError, NotFoundError, UnprocessableEntityError } from '../shared/errors.js';
 import { paginationMeta } from '../shared/pagination.js';
 import { runHttp } from './error-mapping.js';
+import {
+  accountAccess,
+  requireAccountRole,
+  visibleAccountIds,
+  type AccountAccess,
+} from './guest-access.js';
 
 import type { ServerInferRequest } from '@ts-rest/core';
+import type { Response } from 'express';
 
 import type { financeAccountsContract } from '../../contract/rest-accounts.js';
 
@@ -54,6 +65,9 @@ type Req = ServerInferRequest<typeof financeAccountsContract>;
 
 const DEFAULT_LIMIT = 50;
 const DEFAULT_OFFSET = 0;
+
+/** The reach of a route no guest can call. */
+const OWNER: AccountAccess = 'all';
 
 /**
  * Domain errors that are always "well-formed request, semantically invalid
@@ -88,8 +102,9 @@ export function makeAccountsHandlers(db: FinanceDb, contacts: ContactsClient) {
   const project = makeAccountProjector(db, contacts);
 
   return {
-    list: ({ query }: Req['list']) =>
+    list: ({ query, res }: Req['list'] & { res: Response }) =>
       runHttp(async () => {
+        const access = accountAccess(res, db);
         const limit = query.limit ?? DEFAULT_LIMIT;
         const offset = query.offset ?? DEFAULT_OFFSET;
 
@@ -101,6 +116,7 @@ export function makeAccountsHandlers(db: FinanceDb, contacts: ContactsClient) {
           search: query.search,
           kind: query.kind,
           archived: archivedFilter,
+          ids: visibleAccountIds(access),
           limit,
           offset,
         });
@@ -108,17 +124,19 @@ export function makeAccountsHandlers(db: FinanceDb, contacts: ContactsClient) {
         return {
           status: 200 as const,
           body: {
-            data: await project.many(rows),
+            data: await project.many(rows, access),
             pagination: paginationMeta(total, limit, offset),
           },
         };
       }),
 
-    get: ({ params }: Req['get']) =>
+    get: ({ params, res }: Req['get'] & { res: Response }) =>
       runHttp(async () => {
         try {
+          const access = accountAccess(res, db);
+          requireAccountRole(access, params.id, 'view');
           const row = accountsService.getAccount(db, params.id);
-          return { status: 200 as const, body: { data: await project.one(row) } };
+          return { status: 200 as const, body: { data: await project.one(row, access) } };
         } catch (err) {
           translateAccountError(err, params.id);
         }
@@ -136,7 +154,7 @@ export function makeAccountsHandlers(db: FinanceDb, contacts: ContactsClient) {
           );
           return {
             status: 201 as const,
-            body: { data: await project.one(row), message: 'Account created' },
+            body: { data: await project.one(row, OWNER), message: 'Account created' },
           };
         } catch (err) {
           translateAccountError(err);
@@ -149,7 +167,7 @@ export function makeAccountsHandlers(db: FinanceDb, contacts: ContactsClient) {
           const rows = accountsService.reorderAccounts(db, body.accounts);
           return {
             status: 200 as const,
-            body: { data: await project.many(rows), message: 'Accounts reordered' },
+            body: { data: await project.many(rows, OWNER), message: 'Accounts reordered' },
           };
         } catch (err) {
           translateAccountError(err);
@@ -162,7 +180,7 @@ export function makeAccountsHandlers(db: FinanceDb, contacts: ContactsClient) {
           const row = accountsService.updateAccount(db, params.id, toUpdateAccountInput(body));
           return {
             status: 200 as const,
-            body: { data: await project.one(row), message: 'Account updated' },
+            body: { data: await project.one(row, OWNER), message: 'Account updated' },
           };
         } catch (err) {
           translateAccountError(err, params.id);
@@ -175,7 +193,7 @@ export function makeAccountsHandlers(db: FinanceDb, contacts: ContactsClient) {
           const row = accountsService.archiveAccount(db, params.id);
           return {
             status: 200 as const,
-            body: { data: await project.one(row), message: 'Account archived' },
+            body: { data: await project.one(row, OWNER), message: 'Account archived' },
           };
         } catch (err) {
           translateAccountError(err, params.id);
@@ -186,14 +204,14 @@ export function makeAccountsHandlers(db: FinanceDb, contacts: ContactsClient) {
       runHttp(async () => {
         try {
           const preview = previewAccountMerge(db, params.id, body.targetId);
-          const [source, target] = await project.many([preview.source, preview.target]);
+          const [source, target] = await project.many([preview.source, preview.target], OWNER);
           return {
             status: 200 as const,
             body: {
               data: toAccountMergePreviewBody(
                 preview,
-                source ?? (await project.one(preview.source)),
-                target ?? (await project.one(preview.target))
+                source ?? (await project.one(preview.source, OWNER)),
+                target ?? (await project.one(preview.target, OWNER))
               ),
             },
           };
@@ -208,7 +226,7 @@ export function makeAccountsHandlers(db: FinanceDb, contacts: ContactsClient) {
           const row = mergeAccounts(db, params.id, body.targetId);
           return {
             status: 200 as const,
-            body: { data: await project.one(row), message: 'Accounts merged' },
+            body: { data: await project.one(row, OWNER), message: 'Accounts merged' },
           };
         } catch (err) {
           translateAccountError(err, params.id);

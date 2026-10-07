@@ -41,6 +41,7 @@ export const ACCOUNTS: Account[] = [
     entityAvatarAssetId: null,
     entityColour: '#4a5fb0',
     transactionCount: 3,
+    viewerRole: 'owner',
     balance: {
       anchor: { asOf: '2026-08-31', checkpointId: 'chk-everyday-aug', source: 'statement' },
       asOf: '2026-09-04',
@@ -75,6 +76,7 @@ export const ACCOUNTS: Account[] = [
     entityAvatarAssetId: null,
     entityColour: '#4a5fb0',
     transactionCount: 2,
+    viewerRole: 'owner',
     balance: {
       anchor: { asOf: '2026-08-31', checkpointId: REWARDS_CHECKPOINT_ID, source: 'statement' },
       asOf: '2026-08-31',

@@ -8,6 +8,9 @@
  *
  * The four writes pass the request's principal to the service as the actor, so
  * each is recorded in the audit log (POPS-5865).
+ *
+ * `list` and `get`, the two routes a guest reaches, live in
+ * `transactions-read-handlers.ts`.
  */
 import { readPrincipal } from '@pops/pillar-express';
 
@@ -33,8 +36,8 @@ import {
   toUpdateTransactionInput,
 } from '../modules/transactions-types.js';
 import { ConflictError, NotFoundError, ValidationError } from '../shared/errors.js';
-import { paginationMeta } from '../shared/pagination.js';
 import { runHttp } from './error-mapping.js';
+import { makeTransactionReadHandlers } from './transactions-read-handlers.js';
 
 import type { ServerInferRequest } from '@ts-rest/core';
 import type { Response } from 'express';
@@ -43,8 +46,6 @@ import type { financeTransactionsContract } from '../../contract/rest-transactio
 
 type Req = ServerInferRequest<typeof financeTransactionsContract>;
 
-const DEFAULT_LIMIT = 50;
-const DEFAULT_OFFSET = 0;
 const PREVIEW_DESCRIPTIONS_LIMIT = 2000;
 
 function translateTransactionError(err: unknown, id?: string): never {
@@ -70,53 +71,13 @@ function actorOf(res: Response): TransactionActor {
 }
 
 export function makeTransactionsHandlers(db: FinanceDb, contacts: ContactsClient) {
+  const reads = makeTransactionReadHandlers(db);
+
+  // Express registers these in key order, so `get` (`/transactions/:id`) has
+  // to stay below the literal `suggest-tags` and `descriptions-preview` paths
+  // or it answers for them.
   return {
-    list: ({ query }: Req['list']) =>
-      runHttp(() => {
-        const limit = query.limit ?? DEFAULT_LIMIT;
-        const offset = query.offset ?? DEFAULT_OFFSET;
-
-        // Half a keyset anchor is rejected rather than ignored. Dropping it
-        // would answer with page one of an unfiltered list — a plausible
-        // 200 that a paging caller reads as "start again", re-showing rows it
-        // already has instead of failing where the bug is.
-        //
-        // The message names both halves and which one is absent, because the
-        // invalid state is the pair rather than either half: a caller told only
-        // that `beforeDate` is wrong has to guess whether to drop it or to
-        // supply its partner. It goes in the message and not the details —
-        // the wire envelope carries no details.
-        if ((query.beforeDate === undefined) !== (query.beforeId === undefined)) {
-          const missing = query.beforeDate === undefined ? 'beforeDate' : 'beforeId';
-          throw new ValidationError(
-            `beforeDate and beforeId must be supplied together; ${missing} is missing`,
-            { beforeDate: query.beforeDate, beforeId: query.beforeId }
-          );
-        }
-
-        const { rows, total } = transactionsService.listTransactions(
-          db,
-          {
-            search: query.search,
-            accountId: query.accountId,
-            startDate: query.startDate,
-            endDate: query.endDate,
-            tag: query.tag,
-            entityId: query.entityId,
-            type: query.type,
-            ids: query.ids,
-            beforeDate: query.beforeDate,
-            beforeId: query.beforeId,
-          },
-          limit,
-          offset
-        );
-
-        return {
-          status: 200 as const,
-          body: { data: rows.map(toTransaction), pagination: paginationMeta(total, limit, offset) },
-        };
-      }),
+    list: reads.list,
 
     suggestTags: ({ query }: Req['suggestTags']) =>
       runHttp(async () => {
@@ -142,15 +103,7 @@ export function makeTransactionsHandlers(db: FinanceDb, contacts: ContactsClient
         ),
       })),
 
-    get: ({ params }: Req['get']) =>
-      runHttp(() => {
-        try {
-          const row = transactionsService.getTransaction(db, params.id);
-          return { status: 200 as const, body: { data: toTransaction(row) } };
-        } catch (err) {
-          translateTransactionError(err, params.id);
-        }
-      }),
+    get: reads.get,
 
     create: ({ body, res }: Req['create'] & { res: Response }) =>
       runHttp(() => {

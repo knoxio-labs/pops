@@ -299,6 +299,10 @@
                           },
                           "updatedAt": {
                             "type": "string"
+                          },
+                          "viewerRole": {
+                            "enum": ["owner", "view", "edit"],
+                            "type": "string"
                           }
                         },
                         "required": [
@@ -317,6 +321,7 @@
                           "balance",
                           "importStatus",
                           "transactionCount",
+                          "viewerRole",
                           "createdAt",
                           "updatedAt"
                         ],
@@ -352,7 +357,7 @@
             "description": "200"
           }
         },
-        "summary": "List accounts with optional search / kind / archived filters and pagination",
+        "summary": "List accounts with optional search / kind / archived filters and pagination. A guest is listed only the accounts granted to them, and the total counts only those",
         "tags": ["accounts"]
       },
       "post": {
@@ -612,6 +617,10 @@
                         },
                         "updatedAt": {
                           "type": "string"
+                        },
+                        "viewerRole": {
+                          "enum": ["owner", "view", "edit"],
+                          "type": "string"
                         }
                       },
                       "required": [
@@ -630,6 +639,7 @@
                         "balance",
                         "importStatus",
                         "transactionCount",
+                        "viewerRole",
                         "createdAt",
                         "updatedAt"
                       ],
@@ -986,6 +996,10 @@
                           },
                           "updatedAt": {
                             "type": "string"
+                          },
+                          "viewerRole": {
+                            "enum": ["owner", "view", "edit"],
+                            "type": "string"
                           }
                         },
                         "required": [
@@ -1004,6 +1018,7 @@
                           "balance",
                           "importStatus",
                           "transactionCount",
+                          "viewerRole",
                           "createdAt",
                           "updatedAt"
                         ],
@@ -1339,6 +1354,10 @@
                         },
                         "updatedAt": {
                           "type": "string"
+                        },
+                        "viewerRole": {
+                          "enum": ["owner", "view", "edit"],
+                          "type": "string"
                         }
                       },
                       "required": [
@@ -1357,6 +1376,7 @@
                         "balance",
                         "importStatus",
                         "transactionCount",
+                        "viewerRole",
                         "createdAt",
                         "updatedAt"
                       ],
@@ -1676,6 +1696,10 @@
                         },
                         "updatedAt": {
                           "type": "string"
+                        },
+                        "viewerRole": {
+                          "enum": ["owner", "view", "edit"],
+                          "type": "string"
                         }
                       },
                       "required": [
@@ -1694,6 +1718,7 @@
                         "balance",
                         "importStatus",
                         "transactionCount",
+                        "viewerRole",
                         "createdAt",
                         "updatedAt"
                       ],
@@ -1788,7 +1813,7 @@
             "description": "503"
           }
         },
-        "summary": "Get a single account",
+        "summary": "Get a single account; 404s one a guest holds no grant on, as it does a missing one",
         "tags": ["accounts"]
       },
       "patch": {
@@ -2060,6 +2085,10 @@
                         },
                         "updatedAt": {
                           "type": "string"
+                        },
+                        "viewerRole": {
+                          "enum": ["owner", "view", "edit"],
+                          "type": "string"
                         }
                       },
                       "required": [
@@ -2078,6 +2107,7 @@
                         "balance",
                         "importStatus",
                         "transactionCount",
+                        "viewerRole",
                         "createdAt",
                         "updatedAt"
                       ],
@@ -6380,6 +6410,10 @@
                         },
                         "updatedAt": {
                           "type": "string"
+                        },
+                        "viewerRole": {
+                          "enum": ["owner", "view", "edit"],
+                          "type": "string"
                         }
                       },
                       "required": [
@@ -6398,6 +6432,7 @@
                         "balance",
                         "importStatus",
                         "transactionCount",
+                        "viewerRole",
                         "createdAt",
                         "updatedAt"
                       ],
@@ -6763,6 +6798,10 @@
                             },
                             "updatedAt": {
                               "type": "string"
+                            },
+                            "viewerRole": {
+                              "enum": ["owner", "view", "edit"],
+                              "type": "string"
                             }
                           },
                           "required": [
@@ -6781,6 +6820,7 @@
                             "balance",
                             "importStatus",
                             "transactionCount",
+                            "viewerRole",
                             "createdAt",
                             "updatedAt"
                           ],
@@ -6986,6 +7026,10 @@
                             },
                             "updatedAt": {
                               "type": "string"
+                            },
+                            "viewerRole": {
+                              "enum": ["owner", "view", "edit"],
+                              "type": "string"
                             }
                           },
                           "required": [
@@ -7004,6 +7048,7 @@
                             "balance",
                             "importStatus",
                             "transactionCount",
+                            "viewerRole",
                             "createdAt",
                             "updatedAt"
                           ],
@@ -31135,7 +31180,7 @@
             "description": "503"
           }
         },
-        "summary": "List transactions with optional filters and pagination",
+        "summary": "List transactions with optional filters and pagination. A guest is listed only transactions on accounts granted to them; an `accountId` they hold no grant on is a 404",
         "tags": ["transactions"]
       },
       "post": {
@@ -32449,7 +32494,7 @@
             "description": "503"
           }
         },
-        "summary": "Get a single transaction",
+        "summary": "Get a single transaction; 404s one on an account a guest holds no grant on, as it does a missing one",
         "tags": ["transactions"]
       },
       "patch": {

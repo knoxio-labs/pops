@@ -26,16 +26,27 @@
  * since by then nothing references it. Irreversible, so `previewMerge`
  * exists to show the transaction count, checkpoint count, and resulting
  * balance first.
+ *
+ * `list` and `get` are open to a guest (POPS-5866), who sees only the accounts
+ * granted to them; every other route here is the operator's. `viewerRole` on
+ * each account says how the caller stands towards it, which is all a client
+ * needs to decide what to offer: there is no separate "my grants" route.
  */
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 
+import { guestRoute } from '@pops/pillar-sdk/server';
+
+import { ACCOUNT_GRANT_ROLES } from '../db/index.js';
 import { ACCOUNT_KINDS } from './account-kind.js';
 import { ImportStatusSchema } from './rest-account-imports-schemas.js';
 import { AccountBalanceSchema } from './rest-checkpoints-schemas.js';
 import { ERR_RESPONSES, ERR_RESPONSES_WITH_422, LimitQuery, OffsetQuery } from './rest-schemas.js';
 
 const c = initContract();
+
+/** How the caller stands towards an account: its owner, or a guest holding one of the grant roles. */
+export const VIEWER_ROLES = ['owner', ...ACCOUNT_GRANT_ROLES] as const;
 
 /** Wire shape served by the accounts handlers. */
 export const AccountSchema = z.object({
@@ -79,6 +90,12 @@ export const AccountSchema = z.object({
    * carrying it costs nothing extra per page.
    */
   transactionCount: z.number().int(),
+  /**
+   * The caller's standing on this account, derived per response and never
+   * stored: `owner` for the operator and for a service, otherwise the role the
+   * guest was granted.
+   */
+  viewerRole: z.enum(VIEWER_ROLES),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -132,6 +149,7 @@ export const financeAccountsContract = c.router({
   list: {
     method: 'GET',
     path: '/accounts',
+    metadata: guestRoute(),
     query: AccountQuery,
     responses: {
       200: z.object({
@@ -144,14 +162,17 @@ export const financeAccountsContract = c.router({
         }),
       }),
     },
-    summary: 'List accounts with optional search / kind / archived filters and pagination',
+    summary:
+      'List accounts with optional search / kind / archived filters and pagination. ' +
+      'A guest is listed only the accounts granted to them, and the total counts only those',
   },
   get: {
     method: 'GET',
     path: '/accounts/:id',
+    metadata: guestRoute(),
     pathParams: z.object({ id: z.string() }),
     responses: { 200: z.object({ data: AccountSchema }), ...ERR_RESPONSES },
-    summary: 'Get a single account',
+    summary: 'Get a single account; 404s one a guest holds no grant on, as it does a missing one',
   },
   create: {
     method: 'POST',

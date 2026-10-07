@@ -17,7 +17,7 @@
  *
  * Nothing here updates or deletes an event.
  */
-import { desc, eq, or, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, or, type SQL, sql } from 'drizzle-orm';
 import { createSelectSchema } from 'drizzle-zod';
 
 import { transactionEvents, transactions } from '../schema.js';
@@ -88,15 +88,44 @@ export function parseTransactionSnapshot(snapshot: string): TransactionRow {
 /** `at` has millisecond resolution; insertion order separates events sharing one. */
 const NEWEST_FIRST = [desc(transactionEvents.at), desc(sql`rowid`)];
 
+const BEFORE_ACCOUNT_ID = sql<string>`json_extract(${transactionEvents.before}, '$.accountId')`;
+
+/**
+ * Holds an event to a set of accounts: the one it is filed under and, where it
+ * has a `before` row, the one that row sat on must both be in the set. A move
+ * between an account in the set and one outside it is therefore excluded
+ * whole, because either side of it describes the entry on the other account.
+ * An empty set matches nothing.
+ */
+function withinAccounts(accountIds: readonly string[]): SQL | undefined {
+  const ids = [...accountIds];
+  return and(
+    inArray(transactionEvents.accountId, ids),
+    or(isNull(transactionEvents.before), inArray(BEFORE_ACCOUNT_ID, ids))
+  );
+}
+
 /**
  * Every event of one transaction, newest first. A deleted transaction keeps
  * its events, so this answers for an id that no longer has a row.
+ *
+ * @param within Only events that lie wholly on these accounts, for a reader
+ *   who may see only some. Omitted, every event is returned.
  */
-export function listTransactionEvents(db: FinanceDb, transactionId: string): TransactionEventRow[] {
+export function listTransactionEvents(
+  db: FinanceDb,
+  transactionId: string,
+  within?: readonly string[]
+): TransactionEventRow[] {
   return db
     .select()
     .from(transactionEvents)
-    .where(eq(transactionEvents.transactionId, transactionId))
+    .where(
+      and(
+        eq(transactionEvents.transactionId, transactionId),
+        within === undefined ? undefined : withinAccounts(within)
+      )
+    )
     .orderBy(...NEWEST_FIRST)
     .all();
 }
@@ -111,16 +140,19 @@ export interface AccountEventsPage {
  * An account's events, newest first: everything filed under it, plus every
  * event whose `before` row sat on it, which is a transaction moved away.
  * Events of deleted transactions are included.
+ *
+ * `page.within` holds the result to events lying wholly on those accounts, for
+ * a reader who may see only some; it narrows `total` as well as the rows.
  */
 export function listAccountEvents(
   db: FinanceDb,
   accountId: string,
-  limit: number,
-  offset: number
+  page: { limit: number; offset: number; within?: readonly string[] | undefined }
 ): AccountEventsPage {
-  const onAccount = or(
-    eq(transactionEvents.accountId, accountId),
-    sql`json_extract(${transactionEvents.before}, '$.accountId') = ${accountId}`
+  const { limit, offset, within } = page;
+  const onAccount = and(
+    or(eq(transactionEvents.accountId, accountId), sql`${BEFORE_ACCOUNT_ID} = ${accountId}`),
+    within === undefined ? undefined : withinAccounts(within)
   );
   const rows = db
     .select()
