@@ -2040,7 +2040,7 @@ export const transactionsList = <ThrowOnError extends boolean = false>(
   });
 
 /**
- * Create a transaction
+ * Create a transaction. A guest needs `edit` on the account and may not set `relatedTransactionId`, `entityId`, `entityName`, `tags`, `rawRow` or `checksum`
  */
 export const transactionsCreate = <ThrowOnError extends boolean = false>(
   options?: Options<TransactionsCreateData, ThrowOnError>
@@ -2071,7 +2071,7 @@ export const transactionsDescriptionsForPreview = <ThrowOnError extends boolean 
   >({ url: '/transactions/descriptions-preview', ...options });
 
 /**
- * Restore a previously-deleted transaction from its snapshot
+ * Restore a previously-deleted transaction from its snapshot. For a guest only the snapshot's `id` is read: the entry is rebuilt from its latest recorded delete, which must be on an account they hold `edit` on, and is a 404 when there is none
  */
 export const transactionsRestore = <ThrowOnError extends boolean = false>(
   options?: Options<TransactionsRestoreData, ThrowOnError>
@@ -2101,7 +2101,7 @@ export const transactionsSuggestTags = <ThrowOnError extends boolean = false>(
   });
 
 /**
- * Delete a transaction; returns a snapshot for Undo via restore
+ * Delete a transaction; returns a snapshot for Undo via restore. A guest needs `edit` on its account, and their snapshot carries no `rawRow` or `checksum`
  */
 export const transactionsDelete = <ThrowOnError extends boolean = false>(
   options: Options<TransactionsDeleteData, ThrowOnError>
@@ -2131,7 +2131,7 @@ export const transactionsGet = <ThrowOnError extends boolean = false>(
   });
 
 /**
- * Update a transaction
+ * Update a transaction. A guest needs `edit` on its account, and on the new one when `accountId` changes, and may not set `relatedTransactionId`, `entityId`, `entityName` or `tags`
  */
 export const transactionsUpdate = <ThrowOnError extends boolean = false>(
   options: Options<TransactionsUpdateData, ThrowOnError>

@@ -31474,7 +31474,7 @@
             "description": "503"
           }
         },
-        "summary": "Create a transaction",
+        "summary": "Create a transaction. A guest needs `edit` on the account and may not set `relatedTransactionId`, `entityId`, `entityName`, `tags`, `rawRow` or `checksum`",
         "tags": ["transactions"]
       }
     },
@@ -31912,7 +31912,7 @@
             "description": "503"
           }
         },
-        "summary": "Restore a previously-deleted transaction from its snapshot",
+        "summary": "Restore a previously-deleted transaction from its snapshot. For a guest only the snapshot's `id` is read: the entry is rebuilt from its latest recorded delete, which must be on an account they hold `edit` on, and is a 404 when there is none",
         "tags": ["transactions"]
       }
     },
@@ -32274,7 +32274,7 @@
             "description": "503"
           }
         },
-        "summary": "Delete a transaction; returns a snapshot for Undo via restore",
+        "summary": "Delete a transaction; returns a snapshot for Undo via restore. A guest needs `edit` on its account, and their snapshot carries no `rawRow` or `checksum`",
         "tags": ["transactions"]
       },
       "get": {
@@ -32789,7 +32789,7 @@
             "description": "503"
           }
         },
-        "summary": "Update a transaction",
+        "summary": "Update a transaction. A guest needs `edit` on its account, and on the new one when `accountId` changes, and may not set `relatedTransactionId`, `entityId`, `entityName` or `tags`",
         "tags": ["transactions"]
       }
     },

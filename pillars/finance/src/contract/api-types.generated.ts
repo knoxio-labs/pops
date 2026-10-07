@@ -1367,7 +1367,7 @@ export interface paths {
     /** List transactions with optional filters and pagination. A guest is listed only transactions on accounts granted to them; an `accountId` they hold no grant on is a 404 */
     get: operations['transactions.list'];
     put?: never;
-    /** Create a transaction */
+    /** Create a transaction. A guest needs `edit` on the account and may not set `relatedTransactionId`, `entityId`, `entityName`, `tags`, `rawRow` or `checksum` */
     post: operations['transactions.create'];
     delete?: never;
     options?: never;
@@ -1401,7 +1401,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Restore a previously-deleted transaction from its snapshot */
+    /** Restore a previously-deleted transaction from its snapshot. For a guest only the snapshot's `id` is read: the entry is rebuilt from its latest recorded delete, which must be on an account they hold `edit` on, and is a 404 when there is none */
     post: operations['transactions.restore'];
     delete?: never;
     options?: never;
@@ -1437,11 +1437,11 @@ export interface paths {
     get: operations['transactions.get'];
     put?: never;
     post?: never;
-    /** Delete a transaction; returns a snapshot for Undo via restore */
+    /** Delete a transaction; returns a snapshot for Undo via restore. A guest needs `edit` on its account, and their snapshot carries no `rawRow` or `checksum` */
     delete: operations['transactions.delete'];
     options?: never;
     head?: never;
-    /** Update a transaction */
+    /** Update a transaction. A guest needs `edit` on its account, and on the new one when `accountId` changes, and may not set `relatedTransactionId`, `entityId`, `entityName` or `tags` */
     patch: operations['transactions.update'];
     trace?: never;
   };
