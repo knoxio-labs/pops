@@ -11,10 +11,13 @@ import { getTableName } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
 import {
+  accountGrants,
   aiUsage,
   budgets,
   tagVocabulary,
+  transactionAttachments,
   transactionCorrections,
+  transactionEvents,
   transactionTagRules,
   transactions,
   wishList,
@@ -29,6 +32,9 @@ describe('us-03-relocate-finance-schemas', () => {
     [transactions, 'transactions'],
     [wishList, 'wish_list'],
     [aiUsage, 'ai_usage'],
+    [accountGrants, 'account_grants'],
+    [transactionEvents, 'transaction_events'],
+    [transactionAttachments, 'transaction_attachments'],
   ])('resolves %#: %s', (table, expectedName) => {
     expect(getTableName(table)).toBe(expectedName);
   });
