@@ -7,6 +7,7 @@
 import {
   type FinanceDb,
   transactionTagRulesService,
+  EmptyTagRuleTagsError,
   InvalidPatternError,
   MarkerFacetTagRuleError,
   PlaceholderEntityScopeError,
@@ -63,6 +64,9 @@ export function translateTagRuleError(err: unknown, id?: string): never {
   }
   if (err instanceof InvalidPatternError || err instanceof UnmatchablePatternError) {
     throw new ValidationError(err.message, { pattern: err.pattern });
+  }
+  if (err instanceof EmptyTagRuleTagsError) {
+    throw new ValidationError(err.message, { tags: [] });
   }
   if (err instanceof MarkerFacetTagRuleError) {
     throw new ValidationError(err.message, { tags: err.tags });
