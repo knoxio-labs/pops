@@ -1,3 +1,7 @@
+import AppCore
+import Foundation
+import Synchronization
+
 /// Everything a paired device is, and the one operation that has to treat it
 /// as a unit.
 ///
@@ -14,6 +18,7 @@ public struct DeviceCredentialStore: Sendable {
     /// cannot obtain any other way. Not a secret, and stored accordingly; see
     /// ``UserDefaultsPairedDeviceStore``.
     public let pairedDeviceStore: any PairedDeviceStore
+    let mutationState: CredentialMutationState
 
     public init(
         keyStore: any DeviceKeyStore,
@@ -23,6 +28,7 @@ public struct DeviceCredentialStore: Sendable {
         self.keyStore = keyStore
         self.tokenStore = tokenStore
         self.pairedDeviceStore = pairedDeviceStore
+        mutationState = CredentialMutationState()
     }
 
     /// The production wiring: Secure Enclave key, Keychain tokens.
@@ -64,24 +70,212 @@ public struct DeviceCredentialStore: Sendable {
     /// are gone would restore a session on the next launch and then fail every
     /// request in it, which is a worse screen than the pairing one.
     ///
-    /// - Throws: ``DeviceCredentialWipeError`` if any deletion failed. The
-    ///   caller must treat a throw as "credentials may still be present" and
-    ///   retry, but callers must not treat it as "nothing was deleted".
+    /// - Throws: ``DeviceCredentialWipeError`` if any deletion failed, or
+    ///   ``PairedDeviceStoreError/revisionExhausted`` before deleting anything
+    ///   if its revision cannot advance. For a wipe error, the caller must treat
+    ///   credentials as possibly present and retry, not assume nothing was deleted.
     public func wipe() throws {
-        var tokenFailure: (any Error)?
-        var keyFailure: (any Error)?
-        var identityFailure: (any Error)?
+        _ = try performWipe(ifRevision: nil)
+    }
 
-        do { try tokenStore.wipe() } catch { tokenFailure = error }
-        do { try keyStore.deleteKey() } catch { keyFailure = error }
-        do { try pairedDeviceStore.wipe() } catch { identityFailure = error }
+    internal func wipe(ifRevision expectedRevision: UInt64) throws -> Bool {
+        try performWipe(ifRevision: expectedRevision)
+    }
 
-        if tokenFailure != nil || keyFailure != nil || identityFailure != nil {
-            throw DeviceCredentialWipeError(
-                tokenStoreFailure: tokenFailure,
-                keyStoreFailure: keyFailure,
-                pairedDeviceStoreFailure: identityFailure
+    internal func createPairingCandidate(expectedRevision: UInt64) throws -> DeviceKeyCandidate {
+        try mutationState.withLock { revision in
+            let persistedRevision: UInt64
+            do {
+                persistedRevision = try pairedDeviceStore.loadSnapshot()?.revision ?? 0
+            } catch {
+                throw CredentialMutationError.revisionUnreadable
+            }
+            let currentRevision = max(revision ?? 0, persistedRevision)
+            revision = currentRevision
+            guard currentRevision == expectedRevision else {
+                throw CredentialMutationError.superseded
+            }
+            do {
+                return try keyStore.createCandidateKey()
+            } catch {
+                throw CredentialMutationError.keyGenerationFailed
+            }
+        }
+    }
+
+    internal func currentRevision() throws -> UInt64 {
+        try mutationState.withLock { revision in
+            let persistedRevision = try pairedDeviceStore.loadSnapshot()?.revision ?? 0
+            let currentRevision = max(revision ?? 0, persistedRevision)
+            revision = currentRevision
+            return currentRevision
+        }
+    }
+
+    internal func tokenSnapshot() throws -> CredentialTokenSnapshot {
+        try mutationState.withLock { revision in
+            let persistedRevision = try pairedDeviceStore.loadSnapshot()?.revision ?? 0
+            let currentRevision = max(revision ?? 0, persistedRevision)
+            revision = currentRevision
+            let tokens: DeviceTokens?
+            do {
+                tokens = try tokenStore.load()
+            } catch TokenStoreError.corruptedPayload {
+                throw CredentialSnapshotError.corruptedPayload(revision: currentRevision)
+            }
+            return CredentialTokenSnapshot(
+                revision: currentRevision,
+                tokens: tokens
             )
+        }
+    }
+
+    internal func signature(for message: Data, ifRevision expectedRevision: UInt64) throws -> Data?
+    {
+        try mutationState.withLock { revision in
+            let persistedRevision = try pairedDeviceStore.loadSnapshot()?.revision ?? 0
+            let currentRevision = max(revision ?? 0, persistedRevision)
+            revision = currentRevision
+            guard currentRevision == expectedRevision else { return nil }
+            return try keyStore.signature(for: message)
+        }
+    }
+
+    internal func loadTokens() throws -> DeviceTokens? {
+        try mutationState.withLock { _ in try tokenStore.load() }
+    }
+
+    internal func restoreSnapshot() throws -> (device: PairedDevice?, tokens: DeviceTokens?) {
+        try mutationState.withLock { revision in
+            let snapshot = try pairedDeviceStore.loadSnapshot()
+            let persistedRevision = snapshot?.revision ?? 0
+            revision = max(revision ?? 0, persistedRevision)
+            return (snapshot?.device, try tokenStore.load())
+        }
+    }
+
+    internal func commitPairing(
+        candidate: DeviceKeyCandidate,
+        tokens: DeviceTokens,
+        device: PairedDevice,
+        expectedRevision: UInt64
+    ) throws -> UInt64 {
+        try mutationState.withLock { revision in
+            let previousSnapshot = try pairedDeviceStore.loadSnapshot()
+            let previousRevision = max(revision ?? 0, previousSnapshot?.revision ?? 0)
+            guard previousRevision == expectedRevision else {
+                throw CredentialMutationError.superseded
+            }
+            let previousTokens = try tokenStore.load()
+            let nextRevision = try Self.nextRevision(after: previousRevision)
+
+            try tokenStore.save(tokens)
+            do {
+                try pairedDeviceStore.saveSnapshot(
+                    PairedDeviceSnapshot(revision: nextRevision, device: device))
+            } catch {
+                guard !Self.restoreTokens(previousTokens, in: tokenStore) else {
+                    throw CredentialMutationError.rollbackFailed
+                }
+                throw error
+            }
+
+            do {
+                try keyStore.activateCandidate(candidate)
+            } catch {
+                let tokenRollbackFailed = Self.restoreTokens(previousTokens, in: tokenStore)
+                let snapshotRollbackFailed = Self.restoreSnapshot(
+                    previousSnapshot,
+                    revision: previousRevision,
+                    in: pairedDeviceStore
+                )
+                guard !tokenRollbackFailed, !snapshotRollbackFailed else {
+                    throw CredentialMutationError.rollbackFailed
+                }
+                throw error
+            }
+
+            revision = nextRevision
+            return nextRevision
+        }
+    }
+
+    internal func saveTokens(
+        _ tokens: DeviceTokens,
+        ifRevision expectedRevision: UInt64
+    ) throws -> Bool {
+        try mutationState.withLock { revision in
+            let persistedRevision = try pairedDeviceStore.loadSnapshot()?.revision ?? 0
+            let currentRevision = max(revision ?? 0, persistedRevision)
+            revision = currentRevision
+            guard currentRevision == expectedRevision else { return false }
+            try tokenStore.save(tokens)
+            return true
+        }
+    }
+}
+
+internal final class CredentialMutationState: Sendable {
+    private static let sharedLock = Mutex(())
+    private let revision = Mutex<UInt64?>(nil)
+
+    func withLock<Value: Sendable>(
+        _ operation: (inout sending UInt64?) throws -> sending Value
+    ) rethrows -> sending Value {
+        try Self.sharedLock.withLock { _ in
+            try revision.withLock(operation)
+        }
+    }
+}
+
+internal enum CredentialMutationError: Error, Equatable {
+    case revisionUnreadable
+    case keyGenerationFailed
+    case superseded
+    case rollbackFailed
+}
+
+internal struct CredentialTokenSnapshot: Sendable {
+    internal let revision: UInt64
+    internal let tokens: DeviceTokens?
+}
+
+internal enum CredentialSnapshotError: Error {
+    case corruptedPayload(revision: UInt64)
+}
+
+extension DeviceCredentialStore {
+    static func nextRevision(after revision: UInt64) throws -> UInt64 {
+        let (next, overflow) = revision.addingReportingOverflow(1)
+        guard !overflow else { throw PairedDeviceStoreError.revisionExhausted }
+        return next
+    }
+
+    fileprivate static func restoreTokens(_ tokens: DeviceTokens?, in store: any TokenStore) -> Bool
+    {
+        do {
+            if let tokens {
+                try store.save(tokens)
+            } else {
+                try store.wipe()
+            }
+            return false
+        } catch {
+            return true
+        }
+    }
+
+    fileprivate static func restoreSnapshot(
+        _ snapshot: PairedDeviceSnapshot?,
+        revision: UInt64,
+        in store: any PairedDeviceStore
+    ) -> Bool {
+        do {
+            try store.saveSnapshot(
+                snapshot ?? PairedDeviceSnapshot(revision: revision, device: nil))
+            return false
+        } catch {
+            return true
         }
     }
 }

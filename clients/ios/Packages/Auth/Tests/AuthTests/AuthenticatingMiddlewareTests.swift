@@ -112,7 +112,7 @@ internal struct AuthenticatingMiddlewareTests {
 
         #expect(response.status == .unauthorized)
         #expect(transport.attempts.map(\.authorization) == [nil])
-        #expect(fixture.session.events == [.revoked(.credentialsRejected)])
+        #expect(fixture.session.events == [.revoked(.credentialsRejected, ifCredentialRevision: 0)])
     }
 
     /// And it says so once, not once per request.
@@ -127,7 +127,7 @@ internal struct AuthenticatingMiddlewareTests {
             _ = try await fixture.send(.mobile("/mobile/bootstrap?i=\(index)"), through: transport)
         }
 
-        #expect(fixture.session.events == [.revoked(.credentialsRejected)])
+        #expect(fixture.session.events == [.revoked(.credentialsRejected, ifCredentialRevision: 0)])
     }
 
     /// The contrast that keeps the rule honest: a locked handset is normal for
@@ -188,7 +188,7 @@ internal struct AuthenticatingMiddlewareTests {
         }
 
         #expect(transport.attempts.count == 1, "no retry after a refresh that failed")
-        #expect(fixture.session.events == [.revoked(.credentialsRejected)])
+        #expect(fixture.session.events == [.revoked(.credentialsRejected, ifCredentialRevision: 0)])
     }
 
     @Test("an unreachable BFM leaves the credentials and the session alone")

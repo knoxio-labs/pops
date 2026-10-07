@@ -40,6 +40,64 @@ internal struct SessionTransitionTests {
         #expect(state != .revoked(.revokedByOperator))
     }
 
+    @Test("a revocation from an older credential revision leaves the replacement paired")
+    func staleRevisionRevocationLeavesReplacementPaired() {
+        let replacement = PairedDevice(
+            id: "device-2",
+            baseURL: .fakeBFM,
+            credentialRevision: 2
+        )
+
+        let state = SessionReducer.reduce(
+            .paired(replacement),
+            applying: .revoked(.revokedByOperator, ifCredentialRevision: 1)
+        )
+
+        #expect(state == .paired(replacement))
+    }
+
+    @Test("a current revocation arriving before pairing remains attached to that revision")
+    func revocationBeforePairingCannotResurrectRevokedCredentials() {
+        let previous = PairedDevice(id: "device-1", baseURL: .fakeBFM, credentialRevision: 1)
+        let replacement = PairedDevice(id: "device-2", baseURL: .fakeBFM, credentialRevision: 2)
+
+        let revoked = SessionReducer.reduce(
+            .paired(previous),
+            applying: .revoked(.credentialsRejected, ifCredentialRevision: 2)
+        )
+        let afterDelayedPairing = SessionReducer.reduce(revoked, applying: .paired(replacement))
+
+        #expect(revoked == .revoked(.credentialsRejected, credentialRevision: 2))
+        #expect(afterDelayedPairing == revoked)
+    }
+
+    @Test("a newer credential revision clears an older revocation tombstone")
+    func newerPairingClearsRevocationTombstone() {
+        let nextDevice = PairedDevice(id: "device-3", baseURL: .fakeBFM, credentialRevision: 3)
+        let state = SessionReducer.reduce(
+            .revoked(.credentialsRejected, credentialRevision: 2),
+            applying: .paired(nextDevice)
+        )
+
+        #expect(state == .paired(nextDevice))
+    }
+
+    @Test("a revocation for the current credential revision ends the session")
+    func currentRevisionRevocationEndsSession() {
+        let device = PairedDevice(
+            id: "device-2",
+            baseURL: .fakeBFM,
+            credentialRevision: 2
+        )
+
+        let state = SessionReducer.reduce(
+            .paired(device),
+            applying: .revoked(.credentialsRejected, ifCredentialRevision: 2)
+        )
+
+        #expect(state == .revoked(.credentialsRejected, credentialRevision: 2))
+    }
+
     @Test("paired + paired -> the newer device")
     func pairedReplacesDevice() {
         let state = SessionReducer.reduce(.paired(device), applying: .paired(otherDevice))

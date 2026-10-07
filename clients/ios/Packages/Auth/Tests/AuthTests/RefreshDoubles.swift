@@ -43,15 +43,18 @@ internal final class ScriptedRefreshExchange: DeviceRefreshExchange {
     private let refreshScript: Mutex<Script<RefreshedSession>>
     private let recordedChallenges = Mutex<Int>(0)
     private let recordedSpends = Mutex<[Spend]>([])
+    private let beforeChallenge: @Sendable () async -> Void
     private let beforeRefresh: @Sendable () async -> Void
 
     internal init(
         challenges: [Result<RefreshChallenge, any Error>] = [.success(.stub())],
         refreshes: [Result<RefreshedSession, any Error>] = [.success(.stub())],
+        beforeChallenge: @escaping @Sendable () async -> Void = {},
         beforeRefresh: @escaping @Sendable () async -> Void = {}
     ) {
         challengeScript = Mutex(Script(challenges))
         refreshScript = Mutex(Script(refreshes))
+        self.beforeChallenge = beforeChallenge
         self.beforeRefresh = beforeRefresh
     }
 
@@ -60,6 +63,7 @@ internal final class ScriptedRefreshExchange: DeviceRefreshExchange {
 
     internal func challenge() async throws -> RefreshChallenge {
         recordedChallenges.withLock { $0 += 1 }
+        await beforeChallenge()
         return try challengeScript.withLock { $0.next() }.get()
     }
 

@@ -52,6 +52,51 @@ internal struct DeviceKeyStoreTests {
         #expect(second != first)
     }
 
+    @Test("staging and discarding a candidate leaves the active identity untouched")
+    func candidateCanBeDiscardedWithoutReplacingActiveKey() throws {
+        let store = InMemoryKeyStore()
+        let active = try store.createKey()
+        let candidate = try store.createCandidateKey()
+
+        #expect(try store.publicKey() == active)
+        #expect(candidate.publicKey != active)
+
+        try store.discardCandidate(candidate)
+
+        #expect(try store.publicKey() == active)
+        #expect(throws: DeviceKeyStoreError.candidateNotFound) {
+            try store.activateCandidate(candidate)
+        }
+    }
+
+    @Test("activation selects the candidate for future signatures")
+    func candidateActivationReplacesTheActiveSigningKey() throws {
+        let store = InMemoryKeyStore()
+        let previous = try store.createKey()
+        let candidate = try store.createCandidateKey()
+        let message = Data("candidate identity".utf8)
+
+        try store.activateCandidate(candidate)
+        let signature = try store.signature(for: message)
+
+        #expect(try store.publicKey() == candidate.publicKey)
+        #expect(candidate.publicKey.isValidSignature(signature, for: message))
+        #expect(!previous.isValidSignature(signature, for: message))
+    }
+
+    @Test("deleting a key namespace also deletes staged candidates")
+    func namespaceDeletionRemovesCandidates() throws {
+        let store = InMemoryKeyStore()
+        let candidate = try store.createCandidateKey()
+
+        try store.deleteKey()
+
+        #expect(try store.publicKey() == nil)
+        #expect(throws: DeviceKeyStoreError.candidateNotFound) {
+            try store.activateCandidate(candidate)
+        }
+    }
+
     @Test("a signature verifies against the key that produced it")
     func signAndVerify() throws {
         let store = InMemoryKeyStore()

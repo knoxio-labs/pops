@@ -70,7 +70,7 @@ It carries no credentials of its own. `init(baseURL:)` reaches only the BFM's un
 
 ## Ego byte transport
 
-The generated client does not expose response bytes as they arrive, so Ego's `POST /mobile/ego/chat/stream` uses `BFMEgoByteTransport`. It receives a `BFMStreamAuthorizer` and a `BFMByteSource`; it does not store credentials or own pairing. The default source reads with Foundation's `URLSession.bytes(for:)`, yields chunks of at most 4096 bytes, and cancels the request when its consumer stops. A token-bearing `401` refreshes once and retries once. A `403` revokes the device only when its body has the explicit `bfm.auth.device_revoked` or `device_revoked` code; capability refusals are not revocations. Rejected bodies are capped at 64 KiB and have the request's bearer tokens removed.
+The generated client does not expose response bytes as they arrive, so Ego's `POST /mobile/ego/chat/stream` uses `BFMEgoByteTransport`. It receives a `BFMStreamAuthorizer` and a `BFMByteSource`; it does not store credentials or own pairing. Each `BFMStreamCredential` carries the access token and the revision read with it, so an explicit revocation response is applied only to the identity that made that request. The default source reads with Foundation's `URLSession.bytes(for:)`, yields chunks of at most 4096 bytes, and cancels the request when its consumer stops. A token-bearing `401` refreshes once and retries once, carrying the refreshed credential's revision into any response handling. A `403` revokes the device only when its body has the explicit `bfm.auth.device_revoked` or `device_revoked` code; capability refusals are not revocations. Rejected bodies are capped at 64 KiB and have the request's bearer tokens removed.
 
 ## The repositories
 

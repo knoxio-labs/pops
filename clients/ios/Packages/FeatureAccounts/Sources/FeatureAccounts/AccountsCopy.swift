@@ -1,5 +1,4 @@
 import AppCore
-import Foundation
 
 /// Every word this module shows, across the list, the picker and the
 /// dashboard, in one place — the same reason `TransactionsCopy` gathers

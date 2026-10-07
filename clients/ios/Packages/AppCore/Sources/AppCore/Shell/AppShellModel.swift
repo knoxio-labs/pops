@@ -84,7 +84,7 @@ public final class AppShellModel {
         switch session.state {
         case .unpaired:
             return .pairing(nil)
-        case .revoked(let reason):
+        case .revoked(let reason, _):
             return .pairing(reason)
         case .paired:
             return .content(surface)
