@@ -19,12 +19,37 @@ import {
  */
 export const NAV_COLOR = z.enum(['emerald', 'indigo', 'amber', 'rose', 'sky', 'violet']);
 
+/**
+ * Who may open a page or see a nav item.
+ *
+ * `guest` widens rather than narrows: a guest-accessible page is open to
+ * guests as well as the operator, never to guests only. There is no value
+ * that hides something from the operator.
+ *
+ * Declared per descriptor and not inherited: a child page under a
+ * guest-accessible layout is operator-only until it says otherwise, so
+ * marking a layout cannot open its subtree by accident.
+ */
+export const PAGE_ACCESS = z.enum(['operator', 'guest']);
+
+export type PageAccess = z.infer<typeof PAGE_ACCESS>;
+
+/**
+ * The access a descriptor grants once the default is applied. A manifest that
+ * does not mention `access` is operator-only, which is what every manifest
+ * published before the field existed means.
+ */
+export function resolvePageAccess(declared: PageAccess | undefined): PageAccess {
+  return declared ?? 'operator';
+}
+
 const NAV_ITEM_DESCRIPTOR = z
   .object({
     path: z.string(),
     label: z.string().min(1),
     labelKey: I18nKeySchema,
     icon: KebabIdentifierSchema,
+    access: PAGE_ACCESS.optional(),
   })
   .strict();
 
@@ -80,6 +105,7 @@ export interface PageDescriptor {
   readonly path: string;
   readonly index?: boolean;
   readonly bundleSlot: string;
+  readonly access?: PageAccess;
   readonly children?: readonly PageDescriptor[];
 }
 
@@ -94,6 +120,7 @@ function pageDescriptorAtDepth(remaining: number): z.ZodType<PageDescriptor> {
     path: z.string(),
     index: z.boolean().optional(),
     bundleSlot: KebabIdentifierSchema,
+    access: PAGE_ACCESS.optional(),
   };
   if (remaining <= 1) return z.object(base).strict() as z.ZodType<PageDescriptor>;
   return (

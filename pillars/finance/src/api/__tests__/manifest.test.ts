@@ -30,4 +30,18 @@ describe('buildFinanceManifest', () => {
       expect.arrayContaining(['finance.tagged.attach', 'finance.tagged.detach'])
     );
   });
+
+  // The contract's marks are only worth anything if they reach the registry:
+  // the shell filters on the manifest it walks, never on the contract.
+  it('carries the guest marks onto the wire', () => {
+    const manifest = buildFinanceManifest('0.1.0');
+
+    expect(
+      (manifest.pages ?? []).filter((page) => page.access === 'guest').map((page) => page.path)
+    ).toEqual(['transactions', 'accounts', 'accounts/:id']);
+    expect(
+      (manifest.nav?.items ?? []).filter((item) => item.access === 'guest').map((item) => item.path)
+    ).toEqual(['/transactions', '/accounts']);
+    expect((manifest.pages ?? []).some((page) => page.access === 'operator')).toBe(false);
+  });
 });
