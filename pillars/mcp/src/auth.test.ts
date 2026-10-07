@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import express from 'express';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import type { Server as HttpServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
@@ -41,8 +41,13 @@ function missingSecretFilePath(): string {
   return join(directory, 'missing-token');
 }
 
-const { resolveInboundToken, evaluateInboundAuth, inboundAuth, __resetInboundAuthWarningForTests } =
-  await import('./auth.js');
+const {
+  resolveInboundToken,
+  requireInboundToken,
+  isInboundAuthConfigured,
+  evaluateInboundAuth,
+  inboundAuth,
+} = await import('./auth.js');
 
 describe('resolveInboundToken', () => {
   beforeEach(() => {
@@ -99,34 +104,76 @@ describe('resolveInboundToken', () => {
       resolveInboundToken({ MCP_INBOUND_TOKEN_FILE: path, MCP_INBOUND_TOKEN: 'from-env' })
     ).toThrow(/MCP_INBOUND_TOKEN_FILE/);
   });
+
+  it('rejects a multiline configured file without exposing its path or contents', () => {
+    const token = 'sensitive-token-content';
+    const path = secretFile(`${token}\nsecond-line`);
+    let thrown: unknown;
+    try {
+      resolveInboundToken({ MCP_INBOUND_TOKEN_FILE: path, MCP_INBOUND_TOKEN: 'fallback-secret' });
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(Error);
+    expect((thrown as Error).message).toContain('MCP_INBOUND_TOKEN_FILE');
+    expect((thrown as Error).message).not.toContain(path);
+    expect((thrown as Error).message).not.toContain(token);
+    expect((thrown as Error).message).not.toContain('fallback-secret');
+  });
+
+  it('rejects an environment token containing whitespace', () => {
+    expect(() => resolveInboundToken({ MCP_INBOUND_TOKEN: 'two words' })).toThrow(
+      /MCP_INBOUND_TOKEN/
+    );
+  });
+
+  it('reports token availability without revealing a configured value', () => {
+    expect(isInboundAuthConfigured({})).toBe(false);
+    expect(isInboundAuthConfigured({ MCP_INBOUND_TOKEN: 'configured-secret' })).toBe(true);
+    expect(isInboundAuthConfigured({ MCP_INBOUND_TOKEN: '   ' })).toBe(false);
+    expect(isInboundAuthConfigured({ MCP_INBOUND_TOKEN_FILE: missingSecretFilePath() })).toBe(
+      false
+    );
+  });
+
+  it('requires a configured non-blank token before startup', () => {
+    expect(() => requireInboundToken({})).toThrow(/MCP_INBOUND_TOKEN_FILE.*MCP_INBOUND_TOKEN/);
+    expect(() => requireInboundToken({ MCP_INBOUND_TOKEN: '   ' })).toThrow(
+      /MCP_INBOUND_TOKEN_FILE.*MCP_INBOUND_TOKEN/
+    );
+    expect(() => requireInboundToken({ MCP_INBOUND_TOKEN: 'valid-token' })).not.toThrow();
+  });
 });
 
-describe('evaluateInboundAuth — open mode (no token configured)', () => {
-  let warnSpy: ReturnType<typeof vi.spyOn>;
-
+describe('evaluateInboundAuth — unconfigured mode', () => {
   beforeEach(() => {
     delete process.env['MCP_INBOUND_TOKEN'];
     delete process.env['MCP_INBOUND_TOKEN_FILE'];
-    __resetInboundAuthWarningForTests();
-    warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
   });
 
-  afterEach(() => {
-    warnSpy.mockRestore();
-    restoreAuthConfiguration();
+  afterEach(restoreAuthConfiguration);
+
+  it('denies requests if the inbound token is unset or blank', () => {
+    expect(evaluateInboundAuth(undefined)).toEqual({
+      authorized: false,
+      mode: 'unconfigured',
+      reason: 'Inbound authentication is not configured',
+    });
+    process.env['MCP_INBOUND_TOKEN'] = '   ';
+    expect(evaluateInboundAuth('Bearer anything')).toMatchObject({
+      authorized: false,
+      mode: 'unconfigured',
+    });
   });
 
-  it('authorizes any caller and reports open mode', () => {
-    expect(evaluateInboundAuth(undefined)).toEqual({ authorized: true, mode: 'open' });
-    expect(evaluateInboundAuth('Bearer anything')).toEqual({ authorized: true, mode: 'open' });
-  });
-
-  it('emits the loud unprotected warning exactly once across many requests', () => {
-    evaluateInboundAuth(undefined);
-    evaluateInboundAuth(undefined);
-    evaluateInboundAuth('Bearer x');
-    expect(warnSpy).toHaveBeenCalledTimes(1);
-    expect(warnSpy.mock.calls[0]?.[0]).toContain('MCP_INBOUND_TOKEN is not set');
+  it('denies requests for malformed server configuration without exposing it', () => {
+    const tokenPath = secretFile('must-not-appear\nsecond-line');
+    process.env['MCP_INBOUND_TOKEN_FILE'] = tokenPath;
+    const decision = evaluateInboundAuth('Bearer must-not-appear');
+    expect(decision).toMatchObject({ authorized: false, mode: 'unconfigured' });
+    expect(JSON.stringify(decision)).not.toContain(tokenPath);
+    expect(JSON.stringify(decision)).not.toContain('must-not-appear');
   });
 });
 
@@ -136,7 +183,6 @@ describe('evaluateInboundAuth — enforced mode (token configured)', () => {
   beforeEach(() => {
     delete process.env['MCP_INBOUND_TOKEN_FILE'];
     process.env['MCP_INBOUND_TOKEN'] = token;
-    __resetInboundAuthWarningForTests();
   });
 
   afterEach(restoreAuthConfiguration);
@@ -144,6 +190,7 @@ describe('evaluateInboundAuth — enforced mode (token configured)', () => {
   it('rejects a request with no Authorization header', () => {
     expect(evaluateInboundAuth(undefined)).toEqual({
       authorized: false,
+      mode: 'rejected',
       reason: 'Missing bearer token',
     });
   });
@@ -160,6 +207,7 @@ describe('evaluateInboundAuth — enforced mode (token configured)', () => {
     const wrong = 'x'.repeat(token.length);
     expect(evaluateInboundAuth(`Bearer ${wrong}`)).toEqual({
       authorized: false,
+      mode: 'rejected',
       reason: 'Invalid bearer token',
     });
   });
@@ -181,14 +229,6 @@ describe('evaluateInboundAuth — enforced mode (token configured)', () => {
       mode: 'enforced',
     });
   });
-
-  it('never warns while a token is configured', () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    evaluateInboundAuth(`Bearer ${token}`);
-    evaluateInboundAuth(undefined);
-    expect(warnSpy).not.toHaveBeenCalled();
-    warnSpy.mockRestore();
-  });
 });
 
 describe('inboundAuth middleware over HTTP', () => {
@@ -202,7 +242,6 @@ describe('inboundAuth middleware over HTTP', () => {
   });
 
   beforeEach(async () => {
-    __resetInboundAuthWarningForTests();
     delete process.env['MCP_INBOUND_TOKEN_FILE'];
     await new Promise<void>((resolve) => {
       server = app.listen(0, '127.0.0.1', () => resolve());
@@ -269,12 +308,33 @@ describe('inboundAuth middleware over HTTP', () => {
     expect(rejected.status).toBe(401);
   });
 
-  it('passes to the handler unauthenticated when no token is configured', async () => {
+  it('returns 503 and does not reach the handler when no token is configured', async () => {
     delete process.env['MCP_INBOUND_TOKEN'];
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const res = await fetch(`${baseUrl}/mcp`, { method: 'POST' });
-    expect(res.status).toBe(200);
-    expect(warnSpy).toHaveBeenCalledTimes(1);
-    warnSpy.mockRestore();
+    expect(res.status).toBe(503);
+    expect(res.headers.get('www-authenticate')).toBeNull();
+    const body = (await res.json()) as ErrorBody;
+    expect(body).toEqual({
+      code: 'mcp.auth.unavailable',
+      message: 'Inbound authentication is not configured.',
+      requestId: expect.any(String),
+      retryable: true,
+    });
+  });
+
+  it('does not disclose malformed file details in an HTTP error', async () => {
+    const fileToken = 'private-file-token-content';
+    process.env['MCP_INBOUND_TOKEN_FILE'] = secretFile(`${fileToken}\nsecond-line`);
+    process.env['MCP_INBOUND_TOKEN'] = 'fallback-secret';
+    const response = await fetch(`${baseUrl}/mcp`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${fileToken}` },
+    });
+    const body = await response.text();
+
+    expect(response.status).toBe(503);
+    expect(body).not.toContain(fileToken);
+    expect(body).not.toContain('fallback-secret');
+    expect(body).not.toContain(process.env['MCP_INBOUND_TOKEN_FILE']);
   });
 });

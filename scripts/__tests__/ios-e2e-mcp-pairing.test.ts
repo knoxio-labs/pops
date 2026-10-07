@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   callMcpTool,
+  createMcpInboundAuth,
   formatPairingMcpFailure,
   issuePairingCodeViaMcp,
   parsePairingCodeResponse,
@@ -79,6 +80,23 @@ describe('parsePairingCodeResponse', () => {
 
     expect(failure).toMatchObject({ stage: 'mcp-response' });
     expect(formatPairingMcpFailure(failure)).not.toContain(secret);
+  });
+});
+
+describe('createMcpInboundAuth', () => {
+  it('uses a run-scoped token and disables any inherited token-file override', () => {
+    const auth = createMcpInboundAuth();
+    const childEnvironment = {
+      MCP_INBOUND_TOKEN_FILE: '/inherited/token-file',
+      MCP_INBOUND_TOKEN: 'inherited-token',
+      ...auth.environment,
+    };
+
+    expect(auth.token).toMatch(/^[0-9a-f-]{36}$/u);
+    expect(childEnvironment).toEqual({
+      MCP_INBOUND_TOKEN_FILE: '',
+      MCP_INBOUND_TOKEN: auth.token,
+    });
   });
 });
 
