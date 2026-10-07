@@ -124,14 +124,26 @@ export const BootstrapDeviceSchema = z.object({
   capabilities: z.array(z.string()),
 });
 
+/**
+ * Whose session the device holds. `email` is the guest the device was paired
+ * for, and `null` for the operator's own handset.
+ */
+export const BootstrapSessionSchema = z.object({
+  kind: z.enum(['operator', 'guest']),
+  email: z.string().nullable(),
+});
+
 export const MobileBootstrapResponseSchema = z.object({
   device: BootstrapDeviceSchema,
+  /** Optional on the wire so a build paired against an older server still decodes. */
+  session: BootstrapSessionSchema.optional(),
   registry: z.object({ source: RegistrySourceSchema }),
   pillars: z.array(BootstrapPillarSchema),
   features: z.array(BootstrapFeatureSchema),
 });
 
 export type BootstrapDevice = z.infer<typeof BootstrapDeviceSchema>;
+export type BootstrapSession = z.infer<typeof BootstrapSessionSchema>;
 export type BootstrapPillar = z.infer<typeof BootstrapPillarSchema>;
 export type BootstrapFeature = z.infer<typeof BootstrapFeatureSchema>;
 export type MobileBootstrapResponse = z.infer<typeof MobileBootstrapResponseSchema>;

@@ -11230,6 +11230,87 @@ export type TransactionsDescriptionsForPreviewResponses = {
 export type TransactionsDescriptionsForPreviewResponse =
   TransactionsDescriptionsForPreviewResponses[keyof TransactionsDescriptionsForPreviewResponses];
 
+export type TransactionAttachmentsExtractReceiptData = {
+  /**
+   * Body
+   */
+  body?: {
+    accountId: string;
+    parts: Array<{
+      dataBase64: string;
+      mediaType: string;
+    }>;
+  };
+  path?: never;
+  query?: never;
+  url: '/transactions/receipt-extract';
+};
+
+export type TransactionAttachmentsExtractReceiptErrors = {
+  /**
+   * 400
+   */
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
+  /**
+   * 404
+   */
+  404: ErrorBody;
+  /**
+   * 409
+   */
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
+};
+
+export type TransactionAttachmentsExtractReceiptError =
+  TransactionAttachmentsExtractReceiptErrors[keyof TransactionAttachmentsExtractReceiptErrors];
+
+export type TransactionAttachmentsExtractReceiptResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data:
+      | {
+          outcome: 'suggested';
+          receiptUris: Array<string>;
+          suggestion: {
+            amountCents: number;
+            currency: string;
+            currencyMismatch: boolean;
+            date: string;
+            description: string | null;
+          };
+        }
+      | {
+          outcome: 'unreadable' | 'unavailable' | 'already-a-purchase';
+          receiptUris: Array<string>;
+        };
+  };
+};
+
+export type TransactionAttachmentsExtractReceiptResponse =
+  TransactionAttachmentsExtractReceiptResponses[keyof TransactionAttachmentsExtractReceiptResponses];
+
 export type TransactionsRestoreData = {
   /**
    * Body
@@ -11699,6 +11780,347 @@ export type TransactionsUpdateResponses = {
 
 export type TransactionsUpdateResponse =
   TransactionsUpdateResponses[keyof TransactionsUpdateResponses];
+
+export type TransactionAttachmentsListData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/transactions/{id}/attachments';
+};
+
+export type TransactionAttachmentsListErrors = {
+  /**
+   * 400
+   */
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
+  /**
+   * 404
+   */
+  404: ErrorBody;
+  /**
+   * 409
+   */
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
+};
+
+export type TransactionAttachmentsListError =
+  TransactionAttachmentsListErrors[keyof TransactionAttachmentsListErrors];
+
+export type TransactionAttachmentsListResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: Array<{
+      createdAt: string;
+      createdBy: string | null;
+      documentUri: string;
+      id: string;
+      mediaType: string;
+      position: number;
+      transactionId: string;
+    }>;
+  };
+};
+
+export type TransactionAttachmentsListResponse =
+  TransactionAttachmentsListResponses[keyof TransactionAttachmentsListResponses];
+
+export type TransactionAttachmentsAttachData = {
+  /**
+   * Body
+   */
+  body?:
+    | {
+        parts: Array<{
+          dataBase64: string;
+          mediaType: string;
+        }>;
+      }
+    | {
+        receiptUris: Array<string>;
+      };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/transactions/{id}/attachments';
+};
+
+export type TransactionAttachmentsAttachErrors = {
+  /**
+   * 400
+   */
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
+  /**
+   * 404
+   */
+  404: ErrorBody;
+  /**
+   * 409
+   */
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
+};
+
+export type TransactionAttachmentsAttachError =
+  TransactionAttachmentsAttachErrors[keyof TransactionAttachmentsAttachErrors];
+
+export type TransactionAttachmentsAttachResponses = {
+  /**
+   * 201
+   */
+  201: {
+    data: Array<{
+      createdAt: string;
+      createdBy: string | null;
+      documentUri: string;
+      id: string;
+      mediaType: string;
+      position: number;
+      transactionId: string;
+    }>;
+    message: string;
+  };
+};
+
+export type TransactionAttachmentsAttachResponse =
+  TransactionAttachmentsAttachResponses[keyof TransactionAttachmentsAttachResponses];
+
+export type TransactionAttachmentsDetachData = {
+  body?: never;
+  path: {
+    id: string;
+    attachmentId: string;
+  };
+  query?: never;
+  url: '/transactions/{id}/attachments/{attachmentId}';
+};
+
+export type TransactionAttachmentsDetachErrors = {
+  /**
+   * 400
+   */
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
+  /**
+   * 404
+   */
+  404: ErrorBody;
+  /**
+   * 409
+   */
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
+};
+
+export type TransactionAttachmentsDetachError =
+  TransactionAttachmentsDetachErrors[keyof TransactionAttachmentsDetachErrors];
+
+export type TransactionAttachmentsDetachResponses = {
+  /**
+   * 200
+   */
+  200: {
+    message: string;
+  };
+};
+
+export type TransactionAttachmentsDetachResponse =
+  TransactionAttachmentsDetachResponses[keyof TransactionAttachmentsDetachResponses];
+
+export type TransactionAttachmentsReadData = {
+  body?: never;
+  path: {
+    id: string;
+    attachmentId: string;
+  };
+  query?: never;
+  url: '/transactions/{id}/attachments/{attachmentId}';
+};
+
+export type TransactionAttachmentsReadErrors = {
+  /**
+   * 400
+   */
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
+  /**
+   * 404
+   */
+  404: ErrorBody;
+  /**
+   * 409
+   */
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
+};
+
+export type TransactionAttachmentsReadError =
+  TransactionAttachmentsReadErrors[keyof TransactionAttachmentsReadErrors];
+
+export type TransactionAttachmentsReadResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      byteLength: number;
+      dataBase64: string;
+      mediaType: string;
+      sha256: string;
+    };
+  };
+};
+
+export type TransactionAttachmentsReadResponse =
+  TransactionAttachmentsReadResponses[keyof TransactionAttachmentsReadResponses];
+
+export type TransactionAttachmentsThumbnailData = {
+  body?: never;
+  path: {
+    id: string;
+    attachmentId: string;
+  };
+  query?: never;
+  url: '/transactions/{id}/attachments/{attachmentId}/thumbnail';
+};
+
+export type TransactionAttachmentsThumbnailErrors = {
+  /**
+   * 400
+   */
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
+  /**
+   * 404
+   */
+  404: ErrorBody;
+  /**
+   * 409
+   */
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 415
+   */
+  415: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
+};
+
+export type TransactionAttachmentsThumbnailError =
+  TransactionAttachmentsThumbnailErrors[keyof TransactionAttachmentsThumbnailErrors];
+
+export type TransactionAttachmentsThumbnailResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      byteLength: number;
+      dataBase64: string;
+      mediaType: string;
+      sha256: string;
+    };
+  };
+};
+
+export type TransactionAttachmentsThumbnailResponse =
+  TransactionAttachmentsThumbnailResponses[keyof TransactionAttachmentsThumbnailResponses];
 
 export type TransactionHistoryForTransactionData = {
   body?: never;

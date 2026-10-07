@@ -39,6 +39,14 @@ import type { ContractScopeMap, ServiceAccountVerifier } from '@pops/pillar-sdk/
  */
 const FINANCE_SCOPE_ROOT = 'finance';
 
+/**
+ * What a service account must hold to call on behalf of a guest. bfm sends the
+ * guest's email as `X-Pops-Subject-Email` for a guest-bound device, and the
+ * request is then answered as that guest: their grants, and nothing on a route
+ * a guest may not reach. Without the header a key behaves as it always has.
+ */
+export const FINANCE_DELEGATED_SUBJECT_SCOPE = 'finance.delegatedSubject';
+
 const financeAuthErrors = defineErrors('finance', {
   invalid: {
     area: 'auth',
@@ -65,6 +73,7 @@ const gate = createServiceAccountScopeGate({
   rootScope: FINANCE_SCOPE_ROOT,
   logPrefix: 'finance-api',
   errors: financeAuthErrors,
+  delegatedSubjectScope: FINANCE_DELEGATED_SUBJECT_SCOPE,
 });
 
 /**

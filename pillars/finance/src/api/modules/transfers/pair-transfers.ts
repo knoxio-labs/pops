@@ -12,7 +12,7 @@
  * The "different account" predicate compares `accountId` (POPS-2769) — real
  * accounts now exist, so this is an exact identity check rather than a
  * comparison of free-text names. The engine itself stays OFF in
- * production ({@link isTransferPairEnabled} gates both trigger points and
+ * production ({@link isTransferPairEnabled} gates every trigger point and
  * defaults to disabled) pending a separate decision to enable it; this ticket
  * does not flip that flag.
  */

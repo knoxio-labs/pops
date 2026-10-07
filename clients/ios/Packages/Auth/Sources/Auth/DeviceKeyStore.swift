@@ -16,11 +16,22 @@ public protocol DeviceKeyStore: Sendable {
     /// Creates the device key.
     ///
     /// - Returns: The public half, in both encodings.
-    /// - Throws: ``DeviceKeyStoreError/keyAlreadyExists`` when a key is already
-    ///   present. Re-pairing calls ``deleteKey()`` first — replacing silently
-    ///   would orphan the public key the BFM has on file with no way to notice.
+    /// - Throws: ``DeviceKeyStoreError/keyAlreadyExists`` when an active key is
+    ///   already present. Pairing uses ``createCandidateKey()`` so a refused
+    ///   code does not replace the current identity.
     @discardableResult
     func createKey() throws -> DevicePublicKey
+
+    /// Creates a key that can be used for an exchange without replacing the
+    /// active identity.
+    func createCandidateKey() throws -> DeviceKeyCandidate
+
+    /// Makes a staged key active. If this throws, the previous active key is
+    /// still selected.
+    func activateCandidate(_ candidate: DeviceKeyCandidate) throws
+
+    /// Removes a staged key without changing the active identity.
+    func discardCandidate(_ candidate: DeviceKeyCandidate) throws
 
     /// The public half of the existing device key, or `nil` when unpaired.
     func publicKey() throws -> DevicePublicKey?
@@ -33,12 +44,34 @@ public protocol DeviceKeyStore: Sendable {
     /// - Throws: ``DeviceKeyStoreError/keyNotFound`` when unpaired.
     func signature(for message: Data) throws -> Data
 
-    /// Removes the device key. Idempotent: deleting an absent key succeeds.
+    /// Removes every key in this store's namespace, including staged keys.
+    /// Idempotent: deleting an absent key succeeds.
     ///
     /// Revocation recovery calls this, so it must not fail merely because there
     /// was nothing to delete — a throw there would strand the app holding
     /// credentials it has already been told are dead.
     func deleteKey() throws
+}
+
+/// A staged signing key and its public half, safe to retain while pairing is
+/// in flight. The identifier cannot be used to export or sign with the key.
+public struct DeviceKeyCandidate: Sendable, Equatable {
+    /// The public key the BFM stores for the new device identity.
+    public let publicKey: DevicePublicKey
+
+    /// Opaque identifier used by the key store to locate the staged key.
+    public let identifier: UUID
+
+    /// Non-secret key-store namespace that owns the candidate.
+    public let namespace: String
+
+    /// Creates a candidate descriptor. A store still verifies that the
+    /// identifier exists in its own namespace before activation or deletion.
+    public init(publicKey: DevicePublicKey, identifier: UUID, namespace: String) {
+        self.publicKey = publicKey
+        self.identifier = identifier
+        self.namespace = namespace
+    }
 }
 
 /// Why a key operation failed.
@@ -52,6 +85,12 @@ public protocol DeviceKeyStore: Sendable {
 public enum DeviceKeyStoreError: Error, Equatable {
     /// A device key is already present. Delete it before creating another.
     case keyAlreadyExists
+
+    /// A staged key no longer exists or belongs to another store.
+    case candidateNotFound
+
+    /// A staged key has already become the active identity.
+    case candidateAlreadyActive
 
     /// No device key is present — the device is unpaired.
     case keyNotFound
@@ -75,6 +114,8 @@ extension DeviceKeyStoreError: CustomStringConvertible {
     public var description: String {
         switch self {
         case .keyAlreadyExists: "a device key already exists"
+        case .candidateNotFound: "no staged device key"
+        case .candidateAlreadyActive: "the staged device key is active"
         case .keyNotFound: "no device key"
         case .malformedPublicKey: "malformed P-256 public key"
         case .secureEnclaveUnavailable(let code): "secure enclave unavailable (\(code))"

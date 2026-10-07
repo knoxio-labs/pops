@@ -9,11 +9,15 @@
  * body — the phone chooses what it typed, never what kind of write it made.
  */
 import { findPurchaseBySourceOrderId } from '../../db/index.js';
-import { firstPhotoCapture, resolveCapture } from '../../ingest/receipt/capture.js';
+import {
+  deletePendingReceiptCapture,
+  findPendingReceiptCapture,
+} from '../../db/services/pending-receipt-captures.js';
+import { firstPhotoCapture } from '../../ingest/receipt/capture.js';
 import { shapeReceiptDraft } from '../../ingest/receipt/draft.js';
 import { RECEIPT_SOURCE_ID } from '../../ingest/receipt/purchase.js';
 import { causeOf, isNoReading, readReceipt } from '../../ingest/receipt/read-receipt.js';
-import { receiptKeyFromUris } from '../../ingest/receipt/store.js';
+import { receiptKey, receiptKeyFromUris } from '../../ingest/receipt/store.js';
 import {
   createMerchantResolver,
   nameMerchant,
@@ -26,6 +30,7 @@ import {
   persistDraftPurchase,
   readDraftPurchaseDetail,
 } from './purchase-draft-persist.js';
+import { resolveReceiptCaptureState, retainReceiptCaptureState } from './receipt-capture-state.js';
 import {
   fireIngest,
   prepareReceiptParts,
@@ -84,10 +89,18 @@ export function makeReceiptDraftHandlers(
         };
       }
       const { parts, goodParts, stored } = prepared;
+      const contentKey = receiptKey(stored);
+      const photoCapture = firstPhotoCapture(goodParts);
 
       const outcome = await readReceipt(vision, parts);
 
       if (isNoReading(outcome)) {
+        const captureState = resolveReceiptCaptureState(db, contentKey, {
+          clientCapture: body.capture,
+          photo: photoCapture,
+          modelTimeZone: null,
+        });
+        retainReceiptCaptureState(db, contentKey, captureState);
         return okExtract({
           kind: 'unreadable',
           receiptUris: receiptUris(stored),
@@ -96,15 +109,16 @@ export function makeReceiptDraftHandlers(
         });
       }
 
-      const capture = resolveCapture(
-        body.capture,
-        firstPhotoCapture(goodParts),
-        outcome.extracted.timeZone
-      );
+      const captureState = resolveReceiptCaptureState(db, contentKey, {
+        clientCapture: body.capture,
+        photo: photoCapture,
+        modelTimeZone: outcome.extracted.timeZone,
+      });
       const draft = shapeReceiptDraft(outcome.extracted, outcome.gate, stored, {
         uploadedAt,
-        capture,
+        capture: captureState.capture,
       });
+      retainReceiptCaptureState(db, contentKey, captureState);
       const matchedMerchantEntityId = await nameMerchant(merchant, outcome.extracted.merchantName);
 
       return okExtract({
@@ -144,8 +158,10 @@ export function makeReceiptDraftHandlers(
           }),
         };
       }
+      const pendingCapture = findPendingReceiptCapture(db, contentKey);
       const alreadySaved = findPurchaseBySourceOrderId(db, RECEIPT_SOURCE_ID, contentKey);
       if (alreadySaved !== undefined) {
+        deletePendingReceiptCapture(db, contentKey);
         // Replaying the same idempotency key is the retry this key exists
         // for: return what it already wrote rather than refusing it. A
         // different key on the same receipt is a genuinely different save
@@ -171,16 +187,21 @@ export function makeReceiptDraftHandlers(
       // re-deriving what the reviewer already settled.
       const merchantEntityId =
         body.merchantEntityId ?? (await nameMerchant(merchant, body.merchantEntityName));
-      const input = toCreatePurchaseInput(
+      const mappedInput = toCreatePurchaseInput(
         { ...body, merchantEntityId },
         RECEIPT_SOURCE_ID,
         'upload',
         contentKey
       );
+      const input =
+        mappedInput.capture === undefined && pendingCapture !== undefined
+          ? { ...mappedInput, capture: pendingCapture.capture }
+          : mappedInput;
 
       const written = persistDraftPurchase(db, input);
       if (written.kind === 'refused') return { status: written.status, body: written.body };
 
+      deletePendingReceiptCapture(db, contentKey);
       fireIngest(onIngest);
       return { status: 200 as const, body: toPurchaseDetailBody(written.detail) };
     },

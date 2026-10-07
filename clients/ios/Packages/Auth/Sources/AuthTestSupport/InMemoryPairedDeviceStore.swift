@@ -14,7 +14,9 @@ public final class InMemoryPairedDeviceStore: PairedDeviceStore {
     private let state = Mutex<State>(State())
 
     public init(initial: PairedDevice? = nil) {
-        state.withLock { $0.device = initial }
+        state.withLock {
+            $0.snapshot = initial.map { PairedDeviceSnapshot(revision: 0, device: $0) }
+        }
     }
 
     /// Makes every ``save(_:)`` from now on throw.
@@ -22,25 +24,21 @@ public final class InMemoryPairedDeviceStore: PairedDeviceStore {
         state.withLock { $0.writesFail = true }
     }
 
-    public func load() throws -> PairedDevice? {
-        state.withLock { $0.device }
+    public func loadSnapshot() throws -> PairedDeviceSnapshot? {
+        state.withLock { $0.snapshot }
     }
 
-    public func save(_ device: PairedDevice) throws {
+    public func saveSnapshot(_ snapshot: PairedDeviceSnapshot) throws {
         try state.withLock {
             guard !$0.writesFail else { throw PairedDeviceStoreError.corruptedPayload }
-            $0.device = device
+            $0.snapshot = snapshot
         }
-    }
-
-    public func wipe() throws {
-        state.withLock { $0.device = nil }
     }
 }
 
 extension InMemoryPairedDeviceStore {
     private struct State {
-        var device: PairedDevice?
+        var snapshot: PairedDeviceSnapshot?
         var writesFail = false
     }
 }

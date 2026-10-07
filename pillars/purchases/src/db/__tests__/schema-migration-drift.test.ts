@@ -47,6 +47,7 @@ import {
   purchaseMatchRules,
   purchaseSources,
   receiptExternalReferences,
+  pendingReceiptCaptures,
 } from '../schema.js';
 import { openTempDb } from './helpers.js';
 
@@ -88,6 +89,7 @@ const ALL_TABLES: readonly SQLiteTable[] = [
   purchaseProducts,
   purchaseProductAliases,
   receiptExternalReferences,
+  pendingReceiptCaptures,
 ];
 
 interface ColumnInfo {

@@ -12,6 +12,7 @@ import type { Express } from 'express';
 import type { ServiceAccountVerification, ServiceAccountVerifier } from '@pops/pillar-sdk/server';
 
 import type { OpenedPurchasesDb } from '../../db/index.js';
+import type { SharedTagCacheRefreshOutcome } from '../cron/refresh-shared-tags.js';
 
 const { requestOn } = createTestTransport();
 
@@ -23,13 +24,17 @@ let opened: OpenedPurchasesDb;
 let cleanup: () => void;
 let itemId: string;
 
-function app(verify?: ServiceAccountVerifier): Express {
+function app(
+  verify?: ServiceAccountVerifier,
+  refreshSharedTagCache?: () => Promise<SharedTagCacheRefreshOutcome>
+): Express {
   return createPurchasesApiApp({
     vision: null,
     purchasesDb: opened,
     version: '0.0.1-test',
     selfBaseUrl: 'http://localhost:3013',
     ...(verify === undefined ? {} : { serviceAccountVerifier: verify }),
+    ...(refreshSharedTagCache === undefined ? {} : { refreshSharedTagCache }),
   });
 }
 
@@ -174,6 +179,57 @@ describe('Purchases tagged routes', () => {
     expect(response.body.code).toBe('purchases.shared_tag.unknown_shared_tag');
     expect(detach.status).toBe(400);
     expect(detach.body.code).toBe('purchases.shared_tag.unknown_shared_tag');
+  });
+
+  it('refreshes the shared-tag cache once before retrying an uncached assignment', async () => {
+    const refresh = vi
+      .fn<() => Promise<SharedTagCacheRefreshOutcome>>()
+      .mockImplementation(async () => {
+        seedSharedTags(TAG_A);
+        return { kind: 'refreshed', count: 1 };
+      });
+
+    const response = await requestOn(app(undefined, refresh)).put(assignmentPath(itemId, TAG_A));
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ tagIds: [TAG_A] });
+    expect(refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it('preserves the unknown-tag response when the cache refresh fails', async () => {
+    const refresh = vi
+      .fn<() => Promise<SharedTagCacheRefreshOutcome>>()
+      .mockRejectedValue(new Error('tags unavailable'));
+
+    const response = await requestOn(app(undefined, refresh)).put(assignmentPath(itemId, TAG_A));
+
+    expect(response.status).toBe(400);
+    expect(response.body.code).toBe('purchases.shared_tag.unknown_shared_tag');
+    expect(refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it('preserves the unknown-tag response when a refresh returns unavailable', async () => {
+    const refresh = vi
+      .fn<() => Promise<SharedTagCacheRefreshOutcome>>()
+      .mockResolvedValue({ kind: 'unavailable', reason: 'unavailable' });
+
+    const response = await requestOn(app(undefined, refresh)).put(assignmentPath(itemId, TAG_A));
+
+    expect(response.status).toBe(400);
+    expect(response.body.code).toBe('purchases.shared_tag.unknown_shared_tag');
+    expect(refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it('preserves the unknown-tag response when a successful refresh still lacks the tag', async () => {
+    const refresh = vi
+      .fn<() => Promise<SharedTagCacheRefreshOutcome>>()
+      .mockResolvedValue({ kind: 'refreshed', count: 0 });
+
+    const response = await requestOn(app(undefined, refresh)).put(assignmentPath(itemId, TAG_A));
+
+    expect(response.status).toBe(400);
+    expect(response.body.code).toBe('purchases.shared_tag.unknown_shared_tag');
+    expect(refresh).toHaveBeenCalledTimes(1);
   });
 
   it('rejects a query with more than 500 tag ids before searching', async () => {

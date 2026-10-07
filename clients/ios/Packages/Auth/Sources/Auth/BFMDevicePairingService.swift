@@ -2,16 +2,9 @@ import AppCore
 import BFMClient
 import Foundation
 
-/// Pairing, as the three steps that have to happen in order and the cleanup
-/// that has to happen when one of them does not.
-///
-/// The ordering is the design. A key is created before the code is spent
-/// because the BFM needs the public half to pair against; the tokens are stored
-/// after the exchange because they do not exist until then. That leaves two
-/// windows where this device can be left holding half an identity, and both are
-/// closed below rather than left to the caller — a retry that pairs a second
-/// key orphans the first on the server, where only the operator can see it and
-/// only the operator can remove it.
+/// Exchanges a code against a staged key, then activates the returned identity
+/// as one credential-store transaction. A refusal or interrupted exchange
+/// leaves the current identity selected and removes only the staged key.
 public struct BFMDevicePairingService: DevicePairingService {
     private let credentialStore: DeviceCredentialStore
     private let exchange: @Sendable (URL) -> any DevicePairingExchange
@@ -37,105 +30,90 @@ public struct BFMDevicePairingService: DevicePairingService {
     }
 
     public func pair(_ request: PairingRequest) async throws -> PairedDevice {
-        try discardAnyPreviousIdentity()
+        let revision = try pairingRevision()
+        let candidate = try candidateKey(expectedRevision: revision)
+        var activated = false
+        defer {
+            if !activated { try? credentialStore.keyStore.discardCandidate(candidate) }
+        }
 
-        let publicKey = try createDeviceKey()
+        let issued = try await issueCredentials(for: request, candidate: candidate)
+        let device = PairedDevice(id: issued.deviceId, baseURL: request.baseURL)
+        let tokens = DeviceTokens(
+            accessToken: issued.accessToken,
+            refreshToken: issued.refreshToken,
+            accessTokenExpiresAt: now()
+                .addingTimeInterval(TimeInterval(issued.expiresInSeconds))
+        )
+        let committedRevision = try activate(
+            candidate,
+            tokens: tokens,
+            device: device,
+            expectedRevision: revision
+        )
+        activated = true
+        return PairedDevice(
+            id: device.id,
+            baseURL: device.baseURL,
+            credentialRevision: committedRevision
+        )
+    }
 
-        let issued: IssuedDeviceCredentials
+    private func pairingRevision() throws -> UInt64 {
         do {
-            issued = try await exchange(request.baseURL).pairDevice(
+            return try credentialStore.currentRevision()
+        } catch {
+            throw PairingError.credentialStorageFailed
+        }
+    }
+
+    private func candidateKey(expectedRevision: UInt64) throws -> DeviceKeyCandidate {
+        do {
+            return try credentialStore.createPairingCandidate(expectedRevision: expectedRevision)
+        } catch {
+            if error as? CredentialMutationError == .keyGenerationFailed {
+                throw PairingError.keyGenerationFailed
+            }
+            throw PairingError.credentialStorageFailed
+        }
+    }
+
+    private func issueCredentials(
+        for request: PairingRequest,
+        candidate: DeviceKeyCandidate
+    ) async throws -> IssuedDeviceCredentials {
+        do {
+            return try await exchange(request.baseURL).pairDevice(
                 code: request.code,
-                publicKeyBase64DER: publicKey.base64EncodedDER,
+                publicKeyBase64DER: candidate.publicKey.base64EncodedDER,
                 deviceName: request.deviceName,
                 deviceModel: request.deviceModel
             )
+        } catch is CancellationError {
+            throw CancellationError()
         } catch {
-            discardDeviceKey()
             throw Self.pairingError(for: error)
         }
+    }
 
-        let device = PairedDevice(id: issued.deviceId, baseURL: request.baseURL)
-
+    private func activate(
+        _ candidate: DeviceKeyCandidate,
+        tokens: DeviceTokens,
+        device: PairedDevice,
+        expectedRevision: UInt64
+    ) throws -> UInt64 {
         do {
-            try credentialStore.tokenStore.save(
-                DeviceTokens(
-                    accessToken: issued.accessToken,
-                    refreshToken: issued.refreshToken,
-                    accessTokenExpiresAt: now()
-                        .addingTimeInterval(TimeInterval(issued.expiresInSeconds))
-                )
+            return try credentialStore.commitPairing(
+                candidate: candidate,
+                tokens: tokens,
+                device: device,
+                expectedRevision: expectedRevision
             )
-            // After the tokens, because it is what a cold launch reads to
-            // decide the device is paired: an identity stored beside tokens
-            // that never landed would restore a session with nothing to
-            // authenticate it.
-            try credentialStore.pairedDeviceStore.save(device)
-        } catch {
-            // The one failure that leaves a device registered on the server.
-            // The key goes because it can no longer be used for anything; the
-            // device row cannot, and the recovery is for the operator to revoke
-            // it — which is why this is its own error rather than a retryable one.
-            discardDeviceKey()
-            throw PairingError.credentialStorageFailed
-        }
-
-        return device
-    }
-}
-
-extension BFMDevicePairingService {
-    /// Clears whatever a previous identity left behind, before anything new is
-    /// created.
-    ///
-    /// Not merely defensive. `createKey()` throws rather than replacing, so a
-    /// key stranded by an attempt that died between creating it and cleaning it
-    /// up — a crash, a task cancelled mid-request — would make every later
-    /// pairing attempt fail as a key-generation error with no way out from
-    /// inside the app. Pairing is where a device's identity is replaced
-    /// wholesale, so replacing it wholesale is also the honest semantic.
-    private func discardAnyPreviousIdentity() throws {
-        do {
-            try credentialStore.wipe()
         } catch {
             throw PairingError.credentialStorageFailed
         }
     }
 
-    private func createDeviceKey() throws -> DevicePublicKey {
-        do {
-            return try credentialStore.keyStore.createKey()
-        } catch {
-            throw PairingError.keyGenerationFailed
-        }
-    }
-
-    /// Best effort, and deliberately silent. Every caller is already throwing
-    /// the error that explains the failure, and replacing it with a cleanup
-    /// error would hide the cause behind the tidying. What a failure here
-    /// leaves behind is an Enclave key the BFM has never seen, which
-    /// authenticates nothing.
-    private func discardDeviceKey() {
-        try? credentialStore.keyStore.deleteKey()
-    }
-
-    /// Maps by exclusion rather than by naming the error a dead network
-    /// produces, because there is no single such error to name: the generated
-    /// client wraps whatever the transport threw in an `OpenAPIRuntime`
-    /// `ClientError`, so matching on `URLError` would match nothing and send
-    /// every offline attempt down the default branch anyway.
-    ///
-    /// An undocumented status is folded into `unreachable` on purpose. A 502
-    /// from a reverse proxy or a 500 from the BFM is not something the person
-    /// holding the phone can act on any differently from a dead network, and
-    /// inventing a fifth thing to say about it would be a distinction with no
-    /// different recovery behind it. A `transportFailure` is the dead network
-    /// itself, now named rather than reached through the `.none` branch, and it
-    /// lands in the same place.
-    ///
-    /// `refreshRefused` cannot arrive here — pairing does not refresh — and is
-    /// listed rather than folded into a `default` so that a new refusal added
-    /// to `BFMClientError` fails this switch instead of silently becoming
-    /// "check your connection".
     private static func pairingError(for error: any Error) -> PairingError {
         switch error as? BFMClientError {
         case .pairingRefused(.codeRejected):

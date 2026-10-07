@@ -10,6 +10,10 @@ import { initServer } from '@ts-rest/express';
 import { financeContract } from '../../contract/rest.js';
 import { type OpenedFinanceDb } from '../../db/index.js';
 import { type ContactsClient } from '../contacts/client.js';
+import {
+  createPurchasesReceiptsClient,
+  type PurchasesReceiptsClient,
+} from '../purchases/client.js';
 import { makeAccountGrantsHandlers } from './account-grants-handlers.js';
 import { makeAccountImportsHandlers } from './account-imports-handlers.js';
 import { makeAccountsHandlers } from './accounts-handlers.js';
@@ -23,11 +27,13 @@ import { makeGiftCardDetailsHandlers } from './gift-card-details-handlers.js';
 import { makeImportDraftsHandlers } from './import-drafts-handlers.js';
 import { makeImportsHandlers } from './imports-handlers.js';
 import { makeLoanHandlers } from './loan-handlers.js';
+import { makeReceiptExtractHandlers } from './receipt-extract-handlers.js';
 import { makeSearchHandlers } from './search-handlers.js';
 import { makeSettingsHandlers } from './settings-handlers.js';
 import { makeSummaryHandlers } from './summary-handlers.js';
 import { makeTagRulesHandlers } from './tag-rules-handlers.js';
 import { makeTaggedHandlers } from './tagged-handlers.js';
+import { makeTransactionAttachmentsHandlers } from './transaction-attachments-handlers.js';
 import { makeTransactionHistoryHandlers } from './transaction-history-handlers.js';
 import { makeTransactionsHandlers } from './transactions-handlers.js';
 import { makeWishlistHandlers } from './wishlist-handlers.js';
@@ -37,9 +43,11 @@ const server: ReturnType<typeof initServer> = initServer();
 export function makeFinanceRestHandlers(deps: {
   financeDb: OpenedFinanceDb;
   contacts: ContactsClient;
+  purchases?: PurchasesReceiptsClient;
   syncSharedTagsOnce?: () => Promise<unknown>;
 }): ReturnType<typeof server.router<typeof financeContract>> {
   const db = deps.financeDb.db;
+  const purchases = deps.purchases ?? createPurchasesReceiptsClient();
   return server.router(financeContract, {
     wishlist: makeWishlistHandlers(db),
     budgets: makeBudgetsHandlers(db),
@@ -50,7 +58,11 @@ export function makeFinanceRestHandlers(deps: {
     accountImports: makeAccountImportsHandlers(db, deps.contacts),
     giftCardDetails: makeGiftCardDetailsHandlers(db),
     loan: makeLoanHandlers(db),
-    transactions: makeTransactionsHandlers(db, deps.contacts),
+    transactions: makeTransactionsHandlers(db, deps.contacts, purchases),
+    transactionAttachments: {
+      ...makeTransactionAttachmentsHandlers(db, purchases),
+      ...makeReceiptExtractHandlers(db, purchases),
+    },
     transactionHistory: makeTransactionHistoryHandlers(db),
     tagged: makeTaggedHandlers(db, deps.syncSharedTagsOnce),
     tagRules: makeTagRulesHandlers(db),

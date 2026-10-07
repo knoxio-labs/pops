@@ -35,6 +35,10 @@ Running `suggestTags` rather than a private matcher is what stops the panel and 
 
 It used to hardcode `before` to `[]` and materialize only the ChangeSet's `add` ops, which made it answer a different question — "did this rule match at all". A rule proposing a tag an existing rule already supplied read as full impact on every row; `affected` and `suggestionChanges` were equal by construction; and an `edit`, `disable` or `remove` — the ops where "what am I about to break?" matters most — reported zero. Totals were also taken after the input was truncated to the page size, so "affects N transactions" silently capped at 50 on a 400-row import. `counts` now covers every supplied transaction and only `affected[]` is paged, mirroring `RuleMatchPreviewResult`'s `matches` + uncapped `totalCount` (POPS-2599).
 
+## A stored rule must carry a tag
+
+An empty tag set cannot produce a suggestion, but the row still counts as a rule in the browser and in conflict checks. The REST schemas reject empty `tags` arrays, and the shared service write guard enforces the same invariant for every create and update caller, including import commits and direct service calls.
+
 ## One matcher, every call site
 
 The same `normalizeDescription` runs when a pattern is written, when a description is matched, and when a preview is computed, and the same predicate — `contract/pattern-match.ts`'s `patternMatchesDescription` — decides every verdict, including which representation a match type is tested against: `regex` against the raw description, `exact` and `contains` against the normalised one (POPS-2640). This module used to carry its own copy in a local `pattern-match.ts`; six such copies existed across the pillar and the browser app and disagreed on case folding, digit stripping and the regex `i` flag, so a preview could promise a match production would skip (POPS-2600). `preview.ts`'s header explains why a naive uppercase-only comparison diverges from production.

@@ -85,26 +85,36 @@ the `pops_api_key` shared by the `mcp` and `moltbot` compose profiles — are no
 visible from this repo, so a profile that reaches finance with a narrower grant
 than its traffic will see the `403` above (POPS-1551).
 
+A service account that also holds `finance.delegatedSubject` may call on behalf
+of a guest by sending the guest's email as `X-Pops-Subject-Email`. The request
+is then answered as that guest: only the accounts granted to that email, only
+the routes a guest may reach, and the email recorded as the `guest` actor on
+any write. The header from a caller without the scope is `403`, and a value
+that is not one email address is `400`. Without the header a key behaves as
+described above. See
+[`@pops/pillar-express`](../../libs/pillar-express/README.md#a-guest-a-service-account-speaks-for).
+
 ## Who it calls, and as whom
 
-The mirror of the section above (POPS-2021). Finance has three outbound
+The mirror of the section above (POPS-2021). Finance has four outbound
 cross-pillar clients, all through `pillar()` from `@pops/pillar-sdk/server`,
 which attaches the pillar's service-account key as `X-API-Key`:
 
-| Leg                                        | Call                                                                     | Scope needed        | Where                                                        |
-| ------------------------------------------ | ------------------------------------------------------------------------ | ------------------- | ------------------------------------------------------------ |
-| entity matcher / usage rollup / pre-create | `entities.list`, `entities.get`, `entities.create`                       | `contacts.entities` | `src/api/contacts/client.ts`                                 |
-| owner-URI reconciliation cron              | `users.get`                                                              | `registry.users`    | `src/api/cron/pillar-lookup.ts`                              |
-| shared tag vocabulary and carrier sync     | `tags.list`, `tags.create`; one sync retry for an unknown carrier tag id | `tags.tags`         | `src/api/tags/client.ts`, `src/api/cron/sync-shared-tags.ts` |
+| Leg                                        | Call                                                                                                                         | Scope needed        | Where                                                        |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- | ------------------- | ------------------------------------------------------------ |
+| entity matcher / usage rollup / pre-create | `entities.list`, `entities.get`, `entities.create`                                                                           | `contacts.entities` | `src/api/contacts/client.ts`                                 |
+| owner-URI reconciliation cron              | `users.get`                                                                                                                  | `registry.users`    | `src/api/cron/pillar-lookup.ts`                              |
+| shared tag vocabulary and carrier sync     | `tags.list`, `tags.create`; one sync retry for an unknown carrier tag id                                                     | `tags.tags`         | `src/api/tags/client.ts`, `src/api/cron/sync-shared-tags.ts` |
+| files attached to a transaction            | `receipt.store`, `receipt.extract`, `receipt.addReferences`, `receipt.removeReferences`, `receipt.read`, `receipt.thumbnail` | `purchases.receipt` | `src/api/purchases/client.ts`                                |
 
-The grant is those three and nothing wider; `src/api/pillars/service-account.ts`
+The grant is those four and nothing wider; `src/api/pillars/service-account.ts`
 is its source of truth and a test pins the list. Minting the account is an
 operator step against the registry's `userOnly` admin surface — the same
 runbook as
 [`pillars/bfm/README.md`](../bfm/README.md#provisioning-the-service-account),
 with `"name":"finance"` and these scopes.
 
-**The tags producer enforces its grant.** `registry`'s `users.get` handler
+**The tags and purchases producers enforce their grants.** `registry`'s `users.get` handler
 reads no principal, and the Rust `contacts` pillar has no auth middleware.
 Finance still sends the key to every leg so those producers can enforce their
 declared grants later without a second migration, instead of silently going
@@ -131,8 +141,27 @@ cron and tags client, and never issues the call.
 finance entry under `infra/secrets.example/` (compare `purchases`'s, which
 exists) and no `POPS_INTERNAL_API_KEY_FILE` in `infra/docker-compose.yml`'s
 `finance-api` service, unlike `purchases` (POPS-1967). Until provisioning,
-the tags client reports `no-credential` without making an anonymous call;
-provisioning remains an operator step.
+the tags client reports `no-credential` without making an anonymous call
+and the attachment routes answer `503`; provisioning remains an operator step.
+
+**Attached files live in purchases.** `transaction_attachments` holds a
+`pops://purchases/receipt/<sha256>` link and nothing else. Attaching stores
+the file, pins it under `pops://finance/transaction/<id>` so the receipt
+store's retention sweep keeps it, and only then writes the row; detaching and
+deleting a transaction remove the row first and release the pin after, best
+effort. A crash can leave a pin nothing uses, never a row whose file the sweep
+may delete. While purchases cannot be reached the routes that touch a file
+answer `503 finance.dependency.unavailable` and write nothing.
+
+**Reading a receipt suggests an entry and writes none.**
+`POST /transactions/receipt-extract` stores the files, asks purchases to read
+them, and answers a date, description and amount for the person to review; the
+caller then creates the transaction and attaches the returned `receiptUris`.
+The total is suggested as money out and line items are dropped. A receipt
+purchases cannot read, has no vision model for, or has already recorded as a
+household purchase is still stored and answered as an outcome, never an error,
+and nothing about that purchase is returned. The read runs on its own 90s
+budget, not the 8s every other outbound call gets.
 
 ## Domains
 

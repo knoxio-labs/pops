@@ -61,7 +61,7 @@ export function listSolvableCharges(db: PurchasesDb, scope: ReconcileScope = {})
       shippedAt: purchaseShipments.shippedAt,
       descriptorPattern: purchaseSources.descriptorPattern,
       settlementWindowDays: purchaseSources.settlementWindowDays,
-      paymentHint: purchases.paymentHint,
+      paymentHint: purchaseCharges.paymentHint,
     })
     .from(purchaseCharges)
     .innerJoin(purchases, eq(purchaseCharges.purchaseId, purchases.id))
@@ -125,6 +125,7 @@ export function listOrdersNeedingDerivedCharge(
   orderedAt: string;
   currency: string;
   settlementWindowDays: number | null;
+  paymentHint: string | null;
 }[] {
   // A left join with a null charge id is the anti-join, and it stays one
   // query — the alternative, filtering in JS against a second read, re-runs
@@ -138,6 +139,7 @@ export function listOrdersNeedingDerivedCharge(
       orderedAt: purchases.orderedAt,
       currency: purchases.currency,
       settlementWindowDays: purchaseSources.settlementWindowDays,
+      paymentHint: purchases.paymentHint,
     })
     .from(purchases)
     .leftJoin(purchaseSources, eq(purchases.source, purchaseSources.id))
@@ -181,7 +183,7 @@ export function listConfirmedLinks(db: PurchasesDb): ConfirmedLink[] {
 }
 
 /**
- * Every existing link whose order names the card it was paid with, for
+ * Every existing link whose charge names the card it was paid with, for
  * learning which account each card settles on.
  *
  * Unconfirmed links count as well as confirmed ones: nearly every link is
@@ -193,13 +195,12 @@ export function listConfirmedLinks(db: PurchasesDb): ConfirmedLink[] {
 export function listLinkedPaymentHints(db: PurchasesDb): LinkedHint[] {
   const rows = db
     .select({
-      paymentHint: purchases.paymentHint,
+      paymentHint: purchaseCharges.paymentHint,
       transactionUri: purchaseChargeLinks.transactionUri,
     })
     .from(purchaseChargeLinks)
     .innerJoin(purchaseCharges, eq(purchaseChargeLinks.chargeId, purchaseCharges.id))
-    .innerJoin(purchases, eq(purchaseCharges.purchaseId, purchases.id))
-    .where(isNotNull(purchases.paymentHint))
+    .where(isNotNull(purchaseCharges.paymentHint))
     .all();
   return rows.flatMap((row) =>
     row.paymentHint === null

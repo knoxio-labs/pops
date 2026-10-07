@@ -37,6 +37,14 @@ import type { ManifestPayload } from '@pops/pillar-sdk/manifest-schema';
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const COMMITTED_CONF_PATH = resolve(SCRIPT_DIR, '..', 'nginx.conf');
 const PROXY_SNIPPET_PATH = resolve(SCRIPT_DIR, '..', 'nginx', 'conf.d', '_pillar-proxy.conf');
+const UI_PROXY_SNIPPET_PATH = resolve(SCRIPT_DIR, '..', 'nginx', 'conf.d', '_ui-proxy.conf');
+const COMMON_PROXY_SNIPPET_PATH = resolve(
+  SCRIPT_DIR,
+  '..',
+  'nginx',
+  'conf.d',
+  '_proxy-common.conf'
+);
 
 function buildManifest(pillarId: string): ManifestPayload {
   return {
@@ -163,6 +171,47 @@ describe('generate-nginx-conf', () => {
       );
       expect(perPillarRestIncludes).not.toBeNull();
       expect(perPillarRestIncludes ?? []).toHaveLength(PILLARS.length);
+    });
+
+    it('routes UI bundles through the UI-specific proxy partial', () => {
+      for (const id of PILLARS) {
+        const upstreamName = `pops_ui_${id.replace(/-/g, '_')}`;
+        const upstream = rendered.match(
+          new RegExp(`upstream ${upstreamName} \\{([\\s\\S]*?)\\n\\}`)
+        )?.[1];
+        const block = rendered.match(
+          new RegExp(`location /${id}-ui/ \\{([\\s\\S]*?)\\n    \\}`)
+        )?.[1];
+        expect(upstream, `missing shared upstream for ${id}`).toBeDefined();
+        expect(upstream).toContain(`zone ${upstreamName} 64k;`);
+        expect(upstream).toContain(`server ${id}-ui:80 resolve;`);
+        expect(upstream).toContain('resolver 127.0.0.11 valid=30s ipv6=off;');
+        expect(block, `missing /${id}-ui/ block`).toBeDefined();
+        expect(block).toContain(`rewrite ^/${id}-ui/(.*)$ /$1 break;`);
+        expect(block).toContain(`proxy_pass http://${upstreamName};`);
+        expect(block).not.toContain('proxy_pass $');
+        expect(block).not.toContain(`proxy_pass http://${upstreamName}/`);
+        expect(block).toContain('/etc/nginx/snippets/_ui-proxy.conf');
+        expect(block).not.toContain('/etc/nginx/snippets/_pillar-proxy.conf');
+      }
+      expect(rendered.indexOf('upstream pops_ui_inventory {')).toBeLessThan(
+        rendered.indexOf('server {')
+      );
+    });
+
+    it('keeps the shorter connect timeout isolated to UI bundle requests', async () => {
+      const [rest, ui, common] = await Promise.all([
+        readFile(PROXY_SNIPPET_PATH, 'utf8'),
+        readFile(UI_PROXY_SNIPPET_PATH, 'utf8'),
+        readFile(COMMON_PROXY_SNIPPET_PATH, 'utf8'),
+      ]);
+      expect(rest).toContain('proxy_connect_timeout 5s;');
+      expect(rest).toContain('/etc/nginx/snippets/_proxy-common.conf');
+      expect(ui).toContain('proxy_connect_timeout 200ms;');
+      expect(ui).toContain('/etc/nginx/snippets/_proxy-common.conf');
+      expect(common).not.toContain('proxy_connect_timeout');
+      expect(common).toContain('proxy_read_timeout 30s;');
+      expect(common).toContain('proxy_send_timeout 30s;');
     });
 
     it('renders REST blocks in PILLAR_RENDER_ORDER', () => {
@@ -301,9 +350,16 @@ describe('generate-nginx-conf', () => {
       expect(rendered).toContain('location ~ ^/pillars/health/?$ {');
     });
 
-    it('keeps /media/images/, /health, /docs/, /design/, and the SPA fallback', () => {
+    it('serves shell health locally and keeps registry health on its namespaced route', () => {
+      expect(rendered).toContain('location = /healthz {');
+      expect(rendered).toContain('set $shell_health_upstream http://127.0.0.1:9090;');
+      expect(rendered).toContain('proxy_pass $shell_health_upstream/health;');
+      expect(rendered).not.toContain('location /health {');
+      expect(rendered).toContain('location /registry-api/ {');
+    });
+
+    it('keeps /media/images/, /docs/, /design/, and the SPA fallback', () => {
       expect(rendered).toContain('location /media/images/ {');
-      expect(rendered).toContain('location /health {');
       expect(rendered).toContain('location /docs/ {');
       expect(rendered).toContain('location /design/ {');
       expect(rendered).toMatch(/location \/ \{[\s\S]*?try_files \$uri \$uri\/ \/index\.html;/);
@@ -378,10 +434,10 @@ describe('generate-nginx-conf', () => {
       expect(rendered).toContain('access_log /var/log/nginx/access.log pops_json;');
     });
 
-    it('forwards the effective request id from both server defaults and the shared proxy snippet', async () => {
-      const proxySnippet = await readFile(PROXY_SNIPPET_PATH, 'utf8');
+    it('forwards the effective request id from both server defaults and shared proxy directives', async () => {
+      const commonProxySnippet = await readFile(COMMON_PROXY_SNIPPET_PATH, 'utf8');
       expect(rendered).toContain('proxy_set_header X-Request-Id $pops_request_id;');
-      expect(proxySnippet).toContain('proxy_set_header X-Request-Id $pops_request_id;');
+      expect(commonProxySnippet).toContain('proxy_set_header X-Request-Id $pops_request_id;');
     });
 
     it('replaces only nginx-generated 502, 503, and 504 failures', () => {
@@ -492,7 +548,7 @@ describe('generate-nginx-conf', () => {
      */
     const PUBLIC_PROXY_LOCATIONS: readonly RegExp[] = [
       /^\/webhooks\/up$/,
-      /^\/health$/,
+      /^= \/healthz$/,
       /^~ \^\/pillars\/\?\$$/,
       /^~ \^\/pillars\/health\/\?\$$/,
       /^~ \^\/registry\/subscribe\/\?\$$/,

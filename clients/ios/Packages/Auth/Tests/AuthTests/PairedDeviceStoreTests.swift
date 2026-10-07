@@ -41,7 +41,20 @@ internal final class PairedDeviceStoreTests {
 
         try store.save(device)
 
-        #expect(try store.load() == device)
+        #expect(
+            try store.load()
+                == PairedDevice(id: device.id, baseURL: device.baseURL, credentialRevision: 1)
+        )
+        #expect(try store.loadSnapshot()?.revision == 1)
+    }
+
+    @Test("a snapshot revision survives a store recreation")
+    func snapshotRevisionRoundTrip() throws {
+        let device = PairedDevice.fake(id: "device-7")
+        try store.saveSnapshot(PairedDeviceSnapshot(revision: 42, device: device))
+        let reopened = UserDefaultsPairedDeviceStore(suiteName: suiteName)
+
+        #expect(try reopened.loadSnapshot() == PairedDeviceSnapshot(revision: 42, device: device))
     }
 
     @Test("nothing stored is not paired, and is not an error")
@@ -60,11 +73,16 @@ internal final class PairedDeviceStoreTests {
     @Test("a wipe leaves nothing, and wiping nothing succeeds")
     func wipeIsTotalAndIdempotent() throws {
         try store.save(.fake())
+        let activeRevision = try #require(try store.loadSnapshot()?.revision)
 
         try store.wipe()
+        let wipedSnapshot = try #require(try store.loadSnapshot())
         try store.wipe()
 
         #expect(try store.load() == nil)
+        #expect(wipedSnapshot.device == nil)
+        #expect(wipedSnapshot.revision == activeRevision + 1)
+        #expect(try store.loadSnapshot()?.revision == activeRevision + 2)
     }
 
     /// A downgrade, a truncated write, or a build that changed the stored
@@ -102,5 +120,15 @@ internal final class PairedDeviceStoreTests {
         #expect(throws: PairedDeviceStoreError.corruptedPayload) {
             _ = try store.load()
         }
+    }
+
+    @Test("a legacy device payload without a revision starts at revision zero")
+    func legacyPayloadStartsAtZero() throws {
+        defaults.set(
+            Data(#"{"id":"device-1","baseURL":"https://bfm.invalid"}"#.utf8),
+            forKey: Self.key
+        )
+
+        #expect(try store.loadSnapshot()?.revision == 0)
     }
 }

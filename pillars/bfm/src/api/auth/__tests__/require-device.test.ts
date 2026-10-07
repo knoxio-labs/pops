@@ -19,6 +19,7 @@ import { devices } from '../../../db/index.js';
 import { testSigningKey } from '../../__tests__/harness.js';
 import { requestOn } from '../../__tests__/test-http.js';
 import { ACCESS_TOKEN_TTL_SECONDS, mintAccessToken } from '../access-token.js';
+import { currentDeviceSubject } from '../device-subject.js';
 import {
   createRequireDevice,
   LAST_SEEN_COALESCE_WINDOW_MS,
@@ -51,6 +52,14 @@ function harness(key: KeyObject = signingKey): Harness {
   app.use('/mobile', createRequireDevice({ db: opened.db, accessTokenSigningKey: key }));
   app.get('/mobile/whoami', (_req, res) => {
     res.json({ deviceId: readDevice(res).id });
+  });
+  // Behind the body parser, as every real mobile write is, and past an await.
+  app.post('/mobile/subject', express.json({ limit: '1mb' }), async (req, res) => {
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    res.json({ subject: currentDeviceSubject(), echoed: String(req.body.padding).length });
+  });
+  app.get('/health/subject', (_req, res) => {
+    res.json({ subject: currentDeviceSubject() });
   });
   return { app, opened, cleanup };
 }
@@ -401,6 +410,67 @@ describe('lastSeenAt', () => {
     await requestOn(h.app, (r) => r.get('/mobile/whoami').set('Authorization', `Bearer ${token}`));
 
     expect(lastSeenAt(h.opened, otherId)).toBe(PAIRED_AT);
+  });
+});
+
+describe('the device subject a request carries downstream', () => {
+  function bearer(opened: OpenedBfmDb, overrides: Parameters<typeof deviceRow>[0] = {}): string {
+    return `Bearer ${mintAccessToken(insertDevice(opened, overrides), signingKey).token}`;
+  }
+
+  function postSubject(app: Express, authorization: string) {
+    return requestOn(app, (r) =>
+      r
+        .post('/mobile/subject')
+        .set('Authorization', authorization)
+        .send({ padding: 'x'.repeat(300_000) })
+    );
+  }
+
+  it('is null for an operator device, after the body is parsed and across an await', async () => {
+    const { app, opened } = open();
+
+    const res = await postSubject(app, bearer(opened));
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ subject: null, echoed: 300_000 });
+  });
+
+  it('is the bound email for a guest device', async () => {
+    const { app, opened } = open();
+
+    const res = await postSubject(app, bearer(opened, { subjectEmail: 'rosane@example.com' }));
+
+    expect(res.body.subject).toBe('rosane@example.com');
+  });
+
+  it('does not leak between requests in flight together', async () => {
+    const { app, opened } = open();
+    const guest = bearer(opened, { subjectEmail: 'rosane@example.com' });
+    const operator = bearer(opened);
+
+    const answers = await Promise.all(
+      Array.from({ length: 6 }, (_unused, index) =>
+        postSubject(app, index % 2 === 0 ? guest : operator)
+      )
+    );
+
+    expect(answers.map((res) => res.body.subject)).toEqual([
+      'rosane@example.com',
+      null,
+      'rosane@example.com',
+      null,
+      'rosane@example.com',
+      null,
+    ]);
+  });
+
+  it('is absent, and reading it throws, on a route outside the guard', async () => {
+    const { app } = open();
+
+    const res = await requestOn(app, (r) => r.get('/health/subject'));
+
+    expect(res.status).toBe(500);
   });
 });
 

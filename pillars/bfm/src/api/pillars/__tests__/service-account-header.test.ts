@@ -31,6 +31,7 @@ import {
   type PillarHandle,
 } from '@pops/pillar-sdk/server';
 
+import { runWithDeviceSubject } from '../../auth/device-subject.js';
 import { createPillarGateway } from '../gateway.js';
 import { configureBfmServerSdk } from '../sdk-config.js';
 import { MissingServiceAccountKeyError } from '../service-account.js';
@@ -132,9 +133,12 @@ afterEach(async () => {
   });
 });
 
+/** As an operator device's request, which is the only way a finance call starts. */
 function listTransactions(): Promise<unknown> {
-  return createPillarGateway().call<TransactionsRouter, unknown>('finance', (handle) =>
-    handle.transactions.list({ limit: 1 })
+  return runWithDeviceSubject(null, () =>
+    createPillarGateway().call<TransactionsRouter, unknown>('finance', (handle) =>
+      handle.transactions.list({ limit: 1 })
+    )
   );
 }
 

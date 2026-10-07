@@ -6,6 +6,7 @@
     "declaration": true,
     "declarationMap": true,
     "outDir": "dist",
+    "tsBuildInfoFile": "dist/tsconfig.build.tsbuildinfo",
     "rootDir": "src"
   },
   "include": ["src/**/*"],

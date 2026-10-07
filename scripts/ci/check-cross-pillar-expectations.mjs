@@ -770,6 +770,69 @@ export const EXPECTATIONS = [
     usedBy: 'pillars/finance/src/api/cron/pillar-lookup.ts',
   },
   {
+    consumer: 'finance',
+    producer: 'purchases',
+    operationId: 'receipt.store',
+    path: '/receipts/store',
+    method: 'post',
+    // Files attached to a transaction live in the receipt store. Finance
+    // stores without reading, so no purchase is created from an attachment.
+    query: [],
+    usedBy: 'pillars/finance/src/api/purchases/client.ts',
+  },
+  {
+    consumer: 'finance',
+    producer: 'purchases',
+    operationId: 'receipt.extract',
+    path: '/receipts/extract',
+    method: 'post',
+    // Reads a receipt into a suggestion for a new ledger entry. Extract, not
+    // upload: a moved route here must never land on the one that creates a
+    // household purchase from a guest's file.
+    query: [],
+    usedBy: 'pillars/finance/src/api/purchases/client.ts',
+  },
+  {
+    consumer: 'finance',
+    producer: 'purchases',
+    operationId: 'receipt.addReferences',
+    path: '/receipts/references',
+    method: 'put',
+    // The pin that stops the retention sweep deleting an attached file. A
+    // moved route is an attachment whose file disappears after the window.
+    query: [],
+    usedBy: 'pillars/finance/src/api/purchases/client.ts',
+  },
+  {
+    consumer: 'finance',
+    producer: 'purchases',
+    operationId: 'receipt.removeReferences',
+    path: '/receipts/references',
+    method: 'delete',
+    query: [],
+    usedBy: 'pillars/finance/src/api/purchases/client.ts',
+  },
+  {
+    consumer: 'finance',
+    producer: 'purchases',
+    operationId: 'receipt.read',
+    path: '/receipts/{sha256}',
+    method: 'get',
+    query: [],
+    pathParams: ['sha256'],
+    usedBy: 'pillars/finance/src/api/purchases/client.ts',
+  },
+  {
+    consumer: 'finance',
+    producer: 'purchases',
+    operationId: 'receipt.thumbnail',
+    path: '/receipts/{sha256}/thumbnail',
+    method: 'get',
+    query: [],
+    pathParams: ['sha256'],
+    usedBy: 'pillars/finance/src/api/purchases/client.ts',
+  },
+  {
     consumer: 'inventory',
     producer: 'documents',
     operationId: 'paperless.status',
@@ -1013,6 +1076,14 @@ export const UNPINNABLE_CALL_SITES = [
       "cannot resolve belongs to whichever caller supplies it, same as the SDK's " +
       'own `pillar()`. The operations actually called through the resulting ' +
       'handle are pinned where they are called, in `client.ts`.',
+  },
+  {
+    file: 'pillars/bfm/src/api/pillars/handle-factory.ts',
+    reason:
+      "The gateway's default handle: forwards whatever pillar id a gateway call " +
+      "supplies and adds a guest device's subject header on the finance handle. " +
+      'It calls no operation — each one is pinned at the `gateway.call` site ' +
+      'that makes it.',
   },
 ];
 

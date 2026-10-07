@@ -2,7 +2,7 @@
 
 The device's identity: a P-256 key generated inside the Secure Enclave, the access and refresh tokens the BFM issues against it, the device id and base URL a cold launch needs to know it is paired at all, and the one operation that has to destroy all three together.
 
-Pairing is here: `BFMDevicePairingService` owns the order the key, the code exchange and the token write have to happen in, and the cleanup for each way one of them can fail.
+Pairing is here: `BFMDevicePairingService` stages a replacement key, exchanges the code, then commits the token pair and identity while holding the shared credential mutation lock. Refusals and cancellations before BFM acceptance discard only the candidate; after acceptance, local activation completes even if the task was cancelled.
 
 So is everything that happens after it. `AuthenticatingMiddleware` attaches the access token to every `/mobile/*` request and acts on the two ways the BFM can refuse one; `DeviceSessionRefresher` performs the challenge/sign/exchange dance behind it, at most once at a time. Both are argued below.
 
@@ -10,7 +10,9 @@ So is everything that happens after it. `AuthenticatingMiddleware` attaches the 
 
 `DeviceSessionRestorer` answers one question at launch — is this device paired — and it needs something the token pair does not carry: the device id, and **the base URL**. A Release build ships no hostname, because the URL arrives with the pairing QR, so a process that has forgotten it has forgotten how to reach anybody. `PairedDeviceStore` is where it is remembered.
 
-That store is `UserDefaults`-backed, and deliberately not the Keychain. Neither field is a secret — a device id is an opaque handle the BFM prints on its own operator screen, and a base URL is a hostname — so the Keychain would buy no confidentiality while making both unreadable before first unlock. The decisive reason is the other one: **Keychain items survive app deletion**, so an identity kept there would outlive a reinstall and silently resume a session the person had just deleted. `UserDefaults` goes with the app, and the token and key it leaves behind in the Keychain are inert, because pairing wipes every credential before it writes one.
+That store is `UserDefaults`-backed, and deliberately not the Keychain. Neither field is a secret — a device id is an opaque handle the BFM prints on its own operator screen, and a base URL is a hostname — so the Keychain would buy no confidentiality while making both unreadable before first unlock. The decisive reason is the other one: **Keychain items survive app deletion**, so an identity kept there would outlive a reinstall and silently resume a session the person had just deleted. `UserDefaults` goes with the app. Pairing stages a second Enclave key while the current identity remains active, then switches the persisted identity revision, token pair and signing key together after the BFM accepts the code. A reinstall has no identity to resume.
+
+The persisted `PairedDeviceSnapshot` revision protects that activation boundary. A wipe advances it before deleting credentials, so an exchange that returns after sign-out cannot install its staged key or tokens. Refresh and revocation responses carry the captured revision through their conditional writes and wipes; session events carry it too, so an old response cannot overwrite, delete, or sign out a newer pairing, even through separately initialized credential wrappers. Ego streams use the same revision-bound credential and revocation path as authenticated middleware.
 
 Both halves have to be present for a session to resume. An identity with no tokens cannot make a request; tokens with no identity name nowhere to send them. Either alone opens at pairing, which is a better screen than a shell whose every request fails.
 
@@ -44,9 +46,9 @@ Leaving out **Late** is how a request queued behind twenty others triggers a sec
 
 There is no retry counter, because there is no loop: the retried request is sent once and its answer is returned whatever it is.
 
-A revocation and a rotation can be in flight together, and the rotation can finish **second** — request A's refresh is accepted just before the revocation reaches the row, request B's `/mobile` call meets the guard just after. The refresh then returns a perfectly valid new pair for a device that has just been wiped. `DeviceSessionRefresher` carries a credential epoch for exactly this: a rotation that started before a wipe does not write what it obtained, because doing so would leave a token pair with no Enclave key behind it — the half-state `DeviceCredentialStore.wipe()` exists to make impossible.
+A revocation and a rotation can be in flight together, and the rotation can finish **second** — request A's refresh is accepted just before the revocation reaches the row, request B's `/mobile` call meets the guard just after. The refresh then returns a perfectly valid new pair for a device that has just been wiped. The shared credential lock and persisted snapshot revision prevent that result from being saved. The same revision check stops an old refresh from replacing or rejecting a newer pairing.
 
-Only the explicit `bfm.auth.device_revoked` body destroys credentials. A rejected _grant_ does not wipe — re-pairing is what replaces those credentials and re-pairing wipes first, so destroying them eagerly would only add a way for a misread refusal to cost a device its identity. An unreadable `403` is not evidence of revocation, so the middleware leaves the session intact and returns the response for `BFMClient` to classify.
+Only the explicit `bfm.auth.device_revoked` body destroys credentials. A rejected _grant_ does not wipe — a replacement pairing keeps the current identity until the new code is accepted, so destroying it eagerly would only add a way for a misread refusal to cost a device its identity. An unreadable `403` is not evidence of revocation, so the middleware leaves the session intact and returns the response for `BFMClient` to classify.
 
 ## A middleware, not a transport
 

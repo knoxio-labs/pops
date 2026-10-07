@@ -22,7 +22,7 @@ internal struct AuthenticatingMiddlewareRefusalTests {
         #expect(response.status == .forbidden)
         #expect(transport.attempts.count == 1)
         #expect(fixture.exchange.challengeCount == 0, "403 must not cost a refresh round trip")
-        #expect(fixture.session.events == [.revoked(.revokedByOperator)])
+        #expect(fixture.session.events == [.revoked(.revokedByOperator, ifCredentialRevision: 0)])
         #expect(try fixture.tokenStore.load() == nil)
         #expect(try fixture.keyStore.publicKey() == nil)
         #expect(try fixture.pairedDeviceStore.load() == nil)
@@ -92,7 +92,7 @@ internal struct AuthenticatingMiddlewareRefusalTests {
 
         #expect(response.status == .forbidden)
         #expect(transport.attempts.count == 2)
-        #expect(fixture.session.events == [.revoked(.revokedByOperator)])
+        #expect(fixture.session.events == [.revoked(.revokedByOperator, ifCredentialRevision: 0)])
         #expect(try fixture.tokenStore.load() == nil)
     }
 
@@ -109,7 +109,7 @@ internal struct AuthenticatingMiddlewareRefusalTests {
 
         #expect(response.status == .forbidden)
         #expect(try await [UInt8](collecting: #require(body), upTo: 1_024) == payload)
-        #expect(fixture.session.events == [.revoked(.revokedByOperator)])
+        #expect(fixture.session.events == [.revoked(.revokedByOperator, ifCredentialRevision: 0)])
         #expect(try fixture.tokenStore.load() == nil)
         #expect(try fixture.keyStore.publicKey() == nil)
         #expect(try fixture.pairedDeviceStore.load() == nil)

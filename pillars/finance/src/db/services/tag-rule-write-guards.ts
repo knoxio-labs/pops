@@ -8,7 +8,11 @@
  * route is exactly such a route: it never ran the commit's temp-id resolution.
  */
 import { parseTagFacet, tagFacetKind } from '../tag-facets.js';
-import { MarkerFacetTagRuleError, PlaceholderEntityScopeError } from '../tag-rule-errors.js';
+import {
+  EmptyTagRuleTagsError,
+  MarkerFacetTagRuleError,
+  PlaceholderEntityScopeError,
+} from '../tag-rule-errors.js';
 
 /**
  * Reserved namespace for any commit-time placeholder id. Real contact ids are
@@ -66,6 +70,7 @@ export function assertEntityIdNotPlaceholder(entityId: string | null | undefined
  * Fields left `undefined` are not being written and are not checked, so an
  * update that touches neither passes.
  *
+ * @throws {EmptyTagRuleTagsError}
  * @throws {MarkerFacetTagRuleError}
  * @throws {PlaceholderEntityScopeError}
  */
@@ -74,6 +79,7 @@ export function assertTagRuleWritable(input: {
   entityId?: string | null;
 }): void {
   if (input.tags !== undefined) {
+    if (input.tags.length === 0) throw new EmptyTagRuleTagsError();
     const markers = markerFacetTags(input.tags);
     if (markers.length > 0) throw new MarkerFacetTagRuleError(markers);
   }

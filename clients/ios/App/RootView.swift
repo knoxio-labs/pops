@@ -22,6 +22,8 @@ internal struct RootView: View {
     @State private var pairingModel: PairingViewModel
     #if DEBUG && targetEnvironment(simulator)
         @State private var pendingSimulatorPairing = false
+        @State private var simulatorPairingHandoff: SimulatorPairingURL.Handoff?
+        @State private var simulatorPairingBaseURL: URL?
     #endif
 
     /// The pillar named by the last `pops` URL this build could not route
@@ -65,6 +67,32 @@ internal struct RootView: View {
                     AppComposition.pruneStaleInventoryReplicas(keeping: pairedDevice)
                 }.value
             }
+            #if DEBUG && targetEnvironment(simulator)
+                .onChange(of: simulatorPairingReady) { _, ready in
+                    guard
+                        ready,
+                        let handoff = simulatorPairingHandoff,
+                        let baseURL = simulatorPairingBaseURL
+                    else { return }
+                    pendingSimulatorPairing = false
+                    Task {
+                        await pairingModel.pair()
+                        let pairedForOrigin: Bool
+                        if case .paired(let device) = composition.shell.session.state {
+                            pairedForOrigin = SimulatorPairingURL.hasSameOrigin(
+                                device.baseURL,
+                                baseURL
+                            )
+                        } else {
+                            pairedForOrigin = false
+                        }
+                        _ = await SimulatorPairingCompletion.send(handoff, paired: pairedForOrigin)
+                        pairingModel.codeText = ""
+                        simulatorPairingHandoff = nil
+                        simulatorPairingBaseURL = nil
+                    }
+                }
+            #endif
             // Coming back to the app is the one moment worth asking again: a
             // pillar that was down at launch may not be now, and nothing on
             // the screen the app is stuck on would ever find that out.
@@ -97,10 +125,10 @@ internal struct RootView: View {
                     if SimulatorPairingURL.handle(
                         url,
                         consume: { handoff in
-                            guard !pendingSimulatorPairing else { return true }
-                            if case .paired = composition.session.state { return true }
+                            guard simulatorPairingHandoff == nil else { return true }
+                            simulatorPairingHandoff = handoff
                             pendingSimulatorPairing = true
-                            Task { await completeSimulatorPairing(handoff) }
+                            Task { await prepareSimulatorPairing(handoff) }
                             return true
                         })
                     {
@@ -138,29 +166,38 @@ internal struct RootView: View {
     }
 
     #if DEBUG && targetEnvironment(simulator)
-        @MainActor
-        private func completeSimulatorPairing(_ handoff: SimulatorPairingURL.Handoff) async {
-            defer {
-                pairingModel.codeText = ""
-                pendingSimulatorPairing = false
-            }
-
-            await composition.shell.restoreSession()
-            if case .paired = composition.session.state { return }
+        private var simulatorPairingReady: Bool {
             guard
-                let details = await SimulatorPairingURL.claim(handoff),
-                let baseURL = URL(string: details.pairingBaseUrl),
-                pairingModel.receivePairingDetails(baseURL: baseURL, code: details.code)
-            else { return }
+                pendingSimulatorPairing,
+                simulatorPairingHandoff != nil,
+                simulatorPairingBaseURL != nil,
+                case .pairing = composition.shell.destination
+            else { return false }
+            return pairingModel.canSubmit
+        }
 
-            await pairingModel.pair()
-            let pairedForOrigin: Bool
-            if case .paired(let device) = composition.session.state {
-                pairedForOrigin = SimulatorPairingURL.hasSameOrigin(device.baseURL, baseURL)
-            } else {
-                pairedForOrigin = false
+        @MainActor
+        private func prepareSimulatorPairing(_ handoff: SimulatorPairingURL.Handoff) async {
+            await composition.shell.restoreSession()
+            guard case .paired = composition.shell.session.state else {
+                guard
+                    let details = await SimulatorPairingURL.claim(handoff),
+                    let baseURL = URL(string: details.pairingBaseUrl),
+                    pairingModel.receivePairingDetails(baseURL: baseURL, code: details.code)
+                else {
+                    clearSimulatorPairingHandoff()
+                    return
+                }
+                simulatorPairingBaseURL = baseURL
+                return
             }
-            _ = await SimulatorPairingCompletion.send(handoff, paired: pairedForOrigin)
+            clearSimulatorPairingHandoff()
+        }
+
+        private func clearSimulatorPairingHandoff() {
+            pendingSimulatorPairing = false
+            simulatorPairingHandoff = nil
+            simulatorPairingBaseURL = nil
         }
     #endif
 

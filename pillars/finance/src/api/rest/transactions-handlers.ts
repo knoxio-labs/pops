@@ -9,6 +9,7 @@ import { type FinanceDb, transactionsService, transferPairsService } from '../..
 import { type ContactsClient } from '../contacts/client.js';
 import { suggestTags as computeSuggestedTags } from '../modules/tag-suggester/index.js';
 import { toTransaction } from '../modules/transactions-types.js';
+import { type PurchasesReceiptsClient } from '../purchases/client.js';
 import { runHttp } from './error-mapping.js';
 import { makeTransactionReadHandlers } from './transactions-read-handlers.js';
 import {
@@ -24,9 +25,13 @@ type Req = ServerInferRequest<typeof financeTransactionsContract>;
 
 const PREVIEW_DESCRIPTIONS_LIMIT = 2000;
 
-export function makeTransactionsHandlers(db: FinanceDb, contacts: ContactsClient) {
+export function makeTransactionsHandlers(
+  db: FinanceDb,
+  contacts: ContactsClient,
+  purchases: PurchasesReceiptsClient
+) {
   const reads = makeTransactionReadHandlers(db);
-  const writes = makeTransactionWriteHandlers(db);
+  const writes = makeTransactionWriteHandlers(db, purchases);
 
   // Express registers these in key order, so `get` (`/transactions/:id`) has
   // to stay below the literal `suggest-tags` and `descriptions-preview` paths

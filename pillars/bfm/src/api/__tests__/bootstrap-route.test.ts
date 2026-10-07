@@ -20,6 +20,7 @@ import { configureDiscoveryForTest, failNextRegistryFetches } from '@pops/pillar
 
 import {
   DEFAULT_DEVICE_CAPABILITIES,
+  GUEST_DEVICE_CAPABILITIES,
   MOBILE_SESSION_CAPABILITY,
   serialiseDeviceCapabilities,
 } from '../../contract/capabilities.js';
@@ -328,5 +329,62 @@ describe('the federation half-broken, seen from the phone', () => {
     await bootstrapAs(app, device);
 
     expect(storedLastSeenAt(app)).toBe(CHECKED_IN_AT);
+  });
+});
+
+describe('the session the device holds', () => {
+  const everyPillar = ['finance', 'purchases', 'inventory', 'cerebrum'];
+
+  function openWithEveryPillarHealthy(): TestApp {
+    const app = open({ bootstrap: { probe: healthyProbe(...everyPillar) } });
+    registryServing(...everyPillar.map((id) => pillarSnapshot(id)));
+    return app;
+  }
+
+  it('is the operator, with no email, for a device bound to nobody', async () => {
+    const app = openWithEveryPillarHealthy();
+
+    const res = await bootstrapAs(app, pairedDevice(app));
+
+    expect(res.status).toBe(200);
+    expect(res.body.session).toEqual({ kind: 'operator', email: null });
+    expect(res.body.features.map((feature: { id: string }) => feature.id)).toEqual([
+      'transactions',
+      'accounts',
+      'purchases',
+      'receipt-capture',
+      'inventory',
+      'ego',
+    ]);
+  });
+
+  it('is the guest the device was paired for, offered accounts and transactions only', async () => {
+    const app = openWithEveryPillarHealthy();
+    const device = pairedDevice(app, {
+      subjectEmail: 'rosane@example.com',
+      capabilities: serialiseDeviceCapabilities(GUEST_DEVICE_CAPABILITIES),
+    });
+
+    const res = await bootstrapAs(app, device);
+
+    expect(res.status).toBe(200);
+    expect(res.body.session).toEqual({ kind: 'guest', email: 'rosane@example.com' });
+    expect(res.body.features).toEqual([
+      { id: 'transactions', reachability: 'healthy' },
+      { id: 'accounts', reachability: 'healthy' },
+    ]);
+    expect(res.body.device.capabilities).toEqual([...GUEST_DEVICE_CAPABILITIES]);
+    expect(() => MobileBootstrapResponseSchema.parse(res.body)).not.toThrow();
+  });
+
+  it('still decodes a payload from a server that predates the field', () => {
+    const parsed = MobileBootstrapResponseSchema.parse({
+      device: { id: 'd', name: 'n', lastSeenAt: CHECKED_IN_AT, capabilities: [] },
+      registry: { source: 'fresh' },
+      pillars: [],
+      features: [],
+    });
+
+    expect(parsed.session).toBeUndefined();
   });
 });

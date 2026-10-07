@@ -108,6 +108,7 @@ export interface CreateChargeInput {
   readonly orderAmountCents?: number;
   readonly chargedAt?: string | null;
   readonly role?: SettlementRole;
+  /** Omitted inherits the order's hint; `null` explicitly leaves this charge unhinted. */
   readonly paymentHint?: string | null;
   readonly origin?: ChargeOrigin;
   readonly allocations?: readonly CreateChargeAllocationInput[];

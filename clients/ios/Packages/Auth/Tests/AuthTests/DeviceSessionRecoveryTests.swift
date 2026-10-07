@@ -27,12 +27,11 @@ internal struct DeviceSessionRecoveryTests {
             try await fixture.refreshedTokens(replacing: "access-1")
         }
 
-        #expect(fixture.session.events == [.revoked(.credentialsRejected)])
+        #expect(fixture.session.events == [.revoked(.credentialsRejected, ifCredentialRevision: 0)])
         #expect(fixture.exchange.spends.count == 1, "a refused grant must not be re-presented")
-        // Not wiped. The credentials are dead on the server, but pairing again
-        // is what replaces them and pairing wipes first — destroying them here
-        // would only add a way for a misread `401` to cost a device its
-        // identity with nothing gained.
+        // Not wiped. A replacement pairing keeps these credentials active
+        // until the BFM accepts the new code, so a read failure must not erase
+        // the current identity.
         #expect(try fixture.tokenStore.load() != nil)
     }
 
@@ -48,7 +47,7 @@ internal struct DeviceSessionRecoveryTests {
             try await fixture.refreshedTokens(replacing: "access-1")
         }
 
-        #expect(fixture.session.events == [.revoked(.revokedByOperator)])
+        #expect(fixture.session.events == [.revoked(.revokedByOperator, ifCredentialRevision: 0)])
         #expect(try fixture.tokenStore.load() == nil)
         #expect(try fixture.keyStore.publicKey() == nil)
     }
@@ -122,7 +121,7 @@ internal struct DeviceSessionRecoveryTests {
             try await fixture.refreshedTokens(replacing: "access-1")
         }
 
-        #expect(fixture.session.events == [.revoked(.credentialsRejected)])
+        #expect(fixture.session.events == [.revoked(.credentialsRejected, ifCredentialRevision: 0)])
         #expect(fixture.exchange.challengeCount == 0)
     }
 
@@ -159,7 +158,7 @@ internal struct DeviceSessionRecoveryTests {
             try await fixture.refreshedTokens(replacing: "access-1")
         }
 
-        #expect(fixture.session.events == [.revoked(.credentialsRejected)])
+        #expect(fixture.session.events == [.revoked(.credentialsRejected, ifCredentialRevision: 0)])
     }
 
     /// A device that has lost its Enclave key can never prove possession again,
@@ -173,7 +172,7 @@ internal struct DeviceSessionRecoveryTests {
             try await fixture.refreshedTokens(replacing: "access-1")
         }
 
-        #expect(fixture.session.events == [.revoked(.credentialsRejected)])
+        #expect(fixture.session.events == [.revoked(.credentialsRejected, ifCredentialRevision: 0)])
         #expect(fixture.exchange.spends.isEmpty)
     }
 

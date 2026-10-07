@@ -42,9 +42,8 @@
  * and a `rate-limited` one stays `retryable: true` with its `Retry-After`
  * preserved in `detail` rather than silently dropped.
  */
-import { pillar } from '@pops/pillar-sdk/server';
-
 import { toGatewayFailure } from './gateway-failure-mapping.js';
+import { pillarForDevice } from './handle-factory.js';
 
 import type { CallResult, PillarHandle } from '@pops/pillar-sdk/server';
 
@@ -60,7 +59,8 @@ export {
 } from './gateway-types.js';
 
 /**
- * How a handle is obtained. Defaults to the authenticated `/server` factory;
+ * How a handle is obtained. Defaults to the authenticated `/server` factory,
+ * with the finance handle naming a guest device's email (`handle-factory.ts`);
  * tests substitute a stub so the mapping is exercised without a network.
  */
 export type PillarHandleFactory = <TRouter>(pillarId: string) => PillarHandle<TRouter>;
@@ -78,7 +78,9 @@ export interface PillarGateway {
   ): Promise<GatewayOutcome<TValue>>;
 }
 
-export function createPillarGateway(handleFactory: PillarHandleFactory = pillar): PillarGateway {
+export function createPillarGateway(
+  handleFactory: PillarHandleFactory = pillarForDevice
+): PillarGateway {
   return {
     call: async <TRouter, TValue>(
       pillarId: string,

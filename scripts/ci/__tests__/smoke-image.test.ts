@@ -44,6 +44,17 @@ describe('boot placeholders', () => {
     );
   });
 
+  it('generates a fresh inbound token only for the MCP image smoke', () => {
+    const first = bootPlaceholdersForDockerfile('pillars/mcp/Dockerfile');
+    const second = bootPlaceholdersForDockerfile('pillars/mcp/Dockerfile');
+
+    expect(first.MCP_INBOUND_TOKEN).toMatch(/^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/iu);
+    expect(second.MCP_INBOUND_TOKEN).not.toBe(first.MCP_INBOUND_TOKEN);
+    expect(bootPlaceholdersForDockerfile('pillars/finance/Dockerfile')).not.toHaveProperty(
+      'MCP_INBOUND_TOKEN'
+    );
+  });
+
   it('keeps the boot placeholder for images that require a service-account credential', () => {
     expect(bootPlaceholdersForDockerfile('pillars/finance/Dockerfile')).toHaveProperty(
       'POPS_INTERNAL_API_KEY',
@@ -555,8 +566,8 @@ describe('dataMountsForDockerfile — YAML `#` is only a comment outside quotes'
 });
 
 describe('resolveHealthPath', () => {
-  it('probes / for nginx-served images', () => {
-    expect(resolveHealthPath('nginx:1.31.3-alpine')).toBe('/');
+  it('probes /healthz for nginx-served images', () => {
+    expect(resolveHealthPath('nginx:1.31.3-alpine')).toBe('/healthz');
   });
 
   it('probes /health for application images', () => {
@@ -1329,7 +1340,7 @@ describe('planSmoke / freshnessProbePaths with declared routes', () => {
 
   it('leaves an image that declares nothing on the defaults', () => {
     const plain = 'FROM nginx:1.31.3-alpine\nEXPOSE 80';
-    expect(planSmoke(plain).healthPath).toBe('/');
+    expect(planSmoke(plain).healthPath).toBe('/healthz');
     expect(freshnessProbePaths('nginx:1.31.3-alpine', plain)).toEqual([
       '/',
       '/deep/link/smoke-probe',

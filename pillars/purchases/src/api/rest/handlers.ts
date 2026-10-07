@@ -22,11 +22,13 @@ import { makeTaggedHandlers } from './tagged-handlers.js';
 import type { OpenedPurchasesDb } from '../../db/index.js';
 import type { ReceiptVision } from '../../ingest/receipt/vision.js';
 import type { MerchantResolver } from '../contacts/merchant.js';
+import type { SharedTagCacheRefreshOutcome } from '../cron/refresh-shared-tags.js';
 import type { FinanceTransactionLookup, FinanceTransactionSearch } from '../finance/client.js';
 import type { InventoryAssetCreator, InventoryLinkClearer } from '../inventory/client.js';
 
 const server: ReturnType<typeof initServer> = initServer();
 
+/** Composes Purchases route handlers and wires one shared-tag cache refresh for stale assignments. */
 export function makePurchasesRestHandlers(deps: {
   purchasesDb: OpenedPurchasesDb;
   /** Fired after a successful ingest — trigger 1 of the reconciliation sweep. */
@@ -37,6 +39,8 @@ export function makePurchasesRestHandlers(deps: {
   financeTransactionLookup?: FinanceTransactionLookup;
   /** Searches Finance transactions for the queue's manual-link action. */
   financeTransactionSearch?: FinanceTransactionSearch;
+  /** Refreshes the shared-tag cache once when an assignment names an uncached tag. */
+  refreshSharedTagCache?: () => Promise<SharedTagCacheRefreshOutcome>;
   /** Reads photographed receipts. Null declines every upload with a 503. */
   vision: ReceiptVision | null;
   /** Names the merchant against contacts. Injectable so tests stay offline. */
@@ -63,6 +67,6 @@ export function makePurchasesRestHandlers(deps: {
     ),
     search: makeSearchHandlers(deps.purchasesDb.db),
     source: makeSourceHandlers(deps.purchasesDb.db),
-    tagged: makeTaggedHandlers(deps.purchasesDb.db),
+    tagged: makeTaggedHandlers(deps.purchasesDb.db, deps.refreshSharedTagCache),
   });
 }

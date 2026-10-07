@@ -15,6 +15,7 @@
 import type {
   BootstrapFeature,
   BootstrapPillar,
+  BootstrapSession,
   KnownMobileFeatureId,
 } from '../../contract/rest-schemas.js';
 
@@ -32,6 +33,9 @@ export const MOBILE_FEATURES: readonly MobileFeature[] = [
   { id: 'ego', pillar: 'cerebrum' },
 ];
 
+/** The surfaces a guest device is offered: the accounts shared with them and their rows. */
+const GUEST_FEATURE_IDS: ReadonlySet<KnownMobileFeatureId> = new Set(['accounts', 'transactions']);
+
 /**
  * Project probed pillar reachability onto the feature list.
  *
@@ -43,10 +47,21 @@ export const MOBILE_FEATURES: readonly MobileFeature[] = [
  * A feature whose pillar is absent from the snapshot entirely is
  * `unavailable`: the registry is the roster, and a pillar not on it is not
  * reachable by definition.
+ *
+ * A guest session is the exception to "every known feature": it is told about
+ * {@link GUEST_FEATURE_IDS} and nothing else, because a surface a guest can
+ * never be granted is not one that is temporarily missing.
  */
-export function deriveFeatures(pillars: readonly BootstrapPillar[]): BootstrapFeature[] {
+export function deriveFeatures(
+  pillars: readonly BootstrapPillar[],
+  sessionKind: BootstrapSession['kind']
+): BootstrapFeature[] {
   const reachabilityByPillar = new Map(pillars.map((pillar) => [pillar.id, pillar.reachability]));
-  return MOBILE_FEATURES.map((feature) => ({
+  const offered =
+    sessionKind === 'guest'
+      ? MOBILE_FEATURES.filter((feature) => GUEST_FEATURE_IDS.has(feature.id))
+      : MOBILE_FEATURES;
+  return offered.map((feature) => ({
     id: feature.id,
     reachability: reachabilityByPillar.get(feature.pillar) ?? 'unavailable',
   }));

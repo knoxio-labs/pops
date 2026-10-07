@@ -99,6 +99,18 @@ export function renderPillarRestBlockFromUpstream(
   return blocks.join('\n\n');
 }
 
+/** Emits the shared-memory upstream group that resolves one pillar's UI service. */
+export function renderPillarUiUpstream(upstream: PillarUpstream): string {
+  const varName = nginxVarName(upstream.pillarId);
+  return [
+    `upstream pops_ui_${varName} {`,
+    `    zone pops_ui_${varName} 64k;`,
+    `    server ${upstream.pillarId}-ui:80 resolve;`,
+    `    resolver 127.0.0.11 valid=30s ipv6=off;`,
+    `}`,
+  ].join('\n');
+}
+
 /**
  * UI-bundle surface (`/<pillar>-ui/`) for one pillar.
  *
@@ -114,9 +126,8 @@ export function renderPillarRestBlockFromUpstream(
  * Emitted for EVERY pillar, from the convention `<pillar>-ui:80`, rather than
  * for the ones that happen to have a UI today. A per-pillar list here is the
  * central enumeration ADR-039 Invariant 5 removes and POPS-3215 is deleting
- * from the frontend; the variable-form `proxy_pass` already makes an absent
- * upstream a 502 on that path alone rather than a boot failure, which is the
- * same failure mode as a pillar whose API container is not deployed.
+ * from the frontend. The shared-memory upstream resolves optional UI
+ * containers asynchronously, so an absent UI affects only its own route.
  *
  * Not guest-gated: a bundle is public code and holds no private data.
  */
@@ -124,10 +135,9 @@ export function renderPillarUiBlock(upstream: PillarUpstream): string {
   const varName = nginxVarName(upstream.pillarId);
   return [
     `    location /${upstream.pillarId}-ui/ {`,
-    `        set $${varName}_ui_upstream http://${upstream.pillarId}-ui:80;`,
     `        rewrite ^/${upstream.pillarId}-ui/(.*)$ /$1 break;`,
-    `        proxy_pass $${varName}_ui_upstream;`,
-    `        include /etc/nginx/snippets/_pillar-proxy.conf;`,
+    `        proxy_pass http://pops_ui_${varName};`,
+    `        include /etc/nginx/snippets/_ui-proxy.conf;`,
     `    }`,
   ].join('\n');
 }
@@ -147,4 +157,9 @@ export function renderPillarSections(
     .join('\n\n');
   const uiBlocks = upstreams.map(renderPillarUiBlock).join('\n\n');
   return `${NGINX_CONF_REST_INTRO}\n${restBlocks}\n\n${NGINX_CONF_UI_INTRO}\n${uiBlocks}\n\n`;
+}
+
+/** UI upstream groups share DNS state across workers and refresh in the background. */
+export function renderPillarUiUpstreams(upstreams: readonly PillarUpstream[]): string {
+  return upstreams.map(renderPillarUiUpstream).join('\n\n');
 }

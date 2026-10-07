@@ -88,7 +88,7 @@ describe('registerShellWithRegistry — happy path', () => {
       ai: { tools: [] },
       uri: { types: [] },
       consumedSettings: { keys: [] },
-      healthcheck: { path: '/health' },
+      healthcheck: { path: '/healthz' },
     });
   });
 

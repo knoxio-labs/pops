@@ -39,7 +39,7 @@ sentinel contract triplet — rather than omitting them:
     "ai": { "tools": [] },
     "uri": { "types": [] },
     "consumedSettings": { "keys": [] },
-    "healthcheck": { "path": "/health" },
+    "healthcheck": { "path": "/healthz" },
   },
   "apiKey": "<POPS_INTERNAL_API_KEY>",
 }
@@ -137,12 +137,18 @@ answers to a LAN name, a Tailscale name and `localhost` — and same-origin is
 also what lets the import map govern the bundle with no CORS posture at all.
 
 In production the generated `nginx.conf` carries a `/<pillar>-ui/` location per
-pillar, proxying to `<pillar>-ui:80`. That is a convention rather than a list of
-which pillars have a UI: a list is the central enumeration ADR-039 Invariant 5
-removes, and the variable-form `proxy_pass` makes an absent UI container a 502
-on its own path instead of a boot failure. The bundle itself is a static nginx
-image built from the pillar's app (`pillars/purchases/app/Dockerfile`), the same
-shape the design playground uses.
+pillar, backed by a shared-memory nginx upstream for `<pillar>-ui:80`. That is a
+convention rather than a list of which pillars have a UI: a list is the central
+enumeration ADR-039 Invariant 5 removes. The upstream resolves Docker DNS in the
+background and shares its peer list across nginx workers; an absent UI affects
+only its own route. The bundle itself is a static nginx image built from the
+pillar's app (`pillars/purchases/app/Dockerfile`), the same shape the design
+playground uses.
+
+UI proxy locations use a 200ms connect timeout while REST locations retain the
+5s timeout. The shorter UI bound lets nginx retry a stale Docker DNS peer within
+the shell's strict route-probe budget during a UI rollout; response-header and
+send timeouts remain shared at 30s.
 
 The shell preserves an incoming `X-Request-Id`, mints nginx's `$request_id` when
 the header is absent, returns it on every response, forwards it to proxied

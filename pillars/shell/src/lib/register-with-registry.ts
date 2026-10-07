@@ -43,7 +43,7 @@ export const SHELL_CONTRACT_TAG = `contract-${SHELL_PILLAR_ID}@v${SHELL_PILLAR_V
 
 /**
  * The empty manifest a UI pillar publishes. Every capability array is
- * empty; healthcheck still points at `/health` because the registry's
+ * empty; healthcheck points at `/healthz` because the registry's
  * heartbeat checker probes it. `sinks` is intentionally omitted — it is
  * optional in the manifest schema and a UI pillar neither emits nor
  * consumes federated events directly.
@@ -62,7 +62,7 @@ export function buildShellManifest(): ManifestPayload {
     ai: { tools: [] },
     uri: { types: [] },
     consumedSettings: { keys: [] },
-    healthcheck: { path: '/health' },
+    healthcheck: { path: '/healthz' },
   };
 }
 

@@ -59,6 +59,11 @@ export const BFM_SERVICE_ACCOUNT_NAME = 'bfm';
  * it grants nothing else in that pillar.
  * The `cerebrum.ego` grant also covers bfm's mobile Ego relay.
  *
+ * `finance.delegatedSubject` reaches no route of its own. It is what lets bfm
+ * name a guest device's email to finance, which then answers as that guest
+ * rather than as this account. Without it finance refuses every call a guest
+ * device makes, and an operator device is unaffected.
+ *
  * The grant itself is a row in the registry DB rather than anything this repo
  * can set. Provisioning it is an operator step — the runbook is in the pillar
  * README under "Provisioning the service account".
@@ -67,6 +72,7 @@ export const BFM_SERVICE_ACCOUNT_SCOPES: readonly string[] = [
   'finance.transactions',
   'finance.accounts',
   'finance.checkpoints',
+  'finance.delegatedSubject',
   'purchases.purchase',
   'purchases.search',
   'purchases.receipt',

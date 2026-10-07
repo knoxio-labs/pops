@@ -229,6 +229,65 @@ describe('server pillar() — handle reuse + discovery cache', () => {
   });
 });
 
+describe('server pillar() — per-handle call timeout', () => {
+  const SLOW_ANSWER_MS = 80;
+
+  /** Answers the domain call after {@link SLOW_ANSWER_MS}, or rejects as soon as the call is aborted. */
+  function slowFetch(): typeof fetch {
+    return fakeFetch((url, init) => {
+      if (url.endsWith('/openapi')) return Promise.resolve(jsonResponse(FINANCE_OPENAPI));
+      return new Promise<Response>((resolve, reject) => {
+        const timer = setTimeout(() => resolve(jsonResponse({ items: [] })), SLOW_ANSWER_MS);
+        init?.signal?.addEventListener('abort', () => {
+          clearTimeout(timer);
+          reject(new Error('aborted'));
+        });
+      });
+    });
+  }
+
+  beforeEach(() => {
+    resetAll();
+    clearApiKeyEnv();
+  });
+
+  afterEach(() => {
+    resetAll();
+    if (ORIGINAL_API_KEY === undefined) clearApiKeyEnv();
+    else process.env[SERVER_SDK_API_KEY_ENV] = ORIGINAL_API_KEY;
+  });
+
+  it('lets one handle outlast the process-wide budget and leaves the others on it', async () => {
+    configureServerSdk({ apiKey: 'svc-key', callTimeoutMs: 10 });
+    const transport = new FakeRegistryTransport({ pillars: [discoveredPillar()] });
+    const fetchImpl = slowFetch();
+
+    const patient = pillar<FinanceRouter>('finance', {
+      transport,
+      fetchImpl,
+      callTimeoutMs: 5_000,
+    });
+    const standard = pillar<FinanceRouter>('finance', { transport, fetchImpl });
+
+    expect(patient).not.toBe(standard);
+    expect((await standard.wishlist.list({})).kind).toBe('unavailable');
+    expect(isOk(await patient.wishlist.list({}))).toBe(true);
+  });
+
+  it('cuts a handle off at its own budget when that is the shorter one', async () => {
+    configureServerSdk({ apiKey: 'svc-key', callTimeoutMs: 5_000 });
+    const transport = new FakeRegistryTransport({ pillars: [discoveredPillar()] });
+
+    const impatient = pillar<FinanceRouter>('finance', {
+      transport,
+      fetchImpl: slowFetch(),
+      callTimeoutMs: 10,
+    });
+
+    expect((await impatient.wishlist.list({})).kind).toBe('unavailable');
+  });
+});
+
 describe('server pillar() — internal base URL overrides', () => {
   beforeEach(() => {
     resetAll();

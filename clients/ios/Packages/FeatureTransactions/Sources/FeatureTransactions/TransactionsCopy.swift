@@ -1,5 +1,4 @@
 import AppCore
-import Foundation
 
 /// Every word this module shows, both screens, in one place.
 ///

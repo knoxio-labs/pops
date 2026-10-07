@@ -5,14 +5,28 @@ import Foundation
 /// Refreshes started by either caller join the same single flight, so the device's token family
 /// is never spent twice.
 extension DeviceSessionRefresher: BFMStreamAuthorizer {
-    public func currentAccessToken() async -> String? {
-        await currentTokens()?.accessToken
+    public func currentStreamCredential() async -> BFMStreamCredential? {
+        guard let snapshot = await currentCredentialSnapshot(),
+            let tokens = snapshot.tokens
+        else {
+            return nil
+        }
+        return BFMStreamCredential(accessToken: tokens.accessToken, revision: snapshot.revision)
     }
 
-    public func refreshedAccessToken(
+    public func refreshedStreamCredential(
         replacing staleAccessToken: String,
         at baseURL: URL
-    ) async throws -> String {
-        try await refreshedTokens(replacing: staleAccessToken, at: baseURL).accessToken
+    ) async throws -> BFMStreamCredential {
+        let snapshot = try await refreshedCredentials(
+            replacing: staleAccessToken,
+            at: baseURL
+        )
+        guard let tokens = snapshot.tokens else { throw SessionRefreshError.unauthenticated }
+        return BFMStreamCredential(accessToken: tokens.accessToken, revision: snapshot.revision)
+    }
+
+    public func deviceWasRevoked(ifCredentialRevision revision: UInt64) async {
+        _ = await deviceWasRevoked(ifRevision: revision)
     }
 }

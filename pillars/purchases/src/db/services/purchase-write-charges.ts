@@ -30,7 +30,7 @@ export function insertCharge(ctx: IngestContext, input: CreateChargeInput, posit
       orderAmountCents,
       chargedAt: input.chargedAt ?? null,
       role: input.role ?? 'capture',
-      paymentHint: input.paymentHint ?? ctx.purchase.paymentHint,
+      paymentHint: input.paymentHint === undefined ? ctx.purchase.paymentHint : input.paymentHint,
       origin: input.origin ?? 'merchant',
       createdAt: ctx.now,
       updatedAt: ctx.now,

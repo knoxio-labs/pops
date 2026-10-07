@@ -10,6 +10,7 @@
     "declarationMap": true,
     "sourceMap": true,
     "outDir": "dist",
+    "tsBuildInfoFile": "dist/tsconfig.build.tsbuildinfo",
     "rootDir": "src",
     "types": ["node"]
   },
