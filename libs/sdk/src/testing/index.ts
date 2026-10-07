@@ -1,4 +1,13 @@
 export {
+  accessCertsResponse,
+  createAccessJwtFixture,
+  generateAccessKeyPair,
+  type AccessJwtFixture,
+  type AccessJwtFixtureOptions,
+  type AccessJwtSignOverrides,
+  type AccessKeyPair,
+} from './access-jwt.js';
+export {
   seedRegistryCache,
   failNextRegistryFetches,
   configureDiscoveryForTest,

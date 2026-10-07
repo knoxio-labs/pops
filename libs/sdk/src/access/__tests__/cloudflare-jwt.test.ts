@@ -1,8 +1,11 @@
-import { generateKeyPairSync } from 'node:crypto';
-
 import jwt from 'jsonwebtoken';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import {
+  accessCertsResponse,
+  createAccessJwtFixture,
+  generateAccessKeyPair,
+} from '../../testing/access-jwt.js';
 import {
   createCloudflareAccessVerifier,
   readCloudflareAccessConfig,
@@ -13,48 +16,16 @@ const TEAM = 'pops-test-team';
 const AUDIENCE = 'aud-under-test';
 const KID = 'kid-1';
 
-/**
- * A real RSA keypair rather than a fixture: every assertion below is about
- * whether a signature verifies, and a hard-coded token would only prove that
- * `jsonwebtoken` can parse a string we wrote by hand.
- */
-function rsaKeyPair(): { privateKey: string; publicKey: string } {
-  const { privateKey, publicKey } = generateKeyPairSync('rsa', {
-    modulusLength: 2048,
-    privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
-    publicKeyEncoding: { type: 'spki', format: 'pem' },
-  });
-  return { privateKey, publicKey };
-}
-
-const signer = rsaKeyPair();
-
-function signAccessToken(
-  claims: Record<string, unknown>,
-  overrides: { key?: string; kid?: string; algorithm?: jwt.Algorithm } = {}
-): string {
-  const { key = signer.privateKey, kid = KID, algorithm = 'RS256' } = overrides;
-  return jwt.sign(claims, key, { algorithm, keyid: kid, expiresIn: '5m' });
-}
-
-function certsResponse(publicKey: string, kid = KID): Response {
-  return new Response(JSON.stringify({ public_certs: [{ kid, cert: publicKey }] }), {
-    status: 200,
-    headers: { 'content-type': 'application/json' },
-  });
-}
+const signer = createAccessJwtFixture({ teamName: TEAM, kid: KID });
+const signAccessToken = signer.sign;
 
 function makeVerifier(
   overrides: Omit<CloudflareAccessVerifierOptions, 'teamName' | 'fetchImpl'> = {}
 ) {
-  const fetchImpl = vi.fn<typeof globalThis.fetch>(async () => certsResponse(signer.publicKey));
+  const fetchImpl = vi.fn<typeof globalThis.fetch>(signer.fetchImpl);
   return {
     fetchImpl,
-    verifier: createCloudflareAccessVerifier({
-      teamName: TEAM,
-      fetchImpl: fetchImpl as unknown as typeof globalThis.fetch,
-      ...overrides,
-    }),
+    verifier: createCloudflareAccessVerifier({ teamName: TEAM, fetchImpl, ...overrides }),
   };
 }
 
@@ -78,7 +49,7 @@ describe('createCloudflareAccessVerifier', () => {
   });
 
   it('rejects a token signed by a different key, even with a known kid', async () => {
-    const impostor = rsaKeyPair();
+    const impostor = generateAccessKeyPair();
     const { verifier } = makeVerifier();
 
     await expect(
@@ -217,7 +188,7 @@ describe('createCloudflareAccessVerifier', () => {
     });
 
     it('still runs the signature check before reading any claim', async () => {
-      const impostor = rsaKeyPair();
+      const impostor = generateAccessKeyPair();
       const { verifier } = makeVerifier();
 
       await expect(
@@ -320,7 +291,7 @@ describe('createCloudflareAccessVerifier', () => {
       const fetchImpl = vi
         .fn<typeof globalThis.fetch>()
         .mockResolvedValueOnce(new Response('nope', { status: 503, statusText: 'Unavailable' }))
-        .mockResolvedValueOnce(certsResponse(signer.publicKey));
+        .mockResolvedValueOnce(accessCertsResponse(signer.publicKey, KID));
       const verifier = createCloudflareAccessVerifier({
         teamName: TEAM,
         fetchImpl: fetchImpl as unknown as typeof globalThis.fetch,

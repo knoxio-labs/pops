@@ -33,10 +33,17 @@ export type {
 } from './internal-token.js';
 export {
   buildContractScopeMap,
+  guestRoute,
   hasScopeFor,
+  resolveContractRoute,
   resolveContractScope,
 } from './service-account-scope.js';
-export type { ContractScopeMap, ContractScopeRoute } from './service-account-scope.js';
+export type {
+  ContractScopeMap,
+  ContractScopeRoute,
+  GuestRouteMetadata,
+  ResolvedContractRoute,
+} from './service-account-scope.js';
 export { authorizeServiceAccountRequest, SERVICE_ACCOUNT_HEADER } from './service-account-auth.js';
 export type {
   ServiceAccountAuthReason,
