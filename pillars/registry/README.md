@@ -100,8 +100,8 @@ answer a guest 403, so the service-account, feature and settings routes stay
 the operator's; `GET /session` is the one identity-gated route a guest may
 call, and returns `{ kind, email }` with `email: null` for a fallback user.
 While `POPS_OPERATOR_EMAILS` is unset nobody is a guest: every verified email
-is the operator, as before the list existed, and in production the pillar logs one warning
-at startup saying so.
+is the operator, as before the list existed, and in production the pillar logs
+one warning at startup saying so.
 
 The tunnel-user fallback is deliberate, not a placeholder: the registry is
 reachable only from inside the `pops-backend`/`pops-frontend` Docker networks
