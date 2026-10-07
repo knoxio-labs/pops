@@ -105,11 +105,13 @@ every caller on the public internet an operator session. There is no such
 bypassed hostname in front of the registry, which is what makes the fallback
 safe here and not there.
 
-`infra/docker-compose.yml`'s `registry-api` service forwards both
-`CLOUDFLARE_ACCESS_TEAM_NAME` and `CLOUDFLARE_ACCESS_AUD` from the host
-environment, the same way `bfm-api`'s does — setting either only in an
-operator's `.env` does nothing for a container whose compose block never
-declares it. Until an operator sets `CLOUDFLARE_ACCESS_TEAM_NAME` in the
+`infra/docker-compose.yml`'s `registry-api` service forwards
+`CLOUDFLARE_ACCESS_TEAM_NAME`, `CLOUDFLARE_ACCESS_AUD` and
+`POPS_OPERATOR_EMAILS` from the host environment, as every pillar API's does —
+setting one only in an operator's `.env` does nothing for a container whose
+compose block never declares it.
+`scripts/ci/__tests__/check-compose-cloudflare-access-env.test.ts` fails when a
+service drops one. Until an operator sets `CLOUDFLARE_ACCESS_TEAM_NAME` in the
 deployed environment, `GET /service-accounts` and the rest of the `userOnly`
 surface authenticate through the tunnel-user fallback rather than a verified
 Access identity; wiring a value in is an operator step, not a code change.
