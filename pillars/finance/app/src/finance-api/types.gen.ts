@@ -11230,6 +11230,87 @@ export type TransactionsDescriptionsForPreviewResponses = {
 export type TransactionsDescriptionsForPreviewResponse =
   TransactionsDescriptionsForPreviewResponses[keyof TransactionsDescriptionsForPreviewResponses];
 
+export type TransactionAttachmentsExtractReceiptData = {
+  /**
+   * Body
+   */
+  body?: {
+    accountId: string;
+    parts: Array<{
+      dataBase64: string;
+      mediaType: string;
+    }>;
+  };
+  path?: never;
+  query?: never;
+  url: '/transactions/receipt-extract';
+};
+
+export type TransactionAttachmentsExtractReceiptErrors = {
+  /**
+   * 400
+   */
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
+  /**
+   * 404
+   */
+  404: ErrorBody;
+  /**
+   * 409
+   */
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
+};
+
+export type TransactionAttachmentsExtractReceiptError =
+  TransactionAttachmentsExtractReceiptErrors[keyof TransactionAttachmentsExtractReceiptErrors];
+
+export type TransactionAttachmentsExtractReceiptResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data:
+      | {
+          outcome: 'suggested';
+          receiptUris: Array<string>;
+          suggestion: {
+            amountCents: number;
+            currency: string;
+            currencyMismatch: boolean;
+            date: string;
+            description: string | null;
+          };
+        }
+      | {
+          outcome: 'unreadable' | 'unavailable' | 'already-a-purchase';
+          receiptUris: Array<string>;
+        };
+  };
+};
+
+export type TransactionAttachmentsExtractReceiptResponse =
+  TransactionAttachmentsExtractReceiptResponses[keyof TransactionAttachmentsExtractReceiptResponses];
+
 export type TransactionsRestoreData = {
   /**
    * Body

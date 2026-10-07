@@ -5,6 +5,10 @@
  * `pops://purchases/receipt/<sha256>` URI and a reference that stops the
  * store's retention sweep deleting the file.
  *
+ * `extract` (POPS-5871) is the one call that asks the store to read a file as
+ * well as keep it, and the one whose refusals are answers, not failures: see
+ * {@link PurchasesReceiptsClient.extract}.
+ *
  * Every method throws one of four errors, so a handler maps a failure without
  * knowing the SDK's vocabulary:
  *
@@ -20,9 +24,11 @@
 import { isOk, pillar, type CallResult, type PillarHandle } from '@pops/pillar-sdk/server';
 
 import {
+  ReceiptReadingSchema,
   StoredReceiptBytesSchema,
   StoredReceiptUrisSchema,
   type ReceiptPart,
+  type ReceiptReading,
   type StoredReceiptBytes,
 } from '../../contract/rest-transaction-attachments-schemas.js';
 import {
@@ -39,6 +45,19 @@ export const PURCHASES_PILLAR_ID = 'purchases';
 const UNSUPPORTED_MEDIA_TYPE = 415;
 
 /**
+ * How long a receipt reading may take. A vision model reads for longer than
+ * the budget every other outbound call in this process runs on, and still
+ * well inside the 300s the shell's proxy gives a pillar API.
+ */
+export const RECEIPT_EXTRACT_TIMEOUT_MS = 90_000;
+
+/**
+ * The files had already been recorded as a household purchase. Carries nothing
+ * about that purchase: it is not the caller's to see.
+ */
+export type ReceiptExtraction = ReceiptReading | { kind: 'already-a-purchase' };
+
+/**
  * The subset of the purchases router finance calls. A `type`, and declared
  * beside the `pillar()` call, because the cross-pillar-expectations guard
  * resolves a call site's operations from this declaration in the same file.
@@ -46,6 +65,7 @@ const UNSUPPORTED_MEDIA_TYPE = 415;
 export type PurchasesRouter = {
   receipt: {
     store: (input: { parts: ReceiptPart[] }) => Promise<unknown>;
+    extract: (input: { parts: ReceiptPart[] }) => Promise<unknown>;
     addReferences: (input: { ownerUri: string; receiptUris: string[] }) => Promise<unknown>;
     removeReferences: (input: { ownerUri: string; receiptUris?: string[] }) => Promise<unknown>;
     read: (input: { sha256: string }) => Promise<unknown>;
@@ -94,6 +114,15 @@ export class ReceiptNotAPictureError extends Error {
 export interface PurchasesReceiptsClient {
   /** Store files without reading them. Returns one URI per part, in order. */
   store(parts: ReceiptPart[]): Promise<string[]>;
+  /**
+   * Store files and read them as one receipt. Creates no purchase.
+   *
+   * Purchases refusing because the files already became a purchase is an
+   * answer, `already-a-purchase`. Purchases having no reader, being down or
+   * not answering in time is a {@link PurchasesUnavailableError}, after which
+   * `store` may still succeed.
+   */
+  extract(parts: ReceiptPart[]): Promise<ReceiptExtraction>;
   /** Pin stored files for an owner so the retention sweep keeps them. Idempotent. */
   addReferences(ownerUri: string, receiptUris: string[]): Promise<void>;
   /** Release an owner's pins on the named files, or on all of them when none are named. */
@@ -120,6 +149,52 @@ function failure(result: Exclude<CallResult<unknown>, { kind: 'ok' }>, operation
   }
 }
 
+type Invoke = (handle: PillarHandle<PurchasesRouter>) => Promise<CallResult<unknown>>;
+
+/** Builds the handle for one call, on its own time budget when one is given. Null without a key. */
+type PurchasesHandleFactory = (callTimeoutMs?: number) => PillarHandle<PurchasesRouter> | null;
+
+const credentialledHandle: PurchasesHandleFactory = (callTimeoutMs) =>
+  credentialled(PURCHASES_PILLAR_ID, () =>
+    pillar<PurchasesRouter>('purchases', callTimeoutMs === undefined ? {} : { callTimeoutMs })
+  );
+
+function parsed<TSchema extends z.ZodType>(
+  schema: TSchema,
+  value: unknown,
+  operation: string
+): z.infer<TSchema> {
+  const outcome = schema.safeParse(value);
+  if (!outcome.success) throw new PurchasesUnavailableError('malformed response', operation);
+  return outcome.data;
+}
+
+interface Callers {
+  answer(operation: string, invoke: Invoke, callTimeoutMs?: number): Promise<CallResult<unknown>>;
+  call(operation: string, invoke: Invoke): Promise<unknown>;
+}
+
+function callers(handleFactory: PurchasesHandleFactory): Callers {
+  /** What purchases answered, failures included, for a caller that reads some of them. */
+  async function answer(
+    operation: string,
+    invoke: Invoke,
+    callTimeoutMs?: number
+  ): Promise<CallResult<unknown>> {
+    const handle = handleFactory(callTimeoutMs);
+    if (handle === null) throw new PurchasesUnavailableError(NO_CREDENTIAL_REASON, operation);
+    return invoke(handle);
+  }
+
+  async function call(operation: string, invoke: Invoke): Promise<unknown> {
+    const result = await answer(operation, invoke);
+    if (!isOk(result)) throw failure(result, operation);
+    return result.value;
+  }
+
+  return { answer, call };
+}
+
 /**
  * Build the default purchases receipt client. `handleFactory` is injectable so
  * unit tests can supply a stub router; production builds the credentialled
@@ -127,29 +202,9 @@ function failure(result: Exclude<CallResult<unknown>, { kind: 'ok' }>, operation
  * that needed purchases instead of stopping finance from booting.
  */
 export function createPurchasesReceiptsClient(
-  handleFactory: () => PillarHandle<PurchasesRouter> | null = () =>
-    credentialled(PURCHASES_PILLAR_ID, () => pillar<PurchasesRouter>('purchases'))
+  handleFactory: PurchasesHandleFactory = credentialledHandle
 ): PurchasesReceiptsClient {
-  async function call(
-    operation: string,
-    invoke: (handle: PillarHandle<PurchasesRouter>) => Promise<CallResult<unknown>>
-  ): Promise<unknown> {
-    const handle = handleFactory();
-    if (handle === null) throw new PurchasesUnavailableError(NO_CREDENTIAL_REASON, operation);
-    const result = await invoke(handle);
-    if (!isOk(result)) throw failure(result, operation);
-    return result.value;
-  }
-
-  function parsed<TSchema extends z.ZodType>(
-    schema: TSchema,
-    value: unknown,
-    operation: string
-  ): z.infer<TSchema> {
-    const outcome = schema.safeParse(value);
-    if (!outcome.success) throw new PurchasesUnavailableError('malformed response', operation);
-    return outcome.data;
-  }
+  const { answer, call } = callers(handleFactory);
 
   return {
     async store(parts): Promise<string[]> {
@@ -160,6 +215,18 @@ export function createPurchasesReceiptsClient(
         throw new PurchasesUnavailableError('malformed response', operation);
       }
       return receiptUris;
+    },
+
+    async extract(parts): Promise<ReceiptExtraction> {
+      const operation = 'receipt.extract';
+      const result = await answer(
+        operation,
+        (handle) => handle.receipt.extract({ parts }),
+        RECEIPT_EXTRACT_TIMEOUT_MS
+      );
+      if (isOk(result)) return parsed(ReceiptReadingSchema, result.value, operation);
+      if (result.kind === 'conflict') return { kind: 'already-a-purchase' };
+      throw failure(result, operation);
     },
 
     async addReferences(ownerUri, receiptUris): Promise<void> {

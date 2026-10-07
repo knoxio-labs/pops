@@ -3,8 +3,8 @@
  * and passes through on its attachment routes.
  *
  * Restated here instead of imported: `@pops/purchases` depends on the
- * purchases backend's whole runtime graph, and finance needs five operations
- * of it. `scripts/ci/check-cross-pillar-expectations.mjs` pins those five to
+ * purchases backend's whole runtime graph, and finance needs six operations
+ * of it. `scripts/ci/check-cross-pillar-expectations.mjs` pins those six to
  * the producer's published contract.
  */
 import { z } from 'zod';
@@ -42,6 +42,33 @@ export const StoredReceiptBytesSchema = z.object({
 });
 
 export type StoredReceiptBytes = z.infer<typeof StoredReceiptBytesSchema>;
+
+/**
+ * Response of `receipt.extract`, narrowed to what a ledger entry is suggested
+ * from. The producer's draft also carries line items, tax and a merchant
+ * match; finance records the full amount only and reads none of them.
+ */
+export const ReceiptReadingSchema = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('draft'),
+    receiptUris: z.array(ReceiptUriSchema).min(1),
+    draft: z.object({
+      /** The instant of the purchase, ISO-8601 with a timezone. */
+      orderedAt: z.iso.datetime({ offset: true }),
+      /** Minutes ahead of UTC at the shop, when the reading resolved one. */
+      orderedAtOffsetMinutes: z.int().nullish(),
+      currency: z.string().min(1),
+      totalCents: z.int(),
+      merchantEntityName: z.string().nullish(),
+    }),
+  }),
+  z.object({
+    kind: z.literal('unreadable'),
+    receiptUris: z.array(ReceiptUriSchema).min(1),
+  }),
+]);
+
+export type ReceiptReading = z.infer<typeof ReceiptReadingSchema>;
 
 /** The hash a receipt URI names. Call it only with a URI that matches {@link RECEIPT_URI_PATTERN}. */
 export function receiptSha256(receiptUri: string): string {

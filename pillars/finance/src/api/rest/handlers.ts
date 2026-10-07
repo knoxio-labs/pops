@@ -27,6 +27,7 @@ import { makeGiftCardDetailsHandlers } from './gift-card-details-handlers.js';
 import { makeImportDraftsHandlers } from './import-drafts-handlers.js';
 import { makeImportsHandlers } from './imports-handlers.js';
 import { makeLoanHandlers } from './loan-handlers.js';
+import { makeReceiptExtractHandlers } from './receipt-extract-handlers.js';
 import { makeSearchHandlers } from './search-handlers.js';
 import { makeSettingsHandlers } from './settings-handlers.js';
 import { makeSummaryHandlers } from './summary-handlers.js';
@@ -58,7 +59,10 @@ export function makeFinanceRestHandlers(deps: {
     giftCardDetails: makeGiftCardDetailsHandlers(db),
     loan: makeLoanHandlers(db),
     transactions: makeTransactionsHandlers(db, deps.contacts, purchases),
-    transactionAttachments: makeTransactionAttachmentsHandlers(db, purchases),
+    transactionAttachments: {
+      ...makeTransactionAttachmentsHandlers(db, purchases),
+      ...makeReceiptExtractHandlers(db, purchases),
+    },
     transactionHistory: makeTransactionHistoryHandlers(db),
     tagged: makeTaggedHandlers(db, deps.syncSharedTagsOnce),
     tagRules: makeTagRulesHandlers(db),

@@ -31536,6 +31536,221 @@
         "tags": ["transactions"]
       }
     },
+    "/transactions/receipt-extract": {
+      "post": {
+        "operationId": "transactionAttachments.extractReceipt",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "accountId": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "parts": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "dataBase64": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "mediaType": {
+                          "minLength": 1,
+                          "type": "string"
+                        }
+                      },
+                      "required": ["mediaType", "dataBase64"],
+                      "type": "object"
+                    },
+                    "minItems": 1,
+                    "type": "array"
+                  }
+                },
+                "required": ["accountId", "parts"],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "oneOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "outcome": {
+                              "enum": ["suggested"],
+                              "type": "string"
+                            },
+                            "receiptUris": {
+                              "items": {
+                                "pattern": "^pops:\\/\\/purchases\\/receipt\\/[0-9a-f]{64}$",
+                                "type": "string"
+                              },
+                              "minItems": 1,
+                              "type": "array"
+                            },
+                            "suggestion": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "amountCents": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": -9007199254740991,
+                                  "type": "integer"
+                                },
+                                "currency": {
+                                  "type": "string"
+                                },
+                                "currencyMismatch": {
+                                  "type": "boolean"
+                                },
+                                "date": {
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                                  "type": "string"
+                                },
+                                "description": {
+                                  "nullable": true,
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "date",
+                                "description",
+                                "amountCents",
+                                "currency",
+                                "currencyMismatch"
+                              ],
+                              "type": "object"
+                            }
+                          },
+                          "required": ["outcome", "receiptUris", "suggestion"],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "outcome": {
+                              "enum": ["unreadable", "unavailable", "already-a-purchase"],
+                              "type": "string"
+                            },
+                            "receiptUris": {
+                              "items": {
+                                "pattern": "^pops:\\/\\/purchases\\/receipt\\/[0-9a-f]{64}$",
+                                "type": "string"
+                              },
+                              "minItems": 1,
+                              "type": "array"
+                            }
+                          },
+                          "required": ["outcome", "receiptUris"],
+                          "type": "object"
+                        }
+                      ]
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "401"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "403"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "409"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "413"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "500"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "503"
+          }
+        },
+        "summary": "Read a receipt and suggest the date, description and amount of a new entry on an account. Stores the files and writes nothing else; the caller creates the transaction",
+        "tags": ["transactionAttachments"]
+      }
+    },
     "/transactions/restore": {
       "post": {
         "operationId": "transactions.restore",

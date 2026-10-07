@@ -27,6 +27,9 @@ import { InternalBaseUrlTransport } from './transport.js';
  *   alongside the API key, never replacing it. Read fresh on every call, the
  *   same as the key, so it can depend on state that changes after the handle
  *   is built.
+ * - `callTimeoutMs`: how long one call through this handle may take, for a
+ *   caller with one operation slower than the rest, such as a model read.
+ *   Takes precedence over the process-wide {@link configureServerSdk} value.
  */
 export type ServerPillarOptions = {
   contractVersion?: string;
@@ -34,6 +37,7 @@ export type ServerPillarOptions = {
   fetchImpl?: typeof fetch;
   cacheTtlMs?: number;
   extraHeaders?: () => Record<string, string> | Promise<Record<string, string>>;
+  callTimeoutMs?: number;
 };
 
 type CacheKey = string;
@@ -113,7 +117,8 @@ function buildClientOptions(
   if (fetchImpl !== undefined) clientOptions.fetchImpl = fetchImpl;
   if (options.cacheTtlMs !== undefined) clientOptions.cacheTtlMs = options.cacheTtlMs;
   else if (config.cacheTtlMs !== undefined) clientOptions.cacheTtlMs = config.cacheTtlMs;
-  if (config.callTimeoutMs !== undefined) clientOptions.callTimeoutMs = config.callTimeoutMs;
+  const callTimeoutMs = options.callTimeoutMs ?? config.callTimeoutMs;
+  if (callTimeoutMs !== undefined) clientOptions.callTimeoutMs = callTimeoutMs;
   if (options.contractVersion !== undefined)
     clientOptions.contractVersion = options.contractVersion;
   return clientOptions;
@@ -139,7 +144,7 @@ function wrapWithOverrides(
 }
 
 function buildCacheKey(pillarId: string, options: ServerPillarOptions): CacheKey {
-  return `${pillarId}::${options.contractVersion ?? ''}::${options.transport ? 'custom-transport' : 'default-transport'}::${options.fetchImpl ? 'custom-fetch' : 'default-fetch'}::${options.cacheTtlMs ?? ''}::${options.extraHeaders ? 'extra-headers' : 'no-extra-headers'}`;
+  return `${pillarId}::${options.contractVersion ?? ''}::${options.transport ? 'custom-transport' : 'default-transport'}::${options.fetchImpl ? 'custom-fetch' : 'default-fetch'}::${options.cacheTtlMs ?? ''}::${options.extraHeaders ? 'extra-headers' : 'no-extra-headers'}::${options.callTimeoutMs ?? ''}`;
 }
 
 function snapshotConfig(
@@ -149,7 +154,7 @@ function snapshotConfig(
   return {
     apiKey: config.apiKey ?? null,
     fetchImpl: config.fetchImpl ?? null,
-    callTimeoutMs: config.callTimeoutMs ?? null,
+    callTimeoutMs: options.callTimeoutMs ?? config.callTimeoutMs ?? null,
     cacheTtlMs: options.cacheTtlMs ?? config.cacheTtlMs ?? null,
     registry: config.registry ?? null,
     internalBaseUrls: config.internalBaseUrls ?? null,

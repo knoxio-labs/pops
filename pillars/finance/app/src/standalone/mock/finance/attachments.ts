@@ -4,6 +4,7 @@ import type { MockHandlers } from '@pops/pillar-sdk/testing/api-mock';
 
 import type {
   TransactionAttachmentsAttachResponses,
+  TransactionAttachmentsExtractReceiptResponses,
   TransactionAttachmentsListResponses,
 } from '../../../finance-api/types.gen';
 
@@ -15,6 +16,12 @@ export const attachmentHandlers: MockHandlers = {
   'POST /transactions/{id}/attachments': created<TransactionAttachmentsAttachResponses[201]>({
     data: [],
     message: 'Files attached',
+  }),
+  'POST /transactions/receipt-extract': ok<TransactionAttachmentsExtractReceiptResponses[200]>({
+    data: {
+      outcome: 'unavailable',
+      receiptUris: [`pops://purchases/receipt/${'0'.repeat(64)}`],
+    },
   }),
   'GET /transactions/{id}/attachments/{attachmentId}': () => financeNotFound('attachment'),
   'GET /transactions/{id}/attachments/{attachmentId}/thumbnail': () =>
