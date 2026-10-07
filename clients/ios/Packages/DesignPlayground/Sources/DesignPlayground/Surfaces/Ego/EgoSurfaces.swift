@@ -12,7 +12,7 @@ internal enum EgoSurfaces {
         synopsis: "The real chat flow over a fixed local repository.",
         chrome: .sheet,
         states: [
-            DesignState("empty", "Empty thread") {
+            DesignState("empty", "Welcome prompts") {
                 flow(repository: PlaygroundEgoRepository())
             },
             DesignState("text-only", "Text-only answer") {

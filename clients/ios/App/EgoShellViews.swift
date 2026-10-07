@@ -3,45 +3,29 @@ import DesignSystem
 import FeatureEgo
 import SwiftUI
 
-/// Places the Ego entry in the tab accessory or above the safe area.
+/// Places the Ego entry above the safe area when a tab switcher is not shown.
 @MainActor
 internal struct EgoEntryView: View {
-    internal enum Placement {
-        case tabAccessory
-        case safeArea
-    }
-
     internal let isAvailable: Bool
-    internal let placement: Placement
     internal let onOpen: () -> Void
 
     internal var body: some View {
         if isAvailable {
-            switch placement {
-            case .tabAccessory:
+            HStack {
+                Spacer()
                 button
-            case .safeArea:
-                HStack {
-                    Spacer()
-                    button
-                }
-                .padding(.horizontal, PopsSpacing.lg)
-                .padding(.vertical, PopsSpacing.xs)
-                .background(Color.popsBackground)
             }
+            .padding(.horizontal, PopsSpacing.lg)
+            .padding(.vertical, PopsSpacing.xs)
         }
     }
 
     private var button: some View {
         Button(action: onOpen) {
-            Image(systemName: FeatureEgo.symbolName)
-                .font(.popsTitle)
-                .foregroundStyle(Color.popsAccent)
-                .frame(width: PopsSize.touchTarget, height: PopsSize.touchTarget)
-                .contentShape(Rectangle())
+            EgoLauncherIcon()
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Ego")
+        .accessibilityLabel("Open Ego")
         .accessibilityIdentifier("ego-entry")
     }
 }
@@ -70,6 +54,8 @@ internal struct EgoSheetView: View {
                 isActive: true
             )
         )
-        .presentationDetents([.medium, .large])
+        .presentationDetents([.large])
+        .presentationDragIndicator(.hidden)
+        .presentationBackground(Color.popsBackground)
     }
 }

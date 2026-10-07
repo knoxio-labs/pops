@@ -1,5 +1,6 @@
 import AppCore
 import Testing
+
 @testable import FeatureEgo
 
 @Suite("Ego thread model failure presentation")

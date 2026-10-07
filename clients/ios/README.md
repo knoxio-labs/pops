@@ -296,3 +296,5 @@ So `test:device` stays a deliberate pre-release ritual. Run it by hand before sh
 ### Primary navigation
 
 Purchases, Receipts and Inventory remain in the main tab bar when available. Accounts and Transactions are grouped under More and open in dismissible sheets, preserving each feature’s own navigation. Inventory’s Search uses the native search-role tab, in a separate bubble. The server still determines which features are available; unavailable features are omitted. A single feature other than Inventory fills the screen without a tab bar.
+
+Ego opens from the separate action tab beside Inventory Search and preserves the selected feature. When a single feature leaves no tab bar, Ego remains available from the safe-area launcher. Its full-height flow contains the current conversation and conversation history.
