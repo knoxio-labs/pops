@@ -22,4 +22,4 @@ export {
   type ValidationResult,
   type ValidationIssue,
 } from './validate.js';
-export { NAV_COLOR } from './ui.js';
+export { NAV_COLOR, PAGE_ACCESS, resolvePageAccess, type PageAccess } from './ui.js';
