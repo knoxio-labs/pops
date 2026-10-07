@@ -10,7 +10,7 @@ GET /mobile/bootstrap        (behind requireDevice)
        ├─ touchDevice(db, id, now)             ../../db  ← written first, always
        ├─ pillarRegistry()                     @pops/pillar-sdk/discovery (TTL'd)
        ├─ probeFederation(pillars)             reachability.ts   ← one GET, one network retry
-       └─ deriveFeatures(probed)               features.ts
+       └─ deriveFeatures(probed, session.kind) features.ts   ← a guest gets accounts and transactions only
 ```
 
 ## Why a pillar's reachability takes two sources to answer

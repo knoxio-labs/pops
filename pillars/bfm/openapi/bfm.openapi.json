@@ -897,6 +897,21 @@
                       },
                       "required": ["source"],
                       "type": "object"
+                    },
+                    "session": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "email": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "kind": {
+                          "enum": ["operator", "guest"],
+                          "type": "string"
+                        }
+                      },
+                      "required": ["kind", "email"],
+                      "type": "object"
                     }
                   },
                   "required": ["device", "registry", "pillars", "features"],
@@ -3852,6 +3867,9 @@
                             "maximum": 9007199254740991,
                             "minimum": -9007199254740991,
                             "type": "integer"
+                          },
+                          "viewerRole": {
+                            "type": "string"
                           }
                         },
                         "required": [
@@ -4213,6 +4231,9 @@
                           "maximum": 9007199254740991,
                           "minimum": -9007199254740991,
                           "type": "integer"
+                        },
+                        "viewerRole": {
+                          "type": "string"
                         }
                       },
                       "required": [

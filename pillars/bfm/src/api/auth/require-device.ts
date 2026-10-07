@@ -31,6 +31,7 @@
 import { findDeviceById, touchDeviceIfStale } from '../../db/index.js';
 import { bfmErrorBody } from '../errors.js';
 import { AccessTokenError, verifyAccessToken } from './access-token.js';
+import { runWithDeviceSubject } from './device-subject.js';
 
 import type { KeyObject } from 'node:crypto';
 
@@ -169,7 +170,7 @@ export function createRequireDevice(deps: RequireDeviceDeps): RequestHandler {
       new Date(),
       LAST_SEEN_COALESCE_WINDOW_MS
     );
-    next();
+    runWithDeviceSubject(device.subjectEmail, next);
   };
 }
 

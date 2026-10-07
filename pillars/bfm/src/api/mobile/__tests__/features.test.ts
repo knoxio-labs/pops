@@ -17,7 +17,7 @@ function pillars(...entries: BootstrapPillar[]): BootstrapPillar[] {
 
 describe('deriving features from pillar reachability', () => {
   it('reports a feature as reachable as the pillar behind it', () => {
-    const derived = deriveFeatures(pillars({ id: 'finance', reachability: 'healthy' }));
+    const derived = deriveFeatures(pillars({ id: 'finance', reachability: 'healthy' }), 'operator');
 
     expect(derived).toContainEqual({ id: 'transactions', reachability: 'healthy' });
   });
@@ -25,7 +25,7 @@ describe('deriving features from pillar reachability', () => {
   it.each(['degraded', 'unavailable', 'contract-mismatch'] as const)(
     'passes %s through rather than folding it into "absent"',
     (reachability) => {
-      const derived = deriveFeatures(pillars({ id: 'finance', reachability }));
+      const derived = deriveFeatures(pillars({ id: 'finance', reachability }), 'operator');
 
       expect(derived).toContainEqual({ id: 'transactions', reachability });
     }
@@ -34,13 +34,16 @@ describe('deriving features from pillar reachability', () => {
   // The accounts screens read finance, so the phone must be told they are gone
   // when finance is — not left offering a tab that 502s on open (POPS-2848).
   it('ties the accounts surface to finance, like transactions', () => {
-    const derived = deriveFeatures(pillars({ id: 'finance', reachability: 'unavailable' }));
+    const derived = deriveFeatures(
+      pillars({ id: 'finance', reachability: 'unavailable' }),
+      'operator'
+    );
 
     expect(derived).toContainEqual({ id: 'accounts', reachability: 'unavailable' });
   });
 
   it('lists every known feature even when the federation reports nothing', () => {
-    const derived = deriveFeatures([]);
+    const derived = deriveFeatures([], 'operator');
 
     expect(derived.map((feature) => feature.id)).toEqual(
       MOBILE_FEATURES.map((feature) => feature.id)
@@ -48,7 +51,7 @@ describe('deriving features from pillar reachability', () => {
   });
 
   it('calls a feature whose pillar never registered unavailable', () => {
-    const derived = deriveFeatures(pillars({ id: 'media', reachability: 'healthy' }));
+    const derived = deriveFeatures(pillars({ id: 'media', reachability: 'healthy' }), 'operator');
 
     expect(derived).toContainEqual({ id: 'transactions', reachability: 'unavailable' });
     expect(derived).toContainEqual({ id: 'purchases', reachability: 'unavailable' });
@@ -60,14 +63,17 @@ describe('deriving features from pillar reachability', () => {
     it.each(['healthy', 'degraded', 'unavailable', 'contract-mismatch'] as const)(
       'reports Cerebrum as %s for Ego',
       (reachability) => {
-        const derived = deriveFeatures(pillars({ id: 'cerebrum', reachability }));
+        const derived = deriveFeatures(pillars({ id: 'cerebrum', reachability }), 'operator');
 
         expect(derived).toContainEqual({ id: 'ego', reachability });
       }
     );
 
     it('reports Ego unavailable when Cerebrum is not in the registry', () => {
-      const derived = deriveFeatures(pillars({ id: 'finance', reachability: 'healthy' }));
+      const derived = deriveFeatures(
+        pillars({ id: 'finance', reachability: 'healthy' }),
+        'operator'
+      );
 
       expect(derived).toContainEqual({ id: 'ego', reachability: 'unavailable' });
     });
@@ -78,12 +84,44 @@ describe('deriving features from pillar reachability', () => {
       pillars(
         { id: 'media', reachability: 'contract-mismatch' },
         { id: 'finance', reachability: 'healthy' }
-      )
+      ),
+      'operator'
     );
 
     expect(derived).toContainEqual({ id: 'transactions', reachability: 'healthy' });
     expect(derived).toContainEqual({ id: 'purchases', reachability: 'unavailable' });
     expect(derived).toContainEqual({ id: 'receipt-capture', reachability: 'unavailable' });
+  });
+
+  describe('a guest session', () => {
+    it('is offered accounts and transactions and nothing else', () => {
+      const derived = deriveFeatures(
+        pillars(
+          { id: 'finance', reachability: 'healthy' },
+          { id: 'purchases', reachability: 'healthy' },
+          { id: 'inventory', reachability: 'healthy' },
+          { id: 'cerebrum', reachability: 'healthy' }
+        ),
+        'guest'
+      );
+
+      expect(derived).toEqual([
+        { id: 'transactions', reachability: 'healthy' },
+        { id: 'accounts', reachability: 'healthy' },
+      ]);
+    });
+
+    it('still reports its two features when finance is down, rather than dropping them', () => {
+      const derived = deriveFeatures(
+        pillars({ id: 'finance', reachability: 'unavailable' }),
+        'guest'
+      );
+
+      expect(derived).toEqual([
+        { id: 'transactions', reachability: 'unavailable' },
+        { id: 'accounts', reachability: 'unavailable' },
+      ]);
+    });
   });
 
   it('declares each feature exactly once, so no id can shadow another', () => {
@@ -94,7 +132,10 @@ describe('deriving features from pillar reachability', () => {
 
   describe('receipts, backed by purchases', () => {
     it('reports receipts reachable when purchases is', () => {
-      const derived = deriveFeatures(pillars({ id: 'purchases', reachability: 'healthy' }));
+      const derived = deriveFeatures(
+        pillars({ id: 'purchases', reachability: 'healthy' }),
+        'operator'
+      );
 
       expect(derived).toContainEqual({ id: 'receipt-capture', reachability: 'healthy' });
       expect(derived).toContainEqual({ id: 'purchases', reachability: 'healthy' });
@@ -103,7 +144,7 @@ describe('deriving features from pillar reachability', () => {
     it.each(['degraded', 'unavailable', 'contract-mismatch'] as const)(
       'passes purchases %s through to the receipts feature',
       (reachability) => {
-        const derived = deriveFeatures(pillars({ id: 'purchases', reachability }));
+        const derived = deriveFeatures(pillars({ id: 'purchases', reachability }), 'operator');
 
         expect(derived).toContainEqual({ id: 'receipt-capture', reachability });
         expect(derived).toContainEqual({ id: 'purchases', reachability });
@@ -111,7 +152,10 @@ describe('deriving features from pillar reachability', () => {
     );
 
     it('calls receipts unavailable when purchases never registered — the branch that must not appear', () => {
-      const derived = deriveFeatures(pillars({ id: 'finance', reachability: 'healthy' }));
+      const derived = deriveFeatures(
+        pillars({ id: 'finance', reachability: 'healthy' }),
+        'operator'
+      );
 
       expect(derived).toContainEqual({ id: 'receipt-capture', reachability: 'unavailable' });
       expect(derived).toContainEqual({ id: 'purchases', reachability: 'unavailable' });
@@ -122,7 +166,8 @@ describe('deriving features from pillar reachability', () => {
         pillars(
           { id: 'finance', reachability: 'healthy' },
           { id: 'purchases', reachability: 'degraded' }
-        )
+        ),
+        'operator'
       );
 
       expect(derived).toContainEqual({ id: 'transactions', reachability: 'healthy' });

@@ -164,6 +164,21 @@ not reach it, and a guest row marked `tracks-default` resolves to the empty
 grant. `POST /operator/pairing/codes` and the MCP tool mint codes with no
 subject. The operator device list reports `subjectEmail`.
 
+A guest device's calls reach finance as that guest. `requireDevice` runs the
+request with the device's subject in scope (`src/api/auth/device-subject.ts`),
+and the finance handle sends it as `X-Pops-Subject-Email` on every call
+(`src/api/pillars/handle-factory.ts`). Finance then answers from the guest's
+grants, so bfm filters nothing and caches no role: an account that is not
+granted is a `404`, and a route no guest may reach, such as the summary, is a
+`502` carrying finance's own `finance.auth.forbidden`. An operator device
+sends no header. No other pillar's handle can send it. A finance call that
+starts outside a device request throws instead of going out as the operator.
+
+Finance refuses the header from a key without `finance.delegatedSubject`. A
+`bfm` account minted before that scope existed leaves operator devices working
+and every guest device refused until the account is rotated (see
+[Provisioning the service account](#provisioning-the-service-account)).
+
 ### `POST /devices/pair` — the way in
 
 The one route with no gate at all, and that is the design rather than a hole:
@@ -320,6 +335,10 @@ that bfm can see the whole federation: it lists the pillars the registry
 reports, each with a reachability bfm observed itself, and turns that into the
 feature list the app renders. The phone therefore holds no roster of its own —
 it asks.
+
+`session` says whose device it is: `{ kind: 'operator', email: null }`, or
+`{ kind: 'guest', email }` for a device paired for a guest. A guest session is
+offered the `accounts` and `transactions` features and no others.
 
 `unavailable` and `contract-mismatch` stay separate the whole way out, the same
 four values the cross-pillar gateway speaks. The probe's two-source design, why
@@ -662,7 +681,7 @@ and send it in that header, against the registry's admin surface reachable
 externally through the shell proxy:
 
 ```bash
-curl -sS -X POST https://pops.local/registry-api/service-accounts -H 'Content-Type: application/json' -H "cf-access-jwt-assertion: $ACCESS_JWT" -d '{"name":"bfm","scopes":["finance.transactions","finance.accounts","finance.checkpoints","purchases.purchase","purchases.search","purchases.receipt","inventory.sync","inventory.types.catalogue","inventory.types.read","inventory.codes","inventory.media","barcode.lookup","cerebrum.ego"]}'
+curl -sS -X POST https://pops.local/registry-api/service-accounts -H 'Content-Type: application/json' -H "cf-access-jwt-assertion: $ACCESS_JWT" -d '{"name":"bfm","scopes":["finance.transactions","finance.accounts","finance.checkpoints","finance.delegatedSubject","purchases.purchase","purchases.search","purchases.receipt","inventory.sync","inventory.types.catalogue","inventory.types.read","inventory.codes","inventory.media","barcode.lookup","cerebrum.ego"]}'
 ```
 
 Two deployment shapes let a bare `curl` through, which is why this can work on

@@ -4103,6 +4103,51 @@ internal enum Operations {
                         }
                         /// - Remark: Generated from `#/paths/mobile/bootstrap/GET/responses/200/content/json/registry`.
                         internal var registry: Operations.Mobile_bootstrap.Output.Ok.Body.JsonPayload.RegistryPayload
+                        /// - Remark: Generated from `#/paths/mobile/bootstrap/GET/responses/200/content/json/session`.
+                        internal struct SessionPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/bootstrap/GET/responses/200/content/json/session/email`.
+                            internal var email: Swift.String?
+                            /// - Remark: Generated from `#/paths/mobile/bootstrap/GET/responses/200/content/json/session/kind`.
+                            internal enum KindPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case _operator = "operator"
+                                case guest = "guest"
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/bootstrap/GET/responses/200/content/json/session/kind`.
+                            internal var kind: Operations.Mobile_bootstrap.Output.Ok.Body.JsonPayload.SessionPayload.KindPayload
+                            /// Creates a new `SessionPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - email:
+                            ///   - kind:
+                            internal init(
+                                email: Swift.String? = nil,
+                                kind: Operations.Mobile_bootstrap.Output.Ok.Body.JsonPayload.SessionPayload.KindPayload
+                            ) {
+                                self.email = email
+                                self.kind = kind
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case email
+                                case kind
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.email = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .email
+                                )
+                                self.kind = try container.decode(
+                                    Operations.Mobile_bootstrap.Output.Ok.Body.JsonPayload.SessionPayload.KindPayload.self,
+                                    forKey: .kind
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "email",
+                                    "kind"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/bootstrap/GET/responses/200/content/json/session`.
+                        internal var session: Operations.Mobile_bootstrap.Output.Ok.Body.JsonPayload.SessionPayload?
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
@@ -4110,22 +4155,26 @@ internal enum Operations {
                         ///   - features:
                         ///   - pillars:
                         ///   - registry:
+                        ///   - session:
                         internal init(
                             device: Operations.Mobile_bootstrap.Output.Ok.Body.JsonPayload.DevicePayload,
                             features: Operations.Mobile_bootstrap.Output.Ok.Body.JsonPayload.FeaturesPayload,
                             pillars: Operations.Mobile_bootstrap.Output.Ok.Body.JsonPayload.PillarsPayload,
-                            registry: Operations.Mobile_bootstrap.Output.Ok.Body.JsonPayload.RegistryPayload
+                            registry: Operations.Mobile_bootstrap.Output.Ok.Body.JsonPayload.RegistryPayload,
+                            session: Operations.Mobile_bootstrap.Output.Ok.Body.JsonPayload.SessionPayload? = nil
                         ) {
                             self.device = device
                             self.features = features
                             self.pillars = pillars
                             self.registry = registry
+                            self.session = session
                         }
                         internal enum CodingKeys: String, CodingKey {
                             case device
                             case features
                             case pillars
                             case registry
+                            case session
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
                             let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -4145,11 +4194,16 @@ internal enum Operations {
                                 Operations.Mobile_bootstrap.Output.Ok.Body.JsonPayload.RegistryPayload.self,
                                 forKey: .registry
                             )
+                            self.session = try container.decodeIfPresent(
+                                Operations.Mobile_bootstrap.Output.Ok.Body.JsonPayload.SessionPayload.self,
+                                forKey: .session
+                            )
                             try decoder.ensureNoAdditionalProperties(knownKeys: [
                                 "device",
                                 "features",
                                 "pillars",
-                                "registry"
+                                "registry",
+                                "session"
                             ])
                         }
                     }
@@ -15679,6 +15733,8 @@ internal enum Operations {
                             internal var name: Swift.String
                             /// - Remark: Generated from `#/paths/mobile/finance/accounts/GET/responses/200/content/json/AccountsPayload/transactionCount`.
                             internal var transactionCount: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/finance/accounts/GET/responses/200/content/json/AccountsPayload/viewerRole`.
+                            internal var viewerRole: Swift.String?
                             /// Creates a new `AccountsPayloadPayload`.
                             ///
                             /// - Parameters:
@@ -15692,6 +15748,7 @@ internal enum Operations {
                             ///   - kind:
                             ///   - name:
                             ///   - transactionCount:
+                            ///   - viewerRole:
                             internal init(
                                 archived: Swift.Bool,
                                 balance: Operations.MobileFinance_listAccounts.Output.Ok.Body.JsonPayload.AccountsPayloadPayload.BalancePayload,
@@ -15702,7 +15759,8 @@ internal enum Operations {
                                 institutionName: Swift.String? = nil,
                                 kind: Swift.String,
                                 name: Swift.String,
-                                transactionCount: Swift.Int
+                                transactionCount: Swift.Int,
+                                viewerRole: Swift.String? = nil
                             ) {
                                 self.archived = archived
                                 self.balance = balance
@@ -15714,6 +15772,7 @@ internal enum Operations {
                                 self.kind = kind
                                 self.name = name
                                 self.transactionCount = transactionCount
+                                self.viewerRole = viewerRole
                             }
                             internal enum CodingKeys: String, CodingKey {
                                 case archived
@@ -15726,6 +15785,7 @@ internal enum Operations {
                                 case kind
                                 case name
                                 case transactionCount
+                                case viewerRole
                             }
                             internal init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -15769,6 +15829,10 @@ internal enum Operations {
                                     Swift.Int.self,
                                     forKey: .transactionCount
                                 )
+                                self.viewerRole = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .viewerRole
+                                )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
                                     "archived",
                                     "balance",
@@ -15779,7 +15843,8 @@ internal enum Operations {
                                     "institutionName",
                                     "kind",
                                     "name",
-                                    "transactionCount"
+                                    "transactionCount",
+                                    "viewerRole"
                                 ])
                             }
                         }
@@ -17037,6 +17102,8 @@ internal enum Operations {
                             internal var name: Swift.String
                             /// - Remark: Generated from `#/paths/mobile/finance/accounts/{id}/GET/responses/200/content/json/account/transactionCount`.
                             internal var transactionCount: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/finance/accounts/{id}/GET/responses/200/content/json/account/viewerRole`.
+                            internal var viewerRole: Swift.String?
                             /// Creates a new `AccountPayload`.
                             ///
                             /// - Parameters:
@@ -17050,6 +17117,7 @@ internal enum Operations {
                             ///   - kind:
                             ///   - name:
                             ///   - transactionCount:
+                            ///   - viewerRole:
                             internal init(
                                 archived: Swift.Bool,
                                 balance: Operations.MobileFinance_getAccount.Output.Ok.Body.JsonPayload.AccountPayload.BalancePayload,
@@ -17060,7 +17128,8 @@ internal enum Operations {
                                 institutionName: Swift.String? = nil,
                                 kind: Swift.String,
                                 name: Swift.String,
-                                transactionCount: Swift.Int
+                                transactionCount: Swift.Int,
+                                viewerRole: Swift.String? = nil
                             ) {
                                 self.archived = archived
                                 self.balance = balance
@@ -17072,6 +17141,7 @@ internal enum Operations {
                                 self.kind = kind
                                 self.name = name
                                 self.transactionCount = transactionCount
+                                self.viewerRole = viewerRole
                             }
                             internal enum CodingKeys: String, CodingKey {
                                 case archived
@@ -17084,6 +17154,7 @@ internal enum Operations {
                                 case kind
                                 case name
                                 case transactionCount
+                                case viewerRole
                             }
                             internal init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -17127,6 +17198,10 @@ internal enum Operations {
                                     Swift.Int.self,
                                     forKey: .transactionCount
                                 )
+                                self.viewerRole = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .viewerRole
+                                )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
                                     "archived",
                                     "balance",
@@ -17137,7 +17212,8 @@ internal enum Operations {
                                     "institutionName",
                                     "kind",
                                     "name",
-                                    "transactionCount"
+                                    "transactionCount",
+                                    "viewerRole"
                                 ])
                             }
                         }

@@ -122,6 +122,7 @@ describe('the granted scopes', () => {
       'finance.transactions',
       'finance.accounts',
       'finance.checkpoints',
+      'finance.delegatedSubject',
       'purchases.purchase',
       'purchases.search',
       'purchases.receipt',
@@ -169,6 +170,11 @@ describe('the granted scopes', () => {
         'finance.checkpoints.history'
       )
     ).toBe(false);
+  });
+
+  it('may name a guest to finance, and gains no finance route by it', () => {
+    expect(hasScopeFor(BFM_SERVICE_ACCOUNT_SCOPES, 'finance.delegatedSubject')).toBe(true);
+    expect(hasScopeFor(BFM_SERVICE_ACCOUNT_SCOPES, 'finance.budgets.list')).toBe(false);
   });
 
   it('grants no root scope, so a widening stays a visible diff', () => {

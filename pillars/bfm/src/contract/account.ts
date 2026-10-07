@@ -64,6 +64,12 @@ export const MobileAccountSchema = z.object({
    * `balance.asOf`.
    */
   transactionCount: z.number().int(),
+  /**
+   * What this device's session may do with the account, as finance decided it
+   * for this call: `owner` for the operator, `view` or `edit` for a guest. An
+   * open string so a role added later does not fail the account to decode.
+   */
+  viewerRole: z.string().optional(),
 });
 
 export type MobileAccount = z.infer<typeof MobileAccountSchema>;
