@@ -67,6 +67,8 @@ COPY pillars/shell/nginx.conf /etc/nginx/conf.d/default.conf
 # would crash boot. The source path stays under `nginx/conf.d/` per the
 # PRD's repo-layout rule.
 COPY pillars/shell/nginx/conf.d/_pillar-proxy.conf /etc/nginx/snippets/_pillar-proxy.conf
+COPY pillars/shell/nginx/conf.d/_proxy-common.conf /etc/nginx/snippets/_proxy-common.conf
+COPY pillars/shell/nginx/conf.d/_ui-proxy.conf /etc/nginx/snippets/_ui-proxy.conf
 
 # Boot-render + watcher bundles and the supervising entrypoint (PRD-255).
 COPY --from=builder /app/pillars/shell/dist-scripts/render-nginx-conf.mjs /opt/pops-shell/render-nginx-conf.mjs
