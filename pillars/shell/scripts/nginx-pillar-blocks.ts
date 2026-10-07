@@ -6,6 +6,9 @@
  * WHICH pillars to render and in what order, while this one is about what a
  * single pillar's blocks look like.
  */
+import { NGINX_CONF_REST_INTRO, NGINX_CONF_UI_INTRO } from './nginx-conf-template.js';
+import { GUEST_PATH_PREFIXES, guestGuardLines, narrowerGuestPrefixes } from './nginx-guest-gate.js';
+
 import type { PillarId } from '@pops/pillar-sdk';
 
 export interface PillarUpstream {
@@ -25,12 +28,17 @@ export function nginxVarName(pillarId: PillarId): string {
 /**
  * Cerebrum's raw SSE stream route. The proxy headers are inlined because the
  * shared REST snippet sets shorter read/send timeouts that cannot be
- * overridden in the same nginx location.
+ * overridden in the same nginx location. Guests are refused unless the route
+ * sits under a guest prefix.
  */
-export function renderEgoStreamBlock(upstream: PillarUpstream): string {
+export function renderEgoStreamBlock(
+  upstream: PillarUpstream,
+  guestPathPrefixes: readonly string[] = GUEST_PATH_PREFIXES
+): string {
   return [
     `    location = ${EGO_STREAM_LOCATION} {`,
     `        set $cerebrum_ego_stream_upstream http://${upstream.host}:${upstream.port};`,
+    ...guestGuardLines(EGO_STREAM_LOCATION, guestPathPrefixes),
     `        rewrite ^/cerebrum-api/(.*)$ /$1 break;`,
     `        proxy_pass $cerebrum_ego_stream_upstream;`,
     `        proxy_http_version 1.1;`,
@@ -49,25 +57,46 @@ export function renderEgoStreamBlock(upstream: PillarUpstream): string {
   ].join('\n');
 }
 
-/**
- * REST surface dispatcher (`/<pillar>-api/`) for one pillar. Mirrors the
- * media block byte-for-byte: strip the `/<pillar>-api` prefix down to
- * `/` so the pillar's own router sees its natural paths, then proxy to
- * the variable-form upstream and inherit the shared proxy directives.
- */
-export function renderPillarRestBlockFromUpstream(upstream: PillarUpstream): string {
+function renderRestLocation(
+  upstream: PillarUpstream,
+  location: string,
+  guestPathPrefixes: readonly string[]
+): string {
   const varName = nginxVarName(upstream.pillarId);
-  const restBlock = [
-    `    location /${upstream.pillarId}-api/ {`,
+  return [
+    `    location ${location} {`,
     `        set $${varName}_api_upstream http://${upstream.host}:${upstream.port};`,
+    ...guestGuardLines(location, guestPathPrefixes),
     `        rewrite ^/${upstream.pillarId}-api/(.*)$ /$1 break;`,
     `        proxy_pass $${varName}_api_upstream;`,
     `        include /etc/nginx/snippets/_pillar-proxy.conf;`,
     `    }`,
   ].join('\n');
+}
 
-  if (upstream.pillarId !== 'cerebrum') return restBlock;
-  return `${renderEgoStreamBlock(upstream)}\n\n${restBlock}`;
+/**
+ * REST surface dispatcher (`/<pillar>-api/`) for one pillar: strip the
+ * `/<pillar>-api` prefix down to `/` so the pillar's own router sees its
+ * natural paths, then proxy to the variable-form upstream and inherit the
+ * shared proxy directives.
+ *
+ * The block refuses guests unless the whole surface is a guest prefix. A
+ * guest prefix narrower than the surface is emitted as its own unguarded
+ * location ahead of the pillar's block; nginx picks the longest matching
+ * prefix, so only that sub-path is opened.
+ */
+export function renderPillarRestBlockFromUpstream(
+  upstream: PillarUpstream,
+  guestPathPrefixes: readonly string[] = GUEST_PATH_PREFIXES
+): string {
+  const pillarPrefix = `/${upstream.pillarId}-api/`;
+  const blocks = [...narrowerGuestPrefixes(pillarPrefix, guestPathPrefixes), pillarPrefix].map(
+    (location) => renderRestLocation(upstream, location, guestPathPrefixes)
+  );
+  if (upstream.pillarId === 'cerebrum') {
+    blocks.unshift(renderEgoStreamBlock(upstream, guestPathPrefixes));
+  }
+  return blocks.join('\n\n');
 }
 
 /**
@@ -88,6 +117,8 @@ export function renderPillarRestBlockFromUpstream(upstream: PillarUpstream): str
  * from the frontend; the variable-form `proxy_pass` already makes an absent
  * upstream a 502 on that path alone rather than a boot failure, which is the
  * same failure mode as a pillar whose API container is not deployed.
+ *
+ * Not guest-gated: a bundle is public code and holds no private data.
  */
 export function renderPillarUiBlock(upstream: PillarUpstream): string {
   const varName = nginxVarName(upstream.pillarId);
@@ -99,4 +130,21 @@ export function renderPillarUiBlock(upstream: PillarUpstream): string {
     `        include /etc/nginx/snippets/_pillar-proxy.conf;`,
     `    }`,
   ].join('\n');
+}
+
+/**
+ * The per-pillar part of the conf: every REST block under its intro, then
+ * every UI block under its intro. Empty for no upstreams, so a registry with
+ * nothing to route renders head, orchestrator and tail alone.
+ */
+export function renderPillarSections(
+  upstreams: readonly PillarUpstream[],
+  guestPathPrefixes: readonly string[] = GUEST_PATH_PREFIXES
+): string {
+  if (upstreams.length === 0) return '';
+  const restBlocks = upstreams
+    .map((upstream) => renderPillarRestBlockFromUpstream(upstream, guestPathPrefixes))
+    .join('\n\n');
+  const uiBlocks = upstreams.map(renderPillarUiBlock).join('\n\n');
+  return `${NGINX_CONF_REST_INTRO}\n${restBlocks}\n\n${NGINX_CONF_UI_INTRO}\n${uiBlocks}\n\n`;
 }

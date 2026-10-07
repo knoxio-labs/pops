@@ -23,6 +23,8 @@
  * duplicate prefix location outright and refuses to load the whole config.
  * Exported so the generator can skip it.
  */
+import { GUEST_GUARD } from './nginx-guest-gate.js';
+
 export const ORCHESTRATOR_PILLAR_ID = 'orchestrator';
 
 export const NGINX_CONF_ORCHESTRATOR = `    # ── Federated-search orchestrator (ADR-029, epic 06) ──
@@ -32,9 +34,11 @@ export const NGINX_CONF_ORCHESTRATOR = `    # ── Federated-search orchestrat
     # posts to \`/orchestrator-api/...\`; strip the prefix so the
     # orchestrator router sees its natural paths, then proxy to the
     # variable-form upstream (boots even when the orchestrator is absent).
+    # Search fans out over every pillar, so guests are refused.
 
     location /orchestrator-api/ {
         set $orchestrator_api_upstream http://pops-orchestrator:3009;
+${GUEST_GUARD}
         rewrite ^/orchestrator-api/(.*)$ /$1 break;
         proxy_pass $orchestrator_api_upstream;
         include /etc/nginx/snippets/_pillar-proxy.conf;
