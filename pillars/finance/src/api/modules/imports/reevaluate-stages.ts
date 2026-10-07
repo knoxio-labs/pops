@@ -15,8 +15,8 @@ import {
 } from '../corrections/index.js';
 import { applyLearnedCorrection, correctionOutcomeBucket } from './apply-learned-correction.js';
 import { matchEntity } from './entity-matcher.js';
-import { correctionApplicationChanged, transactionChanged } from './reevaluate-diff.js';
-import { buildSuggestedTags } from './tag-management.js';
+import { transactionChanged } from './reevaluate-diff.js';
+import { buildImportSuggestedTags } from './tag-management.js';
 
 import type { EntityMaps } from '../../../db/index.js';
 import type { ProcessedTransaction } from './types.js';
@@ -60,8 +60,7 @@ function tryApplyCorrectionStage(
     rules: ctx.rules,
     isPreview: ctx.isPreview,
     entityDefaultTags: ctx.entityDefaultTags,
-    countsAsUsage: (applied) =>
-      correctionApplicationChanged(item.tx, applied.processed, item.bucket, applied.bucket),
+    recordUsage: false,
   });
   if (!correctionApplied) return { handled: false, changed: false };
 
@@ -89,20 +88,21 @@ function tryEntityMatchStage(
     return { handled: true, changed: false };
   }
 
+  const { suggestions, matchedTagRuleIds } = buildImportSuggestedTags(ctx.db, {
+    description: item.tx.description,
+    entityId: entityEntry.id,
+    correctionTags: [],
+    aiCategory: null,
+    knownTags: ctx.knownTags,
+    entityDefaultTags: ctx.entityDefaultTags,
+  });
   const nextTx: ProcessedTransaction = {
     ...item.tx,
     entity: { entityId: entityEntry.id, entityName: entityEntry.name, matchType: match.matchType },
     status: 'matched',
     error: undefined,
-    suggestedTags: buildSuggestedTags(ctx.db, {
-      description: item.tx.description,
-      entityId: entityEntry.id,
-      correctionTags: [],
-      aiCategory: null,
-      knownTags: ctx.knownTags,
-      entityDefaultTags: ctx.entityDefaultTags,
-      recordTagRuleUsage: !ctx.isPreview,
-    }),
+    suggestedTags: suggestions,
+    matchedTagRuleIds,
   };
 
   buckets.matched.push(nextTx);
@@ -197,8 +197,7 @@ export function reapplyCorrectionToMatched(
     rules: ctx.rules,
     isPreview: ctx.isPreview,
     entityDefaultTags: ctx.entityDefaultTags,
-    countsAsUsage: (applied) =>
-      correctionApplicationChanged(tx, keepMatched(tx, applied.processed, winner)),
+    recordUsage: false,
   });
   if (!correctionApplied) {
     buckets.matched.push(tx);

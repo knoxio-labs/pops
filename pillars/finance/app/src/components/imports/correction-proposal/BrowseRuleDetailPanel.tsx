@@ -1,5 +1,7 @@
 import { Badge, Button, Separator } from '@pops/ui';
 
+import { RULE_USAGE_DESCRIPTION } from '../rule-usage-copy';
+
 import type { CorrectionRule } from '../RulePicker';
 
 export function BrowseRuleDetailPanel(props: {
@@ -54,8 +56,9 @@ function RuleDetailFields({ rule }: { rule: CorrectionRule }) {
       {rule.transactionType && <DetailField label="Type" value={rule.transactionType} />}
       {rule.location && <DetailField label="Location" value={rule.location} />}
       <div className="flex gap-4 text-xs text-muted-foreground pt-1">
-        {rule.timesApplied != null && <span>applied: {rule.timesApplied}×</span>}
+        {rule.timesApplied != null && <span>committed uses: {rule.timesApplied}×</span>}
       </div>
+      <p className="text-xs text-muted-foreground">{RULE_USAGE_DESCRIPTION}</p>
     </div>
   );
 }

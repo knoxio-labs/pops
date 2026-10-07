@@ -1,9 +1,7 @@
 /**
  * Regression tests for CF040/#3664: `reevaluateImportSessionResult` must fetch
- * the correction rule set once per run (not per transaction) while still
- * counting as real usage telemetry — unlike `reevaluateImportSessionWithRules`,
- * whose merged rule set is always an un-persisted preview and must never bump
- * usage counters.
+ * the correction rule set once per run (not per transaction), while deferring
+ * usage telemetry until the confirmed row is committed.
  */
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -17,6 +15,7 @@ import {
   transactionCorrections,
   transactionCorrectionsService,
   transactionTagRules,
+  transactionTagRulesService,
   type FinanceDb,
   type OpenedFinanceDb,
 } from '../../../../db/index.js';
@@ -74,17 +73,12 @@ function seedRuleWithLocation(id: string, location: string): void {
     .run();
 }
 
-function seedTagRule(pattern: string, tags: string[]): void {
-  db.insert(transactionTagRules)
-    .values({
-      descriptionPattern: pattern,
-      matchType: 'contains',
-      tags: JSON.stringify(tags),
-      isActive: true,
-      confidence: 0.95,
-      priority: 0,
-    })
-    .run();
+function seedTagRule(pattern: string, tags: string[]): string {
+  return transactionTagRulesService.createTransactionTagRule(db, {
+    descriptionPattern: pattern,
+    matchType: 'contains',
+    tags,
+  }).id;
 }
 
 function seedWeakRule(id: string): void {
@@ -211,8 +205,8 @@ function matchedTxn(
   return { ...uncertainTxn(description), status: 'matched', entity };
 }
 
-describe('reevaluateImportSessionResult — fetch-once + real usage (CF040/#3664)', () => {
-  it('fetches the rule set exactly once and still bumps usage telemetry', async () => {
+describe('reevaluateImportSessionResult — fetch-once + deferred usage (CF040/#3664)', () => {
+  it('fetches the rule set once and carries matched usage to commit', async () => {
     seedRule('r-1');
     const listSpy = vi.spyOn(transactionCorrectionsService, 'listTransactionCorrections');
     const perTxnSpy = vi.spyOn(
@@ -236,7 +230,8 @@ describe('reevaluateImportSessionResult — fetch-once + real usage (CF040/#3664
     expect(perTxnSpy).not.toHaveBeenCalled();
     expect(affectedCount).toBe(3);
     expect(nextResult.matched).toHaveLength(3);
-    expect(timesApplied('r-1')).toBe(3);
+    expect(nextResult.matched[0]?.ruleProvenance?.ruleId).toBe('r-1');
+    expect(timesApplied('r-1')).toBe(0);
   });
 });
 
@@ -380,7 +375,8 @@ describe('reevaluate — a new rule reaches rows that were already matched (#381
       entityName: 'Coles',
       matchType: 'learned',
     });
-    expect(timesApplied('r-weak')).toBe(1);
+    expect(nextResult.matched[0]?.ruleProvenance?.ruleId).toBe('r-weak');
+    expect(timesApplied('r-weak')).toBe(0);
   });
 
   it('gives a matched row the type a below-the-bar rule names (POPS-3120)', async () => {
@@ -431,7 +427,7 @@ describe('reevaluate — a new rule reaches rows that were already matched (#381
     expect(nextResult.matched[0]?.transactionType).toBe('transfer');
   });
 
-  it('credits usage exactly once for a matched row the rule does re-decide', async () => {
+  it('defers usage for a matched row the rule does re-decide', async () => {
     seedRule('r-1');
     const sibling = matchedTxn('COLES SYDNEY', {
       entityId: 'ent-woolies',
@@ -439,21 +435,22 @@ describe('reevaluate — a new rule reaches rows that were already matched (#381
       matchType: 'ai',
     });
 
-    await reevaluateImportSessionResult({
+    const { nextResult } = await reevaluateImportSessionResult({
       db,
       contacts: makeContactsFake(),
       result: { matched: [sibling], uncertain: [], failed: [], skipped: [] },
     });
 
-    expect(timesApplied('r-1')).toBe(1);
+    expect(nextResult.matched[0]?.ruleProvenance?.ruleId).toBe('r-1');
+    expect(timesApplied('r-1')).toBe(0);
   });
 
-  it('credits a rule that only rewrites tags on an already-matched row (POPS-2659)', async () => {
+  it('carries tag-rule usage for a rule that only rewrites tags (POPS-2659)', async () => {
     // The row is already matched to exactly the entity r-1 names — nothing
     // about its classification would change — but a tag rule added since it
     // was first matched gives it real new output on re-evaluation.
     seedRule('r-1');
-    seedTagRule('COLES', ['venue:supermarket']);
+    const tagRuleId = seedTagRule('COLES', ['venue:supermarket']);
     const alreadyRight = matchedTxn('COLES SYDNEY', {
       entityId: 'ent-coles',
       entityName: 'Coles',
@@ -468,11 +465,12 @@ describe('reevaluate — a new rule reaches rows that were already matched (#381
     });
 
     expect(nextResult.matched[0]?.suggestedTags?.map((t) => t.tag)).toEqual(['venue:supermarket']);
+    expect(nextResult.matched[0]?.matchedTagRuleIds).toContain(tagRuleId);
     expect(affectedCount).toBe(0);
-    expect(timesApplied('r-1')).toBe(1);
+    expect(timesApplied('r-1')).toBe(0);
   });
 
-  it('credits a rule that only rewrites location on an already-matched row (POPS-2659)', async () => {
+  it('defers usage for a rule that only rewrites location on an already-matched row (POPS-2659)', async () => {
     seedRuleWithLocation('r-1', 'Sydney CBD');
     const alreadyRight = matchedTxn('COLES SYDNEY', {
       entityId: 'ent-coles',
@@ -489,7 +487,7 @@ describe('reevaluate — a new rule reaches rows that were already matched (#381
 
     expect(nextResult.matched[0]?.location).toBe('Sydney CBD');
     expect(affectedCount).toBe(0);
-    expect(timesApplied('r-1')).toBe(1);
+    expect(timesApplied('r-1')).toBe(0);
   });
 
   it('never credits usage from the pending-preview path, matched rows included', async () => {
@@ -630,7 +628,7 @@ describe('reevaluate — running twice over the same data is idempotent (POPS-26
     expect(second.nextResult).toEqual(first.nextResult);
   });
 
-  it('does not re-credit usage telemetry on a run that changes nothing (POPS-2641)', async () => {
+  it('does not change usage telemetry on a run that changes nothing (POPS-2641)', async () => {
     seedRule('r-1');
     const contacts = makeContactsFake({ seed: [{ id: 'ent-coles', name: 'Coles' }] });
 
@@ -639,10 +637,7 @@ describe('reevaluate — running twice over the same data is idempotent (POPS-26
       contacts,
       result: emptyResult([uncertainTxn('COLES SYDNEY')]),
     });
-    expect(timesApplied('r-1')).toBe(1);
-    // A sentinel rather than the real stamp: both runs land in the same
-    // millisecond, so comparing the two stamps would pass even if the second
-    // run rewrote it.
+    expect(timesApplied('r-1')).toBe(0);
     stampLastUsedAt('r-1', SENTINEL_STAMP);
 
     const second = await reevaluateImportSessionResult({
@@ -652,7 +647,7 @@ describe('reevaluate — running twice over the same data is idempotent (POPS-26
     });
 
     expect(second.affectedCount).toBe(0);
-    expect(timesApplied('r-1')).toBe(1);
+    expect(timesApplied('r-1')).toBe(0);
     expect(lastUsedAt('r-1')).toBe(SENTINEL_STAMP);
   });
 
@@ -670,7 +665,8 @@ describe('reevaluate — running twice over the same data is idempotent (POPS-26
       result: emptyResult([uncertainTxn('COLES SYDNEY')]),
     });
     expect(first.nextResult.uncertain).toHaveLength(1);
-    expect(timesApplied('r-purchase-only')).toBe(1);
+    expect(first.nextResult.uncertain[0]?.ruleProvenance?.ruleId).toBe('r-purchase-only');
+    expect(timesApplied('r-purchase-only')).toBe(0);
 
     await reevaluateImportSessionResult({
       db,
@@ -678,12 +674,12 @@ describe('reevaluate — running twice over the same data is idempotent (POPS-26
       result: first.nextResult,
     });
 
-    expect(timesApplied('r-purchase-only')).toBe(1);
+    expect(timesApplied('r-purchase-only')).toBe(0);
   });
 
   it('does not re-credit the tag rules a no-op run re-matches', async () => {
     seedRule('r-1');
-    seedTagRule('COLES', ['venue:supermarket']);
+    const tagRuleId = seedTagRule('COLES', ['venue:supermarket']);
     const contacts = makeContactsFake({ seed: [{ id: 'ent-coles', name: 'Coles' }] });
 
     const first = await reevaluateImportSessionResult({
@@ -691,7 +687,8 @@ describe('reevaluate — running twice over the same data is idempotent (POPS-26
       contacts,
       result: emptyResult([uncertainTxn('COLES SYDNEY')]),
     });
-    expect(tagRuleTimesApplied('COLES')).toBe(1);
+    expect(first.nextResult.matched[0]?.matchedTagRuleIds).toContain(tagRuleId);
+    expect(tagRuleTimesApplied('COLES')).toBe(0);
 
     await reevaluateImportSessionResult({
       db,
@@ -699,10 +696,10 @@ describe('reevaluate — running twice over the same data is idempotent (POPS-26
       result: first.nextResult,
     });
 
-    expect(tagRuleTimesApplied('COLES')).toBe(1);
+    expect(tagRuleTimesApplied('COLES')).toBe(0);
   });
 
-  it('still credits a row the run does move, exactly once', async () => {
+  it('carries correction usage when a run moves the row', async () => {
     seedRule('r-1');
     const wronglyMatched = matchedTxn('COLES SYDNEY', {
       entityId: 'ent-woolies',
@@ -717,7 +714,8 @@ describe('reevaluate — running twice over the same data is idempotent (POPS-26
     });
 
     expect(first.affectedCount).toBe(1);
-    expect(timesApplied('r-1')).toBe(1);
+    expect(first.nextResult.matched[0]?.ruleProvenance?.ruleId).toBe('r-1');
+    expect(timesApplied('r-1')).toBe(0);
 
     await reevaluateImportSessionResult({
       db,
@@ -725,6 +723,6 @@ describe('reevaluate — running twice over the same data is idempotent (POPS-26
       result: first.nextResult,
     });
 
-    expect(timesApplied('r-1')).toBe(1);
+    expect(timesApplied('r-1')).toBe(0);
   });
 });

@@ -11,7 +11,7 @@ import {
 } from '../../../contract/transaction-classification.js';
 import { type FinanceDb } from '../../../db/index.js';
 import { formatImportError } from './format-error.js';
-import { buildSuggestedTags } from './tag-management.js';
+import { buildImportSuggestedTags } from './tag-management.js';
 
 import type { DerivedClassification } from '../../../contract/transaction-classification.js';
 import type { EntityLookupEntry } from '../../../db/index.js';
@@ -54,13 +54,14 @@ interface DerivedMatchArgs {
  */
 function buildDerivedMatch(db: FinanceDb, args: DerivedMatchArgs): ProcessedTransaction {
   const { derived } = args;
-  const suggested = buildSuggestedTags(db, {
+  const { suggestions, matchedTagRuleIds } = buildImportSuggestedTags(db, {
     description: args.transaction.description,
     entityId: null,
     correctionTags: [],
     aiCategory: null,
     knownTags: args.knownTags,
-  }).filter((s) => !s.tag.startsWith(FEE_TAG_PREFIX));
+  });
+  const suggested = suggestions.filter((s) => !s.tag.startsWith(FEE_TAG_PREFIX));
   const feeTag: SuggestedTag[] = derived.tag
     ? [{ tag: derived.tag, source: 'rule', pattern: derived.pattern }]
     : [];
@@ -70,6 +71,7 @@ function buildDerivedMatch(db: FinanceDb, args: DerivedMatchArgs): ProcessedTran
     status: 'matched',
     transactionType: derived.type,
     suggestedTags: [...feeTag, ...suggested],
+    matchedTagRuleIds,
   };
 }
 
@@ -105,6 +107,16 @@ export function buildFromEntityMatch(
   args: MatchedFromEntityArgs
 ): ProcessedTransaction {
   const isDebit = args.transaction.amount < 0;
+  const { suggestions, matchedTagRuleIds } = buildImportSuggestedTags(db, {
+    description: args.transaction.description,
+    entityId: args.entry.id,
+    correctionTags: [],
+    aiTags: args.aiTags,
+    aiProvenance: args.aiProvenance,
+    aiCategory: args.category ?? null,
+    knownTags: args.knownTags,
+    entityDefaultTags: args.entityDefaultTags,
+  });
   return {
     ...args.transaction,
     entity: {
@@ -117,16 +129,8 @@ export function buildFromEntityMatch(
     },
     status: isDebit ? 'matched' : 'uncertain',
     transactionType: isDebit ? 'purchase' : undefined,
-    suggestedTags: buildSuggestedTags(db, {
-      description: args.transaction.description,
-      entityId: args.entry.id,
-      correctionTags: [],
-      aiTags: args.aiTags,
-      aiProvenance: args.aiProvenance,
-      aiCategory: args.category ?? null,
-      knownTags: args.knownTags,
-      entityDefaultTags: args.entityDefaultTags,
-    }),
+    suggestedTags: suggestions,
+    matchedTagRuleIds,
   };
 }
 
@@ -146,19 +150,21 @@ export function buildUncertainFromAi(
   db: FinanceDb,
   args: UncertainFromAiArgs
 ): ProcessedTransaction {
+  const { suggestions, matchedTagRuleIds } = buildImportSuggestedTags(db, {
+    description: args.transaction.description,
+    entityId: null,
+    correctionTags: [],
+    aiTags: args.aiTags,
+    aiProvenance: args.aiProvenance,
+    aiCategory: args.aiCategory,
+    knownTags: args.knownTags,
+  });
   return {
     ...args.transaction,
     entity: { entityName: args.entityName, matchType: 'ai', confidence: args.confidence },
     status: 'uncertain',
-    suggestedTags: buildSuggestedTags(db, {
-      description: args.transaction.description,
-      entityId: null,
-      correctionTags: [],
-      aiTags: args.aiTags,
-      aiProvenance: args.aiProvenance,
-      aiCategory: args.aiCategory,
-      knownTags: args.knownTags,
-    }),
+    suggestedTags: suggestions,
+    matchedTagRuleIds,
   };
 }
 
@@ -168,18 +174,20 @@ export function buildUncertainNoMatch(
   reason: string,
   knownTags: string[]
 ): ProcessedTransaction {
+  const { suggestions, matchedTagRuleIds } = buildImportSuggestedTags(db, {
+    description: transaction.description,
+    entityId: null,
+    correctionTags: [],
+    aiCategory: null,
+    knownTags,
+  });
   return {
     ...transaction,
     entity: { matchType: 'none' },
     status: 'uncertain',
     error: reason,
-    suggestedTags: buildSuggestedTags(db, {
-      description: transaction.description,
-      entityId: null,
-      correctionTags: [],
-      aiCategory: null,
-      knownTags,
-    }),
+    suggestedTags: suggestions,
+    matchedTagRuleIds,
   };
 }
 

@@ -63,9 +63,11 @@ import {
   importCommitsService,
   importDraftsService,
   importsService,
+  transactionCorrectionsService,
   tagVocabularyService,
 } from '../../../db/index.js';
 import { type ContactsClient } from '../../contacts/client.js';
+import { creditTagRuleUsage } from '../tag-suggester/index.js';
 import { recordAiSuggestionOutcome } from './commit-ai-outcomes.js';
 import { recordImportBatchesPhase, type InsertedTransaction } from './commit-batches.js';
 import { applyChangeSetsPhase, applyTagRuleChangeSetsPhase } from './commit-changesets.js';
@@ -168,6 +170,10 @@ function writeTransactionsPhase(
           carriesBalance: txn.balanceCents !== undefined,
         });
       }
+      if (txn.matchType === 'learned' && txn.matchRuleId) {
+        transactionCorrectionsService.incrementTransactionCorrectionUsage(tx, txn.matchRuleId);
+      }
+      creditTagRuleUsage(tx, [...new Set(txn.matchedTagRuleIds ?? [])]);
       // A split loan repayment is one suggestion across its legs; count it once.
       const firstLegId = inserted[firstLeg]?.id;
       if (firstLegId !== undefined) recordAiSuggestionOutcome(tx, txn, firstLegId);

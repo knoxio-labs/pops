@@ -3,6 +3,7 @@ import { Pencil, Trash2 } from 'lucide-react';
 import { Badge, Button, formatDate, SortableHeader } from '@pops/ui';
 
 import { ConfidenceSlider } from '../../components/ConfidenceSlider';
+import { RULE_USAGE_DESCRIPTION } from '../../components/imports/rule-usage-copy';
 
 import type { ColumnDef } from '@tanstack/react-table';
 
@@ -36,7 +37,9 @@ const timesAppliedColumn: ColumnDef<Correction> = {
   accessorKey: 'timesApplied',
   header: ({ column }) => (
     <div className="flex justify-end">
-      <SortableHeader column={column}>Times Applied</SortableHeader>
+      <SortableHeader column={column}>
+        <span title={RULE_USAGE_DESCRIPTION}>Committed Uses</span>
+      </SortableHeader>
     </div>
   ),
   cell: ({ row }) => <div className="text-right tabular-nums">{row.original.timesApplied}</div>,

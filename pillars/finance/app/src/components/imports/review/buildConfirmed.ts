@@ -130,6 +130,7 @@ export function buildConfirmedTransactions(
       (t.suggestedTags ?? []).filter((s) => s.preAccept !== false).map((s) => s.tag)
     ),
     suggestedTags: t.suggestedTags,
+    matchedTagRuleIds: t.matchedTagRuleIds,
     matchType: t.entity?.matchType,
     matchRuleId: t.ruleProvenance?.ruleId,
     matchConfidence: t.entity?.confidence,
