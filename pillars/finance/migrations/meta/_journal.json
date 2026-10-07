@@ -519,6 +519,13 @@
       "when": 1791045900000,
       "tag": "0122_tag_vocabulary_shared_tag_id",
       "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "7",
+      "when": 1791333600000,
+      "tag": "0123_shared_account_tables",
+      "breakpoints": true
     }
   ]
 }
