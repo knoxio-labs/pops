@@ -1,47 +1,24 @@
 /**
- * `test`/`expect` for every shell e2e spec, extended with the one thing
- * `helpers/pillar-rest.ts` used to only document: an unrouted pillar REST
- * call now fails the test that made it instead of soft-failing to the
- * fallback path.
+ * `test`/`expect` for shell E2E specs, with a context-level fallback for
+ * unstubbed pillar REST calls. Page-level stubs take precedence over context
+ * routes, and the fallback survives `page.unrouteAll()` cleanup.
  *
- * The `page` fixture below installs `page.route(PILLAR_REST_URL, ...)` before
- * any spec code runs — in fixture setup, ahead of `beforeEach` and the test
- * body — so it is the OLDEST handler for any URL it matches. Playwright
- * dispatches a request to the most-recently-registered matching handler, so
- * every stub a spec (or `pillar-rest.ts`) registers afterwards shadows this
- * one for that URL; only a request nothing more specific claimed reaches it.
- * That is what makes this a fallback rather than a replacement for stubbing:
- * `failRegistry` and an explicit `route.abort()` still behave exactly as
- * before, because their own handler — registered later — is the one that
- * runs.
- *
- * A request that does reach it is recorded and answered with a 599 (a status
- * no real server sends, so a body slipping past this pattern reads
- * unmistakably as "the guard, not the pillar," in a trace or a screenshot),
- * and the fixture's teardown — which runs after the spec's own `afterEach`
- * hooks — throws if the record isn't empty, naming every method and URL that
- * got there.
- *
- * What this does NOT catch, and why the opt-outs still have to be deliberate:
- * only a request the page actually issues before the test body ends is
- * recorded. A spec whose last assertion resolves on the router (a URL, a
- * redirect) can finish while the page it just mounted is still resolving its
- * lazy chunk, and the query that chunk fires lands after `afterEach` has
- * called `page.unrouteAll` — past every handler, this one included. So a
- * green run means "nothing unstubbed fired in time", not "this spec stubs
- * everything its pages read". POPS-4033 closes that gap.
+ * Recent script and pillar REST requests settle before teardown checks the
+ * fallback records. The event-driven wait has a 100ms quiet window and a
+ * five-second bound; tests with no recent relevant requests do not wait.
  */
 import { test as base, expect } from '@playwright/test';
 
 import { PILLAR_REST_URL, REGISTRY_HEALTH_URL } from '../helpers/pillar-rest';
 
-import type { Route } from '@playwright/test';
+import type { Request, Route } from '@playwright/test';
 
 interface UnroutedPillarCall {
   readonly method: string;
   readonly url: string;
 }
 
+/** Test-level controls for the shell's shared pillar REST network guard. */
 export interface PillarRestGuardOptions {
   /**
    * Named reason this spec's subject is the shell's behaviour when a pillar
@@ -56,16 +33,103 @@ export interface PillarRestGuardOptions {
   allowUnroutedPillarRest: string | false;
 }
 
+const SETTLEMENT_TIMEOUT_MS = 5_000;
+const SETTLEMENT_QUIET_PERIOD_MS = 100;
+
+function shouldTrackRequest(request: Request): boolean {
+  return request.resourceType() === 'script' || PILLAR_REST_URL.test(request.url());
+}
+
+interface RequestSettlement {
+  readonly pending: ReadonlySet<Request>;
+  readonly lastActivityAt: () => number | undefined;
+  readonly revision: () => number;
+  readonly waitForChange: (revision: number, timeoutMs: number) => Promise<boolean>;
+}
+
+async function settlePendingRequests(settlement: RequestSettlement): Promise<void> {
+  const deadline = Date.now() + SETTLEMENT_TIMEOUT_MS;
+
+  while (true) {
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) {
+      const pending = [...settlement.pending]
+        .map((request) => `  ${request.method()} ${request.url()}`)
+        .join('\n');
+      throw new Error(
+        `Shell E2E did not settle within ${SETTLEMENT_TIMEOUT_MS}ms after relevant network activity:\n${pending}`
+      );
+    }
+
+    const lastActivityAt = settlement.lastActivityAt();
+    const quietRemaining =
+      lastActivityAt === undefined ? 0 : SETTLEMENT_QUIET_PERIOD_MS - (Date.now() - lastActivityAt);
+    if (settlement.pending.size === 0 && quietRemaining <= 0) return;
+
+    const timeout = settlement.pending.size > 0 ? remaining : Math.min(remaining, quietRemaining);
+    const changed = await settlement.waitForChange(settlement.revision(), timeout);
+    if (!changed && settlement.pending.size === 0 && Date.now() < deadline) return;
+    if (!changed) {
+      const pending = [...settlement.pending]
+        .map((request) => `  ${request.method()} ${request.url()}`)
+        .join('\n');
+      throw new Error(
+        `Shell E2E did not settle within ${SETTLEMENT_TIMEOUT_MS}ms after relevant network activity:\n${pending}`
+      );
+    }
+  }
+}
+
 export const test = base.extend<PillarRestGuardOptions>({
   allowUnroutedPillarRest: [false, { option: true }],
 
-  // `runTest`, not Playwright's usual `use` — oxlint's react-hooks plugin
-  // reads a called identifier literally named `use` as React's `use()` hook
-  // regardless of scope, and this is a Playwright fixture, not a component.
-  page: async ({ page, allowUnroutedPillarRest }, runTest) => {
+  page: async ({ page, context, allowUnroutedPillarRest }, runTest) => {
     const unrouted: UnroutedPillarCall[] = [];
+    const pendingRequests = new Set<Request>();
+    const requestChangeWaiters = new Set<() => void>();
+    let requestRevision = 0;
+    let lastRequestActivity: number | undefined;
+    const notifyRequestChange = () => {
+      requestRevision += 1;
+      for (const wake of requestChangeWaiters) wake();
+    };
+    const trackRequest = (request: Request) => {
+      if (!shouldTrackRequest(request)) return;
+      pendingRequests.add(request);
+      lastRequestActivity = Date.now();
+      notifyRequestChange();
+    };
+    const settleRequest = (request: Request) => {
+      if (!pendingRequests.delete(request)) return;
+      lastRequestActivity = Date.now();
+      notifyRequestChange();
+    };
+    const waitForChange = (revision: number, timeoutMs: number): Promise<boolean> =>
+      new Promise((resolve) => {
+        if (requestRevision !== revision) {
+          resolve(true);
+          return;
+        }
 
-    await page.route(PILLAR_REST_URL, (route: Route) => {
+        let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+        const wake = () => {
+          if (timeoutHandle !== undefined) clearTimeout(timeoutHandle);
+          requestChangeWaiters.delete(wake);
+          resolve(true);
+        };
+        timeoutHandle = setTimeout(() => {
+          requestChangeWaiters.delete(wake);
+          resolve(false);
+        }, timeoutMs);
+        requestChangeWaiters.add(wake);
+        if (requestRevision !== revision) wake();
+      });
+
+    page.on('request', trackRequest);
+    page.on('requestfinished', settleRequest);
+    page.on('requestfailed', settleRequest);
+
+    await context.route(PILLAR_REST_URL, (route: Route) => {
       const request = route.request();
       unrouted.push({ method: request.method(), url: request.url() });
       return route.fulfill({
@@ -81,7 +145,7 @@ export const test = base.extend<PillarRestGuardOptions>({
       });
     });
 
-    await page.route(REGISTRY_HEALTH_URL, (route: Route) =>
+    await context.route(REGISTRY_HEALTH_URL, (route: Route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -89,7 +153,19 @@ export const test = base.extend<PillarRestGuardOptions>({
       })
     );
 
-    await runTest(page);
+    try {
+      await runTest(page);
+      await settlePendingRequests({
+        pending: pendingRequests,
+        lastActivityAt: () => lastRequestActivity,
+        revision: () => requestRevision,
+        waitForChange,
+      });
+    } finally {
+      page.off('request', trackRequest);
+      page.off('requestfinished', settleRequest);
+      page.off('requestfailed', settleRequest);
+    }
 
     if (allowUnroutedPillarRest !== false || unrouted.length === 0) return;
 

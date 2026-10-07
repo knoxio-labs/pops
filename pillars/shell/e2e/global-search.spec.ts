@@ -31,10 +31,6 @@ test.describe('Shell — federated search', () => {
     await expect(searchBox(page)).toBeVisible();
   });
 
-  test.afterEach(async ({ page }) => {
-    await page.unrouteAll({ behavior: 'ignoreErrors' });
-  });
-
   test('typing posts the query to the orchestrator and renders its sections', async ({ page }) => {
     await stubOrchestratorSearch(page, CROSS_MODULE_SEARCH_SECTIONS);
 

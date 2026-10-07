@@ -39,10 +39,6 @@ import {
 } from './helpers/pillar-rest';
 
 test.describe('Shell — POPS_APPS=finance,core install set', () => {
-  test.afterEach(async ({ page }) => {
-    await page.unrouteAll({ behavior: 'ignoreErrors' });
-  });
-
   test('an excluded module is not-installed, not a 404', async ({ page }) => {
     // A registry that ANSWERS and does not carry media. That is what makes
     // this about the install set: with the registry dead nothing mounts at
@@ -93,6 +89,7 @@ test.describe('Shell — POPS_APPS=finance,core install set', () => {
     // outage load-bearing rather than a pillar that was never there: the good
     // boot is what writes media into the cache.
     await expect(page.getByRole('button', { name: 'Media' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
 
     await failRegistry(page);
     await page.goto('/finance');
@@ -101,6 +98,7 @@ test.describe('Shell — POPS_APPS=finance,core install set', () => {
     // surface would hide media too, and assert nothing about the narrowing.
     await expect(page.getByRole('button', { name: 'Finance' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Media' })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
   });
 
   test('search drops results owned by an excluded module', async ({ page }) => {
