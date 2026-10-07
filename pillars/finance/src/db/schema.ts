@@ -16,6 +16,7 @@ export type { TransactionMatchType } from './match-types.js';
 
 export { accounts } from './schema/accounts.js';
 export { accountCheckpoints } from './schema/account-checkpoints.js';
+export { accountGrants } from './schema/account-grants.js';
 export { accountGiftCardDetails } from './schema/account-gift-card-details.js';
 export { aiUsage } from './schema/ai-usage.js';
 export { budgets } from './schema/budgets.js';
@@ -35,6 +36,8 @@ export { aiTagSuggestionOutcomes } from './schema/ai-tag-suggestion-outcomes.js'
 export { tagRuleRejections } from './schema/tag-rule-rejections.js';
 export { tagVocabulary } from './schema/tag-vocabulary.js';
 export { settings } from './schema/settings.js';
+export { transactionAttachments } from './schema/transaction-attachments.js';
+export { transactionEvents } from './schema/transaction-events.js';
 export { transactionTagRules } from './schema/transaction-tag-rules.js';
 export { transactions } from './schema/transactions.js';
 export { wishList } from './schema/wishlist.js';

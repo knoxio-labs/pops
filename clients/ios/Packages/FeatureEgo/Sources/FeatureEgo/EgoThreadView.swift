@@ -29,8 +29,9 @@ public struct EgoThreadView: View {
             } else if isLoadingConversation {
                 LoadingStateView(message: "Loading conversation.")
             } else if rows.isEmpty {
-                EmptyStateView(message: "Start a conversation with Ego.")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                EgoWelcomeView { suggestion in
+                    model.send(prompt: suggestion.prompt)
+                }
             } else {
                 transcript
             }
@@ -106,16 +107,7 @@ public struct EgoThreadView: View {
         case .streaming(let text):
             EgoStreamingBubbleView(text: text)
         case .failure(let message, let retryable):
-            VStack(alignment: .leading, spacing: PopsSpacing.sm) {
-                Text(message)
-                    .font(.popsBody)
-                    .foregroundStyle(Color.popsDestructive)
-                    .fixedSize(horizontal: false, vertical: true)
-                if retryable {
-                    Button("Try again") { model.retry() }
-                        .accessibilityIdentifier("ego-thread-retry")
-                }
-            }
+            EgoTurnFailureView(message: message, retryable: retryable) { model.retry() }
         case .notice(_, let message):
             Text(message)
                 .font(.popsCaption)
@@ -133,6 +125,40 @@ public struct EgoThreadView: View {
         if case .unsupported(let pillar) = entityRouter.route(uri) {
             notices.append("This app can’t open references from \(pillar).")
         }
+    }
+}
+
+@MainActor
+private struct EgoTurnFailureView: View {
+    let message: String
+    let retryable: Bool
+    let onRetry: () -> Void
+
+    var body: some View {
+        PopsCard {
+            VStack(alignment: .leading, spacing: PopsSpacing.md) {
+                HStack(alignment: .top, spacing: PopsSpacing.sm) {
+                    Image(systemName: "exclamationmark.circle.fill")
+                        .foregroundStyle(Color.popsDestructive)
+                        .accessibilityHidden(true)
+                    Text(message)
+                        .font(.popsBody)
+                        .foregroundStyle(Color.popsForeground)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                if retryable {
+                    Button(action: onRetry) {
+                        Label("Try again", systemImage: "arrow.clockwise")
+                    }
+                    .font(.popsSubheadline.weight(.semibold))
+                    .foregroundStyle(Color.popsAccent)
+                    .frame(minHeight: PopsSize.touchTarget, alignment: .leading)
+                    .accessibilityIdentifier("ego-thread-retry")
+                }
+            }
+        }
+        .accessibilityIdentifier("ego-thread-failure")
     }
 }
 

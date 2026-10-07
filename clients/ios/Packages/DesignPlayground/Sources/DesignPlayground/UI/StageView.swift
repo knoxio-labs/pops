@@ -25,7 +25,8 @@ internal struct StageView: View {
         _settings = State(
             initialValue: StageSettings(
                 stateID: stateID ?? surface.openingState?.id ?? "default",
-                chrome: surface.chrome
+                chrome: surface.chrome,
+                typeSize: .playgroundDefault
             )
         )
     }

@@ -24,6 +24,8 @@
  * order: `purchase_products` and `purchase_product_aliases`, the learned
  * dictionary that gives a printed line a durable product identity for the
  * sources that state no sku.
+ * `receipt_external_references` is outside it for a different reason: it
+ * pins a stored receipt file for an owner on another pillar.
  *
  * Two properties of that shape are load-bearing:
  *
@@ -63,6 +65,7 @@ import type {
   purchaseShipments as purchaseShipmentsTable,
   purchaseTags as purchaseTagsTable,
 } from './schema/purchases.js';
+import type { receiptExternalReferences as receiptExternalReferencesTable } from './schema/receipt-external-references.js';
 import type { purchaseMatchRules as purchaseMatchRulesTable } from './schema/rules.js';
 import type {
   purchaseItemSharedTags as purchaseItemSharedTagsTable,
@@ -88,6 +91,7 @@ export {
 export { purchaseItemSharedTags, sharedTagCache } from './schema/shared-tags.js';
 export { purchaseProductAliases, purchaseProducts } from './schema/products.js';
 export { purchases, purchaseShipments, purchaseTags } from './schema/purchases.js';
+export { receiptExternalReferences } from './schema/receipt-external-references.js';
 export { purchaseMatchRules } from './schema/rules.js';
 export { purchaseSources } from './schema/sources.js';
 
@@ -128,3 +132,7 @@ export type PurchaseProductRow = InferSelectModel<typeof purchaseProductsTable>;
 export type PurchaseProductInsert = InferInsertModel<typeof purchaseProductsTable>;
 export type PurchaseProductAliasRow = InferSelectModel<typeof purchaseProductAliasesTable>;
 export type PurchaseProductAliasInsert = InferInsertModel<typeof purchaseProductAliasesTable>;
+export type ReceiptExternalReferenceRow = InferSelectModel<typeof receiptExternalReferencesTable>;
+export type ReceiptExternalReferenceInsert = InferInsertModel<
+  typeof receiptExternalReferencesTable
+>;

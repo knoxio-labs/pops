@@ -5,7 +5,11 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { amazonOrder, openTempDb, seedAmazonSource } from '../../../db/__tests__/helpers.js';
-import { createPurchase } from '../../../db/index.js';
+import {
+  addExternalReceiptReferences,
+  createPurchase,
+  removeExternalReceiptReferences,
+} from '../../../db/index.js';
 import { DEFAULT_RECEIPT_RETENTION_MS, sweepUnreferencedReceipts } from '../retention-sweep.js';
 import { receiptUri } from '../store.js';
 
@@ -75,6 +79,56 @@ describe('sweepUnreferencedReceipts', () => {
         opened.db,
         amazonOrder({ documents: [{ documentUri: receiptUri(SHA_A), kind: 'receipt' }] })
       );
+
+      const result = sweepUnreferencedReceipts(opened.db, { root });
+      expect(result).toEqual({ scanned: 1, deleted: 0, kept: 1, malformed: 0 });
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('keeps an old file only an external owner references, until that reference is removed', () => {
+    root = mkdtempSync(join(tmpdir(), 'pops-receipts-sweep-'));
+    const path = writeReceiptFile(SHA_A, DEFAULT_RECEIPT_RETENTION_MS + 60_000);
+    const { opened, cleanup } = openDb();
+    const owner = 'pops://finance/transaction/txn-1';
+
+    try {
+      addExternalReceiptReferences(opened.db, owner, [receiptUri(SHA_A)]);
+      expect(sweepUnreferencedReceipts(opened.db, { root })).toEqual({
+        scanned: 1,
+        deleted: 0,
+        kept: 1,
+        malformed: 0,
+      });
+      expect(() => statSync(path)).not.toThrow();
+
+      removeExternalReceiptReferences(opened.db, owner, [receiptUri(SHA_A)]);
+      expect(sweepUnreferencedReceipts(opened.db, { root })).toEqual({
+        scanned: 1,
+        deleted: 1,
+        kept: 0,
+        malformed: 0,
+      });
+      expect(() => statSync(path)).toThrow();
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('keeps an old file while one of two external owners still references it', () => {
+    root = mkdtempSync(join(tmpdir(), 'pops-receipts-sweep-'));
+    writeReceiptFile(SHA_A, DEFAULT_RECEIPT_RETENTION_MS + 60_000);
+    const { opened, cleanup } = openDb();
+
+    try {
+      addExternalReceiptReferences(opened.db, 'pops://finance/transaction/txn-1', [
+        receiptUri(SHA_A),
+      ]);
+      addExternalReceiptReferences(opened.db, 'pops://finance/transaction/txn-2', [
+        receiptUri(SHA_A),
+      ]);
+      removeExternalReceiptReferences(opened.db, 'pops://finance/transaction/txn-1');
 
       const result = sweepUnreferencedReceipts(opened.db, { root });
       expect(result).toEqual({ scanned: 1, deleted: 0, kept: 1, malformed: 0 });

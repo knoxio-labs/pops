@@ -220,6 +220,9 @@ export const purchasesHandlers: MockHandlers = {
   'POST /receipts/draft': orderSaved,
   'GET /receipts/{sha256}': () => notFound('receipt', 'purchases.resource.not_found'),
   'GET /receipts/{sha256}/thumbnail': () => notFound('receipt', 'purchases.resource.not_found'),
+  'POST /receipts/store': ok({ receiptUris: [`pops://purchases/receipt/${'0'.repeat(64)}`] }),
+  'PUT /receipts/references': acknowledged,
+  'DELETE /receipts/references': acknowledged,
 
   'GET /sources': ok({ items: [] }),
   'GET /sources/{id}': () => notFound('source', 'purchases.resource.not_found'),

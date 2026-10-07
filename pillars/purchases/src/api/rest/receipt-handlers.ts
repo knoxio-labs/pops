@@ -13,9 +13,10 @@
  *
  * `extract` and `saveDraft` — separating a reading from what becomes a
  * purchase (POPS-2454) — are spread in from `receipt-draft-handlers.ts`,
- * and the sub-router's two read routes from `receipt-bytes-handlers.ts`.
- * All three share the decode/store pipeline in `receipt-prepare.ts` and
- * nothing else with this file.
+ * the sub-router's two read routes from `receipt-bytes-handlers.ts`, and
+ * the store-only and reference routes from `receipt-reference-handlers.ts`.
+ * `upload`, `extract` and `store` share the decode/store pipeline in
+ * `receipt-prepare.ts` and nothing else with this file.
  */
 import { firstPhotoCapture, resolveCapture } from '../../ingest/receipt/capture.js';
 import { receiptToPurchase } from '../../ingest/receipt/purchase.js';
@@ -36,6 +37,7 @@ import {
   visionUnavailable,
   type UploadBody,
 } from './receipt-prepare.js';
+import { makeReceiptReferenceHandlers } from './receipt-reference-handlers.js';
 import { toPurchaseDetailBody } from './serializers.js';
 
 import type { z } from 'zod';
@@ -151,5 +153,6 @@ export function makeReceiptHandlers(
 
     ...makeReceiptDraftHandlers(db, vision, onIngest, merchant),
     ...makeReceiptBytesHandlers(),
+    ...makeReceiptReferenceHandlers(db),
   };
 }

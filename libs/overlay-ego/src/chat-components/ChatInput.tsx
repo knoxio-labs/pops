@@ -19,11 +19,21 @@ export interface ChatInputProps {
   onSend: () => void;
   /** Whether a message is currently being sent. */
   isSending: boolean;
+  /** Fit the composer to the shell overlay's nested card surface. */
+  compact?: boolean;
   /** Additional CSS classes. */
   className?: string;
 }
 
-export function ChatInput({ value, onChange, onSend, isSending, className }: ChatInputProps) {
+/** Render a message composer that sends non-empty input on submit. */
+export function ChatInput({
+  value,
+  onChange,
+  onSend,
+  isSending,
+  compact = false,
+  className,
+}: ChatInputProps) {
   const { t } = useTranslation('cerebrum');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -50,7 +60,11 @@ export function ChatInput({ value, onChange, onSend, isSending, className }: Cha
         onKeyDown={handleKeyDown}
         placeholder={t('chat.placeholder')}
         rows={1}
-        className="min-h-11 max-h-40 resize-none"
+        className={cn(
+          'min-h-11 max-h-40 resize-none',
+          compact &&
+            'border-0 bg-transparent px-3 shadow-none focus-visible:border-transparent focus-visible:ring-0'
+        )}
         aria-label={t('chat.input')}
         disabled={isSending}
       />
@@ -60,6 +74,7 @@ export function ChatInput({ value, onChange, onSend, isSending, className }: Cha
         disabled={!canSend}
         loading={isSending}
         aria-label={t('chat.send')}
+        className={compact ? 'mb-0.5 mr-0.5 rounded-xl' : undefined}
       >
         <SendHorizontal className="h-4 w-4" />
       </Button>

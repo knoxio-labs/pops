@@ -1,5 +1,6 @@
 import AppCore
 import DesignSystem
+import FeatureEgo
 import FeatureInventory
 import FeaturePurchases
 import SwiftUI
@@ -13,7 +14,7 @@ import SwiftUI
 ///
 /// Between features, this draws exactly one piece of navigation chrome — a tab
 /// bar — and only once there is more than one tab feature to move between. Ego's
-/// separate sheet entry stays available without becoming a tab. It draws none
+/// action tab opens its sheet without changing the selected feature. It draws none
 /// inside a feature: a feature that has more than one screen brings
 /// its own `NavigationStack` — `TransactionsFlowView` is the first — because
 /// the routes between those screens belong to that feature and resolving them
@@ -26,10 +27,7 @@ internal struct ContentView: View {
     internal let composition: AppComposition
     internal var purchasesCaptureObserver: (@MainActor (Bool) -> Void)?
 
-    /// The tab the person chose, if they chose one. See ``features`` for why
-    /// this is held here rather than left to `TabView`.
-    @State private var chosenFeature: MobileFeature?
-    @State private var egoPresented = false
+    @State private var tabSelection = ContentViewTabSelection()
 
     /// Which bootstrap failure, if any, a person has already dismissed the
     /// degraded banner for. See ``DegradedBannerVisibility``.
@@ -71,8 +69,7 @@ internal struct ContentView: View {
                 EgoEntryView(
                     isAvailable: Self.showsEgoEntry(available: surface.available)
                         && !showsTabSwitcher,
-                    placement: .safeArea,
-                    onOpen: { egoPresented = true }
+                    onOpen: { tabSelection.isEgoPresented = true }
                 )
             }
             .safeAreaInset(edge: .top) { degradedBanner }
@@ -81,16 +78,16 @@ internal struct ContentView: View {
                     presentation: composition.entityPresentation,
                     dependencies: dependencies,
                     entityRouter: composition.entityRouter,
-                    isActive: !egoPresented
+                    isActive: !tabSelection.isEgoPresented
                 )
             )
-            .sheet(isPresented: $egoPresented) {
+            .sheet(isPresented: $tabSelection.isEgoPresented) {
                 EgoSheetView(
                     dependencies: dependencies,
                     context: { composition.egoScreenContext.current },
                     presentation: composition.entityPresentation,
                     entityRouter: composition.entityRouter,
-                    onClose: { egoPresented = false }
+                    onClose: { tabSelection.isEgoPresented = false }
                 )
             }
             .environment(
@@ -136,8 +133,9 @@ internal struct ContentView: View {
         return count > 1 || hasSearch
     }
 
-    /// Tab features, More, and the app-wide search tab. Ego is exposed by
-    /// its sheet entry and does not count when choosing a tab layout.
+    /// Selectable feature tabs, More, and the app-wide search tab. Ego has a
+    /// separate action tab when available, but stays out of this selection so
+    /// opening its sheet does not replace the current feature.
     ///
     /// Zero gets the explanation below. Exactly one fills the screen outright
     /// — the shipped single-feature look, unchanged, because a tab bar with
@@ -181,6 +179,15 @@ internal struct ContentView: View {
                     }
                     .accessibilityIdentifier(Self.moreTabAccessibilityIdentifier)
                 }
+                if Self.showsEgoEntry(available: surface.available) {
+                    Tab(value: Self.egoLauncherTab) {
+                        EmptyView()
+                    } label: {
+                        EgoLauncherTabLabel()
+                    }
+                    .accessibilityLabel(FeatureEgo.displayName)
+                    .accessibilityIdentifier("ego-entry")
+                }
                 if hasSearch {
                     Tab(value: Self.searchTab, role: .search) {
                         AppSearchTab(
@@ -190,15 +197,6 @@ internal struct ContentView: View {
                 }
             }
             .tint(Self.tabTint(for: selection.wrappedValue))
-            .tabViewBottomAccessory(
-                isEnabled: Self.showsEgoEntry(available: surface.available)
-            ) {
-                EgoEntryView(
-                    isAvailable: Self.showsEgoEntry(available: surface.available),
-                    placement: .tabAccessory,
-                    onOpen: { egoPresented = true }
-                )
-            }
         }
     }
 
@@ -225,14 +223,15 @@ internal struct ContentView: View {
     private var selection: Binding<MobileFeature> {
         Binding(
             get: {
-                Self.shownFeature(
-                    chosen: chosenFeature,
-                    available: Self.tabs(
-                        for: Self.tabFeatures(for: surface.available)
-                    )
+                tabSelection.selectedTab(
+                    egoLauncherTab: Self.egoLauncherTab,
+                    egoAvailable: Self.showsEgoEntry(available: surface.available),
+                    available: Self.tabs(for: Self.tabFeatures(for: surface.available))
                 )
             },
-            set: { chosenFeature = $0 }
+            set: { selected in
+                tabSelection.select(selected, egoLauncherTab: Self.egoLauncherTab)
+            }
         )
     }
 
@@ -308,6 +307,28 @@ extension ContentView {
         guard !surface.available.isEmpty else { return nil }
         if surface.available.count == 1, !hasSearch { return surface.available[0] }
         return Self.shownFeature(
-            chosen: chosenFeature, available: Self.tabs(for: surface.available))
+            chosen: tabSelection.chosenFeature, available: Self.tabs(for: surface.available))
+    }
+}
+
+internal struct ContentViewTabSelection {
+    internal private(set) var chosenFeature: MobileFeature?
+    internal var isEgoPresented = false
+
+    internal func selectedTab(
+        egoLauncherTab: MobileFeature,
+        egoAvailable: Bool,
+        available: [MobileFeature]
+    ) -> MobileFeature {
+        if isEgoPresented && egoAvailable { return egoLauncherTab }
+        return ContentView.shownFeature(chosen: chosenFeature, available: available)
+    }
+
+    internal mutating func select(_ selected: MobileFeature, egoLauncherTab: MobileFeature) {
+        if selected == egoLauncherTab {
+            isEgoPresented = true
+        } else {
+            chosenFeature = selected
+        }
     }
 }

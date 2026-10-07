@@ -16,6 +16,7 @@ const streaming = vi.hoisted(() => ({
   isStreaming: false,
   error: null,
   streamingContent: null,
+  persistedMessageId: null,
   toolActivity: [{ name: 'inventory.search', status: 'started' }],
   streamParts: [{ type: 'text', text: 'A streamed response' }],
 }));
@@ -99,6 +100,7 @@ describe('useChatMutations streamed view-model data', () => {
 
     expect(result.current.toolActivity).toEqual(streaming.toolActivity);
     expect(result.current.streamParts).toEqual(streaming.streamParts);
+    expect(result.current.persistedMessageId).toBeNull();
   });
 
   it('navigates resolved stream frames through the shared URI resolver', () => {

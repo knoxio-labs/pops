@@ -15,7 +15,8 @@
  * POPS_NGINX_RELOAD_CMD, POPS_NGINX_CONFIG_TEST_CMD (default
  * `nginx -t -c <output>`; empty string disables the gate),
  * POPS_NGINX_DEBOUNCE_MS, POPS_NGINX_BACKOFF_MS,
- * POPS_NGINX_HEALTH_PORT / _HOST / _PATH.
+ * POPS_NGINX_HEALTH_PORT / _HOST / _PATH, POPS_OPERATOR_EMAILS (the guest
+ * gate's operator list, so a re-render keeps the gate the boot render had).
  */
 import { spawn } from 'node:child_process';
 import { writeFile } from 'node:fs/promises';
@@ -30,8 +31,11 @@ import {
   type ReloadLogger,
 } from './nginx-event-reload.js';
 import { type NginxGeneratorHealth } from './nginx-generator-health.js';
+import { guestGateFromEnv, type GuestGateOptions } from './nginx-guest-gate.js';
 import { consumeSse } from './registry-sse-client.js';
 import { resolveRegistryUrl } from './registry-url-env.js';
+
+import type { DiscoveryTransport } from '@pops/pillar-sdk/client';
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const DEFAULT_OUTPUT_PATH = resolve(SCRIPT_DIR, '..', 'nginx.conf');
@@ -48,6 +52,7 @@ interface WatcherConfig {
   readonly healthPort: number | null;
   readonly healthHost: string;
   readonly healthPath: string;
+  readonly guestGate: GuestGateOptions;
 }
 
 function parseIntEnv(value: string | undefined, fallback: number): number {
@@ -84,6 +89,7 @@ function readConfig(env: NodeJS.ProcessEnv): WatcherConfig {
     healthPort: parseOptionalPortEnv(env['POPS_NGINX_HEALTH_PORT']),
     healthHost: env['POPS_NGINX_HEALTH_HOST'] ?? '0.0.0.0',
     healthPath: env['POPS_NGINX_HEALTH_PATH'] ?? '/health',
+    guestGate: guestGateFromEnv(env),
   };
 }
 
@@ -98,8 +104,19 @@ function execShell(cmd: string): Promise<void> {
   });
 }
 
+/**
+ * Render the conf the watcher installs. Carries the guest gate read at
+ * startup, so a re-render never drops the gate the boot render applied.
+ */
+export function renderWatchedConf(
+  config: Pick<WatcherConfig, 'registryUrl' | 'guestGate'>,
+  transport?: DiscoveryTransport
+): Promise<string> {
+  return renderNginxConfDynamic(config.registryUrl, transport, config.guestGate);
+}
+
 async function runRegen(config: WatcherConfig): Promise<void> {
-  const conf = await renderNginxConfDynamic(config.registryUrl);
+  const conf = await renderWatchedConf(config);
   await writeFile(config.outputPath, conf, 'utf8');
 }
 

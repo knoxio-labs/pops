@@ -11,6 +11,7 @@ import { useConversationList } from './useConversationList';
 
 import type { ChatPageModel } from './types';
 
+/** Build the conversation state shared by the full-page and shell-overlay chat. */
 export function useChatPageModel(): ChatPageModel {
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [inputValue, setInputValue] = useState('');
@@ -27,6 +28,7 @@ export function useChatPageModel(): ChatPageModel {
 
   const selectConversation = useCallback(
     (id: string) => {
+      mutations.clearPendingUserMessage();
       setSelectedConversationId(id);
       mutations.clearEngrams();
     },
@@ -34,6 +36,7 @@ export function useChatPageModel(): ChatPageModel {
   );
 
   const startNewConversation = useCallback(() => {
+    mutations.clearPendingUserMessage();
     setSelectedConversationId(null);
     setInputValue('');
     mutations.clearEngrams();
@@ -45,6 +48,7 @@ export function useChatPageModel(): ChatPageModel {
     selectedConversationId,
     selectConversation,
     messages: detail.messages,
+    pendingUserMessage: mutations.pendingUserMessage,
     messagesLoading: detail.isLoading,
     inputValue,
     setInputValue,
@@ -60,6 +64,7 @@ export function useChatPageModel(): ChatPageModel {
     activeScopes: detail.activeScopes,
     retrievedEngrams: mutations.retrievedEngrams,
     streamingContent: mutations.streamingContent,
+    persistedMessageId: mutations.persistedMessageId,
     toolActivity: mutations.toolActivity,
     streamParts: mutations.streamParts,
   };

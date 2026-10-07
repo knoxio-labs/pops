@@ -18,6 +18,16 @@ import {
   resolveUpstreamForEntry,
   type PillarUpstream,
 } from './generate-nginx-conf.js';
+import {
+  GUEST_FORBIDDEN_LOCATION,
+  GUEST_GUARD,
+  GUEST_PATH_PREFIXES,
+  guestGateFromEnv,
+  isGuestPath,
+  parseOperatorEmails,
+  rejectedOperatorEmailsWarning,
+  renderGuestMap,
+} from './nginx-guest-gate.js';
 import { EGO_STREAM_LOCATION, renderPillarRestBlockFromUpstream } from './nginx-pillar-blocks.js';
 import { resolveRegistryUrl } from './registry-url-env.js';
 
@@ -245,6 +255,7 @@ describe('generate-nginx-conf', () => {
     it('leaves every non-Cerebrum REST block byte-identical to the generic block', () => {
       for (const pillarId of PILLARS.filter((id) => id !== 'cerebrum')) {
         const { host, port } = PILLAR_UPSTREAMS[pillarId];
+        const guard = isGuestPath(`/${pillarId}-api/`) ? [] : [GUEST_GUARD];
         expect(
           renderPillarRestBlockFromUpstream({ pillarId, host, port }),
           `${pillarId} REST block`
@@ -252,6 +263,7 @@ describe('generate-nginx-conf', () => {
           [
             `    location /${pillarId}-api/ {`,
             `        set $${pillarId}_api_upstream http://${host}:${port};`,
+            ...guard,
             `        rewrite ^/${pillarId}-api/(.*)$ /$1 break;`,
             `        proxy_pass $${pillarId}_api_upstream;`,
             `        include /etc/nginx/snippets/_pillar-proxy.conf;`,
@@ -465,6 +477,367 @@ describe('generate-nginx-conf', () => {
       expect(rendered.indexOf('location ~ \\.mjs$ {')).toBeLessThan(
         rendered.lastIndexOf('    location / {')
       );
+    });
+  });
+
+  describe('guest gate', () => {
+    const OPERATORS = 'owner@example.com';
+    const GUEST_MAP_OPEN = 'map $http_cf_access_authenticated_user_email $pops_guest {';
+
+    /**
+     * Locations a guest may reach although they proxy to a backend and sit
+     * outside every guest prefix: they hold no private data or must stay
+     * public. Adding a proxying location means guarding it, putting it under a
+     * guest prefix, or naming it here on purpose.
+     */
+    const PUBLIC_PROXY_LOCATIONS: readonly RegExp[] = [
+      /^\/webhooks\/up$/,
+      /^\/health$/,
+      /^~ \^\/pillars\/\?\$$/,
+      /^~ \^\/pillars\/health\/\?\$$/,
+      /^~ \^\/registry\/subscribe\/\?\$$/,
+      /^\/docs\/$/,
+      /^\/design\/$/,
+      /^\/[a-z0-9-]+-ui\/$/,
+    ];
+
+    interface RenderedLocation {
+      readonly selector: string;
+      readonly body: string;
+    }
+
+    function locationsOf(conf: string): readonly RenderedLocation[] {
+      return [...conf.matchAll(/^ {4}location ([^\n]+) \{\n([\s\S]*?)\n {4}\}$/gm)].map((m) => ({
+        selector: m[1] ?? '',
+        body: m[2] ?? '',
+      }));
+    }
+
+    function mapBlock(conf: string): string {
+      const start = conf.indexOf(GUEST_MAP_OPEN);
+      expect(start, 'guest map missing').toBeGreaterThanOrEqual(0);
+      return conf.slice(start, conf.indexOf('\n}', start) + 2);
+    }
+
+    function unguardedProxyLocations(
+      conf: string,
+      guestPathPrefixes: readonly string[] = GUEST_PATH_PREFIXES
+    ): readonly string[] {
+      return locationsOf(conf)
+        .filter(({ body }) => body.includes('proxy_pass'))
+        .filter(({ body }) => !body.split('\n').includes(GUEST_GUARD))
+        .filter(({ selector }) => !isGuestPath(selector.replace(/^= /, ''), guestPathPrefixes))
+        .filter(({ selector }) => !PUBLIC_PROXY_LOCATIONS.some((allowed) => allowed.test(selector)))
+        .map(({ selector }) => selector);
+    }
+
+    function guardedSelectors(conf: string): readonly string[] {
+      return locationsOf(conf)
+        .filter(({ body }) => body.split('\n').includes(GUEST_GUARD))
+        .map(({ selector }) => selector);
+    }
+
+    function fullRegistry(): DiscoveryTransport {
+      return makeTransport(
+        PILLARS.map((id) => ({
+          pillarId: id,
+          baseUrl: `http://${PILLAR_UPSTREAMS[id].host}:${PILLAR_UPSTREAMS[id].port}`,
+        }))
+      );
+    }
+
+    describe('with POPS_OPERATOR_EMAILS unset', () => {
+      it.each([
+        ['absent', undefined],
+        ['empty', ''],
+        ['blank', '  '],
+        ['only separators', ' , ,'],
+      ])('classifies nobody as a guest when the list is %s', (_label, raw) => {
+        expect(mapBlock(renderGuestMap(raw))).toBe(`${GUEST_MAP_OPEN}\n    default 0;\n}`);
+      });
+
+      it('is what the committed conf and the default static render carry', async () => {
+        const inert = `${GUEST_MAP_OPEN}\n    default 0;\n}`;
+        expect(mapBlock(renderNginxConf())).toBe(inert);
+        expect(mapBlock(await readFile(COMMITTED_CONF_PATH, 'utf8'))).toBe(inert);
+      });
+
+      it('is what the dynamic render carries, with no value mapped to 1', async () => {
+        const rendered = await renderNginxConfDynamic('http://registry-api:3001', fullRegistry());
+        expect(mapBlock(rendered)).toBe(`${GUEST_MAP_OPEN}\n    default 0;\n}`);
+        expect(rendered).not.toMatch(/^\s+\S+ 1;$/m);
+      });
+
+      it('reads no operator list from an environment without the variable', () => {
+        expect(guestGateFromEnv({})).toEqual({});
+        expect(renderNginxConf(PILLAR_RENDER_ORDER, guestGateFromEnv({}))).toBe(renderNginxConf());
+      });
+    });
+
+    describe('with POPS_OPERATOR_EMAILS set', () => {
+      it('treats an identified non-operator as a guest and a headerless request as the operator', () => {
+        expect(mapBlock(renderGuestMap('owner@example.com,second@example.org'))).toBe(
+          [
+            GUEST_MAP_OPEN,
+            '    default 1;',
+            '    "" 0;',
+            '    "owner@example.com" 0;',
+            '    "second@example.org" 0;',
+            '}',
+          ].join('\n')
+        );
+      });
+
+      it('trims, lower-cases and de-duplicates entries (a repeated map key stops nginx loading)', () => {
+        const parsed = parseOperatorEmails(
+          ' Owner@Example.com ,owner@example.com,, OWNER@EXAMPLE.COM'
+        );
+        expect(parsed).toEqual({ enforced: true, emails: ['owner@example.com'], rejected: [] });
+      });
+
+      it.each([
+        'owner@example.com" 0; } server { listen 81; } map $a $b { "x',
+        'owner@example.com;',
+        'owner@example.com 0',
+        '~.*',
+        'default',
+        'owner@localhost',
+        "o'brien@example.com",
+        'owner@example.com\n"guest@example.com" 0;',
+      ])('drops the malformed entry %j instead of writing it into the conf', (entry) => {
+        const parsed = parseOperatorEmails(`owner@example.com,${entry}`);
+        expect(parsed.emails).toEqual(['owner@example.com']);
+        expect(parsed.rejected).toHaveLength(1);
+        expect(mapBlock(renderGuestMap(`owner@example.com,${entry}`))).toBe(
+          [GUEST_MAP_OPEN, '    default 1;', '    "" 0;', '    "owner@example.com" 0;', '}'].join(
+            '\n'
+          )
+        );
+      });
+
+      it('still enforces when every entry is malformed, so a typo cannot open the gate', () => {
+        expect(parseOperatorEmails('not-an-email')).toEqual({
+          enforced: true,
+          emails: [],
+          rejected: ['not-an-email'],
+        });
+        expect(mapBlock(renderGuestMap('not-an-email'))).toBe(
+          [GUEST_MAP_OPEN, '    default 1;', '    "" 0;', '}'].join('\n')
+        );
+      });
+
+      it('warns with a count, never the entries, when some are dropped', () => {
+        expect(rejectedOperatorEmailsWarning({ operatorEmails: 'owner@example.com' })).toBe('');
+        expect(rejectedOperatorEmailsWarning({})).toBe('');
+        const one = rejectedOperatorEmailsWarning({ operatorEmails: 'owner@example.com,oops' });
+        expect(one).toBe(
+          'generate-nginx-conf: ignoring 1 POPS_OPERATOR_EMAILS entry that is not a plain email address\n'
+        );
+        expect(rejectedOperatorEmailsWarning({ operatorEmails: 'oops,again' })).toContain(
+          'ignoring 2 POPS_OPERATOR_EMAILS entries that are'
+        );
+      });
+
+      it('reads the list from the environment', () => {
+        expect(guestGateFromEnv({ POPS_OPERATOR_EMAILS: OPERATORS })).toEqual({
+          operatorEmails: OPERATORS,
+        });
+      });
+
+      it('changes only the map: every location is rendered the same with or without a list', () => {
+        const withList = renderNginxConf(PILLAR_RENDER_ORDER, { operatorEmails: OPERATORS });
+        const without = renderNginxConf();
+        expect(withList).not.toBe(without);
+        expect(withList.replace(mapBlock(withList), '')).toBe(
+          without.replace(mapBlock(without), '')
+        );
+      });
+    });
+
+    describe('guarded locations', () => {
+      it('leaves no backend-proxying location unguarded in the static render', () => {
+        expect(unguardedProxyLocations(renderNginxConf())).toEqual([]);
+      });
+
+      it('leaves none unguarded in the dynamic render, including an externally registered pillar', async () => {
+        const rendered = await renderNginxConfDynamic(
+          'http://registry-api:3001',
+          makeTransport([{ pillarId: 'external-drop', baseUrl: 'http://external-drop:4100' }]),
+          { operatorEmails: OPERATORS }
+        );
+        expect(unguardedProxyLocations(rendered)).toEqual([]);
+        expect(guardedSelectors(rendered)).toContain('/external-drop-api/');
+      });
+
+      it('leaves none unguarded in the empty-registry render', () => {
+        expect(unguardedProxyLocations(renderNginxConfFromUpstreams([]))).toEqual([]);
+      });
+
+      it('fails for a proxying location that carries no guard', () => {
+        const unguarded = renderNginxConf().replace(
+          `        set $contacts_api_upstream http://contacts-api:3010;\n${GUEST_GUARD}\n`,
+          '        set $contacts_api_upstream http://contacts-api:3010;\n'
+        );
+        expect(unguardedProxyLocations(unguarded)).toEqual(['/contacts-api/']);
+      });
+
+      it('guards exactly the pillar APIs outside the guest prefixes and the fixed private routes', () => {
+        const gatedPillars = PILLAR_RENDER_ORDER.filter((id) => !isGuestPath(`/${id}-api/`));
+        expect([...guardedSelectors(renderNginxConf())].toSorted()).toEqual(
+          [
+            ...gatedPillars.map((id) => `/${id}-api/`),
+            `= ${EGO_STREAM_LOCATION}`,
+            '/orchestrator-api/',
+            '~ ^/(api/inventory|inventory/documents)/',
+            '/media/images/',
+          ].toSorted()
+        );
+      });
+
+      it('leaves the finance and registry APIs open to guests', () => {
+        expect(GUEST_PATH_PREFIXES).toEqual(['/finance-api/', '/registry-api/']);
+        const guarded = guardedSelectors(renderNginxConf());
+        expect(guarded).not.toContain('/finance-api/');
+        expect(guarded).not.toContain('/registry-api/');
+      });
+
+      it('emits the same guards in both render modes', async () => {
+        const gate = { operatorEmails: OPERATORS };
+        const dynamic = await renderNginxConfDynamic(
+          'http://registry-api:3001',
+          fullRegistry(),
+          gate
+        );
+        const staticRender = renderNginxConf(PILLAR_RENDER_ORDER, gate);
+        expect(guardedSelectors(dynamic)).toEqual(guardedSelectors(staticRender));
+        expect(dynamic).toBe(staticRender);
+      });
+
+      it('places the guard after `set` and before the prefix-stripping rewrite and proxy_pass', () => {
+        for (const { selector, body } of locationsOf(renderNginxConf())) {
+          const lines = body.split('\n');
+          const guardIdx = lines.indexOf(GUEST_GUARD);
+          if (guardIdx === -1) continue;
+          const setIdx = lines.findIndex((line) => line.trimStart().startsWith('set $'));
+          const breakIdx = lines.findIndex((line) => / break;$/.test(line));
+          const proxyIdx = lines.findIndex((line) => line.trimStart().startsWith('proxy_pass '));
+          expect(setIdx, `${selector}: set`).toBeGreaterThanOrEqual(0);
+          expect(guardIdx, `${selector}: guard after set`).toBeGreaterThan(setIdx);
+          expect(guardIdx, `${selector}: guard before proxy_pass`).toBeLessThan(proxyIdx);
+          if (breakIdx !== -1) {
+            expect(guardIdx, `${selector}: guard before rewrite break`).toBeLessThan(breakIdx);
+          }
+        }
+      });
+    });
+
+    describe('guest path prefixes', () => {
+      const bfm: PillarUpstream = { pillarId: 'bfm', host: 'bfm-api', port: 3014 };
+
+      it('renders a prefix narrower than a pillar as its own unguarded block ahead of the guarded pillar block', () => {
+        const prefixes = [...GUEST_PATH_PREFIXES, '/bfm-api/guest/'];
+        expect(renderPillarRestBlockFromUpstream(bfm, prefixes)).toBe(
+          [
+            '    location /bfm-api/guest/ {',
+            '        set $bfm_api_upstream http://bfm-api:3014;',
+            '        rewrite ^/bfm-api/(.*)$ /$1 break;',
+            '        proxy_pass $bfm_api_upstream;',
+            '        include /etc/nginx/snippets/_pillar-proxy.conf;',
+            '    }',
+            '',
+            '    location /bfm-api/ {',
+            '        set $bfm_api_upstream http://bfm-api:3014;',
+            GUEST_GUARD,
+            '        rewrite ^/bfm-api/(.*)$ /$1 break;',
+            '        proxy_pass $bfm_api_upstream;',
+            '        include /etc/nginx/snippets/_pillar-proxy.conf;',
+            '    }',
+          ].join('\n')
+        );
+      });
+
+      it('carries a narrower prefix through the full render without leaving anything unguarded', () => {
+        const prefixes = [...GUEST_PATH_PREFIXES, '/bfm-api/guest/'];
+        const rendered = renderNginxConf(PILLAR_RENDER_ORDER, { guestPathPrefixes: prefixes });
+        expect(rendered.indexOf('location /bfm-api/guest/ {')).toBeGreaterThanOrEqual(0);
+        expect(rendered.indexOf('location /bfm-api/guest/ {')).toBeLessThan(
+          rendered.indexOf('location /bfm-api/ {')
+        );
+        expect(guardedSelectors(rendered)).toContain('/bfm-api/');
+        expect(guardedSelectors(rendered)).not.toContain('/bfm-api/guest/');
+        expect(unguardedProxyLocations(rendered, prefixes)).toEqual([]);
+        expect(rendered.match(/location \/bfm-api\/guest\/ \{/g)).toHaveLength(1);
+      });
+
+      it('renders no extra block for a prefix inside a pillar that is already wholly open', () => {
+        const finance: PillarUpstream = { pillarId: 'finance', host: 'finance-api', port: 3004 };
+        const rendered = renderPillarRestBlockFromUpstream(finance, [
+          '/finance-api/',
+          '/finance-api/accounts/',
+        ]);
+        expect(rendered.match(/location /g)).toHaveLength(1);
+        expect(rendered).not.toContain(GUEST_GUARD);
+      });
+
+      it('does not open a pillar whose id merely starts with a guest pillar id', () => {
+        const lookalike: PillarUpstream = { pillarId: 'finance-archive', host: 'fa', port: 4200 };
+        expect(renderPillarRestBlockFromUpstream(lookalike)).toContain(GUEST_GUARD);
+      });
+
+      it('guards the Cerebrum stream unless a guest prefix covers it', () => {
+        const cerebrum: PillarUpstream = { pillarId: 'cerebrum', host: 'cerebrum-api', port: 3007 };
+        const stream = (prefixes: readonly string[]): string =>
+          renderPillarRestBlockFromUpstream(cerebrum, prefixes).split('\n\n')[0] ?? '';
+        expect(stream(GUEST_PATH_PREFIXES)).toContain(GUEST_GUARD);
+        expect(stream(['/cerebrum-api/ego/'])).not.toContain(GUEST_GUARD);
+      });
+
+      it.each(['/bfm-api/guest', 'bfm-api/guest/', '/bfm/guest/', '/bfm-api/guest/ {', '/'])(
+        'rejects the malformed prefix %j',
+        (prefix) => {
+          expect(() => renderPillarRestBlockFromUpstream(bfm, [prefix])).toThrow(
+            /guest path prefix/
+          );
+        }
+      );
+    });
+
+    describe('refusal', () => {
+      const rendered = renderNginxConf();
+      const forbidden = locationsOf(rendered).filter(
+        ({ selector }) => selector === `= ${GUEST_FORBIDDEN_LOCATION}`
+      );
+
+      it('answers 403 with the ADR-054 envelope and a gateway code, as JSON', () => {
+        expect(forbidden).toHaveLength(1);
+        const body = forbidden[0]?.body ?? '';
+        expect(body).toContain('default_type application/json;');
+        const payload = body.match(/return 403 '(.*)';/)?.[1];
+        expect(payload).toBeDefined();
+        const envelope: unknown = JSON.parse(payload!.replace('$pops_request_id', 'req-1'));
+        expect(envelope).toEqual({
+          code: 'gateway.guest_forbidden',
+          message: 'This account cannot access this resource.',
+          requestId: 'req-1',
+          retryable: false,
+        });
+      });
+
+      it('is internal, so a client cannot request the refusal location directly', () => {
+        expect(forbidden[0]?.body.split('\n')).toContain('        internal;');
+      });
+
+      it('is where every guard sends a guest', () => {
+        expect(GUEST_GUARD).toBe(
+          `        if ($pops_guest) { rewrite ^ ${GUEST_FORBIDDEN_LOCATION} last; }`
+        );
+      });
+
+      it('is present in the empty-registry render too', () => {
+        expect(renderNginxConfFromUpstreams([])).toContain(
+          `location = ${GUEST_FORBIDDEN_LOCATION} {`
+        );
+      });
     });
   });
 

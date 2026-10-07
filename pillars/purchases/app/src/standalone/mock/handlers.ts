@@ -192,6 +192,9 @@ export const handlers: MockHandlers = {
   'POST /purchases/manual': ok(ORDER),
   'GET /receipts/{sha256}': ok(RECEIPT_IMAGE),
   'GET /receipts/{sha256}/thumbnail': ok(RECEIPT_IMAGE),
+  'POST /receipts/store': ok({ receiptUris: [`pops://purchases/receipt/${RECEIPT_SHA256}`] }),
+  'PUT /receipts/references': acknowledged,
+  'DELETE /receipts/references': acknowledged,
 
   // ── Sources ──────────────────────────────────────────────────────────────
   'GET /sources': ok({ items: [] }),
