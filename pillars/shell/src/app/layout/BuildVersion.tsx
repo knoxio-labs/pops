@@ -19,7 +19,7 @@ export function BuildVersion() {
   const [apiVersion, setApiVersion] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('/health')
+    fetch('/registry-api/health')
       .then((r) => r.json())
       .then((data: { version?: string }) => {
         if (data.version) setApiVersion(data.version);

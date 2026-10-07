@@ -1,6 +1,28 @@
-import { describe, expect, it } from 'vitest';
+import { render, waitFor } from '@testing-library/react';
+import { createElement } from 'react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { shortVersion } from './BuildVersion';
+import { BuildVersion, shortVersion } from './BuildVersion';
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+describe('BuildVersion', () => {
+  it('reads the registry version through its namespaced API route', async () => {
+    const fetchStub = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ version: 'a0123456789' }), {
+        headers: { 'content-type': 'application/json' },
+      })
+    );
+    vi.stubGlobal('fetch', fetchStub);
+
+    const { container } = render(createElement(BuildVersion));
+
+    await waitFor(() => expect(fetchStub).toHaveBeenCalledWith('/registry-api/health'));
+    await waitFor(() => expect(container.textContent).toContain('a0123456'));
+  });
+});
 
 describe('shortVersion', () => {
   // The topbar showed two full 40-char SHAs side by side and exploded the

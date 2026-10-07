@@ -566,8 +566,8 @@ describe('dataMountsForDockerfile — YAML `#` is only a comment outside quotes'
 });
 
 describe('resolveHealthPath', () => {
-  it('probes / for nginx-served images', () => {
-    expect(resolveHealthPath('nginx:1.31.3-alpine')).toBe('/');
+  it('probes /healthz for nginx-served images', () => {
+    expect(resolveHealthPath('nginx:1.31.3-alpine')).toBe('/healthz');
   });
 
   it('probes /health for application images', () => {
@@ -1340,7 +1340,7 @@ describe('planSmoke / freshnessProbePaths with declared routes', () => {
 
   it('leaves an image that declares nothing on the defaults', () => {
     const plain = 'FROM nginx:1.31.3-alpine\nEXPOSE 80';
-    expect(planSmoke(plain).healthPath).toBe('/');
+    expect(planSmoke(plain).healthPath).toBe('/healthz');
     expect(freshnessProbePaths('nginx:1.31.3-alpine', plain)).toEqual([
       '/',
       '/deep/link/smoke-probe',

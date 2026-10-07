@@ -51,6 +51,9 @@ FROM nginx:1.31.6-alpine
 # package so `apk add` stays reproducible across rebuilds of the same base.
 RUN apk add --no-cache nodejs
 
+ENV POPS_NGINX_HEALTH_HOST=127.0.0.1 \
+    POPS_NGINX_HEALTH_PORT=9090
+
 COPY --from=builder /app/pillars/shell/dist /usr/share/nginx/html
 
 # The committed static conf is the BOOT FALLBACK (PRD-255 US-02): the

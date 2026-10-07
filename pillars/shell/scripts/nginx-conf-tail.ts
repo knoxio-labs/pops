@@ -53,12 +53,14 @@ ${GUEST_GUARD}
         proxy_send_timeout 30s;
     }
 
-    # Proxy health check — served by the registry pillar (formerly core).
-    # Variable-form so the shell still boots when registry-api is absent (the
-    # request URI flows through unchanged, hitting registry-api's /health).
-    location /health {
-        set $health_upstream http://registry-api:3001;
-        proxy_pass $health_upstream;
+    # This health route reads the registry watcher's state in this same
+    # container. It remains available when registry-api is unreachable.
+    location = /healthz {
+        set $shell_health_upstream http://127.0.0.1:9090;
+        proxy_pass $shell_health_upstream/health;
+        proxy_connect_timeout 1s;
+        proxy_read_timeout 2s;
+        proxy_send_timeout 2s;
     }
 
     # Registry pillar snapshot (ADR-026 phase 3 PR 4). The shell's

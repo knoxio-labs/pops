@@ -350,9 +350,16 @@ describe('generate-nginx-conf', () => {
       expect(rendered).toContain('location ~ ^/pillars/health/?$ {');
     });
 
-    it('keeps /media/images/, /health, /docs/, /design/, and the SPA fallback', () => {
+    it('serves shell health locally and keeps registry health on its namespaced route', () => {
+      expect(rendered).toContain('location = /healthz {');
+      expect(rendered).toContain('set $shell_health_upstream http://127.0.0.1:9090;');
+      expect(rendered).toContain('proxy_pass $shell_health_upstream/health;');
+      expect(rendered).not.toContain('location /health {');
+      expect(rendered).toContain('location /registry-api/ {');
+    });
+
+    it('keeps /media/images/, /docs/, /design/, and the SPA fallback', () => {
       expect(rendered).toContain('location /media/images/ {');
-      expect(rendered).toContain('location /health {');
       expect(rendered).toContain('location /docs/ {');
       expect(rendered).toContain('location /design/ {');
       expect(rendered).toMatch(/location \/ \{[\s\S]*?try_files \$uri \$uri\/ \/index\.html;/);
@@ -541,7 +548,7 @@ describe('generate-nginx-conf', () => {
      */
     const PUBLIC_PROXY_LOCATIONS: readonly RegExp[] = [
       /^\/webhooks\/up$/,
-      /^\/health$/,
+      /^= \/healthz$/,
       /^~ \^\/pillars\/\?\$$/,
       /^~ \^\/pillars\/health\/\?\$$/,
       /^~ \^\/registry\/subscribe\/\?\$$/,
