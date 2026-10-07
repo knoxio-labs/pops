@@ -60,6 +60,7 @@ describe('@pops/registry REST openapi projection', () => {
     ['PUT', '/features/{key}/enabled', 'features.setEnabled'],
     ['PUT', '/features/{key}/preference', 'features.setUserPreference'],
     ['DELETE', '/features/{key}/preference', 'features.clearUserPreference'],
+    ['GET', '/session', 'session.get'],
   ])('describes the %s %s endpoint with operationId %s', (method, path, operationId) => {
     const op = openapi.paths[path]?.[method.toLowerCase()];
     expect(op, `${method} ${path} should be documented`).toBeDefined();
@@ -77,6 +78,7 @@ describe('@pops/registry REST openapi projection', () => {
       '/shell',
       '/settings',
       '/service-accounts',
+      '/session',
       '/features',
     ];
     const paths = Object.keys(openapi.paths);

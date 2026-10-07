@@ -51,13 +51,15 @@ export const ERR_RESPONSES = {
 
 /**
  * Error responses for identity-gated routes. Adds `401` (unauthenticated, or a
- * principal the route refuses — the `userOnly` / `protected` gates) on top of
- * the common `400/404/409` set. Kept separate from {@link ERR_RESPONSES} so
- * routes that cannot return `401` keep an honest OpenAPI projection.
+ * machine principal the route refuses — the `userOnly` / `protected` gates)
+ * and `403` (a guest, on a route only the operator may use) on top of the
+ * common `400/404/409` set. Kept separate from {@link ERR_RESPONSES} so
+ * routes that cannot return either keep an honest OpenAPI projection.
  */
 export const AUTH_ERR_RESPONSES = {
   400: ErrorBodySchema,
   401: ErrorBodySchema,
+  403: ErrorBodySchema,
   404: ErrorBodySchema,
   409: ErrorBodySchema,
 } as const;

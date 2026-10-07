@@ -11,6 +11,7 @@ import { coreContract } from '../../contract/rest.js';
 import { type OpenedCoreDb } from '../../db/index.js';
 import { makeFeaturesHandlers } from './features-handlers.js';
 import { makeServiceAccountsHandlers } from './service-accounts-handlers.js';
+import { makeSessionHandlers } from './session-handlers.js';
 import { makeSettingsHandlers } from './settings-handlers.js';
 import { makeShellHandlers } from './shell-handlers.js';
 import { makeUsersHandlers } from './users-handlers.js';
@@ -24,6 +25,7 @@ export function makeCoreRestHandlers(deps: {
   return server.router(coreContract, {
     features: makeFeaturesHandlers(db),
     serviceAccounts: makeServiceAccountsHandlers(db),
+    session: makeSessionHandlers(),
     settings: makeSettingsHandlers(db),
     shell: makeShellHandlers(),
     users: makeUsersHandlers(db),
