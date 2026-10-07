@@ -204,7 +204,9 @@ describe('applying the rest of the journal to a populated purchases database', (
     expect(added.toSorted()).toEqual(
       [
         'idx_purchase_item_shared_tags_tag',
+        'idx_pending_receipt_captures_expires_at',
         'idx_receipt_external_references_owner',
+        'pending_receipt_captures',
         'purchase_item_shared_tags',
         'receipt_external_references',
         'shared_tag_cache',

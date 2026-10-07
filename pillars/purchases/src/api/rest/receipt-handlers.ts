@@ -18,9 +18,11 @@
  * `upload`, `extract` and `store` share the decode/store pipeline in
  * `receipt-prepare.ts` and nothing else with this file.
  */
-import { firstPhotoCapture, resolveCapture } from '../../ingest/receipt/capture.js';
+import { deletePendingReceiptCapture } from '../../db/services/pending-receipt-captures.js';
+import { firstPhotoCapture } from '../../ingest/receipt/capture.js';
 import { receiptToPurchase } from '../../ingest/receipt/purchase.js';
 import { causeOf, isNoReading, readReceipt } from '../../ingest/receipt/read-receipt.js';
+import { receiptKey } from '../../ingest/receipt/store.js';
 import {
   createMerchantResolver,
   nameMerchant,
@@ -28,6 +30,7 @@ import {
 } from '../contacts/merchant.js';
 import { purchaseErrorBody } from '../errors.js';
 import { makeReceiptBytesHandlers } from './receipt-bytes-handlers.js';
+import { resolveReceiptCaptureState, retainReceiptCaptureState } from './receipt-capture-state.js';
 import { makeReceiptDraftHandlers } from './receipt-draft-handlers.js';
 import { persistReceiptPurchase, sameShopAlreadyRecorded } from './receipt-persist.js';
 import {
@@ -81,10 +84,18 @@ export function makeReceiptHandlers(
         };
       }
       const { parts, goodParts, stored } = prepared;
+      const contentKey = receiptKey(stored);
+      const photoCapture = firstPhotoCapture(goodParts);
 
       const outcome = await readReceipt(vision, parts);
 
       if (isNoReading(outcome)) {
+        const captureState = resolveReceiptCaptureState(db, contentKey, {
+          clientCapture: body.capture,
+          photo: photoCapture,
+          modelTimeZone: null,
+        });
+        retainReceiptCaptureState(db, contentKey, captureState);
         return ok({
           kind: 'unreadable',
           receiptUris: receiptUris(stored),
@@ -94,6 +105,12 @@ export function makeReceiptHandlers(
       }
 
       if (outcome.kind === 'needs-review') {
+        const captureState = resolveReceiptCaptureState(db, contentKey, {
+          clientCapture: body.capture,
+          photo: photoCapture,
+          modelTimeZone: outcome.extracted.timeZone,
+        });
+        retainReceiptCaptureState(db, contentKey, captureState);
         return ok({
           kind: 'needs-review',
           receiptUris: receiptUris(stored),
@@ -104,11 +121,11 @@ export function makeReceiptHandlers(
 
       // Ranked against the zone the model read off the printed address, so
       // it is resolved after the reading (`ingest/receipt/capture.ts`).
-      const capture = resolveCapture(
-        body.capture,
-        firstPhotoCapture(goodParts),
-        outcome.extracted.timeZone
-      );
+      const { capture } = resolveReceiptCaptureState(db, contentKey, {
+        clientCapture: body.capture,
+        photo: photoCapture,
+        modelTimeZone: outcome.extracted.timeZone,
+      });
 
       // Always maps: a receipt with no readable date is dated from the
       // capture instant or, failing that, its upload, and tagged rather
@@ -141,6 +158,7 @@ export function makeReceiptHandlers(
       const written = persistReceiptPurchase(db, { ...shaped.purchase, merchantEntityId });
       if (written.kind === 'refused') return { status: written.status, body: written.body };
 
+      deletePendingReceiptCapture(db, contentKey);
       fireIngest(onIngest);
       return ok({
         kind: 'created',

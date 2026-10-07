@@ -13,6 +13,7 @@
 import { existsSync, readdirSync, statSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { pruneExpiredReceiptCaptures } from '../../db/services/pending-receipt-captures.js';
 import { isReceiptReferenced } from '../../db/services/receipt-references.js';
 import { isReceiptSha256, resolveReceiptStoreRoot } from './store.js';
 
@@ -77,6 +78,7 @@ export function sweepUnreferencedReceipts(
   const now = (options.now ?? ((): Date => new Date()))();
 
   const counts = { scanned: 0, deleted: 0, kept: 0, malformed: 0 };
+  pruneExpiredReceiptCaptures(db, now);
   if (!existsSync(root)) return counts;
 
   for (const shard of readdirSync(root)) {

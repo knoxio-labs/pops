@@ -56,6 +56,7 @@ import type {
   purchaseItemTags as purchaseItemTagsTable,
   purchaseItemUnits as purchaseItemUnitsTable,
 } from './schema/items.js';
+import type { pendingReceiptCaptures as pendingReceiptCapturesTable } from './schema/pending-receipt-captures.js';
 import type {
   purchaseProductAliases as purchaseProductAliasesTable,
   purchaseProducts as purchaseProductsTable,
@@ -92,6 +93,7 @@ export { purchaseItemSharedTags, sharedTagCache } from './schema/shared-tags.js'
 export { purchaseProductAliases, purchaseProducts } from './schema/products.js';
 export { purchases, purchaseShipments, purchaseTags } from './schema/purchases.js';
 export { receiptExternalReferences } from './schema/receipt-external-references.js';
+export { pendingReceiptCaptures } from './schema/pending-receipt-captures.js';
 export { purchaseMatchRules } from './schema/rules.js';
 export { purchaseSources } from './schema/sources.js';
 
@@ -136,3 +138,5 @@ export type ReceiptExternalReferenceRow = InferSelectModel<typeof receiptExterna
 export type ReceiptExternalReferenceInsert = InferInsertModel<
   typeof receiptExternalReferencesTable
 >;
+export type PendingReceiptCaptureRow = InferSelectModel<typeof pendingReceiptCapturesTable>;
+export type PendingReceiptCaptureInsert = InferInsertModel<typeof pendingReceiptCapturesTable>;
