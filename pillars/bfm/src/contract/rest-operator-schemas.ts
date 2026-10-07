@@ -61,6 +61,11 @@ export const DeviceSchema = z.object({
   lastSeenAt: z.iso.datetime(),
   /** Null while trusted; the instant the operator cut it off otherwise. */
   revokedAt: z.iso.datetime().nullable(),
+  /**
+   * The guest this device was paired for, or null for the operator's own.
+   * Fixed at pairing; no route changes it.
+   */
+  subjectEmail: z.string().nullable(),
 });
 
 export type Device = z.infer<typeof DeviceSchema>;

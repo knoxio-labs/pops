@@ -4,6 +4,8 @@
   "devices.loading": "Carregando dispositivos pareados…",
   "devices.column.name": "Nome",
   "devices.column.model": "Modelo",
+  "devices.column.owner": "Dono",
+  "devices.owner.operator": "Operador",
   "devices.column.paired": "Pareado em",
   "devices.column.lastSeen": "Visto por último",
   "devices.column.state": "Estado",

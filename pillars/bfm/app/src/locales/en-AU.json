@@ -4,6 +4,8 @@
   "devices.loading": "Loading paired devices…",
   "devices.column.name": "Name",
   "devices.column.model": "Model",
+  "devices.column.owner": "Owner",
+  "devices.owner.operator": "Operator",
   "devices.column.paired": "Paired",
   "devices.column.lastSeen": "Last seen",
   "devices.column.state": "State",

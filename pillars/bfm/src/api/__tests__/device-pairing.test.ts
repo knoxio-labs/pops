@@ -11,14 +11,24 @@
  * partial write. That is `auth/__tests__/pairing-exchange.test.ts`, which can
  * induce a database error mid-transaction; this file cannot.
  */
-import { generateKeyPairSync } from 'node:crypto';
+import { generateKeyPairSync, sign } from 'node:crypto';
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import {
+  DEFAULT_DEVICE_CAPABILITIES,
+  GUEST_DEVICE_CAPABILITIES,
+  parseDeviceCapabilities,
+  readRouteCapability,
+} from '../../contract/capabilities.js';
 import {
   DeviceInvalidRequestErrorSchema,
   PairedDeviceSchema,
+  RefreshChallengeSchema,
+  RefreshedSessionSchema,
 } from '../../contract/rest-device-schemas.js';
+import { DeviceListSchema } from '../../contract/rest-operator-schemas.js';
+import { bfmContract } from '../../contract/rest.js';
 import { spkiPublicKeyBase64 } from '../../db/__tests__/helpers.js';
 import {
   DEFAULT_REFRESH_TOKEN_TTL_MS,
@@ -31,8 +41,17 @@ import {
   pairingCodes,
   refreshTokens,
 } from '../../db/index.js';
-import { PAIRING_PATH } from '../app.js';
+import { CHALLENGE_PATH, PAIRING_PATH, REFRESH_PATH } from '../app.js';
 import { verifyAccessToken } from '../auth/access-token.js';
+import { refreshSignatureMessage } from '../auth/refresh-exchange.js';
+import {
+  collectContractRoutes,
+  isMobilePath,
+  UNCONTRACTED_MOBILE_ROUTES,
+} from '../auth/require-capability.js';
+import { createMobileFinanceClient } from '../finance/client.js';
+import { createPillarGateway } from '../pillars/gateway.js';
+import { createFinanceFake, financeRow } from './finance-fake.js';
 import { createTestApp, PRODUCTION_ENV_WITHOUT_ACCESS, type TestApp } from './harness.js';
 import { requestOn } from './test-http.js';
 
@@ -51,6 +70,7 @@ afterEach(() => {
   while (apps.length > 0) {
     apps.pop()?.cleanup();
   }
+  vi.restoreAllMocks();
 });
 
 interface PairBody {
@@ -537,5 +557,264 @@ describe('the budget', () => {
 
     const mobile = await requestOn(created.app, (r) => r.get('/mobile/anything'));
     expect(mobile.status).toBe(401);
+  });
+});
+
+const GUEST_EMAIL = 'rosane@example.test';
+
+/** Pair through the real route with a code minted for {@link GUEST_EMAIL}. */
+async function pairGuest(app: TestApp, body: object = {}) {
+  const { code } = issuePairingCode(app.db, { subjectEmail: GUEST_EMAIL });
+  const { privateKey, publicKey } = generateKeyPairSync('ec', { namedCurve: 'prime256v1' });
+
+  const res = await pair(app, {
+    ...pairBody({
+      code,
+      publicKey: publicKey.export({ type: 'spki', format: 'der' }).toString('base64'),
+      deviceName: 'Guest iPhone',
+    }),
+    ...body,
+  });
+
+  return { res, privateKey };
+}
+
+interface GatedRoute {
+  readonly method: string;
+  readonly path: string;
+  readonly capability: string;
+}
+
+/** Every `/mobile` route the gate knows, with a placeholder in each path parameter. */
+function gatedMobileRoutes(): GatedRoute[] {
+  const contracted = collectContractRoutes(bfmContract)
+    .filter((route) => isMobilePath(route.path))
+    .map((route) => {
+      const capability = readRouteCapability(route.metadata);
+      if (capability === null) throw new Error(`${route.path} declares no capability`);
+      return { method: route.method, path: route.path, capability };
+    });
+
+  return [...contracted, ...UNCONTRACTED_MOBILE_ROUTES].map((route) => ({
+    method: route.method.toUpperCase(),
+    path: route.path.replaceAll(/:[^/]+/gu, 'placeholder'),
+    capability: route.capability,
+  }));
+}
+
+function send(app: TestApp, route: GatedRoute, accessToken: string) {
+  return requestOn(app.app, (r) => {
+    const authorization = `Bearer ${accessToken}`;
+    if (route.method === 'GET') return r.get(route.path).set('Authorization', authorization);
+    if (route.method === 'POST') return r.post(route.path).set('Authorization', authorization);
+    if (route.method === 'PUT') return r.put(route.path).set('Authorization', authorization);
+    if (route.method === 'PATCH') return r.patch(route.path).set('Authorization', authorization);
+    if (route.method === 'DELETE') return r.delete(route.path).set('Authorization', authorization);
+    throw new Error(`no request builder for ${route.method}`);
+  });
+}
+
+describe('a code minted for a guest', () => {
+  it('pairs a device bound to that guest with the explicit guest grant', async () => {
+    const created = open();
+
+    const { res } = await pairGuest(created);
+
+    expect(res.status).toBe(201);
+    const [device] = deviceRows(created);
+    if (device === undefined) throw new Error('expected a device row');
+    expect(device.id).toBe(res.body.deviceId);
+    expect(device.subjectEmail).toBe(GUEST_EMAIL);
+    expect(device.capabilityMode).toBe('explicit');
+    expect(parseDeviceCapabilities(device.capabilities, device.id)).toEqual([
+      ...GUEST_DEVICE_CAPABILITIES,
+    ]);
+  });
+
+  it('answers the same body an operator pairing does, with no subject in it', async () => {
+    const created = open();
+
+    const { res } = await pairGuest(created);
+
+    expect(PairedDeviceSchema.safeParse(res.body).success).toBe(true);
+    expect(JSON.stringify(res.body)).not.toContain(GUEST_EMAIL);
+  });
+
+  it('ignores a subject the handset sends: the code decides, not the request', async () => {
+    const created = open();
+
+    const { res } = await pairGuest(created, {
+      subjectEmail: null,
+      capabilityMode: 'tracks-default',
+    });
+
+    // The extra fields are dropped by the body schema. What must not happen
+    // is a device the request talked into being the operator's.
+    expect(res.status).toBe(201);
+    const rows = deviceRows(created);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.subjectEmail).toBe(GUEST_EMAIL);
+    expect(rows[0]?.capabilityMode).toBe('explicit');
+  });
+
+  it('cannot make an operator code pair a guest device by naming a subject in the body', async () => {
+    const created = open();
+    const { code } = issuePairingCode(created.db);
+
+    const res = await pair(created, { ...pairBody({ code }), subjectEmail: GUEST_EMAIL });
+
+    expect(res.status).toBe(201);
+    const rows = deviceRows(created);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.subjectEmail).toBeNull();
+    expect(rows[0]?.capabilityMode).toBe('tracks-default');
+  });
+
+  it('is refused 403 on every mobile route outside the guest grant', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const created = open({
+      mobileRateLimit: { perClientLimit: 1_000, globalLimit: 1_000 },
+      receiptRateLimit: { perClientLimit: 1_000, globalLimit: 1_000 },
+      egoRateLimit: { perClientLimit: 1_000, globalLimit: 1_000 },
+    });
+    const { res } = await pairGuest(created);
+    const accessToken = String(res.body.accessToken);
+
+    const refused = gatedMobileRoutes().filter(
+      (route) => !GUEST_DEVICE_CAPABILITIES.some((granted) => granted === route.capability)
+    );
+
+    // The list is read off the contract, so prove it is not empty and that it
+    // reaches every pillar a guest must stay out of before trusting the loop.
+    for (const pillar of ['purchases', 'inventory', 'contacts', 'barcode', 'ego']) {
+      expect(refused.some((route) => route.path.startsWith(`/mobile/${pillar}/`))).toBe(true);
+    }
+
+    for (const route of refused) {
+      const answered = await send(created, route, accessToken);
+
+      expect([route.method, route.path, answered.status]).toEqual([route.method, route.path, 403]);
+      expect(answered.body).toMatchObject({
+        code: 'capability_not_granted',
+        capability: route.capability,
+      });
+    }
+  });
+
+  it('is let through the gate on a route the guest grant covers', async () => {
+    const fake = createFinanceFake([financeRow({ id: 'txn-1' })]);
+    const created = open({ finance: createMobileFinanceClient(createPillarGateway(fake.factory)) });
+    const { res } = await pairGuest(created);
+
+    const answered = await requestOn(created.app, (r) =>
+      r
+        .get(bfmContract.mobileFinance.listTransactions.path)
+        .set('Authorization', `Bearer ${String(res.body.accessToken)}`)
+    );
+
+    expect(answered.status).toBe(200);
+  });
+
+  it('keeps its subject and its grant across a refresh', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const created = open();
+    const { res, privateKey } = await pairGuest(created);
+    const refreshToken = String(res.body.refreshToken);
+
+    const challenged = await requestOn(created.app, (r) => r.post(CHALLENGE_PATH).send({}));
+    const { nonce } = RefreshChallengeSchema.parse(challenged.body);
+    const signature = sign(
+      'sha256',
+      refreshSignatureMessage(nonce, hashRefreshToken(refreshToken)),
+      {
+        key: privateKey,
+        dsaEncoding: 'der',
+      }
+    ).toString('base64');
+    const refreshed = await requestOn(created.app, (r) =>
+      r.post(REFRESH_PATH).send({ refreshToken, nonce, signature })
+    );
+
+    expect(refreshed.status).toBe(200);
+    const session = RefreshedSessionSchema.parse(refreshed.body);
+    const [device] = deviceRows(created);
+    expect(device?.subjectEmail).toBe(GUEST_EMAIL);
+    expect(device?.capabilityMode).toBe('explicit');
+    expect(parseDeviceCapabilities(device?.capabilities ?? '', 'd')).toEqual([
+      ...GUEST_DEVICE_CAPABILITIES,
+    ]);
+
+    // And the refreshed token is still a guest's: a purchases read is refused.
+    const purchases = await requestOn(created.app, (r) =>
+      r
+        .get(bfmContract.mobilePurchases.listPurchases.path)
+        .set('Authorization', `Bearer ${session.accessToken}`)
+    );
+    expect(purchases.status).toBe(403);
+    expect(purchases.body.code).toBe('capability_not_granted');
+  });
+
+  it('shows up in the operator device list with its subject, and can be revoked', async () => {
+    const created = open();
+    const { res } = await pairGuest(created);
+    const { code } = issuePairingCode(created.db);
+    await pair(created, pairBody({ code }));
+
+    const listed = await requestOn(created.app, (r) => r.get('/operator/devices'));
+
+    expect(listed.status).toBe(200);
+    const bySubject = DeviceListSchema.parse(listed.body).devices.map(
+      (device) => device.subjectEmail
+    );
+    expect(bySubject.toSorted()).toEqual([GUEST_EMAIL, null].toSorted());
+
+    const revoked = await requestOn(created.app, (r) =>
+      r.delete(`/operator/devices/${String(res.body.deviceId)}`)
+    );
+    expect(revoked.status).toBe(200);
+    const after = await requestOn(created.app, (r) =>
+      r
+        .get(bfmContract.mobileFinance.listTransactions.path)
+        .set('Authorization', `Bearer ${String(res.body.accessToken)}`)
+    );
+    expect(after.status).toBe(403);
+    expect(after.body.code).toBe('bfm.auth.device_revoked');
+  });
+});
+
+describe('the operator path, which names no subject', () => {
+  it('still mints a code with no subject and pairs a full operator device from it', async () => {
+    // No operator list and no Access team are configured here, which is what
+    // production runs with today: nothing about a subject may change it.
+    const created = open();
+
+    const issued = await requestOn(created.app, (r) => r.post('/operator/pairing/codes').send({}));
+    expect(issued.status).toBe(201);
+    const [codeRow] = created.db.select().from(pairingCodes).all();
+    expect(codeRow?.subjectEmail).toBeNull();
+
+    const res = await pair(created, pairBody({ code: String(issued.body.code) }));
+
+    expect(res.status).toBe(201);
+    const [device] = deviceRows(created);
+    if (device === undefined) throw new Error('expected a device row');
+    expect(device.subjectEmail).toBeNull();
+    expect(device.capabilityMode).toBe('tracks-default');
+    expect(parseDeviceCapabilities(device.capabilities, device.id)).toEqual([
+      ...DEFAULT_DEVICE_CAPABILITIES,
+    ]);
+  });
+
+  it('cannot be given a subject through the request body', async () => {
+    const created = open();
+
+    const issued = await requestOn(created.app, (r) =>
+      r.post('/operator/pairing/codes').send({ subjectEmail: GUEST_EMAIL })
+    );
+
+    expect(issued.status).toBe(201);
+    const rows = created.db.select().from(pairingCodes).all();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.subjectEmail).toBeNull();
   });
 });

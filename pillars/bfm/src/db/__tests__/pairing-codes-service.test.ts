@@ -18,6 +18,7 @@ import {
   PAIRING_CODE_ALPHABET,
   PAIRING_CODE_LENGTH,
   redeemPairingCode,
+  spendPairingCode,
 } from '../services/pairing-codes.js';
 import { openTempDb, requireRow } from './helpers.js';
 
@@ -279,5 +280,69 @@ describe('redeemPairingCode', () => {
       requireRow(opened.db.select().from(pairingCodes).get(), 'rolled-back code').consumedAt
     ).toBeNull();
     expect(redeemPairingCode(opened.db, issued.code)).toBe(true);
+  });
+});
+
+describe('a code bound to a subject', () => {
+  it('stores no subject unless one is given', () => {
+    issuePairingCode(opened.db);
+
+    expect(
+      requireRow(opened.db.select().from(pairingCodes).get(), 'issued code').subjectEmail
+    ).toBeNull();
+  });
+
+  it('stores the subject normalised, so one person is one subject', () => {
+    issuePairingCode(opened.db, { subjectEmail: '  Rosane@Example.TEST ' });
+
+    expect(
+      requireRow(opened.db.select().from(pairingCodes).get(), 'issued code').subjectEmail
+    ).toBe('rosane@example.test');
+  });
+
+  it.each([
+    ['empty', ''],
+    ['whitespace', '   '],
+  ])('refuses an %s subject rather than minting an operator code', (_label, subjectEmail) => {
+    expect(() => issuePairingCode(opened.db, { subjectEmail })).toThrow(/empty subject/);
+    expect(opened.db.select().from(pairingCodes).all()).toHaveLength(0);
+  });
+
+  it('hands the subject back from the spend that consumed the code', () => {
+    const issued = issuePairingCode(opened.db, { subjectEmail: 'rosane@example.test' });
+
+    expect(spendPairingCode(opened.db, issued.code)).toEqual({
+      subjectEmail: 'rosane@example.test',
+    });
+    expect(
+      requireRow(opened.db.select().from(pairingCodes).get(), 'spent code').consumedAt
+    ).not.toBeNull();
+  });
+
+  it('hands back a null subject for an operator code, which is not a refusal', () => {
+    const issued = issuePairingCode(opened.db);
+
+    expect(spendPairingCode(opened.db, issued.code)).toEqual({ subjectEmail: null });
+  });
+
+  it('hands back nothing for a code already spent, whoever it was for', () => {
+    const issued = issuePairingCode(opened.db, { subjectEmail: 'rosane@example.test' });
+    spendPairingCode(opened.db, issued.code);
+
+    expect(spendPairingCode(opened.db, issued.code)).toBeNull();
+  });
+
+  it('hands back nothing for an expired or unknown code', () => {
+    const issuedAt = new Date('2026-08-08T10:00:00.000Z');
+    const issued = issuePairingCode(opened.db, {
+      ttlMs: 60_000,
+      now: () => issuedAt,
+      subjectEmail: 'rosane@example.test',
+    });
+
+    expect(
+      spendPairingCode(opened.db, issued.code, new Date(issuedAt.getTime() + 60_000))
+    ).toBeNull();
+    expect(spendPairingCode(opened.db, 'not a code')).toBeNull();
   });
 });

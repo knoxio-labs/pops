@@ -49,24 +49,35 @@
  * what makes the other direction true as well: a crash between spending the
  * code and creating the device cannot leave a burned code with no device
  * behind it.
+ *
+ * ## Whose device it is
+ *
+ * The code decides, not the request. A code minted for a guest carries that
+ * guest's email, and the device it buys is bound to the same email with the
+ * fixed guest grant; a code with no subject buys the operator's device, as
+ * every code did before subjects existed. The pairing body has no field that
+ * could say otherwise, so a handset cannot choose who it belongs to.
  */
 import { randomUUID } from 'node:crypto';
 
-import { DEFAULT_DEVICE_CAPABILITIES } from '../../contract/capabilities.js';
+import {
+  DEFAULT_DEVICE_CAPABILITIES,
+  GUEST_DEVICE_CAPABILITIES,
+} from '../../contract/capabilities.js';
 import {
   DEFAULT_REFRESH_TOKEN_TTL_MS,
   generateRefreshToken,
   hashRefreshToken,
   insertDevice,
   insertRefreshToken,
-  redeemPairingCode,
+  spendPairingCode,
 } from '../../db/index.js';
 import { mintAccessToken } from './access-token.js';
 import { DevicePublicKeyError, parseDevicePublicKey } from './device-signature.js';
 
 import type { KeyObject } from 'node:crypto';
 
-import type { BfmDb } from '../../db/index.js';
+import type { BfmDb, InsertDeviceValues } from '../../db/index.js';
 
 export interface PairingExchangeInput {
   /** As presented — grouped or not, any case. `normalizePairingCode` folds it. */
@@ -109,6 +120,27 @@ export type PairingExchangeResult =
     }
   | { outcome: 'invalid-key' }
   | { outcome: 'rejected' };
+
+/**
+ * The grant a new device is written with, decided by who it belongs to.
+ *
+ * The operator's device gets the full default set, written explicitly rather
+ * than left to the column's default, which is the empty grant (ADR-048). It
+ * is recorded as tracking that set rather than as a copy of it, so the device
+ * is not frozen at the vocabulary of the day it paired (POPS-2928).
+ *
+ * A guest's device gets the fixed guest set as an `explicit` grant, which the
+ * resolver reads verbatim. That is what keeps a capability added to the
+ * vocabulary later from reaching it.
+ */
+function deviceGrantFor(
+  subjectEmail: string | null
+): Pick<InsertDeviceValues, 'capabilities' | 'capabilityMode'> {
+  if (subjectEmail === null) {
+    return { capabilities: DEFAULT_DEVICE_CAPABILITIES, capabilityMode: 'tracks-default' };
+  }
+  return { capabilities: GUEST_DEVICE_CAPABILITIES, capabilityMode: 'explicit' };
+}
 
 export function completePairingExchange(
   input: PairingExchangeInput,
@@ -157,7 +189,8 @@ export function completePairingExchange(
   const access = mintAccessToken(deviceId, accessTokenSigningKey);
 
   return db.transaction((tx): PairingExchangeResult => {
-    if (!redeemPairingCode(tx, input.code, at)) return { outcome: 'rejected' };
+    const spent = spendPairingCode(tx, input.code, at);
+    if (spent === null) return { outcome: 'rejected' };
 
     insertDevice(tx, {
       id: deviceId,
@@ -165,15 +198,8 @@ export function completePairingExchange(
       model: input.deviceModel,
       publicKeyDer,
       createdAt,
-      // The full vocabulary, written explicitly rather than left to the
-      // column's default — which is the empty grant, so a row that reached
-      // the table without anyone deciding may do nothing (ADR-048).
-      capabilities: DEFAULT_DEVICE_CAPABILITIES,
-      // ...and recorded as tracking that set rather than as a copy of it, so
-      // this device is not frozen at the vocabulary of the day it paired
-      // (POPS-2928). The column above stays the record of what it was granted
-      // here; what it may do is resolved against the running build.
-      capabilityMode: 'tracks-default',
+      subjectEmail: spent.subjectEmail,
+      ...deviceGrantFor(spent.subjectEmail),
     });
 
     insertRefreshToken(tx, {

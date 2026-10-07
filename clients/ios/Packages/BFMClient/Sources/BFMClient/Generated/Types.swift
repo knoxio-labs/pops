@@ -71170,6 +71170,8 @@ internal enum Operations {
                             internal var name: Swift.String
                             /// - Remark: Generated from `#/paths/operator/devices/GET/responses/200/content/json/DevicesPayload/revokedAt`.
                             internal var revokedAt: Foundation.Date?
+                            /// - Remark: Generated from `#/paths/operator/devices/GET/responses/200/content/json/DevicesPayload/subjectEmail`.
+                            internal var subjectEmail: Swift.String?
                             /// Creates a new `DevicesPayloadPayload`.
                             ///
                             /// - Parameters:
@@ -71179,13 +71181,15 @@ internal enum Operations {
                             ///   - model:
                             ///   - name:
                             ///   - revokedAt:
+                            ///   - subjectEmail:
                             internal init(
                                 createdAt: Foundation.Date,
                                 id: Swift.String,
                                 lastSeenAt: Foundation.Date,
                                 model: Swift.String,
                                 name: Swift.String,
-                                revokedAt: Foundation.Date? = nil
+                                revokedAt: Foundation.Date? = nil,
+                                subjectEmail: Swift.String? = nil
                             ) {
                                 self.createdAt = createdAt
                                 self.id = id
@@ -71193,6 +71197,7 @@ internal enum Operations {
                                 self.model = model
                                 self.name = name
                                 self.revokedAt = revokedAt
+                                self.subjectEmail = subjectEmail
                             }
                             internal enum CodingKeys: String, CodingKey {
                                 case createdAt
@@ -71201,6 +71206,7 @@ internal enum Operations {
                                 case model
                                 case name
                                 case revokedAt
+                                case subjectEmail
                             }
                             internal init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -71228,13 +71234,18 @@ internal enum Operations {
                                     Foundation.Date.self,
                                     forKey: .revokedAt
                                 )
+                                self.subjectEmail = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .subjectEmail
+                                )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
                                     "createdAt",
                                     "id",
                                     "lastSeenAt",
                                     "model",
                                     "name",
-                                    "revokedAt"
+                                    "revokedAt",
+                                    "subjectEmail"
                                 ])
                             }
                         }

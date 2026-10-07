@@ -22,6 +22,13 @@
       "when": 1788652800000,
       "tag": "0002_device_capability_mode",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1791331200000,
+      "tag": "0003_device_subject",
+      "breakpoints": true
     }
   ]
 }

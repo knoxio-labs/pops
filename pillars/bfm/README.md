@@ -127,8 +127,8 @@ A device row carries two columns, not one: `capabilities`, the JSON grant, and
 `capability_mode`, which says how to read it. `tracks-default` means the device
 holds whatever pairing grants and its effective set is resolved from
 `DEFAULT_DEVICE_CAPABILITIES` on every request; `explicit` means the column is
-the whole answer. Pairing writes the first, the column defaults to the second,
-and `resolveDeviceCapabilities` in `src/contract/capabilities.ts` is the one
+the whole answer. Pairing writes the first for the operator's device, the
+column defaults to the second, and `resolveDeviceCapabilities` in `src/contract/capabilities.ts` is the one
 place either is turned into a set — `requireCapability` gates with it and
 `/mobile/bootstrap` reports it, so what the app is told it may do and what it
 is allowed to do cannot drift apart.
@@ -151,6 +151,18 @@ build knows about"; and an `explicit` grant is never widened by the default
 set, so a per-device narrowing (POPS-2460) cannot be undone by it. An unknown
 mode resolves to the empty grant, the same fail-closed direction as an
 unparseable column.
+
+#### A device can belong to a guest
+
+`pairing_codes.subject_email` and `devices.subject_email` are null for the
+operator and a normalised email for a guest. The subject is set when the code
+is minted (`issuePairingCode`), copied onto the device inside the pairing
+transaction, and never written again; no route changes it, and the pairing
+body has no field for it. A device with a subject is written `explicit` with
+`GUEST_DEVICE_CAPABILITIES`, so growing the vocabulary or the default set does
+not reach it, and a guest row marked `tracks-default` resolves to the empty
+grant. `POST /operator/pairing/codes` and the MCP tool mint codes with no
+subject. The operator device list reports `subjectEmail`.
 
 ### `POST /devices/pair` — the way in
 

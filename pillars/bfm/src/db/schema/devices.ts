@@ -102,6 +102,17 @@ export const devices = sqliteTable(
     capabilityMode: text('capability_mode', { enum: DEVICE_CAPABILITY_MODES })
       .notNull()
       .default('explicit'),
+    /**
+     * Whose handset this is. Null means the operator's, which is every device
+     * paired before this column existed.
+     *
+     * A normalised email otherwise: the guest the pairing code was minted for.
+     * Copied from the code inside the pairing transaction and never written
+     * again, so no route can move a device from one person to another, or
+     * from a guest to the operator. Re-binding means revoking and pairing
+     * again.
+     */
+    subjectEmail: text('subject_email'),
   },
   // No index on `id`: SQLite backs a non-INTEGER primary key with an implicit
   // unique index, so lookups by device id are already index-driven. Adding one

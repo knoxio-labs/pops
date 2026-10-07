@@ -18,6 +18,12 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  DEFAULT_DEVICE_CAPABILITIES,
+  GUEST_DEVICE_CAPABILITIES,
+  parseDeviceCapabilities,
+  resolveDeviceCapabilities,
+} from '../../../contract/capabilities.js';
+import {
   deviceRow,
   openTempDb,
   refreshTokenRow,
@@ -292,6 +298,120 @@ describe('what a successful exchange produces', () => {
         drawn.add(result.refreshToken);
       }
       expect(drawn.size).toBe(8);
+    });
+  });
+});
+
+describe('whose device a code buys', () => {
+  it('binds the device to the subject the code was minted for, with the guest grant', () => {
+    withDb((db) => {
+      const { code } = issuePairingCode(db, { subjectEmail: 'Rosane@Example.test' });
+
+      const result = completePairingExchange(input({ code }), {
+        db,
+        accessTokenSigningKey: testSigningKey(),
+      });
+
+      expect(result.outcome).toBe('paired');
+      const [device] = db.select().from(devices).all();
+      expect(device?.subjectEmail).toBe('rosane@example.test');
+      expect(device?.capabilityMode).toBe('explicit');
+      expect(parseDeviceCapabilities(device?.capabilities ?? '', 'd')).toEqual([
+        'session.read',
+        'finance.accounts.read',
+        'finance.transactions.read',
+      ]);
+    });
+  });
+
+  it('resolves a guest device to the guest set and nothing the operator holds beyond it', () => {
+    withDb((db) => {
+      const { code } = issuePairingCode(db, { subjectEmail: 'rosane@example.test' });
+      completePairingExchange(input({ code }), { db, accessTokenSigningKey: testSigningKey() });
+
+      const [device] = db.select().from(devices).all();
+      if (device === undefined) throw new Error('expected a device row');
+      const resolved = resolveDeviceCapabilities(device);
+
+      expect([...resolved]).toEqual([...GUEST_DEVICE_CAPABILITIES]);
+      for (const capability of DEFAULT_DEVICE_CAPABILITIES) {
+        if (GUEST_DEVICE_CAPABILITIES.includes(capability)) continue;
+        expect(resolved).not.toContain(capability);
+      }
+    });
+  });
+
+  it('buys the same operator device as before when the code has no subject', () => {
+    withDb((db) => {
+      const { code } = issuePairingCode(db);
+
+      completePairingExchange(input({ code }), { db, accessTokenSigningKey: testSigningKey() });
+
+      const [device] = db.select().from(devices).all();
+      if (device === undefined) throw new Error('expected a device row');
+      expect(device.subjectEmail).toBeNull();
+      expect(device.capabilityMode).toBe('tracks-default');
+      expect(parseDeviceCapabilities(device.capabilities, device.id)).toEqual([
+        ...DEFAULT_DEVICE_CAPABILITIES,
+      ]);
+      expect([...resolveDeviceCapabilities(device)]).toEqual([...DEFAULT_DEVICE_CAPABILITIES]);
+    });
+  });
+
+  it('takes the subject from the code that was spent, not from another live code', () => {
+    withDb((db) => {
+      const guest = issuePairingCode(db, { subjectEmail: 'rosane@example.test' });
+      const operator = issuePairingCode(db);
+
+      completePairingExchange(input({ code: operator.code }), {
+        db,
+        accessTokenSigningKey: testSigningKey(),
+        generateDeviceId: () => 'd-operator',
+      });
+      completePairingExchange(input({ code: guest.code }), {
+        db,
+        accessTokenSigningKey: testSigningKey(),
+        generateDeviceId: () => 'd-guest',
+      });
+
+      const stored = db
+        .select({
+          id: devices.id,
+          subjectEmail: devices.subjectEmail,
+          mode: devices.capabilityMode,
+        })
+        .from(devices)
+        .all()
+        .sort((a, b) => a.id.localeCompare(b.id));
+      expect(stored).toEqual([
+        { id: 'd-guest', subjectEmail: 'rosane@example.test', mode: 'explicit' },
+        { id: 'd-operator', subjectEmail: null, mode: 'tracks-default' },
+      ]);
+    });
+  });
+
+  it('leaves a guest code spendable and no guest device behind when the last write fails', () => {
+    withDb((db) => {
+      const { code } = issuePairingCode(db, { subjectEmail: 'rosane@example.test' });
+      const collidingPlaintext = 'a-guest-token-that-is-already-in-the-table';
+      const planted = deviceRow();
+      db.insert(devices).values(planted).run();
+      db.insert(refreshTokens)
+        .values(refreshTokenRow(planted.id, { tokenHash: hashRefreshToken(collidingPlaintext) }))
+        .run();
+
+      expect(() =>
+        completePairingExchange(input({ code }), {
+          db,
+          accessTokenSigningKey: testSigningKey(),
+          generateRefreshToken: () => collidingPlaintext,
+        })
+      ).toThrow();
+
+      expect(db.select({ id: devices.id }).from(devices).all()).toEqual([{ id: planted.id }]);
+      const [codeRow] = db.select().from(pairingCodes).all();
+      expect(codeRow?.consumedAt).toBeNull();
+      expect(codeRow?.subjectEmail).toBe('rosane@example.test');
     });
   });
 });

@@ -208,6 +208,7 @@ describe('usePairingCode — a redeemed code', () => {
     createdAt: '2026-08-08T12:00:30.000Z',
     lastSeenAt: '2026-08-08T12:00:30.000Z',
     revokedAt: null,
+    subjectEmail: null,
   };
 
   it('drops the spent plaintext and reports the handset', async () => {

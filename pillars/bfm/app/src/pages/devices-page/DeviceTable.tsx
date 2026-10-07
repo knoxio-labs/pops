@@ -61,6 +61,7 @@ export function DeviceTable({
         <TableRow>
           <TableHead>{t('devices.column.name')}</TableHead>
           <TableHead>{t('devices.column.model')}</TableHead>
+          <TableHead>{t('devices.column.owner')}</TableHead>
           <TableHead>{t('devices.column.paired')}</TableHead>
           <TableHead>{t('devices.column.lastSeen')}</TableHead>
           <TableHead>{t('devices.column.state')}</TableHead>
@@ -90,6 +91,9 @@ function DeviceRow({
     <TableRow data-device-id={device.id} data-revoked={revokedAt !== null}>
       <TableCell className="font-medium">{device.name}</TableCell>
       <TableCell className="text-muted-foreground">{device.model}</TableCell>
+      <TableCell className="text-muted-foreground">
+        {device.subjectEmail ?? t('devices.owner.operator')}
+      </TableCell>
       <TableCell className="text-muted-foreground">{formatDate(device.createdAt)}</TableCell>
       <TableCell className="text-muted-foreground">
         {formatRelativeTime(device.lastSeenAt)}
