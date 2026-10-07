@@ -1,12 +1,13 @@
 /**
- * POPS-2092: `@types/node` major-pin guard.
+ * POPS-2092: `@types/node` pin guard.
  *
  * ADR-045: a guard ships with a test proving it REPORTS, not merely that it
- * passes. The tree agrees on major 24 today, so a suite that only ran the
- * guard would be green whether or not the comparison still works. These
- * drive the pure functions over ranges the guard must flag, ranges it must
- * not, and the real tree — so a matcher that silently stops matching, or a
- * discovery walk that silently stops finding packages, fails here.
+ * passes. The workspace packages share major 24 today, and the root pin and
+ * pnpm override should agree exactly; a suite that only ran the guard would
+ * stay green if either comparison stopped working. These drive the guard
+ * over ranges and workspace shapes it must flag, ranges it must not, and the
+ * real tree — so a matcher or discovery walk that stops finding violations
+ * fails here.
  */
 
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -70,7 +71,12 @@ describe('workspace fixture scans', () => {
     return dir;
   }
 
-  function writeRoot(dir: string, canonRange: string, globs: string[] = ['libs/*']): void {
+  function writeRoot(
+    dir: string,
+    canonRange: string,
+    globs: string[] = ['libs/*'],
+    overrideRange = canonRange
+  ): void {
     writeFileSync(
       join(dir, 'package.json'),
       JSON.stringify({ devDependencies: { '@types/node': canonRange } }),
@@ -78,7 +84,8 @@ describe('workspace fixture scans', () => {
     );
     writeFileSync(
       join(dir, 'pnpm-workspace.yaml'),
-      `packages:\n${globs.map((glob) => `  - '${glob}'`).join('\n')}\n`,
+      `packages:\n${globs.map((glob) => `  - '${glob}'`).join('\n')}\n` +
+        `overrides:\n  '@types/node': ${overrideRange}\n`,
       'utf8'
     );
   }
@@ -125,6 +132,25 @@ describe('workspace fixture scans', () => {
     writeRoot(dir, '^24.13.3');
     writePackage(dir, 'libs/baz', { devDependencies: { '@types/node': '^24.5.0' } });
     expect(checkTypesNodeMajor(dir).violations).toEqual([]);
+  });
+
+  it('requires the pnpm override to match the root pin exactly', () => {
+    const dir = fixture();
+    writeRoot(dir, '^24.13.4', ['libs/*'], '^24.13.3');
+    writePackage(dir, 'libs/foo', {});
+
+    expect(checkTypesNodeMajor(dir).violations.join('\n')).toContain('must exactly match');
+  });
+
+  it('fails when pnpm-workspace.yaml has no @types/node override', () => {
+    const dir = fixture();
+    writeRoot(dir, '^24.13.4');
+    writeFileSync(join(dir, 'pnpm-workspace.yaml'), "packages:\n  - 'libs/*'\n", 'utf8');
+    writePackage(dir, 'libs/foo', {});
+
+    expect(checkTypesNodeMajor(dir).violations.join('\n')).toContain(
+      'pnpm-workspace.yaml overrides["@types/node"]'
+    );
   });
 
   it.each(['~24', '24.x', '>=24 <25'])('reads the exotic range "%s" as major 24', (range) => {

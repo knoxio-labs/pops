@@ -1,13 +1,12 @@
 #!/usr/bin/env node
 /**
- * `@types/node` major-pin guard — POPS-2092, alongside POPS-1926's
+ * `@types/node` pin guard — POPS-2092, alongside POPS-1926's
  * `check-node-pin.mjs` next door (which pins the Node *runtime*; this pins the
  * type declarations for it).
  *
- * POPS-1926 pinned every workspace package's `@types/node` to the major the
- * fleet actually runs — `^24.13.4` today, both in `pnpm-workspace.yaml`'s
- * `overrides` and in the root `package.json`'s own `devDependencies`. Nothing
- * enforced that a package added AFTERWARDS keeps it. `libs/contract-openapi`
+ * The root `package.json` owns the canonical `@types/node` range. Its exact
+ * value must also appear in `pnpm-workspace.yaml`'s `overrides`, while every
+ * workspace package must use that range's major. `libs/contract-openapi`
  * (POPS-2057, PR #4088) was authored before that pin merged and declared
  * `"@types/node": "^25.9.3"`; it passed every check that existed at the time
  * and only surfaced when a later merge from `main` collided the lockfile
@@ -22,17 +21,15 @@
  *   `devDependencies["@types/node"]`. A package that declares no
  *   `@types/node` at all is not a violation — there is nothing to compare. A
  *   package whose range's major disagrees, or whose range this guard cannot
- *   read a major out of, is.
+ *   read a major out of, is. The `pnpm-workspace.yaml` override must exactly
+ *   match the root range, including its minor and patch.
  *
  * WHAT THIS DOES NOT SEE
  *
- *   - The lockfile's resolved version, or what a fresh `pnpm install` actually
- *     puts on disk. This reads manifest text only.
- *   - The transitive `@types/node: "*"` that a dozen DefinitelyTyped packages
- *     depend on and that never goes through a workspace `package.json` at
- *     all. That is `pnpm-workspace.yaml`'s own `overrides` entry's job (see
- *     the comment beside it there), not this guard's — this guard only reads
- *     what a workspace package itself declares.
+ *   - The lockfile's resolved version or what a fresh `pnpm install` puts on
+ *     disk. The override is how pnpm constrains transitive `@types/node: "*"`
+ *     dependencies; this guard only verifies that the override matches the
+ *     root range, not what the resolver ultimately installs.
  *   - Anything outside `pnpm-workspace.yaml`'s globs: `scripts/`,
  *     `clients/ios`, the repo root itself. Those are not pnpm workspace
  *     packages and carry no `@types/node` pin this guard's job is to police.
@@ -42,8 +39,9 @@
  *     throws on anything else rather than silently matching nothing.
  *
  * Deliberately no YAML parser: `pnpm-workspace.yaml`'s `packages:` list is a
- * flat, committed sequence of quoted globs, and this guard's job is meant to
- * be Tier A (install-free — see ADR-045). `scripts/pre-push-scope.mjs` and
+ * flat sequence of quoted globs and its `@types/node` override is one scalar.
+ * This guard is meant to be Tier A (install-free — see ADR-045).
+ * `scripts/pre-push-scope.mjs` and
  * `scripts/check-deps-materialised.mjs` give the same reasoning for their own
  * hand-rolled readers; each is kept local rather than shared because each
  * runs in a context that cannot assume the others' dependencies, or each
@@ -107,6 +105,27 @@ export function pnpmWorkspaceGlobs(source) {
     if (glob !== '') globs.push(glob);
   }
   return globs;
+}
+
+/** @param {string} source @returns {string | null} */
+function pnpmNodeOverrideRange(source) {
+  let inOverrides = false;
+  for (const raw of source.split('\n')) {
+    const line = raw.replace(/\r$/u, '');
+    if (/^overrides:\s*(#.*)?$/u.test(line)) {
+      inOverrides = true;
+      continue;
+    }
+    if (!inOverrides) continue;
+    if (line.trim() === '' || /^\s*#/u.test(line)) continue;
+    if (!/^\s+/u.test(line)) break;
+    const entry = /^\s+(?:'@types\/node'|"@types\/node"|@types\/node)\s*:\s*(.*?)\s*$/u.exec(line);
+    if (entry === null) continue;
+    const rawRange = (entry[1] ?? '').replace(/\s+#.*$/u, '').trim();
+    const quotedRange = /^(['"])(.*?)\1$/u.exec(rawRange);
+    return quotedRange?.[2] ?? (rawRange === '' ? null : rawRange);
+  }
+  return null;
 }
 
 /**
@@ -229,6 +248,20 @@ export function checkTypesNodeMajor(root) {
     );
   }
 
+  const workspaceSource = readFileSync(join(root, 'pnpm-workspace.yaml'), 'utf8');
+  const overrideRange = pnpmNodeOverrideRange(workspaceSource);
+  if (overrideRange === null) {
+    violations.push(
+      'pnpm-workspace.yaml overrides["@types/node"] is missing or unreadable; expected the ' +
+        'root package.json devDependencies["@types/node"] range.'
+    );
+  } else if (typeof canonRange === 'string' && overrideRange !== canonRange) {
+    violations.push(
+      `pnpm-workspace.yaml overrides["@types/node"] = "${overrideRange}" must exactly match ` +
+        `root package.json devDependencies["@types/node"] = "${canonRange}".`
+    );
+  }
+
   const dirs = workspacePackageDirs(root);
   if (dirs.length === 0) {
     violations.push(
@@ -279,8 +312,8 @@ function main() {
   if (args.includes('--help') || args.includes('-h')) {
     console.log(
       'Usage: node scripts/ci/check-types-node-major.mjs [--self-test]\n' +
-        "Fails if any workspace package's @types/node range names a major other than the " +
-        "root package.json's, or a range this guard cannot read a major out of."
+        'Fails if the pnpm @types/node override differs from the root pin, or a workspace ' +
+        "package's range names a different major."
     );
     process.exit(2);
   }
@@ -292,7 +325,7 @@ function main() {
   if (violations.length === 0) {
     console.log(
       `OK — all ${packages.length} workspace packages agree with @types/node major ${canon} ` +
-        '(or declare none).'
+        '(or declare none), and the pnpm override matches the root range.'
     );
     process.exit(0);
   }
@@ -305,11 +338,12 @@ function main() {
  * only violation is the one it plants.
  *
  * @param {string} dir
- * @param {{ canonRange?: string, globs?: string[] }} [options]
+ * @param {{ canonRange?: string, globs?: string[], overrideRange?: string }} [options]
  */
 function writeCoherentFixture(dir, options = {}) {
   const canonRange = options.canonRange ?? '^24.13.3';
   const globs = options.globs ?? ['libs/*'];
+  const overrideRange = options.overrideRange ?? canonRange;
   writeFileSync(
     join(dir, 'package.json'),
     JSON.stringify({ devDependencies: { '@types/node': canonRange } }),
@@ -317,7 +351,8 @@ function writeCoherentFixture(dir, options = {}) {
   );
   writeFileSync(
     join(dir, 'pnpm-workspace.yaml'),
-    `packages:\n${globs.map((glob) => `  - '${glob}'`).join('\n')}\n`,
+    `packages:\n${globs.map((glob) => `  - '${glob}'`).join('\n')}\n` +
+      `overrides:\n  '@types/node': ${overrideRange}\n`,
     'utf8'
   );
 }
@@ -354,14 +389,38 @@ function selfTest() {
     matchingRangePasses(),
     exoticRangeIsReadCorrectly(),
     unparseableRangeIsRejectedLoudly(),
+    overrideRangeDriftIsReported(),
     newPackageDirectoryIsDiscovered(),
     zeroPackagesIsAFailure(),
     peerDependenciesAreCheckedToo(),
   ];
   const ok = checks.every(Boolean);
   if (!ok) console.error(`self-test FAILED: ${JSON.stringify(checks)}`);
-  else console.log('self-test OK — the guard reports a drifted major, and reports nothing else.');
+  else
+    console.log(
+      'self-test OK — the guard reports package-major and override-range drift, and reports ' +
+        'nothing else.'
+    );
   return ok;
+}
+
+/** @returns {boolean} */
+function overrideRangeDriftIsReported() {
+  const dir = mkdtempSync(join(tmpdir(), 'types-node-override-drift-'));
+  try {
+    writeCoherentFixture(dir, { canonRange: '^24.13.4', overrideRange: '^24.13.3' });
+    writePackage(dir, 'libs/no-node', {});
+    const { violations } = checkTypesNodeMajor(dir);
+    return violations.some(
+      (violation) =>
+        violation.includes('pnpm-workspace.yaml') &&
+        violation.includes('must exactly match') &&
+        violation.includes('^24.13.3') &&
+        violation.includes('^24.13.4')
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 }
 
 /** @returns {boolean} */

@@ -44,6 +44,17 @@ describe('boot placeholders', () => {
     );
   });
 
+  it('generates a fresh inbound token only for the MCP image smoke', () => {
+    const first = bootPlaceholdersForDockerfile('pillars/mcp/Dockerfile');
+    const second = bootPlaceholdersForDockerfile('pillars/mcp/Dockerfile');
+
+    expect(first.MCP_INBOUND_TOKEN).toMatch(/^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/iu);
+    expect(second.MCP_INBOUND_TOKEN).not.toBe(first.MCP_INBOUND_TOKEN);
+    expect(bootPlaceholdersForDockerfile('pillars/finance/Dockerfile')).not.toHaveProperty(
+      'MCP_INBOUND_TOKEN'
+    );
+  });
+
   it('keeps the boot placeholder for images that require a service-account credential', () => {
     expect(bootPlaceholdersForDockerfile('pillars/finance/Dockerfile')).toHaveProperty(
       'POPS_INTERNAL_API_KEY',
