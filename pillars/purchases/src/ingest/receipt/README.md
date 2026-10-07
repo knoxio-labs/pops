@@ -322,6 +322,15 @@ it wrongly, or the figures disagree, the file is still on disk and
 addressable — so a failed upload leaves evidence. Reading first and storing
 only on success would discard exactly the receipts a human needs to see.
 
+When `/receipts` answers `needs-review` or `unreadable`, its response keeps
+the existing shape and does not echo capture metadata. The resolved facts
+and the client's original capture signals are held privately under the
+receipt's content key, so a later retry or `POST /receipts/extract` can use
+them and `POST /receipts/draft` can attach them if the caller omits `capture`.
+Saving a purchase removes the pending row. Otherwise it expires with the
+same 48-hour window as an unreferenced receipt; it does not extend file
+retention.
+
 A receipt that merely states no **date** is not `needs-review`: it is
 created, dated from the upload, and tagged `date-uncertain`, because losing
 a shop that happened is worse than carrying an inferred date the tag stops

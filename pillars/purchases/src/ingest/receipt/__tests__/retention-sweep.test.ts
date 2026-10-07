@@ -10,6 +10,7 @@ import {
   createPurchase,
   removeExternalReceiptReferences,
 } from '../../../db/index.js';
+import { pendingReceiptCaptures } from '../../../db/schema.js';
 import { DEFAULT_RECEIPT_RETENTION_MS, sweepUnreferencedReceipts } from '../retention-sweep.js';
 import { receiptUri } from '../store.js';
 
@@ -50,6 +51,30 @@ describe('sweepUnreferencedReceipts', () => {
     try {
       const result = sweepUnreferencedReceipts(opened.db, { root });
       expect(result).toEqual({ scanned: 1, deleted: 1, kept: 0, malformed: 0 });
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('expires pending capture metadata at the same retention boundary as its receipt', () => {
+    root = mkdtempSync(join(tmpdir(), 'pops-receipts-sweep-'));
+    const now = new Date();
+    const oldReceipt = DEFAULT_RECEIPT_RETENTION_MS + 60_000;
+    writeReceiptFile(SHA_A, oldReceipt);
+    const { opened, cleanup } = openDb();
+    opened.db
+      .insert(pendingReceiptCaptures)
+      .values({ receiptKey: SHA_A, expiresAt: new Date(now.getTime() - 1).toISOString() })
+      .run();
+
+    try {
+      expect(sweepUnreferencedReceipts(opened.db, { root, now: () => now })).toEqual({
+        scanned: 1,
+        deleted: 1,
+        kept: 0,
+        malformed: 0,
+      });
+      expect(opened.db.select().from(pendingReceiptCaptures).all()).toEqual([]);
     } finally {
       cleanup();
     }

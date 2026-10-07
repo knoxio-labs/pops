@@ -19,7 +19,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { openTempDb } from '../../db/__tests__/helpers.js';
-import { purchaseCapture } from '../../db/schema.js';
+import { pendingReceiptCaptures, purchaseCapture } from '../../db/schema.js';
 import { dms } from '../../ingest/receipt/__tests__/exif-fixtures.js';
 import { jpegWithExif, jpegWithTiff } from '../../ingest/receipt/__tests__/image-fixtures.js';
 import { createPurchasesApiApp } from '../app.js';
@@ -106,6 +106,76 @@ const post = (app: Express, body: object) => requestOn(app).post('/receipts').se
 const captureRows = (): PurchaseCaptureRow[] => opened.db.select().from(purchaseCapture).all();
 
 describe('what the client sends', () => {
+  it('keeps capture metadata from a needs-review upload through saving its draft', async () => {
+    const body = {
+      parts: [{ mediaType: 'image/jpeg' as const, dataBase64: PLAIN_JPEG }],
+      capture: {
+        capturedAt: '2026-08-01T14:32:07+10:00',
+        timeZone: 'Australia/Perth',
+        location: { latitude: -31.9523, longitude: 115.8613 },
+      },
+    };
+    const review = await post(appWith({ ...READING, total: '$99.00' }), body);
+
+    expect(review.status).toBe(200);
+    expect(review.body.kind).toBe('needs-review');
+    expect(JSON.stringify(review.body)).not.toContain('31.9523');
+    expect(JSON.stringify(review.body)).not.toContain('115.8613');
+    expect(opened.db.select().from(pendingReceiptCaptures).all()).toHaveLength(1);
+
+    const extracted = await requestOn(appWith())
+      .post('/receipts/extract')
+      .send({ parts: body.parts });
+    expect(extracted.status).toBe(200);
+    expect(extracted.body.kind).toBe('draft');
+
+    const saved = await requestOn(appWith())
+      .post('/receipts/draft')
+      .send({
+        ...extracted.body.draft,
+        capture: undefined,
+        idempotencyKey: 'needs-review-capture',
+      });
+    expect(saved.status).toBe(200);
+
+    const [row] = captureRows();
+    expect(row?.capturedAt).toBe('2026-08-01T04:32:07.000Z');
+    expect(row?.capturedAtSource).toBe('client');
+    expect(row?.declaredTimeZone).toBe('Australia/Perth');
+    expect(row?.latitude).toBeCloseTo(-31.9523, 4);
+    expect(row?.locationSource).toBe('client');
+    expect(opened.db.select().from(pendingReceiptCaptures).all()).toHaveLength(0);
+  });
+
+  it('keeps capture metadata from an unreadable upload for a later successful retry', async () => {
+    const body = {
+      parts: [{ mediaType: 'image/jpeg' as const, dataBase64: PLAIN_JPEG }],
+      capture: {
+        capturedAt: '2026-08-01T14:32:07+10:00',
+        timeZone: 'Australia/Perth',
+        location: { latitude: -31.9523, longitude: 115.8613 },
+      },
+    };
+    const unreadable = await post(appWith(null), body);
+
+    expect(unreadable.status).toBe(200);
+    expect(unreadable.body.kind).toBe('unreadable');
+    expect(JSON.stringify(unreadable.body)).not.toContain('31.9523');
+    expect(JSON.stringify(unreadable.body)).not.toContain('115.8613');
+    expect(opened.db.select().from(pendingReceiptCaptures).all()).toHaveLength(1);
+
+    const retried = await post(appWith(), { parts: body.parts });
+    expect(retried.status).toBe(200);
+    expect(retried.body.kind).toBe('created');
+
+    const [row] = captureRows();
+    expect(row?.capturedAt).toBe('2026-08-01T04:32:07.000Z');
+    expect(row?.declaredTimeZone).toBe('Australia/Perth');
+    expect(row?.latitude).toBeCloseTo(-31.9523, 4);
+    expect(row?.locationSource).toBe('client');
+    expect(opened.db.select().from(pendingReceiptCaptures).all()).toHaveLength(0);
+  });
+
   it('records the device clock, its zone and its location', async () => {
     const response = await post(appWith(), {
       parts: [{ mediaType: 'image/jpeg', dataBase64: PLAIN_JPEG }],

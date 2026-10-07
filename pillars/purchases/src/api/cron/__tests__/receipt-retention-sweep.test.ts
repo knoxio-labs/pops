@@ -6,6 +6,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { openTempDb } from '../../../db/__tests__/helpers.js';
 import { startReceiptRetentionSweepWorker } from '../receipt-retention-sweep.js';
 
 import type { PurchasesDb } from '../../../db/index.js';
@@ -77,14 +78,21 @@ describe('runOnce', () => {
 
   it('uses the production sweep and default schedule when neither is overridden', async () => {
     vi.useFakeTimers();
-    const handle = start({
-      root: '/path/that/does/not/exist',
-      intervalMs: undefined,
-      sweep: undefined,
-    });
+    const { opened, cleanup } = openTempDb();
 
-    await expect(handle.runOnce()).resolves.toEqual(EMPTY_RESULT);
-    expect(vi.getTimerCount()).toBe(1);
+    try {
+      const handle = start({
+        db: opened.db,
+        root: '/path/that/does/not/exist',
+        intervalMs: undefined,
+        sweep: undefined,
+      });
+
+      await expect(handle.runOnce()).resolves.toEqual(EMPTY_RESULT);
+      expect(vi.getTimerCount()).toBe(1);
+    } finally {
+      cleanup();
+    }
   });
 });
 
