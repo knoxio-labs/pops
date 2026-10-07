@@ -2959,6 +2959,121 @@ export type ReceiptExtractResponses = {
 
 export type ReceiptExtractResponse = ReceiptExtractResponses[keyof ReceiptExtractResponses];
 
+export type ReceiptRemoveReferencesData = {
+  /**
+   * Body
+   */
+  body?: {
+    ownerUri: string;
+    receiptUris?: Array<string>;
+  };
+  path?: never;
+  query?: never;
+  url: '/receipts/references';
+};
+
+export type ReceiptRemoveReferencesErrors = {
+  /**
+   * 400
+   */
+  400: ErrorBody;
+};
+
+export type ReceiptRemoveReferencesError =
+  ReceiptRemoveReferencesErrors[keyof ReceiptRemoveReferencesErrors];
+
+export type ReceiptRemoveReferencesResponses = {
+  /**
+   * 200
+   */
+  200: {
+    ok: true;
+  };
+};
+
+export type ReceiptRemoveReferencesResponse =
+  ReceiptRemoveReferencesResponses[keyof ReceiptRemoveReferencesResponses];
+
+export type ReceiptAddReferencesData = {
+  /**
+   * Body
+   */
+  body?: {
+    ownerUri: string;
+    receiptUris: Array<string>;
+  };
+  path?: never;
+  query?: never;
+  url: '/receipts/references';
+};
+
+export type ReceiptAddReferencesErrors = {
+  /**
+   * 400
+   */
+  400: ErrorBody;
+  /**
+   * 404
+   */
+  404: ErrorBody;
+};
+
+export type ReceiptAddReferencesError =
+  ReceiptAddReferencesErrors[keyof ReceiptAddReferencesErrors];
+
+export type ReceiptAddReferencesResponses = {
+  /**
+   * 200
+   */
+  200: {
+    ok: true;
+  };
+};
+
+export type ReceiptAddReferencesResponse =
+  ReceiptAddReferencesResponses[keyof ReceiptAddReferencesResponses];
+
+export type ReceiptStoreData = {
+  /**
+   * Body
+   */
+  body?: {
+    parts: Array<{
+      dataBase64: string;
+      mediaType:
+        | 'image/jpeg'
+        | 'image/png'
+        | 'image/webp'
+        | 'image/gif'
+        | 'application/pdf'
+        | 'text/plain';
+    }>;
+  };
+  path?: never;
+  query?: never;
+  url: '/receipts/store';
+};
+
+export type ReceiptStoreErrors = {
+  /**
+   * 400
+   */
+  400: ErrorBody;
+};
+
+export type ReceiptStoreError = ReceiptStoreErrors[keyof ReceiptStoreErrors];
+
+export type ReceiptStoreResponses = {
+  /**
+   * 200
+   */
+  200: {
+    receiptUris: Array<string>;
+  };
+};
+
+export type ReceiptStoreResponse = ReceiptStoreResponses[keyof ReceiptStoreResponses];
+
 export type ReceiptReadData = {
   body?: never;
   path: {

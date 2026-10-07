@@ -162,7 +162,7 @@ export {
 
 export { attachDocument, type AttachDocumentInput } from './services/purchase-documents.js';
 
-export { isReceiptReferenced } from './services/receipt-references.js';
+export * from './services/receipt-references.js';
 
 export { eraseCaptureLocation } from './services/purchase-write-capture.js';
 

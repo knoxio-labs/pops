@@ -184,7 +184,7 @@ describe('applying the rest of the journal to a populated purchases database', (
     expect(readdirSync(dir).filter((name) => name.includes('.pre-migration-'))).toEqual([]);
   });
 
-  it('adds only the two new tables and their assignment index', () => {
+  it('adds only the tables and indexes the later migrations declare', () => {
     const after = rows<SchemaObject>(
       `SELECT type, name, sql FROM sqlite_schema
        WHERE sql IS NOT NULL AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '__drizzle%'
@@ -204,8 +204,11 @@ describe('applying the rest of the journal to a populated purchases database', (
     expect(added.toSorted()).toEqual(
       [
         'idx_purchase_item_shared_tags_tag',
+        'idx_receipt_external_references_owner',
         'purchase_item_shared_tags',
+        'receipt_external_references',
         'shared_tag_cache',
+        'uq_receipt_external_references',
       ].toSorted()
     );
   });
