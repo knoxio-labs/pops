@@ -91,7 +91,7 @@ export function tearDownUnconfirmedLinks(db: PurchasesDb, chargeIds: readonly st
  */
 export function mintDerivedCharge(
   db: PurchasesDb,
-  order: { id: string; totalCents: number; currency: string }
+  order: { id: string; totalCents: number; currency: string; paymentHint: string | null }
 ): string {
   // MAX() with no rows still returns one row (NULL), never zero — this is
   // a scalar aggregate with no GROUP BY — so `expectRow` here documents an
@@ -118,6 +118,7 @@ export function mintDerivedCharge(
       currency: order.currency,
       amountCents: order.totalCents,
       orderAmountCents: order.totalCents,
+      paymentHint: order.paymentHint,
       role: 'capture',
       origin: 'derived',
     })

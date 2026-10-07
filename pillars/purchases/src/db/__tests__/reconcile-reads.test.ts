@@ -13,6 +13,7 @@ import {
   confirmLink,
   createPurchase,
   listConfirmedLinks,
+  listLinkedPaymentHints,
   listOrdersNeedingDerivedCharge,
   listRejectedPairings,
   listSolvableCharges,
@@ -140,6 +141,87 @@ describe('listSolvableCharges', () => {
     ]);
   });
 
+  it('reads each charge payment hint instead of the parent order hint', () => {
+    const purchaseId = createPurchase(
+      opened.db,
+      amazonOrder({
+        checksum: 'amazon:charge-payment-hints',
+        sourceOrderId: 'amazon-charge-payment-hints',
+        totalCents: 600,
+        paymentHint: 'Visa - 7373',
+        charges: [
+          { sourceChargeRef: 'inherited', amountCents: 100 },
+          { sourceChargeRef: 'cleared', amountCents: 200, paymentHint: null },
+          { sourceChargeRef: 'overridden', amountCents: 300, paymentHint: 'Amex - 1001' },
+        ],
+      })
+    );
+
+    const byAmount = Object.fromEntries(
+      listSolvableCharges(opened.db)
+        .filter((charge) => charge.purchaseId === purchaseId)
+        .map(({ amountCents, paymentHint }) => [amountCents, paymentHint])
+    );
+
+    expect(byAmount).toEqual({
+      100: 'Visa - 7373',
+      200: null,
+      300: 'Amex - 1001',
+    });
+  });
+
+  it('learns linked account hints from charges, excluding an explicit null', () => {
+    const purchaseId = createPurchase(
+      opened.db,
+      amazonOrder({
+        checksum: 'amazon:linked-charge-payment-hints',
+        sourceOrderId: 'amazon-linked-charge-payment-hints',
+        totalCents: 300,
+        paymentHint: 'Visa - 7373',
+        charges: [
+          { sourceChargeRef: 'cleared', amountCents: 100, paymentHint: null },
+          { sourceChargeRef: 'overridden', amountCents: 200, paymentHint: 'Amex - 1001' },
+        ],
+      })
+    );
+    const charges = listSolvableCharges(opened.db).filter(
+      (charge) => charge.purchaseId === purchaseId
+    );
+    const cleared = charges.find((charge) => charge.amountCents === 100);
+    const overridden = charges.find((charge) => charge.amountCents === 200);
+    if (cleared === undefined || overridden === undefined) {
+      throw new Error('expected both charges to be solvable');
+    }
+
+    persistProposedLinks(opened.db, [
+      {
+        chargeId: cleared.id,
+        transactionUri: 'pops://finance/transaction/cleared',
+        transactionDescription: 'AMAZON',
+        amountCents: 100,
+        linkType: 'exact',
+        confidence: 1,
+        matchRuleId: null,
+      },
+      {
+        chargeId: overridden.id,
+        transactionUri: 'pops://finance/transaction/overridden',
+        transactionDescription: 'AMAZON',
+        amountCents: 200,
+        linkType: 'exact',
+        confidence: 1,
+        matchRuleId: null,
+      },
+    ]);
+
+    expect(listLinkedPaymentHints(opened.db)).toEqual([
+      {
+        paymentHint: 'Amex - 1001',
+        transactionUri: 'pops://finance/transaction/overridden',
+      },
+    ]);
+  });
+
   it('scope.source restricts to that source alone', () => {
     const purchaseIds = listSolvableCharges(opened.db, { source: 'woolworths' }).map(
       (charge) => charge.purchaseId
@@ -247,6 +329,22 @@ describe('listOrdersNeedingDerivedCharge', () => {
   it('includes an order with no charge at all', () => {
     const ids = listOrdersNeedingDerivedCharge(opened.db).map((order) => order.id);
     expect(ids).toContain(noChargeOrderId);
+  });
+
+  it('carries the order payment hint to the derived charge work item', () => {
+    const orderId = createPurchase(
+      opened.db,
+      amazonOrder({
+        checksum: 'amazon:derived-payment-hint',
+        sourceOrderId: 'amazon-derived-payment-hint',
+        totalCents: 5678,
+        paymentHint: 'Visa - 7373',
+      })
+    );
+
+    const order = listOrdersNeedingDerivedCharge(opened.db).find(({ id }) => id === orderId);
+
+    expect(order?.paymentHint).toBe('Visa - 7373');
   });
 
   it('excludes an order a capture already claims', () => {
