@@ -10,6 +10,7 @@ import { initServer } from '@ts-rest/express';
 import { financeContract } from '../../contract/rest.js';
 import { type OpenedFinanceDb } from '../../db/index.js';
 import { type ContactsClient } from '../contacts/client.js';
+import { makeAccountGrantsHandlers } from './account-grants-handlers.js';
 import { makeAccountImportsHandlers } from './account-imports-handlers.js';
 import { makeAccountsHandlers } from './accounts-handlers.js';
 import { makeBudgetsHandlers } from './budgets-handlers.js';
@@ -44,6 +45,7 @@ export function makeFinanceRestHandlers(deps: {
     currencies: makeCurrenciesHandlers(db),
     accounts: makeAccountsHandlers(db, deps.contacts),
     checkpoints: makeCheckpointsHandlers(db),
+    accountGrants: makeAccountGrantsHandlers(db),
     accountImports: makeAccountImportsHandlers(db, deps.contacts),
     giftCardDetails: makeGiftCardDetailsHandlers(db),
     loan: makeLoanHandlers(db),
