@@ -74,6 +74,8 @@ import type { ShellManifestResponses } from '../../src/registry-api/types.gen';
 const PILLAR_BOOT_URL = /^https?:\/\/[^/]+\/pillars$/;
 const PILLAR_HEALTH_URL = /^https?:\/\/[^/]+\/pillars\/health$/;
 const REGISTRY_SNAPSHOT_URL = /\/registry-api\/registry\/pillars$/;
+/** Registry health request made by the shell chrome to read its build version. */
+export const REGISTRY_HEALTH_URL = /\/registry-api\/health$/;
 const SHELL_MANIFEST_URL = /\/registry-api\/shell\/manifest$/;
 const ORCHESTRATOR_SEARCH_URL = /\/orchestrator-api\/search$/;
 const NUDGES_SEARCH_URL = /\/cerebrum-api\/nudges\/search$/;

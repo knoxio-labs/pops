@@ -39,7 +39,7 @@ sentinel contract triplet — rather than omitting them:
     "ai": { "tools": [] },
     "uri": { "types": [] },
     "consumedSettings": { "keys": [] },
-    "healthcheck": { "path": "/health" },
+    "healthcheck": { "path": "/healthz" },
   },
   "apiKey": "<POPS_INTERNAL_API_KEY>",
 }

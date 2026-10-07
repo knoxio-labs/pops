@@ -305,16 +305,14 @@ export function parseRuntimeBaseImage(dockerfile) {
  *
  * Application pillars answer the SDK's `/health` (see
  * `libs/sdk/src/bootstrap/health-route.ts`). The nginx-served pillars
- * (`docs`, `shell`) are probed at `/` instead, matching what the production
- * compose healthcheck asks of the shell: its `/health` location is a REVERSE
- * PROXY to the registry, so probing it would assert a sibling pillar is up
- * rather than that this image boots.
+ * (`docs`, `shell`) are probed at `/healthz`, their upstream-independent
+ * liveness route.
  *
  * @param {string} baseImage Runtime stage base image.
  * @returns {string} Absolute liveness path.
  */
 export function resolveHealthPath(baseImage) {
-  return /^nginx(:|$)/u.test(baseImage) ? '/' : '/health';
+  return /^nginx(:|$)/u.test(baseImage) ? '/healthz' : '/health';
 }
 
 /**
