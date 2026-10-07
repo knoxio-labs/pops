@@ -1,16 +1,32 @@
 import Foundation
 
+/// An access token paired with the local credential revision that produced it.
+public struct BFMStreamCredential: Sendable {
+    /// Bearer token attached to one Ego stream request.
+    public let accessToken: String
+    /// Local identity revision used to reject stale refresh and revocation results.
+    public let revision: UInt64
+
+    /// Creates a stream credential tied to one local identity revision.
+    public init(accessToken: String, revision: UInt64) {
+        self.accessToken = accessToken
+        self.revision = revision
+    }
+}
+
 /// Supplies the device credential and the existing refresh/revocation actions to Ego's stream.
 public protocol BFMStreamAuthorizer: Sendable {
-    /// Returns the current access token, or `nil` when the device has no usable session.
-    func currentAccessToken() async -> String?
+    /// Returns an access token and its revision, or `nil` without a usable session.
+    func currentStreamCredential() async -> BFMStreamCredential?
 
-    /// Rotates a rejected token through the caller's existing session refresher.
-    func refreshedAccessToken(replacing staleAccessToken: String, at baseURL: URL) async throws
-        -> String
+    /// Rotates a rejected token and returns the revision attached to the replacement token.
+    func refreshedStreamCredential(
+        replacing staleAccessToken: String,
+        at baseURL: URL
+    ) async throws -> BFMStreamCredential
 
-    /// Reports the BFM's explicit device-revocation response to the existing session owner.
-    func deviceWasRevoked() async
+    /// Reports revocation only for the credential revision used by the rejected request.
+    func deviceWasRevoked(ifCredentialRevision revision: UInt64) async
 }
 
 internal protocol BFMByteSource: Sendable {
@@ -99,26 +115,32 @@ internal struct BFMEgoByteTransport: Sendable {
     }
 
     internal func open(body: Data) async throws -> BFMEgoStreamOpening {
-        let accessToken = await authorizer.currentAccessToken()
+        let credential = await authorizer.currentStreamCredential()
         let (response, bytes) = try await source.open(
-            request(body: body, accessToken: accessToken))
+            request(body: body, accessToken: credential?.accessToken))
 
-        if response.statusCode == 401, let accessToken {
+        if response.statusCode == 401, let credential {
             _ = await Self.readBody(from: bytes, upTo: Self.rejectedBodyLimit)
-            let refreshedToken = try await authorizer.refreshedAccessToken(
-                replacing: accessToken,
+            let refreshedCredential = try await authorizer.refreshedStreamCredential(
+                replacing: credential.accessToken,
                 at: baseURL
             )
             let (retryResponse, retryBytes) = try await source.open(
-                request(body: body, accessToken: refreshedToken))
+                request(body: body, accessToken: refreshedCredential.accessToken))
             return await opening(
                 for: retryResponse,
                 bytes: retryBytes,
-                tokens: [accessToken, refreshedToken]
+                credential: refreshedCredential,
+                tokens: [credential.accessToken, refreshedCredential.accessToken]
             )
         }
 
-        return await opening(for: response, bytes: bytes, tokens: [accessToken].compactMap { $0 })
+        return await opening(
+            for: response,
+            bytes: bytes,
+            credential: credential,
+            tokens: credential.map { [$0.accessToken] } ?? []
+        )
     }
 
     private func request(body: Data, accessToken: String?) -> URLRequest {
@@ -141,6 +163,7 @@ internal struct BFMEgoByteTransport: Sendable {
     private func opening(
         for response: HTTPURLResponse,
         bytes: AsyncThrowingStream<[UInt8], any Error>,
+        credential: BFMStreamCredential?,
         tokens: [String]
     ) async -> BFMEgoStreamOpening {
         guard response.statusCode != 200 else {
@@ -148,8 +171,8 @@ internal struct BFMEgoByteTransport: Sendable {
         }
 
         let body = await Self.readBody(from: bytes, upTo: Self.rejectedBodyLimit)
-        if response.statusCode == 403, Self.isDeviceRevocation(body) {
-            await authorizer.deviceWasRevoked()
+        if response.statusCode == 403, Self.isDeviceRevocation(body), let credential {
+            await authorizer.deviceWasRevoked(ifCredentialRevision: credential.revision)
         }
 
         let safeBody = Self.redact(tokens: tokens, from: body)

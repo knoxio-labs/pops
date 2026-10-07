@@ -105,6 +105,7 @@ internal struct BFMEgoByteTransportBehaviorTests {
         #expect(status == 403)
         #expect(await attempt.source.recordedRequests().count == 1)
         #expect(await attempt.authorizer.revocationCount() == 1)
+        #expect(await attempt.authorizer.revokedRevisions() == [1])
     }
 
     @Test(

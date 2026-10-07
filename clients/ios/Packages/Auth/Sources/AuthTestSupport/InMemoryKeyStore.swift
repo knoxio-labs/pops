@@ -16,35 +16,94 @@ import Synchronization
 /// silent, producing an app that pairs, works, and provides none of the
 /// guarantees the pairing was for.
 public final class InMemoryKeyStore: DeviceKeyStore {
-    private let key = Mutex<P256.Signing.PrivateKey?>(nil)
+    private let namespace = UUID().uuidString
+    private let key = Mutex<State>(State())
 
     public init() {}
 
+    /// Number of staged keys that have not been activated or discarded.
+    public var stagedCandidateCount: Int { key.withLock { $0.candidates.count } }
+
     @discardableResult
     public func createKey() throws -> DevicePublicKey {
-        try key.withLock { stored in
-            guard stored == nil else { throw DeviceKeyStoreError.keyAlreadyExists }
+        try key.withLock { state in
+            guard state.active == nil else { throw DeviceKeyStoreError.keyAlreadyExists }
             let generated = P256.Signing.PrivateKey()
-            stored = generated
+            state.active = ActiveKey(identifier: nil, privateKey: generated)
             return try DevicePublicKey(x963Representation: generated.publicKey.x963Representation)
         }
     }
 
+    public func createCandidateKey() throws -> DeviceKeyCandidate {
+        try key.withLock { state in
+            let generated = P256.Signing.PrivateKey()
+            let identifier = UUID()
+            state.candidates[identifier] = generated
+            let publicKey = try DevicePublicKey(
+                x963Representation: generated.publicKey.x963Representation)
+            return DeviceKeyCandidate(
+                publicKey: publicKey,
+                identifier: identifier,
+                namespace: namespace
+            )
+        }
+    }
+
+    public func activateCandidate(_ candidate: DeviceKeyCandidate) throws {
+        try key.withLock { state in
+            guard candidate.namespace == namespace,
+                let privateKey = state.candidates.removeValue(forKey: candidate.identifier)
+            else {
+                throw DeviceKeyStoreError.candidateNotFound
+            }
+            state.active = ActiveKey(identifier: candidate.identifier, privateKey: privateKey)
+        }
+    }
+
+    public func discardCandidate(_ candidate: DeviceKeyCandidate) throws {
+        try key.withLock { state in
+            guard candidate.namespace == namespace else {
+                throw DeviceKeyStoreError.candidateNotFound
+            }
+            guard state.active?.identifier != candidate.identifier else {
+                throw DeviceKeyStoreError.candidateAlreadyActive
+            }
+            state.candidates.removeValue(forKey: candidate.identifier)
+        }
+    }
+
     public func publicKey() throws -> DevicePublicKey? {
-        try key.withLock { stored in
-            guard let stored else { return nil }
-            return try DevicePublicKey(x963Representation: stored.publicKey.x963Representation)
+        try key.withLock { state in
+            guard let privateKey = state.active?.privateKey else { return nil }
+            return try DevicePublicKey(x963Representation: privateKey.publicKey.x963Representation)
         }
     }
 
     public func signature(for message: Data) throws -> Data {
-        try key.withLock { stored in
-            guard let stored else { throw DeviceKeyStoreError.keyNotFound }
-            return try stored.signature(for: message).derRepresentation
+        try key.withLock { state in
+            guard let privateKey = state.active?.privateKey else {
+                throw DeviceKeyStoreError.keyNotFound
+            }
+            return try privateKey.signature(for: message).derRepresentation
         }
     }
 
     public func deleteKey() throws {
-        key.withLock { $0 = nil }
+        key.withLock {
+            $0.active = nil
+            $0.candidates.removeAll()
+        }
+    }
+}
+
+extension InMemoryKeyStore {
+    fileprivate struct ActiveKey {
+        let identifier: UUID?
+        let privateKey: P256.Signing.PrivateKey
+    }
+
+    fileprivate struct State {
+        var active: ActiveKey?
+        var candidates: [UUID: P256.Signing.PrivateKey] = [:]
     }
 }

@@ -73,11 +73,14 @@ public enum PairingError: Error, Hashable, Sendable {
 
 /// Turning a pairing code into a paired device.
 public protocol DevicePairingService: Sendable {
-    /// Creates the device key, exchanges the code and persists the resulting
-    /// credentials. The caller commits the returned device to ``SessionStore``.
+    /// Exchanges the code against a staged key and activates the resulting
+    /// credentials together. A failed attempt preserves any existing identity;
+    /// the caller commits a successful returned device to ``SessionStore``.
     ///
-    /// Leaves no key behind on failure: an attempt that generated a key and
-    /// then could not spend it deletes the key before throwing, so a retry
-    /// pairs one key rather than orphaning the first on the server.
+    /// - Throws: ``PairingError`` after removing the candidate key and leaving
+    ///   the previously active identity unchanged, or ``CancellationError``
+    ///   when cancellation interrupts the exchange before a successful server
+    ///   response. Once the BFM accepts the candidate, local activation finishes
+    ///   even if the task has since been cancelled.
     func pair(_ request: PairingRequest) async throws -> PairedDevice
 }

@@ -105,7 +105,9 @@ public struct AuthenticatingMiddleware: ClientMiddleware {
             body: try await ReplayableBody(capturing: body),
             baseURL: baseURL
         )
-        guard let tokens = await refresher.currentTokens() else {
+        guard let credentials = await refresher.currentCredentialSnapshot(),
+            let tokens = credentials.tokens
+        else {
             // Unpaired, or wiped by a `403` that landed while this request was
             // being prepared. Sent without a token so the BFM answers the
             // refusal, rather than short-circuited here into an error only this
@@ -117,6 +119,7 @@ public struct AuthenticatingMiddleware: ClientMiddleware {
             to: try await attempt.send(authorizedWith: tokens.accessToken, through: next),
             of: attempt,
             rejecting: tokens.accessToken,
+            credentialRevision: credentials.revision,
             through: next
         )
     }
@@ -129,32 +132,43 @@ extension AuthenticatingMiddleware {
         to answered: (HTTPResponse, HTTPBody?),
         of attempt: AuthenticatedAttempt,
         rejecting staleAccessToken: String,
+        credentialRevision: UInt64,
         through next: (HTTPRequest, HTTPBody?, URL) async throws -> (HTTPResponse, HTTPBody?)
     ) async throws -> (HTTPResponse, HTTPBody?) {
         switch answered.0.status.code {
         case 401:
             guard attempt.isReplayable else { return answered }
-            let refreshed = try await refresher.refreshedTokens(
+            let refreshed = try await refresher.refreshedCredentials(
                 replacing: staleAccessToken,
                 at: attempt.baseURL
             )
+            guard let refreshedTokens = refreshed.tokens else {
+                throw SessionRefreshError.unauthenticated
+            }
             let retried = try await attempt.send(
-                authorizedWith: refreshed.accessToken,
+                authorizedWith: refreshedTokens.accessToken,
                 through: next
             )
             // The retry can meet a revocation that landed between the two
             // attempts. Handled here rather than by recursing, so the number of
             // requests this middleware can make stays two.
-            return await preservingSessionUnlessRevoked(retried)
+            return await preservingSessionUnlessRevoked(
+                retried,
+                ifRevision: refreshed.revision
+            )
         case 403:
-            return await preservingSessionUnlessRevoked(answered)
+            return await preservingSessionUnlessRevoked(
+                answered,
+                ifRevision: credentialRevision
+            )
         default:
             return answered
         }
     }
 
     private func preservingSessionUnlessRevoked(
-        _ answered: (HTTPResponse, HTTPBody?)
+        _ answered: (HTTPResponse, HTTPBody?),
+        ifRevision revision: UInt64
     ) async -> (HTTPResponse, HTTPBody?) {
         guard answered.0.status.code == 403, let body = answered.1 else { return answered }
         if case .known(let length) = body.length,
@@ -167,7 +181,7 @@ extension AuthenticatingMiddleware {
             do {
                 let bytes = try await [UInt8](collecting: body, upTo: Self.maximumRefusalBodyBytes)
                 if Self.isDeviceRevocation(bytes) {
-                    await refresher.deviceWasRevoked()
+                    _ = await refresher.deviceWasRevoked(ifRevision: revision)
                 }
             } catch {
                 return answered
@@ -175,12 +189,17 @@ extension AuthenticatingMiddleware {
             return answered
         }
 
-        return await preservingSinglePassRefusalBody(body, in: answered.0)
+        return await preservingSinglePassRefusalBody(
+            body,
+            in: answered.0,
+            ifRevision: revision
+        )
     }
 
     private func preservingSinglePassRefusalBody(
         _ body: HTTPBody,
-        in response: HTTPResponse
+        in response: HTTPResponse,
+        ifRevision revision: UInt64
     ) async -> (HTTPResponse, HTTPBody?) {
         var iterator = body.makeAsyncIterator()
         var bytes: [UInt8] = []
@@ -202,7 +221,7 @@ extension AuthenticatingMiddleware {
                 bytes.append(contentsOf: chunk)
             }
             if Self.isDeviceRevocation(bytes) {
-                await refresher.deviceWasRevoked()
+                _ = await refresher.deviceWasRevoked(ifRevision: revision)
             }
             return (response, HTTPBody(bytes))
         } catch {

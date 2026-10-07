@@ -192,34 +192,44 @@ internal actor RecordingBFMStreamAuthorizer: BFMStreamAuthorizer {
         internal let baseURL: URL
     }
 
-    private let accessToken: String?
+    private let credential: BFMStreamCredential?
     private let refreshBehavior: RefreshBehavior
     private var refreshes: [RefreshCall] = []
-    private var revocations = 0
+    private var revocations: [UInt64] = []
 
-    internal init(accessToken: String?, refreshBehavior: RefreshBehavior = .returns("access-2")) {
-        self.accessToken = accessToken
+    internal init(
+        accessToken: String?,
+        credentialRevision: UInt64 = 1,
+        refreshBehavior: RefreshBehavior = .returns("access-2")
+    ) {
+        credential = accessToken.map {
+            BFMStreamCredential(accessToken: $0, revision: credentialRevision)
+        }
         self.refreshBehavior = refreshBehavior
     }
 
-    internal func currentAccessToken() async -> String? {
-        accessToken
+    internal func currentStreamCredential() async -> BFMStreamCredential? {
+        credential
     }
 
-    internal func refreshedAccessToken(replacing staleAccessToken: String, at baseURL: URL)
-        async throws -> String
-    {
+    internal func refreshedStreamCredential(
+        replacing staleAccessToken: String,
+        at baseURL: URL
+    ) async throws -> BFMStreamCredential {
         refreshes.append(RefreshCall(staleAccessToken: staleAccessToken, baseURL: baseURL))
         switch refreshBehavior {
         case .returns(let accessToken):
-            return accessToken
+            return BFMStreamCredential(
+                accessToken: accessToken,
+                revision: (credential?.revision ?? 0) + 1
+            )
         case .fails:
             throw StreamAuthorizerTestFailure.refreshFailed
         }
     }
 
-    internal func deviceWasRevoked() async {
-        revocations += 1
+    internal func deviceWasRevoked(ifCredentialRevision revision: UInt64) async {
+        revocations.append(revision)
     }
 
     internal func recordedRefreshes() -> [RefreshCall] {
@@ -227,6 +237,11 @@ internal actor RecordingBFMStreamAuthorizer: BFMStreamAuthorizer {
     }
 
     internal func revocationCount() -> Int {
+        revocations
+            .count
+    }
+
+    internal func revokedRevisions() -> [UInt64] {
         revocations
     }
 }

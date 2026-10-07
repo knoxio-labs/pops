@@ -13,6 +13,13 @@ private struct FailingDeleteKeyStore: DeviceKeyStore {
 
     @discardableResult
     func createKey() throws -> DevicePublicKey { try wrapped.createKey() }
+    func createCandidateKey() throws -> DeviceKeyCandidate { try wrapped.createCandidateKey() }
+    func activateCandidate(_ candidate: DeviceKeyCandidate) throws {
+        try wrapped.activateCandidate(candidate)
+    }
+    func discardCandidate(_ candidate: DeviceKeyCandidate) throws {
+        try wrapped.discardCandidate(candidate)
+    }
     func publicKey() throws -> DevicePublicKey? { try wrapped.publicKey() }
     func signature(for message: Data) throws -> Data { try wrapped.signature(for: message) }
     func deleteKey() throws { throw DeviceKeyStoreError.keychain(-25300) }

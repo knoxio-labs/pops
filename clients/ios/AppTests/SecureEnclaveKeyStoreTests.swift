@@ -58,6 +58,22 @@ internal struct SecureEnclaveKeyStoreTests {
         ]
     }
 
+    private func candidateKeyStatus(for identifier: UUID) -> OSStatus {
+        var found: CFTypeRef?
+        return SecItemCopyMatching(
+            [
+                kSecClass as String: kSecClassKey,
+                kSecAttrKeyType as String: kSecAttrKeyTypeECSECPrimeRandom,
+                kSecAttrApplicationTag as String: Data(
+                    "\(Self.applicationTag).candidate.\(identifier.uuidString)".utf8),
+                kSecUseDataProtectionKeychain as String: true,
+                kSecReturnAttributes as String: true,
+                kSecMatchLimit as String: kSecMatchLimitOne,
+            ] as CFDictionary,
+            &found
+        )
+    }
+
     private func storedKeyAttributes() throws -> [String: Any] {
         var found: CFTypeRef?
         let status = SecItemCopyMatching(
@@ -185,8 +201,8 @@ internal struct SecureEnclaveKeyStoreTests {
         try store.deleteKey()
     }
 
-    /// Re-pairing deletes before it creates, so a create that silently replaced
-    /// would orphan the public key the BFM has on file with nothing to notice it.
+    /// Direct creation remains exclusive; pairing uses staged candidates to
+    /// replace an active identity only after the BFM accepts the new code.
     @Test("a second create is refused rather than silently replacing the identity")
     func createRefusesToReplace() throws {
         try store.createKey()
@@ -194,6 +210,60 @@ internal struct SecureEnclaveKeyStoreTests {
         #expect(throws: DeviceKeyStoreError.keyAlreadyExists) { try store.createKey() }
 
         try store.deleteKey()
+    }
+
+    @Test("a candidate leaves the current Enclave key active until activation")
+    func candidateActivationSwitchesTheEnclaveIdentity() throws {
+        let previous = try store.createKey()
+        let candidate = try store.createCandidateKey()
+        let message = Data("candidate identity".utf8)
+
+        #expect(try store.publicKey() == previous)
+        try store.activateCandidate(candidate)
+        let signature = try store.signature(for: message)
+
+        #expect(try store.publicKey() == candidate.publicKey)
+        #expect(candidate.publicKey.isValidSignature(signature, for: message))
+        #expect(!previous.isValidSignature(signature, for: message))
+
+        try store.deleteKey()
+    }
+
+    @Test("namespace deletion removes staged Enclave keys")
+    func namespaceDeletionRemovesCandidates() throws {
+        let candidate = try store.createCandidateKey()
+
+        try store.deleteKey()
+
+        #expect(candidateKeyStatus(for: candidate.identifier) == errSecItemNotFound)
+        #expect(try store.publicKey() == nil)
+        #expect(throws: DeviceKeyStoreError.candidateNotFound) {
+            try store.activateCandidate(candidate)
+        }
+    }
+
+    @Test("namespace deletion finds active candidate keys after defaults metadata is lost")
+    func namespaceDeletionFindsCandidatesAfterDefaultsLoss() throws {
+        let candidate = try store.createCandidateKey()
+        try store.activateCandidate(candidate)
+        UserDefaults.standard.removeObject(forKey: "\(Self.applicationTag).active-candidate")
+        UserDefaults.standard.removeObject(forKey: "\(Self.applicationTag).candidates")
+
+        try store.deleteKey()
+
+        #expect(candidateKeyStatus(for: candidate.identifier) == errSecItemNotFound)
+    }
+
+    @Test("concurrent candidate creations leave no key outside a namespace wipe")
+    func concurrentCandidatesAreDeleted() async throws {
+        async let first = store.createCandidateKey()
+        async let second = store.createCandidateKey()
+        let candidates = try await [first, second]
+
+        try store.deleteKey()
+
+        #expect(
+            candidates.allSatisfy { candidateKeyStatus(for: $0.identifier) == errSecItemNotFound })
     }
 
     @Test("deletion is total and idempotent")

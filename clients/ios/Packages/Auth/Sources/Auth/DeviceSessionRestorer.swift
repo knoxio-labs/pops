@@ -18,9 +18,10 @@ import AppCore
 /// real request, which `AuthenticatingMiddleware` already turns into a session
 /// event, and the root moves to the pairing screen with an explanation.
 ///
-/// It also does not wipe what it could not use. Pairing replaces credentials
-/// and wipes before it writes, so destroying them here would only add a way for
-/// a transient read failure to cost a device its identity.
+/// It also does not wipe what it could not use. Pairing keeps the current
+/// identity active until the server accepts its replacement, so destroying it
+/// here would only add a way for a transient read failure to cost a device its
+/// identity.
 public struct DeviceSessionRestorer: SessionRestoring {
     private let credentialStore: DeviceCredentialStore
 
@@ -29,18 +30,12 @@ public struct DeviceSessionRestorer: SessionRestoring {
     }
 
     public func restoredSession() async -> SessionState {
-        guard let device = storedDevice, hasTokens else { return .unpaired }
+        guard let snapshot = try? credentialStore.restoreSnapshot(),
+            let device = snapshot.device,
+            snapshot.tokens != nil
+        else {
+            return .unpaired
+        }
         return .paired(device)
-    }
-
-    /// A read that failed and a read that found nothing mean the same thing to
-    /// the caller, and `do`/`catch` says so without the double optional a
-    /// `try?` on an optional-returning call produces.
-    private var storedDevice: PairedDevice? {
-        do { return try credentialStore.pairedDeviceStore.load() } catch { return nil }
-    }
-
-    private var hasTokens: Bool {
-        do { return try credentialStore.tokenStore.load() != nil } catch { return false }
     }
 }

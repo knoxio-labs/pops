@@ -1,5 +1,6 @@
 import Foundation
 import Security
+import Synchronization
 
 /// The real device key store: a P-256 key generated inside the Secure Enclave.
 ///
@@ -54,19 +55,34 @@ import Security
 /// target instead. See `clients/ios/AppTests/SecureEnclaveKeyStoreTests.swift`
 /// and the package README.
 public struct SecureEnclaveKeyStore: DeviceKeyStore {
-    private let tag: Data
+    static let mutationLock = Mutex(())
+
+    let applicationTag: String
+
+    var tag: Data { Data(applicationTag.utf8) }
+
+    var activeCandidateDefaultsKey: String { "\(applicationTag).active-candidate" }
+
+    var candidateDefaultsKey: String { "\(applicationTag).candidates" }
 
     /// - Parameter applicationTag: The Keychain `kSecAttrApplicationTag` the key
     ///   is filed under. The default is the only value production uses; tests
     ///   on real hardware pass their own so a run cannot destroy a paired key.
     public init(applicationTag: String = "com.knoxiolabs.pops.device-key") {
-        tag = Data(applicationTag.utf8)
+        self.applicationTag = applicationTag
     }
 
     @discardableResult
     public func createKey() throws -> DevicePublicKey {
-        if try loadPrivateKey() != nil { throw DeviceKeyStoreError.keyAlreadyExists }
+        try Self.mutationLock.withLock { _ in
+            if try loadPrivateKey(at: activeTag) != nil {
+                throw DeviceKeyStoreError.keyAlreadyExists
+            }
+            return try createKey(at: tag)
+        }
+    }
 
+    func createKey(at applicationTag: Data) throws -> DevicePublicKey {
         var accessControlError: Unmanaged<CFError>?
         guard
             let access = SecAccessControlCreateWithFlags(
@@ -86,50 +102,45 @@ public struct SecureEnclaveKeyStore: DeviceKeyStore {
             kSecAttrTokenID: kSecAttrTokenIDSecureEnclave,
             kSecPrivateKeyAttrs: [
                 kSecAttrIsPermanent: true,
-                kSecAttrApplicationTag: tag,
+                kSecAttrApplicationTag: applicationTag,
                 kSecAttrAccessControl: access,
-                // Must match `baseQuery()`, or the key is written to one
-                // keychain and looked up in the other — see that method.
                 kSecUseDataProtectionKeychain: true,
             ] as [CFString: Any],
         ]
 
         var creationError: Unmanaged<CFError>?
-        guard
-            let privateKey = SecKeyCreateRandomKey(attributes as CFDictionary, &creationError)
+        guard let privateKey = SecKeyCreateRandomKey(attributes as CFDictionary, &creationError)
         else {
             throw DeviceKeyStoreError.secureEnclaveUnavailable(code: Self.code(of: creationError))
         }
-
         return try Self.publicKey(of: privateKey)
     }
 
     public func publicKey() throws -> DevicePublicKey? {
-        guard let privateKey = try loadPrivateKey() else { return nil }
-        return try Self.publicKey(of: privateKey)
+        try Self.mutationLock.withLock { _ in
+            guard let privateKey = try loadPrivateKey(at: activeTag) else { return nil }
+            return try Self.publicKey(of: privateKey)
+        }
     }
 
     public func signature(for message: Data) throws -> Data {
-        guard let privateKey = try loadPrivateKey() else { throw DeviceKeyStoreError.keyNotFound }
+        try Self.mutationLock.withLock { _ in
+            guard let privateKey = try loadPrivateKey(at: activeTag) else {
+                throw DeviceKeyStoreError.keyNotFound
+            }
 
-        var signingError: Unmanaged<CFError>?
-        guard
-            let signature = SecKeyCreateSignature(
-                privateKey,
-                .ecdsaSignatureMessageX962SHA256,
-                message as CFData,
-                &signingError
-            )
-        else {
-            throw DeviceKeyStoreError.signingFailed(code: Self.code(of: signingError))
-        }
-        return signature as Data
-    }
-
-    public func deleteKey() throws {
-        let status = SecItemDelete(baseQuery() as CFDictionary)
-        guard status == errSecSuccess || status == errSecItemNotFound else {
-            throw DeviceKeyStoreError.keychain(status)
+            var signingError: Unmanaged<CFError>?
+            guard
+                let signature = SecKeyCreateSignature(
+                    privateKey,
+                    .ecdsaSignatureMessageX962SHA256,
+                    message as CFData,
+                    &signingError
+                )
+            else {
+                throw DeviceKeyStoreError.signingFailed(code: Self.code(of: signingError))
+            }
+            return signature as Data
         }
     }
 
@@ -138,17 +149,67 @@ public struct SecureEnclaveKeyStore: DeviceKeyStore {
     /// and the flag is a no-op there; a macOS host build has two and defaults
     /// to the file-based one, so omitting it in one place and not the other
     /// creates a key that then cannot be found or deleted.
-    private func baseQuery() -> [CFString: Any] {
+    private var activeTag: Data {
+        guard let identifier = UserDefaults.standard.string(forKey: activeCandidateDefaultsKey),
+            let uuid = UUID(uuidString: identifier)
+        else {
+            return tag
+        }
+        return candidateTag(for: uuid)
+    }
+
+    var candidateIdentifiers: [String] {
+        UserDefaults.standard.stringArray(forKey: candidateDefaultsKey) ?? []
+    }
+
+    func candidateTag(for identifier: UUID) -> Data {
+        Data("\(applicationTag).candidate.\(identifier.uuidString)".utf8)
+    }
+
+    func matchingCandidateTags() throws -> Set<Data> {
+        var query: [CFString: Any] = [
+            kSecClass: kSecClassKey,
+            kSecAttrKeyType: kSecAttrKeyTypeECSECPrimeRandom,
+            kSecAttrTokenID: kSecAttrTokenIDSecureEnclave,
+            kSecUseDataProtectionKeychain: true,
+            kSecMatchLimit: kSecMatchLimitAll,
+            kSecReturnAttributes: true,
+        ]
+        query.removeValue(forKey: kSecAttrApplicationTag)
+
+        var found: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &found)
+        guard status == errSecSuccess || status == errSecItemNotFound else {
+            throw DeviceKeyStoreError.keychain(status)
+        }
+        guard status == errSecSuccess else { return [] }
+        guard let attributes = found as? [[String: Any]] else {
+            throw DeviceKeyStoreError.keychain(errSecInvalidItemRef)
+        }
+        let prefix = Data("\(applicationTag).candidate.".utf8)
+        return Set(
+            attributes.compactMap { $0[kSecAttrApplicationTag as String] as? Data }
+                .filter { $0.starts(with: prefix) })
+    }
+
+    func removeCandidate(_ identifier: UUID) {
+        UserDefaults.standard.set(
+            candidateIdentifiers.filter { $0 != identifier.uuidString },
+            forKey: candidateDefaultsKey
+        )
+    }
+
+    private func baseQuery(for applicationTag: Data) -> [CFString: Any] {
         [
             kSecClass: kSecClassKey,
             kSecAttrKeyType: kSecAttrKeyTypeECSECPrimeRandom,
-            kSecAttrApplicationTag: tag,
+            kSecAttrApplicationTag: applicationTag,
             kSecUseDataProtectionKeychain: true,
         ]
     }
 
-    private func loadPrivateKey() throws -> SecKey? {
-        var query = baseQuery()
+    func loadPrivateKey(at applicationTag: Data) throws -> SecKey? {
+        var query = baseQuery(for: applicationTag)
         query[kSecReturnRef] = true
 
         var item: CFTypeRef?
@@ -165,6 +226,13 @@ public struct SecureEnclaveKeyStore: DeviceKeyStore {
         case errSecItemNotFound:
             return nil
         default:
+            throw DeviceKeyStoreError.keychain(status)
+        }
+    }
+
+    func deleteKey(at applicationTag: Data) throws {
+        let status = SecItemDelete(baseQuery(for: applicationTag) as CFDictionary)
+        guard status == errSecSuccess || status == errSecItemNotFound else {
             throw DeviceKeyStoreError.keychain(status)
         }
     }

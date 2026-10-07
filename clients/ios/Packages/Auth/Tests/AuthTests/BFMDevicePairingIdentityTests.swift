@@ -7,12 +7,13 @@ import Testing
 
 @testable import Auth
 
-/// The half of pairing that exists so a **later launch** can tell whether this
-/// device is paired at all.
+/// The persisted identity and revision that a **later launch** uses to restore
+/// a paired session.
 ///
 /// Split from `BFMDevicePairingServiceTests` because the two together outgrow
 /// one file, not because the concern is different: the rule under both is that
-/// however an attempt ended, the device holds nothing it cannot use.
+/// a failed replacement leaves the prior identity intact and a successful one
+/// advances the persisted revision.
 @Suite("BFMDevicePairingService identity")
 internal struct BFMDevicePairingIdentityTests {
     private struct Fixture {
@@ -51,6 +52,7 @@ internal struct BFMDevicePairingIdentityTests {
         let device = try await fixture.service.pair(.fake(baseURL: .fakeBFM))
 
         #expect(try fixture.deviceStore.load() == device)
+        #expect(try fixture.deviceStore.loadSnapshot()?.revision == 1)
     }
 
     /// The identity is written after the tokens, so a token write that failed
@@ -86,12 +88,10 @@ internal struct BFMDevicePairingIdentityTests {
         #expect(try fixture.keyStore.publicKey() == nil)
     }
 
-    /// Pairing replaces a device's identity wholesale, so an identity from an
-    /// earlier pairing must not outlive an attempt that failed — it would
-    /// restore a session for a device the server no longer knows.
-    @Test("an identity left by an earlier pairing is gone before the exchange runs")
-    func previousIdentityIsWiped() async throws {
-        let deviceStore = InMemoryPairedDeviceStore(initial: .fake(id: "stale-device"))
+    @Test("a rejected code preserves the identity from an earlier pairing")
+    func previousIdentityIsPreserved() async throws {
+        let previousDevice = PairedDevice.fake(id: "previous-device")
+        let deviceStore = InMemoryPairedDeviceStore(initial: previousDevice)
         let fixture = fixture(
             exchange: ScriptedPairingExchange(
                 .failure(BFMClientError.pairingRefused(.codeRejected))),
@@ -100,6 +100,7 @@ internal struct BFMDevicePairingIdentityTests {
 
         await #expect(throws: PairingError.codeRejected) { try await fixture.service.pair(.fake()) }
 
-        #expect(try deviceStore.load() == nil)
+        #expect(try deviceStore.load() == previousDevice)
+        #expect(try deviceStore.loadSnapshot()?.revision == 0)
     }
 }

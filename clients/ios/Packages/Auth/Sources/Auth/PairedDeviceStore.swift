@@ -1,26 +1,61 @@
 import AppCore
 import Foundation
 
+/// An identity and revision persisted as the active pairing snapshot.
+public struct PairedDeviceSnapshot: Sendable, Equatable {
+    /// Monotonic revision used to reject credentials produced by an older
+    /// pairing or refresh operation.
+    public let revision: UInt64
+
+    /// The current identity, or `nil` when the persisted revision is a wipe
+    /// tombstone.
+    public let device: PairedDevice?
+
+    /// Creates a persisted view of the active credential identity.
+    public init(revision: UInt64, device: PairedDevice?) {
+        self.revision = revision
+        self.device = device.map {
+            PairedDevice(id: $0.id, baseURL: $0.baseURL, credentialRevision: revision)
+        }
+    }
+}
+
 /// Where the device's own identity is remembered between launches.
 ///
-/// The two things in ``PairedDevice`` are the only parts of a session that a
-/// cold launch cannot obtain any other way. The device id names this handset to
-/// the BFM; the base URL is where the BFM *is*, and it arrives with the pairing
-/// code rather than being compiled in — a Release build names no host, so a
-/// process that has forgotten this has no way to ask anybody anything.
-///
-/// Separate from ``TokenStore`` because it is separate material with a
-/// different reason to exist, and joined to it by ``DeviceCredentialStore``,
-/// which is what makes a wipe cover both.
+/// The revision is part of the persisted snapshot so a delayed pairing or
+/// refresh cannot replace credentials that became active after it started.
 public protocol PairedDeviceStore: Sendable {
+    /// Loads the active identity and revision, or `nil` before the first write.
+    func loadSnapshot() throws -> PairedDeviceSnapshot?
+
+    /// Replaces the stored snapshot as one persistence operation.
+    func saveSnapshot(_ snapshot: PairedDeviceSnapshot) throws
+}
+
+extension PairedDeviceStore {
     /// The device this app is paired as, or `nil` when it is not paired.
-    func load() throws -> PairedDevice?
+    public func load() throws -> PairedDevice? {
+        try loadSnapshot()?.device
+    }
 
-    /// Replaces what is stored. Called once, at the end of pairing.
-    func save(_ device: PairedDevice) throws
+    /// Replaces the active device and advances its persisted revision.
+    public func save(_ device: PairedDevice) throws {
+        let revision = try nextRevision(after: loadSnapshot()?.revision ?? 0)
+        try saveSnapshot(PairedDeviceSnapshot(revision: revision, device: device))
+    }
 
-    /// Removes it. Idempotent, and total.
-    func wipe() throws
+    /// Persists a newer empty revision so in-flight work cannot restore a wiped
+    /// identity after it completes.
+    public func wipe() throws {
+        let revision = try nextRevision(after: loadSnapshot()?.revision ?? 0)
+        try saveSnapshot(PairedDeviceSnapshot(revision: revision, device: nil))
+    }
+
+    private func nextRevision(after revision: UInt64) throws -> UInt64 {
+        let (next, overflow) = revision.addingReportingOverflow(1)
+        guard !overflow else { throw PairedDeviceStoreError.revisionExhausted }
+        return next
+    }
 }
 
 /// Why a paired-device read or write failed.
@@ -29,6 +64,9 @@ public enum PairedDeviceStoreError: Error, Equatable {
     /// truncated write, a base URL that no longer parses. Treated as unpaired
     /// by callers rather than crashed on.
     case corruptedPayload
+
+    /// The monotonic revision reached its maximum value.
+    case revisionExhausted
 }
 
 /// `UserDefaults`-backed ``PairedDeviceStore``.
@@ -48,9 +86,9 @@ public enum PairedDeviceStoreError: Error, Equatable {
 /// goes with the app, so a reinstall reaches the pairing screen — which is what
 /// somebody who deleted the app and installed it again is expecting.
 ///
-/// That leaves the token and the key behind in the Keychain after a reinstall,
-/// which is inert: pairing wipes every credential before it creates anything,
-/// so the first thing the fresh install does is remove them.
+/// That leaves the token and the key behind in the Keychain after a reinstall.
+/// Pairing stages a replacement key and preserves the old identity until the
+/// server accepts the code; a new install has no stored identity to resume.
 public struct UserDefaultsPairedDeviceStore: PairedDeviceStore {
     private let suiteName: String?
     private let key: String
@@ -78,25 +116,21 @@ public struct UserDefaultsPairedDeviceStore: PairedDeviceStore {
         suiteName.flatMap(UserDefaults.init(suiteName:)) ?? .standard
     }
 
-    public func load() throws -> PairedDevice? {
+    public func loadSnapshot() throws -> PairedDeviceSnapshot? {
         guard let data = defaults.data(forKey: key) else { return nil }
         guard let stored = try? JSONDecoder().decode(StoredPairedDevice.self, from: data),
-            let device = stored.device
+            let snapshot = stored.snapshot
         else {
             throw PairedDeviceStoreError.corruptedPayload
         }
-        return device
+        return snapshot
     }
 
-    public func save(_ device: PairedDevice) throws {
-        guard let data = try? JSONEncoder().encode(StoredPairedDevice(device)) else {
+    public func saveSnapshot(_ snapshot: PairedDeviceSnapshot) throws {
+        guard let data = try? JSONEncoder().encode(StoredPairedDevice(snapshot)) else {
             throw PairedDeviceStoreError.corruptedPayload
         }
         defaults.set(data, forKey: key)
-    }
-
-    public func wipe() throws {
-        defaults.removeObject(forKey: key)
     }
 }
 
@@ -108,16 +142,29 @@ public struct UserDefaultsPairedDeviceStore: PairedDeviceStore {
 /// no longer parses has to be readable as corruption rather than as a decode
 /// failure indistinguishable from a truncated file.
 private struct StoredPairedDevice: Codable {
-    let id: String
-    let baseURL: String
+    let id: String?
+    let baseURL: String?
+    let revision: UInt64?
 
-    init(_ device: PairedDevice) {
-        id = device.id
-        baseURL = device.baseURL.absoluteString
+    init(_ snapshot: PairedDeviceSnapshot) {
+        id = snapshot.device?.id
+        baseURL = snapshot.device?.baseURL.absoluteString
+        revision = snapshot.revision
     }
 
-    var device: PairedDevice? {
-        guard !id.isEmpty, let url = URL(string: baseURL), url.host() != nil else { return nil }
-        return PairedDevice(id: id, baseURL: url)
+    var snapshot: PairedDeviceSnapshot? {
+        let revision = revision ?? 0
+        switch (id, baseURL) {
+        case (nil, nil):
+            return PairedDeviceSnapshot(revision: revision, device: nil)
+        case (.some(let id), .some(let baseURL)):
+            guard !id.isEmpty, let url = URL(string: baseURL), url.host() != nil else {
+                return nil
+            }
+            return PairedDeviceSnapshot(
+                revision: revision, device: PairedDevice(id: id, baseURL: url))
+        default:
+            return nil
+        }
     }
 }

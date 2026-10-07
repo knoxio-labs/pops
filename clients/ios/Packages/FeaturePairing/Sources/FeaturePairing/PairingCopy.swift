@@ -1,5 +1,4 @@
 import AppCore
-import Foundation
 
 /// Every word this screen shows, in one place.
 ///

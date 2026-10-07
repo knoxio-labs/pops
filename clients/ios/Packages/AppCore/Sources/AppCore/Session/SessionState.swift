@@ -7,10 +7,13 @@ public struct PairedDevice: Hashable, Sendable, Identifiable {
     /// Arrives with the pairing code rather than being compiled in, so a fresh
     /// install can be pointed at a different BFM without a new build.
     public let baseURL: URL
+    /// Local revision of the credential identity that produced this session.
+    public let credentialRevision: UInt64
 
-    public init(id: String, baseURL: URL) {
+    public init(id: String, baseURL: URL, credentialRevision: UInt64 = 0) {
         self.id = id
         self.baseURL = baseURL
+        self.credentialRevision = credentialRevision
     }
 }
 
@@ -27,5 +30,6 @@ public enum RevocationReason: Hashable, Sendable {
 public enum SessionState: Hashable, Sendable {
     case unpaired
     case paired(PairedDevice)
-    case revoked(RevocationReason)
+    /// A revoked credential revision remains a tombstone until pairing a newer revision.
+    case revoked(RevocationReason, credentialRevision: UInt64? = nil)
 }

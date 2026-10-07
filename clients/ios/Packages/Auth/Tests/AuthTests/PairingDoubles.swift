@@ -45,6 +45,41 @@ internal final class ScriptedPairingExchange: DevicePairingExchange {
     }
 }
 
+internal actor GatedPairingExchange: DevicePairingExchange {
+    internal struct Call: Sendable, Equatable {
+        internal let code: String
+        internal let publicKeyBase64DER: String
+    }
+
+    private var response: CheckedContinuation<IssuedDeviceCredentials, any Error>?
+    private var started = false
+    private var startWaiters: [CheckedContinuation<Void, Never>] = []
+    internal private(set) var call: Call?
+
+    internal func pairDevice(
+        code: String,
+        publicKeyBase64DER: String,
+        deviceName: String,
+        deviceModel: String
+    ) async throws -> IssuedDeviceCredentials {
+        started = true
+        call = Call(code: code, publicKeyBase64DER: publicKeyBase64DER)
+        for waiter in startWaiters { waiter.resume() }
+        startWaiters.removeAll()
+        return try await withCheckedThrowingContinuation { response = $0 }
+    }
+
+    internal func waitUntilStarted() async {
+        guard !started else { return }
+        await withCheckedContinuation { startWaiters.append($0) }
+    }
+
+    internal func complete(_ result: Result<IssuedDeviceCredentials, any Error>) {
+        response?.resume(with: result)
+        response = nil
+    }
+}
+
 extension IssuedDeviceCredentials {
     internal static func stub(
         deviceId: String = "6ba7b810-9dad-41d1-80b4-00c04fd430c8",
@@ -70,6 +105,7 @@ extension IssuedDeviceCredentials {
 internal final class FailingKeyStore: DeviceKeyStore {
     internal enum Operation: Sendable {
         case create
+        case activate
         case delete
     }
 
@@ -87,6 +123,24 @@ internal final class FailingKeyStore: DeviceKeyStore {
             throw DeviceKeyStoreError.secureEnclaveUnavailable(code: -26275)
         }
         return try wrapped.createKey()
+    }
+
+    internal func createCandidateKey() throws -> DeviceKeyCandidate {
+        guard !failing.contains(.create) else {
+            throw DeviceKeyStoreError.secureEnclaveUnavailable(code: -26275)
+        }
+        return try wrapped.createCandidateKey()
+    }
+
+    internal func activateCandidate(_ candidate: DeviceKeyCandidate) throws {
+        guard !failing.contains(.activate) else {
+            throw DeviceKeyStoreError.keychain(errSecInternalError)
+        }
+        try wrapped.activateCandidate(candidate)
+    }
+
+    internal func discardCandidate(_ candidate: DeviceKeyCandidate) throws {
+        try wrapped.discardCandidate(candidate)
     }
 
     internal func publicKey() throws -> DevicePublicKey? { try wrapped.publicKey() }
