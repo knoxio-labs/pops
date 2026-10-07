@@ -20,10 +20,10 @@ export interface LocationModels {
 export function useLocationModels(): LocationModels {
   const query = useQuery({
     queryKey: LOCATIONS_TREE_QUERY_KEY,
-    queryFn: async () => (await unwrap(await locationsTree())).data,
+    queryFn: async () => unwrap(await locationsTree()),
   });
   const locations = useMemo(
-    () => (query.data === undefined ? [] : flattenLocationTree(query.data)),
+    () => (query.data === undefined ? [] : flattenLocationTree(query.data.data)),
     [query.data]
   );
   const refetch = useCallback(() => {
