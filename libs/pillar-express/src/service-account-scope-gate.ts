@@ -22,9 +22,12 @@ import {
   resolveContractScope,
   SERVICE_ACCOUNT_HEADER,
   type ContractScopeMap,
+  type ServiceAccountAuthResult,
+  type ServiceAccountPrincipal,
   type ServiceAccountVerifier,
 } from '@pops/pillar-sdk/server';
 
+import { DELEGATED_SUBJECT_HEADER, resolveDelegatedSubject } from './delegated-subject.js';
 import {
   createAccessIdentitySource,
   identifyRequest,
@@ -94,6 +97,19 @@ export interface ServiceAccountScopeGateOptions {
    * apply.
    */
   readonly rawRoutes?: RawRouteTree;
+  /**
+   * The scope that lets a service account call on behalf of a guest. Omitted,
+   * `X-Pops-Subject-Email` is not read and nothing changes.
+   *
+   * Declared, a request carrying that header is the named guest's rather than
+   * the service's: the principal becomes `{ kind: 'guest', email }` and every
+   * guest rule applies, including the refusal on a route not marked
+   * `guestRoute()`. The key must still cover the route's own scope. The header
+   * from any caller that does not hold this scope is 403, never ignored, and
+   * that includes a browser session and a request with no key at all. A value
+   * that is not one email address is 400.
+   */
+  readonly delegatedSubjectScope?: string;
   /** Optional registered failures used when a scoped request is rejected. */
   readonly errors?: ServiceAccountErrorHandlers;
   /** Test seams for the Cloudflare Access leg. Production omits it. */
@@ -168,16 +184,61 @@ interface GateContext {
   readonly classify: AccessClassifier | null;
 }
 
+function scopeRejection(logPrefix: string, result: ServiceAccountAuthResult): AuthFailure {
+  logRejection(logPrefix, result);
+  return {
+    status: result.status,
+    details:
+      result.requiredScope === undefined ? undefined : { requiredScope: result.requiredScope },
+  };
+}
+
+function refuseGuest(logPrefix: string, requiredScope: string | undefined): AuthFailure {
+  console.warn(
+    `[${logPrefix}] refused a guest for '${requiredScope ?? 'a path outside the contract'}'`
+  );
+  return { status: 403, details: { principal: 'guest' } };
+}
+
+interface DelegationStep {
+  readonly options: ServiceAccountScopeGateOptions;
+  readonly req: Request;
+  readonly res: Response;
+  /** The verified account behind the request's key, when there was one. */
+  readonly service: ServiceAccountPrincipal | undefined;
+  readonly requiredScope: string | undefined;
+  readonly guestMayReach: boolean;
+}
+
+/**
+ * Hand the request to the guest a delegating key names. A gate that did not
+ * opt in, or a request with no subject header, is left exactly as it was.
+ */
+function applyDelegatedSubject(step: DelegationStep): AuthFailure | null {
+  const { options, req, res, service, requiredScope, guestMayReach } = step;
+  const { delegatedSubjectScope: delegationScope, logPrefix } = options;
+  if (delegationScope === undefined) return null;
+  const header = req.get(DELEGATED_SUBJECT_HEADER);
+  if (header === undefined) return null;
+
+  const subject = resolveDelegatedSubject({ logPrefix, delegationScope, header, service });
+  if (subject.outcome === 'refused') return subject.failure;
+  setPrincipal(res, { kind: 'guest', email: subject.email });
+  return guestMayReach ? null : refuseGuest(logPrefix, requiredScope);
+}
+
 /**
  * One request's decision: resolve the principal, refuse a guest anywhere the
- * contract has not opened to one, then apply the service-account rule
- * unchanged. Returns the refusal to send, or `null` to proceed.
+ * contract has not opened to one, apply the service-account rule unchanged,
+ * then let a key that may delegate hand the request to the guest it names.
+ * Returns the refusal to send, or `null` to proceed.
  */
 async function decide(gate: GateContext, req: Request, res: Response): Promise<AuthFailure | null> {
   const { options, scopeMap, rawScopeMap, verify, classify } = gate;
   const route = resolveContractRoute(scopeMap, req.method, req.path);
   const requiredScope = route?.scope ?? resolveContractScope(rawScopeMap, req.method, req.path);
   const apiKey = readApiKey(req);
+  const guestMayReach = route?.guest === true || isHealthPath(req.path);
 
   const principal = await identifyRequest({
     classify,
@@ -188,12 +249,8 @@ async function decide(gate: GateContext, req: Request, res: Response): Promise<A
   if (principal === null) return { status: 401, details: { credential: 'cloudflare-access' } };
   setPrincipal(res, principal);
 
-  if (principal.kind === 'guest' && route?.guest !== true && !isHealthPath(req.path)) {
-    console.warn(
-      `[${options.logPrefix}] refused a guest for ` +
-        `'${requiredScope ?? 'a path outside the contract'}'`
-    );
-    return { status: 403, details: { principal: 'guest' } };
+  if (principal.kind === 'guest' && !guestMayReach) {
+    return refuseGuest(options.logPrefix, requiredScope);
   }
 
   const result = await authorizeServiceAccountRequest({
@@ -202,13 +259,16 @@ async function decide(gate: GateContext, req: Request, res: Response): Promise<A
     verify,
     requireCredential: options.requireCredential,
   });
-  if (result.ok) return null;
-  logRejection(options.logPrefix, result);
-  return {
-    status: result.status,
-    details:
-      result.requiredScope === undefined ? undefined : { requiredScope: result.requiredScope },
-  };
+  if (!result.ok) return scopeRejection(options.logPrefix, result);
+
+  return applyDelegatedSubject({
+    options,
+    req,
+    res,
+    service: result.principal,
+    requiredScope,
+    guestMayReach,
+  });
 }
 
 /**
