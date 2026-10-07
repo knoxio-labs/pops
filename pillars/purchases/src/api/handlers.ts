@@ -12,10 +12,12 @@ import type { PillarRegistryEntry } from '@pops/types';
 import type { OpenedPurchasesDb } from '../db/index.js';
 import type { ReceiptVision } from '../ingest/receipt/vision.js';
 import type { MerchantResolver } from './contacts/merchant.js';
+import type { SharedTagCacheRefreshOutcome } from './cron/refresh-shared-tags.js';
 import type { FinanceTransactionLookup, FinanceTransactionSearch } from './finance/client.js';
 import type { InventoryAssetCreator, InventoryLinkClearer } from './inventory/client.js';
 import type { SweepTrigger } from './rest/reconcile-handlers.js';
 
+/** Dependencies and optional integrations used to construct the Purchases API. */
 export interface PurchasesApiDeps {
   /** Open handle to the purchases pillar's SQLite. */
   purchasesDb: OpenedPurchasesDb;
@@ -34,6 +36,8 @@ export interface PurchasesApiDeps {
   financeTransactionLookup?: FinanceTransactionLookup;
   /** Searches Finance transactions for the queue's manual-link action. */
   financeTransactionSearch?: FinanceTransactionSearch;
+  /** Refreshes the shared-tag cache once when an assignment names an uncached tag. */
+  refreshSharedTagCache?: () => Promise<SharedTagCacheRefreshOutcome>;
   /**
    * Reads photographed receipts. Null declines every upload with a 503 —
    * the drop-zone is optional, and a pillar without an API key should say

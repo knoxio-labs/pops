@@ -166,6 +166,7 @@ const app = createPurchasesApiApp({
   selfBaseUrl,
   financeTransactionLookup: financeClient,
   financeTransactionSearch: financeClient,
+  refreshSharedTagCache: () => sharedTagCacheRefreshWorker.runOnce(),
   // Null when no API key is configured, which the drop-zone reports as a
   // 503 at the edge rather than accepting uploads it cannot read.
   vision: createAnthropicVision(),

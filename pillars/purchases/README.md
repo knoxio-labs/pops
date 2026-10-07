@@ -306,6 +306,8 @@ The mirror of the section above, and the half with a production failure mode. pu
 
 The refresh runs at boot and every 24 hours by default; `PURCHASES_SHARED_TAG_REFRESH_INTERVAL_MS` overrides the cadence in milliseconds. It requests archived entries too, validates the complete response, and replaces the local cache in one transaction. If tags is unavailable, refuses the credential, Purchases has no credential, or the response is malformed, the previous complete cache stays in place.
 
+If an assignment names a tag missing from the local cache, Purchases runs one bounded refresh and retries once. A failed refresh or a tag still absent from the refreshed cache keeps the existing `400` unknown-tag response.
+
 **Five of those seven read. The other two write**, and they are the only calls in this pillar that change data another pillar owns — see [the fan-out](#the-inventory-fan-out) for why the first sits here rather than in the browser, and what that costs. The two inventory writes reuse the `inventory.items` scope already needed by the cron read; the tags refresh adds its own `tags.tags` scope.
 
 The grant is those five scopes and nothing wider; `src/api/pillars/service-account.ts` is its source of truth and a test pins the list. Scopes are dotted and match by prefix, so `finance.transactions` reaches `transactions.list` and not `budgets.list`. Minting the account is an operator step against the registry's `userOnly` admin surface — the same runbook as [`pillars/bfm/README.md`](../bfm/README.md#provisioning-the-service-account), with `"name":"purchases"` and these scopes — and the plaintext goes in the Docker secret described by [`infra/secrets.example/purchases/README.md`](../../infra/secrets.example/purchases/README.md).

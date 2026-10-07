@@ -13,6 +13,7 @@ import { purchaseErrorBody } from '../errors.js';
 import type { TaggedQueryRequest } from '@pops/types';
 
 import type { PurchasesDb } from '../../db/index.js';
+import type { SharedTagCacheRefreshOutcome } from '../cron/refresh-shared-tags.js';
 
 type TagParams = {
   entityType: 'purchase-item';
@@ -38,7 +39,32 @@ function unknownTag(tagId: string) {
   };
 }
 
-export function makeTaggedHandlers(db: PurchasesDb) {
+async function attachWithOneCacheRefresh(
+  db: PurchasesDb,
+  entityId: string,
+  tagId: string,
+  refreshSharedTagCache: (() => Promise<SharedTagCacheRefreshOutcome>) | undefined
+): Promise<void> {
+  try {
+    attachSharedTag(db, entityId, tagId);
+  } catch (error) {
+    if (!(error instanceof UnknownSharedTagIdError) || refreshSharedTagCache === undefined) {
+      throw error;
+    }
+    try {
+      await refreshSharedTagCache();
+    } catch {
+      throw error;
+    }
+    attachSharedTag(db, entityId, tagId);
+  }
+}
+
+/** Creates the shared-tag carrier handlers, including one cache refresh for a stale tag assignment. */
+export function makeTaggedHandlers(
+  db: PurchasesDb,
+  refreshSharedTagCache?: () => Promise<SharedTagCacheRefreshOutcome>
+) {
   return {
     list: async ({ body }: { body: TaggedQueryRequest }) => {
       const page = listItemsBySharedTagIds(db, {
@@ -72,7 +98,7 @@ export function makeTaggedHandlers(db: PurchasesDb) {
       }
 
       try {
-        attachSharedTag(db, params.entityId, params.tagId);
+        await attachWithOneCacheRefresh(db, params.entityId, params.tagId, refreshSharedTagCache);
       } catch (error) {
         if (error instanceof UnknownSharedTagIdError) return unknownTag(error.tagId);
         if (error instanceof PurchaseItemNotFoundForSharedTagError) {
