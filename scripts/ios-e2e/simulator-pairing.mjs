@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { spawn } from 'node:child_process';
-import { resolve } from 'node:path';
+import { homedir } from 'node:os';
+import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
@@ -9,6 +10,7 @@ import {
   isPairingCode,
   issuePairingCodeViaMcp,
 } from './mcp-pairing-code.mjs';
+import { PairingArtifactScanFailure, scanPairingArtifacts } from './pairing-artifact-guard.mjs';
 import {
   createPairingHandoff,
   isHandoffInstanceIdentifier,
@@ -85,14 +87,36 @@ export function isSimulatorIdentifier(deviceId) {
 }
 
 /**
+ * Scans artifacts from the selected simulator after a live pairing attempt.
+ *
+ * @param {{ deviceId: string, afterMs: number, materials: Array<{ code: string, pairingUrl: string }> }} options
+ * @returns {Promise<{ scannedFiles: number, scannedRoots: number, totalRoots: number, filesWithPairingMaterial: number } >}
+ */
+export function scanSimulatorPairingArtifacts({ deviceId, afterMs, materials }) {
+  if (!isSimulatorIdentifier(deviceId)) {
+    throw new Error('ios-e2e selected simulator ID is invalid.');
+  }
+  const simulatorLogRoot = join(homedir(), 'Library', 'Logs', 'CoreSimulator', deviceId);
+  return scanPairingArtifacts({
+    root: simulatorLogRoot,
+    additionalRoots: [join(homedir(), '.maestro', 'tests')],
+    requiredRoots: [simulatorLogRoot],
+    afterMs,
+    materials,
+  });
+}
+
+/**
  * Issues one code and opens a non-secret trigger for the selected simulator.
  * The code stays in host memory and the simulator receives only a loopback
- * broker trigger with public target metadata.
+ * broker trigger with public target metadata. When `expectedPairingOrigin` is
+ * supplied, the issuer URL must use that exact HTTPS origin.
  *
  * @param {{
  *   issuer?: 'direct' | 'mcp',
  *   endpoint: string,
  *   pairingBaseUrl?: string,
+ *   expectedPairingOrigin?: string,
  *   brokerUrl: string,
  *   handoff: ReturnType<typeof createPairingHandoff>,
  *   onPairingIssued?: (material: { code: string, pairingUrl: string }) => void,
@@ -107,6 +131,7 @@ export async function issueAndOpenPairingLink({
   issuer = 'mcp',
   endpoint,
   pairingBaseUrl,
+  expectedPairingOrigin,
   brokerUrl,
   handoff,
   onPairingIssued,
@@ -118,22 +143,34 @@ export async function issueAndOpenPairingLink({
   if (!isSimulatorIdentifier(deviceId) || handoff === undefined || brokerUrl === undefined)
     return 1;
 
+  const expectedOrigin =
+    expectedPairingOrigin === undefined
+      ? undefined
+      : normalizeExpectedPairingOrigin(expectedPairingOrigin);
+  if (expectedPairingOrigin !== undefined && expectedOrigin === null) {
+    throw new Error('expected BFM origin is invalid');
+  }
+
   const pairing =
     issuer === 'mcp'
       ? await issuePairingCodeViaMcp({ endpoint, token, fetchImpl })
       : await issuePairingCodeDirectly({ endpoint, fetchImpl });
-  const issuedPairingUrl = pairingBaseUrl
-    ? bfmPairingURL(pairingBaseUrl, pairing.code)
-    : pairing.pairingUrl;
-  const pairingDetails = detailsFromIssuedPairing(
-    issuedPairingUrl,
+  onPairingIssued?.({ code: pairing.code, pairingUrl: pairing.pairingUrl });
+
+  const issuedPairingDetails = detailsFromIssuedPairing(
+    pairing.pairingUrl,
     pairing.code,
-    pairing.expiresAt
+    pairing.expiresAt,
+    expectedOrigin ?? undefined
   );
-  onPairingIssued?.({
-    code: pairing.code,
-    pairingUrl: bfmPairingURL(pairingDetails.pairingBaseUrl, pairing.code),
-  });
+  const pairingDetails = pairingBaseUrl
+    ? detailsFromIssuedPairing(
+        bfmPairingURL(pairingBaseUrl, pairing.code),
+        pairing.code,
+        pairing.expiresAt,
+        expectedOrigin ?? undefined
+      )
+    : issuedPairingDetails;
   const generation = handoff.offer({ deviceId, ...pairingDetails });
   try {
     const link = simulatorPairingURL({
@@ -158,9 +195,10 @@ export async function issueAndOpenPairingLink({
  * @param {string} pairingUrl
  * @param {string} issuedCode
  * @param {string} expiresAt
+ * @param {string} [expectedOrigin]
  * @returns {{ pairingBaseUrl: string, code: string, expiresAt: string }}
  */
-function detailsFromIssuedPairing(pairingUrl, issuedCode, expiresAt) {
+function detailsFromIssuedPairing(pairingUrl, issuedCode, expiresAt, expectedOrigin) {
   let url;
   try {
     url = new URL(pairingUrl);
@@ -175,7 +213,8 @@ function detailsFromIssuedPairing(pairingUrl, issuedCode, expiresAt) {
     url.hash !== '' ||
     url.searchParams.getAll('code').length !== 1 ||
     url.searchParams.get('code') !== issuedCode ||
-    [...url.searchParams.keys()].some((key) => key !== 'code')
+    [...url.searchParams.keys()].some((key) => key !== 'code') ||
+    (expectedOrigin !== undefined && url.origin !== expectedOrigin)
   ) {
     throw new Error('pairing response was invalid');
   }
@@ -184,6 +223,33 @@ function detailsFromIssuedPairing(pairingUrl, issuedCode, expiresAt) {
     throw new Error('pairing response was invalid');
   }
   return { pairingBaseUrl: url.origin, code: issuedCode, expiresAt };
+}
+
+/**
+ * Accepts only a credential-free HTTPS origin for a live BFM pairing.
+ *
+ * @param {string} value
+ * @returns {string | null}
+ */
+function normalizeExpectedPairingOrigin(value) {
+  let url;
+  try {
+    url = new URL(value);
+  } catch {
+    return null;
+  }
+  if (
+    url.protocol !== 'https:' ||
+    url.host === '' ||
+    url.pathname !== '/' ||
+    url.search !== '' ||
+    url.hash !== '' ||
+    url.username !== '' ||
+    url.password !== ''
+  ) {
+    return null;
+  }
+  return url.origin;
 }
 
 /**
@@ -226,17 +292,21 @@ async function issuePairingCodeDirectly({ endpoint, fetchImpl }) {
 /** @param {unknown} error */
 function formatPairingFailure(error) {
   if (error instanceof PairingMcpFailure) return formatPairingMcpFailure(error);
-  return 'ios-e2e: direct pairing handoff failed; issuance status is unknown. No retry was attempted.';
+  return 'ios-e2e: pairing handoff failed; issuance status is unknown. No retry was attempted.';
 }
 
 /**
- * Validates the command inputs, issues one simulator pairing link, and writes only a fixed status.
+ * Validates the command inputs, issues one simulator pairing link, and writes
+ * only a fixed status. Live pairing requires the configured expected HTTPS BFM
+ * origin and verifies it before requesting a code.
  *
  * @param {{
  *   endpoint?: string,
  *   token?: string,
+ *   expectedPairingOrigin?: string,
  *   deviceId?: string,
- *   issuePairingLink?: (options: { endpoint: string, token?: string, deviceId: string, brokerUrl: string, handoff: ReturnType<typeof createPairingHandoff> }) => Promise<number>,
+ *   issuePairingLink?: (options: { endpoint: string, token?: string, expectedPairingOrigin: string, deviceId: string, brokerUrl: string, handoff: ReturnType<typeof createPairingHandoff>, onPairingIssued: (material: { code: string, pairingUrl: string }) => void }) => Promise<number>,
+ *   scanArtifacts?: (options: { deviceId: string, afterMs: number, materials: Array<{ code: string, pairingUrl: string }> }) => Promise<{ scannedFiles: number, scannedRoots: number, totalRoots: number, filesWithPairingMaterial: number }>,
  *   writeStdout?: (message: string) => void,
  *   writeStderr?: (message: string) => void
  * }} options
@@ -245,8 +315,10 @@ function formatPairingFailure(error) {
 export async function runSimulatorPairing({
   endpoint = process.env['POPS_MCP_URL']?.trim(),
   token = process.env['MCP_INBOUND_TOKEN'],
+  expectedPairingOrigin = process.env['POPS_IOS_PAIRING_EXPECTED_BFM_ORIGIN']?.trim(),
   deviceId = process.env['POPS_IOS_SIMULATOR_UDID']?.trim(),
   issuePairingLink,
+  scanArtifacts = scanSimulatorPairingArtifacts,
   writeStdout = (message) => {
     process.stdout.write(message);
   },
@@ -264,36 +336,97 @@ export async function runSimulatorPairing({
     return 1;
   }
 
+  const expectedOrigin =
+    expectedPairingOrigin === undefined
+      ? null
+      : normalizeExpectedPairingOrigin(expectedPairingOrigin);
+  if (expectedOrigin === null) {
+    writeStderr(
+      'ios-e2e: a credential-free HTTPS BFM origin is required for live simulator pairing.\n'
+    );
+    return 1;
+  }
+
   const handoff = createPairingHandoff({ deviceId });
   const broker = await startPairingHandoffServer(handoff);
+  /** @type {Array<{ code: string, pairingUrl: string }>} */
+  const pairingMaterials = [];
+  const artifactScanStartedAt = Date.now() - 5_000;
   try {
-    const exitCode =
-      issuePairingLink === undefined
-        ? await issueAndOpenPairingLink({
-            endpoint,
-            token,
-            deviceId,
-            brokerUrl: broker.url,
-            handoff,
-          })
-        : await issuePairingLink({ endpoint, token, deviceId, brokerUrl: broker.url, handoff });
-    if (exitCode !== 0) {
-      writeStderr(
-        `ios-e2e: pairing code was issued, but simulator link delivery failed (exit ${exitCode}).\n`
-      );
-      return exitCode;
+    /** @type {string | null} */
+    let pairingFailure = null;
+    try {
+      /** @type {(material: { code: string, pairingUrl: string }) => void} */
+      const recordPairingMaterial = (material) => {
+        pairingMaterials.push(material);
+      };
+      const issueOptions = {
+        endpoint,
+        token,
+        expectedPairingOrigin: expectedOrigin,
+        deviceId,
+        brokerUrl: broker.url,
+        handoff,
+        onPairingIssued: recordPairingMaterial,
+      };
+      const exitCode =
+        issuePairingLink === undefined
+          ? await issueAndOpenPairingLink(issueOptions)
+          : await issuePairingLink(issueOptions);
+      if (exitCode !== 0) {
+        pairingFailure = `ios-e2e: pairing code was issued, but simulator link delivery failed (exit ${exitCode}). No retry was attempted.`;
+      } else if (!(await handoff.waitForPairing(5 * 60 * 1000))) {
+        pairingFailure =
+          'ios-e2e: selected simulator did not confirm pairing. Issuance status is uncertain; no retry was attempted.';
+      }
+    } catch (error) {
+      pairingFailure = formatPairingFailure(error).trimEnd();
     }
 
-    if (!(await handoff.waitForPairing(5 * 60 * 1000))) {
-      writeStderr('ios-e2e: simulator did not store a session for this BFM.\n');
+    /** @type {Awaited<ReturnType<typeof scanSimulatorPairingArtifacts>> | undefined} */
+    let artifactScan;
+    /** @type {unknown} */
+    let artifactScanError;
+    try {
+      artifactScan = await scanArtifacts({
+        deviceId,
+        afterMs: artifactScanStartedAt,
+        materials: pairingMaterials,
+      });
+    } catch (error) {
+      artifactScanError = error;
+    }
+
+    if (artifactScan !== undefined) {
+      writeStdout(
+        `ios-e2e: pairing artifact scan roots=${artifactScan.scannedRoots}/${artifactScan.totalRoots} files=${artifactScan.scannedFiles} matches=${artifactScan.filesWithPairingMaterial}.\n`
+      );
+    }
+    if (artifactScanError !== undefined) {
+      const stage =
+        artifactScanError instanceof PairingArtifactScanFailure
+          ? ` at ${artifactScanError.stage}`
+          : '';
+      writeStderr(
+        `ios-e2e: selected simulator artifact scan failed${stage}; pairing may already be active. No retry was attempted.\n`
+      );
+    } else if ((artifactScan?.filesWithPairingMaterial ?? 0) > 0) {
+      writeStderr(
+        'ios-e2e: pairing material was found in a selected-simulator artifact; pairing may already be active. No retry was attempted.\n'
+      );
+    }
+    if (pairingFailure !== null) {
+      writeStderr(`${pairingFailure}\n`);
       return 1;
     }
+    if (artifactScanError !== undefined || (artifactScan?.filesWithPairingMaterial ?? 0) > 0) {
+      return 1;
+    }
+
     writeStdout('ios-e2e: simulator stored a session for this BFM.\n');
     return 0;
-  } catch (error) {
-    writeStderr(`${formatPairingFailure(error)}\n`);
-    return 1;
   } finally {
+    pairingMaterials.length = 0;
     handoff.reset();
     await broker.close();
   }

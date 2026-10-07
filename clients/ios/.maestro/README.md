@@ -61,14 +61,21 @@ why it does not use port 3014.
 For a simulator paired against a live BFM, use
 `mise -C clients/ios run e2e:pair:mcp`. It requires the local Debug app to be
 installed and unpaired on an explicitly selected disposable simulator via
-`POPS_IOS_E2E_SIMULATOR_UDID`. `Pops` alone registers the `pops://` scheme. The
-host requests one code through MCP and opens a non-secret broker trigger
-through a native URL route compiled only for Debug simulator builds. The app
-claims the code from the loopback broker once, with caching and redirects
-disabled. Debug simulator builds allow ATS local networking for this loopback
-request; device and Release builds carry no such exception. This task waits for
-the app to report a stored session for the expected BFM origin; it does not run
-a Maestro flow.
+`POPS_IOS_E2E_SIMULATOR_UDID`, and requires
+`POPS_IOS_PAIRING_EXPECTED_BFM_ORIGIN` set to the HTTPS origin configured by
+the non-secret `BFM_PUBLIC_BASE_URL` deployment setting. The issuer's pairing
+URL must match that origin, `/devices/pair`, and the single returned code
+before the code is delivered. `Pops` alone registers
+the `pops://` scheme. The host requests one code through MCP and opens a
+non-secret broker trigger through a native URL route compiled only for Debug
+simulator builds. The app claims the code from the loopback broker once, with
+caching and redirects disabled. Debug simulator builds allow ATS local
+networking for this loopback request; device and Release builds carry no such
+exception. This task waits for the app to report a committed session for the
+expected BFM origin, then scans new logs for that exact simulator and fresh
+Maestro artifacts for the issued code and URL. It prints only scan counts and
+never retries an uncertain issuance or pairing; it does not run a Maestro
+flow.
 
 `mise run e2e:ios -- --serve-only` starts the same local fixture without running
 Maestro. It requires the selected disposable simulator to have the unpaired
