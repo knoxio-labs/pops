@@ -3937,6 +3937,343 @@
         "tags": ["accountGrants"]
       }
     },
+    "/accounts/{id}/history": {
+      "get": {
+        "operationId": "transactionHistory.forAccount",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "exclusiveMinimum": true,
+              "maximum": 500,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "accountId": {
+                            "type": "string"
+                          },
+                          "action": {
+                            "enum": ["create", "update", "delete", "restore", "attach", "detach"],
+                            "type": "string"
+                          },
+                          "actorEmail": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "actorKind": {
+                            "enum": ["operator", "guest", "service", "system"],
+                            "type": "string"
+                          },
+                          "after": {
+                            "additionalProperties": false,
+                            "nullable": true,
+                            "properties": {
+                              "accountId": {
+                                "type": "string"
+                              },
+                              "amount": {
+                                "type": "number"
+                              },
+                              "date": {
+                                "type": "string"
+                              },
+                              "description": {
+                                "type": "string"
+                              },
+                              "entityId": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "entityName": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "notes": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "tags": {
+                                "items": {
+                                  "type": "string"
+                                },
+                                "type": "array"
+                              },
+                              "type": {
+                                "enum": [
+                                  "purchase",
+                                  "transfer",
+                                  "income",
+                                  "refund",
+                                  "reversal",
+                                  "loan",
+                                  "rebate",
+                                  "tax",
+                                  "fee"
+                                ],
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "accountId",
+                              "date",
+                              "amount",
+                              "description",
+                              "type",
+                              "notes",
+                              "entityId",
+                              "entityName",
+                              "tags"
+                            ],
+                            "type": "object"
+                          },
+                          "at": {
+                            "type": "string"
+                          },
+                          "before": {
+                            "additionalProperties": false,
+                            "nullable": true,
+                            "properties": {
+                              "accountId": {
+                                "type": "string"
+                              },
+                              "amount": {
+                                "type": "number"
+                              },
+                              "date": {
+                                "type": "string"
+                              },
+                              "description": {
+                                "type": "string"
+                              },
+                              "entityId": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "entityName": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "notes": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "tags": {
+                                "items": {
+                                  "type": "string"
+                                },
+                                "type": "array"
+                              },
+                              "type": {
+                                "enum": [
+                                  "purchase",
+                                  "transfer",
+                                  "income",
+                                  "refund",
+                                  "reversal",
+                                  "loan",
+                                  "rebate",
+                                  "tax",
+                                  "fee"
+                                ],
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "accountId",
+                              "date",
+                              "amount",
+                              "description",
+                              "type",
+                              "notes",
+                              "entityId",
+                              "entityName",
+                              "tags"
+                            ],
+                            "type": "object"
+                          },
+                          "changed": {
+                            "items": {
+                              "enum": [
+                                "accountId",
+                                "date",
+                                "amount",
+                                "description",
+                                "type",
+                                "notes",
+                                "entityId",
+                                "entityName",
+                                "tags"
+                              ],
+                              "type": "string"
+                            },
+                            "type": "array"
+                          },
+                          "id": {
+                            "type": "string"
+                          },
+                          "transactionId": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "transactionId",
+                          "accountId",
+                          "action",
+                          "actorKind",
+                          "actorEmail",
+                          "at",
+                          "before",
+                          "after",
+                          "changed"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "pagination": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "hasMore": {
+                          "type": "boolean"
+                        },
+                        "limit": {
+                          "type": "number"
+                        },
+                        "offset": {
+                          "type": "number"
+                        },
+                        "total": {
+                          "type": "number"
+                        }
+                      },
+                      "required": ["total", "limit", "offset", "hasMore"],
+                      "type": "object"
+                    }
+                  },
+                  "required": ["data", "pagination"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "401"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "403"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "409"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "413"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "500"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "503"
+          }
+        },
+        "summary": "Changes to the transactions of an account, newest first, including deleted transactions and ones since moved to another account",
+        "tags": ["transactionHistory"]
+      }
+    },
     "/accounts/{id}/import-config": {
       "get": {
         "operationId": "accountImports.getConfig",
@@ -32409,6 +32746,305 @@
         },
         "summary": "Update a transaction",
         "tags": ["transactions"]
+      }
+    },
+    "/transactions/{id}/history": {
+      "get": {
+        "operationId": "transactionHistory.forTransaction",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "accountId": {
+                            "type": "string"
+                          },
+                          "action": {
+                            "enum": ["create", "update", "delete", "restore", "attach", "detach"],
+                            "type": "string"
+                          },
+                          "actorEmail": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "actorKind": {
+                            "enum": ["operator", "guest", "service", "system"],
+                            "type": "string"
+                          },
+                          "after": {
+                            "additionalProperties": false,
+                            "nullable": true,
+                            "properties": {
+                              "accountId": {
+                                "type": "string"
+                              },
+                              "amount": {
+                                "type": "number"
+                              },
+                              "date": {
+                                "type": "string"
+                              },
+                              "description": {
+                                "type": "string"
+                              },
+                              "entityId": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "entityName": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "notes": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "tags": {
+                                "items": {
+                                  "type": "string"
+                                },
+                                "type": "array"
+                              },
+                              "type": {
+                                "enum": [
+                                  "purchase",
+                                  "transfer",
+                                  "income",
+                                  "refund",
+                                  "reversal",
+                                  "loan",
+                                  "rebate",
+                                  "tax",
+                                  "fee"
+                                ],
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "accountId",
+                              "date",
+                              "amount",
+                              "description",
+                              "type",
+                              "notes",
+                              "entityId",
+                              "entityName",
+                              "tags"
+                            ],
+                            "type": "object"
+                          },
+                          "at": {
+                            "type": "string"
+                          },
+                          "before": {
+                            "additionalProperties": false,
+                            "nullable": true,
+                            "properties": {
+                              "accountId": {
+                                "type": "string"
+                              },
+                              "amount": {
+                                "type": "number"
+                              },
+                              "date": {
+                                "type": "string"
+                              },
+                              "description": {
+                                "type": "string"
+                              },
+                              "entityId": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "entityName": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "notes": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "tags": {
+                                "items": {
+                                  "type": "string"
+                                },
+                                "type": "array"
+                              },
+                              "type": {
+                                "enum": [
+                                  "purchase",
+                                  "transfer",
+                                  "income",
+                                  "refund",
+                                  "reversal",
+                                  "loan",
+                                  "rebate",
+                                  "tax",
+                                  "fee"
+                                ],
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "accountId",
+                              "date",
+                              "amount",
+                              "description",
+                              "type",
+                              "notes",
+                              "entityId",
+                              "entityName",
+                              "tags"
+                            ],
+                            "type": "object"
+                          },
+                          "changed": {
+                            "items": {
+                              "enum": [
+                                "accountId",
+                                "date",
+                                "amount",
+                                "description",
+                                "type",
+                                "notes",
+                                "entityId",
+                                "entityName",
+                                "tags"
+                              ],
+                              "type": "string"
+                            },
+                            "type": "array"
+                          },
+                          "id": {
+                            "type": "string"
+                          },
+                          "transactionId": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "transactionId",
+                          "accountId",
+                          "action",
+                          "actorKind",
+                          "actorEmail",
+                          "at",
+                          "before",
+                          "after",
+                          "changed"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "401"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "403"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "409"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "413"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "500"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "503"
+          }
+        },
+        "summary": "Who created, changed, deleted or restored a transaction, newest first. Still answers for a deleted transaction; 404s an id that never had a row or an event",
+        "tags": ["transactionHistory"]
       }
     },
     "/transactions/{id}/unlink-transfer": {

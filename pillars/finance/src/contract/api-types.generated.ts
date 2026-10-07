@@ -196,6 +196,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/accounts/{id}/history': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Changes to the transactions of an account, newest first, including deleted transactions and ones since moved to another account */
+    get: operations['transactionHistory.forAccount'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/accounts/{id}/import-config': {
     parameters: {
       query?: never;
@@ -1426,6 +1443,23 @@ export interface paths {
     head?: never;
     /** Update a transaction */
     patch: operations['transactions.update'];
+    trace?: never;
+  };
+  '/transactions/{id}/history': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Who created, changed, deleted or restored a transaction, newest first. Still answers for a deleted transaction; 404s an id that never had a row or an event */
+    get: operations['transactionHistory.forTransaction'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
     trace?: never;
   };
   '/transactions/{id}/unlink-transfer': {
@@ -3624,6 +3658,174 @@ export interface operations {
         content: {
           'application/json': {
             message: string;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+    };
+  };
+  'transactionHistory.forAccount': {
+    parameters: {
+      query?: {
+        limit?: number;
+        offset?: number;
+      };
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              accountId: string;
+              /** @enum {string} */
+              action: 'create' | 'update' | 'delete' | 'restore' | 'attach' | 'detach';
+              actorEmail: string | null;
+              /** @enum {string} */
+              actorKind: 'operator' | 'guest' | 'service' | 'system';
+              after: {
+                accountId: string;
+                amount: number;
+                date: string;
+                description: string;
+                entityId: string | null;
+                entityName: string | null;
+                notes: string | null;
+                tags: string[];
+                /** @enum {string} */
+                type:
+                  | 'purchase'
+                  | 'transfer'
+                  | 'income'
+                  | 'refund'
+                  | 'reversal'
+                  | 'loan'
+                  | 'rebate'
+                  | 'tax'
+                  | 'fee';
+              } | null;
+              at: string;
+              before: {
+                accountId: string;
+                amount: number;
+                date: string;
+                description: string;
+                entityId: string | null;
+                entityName: string | null;
+                notes: string | null;
+                tags: string[];
+                /** @enum {string} */
+                type:
+                  | 'purchase'
+                  | 'transfer'
+                  | 'income'
+                  | 'refund'
+                  | 'reversal'
+                  | 'loan'
+                  | 'rebate'
+                  | 'tax'
+                  | 'fee';
+              } | null;
+              changed: (
+                | 'accountId'
+                | 'date'
+                | 'amount'
+                | 'description'
+                | 'type'
+                | 'notes'
+                | 'entityId'
+                | 'entityName'
+                | 'tags'
+              )[];
+              id: string;
+              transactionId: string;
+            }[];
+            pagination: {
+              hasMore: boolean;
+              limit: number;
+              offset: number;
+              total: number;
+            };
           };
         };
       };
@@ -17688,6 +17890,165 @@ export interface operations {
                 | 'fee';
             };
             message: string;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 401 */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 403 */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 413 */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 500 */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+    };
+  };
+  'transactionHistory.forTransaction': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              accountId: string;
+              /** @enum {string} */
+              action: 'create' | 'update' | 'delete' | 'restore' | 'attach' | 'detach';
+              actorEmail: string | null;
+              /** @enum {string} */
+              actorKind: 'operator' | 'guest' | 'service' | 'system';
+              after: {
+                accountId: string;
+                amount: number;
+                date: string;
+                description: string;
+                entityId: string | null;
+                entityName: string | null;
+                notes: string | null;
+                tags: string[];
+                /** @enum {string} */
+                type:
+                  | 'purchase'
+                  | 'transfer'
+                  | 'income'
+                  | 'refund'
+                  | 'reversal'
+                  | 'loan'
+                  | 'rebate'
+                  | 'tax'
+                  | 'fee';
+              } | null;
+              at: string;
+              before: {
+                accountId: string;
+                amount: number;
+                date: string;
+                description: string;
+                entityId: string | null;
+                entityName: string | null;
+                notes: string | null;
+                tags: string[];
+                /** @enum {string} */
+                type:
+                  | 'purchase'
+                  | 'transfer'
+                  | 'income'
+                  | 'refund'
+                  | 'reversal'
+                  | 'loan'
+                  | 'rebate'
+                  | 'tax'
+                  | 'fee';
+              } | null;
+              changed: (
+                | 'accountId'
+                | 'date'
+                | 'amount'
+                | 'description'
+                | 'type'
+                | 'notes'
+                | 'entityId'
+                | 'entityName'
+                | 'tags'
+              )[];
+              id: string;
+              transactionId: string;
+            }[];
           };
         };
       };
