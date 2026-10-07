@@ -5,13 +5,19 @@
  *
  * `delete` returns the full row as a `snapshot` so the client can Undo via
  * `restore`, which re-inserts preserving id + dedup metadata.
+ *
+ * The four writes pass the request's principal to the service as the actor, so
+ * each is recorded in the audit log (POPS-5865).
  */
+import { readPrincipal } from '@pops/pillar-express';
+
 import {
   AccountNotFoundError,
   FacetCardinalityError,
   FeeTagOnNonFeeTypeError,
   type FinanceDb,
   PositiveAmountPurchaseError,
+  type TransactionActor,
   TransactionAlreadyExistsError,
   TransactionNotFoundError,
   transactionsService,
@@ -31,6 +37,7 @@ import { paginationMeta } from '../shared/pagination.js';
 import { runHttp } from './error-mapping.js';
 
 import type { ServerInferRequest } from '@ts-rest/core';
+import type { Response } from 'express';
 
 import type { financeTransactionsContract } from '../../contract/rest-transactions.js';
 
@@ -52,6 +59,14 @@ function translateTransactionError(err: unknown, id?: string): never {
   if (err instanceof TransactionAlreadyExistsError) throw new ConflictError(err.message);
   if (err instanceof AccountNotFoundError) throw new NotFoundError('Account', err.id);
   throw err;
+}
+
+/** A service presents a key, not a session, so it has no email to record. */
+function actorOf(res: Response): TransactionActor {
+  const principal = readPrincipal(res);
+  return principal.kind === 'service'
+    ? { kind: 'service', email: null }
+    : { kind: principal.kind, email: principal.email };
 }
 
 export function makeTransactionsHandlers(db: FinanceDb, contacts: ContactsClient) {
@@ -137,10 +152,14 @@ export function makeTransactionsHandlers(db: FinanceDb, contacts: ContactsClient
         }
       }),
 
-    create: ({ body }: Req['create']) =>
+    create: ({ body, res }: Req['create'] & { res: Response }) =>
       runHttp(() => {
         try {
-          const row = transactionsService.createTransaction(db, toCreateTransactionInput(body));
+          const row = transactionsService.createTransaction(
+            db,
+            toCreateTransactionInput(body),
+            actorOf(res)
+          );
           return {
             status: 201 as const,
             body: { data: toTransaction(row), message: 'Transaction created' },
@@ -150,13 +169,14 @@ export function makeTransactionsHandlers(db: FinanceDb, contacts: ContactsClient
         }
       }),
 
-    update: ({ params, body }: Req['update']) =>
+    update: ({ params, body, res }: Req['update'] & { res: Response }) =>
       runHttp(() => {
         try {
           const row = transactionsService.updateTransaction(
             db,
             params.id,
-            toUpdateTransactionInput(body)
+            toUpdateTransactionInput(body),
+            actorOf(res)
           );
           return {
             status: 200 as const,
@@ -180,10 +200,10 @@ export function makeTransactionsHandlers(db: FinanceDb, contacts: ContactsClient
         }
       }),
 
-    delete: ({ params }: Req['delete']) =>
+    delete: ({ params, res }: Req['delete'] & { res: Response }) =>
       runHttp(() => {
         try {
-          const row = transactionsService.deleteTransaction(db, params.id);
+          const row = transactionsService.deleteTransaction(db, params.id, actorOf(res));
           return {
             status: 200 as const,
             body: { message: 'Transaction deleted', snapshot: toTransactionSnapshot(row) },
@@ -193,10 +213,14 @@ export function makeTransactionsHandlers(db: FinanceDb, contacts: ContactsClient
         }
       }),
 
-    restore: ({ body }: Req['restore']) =>
+    restore: ({ body, res }: Req['restore'] & { res: Response }) =>
       runHttp(() => {
         try {
-          const row = transactionsService.restoreTransaction(db, fromTransactionSnapshot(body));
+          const row = transactionsService.restoreTransaction(
+            db,
+            fromTransactionSnapshot(body),
+            actorOf(res)
+          );
           return {
             status: 201 as const,
             body: { data: toTransaction(row), message: 'Transaction restored' },

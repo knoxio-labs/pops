@@ -1505,6 +1505,133 @@ export type AccountGrantsRemoveResponses = {
 export type AccountGrantsRemoveResponse =
   AccountGrantsRemoveResponses[keyof AccountGrantsRemoveResponses];
 
+export type TransactionHistoryForAccountData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: {
+    limit?: number;
+    offset?: number;
+  };
+  url: '/accounts/{id}/history';
+};
+
+export type TransactionHistoryForAccountErrors = {
+  /**
+   * 400
+   */
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
+  /**
+   * 404
+   */
+  404: ErrorBody;
+  /**
+   * 409
+   */
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
+};
+
+export type TransactionHistoryForAccountError =
+  TransactionHistoryForAccountErrors[keyof TransactionHistoryForAccountErrors];
+
+export type TransactionHistoryForAccountResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: Array<{
+      accountId: string;
+      action: 'create' | 'update' | 'delete' | 'restore' | 'attach' | 'detach';
+      actorEmail: string | null;
+      actorKind: 'operator' | 'guest' | 'service' | 'system';
+      after: {
+        accountId: string;
+        amount: number;
+        date: string;
+        description: string;
+        entityId: string | null;
+        entityName: string | null;
+        notes: string | null;
+        tags: Array<string>;
+        type:
+          | 'purchase'
+          | 'transfer'
+          | 'income'
+          | 'refund'
+          | 'reversal'
+          | 'loan'
+          | 'rebate'
+          | 'tax'
+          | 'fee';
+      } | null;
+      at: string;
+      before: {
+        accountId: string;
+        amount: number;
+        date: string;
+        description: string;
+        entityId: string | null;
+        entityName: string | null;
+        notes: string | null;
+        tags: Array<string>;
+        type:
+          | 'purchase'
+          | 'transfer'
+          | 'income'
+          | 'refund'
+          | 'reversal'
+          | 'loan'
+          | 'rebate'
+          | 'tax'
+          | 'fee';
+      } | null;
+      changed: Array<
+        | 'accountId'
+        | 'date'
+        | 'amount'
+        | 'description'
+        | 'type'
+        | 'notes'
+        | 'entityId'
+        | 'entityName'
+        | 'tags'
+      >;
+      id: string;
+      transactionId: string;
+    }>;
+    pagination: {
+      hasMore: boolean;
+      limit: number;
+      offset: number;
+      total: number;
+    };
+  };
+};
+
+export type TransactionHistoryForAccountResponse =
+  TransactionHistoryForAccountResponses[keyof TransactionHistoryForAccountResponses];
+
 export type AccountImportsGetConfigData = {
   body?: never;
   path: {
@@ -11563,6 +11690,124 @@ export type TransactionsUpdateResponses = {
 
 export type TransactionsUpdateResponse =
   TransactionsUpdateResponses[keyof TransactionsUpdateResponses];
+
+export type TransactionHistoryForTransactionData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/transactions/{id}/history';
+};
+
+export type TransactionHistoryForTransactionErrors = {
+  /**
+   * 400
+   */
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
+  /**
+   * 404
+   */
+  404: ErrorBody;
+  /**
+   * 409
+   */
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
+};
+
+export type TransactionHistoryForTransactionError =
+  TransactionHistoryForTransactionErrors[keyof TransactionHistoryForTransactionErrors];
+
+export type TransactionHistoryForTransactionResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: Array<{
+      accountId: string;
+      action: 'create' | 'update' | 'delete' | 'restore' | 'attach' | 'detach';
+      actorEmail: string | null;
+      actorKind: 'operator' | 'guest' | 'service' | 'system';
+      after: {
+        accountId: string;
+        amount: number;
+        date: string;
+        description: string;
+        entityId: string | null;
+        entityName: string | null;
+        notes: string | null;
+        tags: Array<string>;
+        type:
+          | 'purchase'
+          | 'transfer'
+          | 'income'
+          | 'refund'
+          | 'reversal'
+          | 'loan'
+          | 'rebate'
+          | 'tax'
+          | 'fee';
+      } | null;
+      at: string;
+      before: {
+        accountId: string;
+        amount: number;
+        date: string;
+        description: string;
+        entityId: string | null;
+        entityName: string | null;
+        notes: string | null;
+        tags: Array<string>;
+        type:
+          | 'purchase'
+          | 'transfer'
+          | 'income'
+          | 'refund'
+          | 'reversal'
+          | 'loan'
+          | 'rebate'
+          | 'tax'
+          | 'fee';
+      } | null;
+      changed: Array<
+        | 'accountId'
+        | 'date'
+        | 'amount'
+        | 'description'
+        | 'type'
+        | 'notes'
+        | 'entityId'
+        | 'entityName'
+        | 'tags'
+      >;
+      id: string;
+      transactionId: string;
+    }>;
+  };
+};
+
+export type TransactionHistoryForTransactionResponse =
+  TransactionHistoryForTransactionResponses[keyof TransactionHistoryForTransactionResponses];
 
 export type TransactionsUnlinkTransferData = {
   /**

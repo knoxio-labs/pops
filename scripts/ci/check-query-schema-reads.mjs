@@ -265,7 +265,7 @@ export const ALLOWLIST = [];
 /** Repo-relative, posix. The committed OpenAPI projection of the finance contract. */
 export const FINANCE_OPENAPI_REL_PATH = 'pillars/finance/openapi/finance.openapi.json';
 
-/** Today's real count of finance routes carrying query fields is 17. See {@link MIN_ROUTES_WITH_FIELDS}. */
+/** Today's real count of finance routes carrying query fields is 18. See {@link MIN_ROUTES_WITH_FIELDS}. */
 const FINANCE_MIN_ROUTES_WITH_FIELDS = 12;
 
 /**
@@ -296,6 +296,12 @@ export const FINANCE_ROUTES = [
     path: '/accounts/{id}/balance-history',
     handlerFile: 'pillars/finance/src/api/rest/checkpoints-handlers.ts',
     handlerKey: 'history',
+  },
+  {
+    method: 'get',
+    path: '/accounts/{id}/history',
+    handlerFile: 'pillars/finance/src/api/rest/transaction-history-handlers.ts',
+    handlerKey: 'forAccount',
   },
   {
     method: 'get',

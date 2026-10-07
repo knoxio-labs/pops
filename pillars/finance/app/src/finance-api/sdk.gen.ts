@@ -304,6 +304,12 @@ import type {
   TagRulesUpdateResponses,
   TagRulesVocabularyData,
   TagRulesVocabularyResponses,
+  TransactionHistoryForAccountData,
+  TransactionHistoryForAccountErrors,
+  TransactionHistoryForAccountResponses,
+  TransactionHistoryForTransactionData,
+  TransactionHistoryForTransactionErrors,
+  TransactionHistoryForTransactionResponses,
   TransactionsCreateData,
   TransactionsCreateErrors,
   TransactionsCreateResponses,
@@ -611,6 +617,22 @@ export const accountGrantsRemove = <ThrowOnError extends boolean = false>(
       ...options.headers,
     },
   });
+
+/**
+ * Changes to the transactions of an account, newest first, including deleted transactions and ones since moved to another account
+ */
+export const transactionHistoryForAccount = <ThrowOnError extends boolean = false>(
+  options: Options<TransactionHistoryForAccountData, ThrowOnError>
+): RequestResult<
+  TransactionHistoryForAccountResponses,
+  TransactionHistoryForAccountErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    TransactionHistoryForAccountResponses,
+    TransactionHistoryForAccountErrors,
+    ThrowOnError
+  >({ url: '/accounts/{id}/history', ...options });
 
 /**
  * How an account expects to be fed; 404 for an account with no config
@@ -2126,6 +2148,22 @@ export const transactionsUpdate = <ThrowOnError extends boolean = false>(
       ...options.headers,
     },
   });
+
+/**
+ * Who created, changed, deleted or restored a transaction, newest first. Still answers for a deleted transaction; 404s an id that never had a row or an event
+ */
+export const transactionHistoryForTransaction = <ThrowOnError extends boolean = false>(
+  options: Options<TransactionHistoryForTransactionData, ThrowOnError>
+): RequestResult<
+  TransactionHistoryForTransactionResponses,
+  TransactionHistoryForTransactionErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    TransactionHistoryForTransactionResponses,
+    TransactionHistoryForTransactionErrors,
+    ThrowOnError
+  >({ url: '/transactions/{id}/history', ...options });
 
 /**
  * Break a false-positive transfer pair; symmetrically unlinks both legs

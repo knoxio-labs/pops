@@ -1,5 +1,6 @@
 import { accountHandlers } from './finance/accounts';
 import { grantHandlers } from './finance/grants';
+import { historyHandlers } from './finance/history';
 import { importHandlers } from './finance/imports';
 import { ledgerHandlers } from './finance/ledger';
 import { ruleHandlers } from './finance/rules';
@@ -19,6 +20,7 @@ import type { MockHandlers } from '@pops/pillar-sdk/testing/api-mock';
 export const financeHandlers: MockHandlers = {
   ...accountHandlers,
   ...grantHandlers,
+  ...historyHandlers,
   ...ledgerHandlers,
   ...ruleHandlers,
   ...importHandlers,

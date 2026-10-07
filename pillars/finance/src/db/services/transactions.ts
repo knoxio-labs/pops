@@ -15,6 +15,11 @@
  * `checksum`, `rawRow`, and `notionId` so dedup metadata is intact and
  * any downstream link that still points at the original id resolves
  * again.
+ *
+ * The four writers take an optional `actor`. Given one, they append one row to
+ * the audit log (`transaction-events.ts`) inside the same database transaction
+ * as the change, so neither commits without the other. Without one they write
+ * no event, which is every caller that is not a person editing an entry.
  */
 import { eq } from 'drizzle-orm';
 
@@ -30,8 +35,19 @@ import { transactions } from '../schema.js';
 import { parseStoredTags } from '../tag-facets.js';
 import { getAccount } from './accounts.js';
 import { applyVocabularyUsageDelta } from './tag-vocabulary.js';
+import {
+  recordTransactionEvent,
+  type TransactionActor,
+  type TransactionEventInput,
+} from './transaction-events.js';
+import {
+  assertPatchStaysCoherent,
+  buildTransactionUpdates,
+  type UpdateTransactionInput,
+} from './transaction-patch.js';
 
 import type { TransactionType } from '../../contract/corrections-constants.js';
+import type { TransactionEventAction } from '../schema/transaction-events.js';
 import type { FinanceDb, TransactionRow } from './internal.js';
 
 /** Raw drizzle row shape — exposed so callers can reuse the inferred select type. */
@@ -58,22 +74,7 @@ export interface CreateTransactionInput {
   checksum?: string | null | undefined;
 }
 
-/** Same shape as create — all fields optional for PATCH semantics. */
-export interface UpdateTransactionInput {
-  description?: string;
-  /** FK to `accounts.id`. Throws `AccountNotFoundError` for an unknown id. */
-  accountId?: string;
-  amountCents?: number;
-  date?: string;
-  type?: TransactionType;
-  tags?: string[];
-  entityId?: string | null;
-  entityName?: string | null;
-  location?: string | null;
-  country?: string | null;
-  relatedTransactionId?: string | null;
-  notes?: string | null;
-}
+export type { UpdateTransactionInput } from './transaction-patch.js';
 
 /**
  * The list read lives in `transactions-list.js` — its ordering and its keyset
@@ -82,6 +83,15 @@ export interface UpdateTransactionInput {
  */
 export { listTransactions } from './transactions-list.js';
 export type { TransactionFilters, TransactionListResult } from './transactions-list.js';
+
+function audit(
+  tx: FinanceDb,
+  action: TransactionEventAction,
+  actor: TransactionActor | undefined,
+  rows: Pick<TransactionEventInput, 'before' | 'after'>
+): void {
+  if (actor !== undefined) recordTransactionEvent(tx, { action, actor, ...rows });
+}
 
 /** Get a single transaction by id. Throws `TransactionNotFoundError` if missing. */
 export function getTransaction(db: FinanceDb, id: string): TransactionRow {
@@ -97,7 +107,11 @@ export function getTransaction(db: FinanceDb, id: string): TransactionRow {
  * caller supplies none — the column is `NOT NULL`. `tags` defaults to `[]`
  * serialised.
  */
-export function createTransaction(db: FinanceDb, input: CreateTransactionInput): TransactionRow {
+export function createTransaction(
+  db: FinanceDb,
+  input: CreateTransactionInput,
+  actor?: TransactionActor
+): TransactionRow {
   const type = input.type ?? 'purchase';
   if (isPositiveAmountPurchase(input.amountCents, type)) {
     throw new PositiveAmountPurchaseError(input.amountCents);
@@ -133,115 +147,22 @@ export function createTransaction(db: FinanceDb, input: CreateTransactionInput):
       })
       .run();
     applyVocabularyUsageDelta(tx, [], tags);
+    audit(tx, 'create', actor, { before: null, after: getTransaction(tx, id) });
   });
 
   return getTransaction(db, id);
 }
 
-type TransactionUpdate = Partial<typeof transactions.$inferInsert>;
-
-function applyCoreFields(
-  db: FinanceDb,
-  input: UpdateTransactionInput,
-  updates: TransactionUpdate
-): void {
-  if (input.description !== undefined) updates.description = input.description;
-  if (input.accountId !== undefined) {
-    updates.accountId = getAccount(db, input.accountId).id;
-  }
-  if (input.amountCents !== undefined) updates.amountCents = input.amountCents;
-  if (input.date !== undefined) updates.date = input.date;
-  if (input.type !== undefined) updates.type = input.type;
-  if (input.tags !== undefined) updates.tags = JSON.stringify(input.tags);
-}
-
-function applyEntityFields(input: UpdateTransactionInput, updates: TransactionUpdate): void {
-  if (input.entityId !== undefined) updates.entityId = input.entityId ?? null;
-  if (input.entityName !== undefined) updates.entityName = input.entityName ?? null;
-}
-
-function applyLocationFields(input: UpdateTransactionInput, updates: TransactionUpdate): void {
-  if (input.location !== undefined) updates.location = input.location ?? null;
-  if (input.country !== undefined) updates.country = input.country ?? null;
-}
-
-function applyMetadataFields(input: UpdateTransactionInput, updates: TransactionUpdate): void {
-  if (input.relatedTransactionId !== undefined) {
-    updates.relatedTransactionId = input.relatedTransactionId ?? null;
-  }
-  if (input.notes !== undefined) updates.notes = input.notes ?? null;
-}
-
-/**
- * The classification fields a direct PATCH must touch to count as a manual
- * override (CF017/#3623): doing so stamps `matchType: 'manual'` and clears
- * the stale rule-match provenance so a future reclassify pass leaves the row
- * alone instead of silently reverting the user's hand-fix.
- *
- * `buildRetroactiveApplyUpdates` (`reclassifyExistingTransactions`/
- * `applyCorrectionRuleToExistingTransactions`) also merges `tags` and stamps
- * match-provenance columns on a reclassify pass, but a `tags`-only PATCH is
- * deliberately excluded from this list: tag merging is additive-only, so
- * re-merging a rule's tags onto a row the user only re-tagged (rather than
- * reclassified) never reverts anything.
- */
-const CLASSIFICATION_PATCH_FIELDS = ['entityId', 'entityName', 'type', 'location'] as const;
-
-function touchesClassificationFields(input: UpdateTransactionInput): boolean {
-  return CLASSIFICATION_PATCH_FIELDS.some((field) => input[field] !== undefined);
-}
-
-function buildTransactionUpdates(db: FinanceDb, input: UpdateTransactionInput): TransactionUpdate {
-  const updates: TransactionUpdate = {};
-  applyCoreFields(db, input, updates);
-  applyEntityFields(input, updates);
-  applyLocationFields(input, updates);
-  applyMetadataFields(input, updates);
-  if (touchesClassificationFields(input)) {
-    updates.matchType = 'manual';
-    updates.matchRuleId = null;
-    updates.matchConfidence = null;
-  }
-  return updates;
-}
-
-/**
- * A PATCH is checked against the row it lands on, not against itself.
- *
- * This is the reason the guard lives in the service rather than in the zod
- * body: `UpdateTransactionBody` makes `amount` and `type` independently
- * optional, so `{ type: 'purchase' }` alone is a valid body and a schema
- * refinement cannot see the stored amount it would contradict. That is exactly
- * how POPS-2680's rows were produced — their `match_type` is `prefix`,
- * `learned` and `manual`, i.e. through review and the editor, never through
- * the automatic default.
- */
-function assertPatchStaysCoherent(stored: TransactionRow, input: UpdateTransactionInput): void {
-  const amountCents = input.amountCents ?? stored.amountCents;
-  const type = input.type ?? stored.type;
-  if (isPositiveAmountPurchase(amountCents, type)) {
-    throw new PositiveAmountPurchaseError(amountCents);
-  }
-  // Only the tags this PATCH sends are judged. A stored row already over the
-  // cardinality must stay editable on its other fields, and a tags-bearing
-  // PATCH is exactly the edit that can repair it.
-  if (input.tags !== undefined) assertTagsWithinFacetCardinality(input.tags);
-  // Judged on the row the PATCH leaves behind, so retyping a fee to `purchase`
-  // while its `fee:` tags stay stored is refused too. A PATCH touching neither
-  // field is not judged, for the same stays-editable reason as above.
-  if (input.type !== undefined || input.tags !== undefined) {
-    assertNoFeeTagsOnNonFeeType(type, input.tags ?? parseStoredTags(stored.tags));
-  }
-}
-
 /**
  * Patch a transaction. Throws `TransactionNotFoundError` if missing.
- * No-op writes (empty `input`) still re-read the row but skip the UPDATE.
+ * No-op writes (empty `input`) still re-read the row but skip the UPDATE, and
+ * so record no event either.
  */
 export function updateTransaction(
   db: FinanceDb,
   id: string,
-  input: UpdateTransactionInput
+  input: UpdateTransactionInput,
+  actor?: TransactionActor
 ): TransactionRow {
   const stored = getTransaction(db, id);
   assertPatchStaysCoherent(stored, input);
@@ -254,6 +175,7 @@ export function updateTransaction(
       if (input.tags !== undefined) {
         applyVocabularyUsageDelta(tx, parseStoredTags(stored.tags), input.tags);
       }
+      audit(tx, 'update', actor, { before: stored, after: getTransaction(tx, id) });
     });
   }
 
@@ -266,13 +188,18 @@ export function updateTransaction(
  * Returns the deleted row snapshot so a caller can hand it to
  * `restoreTransaction` for an Undo flow.
  */
-export function deleteTransaction(db: FinanceDb, id: string): TransactionRow {
+export function deleteTransaction(
+  db: FinanceDb,
+  id: string,
+  actor?: TransactionActor
+): TransactionRow {
   const snapshot = getTransaction(db, id);
 
   db.transaction((tx) => {
     const result = tx.delete(transactions).where(eq(transactions.id, id)).run();
     if (result.changes === 0) throw new TransactionNotFoundError(id);
     applyVocabularyUsageDelta(tx, parseStoredTags(snapshot.tags), []);
+    audit(tx, 'delete', actor, { before: snapshot, after: null });
   });
 
   return snapshot;
@@ -285,7 +212,11 @@ export function deleteTransaction(db: FinanceDb, id: string): TransactionRow {
  * so dedup metadata is intact. Throws `TransactionAlreadyExistsError` if a
  * row with the same id is already present (caller should handle that case).
  */
-export function restoreTransaction(db: FinanceDb, snapshot: TransactionRow): TransactionRow {
+export function restoreTransaction(
+  db: FinanceDb,
+  snapshot: TransactionRow,
+  actor?: TransactionActor
+): TransactionRow {
   const existing = db.select().from(transactions).where(eq(transactions.id, snapshot.id)).get();
   if (existing) {
     throw new TransactionAlreadyExistsError(snapshot.id);
@@ -293,6 +224,7 @@ export function restoreTransaction(db: FinanceDb, snapshot: TransactionRow): Tra
   db.transaction((tx) => {
     tx.insert(transactions).values(snapshot).run();
     applyVocabularyUsageDelta(tx, [], parseStoredTags(snapshot.tags));
+    audit(tx, 'restore', actor, { before: null, after: getTransaction(tx, snapshot.id) });
   });
   return getTransaction(db, snapshot.id);
 }
