@@ -148,9 +148,13 @@ export const PROMPT_FIELDS: Readonly<Record<string, string>> = {
   total: 'the total the receipt states, exactly as stated',
   tax: 'tax stated as a separate line, exactly as stated, or null. Do NOT report tax that the receipt says is already included in the prices',
   discounts:
-    'each stated discount as an array — the amount only, without the wording ' +
-    'stated beside it. A receipt that lists a discount and then repeats it ' +
-    'in a totals line has stated one discount, so report it once',
+    'each order-level discount as an array — the amount only, without the ' +
+    'wording stated beside it. Include only reductions that still apply ' +
+    'after the line amounts are accounted for. Do not include a line-specific ' +
+    'discount already reflected in the reported net line amount: a $5.00 line ' +
+    'reduced to $0.00 remains one $0.00 line and adds nothing here. A receipt ' +
+    'that lists an order-level discount and repeats it in a totals line has ' +
+    'stated one discount, so report it once',
   surcharges:
     'each fee the merchant added as an array — a card or credit surcharge, ' +
     'a small-order fee, a service charge. The amount only, without the ' +
@@ -175,11 +179,20 @@ export const PROMPT_FIELDS: Readonly<Record<string, string>> = {
     'product only when it names something bought: a delivery, postage or ' +
     'shipping row belongs in "shipping", a fee in "surcharges", a reduction ' +
     'in "discounts", and tax and the total in their own fields — none of ' +
-    'those is a line, however much the receipt prints it like one',
+    'those is a line, however much the receipt prints it like one. An invoice ' +
+    'may print a combination package row followed by separately priced ' +
+    'component rows. When the components sum to the package price, the ' +
+    'package row is a summary: report the component rows only and omit the ' +
+    'package summary. If no component breakdown is printed, report the ' +
+    'package once. Never report both or invent an adjustment to reconcile ' +
+    'the doubled amount',
   description: 'the product text verbatim, including abbreviations. Do not expand or tidy them',
   amount:
-    'the money stated for that line, exactly as stated — but the amount ' +
-    'only. Many receipts print a tax or department code beside it (ALDI ' +
+    'the net money charged for that line, including any line-specific ' +
+    'reduction already applied. For example, a line charged at $5.00 and ' +
+    'reduced on that line by $5.00 has amount "$0.00"; do not report that ' +
+    'reduction as an order-level discount. Report the amount only, without ' +
+    'a label. Many receipts print a tax or department code beside it (ALDI ' +
     'prints a trailing "A", Woolworths a leading "#"); that mark is not ' +
     'part of the money and must not be included',
   quantity:
