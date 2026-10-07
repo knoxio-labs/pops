@@ -76,9 +76,12 @@ runs against the second. The `chromium-ui-storybook` project runs targeted
 browser interaction checks against the shared UI library's Storybook, currently
 covering the expanded remove-button hit areas on wrapped and clickable chips.
 
-The finance-only server builds that snapshot first, which discovers every
-pillar's `./manifest` export from its built `dist/`. So a local run needs every
-pillar built, not just the shell's dependency closure:
+The finance-only server builds that snapshot first from the public
+`@pops/module-registry` exports: `KNOWN_MODULES` keeps the full id set,
+`MODULES` supplies the generated manifest rows, and `INSTALLED_MODULES` applies
+the finance-only environment. The snapshot no longer walks each pillar's
+built manifest. The all-pillar build below remains necessary to supply the
+remote app bundles served by the shell's E2E servers:
 
 ```sh
 pnpm --filter "./pillars/*" --filter "@pops/shell^..." build

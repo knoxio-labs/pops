@@ -137,7 +137,8 @@ No certificate, profile or key is in the tree, and none should be: automatic sig
 
 Every build is the **local** flavour unless it says otherwise: `com.knoxiolabs.pops.local` (and `com.knoxiolabs.pops.playground.local`), an icon with an amber LOCAL band, and "Pops Local" / "Design Local" on the home screen. So a build from a laptop installs beside the TestFlight app instead of replacing it, pairs separately, and keeps its own keychain. One build setting decides it, `POPS_FLAVOR` in `project.yml`; only `scripts/testflight.sh` passes `POPS_FLAVOR=testflight`, and it reads the archived identifier back and refuses to upload anything but the exact shipped one. Tests and the Maestro flows run the local flavour, which is why they name `com.knoxiolabs.pops.local`.
 
-Both apps register the `pops://` URL scheme, so with both installed iOS picks one of them to open such a link (POPS-4183).
+`Pops` alone registers the `pops://` URL scheme; `PopsPlayground` does not. The
+simulator pairing URL handler is compiled only for Debug simulator builds.
 
 ### On the phone
 
@@ -204,6 +205,17 @@ xcrun actool clients/ios/App/AppIcon.icon --compile tmp/icon-preview \
 ```
 
 [`scripts/__tests__/ios-app-icon.test.ts`](../../scripts/__tests__/ios-app-icon.test.ts) checks weave topology, proportions, touching crossings, shadow placement, manifest effects and exact agreement between generated and committed bundles. These tests protect geometry and reproducibility; native renders remain the visual check.
+
+## Localisation
+
+The app shell, `FeaturePairing`, `FeatureAccounts` and `FeatureTransactions` are in en-AU and pt-BR; they are what a guest session shows. `FeaturePurchases`, `FeatureInventory`, `FeatureEgo` and `FeatureSearch` are English only. The app follows the system language and has no switch of its own.
+
+Each localised module keeps every sentence in its copy enum, in English, and resolves it through `AppCore`'s `LocalizedCopy` against a `Localizable.xcstrings` in its own bundle. The English sentence is the catalogue key, so the catalogue holds only the pt-BR value and the plural forms.
+
+- **The catalogues are edited by hand.** Xcode's extraction does not see through `LocalizedCopy`. Adding a sentence means adding its key to the module's catalogue with a pt-BR value; each module's `…LocalizationTests` fails on a sentence the catalogue lacks, an entry no code uses, or an entry with no pt-BR value.
+- **A count is interpolated as a number, never as text.** `localized("\(count) accounts")` gives each language its own plural rule and digit grouping. Amounts and dates are formatted before they are interpolated, with the reader's locale.
+- **A call must be `localized("…")` with a literal**, on one line or as a multi-line literal. The audit reads the source and reports any other shape as unreadable.
+- **A stored `static let` must not hold resolved copy.** It would keep the language of whoever read it first.
 
 ## Module boundaries
 
@@ -295,3 +307,5 @@ So `test:device` stays a deliberate pre-release ritual. Run it by hand before sh
 ### Primary navigation
 
 Purchases, Receipts and Inventory remain in the main tab bar when available. Accounts and Transactions are grouped under More and open in dismissible sheets, preserving each feature’s own navigation. Inventory’s Search uses the native search-role tab, in a separate bubble. The server still determines which features are available; unavailable features are omitted. A single feature other than Inventory fills the screen without a tab bar.
+
+Ego opens from the separate action tab beside Inventory Search and preserves the selected feature. When a single feature leaves no tab bar, Ego remains available from the safe-area launcher. Its full-height flow contains the current conversation and conversation history.

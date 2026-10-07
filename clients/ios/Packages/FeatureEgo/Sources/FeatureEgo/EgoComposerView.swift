@@ -27,12 +27,13 @@ internal struct EgoComposerView: View {
 
     var body: some View {
         HStack(alignment: .bottom, spacing: PopsSpacing.sm) {
-            TextField("Message Ego", text: $model.draft, axis: .vertical)
+            TextField("Ask Ego anything…", text: $model.draft, axis: .vertical)
                 .font(.popsBody)
                 .foregroundStyle(Color.popsForeground)
                 .tint(Color.popsAccent)
                 .lineLimit(1...5)
                 .padding(.vertical, PopsSpacing.sm)
+                .padding(.leading, PopsSpacing.md)
                 .accessibilityLabel("Message Ego")
                 .accessibilityIdentifier(EgoComposerAccessibility.input)
 
@@ -56,14 +57,16 @@ internal struct EgoComposerView: View {
             .accessibilityLabel(actionState.action == .stop ? "Stop response" : "Send message")
             .accessibilityIdentifier(EgoComposerAccessibility.action)
         }
-        .padding(.horizontal, PopsSpacing.md)
-        .padding(.vertical, PopsSpacing.sm)
-        .background(Color.popsBackground)
-        .overlay(alignment: .top) {
-            Rectangle()
-                .fill(Color.popsSeparator)
-                .frame(height: PopsBorder.hairline)
+        .padding(.trailing, PopsSpacing.xs)
+        .padding(.vertical, PopsSpacing.xs)
+        .background(Color.popsSurface, in: Capsule())
+        .overlay {
+            Capsule().stroke(Color.popsSeparator, lineWidth: PopsBorder.hairline)
         }
+        .popsGlass(in: Capsule())
+        .padding(.horizontal, PopsSpacing.lg)
+        .padding(.vertical, PopsSpacing.md)
+        .background(Color.popsBackground)
     }
 
     private func submit() {

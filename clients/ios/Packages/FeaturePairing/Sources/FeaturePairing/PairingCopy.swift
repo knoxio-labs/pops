@@ -1,38 +1,44 @@
 import AppCore
+import Foundation
 
 /// Every word this screen shows, in one place.
 ///
-/// English string literals, like `DesignSystem`'s state primitives and for the
-/// same reason: the app has no localisation layer yet, and scattering the copy
-/// through the view now would make adding one a hunt. Gathering it here makes
-/// that a change to one file. Tracked separately as a gap rather than
-/// pretended away.
+/// Each sentence is written here in English and resolved through this
+/// package's String Catalog, where the English is the key and `pt-BR` is the
+/// translation. The two placeholders that are a shape rather than a sentence
+/// stay literals.
 internal enum PairingCopy {
-    internal static let title = "Pair this device"
-    internal static let subtitle =
-        "Open the Devices page on your Pops server and scan the code it shows."
+    private static let localized = LocalizedCopy(bundle: .module)
 
-    internal static let scanButton = "Scan QR code"
-    internal static let scannerInstruction = "Point the camera at the QR code."
-    internal static let scannerCancel = "Cancel"
+    internal static var title: String { localized("Pair this device") }
+    internal static var subtitle: String {
+        localized("Open the Devices page on your Pops server and scan the code it shows.")
+    }
 
-    internal static let cameraDenied =
-        "Pops cannot use the camera. Allow it in Settings, or type the details below."
-    internal static let cameraRestricted =
-        "Camera access is restricted on this device. Type the details below instead."
-    internal static let cameraUnavailable =
-        "This device has no camera. Type the details below instead."
-    internal static let openSettings = "Open Settings"
+    internal static var scanButton: String { localized("Scan QR code") }
+    internal static var scannerInstruction: String { localized("Point the camera at the QR code.") }
+    internal static var scannerCancel: String { localized("Cancel") }
 
-    internal static let serverLabel = "Server address"
+    internal static var cameraDenied: String {
+        localized("Pops cannot use the camera. Allow it in Settings, or type the details below.")
+    }
+    internal static var cameraRestricted: String {
+        localized("Camera access is restricted on this device. Type the details below instead.")
+    }
+    internal static var cameraUnavailable: String {
+        localized("This device has no camera. Type the details below instead.")
+    }
+    internal static var openSettings: String { localized("Open Settings") }
+
+    internal static var serverLabel: String { localized("Server address") }
     internal static let serverPlaceholder = "https://bfm.example.com"
-    internal static let codeLabel = "Pairing code"
+    internal static var codeLabel: String { localized("Pairing code") }
     internal static let codePlaceholder = "XXXX-XXXX-XXXX"
-    internal static let nameLabel = "Device name"
-    internal static let namePlaceholder = "This iPhone"
+    internal static var nameLabel: String { localized("Device name") }
+    internal static var namePlaceholder: String { localized("This iPhone") }
 
-    internal static let pairButton = "Pair"
-    internal static let pairing = "Pairing…"
+    internal static var pairButton: String { localized("Pair") }
+    internal static var pairing: String { localized("Pairing…") }
 
     /// Why somebody who was signed in is looking at this screen again.
     ///
@@ -44,9 +50,11 @@ internal enum PairingCopy {
     internal static func explanation(for reason: RevocationReason) -> String {
         switch reason {
         case .revokedByOperator:
-            return "This device was removed on your Pops server. Pair it again to continue."
+            return localized(
+                "This device was removed on your Pops server. Pair it again to continue.")
         case .credentialsRejected:
-            return "This device's sign-in expired and could not be renewed. Pair it again."
+            return localized(
+                "This device's sign-in expired and could not be renewed. Pair it again.")
         }
     }
 
@@ -59,29 +67,32 @@ internal enum PairingCopy {
     internal static func message(for error: PairingError) -> String {
         switch error {
         case .codeRejected:
-            return "That code did not work. Generate a new one and try again."
+            return localized("That code did not work. Generate a new one and try again.")
         case .rateLimited(.some(let retryAfterSeconds)):
-            let unit = retryAfterSeconds == 1 ? "second" : "seconds"
-            return "Too many attempts. Try again in \(retryAfterSeconds) \(unit)."
+            return localized("Too many attempts. Try again in \(retryAfterSeconds) seconds.")
         case .rateLimited(.none):
             // No number to give, and inventing one would be a promise the
             // server never made. Still says the thing that decides what to do.
-            return "Too many attempts. Wait a minute and try again."
+            return localized("Too many attempts. Wait a minute and try again.")
         case .invalidRequest:
             // Deliberately not "check your code". The server refused the
             // request itself, which is this build's fault, and sending someone
             // to mint fresh codes against a bug wastes their time indefinitely.
-            return "This version of Pops sent something the server refused. Update the app."
+            return localized(
+                "This version of Pops sent something the server refused. Update the app.")
         case .unreachable:
-            return "Could not reach that server. Check the address and your connection."
+            return localized("Could not reach that server. Check the address and your connection.")
         case .keyGenerationFailed:
-            return "This device could not create its security key. Unlock it and try again."
+            return localized(
+                "This device could not create its security key. Unlock it and try again.")
         case .credentialStorageFailed:
-            return
-                "Paired, but this device could not store its credentials. "
-                + "Revoke it on the Devices page and pair again."
+            return localized(
+                """
+                Paired, but this device could not store its credentials. \
+                Revoke it on the Devices page and pair again.
+                """)
         case .dependencyNotBound:
-            return "Pops is not set up correctly on this device."
+            return localized("Pops is not set up correctly on this device.")
         }
     }
 
@@ -90,11 +101,11 @@ internal enum PairingCopy {
     /// still empty.
     internal static func blockedHint(for problem: PairingInputProblem) -> String {
         switch problem {
-        case .missingServer: return "Enter the server address first."
-        case .missingCode: return "Enter the pairing code first."
-        case .missingName: return "Enter a name for this device first."
+        case .missingServer: return localized("Enter the server address first.")
+        case .missingCode: return localized("Enter the pairing code first.")
+        case .missingName: return localized("Enter a name for this device first.")
         case .fieldTooLong:
-            return "The pairing code and device name must be 64 characters or fewer."
+            return localized("The pairing code and device name must be 64 characters or fewer.")
         }
     }
 }

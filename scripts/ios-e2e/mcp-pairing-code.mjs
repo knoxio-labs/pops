@@ -14,6 +14,22 @@ const MCP_PROTOCOL_VERSION = '2025-06-18';
 const TOOL_NAME = 'bfm.devicePairing.issueCode';
 
 /** @typedef {{ code: string, pairingUrl: string, expiresAt: string }} PairingCode */
+/** @typedef {'mcp-transport' | 'mcp-http' | 'mcp-response' | 'mcp-tool' | 'mcp-metadata'} PairingFailureStage */
+/** @typedef {{ content: unknown[], isError: boolean }} McpToolResult */
+
+/** An MCP pairing failure with a static stage and no response details. */
+export class PairingMcpFailure extends Error {
+  /**
+   * @param {PairingFailureStage} stage
+   * @param {number} [httpStatus]
+   */
+  constructor(stage, httpStatus) {
+    super('MCP pairing handoff failed');
+    this.name = 'PairingMcpFailure';
+    this.stage = stage;
+    this.httpStatus = httpStatus;
+  }
+}
 
 /**
  * Create an isolated, per-run inbound credential for the locally spawned MCP
@@ -45,38 +61,29 @@ export function createMcpInboundAuth() {
  * @returns {PairingCode}
  */
 export function parsePairingCodeResponse(body, contentType) {
-  const message = parseJsonRpcMessage(body, contentType);
-  if (!isRecord(message) || !isRecord(message['result'])) {
-    throw new Error('MCP pairing tool returned no result');
-  }
-
-  const content = message['result']['content'];
-  if (!Array.isArray(content)) throw new Error('MCP pairing tool returned no content');
-  const textItem = content.find(
-    (item) => isRecord(item) && item['type'] === 'text' && typeof item['text'] === 'string'
-  );
-  if (!isRecord(textItem) || typeof textItem['text'] !== 'string') {
-    throw new Error('MCP pairing tool returned no text payload');
-  }
-
-  let payload;
-  try {
-    payload = JSON.parse(textItem['text']);
-  } catch {
-    throw new Error('MCP pairing tool returned malformed pairing metadata');
-  }
-  if (!isPairingCode(payload))
-    throw new Error('MCP pairing tool returned invalid pairing metadata');
-  return payload;
+  return parsePairingToolContent(parseMcpToolResult(body, contentType));
 }
 
 /**
- * Call the pairing MCP tool.
+ * Calls one MCP tool through the stateless Streamable HTTP endpoint. Returned
+ * content can contain pairing credentials and must stay out of logs.
  *
- * @param {{ endpoint: string, token?: string, fetchImpl?: typeof fetch }} options
- * @returns {Promise<PairingCode>}
+ * @param {{
+ *   endpoint: string,
+ *   token?: string,
+ *   name: string,
+ *   arguments: Record<string, unknown>,
+ *   fetchImpl?: typeof fetch
+ * }} options
+ * @returns {Promise<McpToolResult>}
  */
-export async function issuePairingCodeViaMcp({ endpoint, token, fetchImpl = fetch }) {
+export async function callMcpTool({
+  endpoint,
+  token,
+  name,
+  arguments: toolArguments,
+  fetchImpl = fetch,
+}) {
   const headers = {
     accept: 'application/json, text/event-stream',
     'content-type': 'application/json',
@@ -85,19 +92,61 @@ export async function issuePairingCodeViaMcp({ endpoint, token, fetchImpl = fetc
       ? {}
       : { authorization: `Bearer ${token.trim()}` }),
   };
-  const response = await fetchImpl(endpoint, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({
-      jsonrpc: '2.0',
-      id: 1,
-      method: 'tools/call',
-      params: { name: TOOL_NAME, arguments: {} },
-    }),
+  let response;
+  try {
+    response = await fetchImpl(endpoint, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'tools/call',
+        params: { name, arguments: toolArguments },
+      }),
+    });
+  } catch {
+    throw new PairingMcpFailure('mcp-transport');
+  }
+  if (!response.ok) throw new PairingMcpFailure('mcp-http', response.status);
+
+  let body;
+  try {
+    body = await response.text();
+  } catch {
+    throw new PairingMcpFailure('mcp-response');
+  }
+  return parseMcpToolResult(body, response.headers.get('content-type'));
+}
+
+/**
+ * Calls the BFM pairing-code MCP tool and validates its metadata.
+ *
+ * @param {{ endpoint: string, token?: string, fetchImpl?: typeof fetch }} options
+ * @returns {Promise<PairingCode>}
+ */
+export async function issuePairingCodeViaMcp({ endpoint, token, fetchImpl = fetch }) {
+  const result = await callMcpTool({
+    endpoint,
+    token,
+    name: TOOL_NAME,
+    arguments: {},
+    fetchImpl,
   });
-  const body = await response.text();
-  if (!response.ok) throw new Error(`MCP pairing tool HTTP ${response.status}`);
-  return parsePairingCodeResponse(body, response.headers.get('content-type'));
+  return parsePairingToolContent(result);
+}
+
+/**
+ * Formats a pairing failure without exposing MCP or BFM response content.
+ *
+ * @param {unknown} error
+ * @returns {string}
+ */
+export function formatPairingMcpFailure(error) {
+  if (!(error instanceof PairingMcpFailure))
+    return 'ios-e2e: MCP pairing handoff failed at an unknown stage; issuance status is unknown. No retry was attempted.';
+
+  const status = error.httpStatus === undefined ? '' : ` (HTTP ${error.httpStatus})`;
+  return `ios-e2e: MCP pairing handoff failed at ${error.stage}${status}; issuance status is unknown. No retry was attempted.`;
 }
 
 /**
@@ -119,13 +168,57 @@ function parseJsonRpcMessage(body, contentType) {
         continue;
       }
     }
-    throw new Error('MCP pairing tool returned no JSON event');
+    throw new PairingMcpFailure('mcp-response');
   }
   try {
     return JSON.parse(body);
   } catch {
-    throw new Error('MCP pairing tool returned invalid JSON');
+    throw new PairingMcpFailure('mcp-response');
   }
+}
+
+/**
+ * @param {string} body
+ * @param {string | null} contentType
+ * @returns {McpToolResult}
+ */
+function parseMcpToolResult(body, contentType) {
+  const message = parseJsonRpcMessage(body, contentType);
+  if (!isRecord(message) || !isRecord(message['result']) || message['error'] !== undefined)
+    throw new PairingMcpFailure('mcp-response');
+
+  const result = message['result'];
+  const content = result['content'];
+  if (!Array.isArray(content)) throw new PairingMcpFailure('mcp-response');
+  if (result['isError'] !== undefined && typeof result['isError'] !== 'boolean') {
+    throw new PairingMcpFailure('mcp-response');
+  }
+
+  return { content, isError: result['isError'] === true };
+}
+
+/**
+ * @param {McpToolResult} result
+ * @returns {PairingCode}
+ */
+function parsePairingToolContent(result) {
+  if (result.isError) throw new PairingMcpFailure('mcp-tool');
+
+  const textItem = result.content.find(
+    (item) => isRecord(item) && item['type'] === 'text' && typeof item['text'] === 'string'
+  );
+  if (!isRecord(textItem) || typeof textItem['text'] !== 'string') {
+    throw new PairingMcpFailure('mcp-response');
+  }
+
+  let payload;
+  try {
+    payload = JSON.parse(textItem['text']);
+  } catch {
+    throw new PairingMcpFailure('mcp-metadata');
+  }
+  if (!isPairingCode(payload)) throw new PairingMcpFailure('mcp-metadata');
+  return payload;
 }
 
 /**
@@ -166,9 +259,7 @@ if (invokedDirectly) {
       });
       process.stdout.write(`${pairing.code}\n`);
     } catch (error) {
-      process.stderr.write(
-        `ios-e2e: MCP pairing failed: ${error instanceof Error ? error.message : 'unknown error'}\n`
-      );
+      process.stderr.write(`${formatPairingMcpFailure(error)}\n`);
       process.exitCode = 1;
     }
   }

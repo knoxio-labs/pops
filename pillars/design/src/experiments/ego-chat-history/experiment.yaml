@@ -1,0 +1,8 @@
+name: Ego chat history
+question: Should conversation history open as a side sheet beside compact chat or take over the chat panel?
+status: active
+screen: cerebrum/ego-chat
+variants:
+  sheet: Side sheet
+  takeover: Take over chat
+frame: web

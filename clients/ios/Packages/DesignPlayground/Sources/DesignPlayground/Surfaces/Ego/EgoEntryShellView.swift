@@ -1,41 +1,30 @@
 import DesignSystem
+import FeatureEgo
 import SwiftUI
 
-/// The real shell tabs with the Ego entry control attached to the tab bar.
+/// The native shell tabs with the compact Ego launcher beside Search.
 internal struct EgoEntryShellView: View {
+    @State private var selection = shellTabs[0].id
+
     internal var body: some View {
-        #if os(iOS)
-            shell.tabViewBottomAccessory {
-                entryControl
-            }
-        #else
-            shell
-        #endif
-    }
-
-    private var shell: some View {
-        TabView {
+        TabView(selection: $selection) {
             ForEach(shellTabs) { tab in
-                EmptyStateView(
-                    message: "\(tab.label) fills the screen here. It has its own surface."
-                )
-                .tabItem { Label(tab.label, systemImage: tab.symbol) }
-                .tag(tab.id)
+                Tab(tab.label, systemImage: tab.symbol, value: tab.id) {
+                    placeholder(for: tab)
+                }
+            }
+            Tab(value: "ego-launcher") {
+                EmptyView()
+            } label: {
+                EgoLauncherTabLabel()
+            }
+            Tab("Search", systemImage: "magnifyingglass", value: "shell.search") {
+                EmptyStateView(message: "Search is available from its own screen.")
             }
         }
     }
 
-    private var entryControl: some View {
-        Button {
-        } label: {
-            Image(systemName: "bubble.left")
-                .font(.popsTitle)
-                .foregroundStyle(Color.popsAccent)
-                .frame(width: PopsSize.touchTarget, height: PopsSize.touchTarget)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Ego")
-        .accessibilityIdentifier("ego-entry")
+    private func placeholder(for tab: ShellTab) -> some View {
+        EmptyStateView(message: "\(tab.label) fills the screen here. It has its own surface.")
     }
 }

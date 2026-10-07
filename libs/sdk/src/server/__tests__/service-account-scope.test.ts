@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 
 import {
   buildContractScopeMap,
+  guestRoute,
   hasScopeFor,
+  resolveContractRoute,
   resolveContractScope,
 } from '../service-account-scope.js';
 
@@ -157,5 +159,79 @@ describe('resolveContractScope', () => {
       'finance'
     );
     expect(resolveContractScope(withHead, 'HEAD', '/blobs/x')).toBe('finance.blobs.probe');
+  });
+});
+
+describe('the guest flag', () => {
+  const shared = {
+    accounts: {
+      list: { method: 'GET', path: '/accounts', metadata: guestRoute() },
+      get: { method: 'GET', path: '/accounts/:id', metadata: { ...guestRoute(), note: 'x' } },
+      archive: { method: 'POST', path: '/accounts/:id/archive' },
+      remove: { method: 'DELETE', path: '/accounts/:id', metadata: { note: 'operator only' } },
+    },
+  };
+  const map = buildContractScopeMap(shared, 'finance');
+
+  it('is carried by a marked route and absent from an unmarked one', () => {
+    expect(map.routes).toEqual([
+      { method: 'GET', path: '/accounts', scope: 'finance.accounts.list', guest: true },
+      { method: 'GET', path: '/accounts/:id', scope: 'finance.accounts.get', guest: true },
+      { method: 'POST', path: '/accounts/:id/archive', scope: 'finance.accounts.archive' },
+      { method: 'DELETE', path: '/accounts/:id', scope: 'finance.accounts.remove' },
+    ]);
+    expect(map.routes[2]).not.toHaveProperty('guest');
+  });
+
+  it('is returned by the resolver for literal and parameterised routes alike', () => {
+    expect(resolveContractRoute(map, 'GET', '/accounts')).toEqual({
+      scope: 'finance.accounts.list',
+      guest: true,
+    });
+    expect(resolveContractRoute(map, 'GET', '/Accounts/abc/')).toEqual({
+      scope: 'finance.accounts.get',
+      guest: true,
+    });
+  });
+
+  it('is false for an unmarked route, including one sharing a path with a marked route', () => {
+    expect(resolveContractRoute(map, 'POST', '/accounts/abc/archive')).toEqual({
+      scope: 'finance.accounts.archive',
+      guest: false,
+    });
+    expect(resolveContractRoute(map, 'DELETE', '/accounts/abc')).toEqual({
+      scope: 'finance.accounts.remove',
+      guest: false,
+    });
+  });
+
+  it('follows a HEAD onto the GET it shares a path with', () => {
+    expect(resolveContractRoute(map, 'HEAD', '/accounts')?.guest).toBe(true);
+  });
+
+  it('resolves nothing for a path outside the contract', () => {
+    expect(resolveContractRoute(map, 'GET', '/health')).toBeUndefined();
+  });
+
+  it.each([
+    ['a truthy string', { popsGuestRoute: 'true' }],
+    ['the number one', { popsGuestRoute: 1 }],
+    ['false', { popsGuestRoute: false }],
+    ['a non-object', 'popsGuestRoute'],
+    ['null', null],
+  ])('does not read %s under the marker key as the marker', (_label, metadata) => {
+    const lookalike = buildContractScopeMap(
+      { items: { list: { method: 'GET', path: '/items', metadata } } },
+      'widgets'
+    );
+
+    expect(resolveContractRoute(lookalike, 'GET', '/items')).toEqual({
+      scope: 'widgets.items.list',
+      guest: false,
+    });
+  });
+
+  it('leaves the scope the existing resolver returns unchanged', () => {
+    expect(resolveContractScope(map, 'GET', '/accounts')).toBe('finance.accounts.list');
   });
 });

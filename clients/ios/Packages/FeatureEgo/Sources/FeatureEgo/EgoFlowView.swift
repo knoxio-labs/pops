@@ -1,4 +1,5 @@
 import AppCore
+import DesignSystem
 import Observation
 import SwiftUI
 
@@ -37,27 +38,46 @@ public struct EgoFlowView: View {
             EgoThreadView(model: flow.thread, entityRouter: flow.entityRouter)
                 .id(ObjectIdentifier(flow.thread))
                 .navigationTitle("Ego")
+                #if os(iOS)
+                    .navigationBarTitleDisplayMode(.inline)
+                #endif
                 .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button(action: onClose) {
-                            Image(systemName: "xmark")
-                        }
-                        .accessibilityLabel("Close Ego")
-                    }
-                    ToolbarItemGroup(placement: .primaryAction) {
-                        Button(action: flow.startNew) {
-                            Image(systemName: "square.and.pencil")
-                        }
-                        .accessibilityLabel("New conversation")
-                        .accessibilityIdentifier("ego-new-conversation")
+                    ToolbarItem(placement: menuPlacement) {
+                        Menu {
+                            Button(action: flow.startNew) {
+                                Label("New conversation", systemImage: "square.and.pencil")
+                            }
+                            .accessibilityIdentifier("ego-new-conversation")
 
-                        Button {
-                            flow.isShowingConversations = true
+                            Button {
+                                flow.isShowingConversations = true
+                            } label: {
+                                Label("Conversation history", systemImage: "clock")
+                            }
+                            .accessibilityIdentifier("ego-conversation-history")
+
+                            Divider()
+
+                            Button(action: onClose) {
+                                Label("Close Ego", systemImage: "xmark")
+                            }
+                            .accessibilityIdentifier("ego-close")
                         } label: {
-                            Image(systemName: "clock")
+                            Image(systemName: "line.3.horizontal")
+                                .font(.popsBody.weight(.medium))
+                                .foregroundStyle(Color.popsForeground)
+                                .frame(
+                                    width: PopsSize.touchTarget, height: PopsSize.touchTarget
+                                )
+                                .background(Color.popsSurface, in: Circle())
+                                .overlay {
+                                    Circle().stroke(
+                                        Color.popsSeparator, lineWidth: PopsBorder.hairline)
+                                }
+                                .popsGlass(in: Circle())
                         }
-                        .accessibilityLabel("Conversation history")
-                        .accessibilityIdentifier("ego-conversation-history")
+                        .accessibilityLabel("Ego menu")
+                        .accessibilityIdentifier("ego-menu")
                     }
                 }
                 .navigationDestination(isPresented: $flow.isShowingConversations) {
@@ -69,6 +89,14 @@ public struct EgoFlowView: View {
         .task(id: ObjectIdentifier(flow.thread)) {
             await flow.stageInitialState()
         }
+    }
+
+    private var menuPlacement: ToolbarItemPlacement {
+        #if os(iOS)
+            .topBarLeading
+        #else
+            .automatic
+        #endif
     }
 }
 

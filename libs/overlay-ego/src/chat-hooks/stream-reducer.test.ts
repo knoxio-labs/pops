@@ -9,8 +9,18 @@ import {
 
 describe('stream state reducer', () => {
   it('defines idle and active stream states', () => {
-    expect(INITIAL_STREAM_STATE).toEqual({ content: null, tools: [], parts: [] });
-    expect(STREAM_START_STATE).toEqual({ content: '', tools: [], parts: [] });
+    expect(INITIAL_STREAM_STATE).toEqual({
+      content: null,
+      tools: [],
+      parts: [],
+      persistedMessageId: null,
+    });
+    expect(STREAM_START_STATE).toEqual({
+      content: '',
+      tools: [],
+      parts: [],
+      persistedMessageId: null,
+    });
   });
 
   it('appends tokens and starts content from null', () => {
@@ -96,7 +106,7 @@ describe('stream state reducer', () => {
     );
   });
 
-  it('returns the same state for done and navigate frames', () => {
+  it('records the completed message id and leaves state unchanged for navigation', () => {
     const state: StreamState = { ...STREAM_START_STATE, content: 'reply' };
     const done = {
       type: 'done' as const,
@@ -106,7 +116,11 @@ describe('stream state reducer', () => {
       parts: [],
     };
 
-    expect(reduceStreamFrame(state, done)).toBe(state);
+    expect(reduceStreamFrame(state, done)).toEqual({ ...state, persistedMessageId: 'm1' });
+    expect(reduceStreamFrame(state, { ...done, messageId: null })).toEqual({
+      ...state,
+      persistedMessageId: null,
+    });
     expect(reduceStreamFrame(state, { type: 'navigate', uri: 'pops:inventory/item/1' })).toBe(
       state
     );
@@ -117,11 +131,13 @@ describe('stream state reducer', () => {
       content: 'reply',
       tools: [{ name: 'lookup', status: 'started' }],
       parts: [{ type: 'text', text: 'part' }],
+      persistedMessageId: null,
     };
     const snapshot = {
       content: state.content,
       tools: [...state.tools],
       parts: [...state.parts],
+      persistedMessageId: state.persistedMessageId,
     };
     Object.freeze(state.tools[0]);
     Object.freeze(state.parts[0]);

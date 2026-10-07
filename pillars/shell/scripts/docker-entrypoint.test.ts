@@ -43,6 +43,41 @@ describe('docker-entrypoint.sh', () => {
     expect(src).toContain('served_conf_is_valid');
   });
 
+  it('keeps the baked fallback and warns once when POPS_OPERATOR_EMAILS is unset', async () => {
+    const src = await readFile(ENTRYPOINT, 'utf8');
+    const prepare = src.match(/prepare_fallback\(\) \{([\s\S]*?)\n\}/)?.[1];
+    expect(prepare).toBeDefined();
+    // The unset branch must return before anything renders or exits, so a
+    // deployment without the variable boots exactly as it did before.
+    const unsetBranch = prepare!.match(
+      /if \[ -z "\$\{POPS_OPERATOR_EMAILS:-\}" \]; then([\s\S]*?)\n {2}fi/
+    )?.[1];
+    expect(unsetBranch).toBeDefined();
+    expect(unsetBranch).toMatch(/warn "POPS_OPERATOR_EMAILS is unset/);
+    expect(unsetBranch).toMatch(/return 0\s*$/);
+    expect(unsetBranch).not.toContain('exit');
+    expect(unsetBranch).not.toContain('node ');
+    expect(src.match(/POPS_OPERATOR_EMAILS is unset/g)).toHaveLength(1);
+  });
+
+  it('re-renders the fallback with the guest gate before installing it, and refuses to start if that fails', async () => {
+    const src = await readFile(ENTRYPOINT, 'utf8');
+    const prepare = src.match(/prepare_fallback\(\) \{([\s\S]*?)\n\}/)?.[1];
+    expect(prepare).toBeDefined();
+    // Static mode (no --dynamic): the gated fallback must not need the registry.
+    expect(prepare).toMatch(
+      /if ! node "\$RENDER_BUNDLE" --out "\$gated"; then[\s\S]*?exit 1\n {2}fi/
+    );
+    expect(prepare).not.toContain('--dynamic');
+    expect(prepare).toContain('cp "$gated" "$FALLBACK_CONF"');
+    // And it must run before the fallback is first copied to the served path.
+    const main = src.slice(src.indexOf('\nmain() {'));
+    expect(main.indexOf('prepare_fallback')).toBeGreaterThanOrEqual(0);
+    expect(main.indexOf('prepare_fallback')).toBeLessThan(
+      main.indexOf('cp "$FALLBACK_CONF" "$SERVED_CONF"')
+    );
+  });
+
   it('reads the registry URL from POPS_REGISTRY_URL with a CORE_REGISTRY_URL fallback', async () => {
     const src = await readFile(ENTRYPOINT, 'utf8');
     expect(src).toMatch(/POPS_REGISTRY_URL:-\$\{CORE_REGISTRY_URL:-http:\/\/registry-api:3001\}/);

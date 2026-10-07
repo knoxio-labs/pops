@@ -15,6 +15,7 @@ import { initContract } from '@ts-rest/core';
 
 import { coreFeaturesContract } from './rest-features.js';
 import { coreServiceAccountsContract } from './rest-service-accounts.js';
+import { coreSessionContract } from './rest-session.js';
 import { coreSettingsContract } from './rest-settings.js';
 import { coreShellContract } from './rest-shell.js';
 import { coreUsersContract } from './rest-users.js';
@@ -25,6 +26,7 @@ export const coreContract = c.router(
   {
     features: coreFeaturesContract,
     serviceAccounts: coreServiceAccountsContract,
+    session: coreSessionContract,
     settings: coreSettingsContract,
     shell: coreShellContract,
     users: coreUsersContract,

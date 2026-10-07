@@ -26,6 +26,7 @@ let package = Package(
                 "FeatureEgo",
                 "AppCore",
                 "DesignSystem",
+                .product(name: "DesignSystemTestSupport", package: "DesignSystem"),
                 .product(name: "AppCoreFakes", package: "AppCore"),
             ],
             swiftSettings: strictSwiftSettings

@@ -46,6 +46,22 @@ config.
 - The dynamic renderer must skip the orchestrator's registry id — see
   `nginx-conf-orchestrator.ts`'s header for why.
 - A failed validate skips the reload; the previously loaded conf stays live.
+- Every location that proxies to a pillar backend refuses guests, unless it is
+  under a guest prefix or is one of the public routes listed in
+  `generate-nginx-conf.test.ts`. That test fails on a new unguarded proxy
+  location. See `nginx-guest-gate.ts`.
+
+## Guest gate and `POPS_OPERATOR_EMAILS`
+
+The operator list is only known at boot, so the committed `../nginx.conf` is
+rendered without one and its gate is inert. The entrypoint, the boot render and
+the watcher all read `POPS_OPERATOR_EMAILS` from the container's environment:
+
+- Unset: nobody is a guest, routing is unchanged, and the entrypoint logs one
+  warning.
+- Set: the entrypoint re-renders the fallback with the list before anything
+  else, and exits if that render fails, so no path serves an open gate. A
+  malformed entry is ignored with a warning; the gate still enforces.
 
 Watcher env vars are listed in `watch-registry-and-reload.ts`'s header and the
 health-endpoint payload in `nginx-generator-health.ts`'s; the `gen:nginx*`

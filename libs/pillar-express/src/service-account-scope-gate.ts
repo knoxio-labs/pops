@@ -18,15 +18,26 @@
 import {
   authorizeServiceAccountRequest,
   buildContractScopeMap,
+  resolveContractRoute,
   resolveContractScope,
   SERVICE_ACCOUNT_HEADER,
   type ContractScopeMap,
-  type ServiceAccountAuthResult,
   type ServiceAccountVerifier,
 } from '@pops/pillar-sdk/server';
 
-import { PopsError } from './errors.js';
-import { sendPopsError } from './middleware.js';
+import {
+  createAccessIdentitySource,
+  identifyRequest,
+  setPrincipal,
+  type AccessClassifier,
+  type AccessIdentityOptions,
+} from './request-principal.js';
+import {
+  logRejection,
+  sendAuthFailure,
+  type AuthFailure,
+  type ServiceAccountErrorHandlers,
+} from './scope-gate-rejection.js';
 
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
 
@@ -85,13 +96,8 @@ export interface ServiceAccountScopeGateOptions {
   readonly rawRoutes?: RawRouteTree;
   /** Optional registered failures used when a scoped request is rejected. */
   readonly errors?: ServiceAccountErrorHandlers;
-}
-
-/** Registered failures a service-account gate can throw into the final handler. */
-export interface ServiceAccountErrorHandlers {
-  readonly invalid: (details?: unknown) => never;
-  readonly forbidden: (details?: unknown) => never;
-  readonly unavailable: (details?: unknown) => never;
+  /** Test seams for the Cloudflare Access leg. Production omits it. */
+  readonly identity?: AccessIdentityOptions;
 }
 
 /** A pillar's gate: the scope table it derived, and the middleware over it. */
@@ -124,87 +130,10 @@ function readApiKey(req: Request): string | undefined {
   return req.get(SERVICE_ACCOUNT_HEADER);
 }
 
-/**
- * Log a rejection with enough detail to act on — the account and the scope it
- * was missing — and never the key. A 403 is most often an account that needs
- * widening, and the operator cannot widen what the log does not name.
- *
- * The uncredentialled 401 gets its own wording. It is reachable only under
- * `requireCredential`, and it is the one rejection where no key was presented
- * at all — calling it a credentialled request would mis-tell the operator the
- * single fact that distinguishes it from a bad key.
- */
-function logRejection(logPrefix: string, result: ServiceAccountAuthResult): void {
-  if (result.reason === 'missing-scope') {
-    console.warn(
-      `[${logPrefix}] service account '${result.principal?.name ?? 'unknown'}' is not authorised ` +
-        `for '${result.requiredScope ?? 'unknown'}'`
-    );
-    return;
-  }
-  const subject =
-    result.reason === 'no-credential'
-      ? 'an uncredentialled request'
-      : `a credentialled request (${result.reason})`;
-  console.warn(`[${logPrefix}] rejected ${subject} for '${result.requiredScope ?? 'unknown'}'`);
-}
-
-interface SendAuthFailureOptions {
-  readonly options: ServiceAccountScopeGateOptions;
-  readonly result: ServiceAccountAuthResult;
-  readonly req: Request;
-  readonly res: Response;
-  readonly next: NextFunction;
-}
-
-function sendAuthFailure({ options, result, req, res, next }: SendAuthFailureOptions): void {
-  const details =
-    result.requiredScope === undefined ? undefined : { requiredScope: result.requiredScope };
-  if (options.errors !== undefined) {
-    try {
-      if (result.status === 401) options.errors.invalid(details);
-      if (result.status === 403) options.errors.forbidden(details);
-      if (result.status === 503) options.errors.unavailable(details);
-      throw new Error(`Unexpected service-account rejection status: ${result.status}`);
-    } catch (error) {
-      next(error);
-    }
-    return;
-  }
-
-  const failure = authFailure(options.rootScope, result.status, details);
-  sendPopsError(req, res, failure);
-}
-
-function authFailure(rootScope: string, status: number, details?: unknown): PopsError {
-  if (status === 401) {
-    return new PopsError({
-      code: `${rootScope}.auth.invalid`,
-      status,
-      message: 'Missing or invalid service-account credentials.',
-      retryable: false,
-      details,
-    });
-  }
-  if (status === 403) {
-    return new PopsError({
-      code: `${rootScope}.auth.forbidden`,
-      status,
-      message: 'This service account is not authorised for this operation.',
-      retryable: false,
-      details,
-    });
-  }
-  if (status === 503) {
-    return new PopsError({
-      code: `${rootScope}.auth.unavailable`,
-      status,
-      message: 'Service-account credentials could not be verified.',
-      retryable: true,
-      details,
-    });
-  }
-  throw new Error(`Unexpected service-account rejection status: ${status}`);
+/** The liveness probe is the one path a guest reaches without a marked route. */
+function isHealthPath(path: string): boolean {
+  const lower = path.toLowerCase();
+  return lower === '/health' || lower === '/health/';
 }
 
 function projectRawRoutes(
@@ -231,6 +160,57 @@ function projectRawRoutes(
   return rawMap;
 }
 
+interface GateContext {
+  readonly options: ServiceAccountScopeGateOptions;
+  readonly scopeMap: ContractScopeMap;
+  readonly rawScopeMap: ContractScopeMap;
+  readonly verify: ServiceAccountVerifier;
+  readonly classify: AccessClassifier | null;
+}
+
+/**
+ * One request's decision: resolve the principal, refuse a guest anywhere the
+ * contract has not opened to one, then apply the service-account rule
+ * unchanged. Returns the refusal to send, or `null` to proceed.
+ */
+async function decide(gate: GateContext, req: Request, res: Response): Promise<AuthFailure | null> {
+  const { options, scopeMap, rawScopeMap, verify, classify } = gate;
+  const route = resolveContractRoute(scopeMap, req.method, req.path);
+  const requiredScope = route?.scope ?? resolveContractScope(rawScopeMap, req.method, req.path);
+  const apiKey = readApiKey(req);
+
+  const principal = await identifyRequest({
+    classify,
+    req,
+    hasApiKey: apiKey !== undefined && apiKey !== '',
+    scoped: requiredScope !== undefined,
+  });
+  if (principal === null) return { status: 401, details: { credential: 'cloudflare-access' } };
+  setPrincipal(res, principal);
+
+  if (principal.kind === 'guest' && route?.guest !== true && !isHealthPath(req.path)) {
+    console.warn(
+      `[${options.logPrefix}] refused a guest for ` +
+        `'${requiredScope ?? 'a path outside the contract'}'`
+    );
+    return { status: 403, details: { principal: 'guest' } };
+  }
+
+  const result = await authorizeServiceAccountRequest({
+    requiredScope,
+    apiKey,
+    verify,
+    requireCredential: options.requireCredential,
+  });
+  if (result.ok) return null;
+  logRejection(options.logPrefix, result);
+  return {
+    status: result.status,
+    details:
+      result.requiredScope === undefined ? undefined : { requiredScope: result.requiredScope },
+  };
+}
+
 /**
  * Derive a pillar's scope table from its contract and bind ADR-044's decision
  * to Express.
@@ -243,7 +223,7 @@ export function createServiceAccountScopeGate(
   options: ServiceAccountScopeGateOptions
 ): ServiceAccountScopeGate {
   const scopeMap = buildContractScopeMap(options.contract, options.rootScope);
-  const { logPrefix, rootScope, requireCredential } = options;
+  const { logPrefix, rootScope } = options;
 
   // `resolveContractScope` treats an unmatched path as "outside the
   // contract" and the auth decision admits it unconditionally (ADR-044's
@@ -264,23 +244,24 @@ export function createServiceAccountScopeGate(
 
   const rawScopeMap = projectRawRoutes(options, scopeMap);
 
+  const identitySource = createAccessIdentitySource(logPrefix, options.identity);
+
   const createMiddleware = (verify: ServiceAccountVerifier): RequestHandler => {
+    const gate: GateContext = {
+      options,
+      scopeMap,
+      rawScopeMap,
+      verify,
+      classify: identitySource.current(),
+    };
     return (req: Request, res: Response, next: NextFunction): void => {
-      void authorizeServiceAccountRequest({
-        requiredScope:
-          resolveContractScope(scopeMap, req.method, req.path) ??
-          resolveContractScope(rawScopeMap, req.method, req.path),
-        apiKey: readApiKey(req),
-        verify,
-        requireCredential,
-      })
-        .then((result) => {
-          if (result.ok) {
+      void decide(gate, req, res)
+        .then((failure) => {
+          if (failure === null) {
             next();
             return;
           }
-          logRejection(logPrefix, result);
-          sendAuthFailure({ options, result, req, res, next });
+          sendAuthFailure({ options, failure, req, res, next });
         })
         .catch(next);
     };

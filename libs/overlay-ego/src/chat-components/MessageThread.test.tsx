@@ -143,6 +143,42 @@ describe('MessageThread', () => {
     expect(screen.queryByRole('button', { name: 'Reject all' })).not.toBeInTheDocument();
   });
 
+  it('keeps a streamed entity when an earlier assistant turn contains the same entity', () => {
+    const entityPart: MessagePart = {
+      type: 'entity',
+      uri: 'pops:inventory/item/drill-1',
+      title: 'Bosch drill',
+    };
+
+    renderThread({
+      messages: [message({ parts: [entityPart] })],
+      isSending: true,
+      streamingContent: '',
+      streamParts: [entityPart],
+    });
+
+    expect(screen.getAllByText('Bosch drill')).toHaveLength(2);
+  });
+
+  it('hides streamed rich parts after the matching assistant message is persisted', () => {
+    const entityPart: MessagePart = {
+      type: 'entity',
+      uri: 'pops:inventory/item/drill-1',
+      title: 'Bosch drill',
+    };
+
+    renderThread({
+      messages: [message({ id: 'completed-message', parts: [entityPart] })],
+      isSending: true,
+      streamingContent: '',
+      persistedMessageId: 'completed-message',
+      streamParts: [entityPart],
+    });
+
+    expect(screen.getAllByText('Bosch drill')).toHaveLength(1);
+    expect(screen.queryByTestId('streaming-bubble')).not.toBeInTheDocument();
+  });
+
   it('renders unknown action batches and streamed entities without decision controls', () => {
     const parts: MessagePart[] = [
       { type: 'entity', uri: 'pops:inventory/item/drill-1', title: 'Bosch drill' },

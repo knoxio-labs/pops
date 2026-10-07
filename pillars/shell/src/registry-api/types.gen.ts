@@ -29,6 +29,10 @@ export type FeaturesListErrors = {
    */
   401: ErrorBody;
   /**
+   * 403
+   */
+  403: ErrorBody;
+  /**
    * 404
    */
   404: ErrorBody;
@@ -86,6 +90,10 @@ export type FeaturesGetManifestsErrors = {
    * 401
    */
   401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
@@ -148,6 +156,10 @@ export type FeaturesIsEnabledErrors = {
    */
   401: ErrorBody;
   /**
+   * 403
+   */
+  403: ErrorBody;
+  /**
    * 404
    */
   404: ErrorBody;
@@ -195,6 +207,10 @@ export type FeaturesSetEnabledErrors = {
    */
   401: ErrorBody;
   /**
+   * 403
+   */
+  403: ErrorBody;
+  /**
    * 404
    */
   404: ErrorBody;
@@ -241,6 +257,10 @@ export type FeaturesClearUserPreferenceErrors = {
    * 401
    */
   401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
@@ -290,6 +310,10 @@ export type FeaturesSetUserPreferenceErrors = {
    */
   401: ErrorBody;
   /**
+   * 403
+   */
+  403: ErrorBody;
+  /**
    * 404
    */
   404: ErrorBody;
@@ -330,6 +354,10 @@ export type ServiceAccountsListErrors = {
    * 401
    */
   401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
@@ -383,6 +411,10 @@ export type ServiceAccountsCreateErrors = {
    * 401
    */
   401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
@@ -440,6 +472,10 @@ export type ServiceAccountsRevokeErrors = {
    */
   401: ErrorBody;
   /**
+   * 403
+   */
+  403: ErrorBody;
+  /**
    * 404
    */
   404: ErrorBody;
@@ -464,6 +500,34 @@ export type ServiceAccountsRevokeResponses = {
 export type ServiceAccountsRevokeResponse =
   ServiceAccountsRevokeResponses[keyof ServiceAccountsRevokeResponses];
 
+export type SessionGetData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/session';
+};
+
+export type SessionGetErrors = {
+  /**
+   * 401
+   */
+  401: ErrorBody;
+};
+
+export type SessionGetError = SessionGetErrors[keyof SessionGetErrors];
+
+export type SessionGetResponses = {
+  /**
+   * 200
+   */
+  200: {
+    email: string | null;
+    kind: 'operator' | 'guest';
+  };
+};
+
+export type SessionGetResponse = SessionGetResponses[keyof SessionGetResponses];
+
 export type SettingsListData = {
   body?: never;
   path?: never;
@@ -480,6 +544,10 @@ export type SettingsListErrors = {
    * 401
    */
   401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
@@ -522,6 +590,10 @@ export type SettingsAggregateErrors = {
    * 401
    */
   401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
@@ -576,6 +648,10 @@ export type SettingsGetManyErrors = {
    */
   401: ErrorBody;
   /**
+   * 403
+   */
+  403: ErrorBody;
+  /**
    * 404
    */
   404: ErrorBody;
@@ -621,6 +697,10 @@ export type SettingsResetErrors = {
    * 401
    */
   401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
@@ -671,6 +751,10 @@ export type SettingsSetManyErrors = {
    * 401
    */
   401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
@@ -733,6 +817,10 @@ export type SettingsDeleteErrors = {
    */
   401: ErrorBody;
   /**
+   * 403
+   */
+  403: ErrorBody;
+  /**
    * 404
    */
   404: ErrorBody;
@@ -786,6 +874,10 @@ export type SettingsGetErrors = {
    * 401
    */
   401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
@@ -848,6 +940,10 @@ export type SettingsSetErrors = {
    * 401
    */
   401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */
@@ -912,6 +1008,10 @@ export type SettingsEnsureErrors = {
    */
   401: ErrorBody;
   /**
+   * 403
+   */
+  403: ErrorBody;
+  /**
    * 404
    */
   404: ErrorBody;
@@ -973,6 +1073,10 @@ export type SettingsResetKeyErrors = {
    * 401
    */
   401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
   /**
    * 404
    */

@@ -28,6 +28,9 @@
  *     during development. Unknown pillars fall back to parsing
  *     `host:port` out of their registry `baseUrl`.
  *
+ * Both modes read `POPS_OPERATOR_EMAILS` for the guest gate
+ * (`nginx-guest-gate.ts`); the committed file is the render without it.
+ *
  * The drift-detection test renders the static mode in-memory and
  * compares against the committed file. The dynamic mode is exercised
  * with an injected registry fetcher so the test suite never needs a
@@ -58,16 +61,13 @@ import { parseCliArgs, type CliOptions } from './nginx-cli-args.js';
 import { assertDynamicNotCheck, runDynamic, runStatic } from './nginx-cli-main.js';
 import { NGINX_CONF_ORCHESTRATOR, ORCHESTRATOR_PILLAR_ID } from './nginx-conf-orchestrator.js';
 import { NGINX_CONF_TAIL } from './nginx-conf-tail.js';
+import { renderNginxConfHead } from './nginx-conf-template.js';
 import {
-  NGINX_CONF_HEAD,
-  NGINX_CONF_REST_INTRO,
-  NGINX_CONF_UI_INTRO,
-} from './nginx-conf-template.js';
-import {
-  renderPillarRestBlockFromUpstream,
-  renderPillarUiBlock,
-  type PillarUpstream,
-} from './nginx-pillar-blocks.js';
+  guestGateFromEnv,
+  rejectedOperatorEmailsWarning,
+  type GuestGateOptions,
+} from './nginx-guest-gate.js';
+import { renderPillarSections, type PillarUpstream } from './nginx-pillar-blocks.js';
 import { DEFAULT_REGISTRY_URL, resolveRegistryUrl } from './registry-url-env.js';
 
 /**
@@ -166,19 +166,17 @@ function upstreamForId(id: BuildPillarId): PillarUpstream {
   return { pillarId: id, host: upstream.host, port: upstream.port };
 }
 
-function renderPillarRestBlock(id: BuildPillarId): string {
-  return renderPillarRestBlockFromUpstream(upstreamForId(id));
-}
-
 /**
  * Pure renderer (static mode). Takes the ordered pillar list and returns
  * the full `nginx.conf` body. Exported so the drift-detection test can
- * call it without touching the filesystem.
+ * call it without touching the filesystem. The committed file is this
+ * render with no operator list, which leaves the guest gate inert.
  */
-export function renderNginxConf(order: readonly BuildPillarId[] = PILLAR_RENDER_ORDER): string {
-  const restBlocks = order.map(renderPillarRestBlock).join('\n\n');
-  const uiBlocks = order.map((id) => renderPillarUiBlock(upstreamForId(id))).join('\n\n');
-  return `${NGINX_CONF_HEAD}\n${NGINX_CONF_REST_INTRO}\n${restBlocks}\n\n${NGINX_CONF_UI_INTRO}\n${uiBlocks}\n\n${NGINX_CONF_ORCHESTRATOR}\n${NGINX_CONF_TAIL}`;
+export function renderNginxConf(
+  order: readonly BuildPillarId[] = PILLAR_RENDER_ORDER,
+  gate: GuestGateOptions = {}
+): string {
+  return renderNginxConfFromUpstreams(order.map(upstreamForId), gate);
 }
 
 /**
@@ -197,14 +195,13 @@ const FIXED_BLOCK_IDS: ReadonlySet<string> = new Set([ORCHESTRATOR_PILLAR_ID]);
  * such entries — is valid and produces a config with zero per-pillar
  * `/<pillar>-api/` REST blocks.
  */
-export function renderNginxConfFromUpstreams(upstreams: readonly PillarUpstream[]): string {
+export function renderNginxConfFromUpstreams(
+  upstreams: readonly PillarUpstream[],
+  gate: GuestGateOptions = {}
+): string {
   const rendered = upstreams.filter((upstream) => !FIXED_BLOCK_IDS.has(upstream.pillarId));
-  if (rendered.length === 0) {
-    return `${NGINX_CONF_HEAD}\n${NGINX_CONF_ORCHESTRATOR}\n${NGINX_CONF_TAIL}`;
-  }
-  const restBlocks = rendered.map(renderPillarRestBlockFromUpstream).join('\n\n');
-  const uiBlocks = rendered.map(renderPillarUiBlock).join('\n\n');
-  return `${NGINX_CONF_HEAD}\n${NGINX_CONF_REST_INTRO}\n${restBlocks}\n\n${NGINX_CONF_UI_INTRO}\n${uiBlocks}\n\n${NGINX_CONF_ORCHESTRATOR}\n${NGINX_CONF_TAIL}`;
+  const sections = renderPillarSections(rendered, gate.guestPathPrefixes);
+  return `${renderNginxConfHead(gate.operatorEmails)}\n${sections}${NGINX_CONF_ORCHESTRATOR}\n${NGINX_CONF_TAIL}`;
 }
 
 /**
@@ -266,7 +263,8 @@ export function orderUpstreams(upstreams: readonly PillarUpstream[]): readonly P
 
 export async function renderNginxConfDynamic(
   registryUrl: string,
-  transport: DiscoveryTransport = new HttpDiscoveryTransport({ registryUrl })
+  transport: DiscoveryTransport = new HttpDiscoveryTransport({ registryUrl }),
+  gate: GuestGateOptions = {}
 ): Promise<string> {
   const pillars = await transport.fetchSnapshot();
   const knownIds = new Set<string>(PILLAR_RENDER_ORDER);
@@ -279,7 +277,7 @@ export async function renderNginxConfDynamic(
   const external = pillars.filter((p) => !knownIds.has(p.pillarId)).map(resolveUpstreamForEntry);
 
   const ordered = orderUpstreams([...known, ...external]);
-  return renderNginxConfFromUpstreams(ordered);
+  return renderNginxConfFromUpstreams(ordered, gate);
 }
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
@@ -300,18 +298,20 @@ async function main(): Promise<void> {
   assertRenderOrderCoversAllPillars();
   const opts = parseCliArgsForGenerator(process.argv.slice(2));
   assertDynamicNotCheck(opts);
+  const gate = guestGateFromEnv(process.env);
+  process.stderr.write(rejectedOperatorEmailsWarning(gate));
   if (opts.dynamic) {
     await runDynamic({
       outputPath: opts.outputPath,
       registryUrl: opts.registryUrl,
-      render: renderNginxConfDynamic,
+      render: (registryUrl) => renderNginxConfDynamic(registryUrl, undefined, gate),
     });
     return;
   }
   await runStatic({
     outputPath: opts.outputPath,
     check: opts.check,
-    expected: renderNginxConf(),
+    expected: renderNginxConf(PILLAR_RENDER_ORDER, gate),
     pillarCount: PILLAR_RENDER_ORDER.length,
   });
 }

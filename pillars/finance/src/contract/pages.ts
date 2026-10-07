@@ -23,15 +23,19 @@
  * no reason to depend on the manifest schema. `src/api/manifest.ts` is where
  * `PageDescriptor` conformance is asserted, beside the payload that satisfies
  * it.
+ *
+ * `access: 'guest'` marks the pages a guest may also open; a page without it
+ * is operator-only. The account sub-pages (checkpoints, imports) are operator
+ * tools and stay unmarked on purpose, though they sit under a guest path.
  */
 
 export const FINANCE_PAGES = [
   { path: '', index: true, bundleSlot: 'finance-dashboard' },
-  { path: 'transactions', bundleSlot: 'finance-transactions' },
+  { path: 'transactions', bundleSlot: 'finance-transactions', access: 'guest' },
   { path: 'entities', bundleSlot: 'finance-entities' },
   { path: 'entities/:id', bundleSlot: 'finance-entity-detail' },
-  { path: 'accounts', bundleSlot: 'finance-accounts' },
-  { path: 'accounts/:id', bundleSlot: 'finance-account-detail' },
+  { path: 'accounts', bundleSlot: 'finance-accounts', access: 'guest' },
+  { path: 'accounts/:id', bundleSlot: 'finance-account-detail', access: 'guest' },
   { path: 'accounts/:id/checkpoints', bundleSlot: 'finance-account-checkpoints' },
   { path: 'accounts/:id/imports', bundleSlot: 'finance-account-imports' },
   { path: 'budgets', bundleSlot: 'finance-budgets' },

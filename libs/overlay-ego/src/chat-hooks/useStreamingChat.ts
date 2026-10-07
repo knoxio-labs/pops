@@ -115,6 +115,8 @@ export interface UseStreamingChatReturn {
   error: string | null;
   /** Partial streaming content (null when not streaming). */
   streamingContent: string | null;
+  /** Persisted assistant message id for the active turn, when the server provides it. */
+  persistedMessageId: string | null;
   /** Tool calls and their latest lifecycle status from the active stream. */
   toolActivity: ToolActivity[];
   /** Message parts received from the active stream. */
@@ -181,6 +183,7 @@ export function useStreamingChat(): UseStreamingChatReturn {
     isStreaming,
     error,
     streamingContent: streamState.content,
+    persistedMessageId: streamState.persistedMessageId,
     toolActivity: streamState.tools,
     streamParts: streamState.parts,
     clearError,

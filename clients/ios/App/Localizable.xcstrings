@@ -1,0 +1,256 @@
+{
+  "sourceLanguage" : "en-AU",
+  "strings" : {
+    "%@ is not available right now." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ não está disponível no momento."
+          }
+        }
+      }
+    },
+    "%@ needs a newer version of this app." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ precisa de uma versão mais recente deste app."
+          }
+        }
+      }
+    },
+    "Build" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Versão"
+          }
+        }
+      }
+    },
+    "Code" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Código"
+          }
+        }
+      }
+    },
+    "Copied" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copiado"
+          }
+        }
+      }
+    },
+    "Copies the message and diagnostics" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copia a mensagem e o diagnóstico"
+          }
+        }
+      }
+    },
+    "Copy" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copiar"
+          }
+        }
+      }
+    },
+    "Diagnostics" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diagnóstico"
+          }
+        }
+      }
+    },
+    "Dismiss" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dispensar"
+          }
+        }
+      }
+    },
+    "Dismiss error" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dispensar erro"
+          }
+        }
+      }
+    },
+    "Done" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OK"
+          }
+        }
+      }
+    },
+    "Error details" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Detalhes do erro"
+          }
+        }
+      }
+    },
+    "Failures from this device will appear here." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "As falhas deste dispositivo aparecerão aqui."
+          }
+        }
+      }
+    },
+    "More" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mais"
+          }
+        }
+      }
+    },
+    "No recent errors" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nenhum erro recente"
+          }
+        }
+      }
+    },
+    "Opens in %@" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abre em %@"
+          }
+        }
+      }
+    },
+    "Operation" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Operação"
+          }
+        }
+      }
+    },
+    "Recent errors" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erros recentes"
+          }
+        }
+      }
+    },
+    "Request ID" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ID da solicitação"
+          }
+        }
+      }
+    },
+    "Shows error details" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mostra os detalhes do erro"
+          }
+        }
+      }
+    },
+    "Some of Pops could not be reached, so this may be out of date." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Parte do Pops está inacessível, então isto pode estar desatualizado."
+          }
+        }
+      }
+    },
+    "Time" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hora"
+          }
+        }
+      }
+    },
+    "Try again" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tentar novamente"
+          }
+        }
+      }
+    },
+    "What happened" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O que aconteceu"
+          }
+        }
+      }
+    },
+    "Your Pops server is not offering anything this app can show yet." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seu servidor Pops ainda não oferece nada que este app possa mostrar."
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

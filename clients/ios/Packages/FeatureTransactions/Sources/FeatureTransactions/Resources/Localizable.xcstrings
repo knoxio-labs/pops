@@ -1,0 +1,446 @@
+{
+  "sourceLanguage" : "en-AU",
+  "strings" : {
+    "%lld seconds" : {
+      "localizations" : {
+        "en-AU" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld second"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld seconds"
+                }
+              }
+            }
+          }
+        },
+        "pt-BR" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld segundo"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld segundos"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Account" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conta"
+          }
+        }
+      }
+    },
+    "Could not load more." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível carregar mais."
+          }
+        }
+      }
+    },
+    "Could not load the full record." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível carregar o registro completo."
+          }
+        }
+      }
+    },
+    "Could not reach the server. Check your connection and try again." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível acessar o servidor. Verifique sua conexão e tente novamente."
+          }
+        }
+      }
+    },
+    "Could not refresh." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível atualizar."
+          }
+        }
+      }
+    },
+    "Country" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "País"
+          }
+        }
+      }
+    },
+    "Done" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OK"
+          }
+        }
+      }
+    },
+    "Entity" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Entidade"
+          }
+        }
+      }
+    },
+    "Last edited" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Última edição"
+          }
+        }
+      }
+    },
+    "Loading more…" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carregando mais…"
+          }
+        }
+      }
+    },
+    "Loading transactions…" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carregando transações…"
+          }
+        }
+      }
+    },
+    "Loading transaction…" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carregando transação…"
+          }
+        }
+      }
+    },
+    "Location" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Localização"
+          }
+        }
+      }
+    },
+    "No transactions yet." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ainda não há transações."
+          }
+        }
+      }
+    },
+    "Notes" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notas"
+          }
+        }
+      }
+    },
+    "Pops is not set up correctly on this device." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O Pops não está configurado corretamente neste dispositivo."
+          }
+        }
+      }
+    },
+    "Refreshing transactions" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Atualizando transações"
+          }
+        }
+      }
+    },
+    "Retry" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tentar novamente"
+          }
+        }
+      }
+    },
+    "Tags" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tags"
+          }
+        }
+      }
+    },
+    "That change conflicts with something already saved." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Essa alteração entra em conflito com algo já salvo."
+          }
+        }
+      }
+    },
+    "This device is no longer signed in." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Este dispositivo não está mais conectado."
+          }
+        }
+      }
+    },
+    "This feature isn't available with this device's permissions." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Este recurso não está disponível com as permissões deste dispositivo."
+          }
+        }
+      }
+    },
+    "This transaction no longer exists." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esta transação não existe mais."
+          }
+        }
+      }
+    },
+    "This version of Pops cannot read what the server sent. Update the app." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esta versão do Pops não consegue ler o que o servidor enviou. Atualize o app."
+          }
+        }
+      }
+    },
+    "This version of Pops sent a request the server cannot accept. Update the app." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esta versão do Pops enviou uma solicitação que o servidor não pode aceitar. Atualize o app."
+          }
+        }
+      }
+    },
+    "Too many requests. Wait %@ before trying again." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Muitas solicitações. Aguarde %@ antes de tentar novamente."
+          }
+        }
+      }
+    },
+    "Transactions" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Transações"
+          }
+        }
+      }
+    },
+    "Type" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tipo"
+          }
+        }
+      }
+    },
+    "Wait %@, then retry" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aguarde %@ e tente novamente"
+          }
+        }
+      }
+    },
+    "Your transactions are temporarily unreachable. Nothing is lost — try again in a moment." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suas transações estão temporariamente inacessíveis. Nada foi perdido — tente novamente em instantes."
+          }
+        }
+      }
+    },
+    "a minute" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "um minuto"
+          }
+        }
+      }
+    },
+    "income" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "receita"
+          }
+        }
+      }
+    },
+    "loan" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "empréstimo"
+          }
+        }
+      }
+    },
+    "purchase" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "compra"
+          }
+        }
+      }
+    },
+    "rebate" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "bonificação"
+          }
+        }
+      }
+    },
+    "refund" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "reembolso"
+          }
+        }
+      }
+    },
+    "reversal" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "estorno"
+          }
+        }
+      }
+    },
+    "tagged %@" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "com as tags %@"
+          }
+        }
+      }
+    },
+    "tax" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "imposto"
+          }
+        }
+      }
+    },
+    "transfer" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "transferência"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

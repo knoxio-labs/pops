@@ -16,3 +16,4 @@ export {
   type CloudflareAccessVerifier,
   type CloudflareAccessVerifierOptions,
 } from './cloudflare-jwt.js';
+export { normalizeEmail, OPERATOR_EMAILS_ENV, readOperatorEmails } from './operator-emails.js';

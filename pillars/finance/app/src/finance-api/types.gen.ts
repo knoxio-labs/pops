@@ -1305,6 +1305,206 @@ export type GiftCardDetailsRevealResponses = {
 export type GiftCardDetailsRevealResponse =
   GiftCardDetailsRevealResponses[keyof GiftCardDetailsRevealResponses];
 
+export type AccountGrantsListData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/accounts/{id}/grants';
+};
+
+export type AccountGrantsListErrors = {
+  /**
+   * 400
+   */
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
+  /**
+   * 404
+   */
+  404: ErrorBody;
+  /**
+   * 409
+   */
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
+};
+
+export type AccountGrantsListError = AccountGrantsListErrors[keyof AccountGrantsListErrors];
+
+export type AccountGrantsListResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: Array<{
+      accountId: string;
+      createdAt: string;
+      createdBy: string | null;
+      email: string;
+      id: string;
+      role: 'view' | 'edit';
+    }>;
+  };
+};
+
+export type AccountGrantsListResponse =
+  AccountGrantsListResponses[keyof AccountGrantsListResponses];
+
+export type AccountGrantsPutData = {
+  /**
+   * Body
+   */
+  body?: {
+    email: string;
+    role: 'view' | 'edit';
+  };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/accounts/{id}/grants';
+};
+
+export type AccountGrantsPutErrors = {
+  /**
+   * 400
+   */
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
+  /**
+   * 404
+   */
+  404: ErrorBody;
+  /**
+   * 409
+   */
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
+};
+
+export type AccountGrantsPutError = AccountGrantsPutErrors[keyof AccountGrantsPutErrors];
+
+export type AccountGrantsPutResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      accountId: string;
+      createdAt: string;
+      createdBy: string | null;
+      email: string;
+      id: string;
+      role: 'view' | 'edit';
+    };
+    message: string;
+  };
+};
+
+export type AccountGrantsPutResponse = AccountGrantsPutResponses[keyof AccountGrantsPutResponses];
+
+export type AccountGrantsRemoveData = {
+  /**
+   * Body
+   */
+  body?: {
+    [key: string]: never;
+  };
+  path: {
+    id: string;
+    grantId: string;
+  };
+  query?: never;
+  url: '/accounts/{id}/grants/{grantId}';
+};
+
+export type AccountGrantsRemoveErrors = {
+  /**
+   * 400
+   */
+  400: ErrorBody;
+  /**
+   * 401
+   */
+  401: ErrorBody;
+  /**
+   * 403
+   */
+  403: ErrorBody;
+  /**
+   * 404
+   */
+  404: ErrorBody;
+  /**
+   * 409
+   */
+  409: ErrorBody;
+  /**
+   * 413
+   */
+  413: ErrorBody;
+  /**
+   * 500
+   */
+  500: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
+};
+
+export type AccountGrantsRemoveError = AccountGrantsRemoveErrors[keyof AccountGrantsRemoveErrors];
+
+export type AccountGrantsRemoveResponses = {
+  /**
+   * 204
+   */
+  204: {
+    message: string;
+  };
+};
+
+export type AccountGrantsRemoveResponse =
+  AccountGrantsRemoveResponses[keyof AccountGrantsRemoveResponses];
+
 export type AccountImportsGetConfigData = {
   body?: never;
   path: {

@@ -19,7 +19,7 @@ internal struct AccountTrendCardView: View {
         if history.count > 1 {
             PopsCard {
                 VStack(alignment: .leading, spacing: PopsSpacing.md) {
-                    Text("Twelve months")
+                    Text(AccountsCopy.trendTitle)
                         .font(.popsTitle)
                         .foregroundStyle(Color.popsForeground)
                     AccountTrendView(history: history, color: color)
@@ -48,6 +48,6 @@ internal struct AccountTrendCardView: View {
             minorUnits: abs(change), currencyCode: account.balance.currencyCode
         )
         .formatted()
-        return "\(change >= 0 ? "Up" : "Down") \(amount) over 12 months"
+        return AccountsCopy.trend(rose: change >= 0, by: amount)
     }
 }

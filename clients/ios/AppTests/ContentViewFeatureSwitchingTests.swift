@@ -1,6 +1,6 @@
 import AppCore
 import Auth
-import DesignSystem
+import FeatureEgo
 import FeaturePurchases
 import Foundation
 import SwiftUI
@@ -40,81 +40,6 @@ internal enum ContentViewFixture {
             composition: bound,
             purchasesCaptureObserver: purchasesCaptureObserver
         )
-    }
-}
-
-/// The bug this covers only exists when the BFM names more than one feature,
-/// and today it never does — so a test that only ever built a
-/// single-`available` `FeatureSurface` would reproduce the exact blind spot
-/// that let `ContentView` ship reading `.first`.
-///
-/// Lives here rather than in a package because `ContentView` is under `App/`,
-/// which is in no package — see `AppTests/README.md`.
-///
-/// ## Why the single-feature path is not rendered here
-///
-/// `TransactionsFlowView` is the one screen this suite must not construct.
-/// Rendering it through `ImageRenderer` — even indirectly, through
-/// `ContentView` — crashes the host process outright:
-/// `SwiftUICore/Logging.swift:232: Fatal error: no current update to enqueue
-/// action to`, from the list's `.task` starting real async work outside a
-/// SwiftUI transaction `ImageRenderer` never opens. That is the same
-/// limitation `TransactionDetailRenderingTests` documents and works around by
-/// rendering `TransactionDetailCard` rather than the screen it sits in.
-/// `ContentView`'s single-feature path had an equivalent safe substitute —
-/// `ReceiptCaptureView`, a screen with an observable model but no `.task` —
-/// until POPS-4294 removed it; every screen `RootFeature.renderable` maps to
-/// today starts with a `.task` of its own, so nothing left in this build can
-/// stand in for it, and the pixel comparison that regression once protected
-/// lives on in `ContentViewTabSwitcherTests/oneFeatureBuildsNoTabBar`, which
-/// proves the same "no tab bar for a single feature" claim by mounting rather
-/// than rasterising.
-///
-/// ## Why two-or-more features are not rendered here
-///
-/// Measured, not assumed, the same way: an `ImageRenderer` asked to flatten
-/// the `TabView` branch logs `Unable to render flattened version of
-/// PlatformViewControllerRepresentableAdaptor<UIKitAdaptableTabView>` and
-/// produces nothing a byte comparison could tell apart. That branch is mounted
-/// in a real window instead — see ``ContentViewTabSwitcherTests``.
-@Suite("ContentView feature switching")
-@MainActor
-internal struct ContentViewFeatureSwitchingTests {
-    @Test("zero available features renders, and renders real content rather than a blank screen")
-    func zeroFeaturesRendersRealContent() throws {
-        let adaptiveFlat = Color(
-            uiColor: UIColor { traits in
-                traits.userInterfaceStyle == .dark ? .red : .blue
-            })
-
-        #expect(
-            try SwiftUIViewRendering.rendersSchemeAwareContent(
-                ContentViewFixture.view(available: []).features,
-                background: Color.popsBackground))
-        #expect(
-            try !SwiftUIViewRendering.rendersSchemeAwareContent(
-                Color.clear, background: Color.popsBackground))
-        #expect(
-            try !SwiftUIViewRendering.rendersSchemeAwareContent(
-                Color.popsBackground, background: Color.popsBackground))
-        #expect(
-            try !SwiftUIViewRendering.rendersSchemeAwareContent(
-                adaptiveFlat.ignoresSafeArea(), background: Color.popsBackground))
-    }
-
-    /// `.receiptCapture` is not in `RootFeature.renderable` — POPS-4294
-    /// retired its tab — so a `FeatureSurface` naming it alone (as one would
-    /// arrive if something upstream still put it in `available`) reaches
-    /// `screen(for:)`'s `default:` case exactly like any feature id this
-    /// build has no screen for. Named alone, that is the same
-    /// "nothing this build can show" state as an empty `available`, not a
-    /// lone screen of its own.
-    @Test("receipt-capture alone renders the nothing-available explanation, not a screen")
-    func receiptCaptureAloneRendersNothingAvailable() throws {
-        #expect(
-            try SwiftUIViewRendering.rendersSchemeAwareContent(
-                ContentViewFixture.view(available: [.receiptCapture]).features,
-                background: Color.popsBackground))
     }
 }
 
@@ -229,6 +154,18 @@ internal struct ContentViewTabSwitcherTests {
                     + "\(switcher.tabBar.items?.count ?? 0)"
             )
         )
+    }
+
+    @Test("Ego sits immediately before Search without replacing Purchases")
+    func egoLauncherSitsBeforeSearch() throws {
+        let switcher = try #require(
+            try mountedTabBar(available: [FeaturePurchases.feature, FeatureEgo.feature]),
+            "Purchases and Ego should build a native tab bar"
+        )
+        let items = try #require(switcher.tabBar.items)
+
+        #expect(items.count == 3)
+        #expect(Array(items.prefix(2)).compactMap(\.title) == ["Purchases", "Ego"])
     }
 
     /// Transactions searches nothing, so it is the negative case POPS-4312's

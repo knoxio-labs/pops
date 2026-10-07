@@ -8,6 +8,7 @@ export interface StreamState {
   content: string | null;
   tools: ToolActivity[];
   parts: MessagePart[];
+  persistedMessageId: string | null;
 }
 
 /** Empty state before a stream is active. */
@@ -15,6 +16,7 @@ export const INITIAL_STREAM_STATE: StreamState = {
   content: null,
   tools: [],
   parts: [],
+  persistedMessageId: null,
 };
 
 /** Empty state immediately after a stream starts. */
@@ -22,6 +24,7 @@ export const STREAM_START_STATE: StreamState = {
   content: '',
   tools: [],
   parts: [],
+  persistedMessageId: null,
 };
 
 /** Applies one frame without mutating the supplied state or its arrays. */
@@ -36,6 +39,7 @@ export function reduceStreamFrame(state: StreamState, frame: StreamFrame): Strea
     case 'error':
       return INITIAL_STREAM_STATE;
     case 'done':
+      return { ...state, persistedMessageId: frame.messageId };
     case 'navigate':
       return state;
     default: {

@@ -20,7 +20,7 @@
  * So the barrel is split along the seam the services already have, one file
  * per domain under `./exports/`. A new service is added to its group, not to
  * this file, and this file only grows when finance gains a whole new domain.
- * DO NOT re-flatten it: inlining these eight lines restores a file that is one
+ * DO NOT re-flatten it: inlining these nine lines restores a file that is one
  * export away from its cap and hides the next collision in the merge queue
  * again.
  */
@@ -32,3 +32,4 @@ export * from './exports/tagging.js';
 export * from './exports/imports.js';
 export * from './exports/entities.js';
 export * from './exports/planning.js';
+export * from './exports/shared-accounts.js';

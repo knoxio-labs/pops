@@ -75,6 +75,10 @@ Bootstrap does not gate the launch. The surface starts as everything this build 
 
 `MobileFeature`, `FeatureReachability` and `RegistrySource` are `RawRepresentable` wrappers rather than enums, for the reason `TransactionType` is one: this app is distributed rather than deployed, so a build already on a phone meets a BFM that has learned new words. An unrecognised reachability counts as usable and an unrecognised registry source counts as not current — the asymmetry is deliberate, because being unsure how fresh an answer is costs a line of explanation, while being unsure whether a screen works costs the screen.
 
+## Localised copy
+
+`LocalizedCopy` is how a copy enum reaches the String Catalog in its own bundle; `AppCoreFakes` carries `LocalizationCatalogAudit`, which each localised module's tests use to compare its catalogue with its source. The convention is in [the app README](../../README.md#localisation).
+
 ## The rule is asserted, not compiled
 
 [ModuleBoundaryTests.swift](Tests/AppCoreTests/ModuleBoundaryTests.swift) reads every package's sources and manifest and fails on a forbidden import or dependency edge. The compiler is no help here: it refuses an import that no manifest declares, but it has nothing to say about the wrong edge being added to a manifest, which is the mistake that actually happens. SwiftLint cannot express the rule either.

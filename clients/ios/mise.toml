@@ -735,6 +735,7 @@ authoritative=1
 # so it is the one that must not be behind a guard.
 swiftlint lint --strict --quiet || status=1
 mise run verify:analyzer-lane || status=1
+mise run verify:analyzer-inputs || status=1
 mise run generated-boundary || status=1
 mise run verify:feature-repository-errors || status=1
 mise run verify:release-version || status=1
@@ -847,6 +848,10 @@ run = "bash scripts/analyzer-lane.sh"
 [tasks."verify:analyzer-lane"]
 description = "An off-pin analyzer finding remains visible and failing"
 run = "bash scripts/test-analyzer-lane.sh"
+
+[tasks."verify:analyzer-inputs"]
+description = "Analyzer response files are canonicalized in copies without changing build artifacts"
+run = "bash scripts/test-prepare-analyzer-inputs.sh"
 
 # Generates this client's canonical copy and stops there. The BFM vendors its
 # own copy and a repo-root guard fails on drift, so regenerating without
@@ -1111,6 +1116,45 @@ if [ -n "$failed_flows" ]; then
   exit 1
 fi
 echo "e2e: all flows passed."
+'''
+
+[tasks."e2e:pair:mcp"]
+description = "Open one MCP-issued pairing link in the unpaired local iOS Simulator without sending it through Maestro"
+depends = ["verify:xcode-version"]
+run = '''
+set -eu
+set -o pipefail
+
+if [ -z "${POPS_MCP_URL:-}" ]; then
+  echo "e2e: POPS_MCP_URL is required for the native simulator pairing handoff." >&2
+  exit 1
+fi
+
+udid=$(xcrun simctl list devices available -j \
+  | jq -r --arg name "$POPS_IOS_SIMULATOR" \
+    '[.devices[][] | select(.name == $name)] | (map(select(.state == "Booted")) + .) | .[0].udid // empty')
+if [ -z "$udid" ]; then
+  echo "e2e: no simulator named '$POPS_IOS_SIMULATOR' is available." >&2
+  exit 1
+fi
+
+if ! xcrun simctl bootstatus "$udid" -b >/dev/null 2>&1; then
+  echo "e2e: the iOS Simulator could not be started." >&2
+  exit 1
+fi
+if ! xcrun simctl get_app_container "$udid" com.knoxiolabs.pops.local app >/dev/null 2>&1; then
+  echo "e2e: install the local Debug app on the selected simulator before pairing." >&2
+  exit 1
+fi
+
+if ! token=$("$HOME/.local/bin/pops-mcp-headers" 2>/dev/null \
+  | jq -er '.Authorization | sub("^Bearer "; "")' 2>/dev/null); then
+  echo "e2e: stored MCP authorization is unavailable." >&2
+  exit 1
+fi
+POPS_IOS_SIMULATOR_UDID="$udid" MCP_INBOUND_TOKEN="$token" \
+  node ../../scripts/ios-e2e/simulator-pairing.mjs
+unset token
 '''
 
 [tasks."fixture:device-signature:generate"]

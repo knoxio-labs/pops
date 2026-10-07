@@ -13,14 +13,14 @@ internal struct PersonFactsView: View {
     internal var body: some View {
         PopsCard {
             VStack(alignment: .leading, spacing: PopsSpacing.md) {
-                Text("Ledger")
+                Text(AccountsCopy.ledgerTitle)
                     .font(.popsTitle)
                     .foregroundStyle(Color.popsForeground)
                 Text(summary)
                     .font(.popsSubheadline)
                     .foregroundStyle(Color.popsForeground)
                 if let move = biggestMove {
-                    Text("Biggest single move: \(move)")
+                    Text(AccountsCopy.biggestMove(move))
                         .font(.popsCaption)
                         .foregroundStyle(Color.popsMutedForeground)
                 }
@@ -31,9 +31,11 @@ internal struct PersonFactsView: View {
     private var who: String { account.contact ?? account.name }
 
     private var summary: String {
-        guard account.balance.minorUnits != 0 else { return "Settled up with \(who)" }
-        guard let transactionCount = account.transactionCount else { return "Open with \(who)" }
-        return "\(transactionCount) entries with \(who)"
+        guard account.balance.minorUnits != 0 else { return AccountsCopy.settledUp(with: who) }
+        guard let transactionCount = account.transactionCount else {
+            return AccountsCopy.open(with: who)
+        }
+        return AccountsCopy.entries(transactionCount, with: who)
     }
 
     private var biggestMove: String? {
@@ -50,6 +52,6 @@ internal struct PersonFactsView: View {
             minorUnits: abs(best.delta), currencyCode: account.balance.currencyCode
         )
         .formatted()
-        return "\(best.delta > 0 ? "+" : "−")\(amount) in \(best.month)"
+        return AccountsCopy.move("\(best.delta > 0 ? "+" : "−")\(amount)", in: best.month)
     }
 }

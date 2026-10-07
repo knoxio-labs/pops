@@ -35,6 +35,24 @@ internal struct EgoThreadModelTests {
         #expect(model.conversationId == "conversation-1")
     }
 
+    @Test("a welcome prompt is sent without replacing the unsent draft")
+    func sendsWelcomePromptPreservingDraft() async {
+        let prompt = "Summarize my recent purchases and spending."
+        let draft = "Keep this question for after the suggestion."
+        let repository = ScriptedEgoRepository(
+            chatScripts: [EgoThreadModelFixtures.script(doneID: "assistant-1")])
+        let model = EgoThreadModelFixtures.model(repository: repository)
+        model.draft = draft
+
+        model.send(prompt: prompt)
+        await awaitObservedCondition { model.turn == nil && model.messages.count == 2 }
+
+        #expect(model.messages[0].role == .user)
+        #expect(model.messages[0].plainText == prompt)
+        #expect(model.draft == draft)
+        #expect(await repository.streamChatCalls.map(\.message) == [prompt])
+    }
+
     @Test("the next send continues the conversation returned by done")
     func secondSendUsesConversationID() async {
         let repository = ScriptedEgoRepository(

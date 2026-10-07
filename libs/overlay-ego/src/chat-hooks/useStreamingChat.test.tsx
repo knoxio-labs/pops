@@ -354,6 +354,7 @@ describe('useStreamingChat stream frames', () => {
     expect(streamCallbacks.onConversation).toHaveBeenCalledWith('conversation-1');
     expect(streamCallbacks.onEngrams).toHaveBeenCalledWith([]);
     expect(result.current.streamingContent).toBe('Found it.');
+    expect(result.current.persistedMessageId).toBe('message-1');
     expect(result.current.toolActivity).toEqual([{ name: 'inventory.search', status: 'started' }]);
     expect(result.current.streamParts).toEqual([
       { type: 'entity', uri: 'pops:inventory/item/drill-1', title: 'Bosch drill' },
@@ -366,6 +367,7 @@ describe('useStreamingChat stream frames', () => {
     });
     await waitFor(() => expect(result.current.isStreaming).toBe(false));
     expect(result.current.streamingContent).toBeNull();
+    expect(result.current.persistedMessageId).toBeNull();
     expect(result.current.toolActivity).toEqual([]);
     expect(result.current.streamParts).toEqual([]);
   });
@@ -400,6 +402,7 @@ describe('useStreamingChat stream frames', () => {
     expect(streamCallbacks.onConversation).toHaveBeenCalledWith('c1');
     expect(streamCallbacks.onEngrams).toHaveBeenCalledWith([]);
     expect(result.current.streamingContent).toBe('The turn continued.');
+    expect(result.current.persistedMessageId).toBe('m1');
     expect(result.current.isStreaming).toBe(true);
 
     act(() => controlled.close());
@@ -409,6 +412,7 @@ describe('useStreamingChat stream frames', () => {
     });
     await waitFor(() => expect(result.current.isStreaming).toBe(false));
     expect(result.current.streamingContent).toBeNull();
+    expect(result.current.persistedMessageId).toBeNull();
   });
 
   it('keeps resumed tool and action frames visible until invalidation resolves', async () => {

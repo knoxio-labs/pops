@@ -4,6 +4,15 @@ import { client } from './client.gen';
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import type {
+  AccountGrantsListData,
+  AccountGrantsListErrors,
+  AccountGrantsListResponses,
+  AccountGrantsPutData,
+  AccountGrantsPutErrors,
+  AccountGrantsPutResponses,
+  AccountGrantsRemoveData,
+  AccountGrantsRemoveErrors,
+  AccountGrantsRemoveResponses,
   AccountImportsGetConfigData,
   AccountImportsGetConfigErrors,
   AccountImportsGetConfigResponses,
@@ -552,6 +561,50 @@ export const giftCardDetailsReveal = <ThrowOnError extends boolean = false>(
     ThrowOnError
   >({
     url: '/accounts/{id}/gift-card-details/reveal',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * List who an account is shared with, ordered by email
+ */
+export const accountGrantsList = <ThrowOnError extends boolean = false>(
+  options: Options<AccountGrantsListData, ThrowOnError>
+): RequestResult<AccountGrantsListResponses, AccountGrantsListErrors, ThrowOnError> =>
+  (options.client ?? client).get<AccountGrantsListResponses, AccountGrantsListErrors, ThrowOnError>(
+    { url: '/accounts/{id}/grants', ...options }
+  );
+
+/**
+ * Give an email view or edit on an account, or change the role it already holds. The email is matched case-insensitively, so one address has at most one grant per account
+ */
+export const accountGrantsPut = <ThrowOnError extends boolean = false>(
+  options: Options<AccountGrantsPutData, ThrowOnError>
+): RequestResult<AccountGrantsPutResponses, AccountGrantsPutErrors, ThrowOnError> =>
+  (options.client ?? client).put<AccountGrantsPutResponses, AccountGrantsPutErrors, ThrowOnError>({
+    url: '/accounts/{id}/grants',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Revoke a grant; the grantee loses the account on their next request
+ */
+export const accountGrantsRemove = <ThrowOnError extends boolean = false>(
+  options: Options<AccountGrantsRemoveData, ThrowOnError>
+): RequestResult<AccountGrantsRemoveResponses, AccountGrantsRemoveErrors, ThrowOnError> =>
+  (options.client ?? client).delete<
+    AccountGrantsRemoveResponses,
+    AccountGrantsRemoveErrors,
+    ThrowOnError
+  >({
+    url: '/accounts/{id}/grants/{grantId}',
     ...options,
     headers: {
       'Content-Type': 'application/json',

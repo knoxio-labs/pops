@@ -27,10 +27,13 @@ else
   artifacts=$(mktemp -d "$scratch/ios-analyzer.XXXXXX")
 fi
 cp "$log" "$artifacts/compiler.log"
+normalized_log="$artifacts/compiler.normalized.log"
+python3 "$script_dir/prepare-analyzer-inputs.py" \
+  "$log" "$normalized_log" "$artifacts/swift-filelists" "$PWD"
 output_log="$artifacts/analyze.log"
 printf 'lint:analyze: streaming analyzer output to %s\n' "$output_log"
 set +e
-swiftlint analyze --strict --compiler-log-path "$log" --config .swiftlint.yml \
+swiftlint analyze --strict --compiler-log-path "$normalized_log" --config .swiftlint.yml \
   <&0 >"$output_log" 2>&1 &
 analyzer_pid=$!
 offset=0

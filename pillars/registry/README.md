@@ -93,6 +93,16 @@ account, then (non-production) a dev fallback user, then — **only when
 `CLOUDFLARE_ACCESS_TEAM_NAME` is unset** — a `tunnel-authenticated@pops.local`
 principal, then a verified `cf-access-jwt-assertion`, then anonymous.
 
+A verified email is the **operator** when it is in `POPS_OPERATOR_EMAILS`
+(comma-separated, compared trimmed and lower-cased) and a **guest** otherwise.
+Both fallback users are the operator. `requireUser` and `requireProtected`
+answer a guest 403, so the service-account, feature and settings routes stay
+the operator's; `GET /session` is the one identity-gated route a guest may
+call, and returns `{ kind, email }` with `email: null` for a fallback user.
+While `POPS_OPERATOR_EMAILS` is unset nobody is a guest: every verified email
+is the operator, as before the list existed, and in production the pillar logs
+one warning at startup saying so.
+
 The tunnel-user fallback is deliberate, not a placeholder: the registry is
 reachable only from inside the `pops-backend`/`pops-frontend` Docker networks
 and through the shell's Cloudflare Access-protected proxy, so "no team name
@@ -105,11 +115,13 @@ every caller on the public internet an operator session. There is no such
 bypassed hostname in front of the registry, which is what makes the fallback
 safe here and not there.
 
-`infra/docker-compose.yml`'s `registry-api` service forwards both
-`CLOUDFLARE_ACCESS_TEAM_NAME` and `CLOUDFLARE_ACCESS_AUD` from the host
-environment, the same way `bfm-api`'s does — setting either only in an
-operator's `.env` does nothing for a container whose compose block never
-declares it. Until an operator sets `CLOUDFLARE_ACCESS_TEAM_NAME` in the
+`infra/docker-compose.yml`'s `registry-api` service forwards
+`CLOUDFLARE_ACCESS_TEAM_NAME`, `CLOUDFLARE_ACCESS_AUD` and
+`POPS_OPERATOR_EMAILS` from the host environment, as every pillar API's does —
+setting one only in an operator's `.env` does nothing for a container whose
+compose block never declares it.
+`scripts/ci/__tests__/check-compose-cloudflare-access-env.test.ts` fails when a
+service drops one. Until an operator sets `CLOUDFLARE_ACCESS_TEAM_NAME` in the
 deployed environment, `GET /service-accounts` and the rest of the `userOnly`
 surface authenticate through the tunnel-user fallback rather than a verified
 Access identity; wiring a value in is an operator step, not a code change.

@@ -1,6 +1,6 @@
 /**
  * Decoding and storing a receipt upload's parts — the half of the pipeline
- * `upload`, `extract` and nothing else share.
+ * `upload`, `extract` and `store` share.
  *
  * Split out purely to keep `receipt-handlers.ts` and
  * `receipt-draft-handlers.ts` under the file-size cap; there is no
@@ -89,27 +89,26 @@ function notWhatItClaims(
 export const receiptUris = (stored: readonly StoredReceipt[]): string[] =>
   stored.map((one) => one.uri);
 
+type StoredParts = {
+  readonly parts: { mediaType: UploadBody['parts'][number]['mediaType']; dataBase64: string }[];
+  readonly goodParts: DecodedReceiptPart[];
+  readonly stored: StoredReceipt[];
+};
+
 /**
- * Decode every part, refuse the first that is not what it claims, store what
- * survives, and refuse a repeat of a file this pillar already read.
+ * Decode every part, refuse the first that is not what it claims, and store
+ * what survives.
  *
- * Shared by `upload` and `extract`: both store first and ask the model
- * second (`receipt-handlers.ts`'s header explains why), and both must refuse
- * the same repeat before paying for a vision call whose only possible
- * outcome is a 409.
+ * Nothing reaches the store unless every part passed, and nothing here asks
+ * whether the file already became a purchase: that question belongs to the
+ * routes that would create one (see {@link prepareReceiptParts}), not to a
+ * caller that only wants the bytes kept.
  */
-export function prepareReceiptParts(
-  db: PurchasesDb,
-  body: { parts: UploadBody['parts'] }
-):
+export function validateAndStoreReceiptParts(body: {
+  parts: UploadBody['parts'];
+}):
   | { readonly kind: 'refused'; readonly response: ReturnType<typeof notWhatItClaims> }
-  | { readonly kind: 'duplicate'; readonly purchaseId: string }
-  | {
-      readonly kind: 'ready';
-      readonly parts: { mediaType: UploadBody['parts'][number]['mediaType']; dataBase64: string }[];
-      readonly goodParts: DecodedReceiptPart[];
-      readonly stored: StoredReceipt[];
-    } {
+  | ({ readonly kind: 'stored' } & StoredParts) {
   const parts = body.parts.map((one) => ({
     mediaType: one.mediaType,
     dataBase64: canonicalBase64(one.dataBase64),
@@ -131,6 +130,29 @@ export function prepareReceiptParts(
 
   const goodParts = decodedParts.filter((one): one is DecodedReceiptPart => one.bytes !== null);
   const stored = goodParts.map((one) => storeReceiptPart(one));
+
+  return { kind: 'stored', parts, goodParts, stored };
+}
+
+/**
+ * {@link validateAndStoreReceiptParts}, then refuse a repeat of a file this
+ * pillar already read.
+ *
+ * Shared by `upload` and `extract`: both store first and ask the model
+ * second (`receipt-handlers.ts`'s header explains why), and both must refuse
+ * the same repeat before paying for a vision call whose only possible
+ * outcome is a 409.
+ */
+export function prepareReceiptParts(
+  db: PurchasesDb,
+  body: { parts: UploadBody['parts'] }
+):
+  | { readonly kind: 'refused'; readonly response: ReturnType<typeof notWhatItClaims> }
+  | { readonly kind: 'duplicate'; readonly purchaseId: string }
+  | ({ readonly kind: 'ready' } & StoredParts) {
+  const outcome = validateAndStoreReceiptParts(body);
+  if (outcome.kind === 'refused') return outcome;
+  const { parts, goodParts, stored } = outcome;
 
   const existing = findPurchaseBySourceOrderId(db, RECEIPT_SOURCE_ID, receiptKey(stored));
   if (existing !== undefined) return { kind: 'duplicate', purchaseId: existing.id };

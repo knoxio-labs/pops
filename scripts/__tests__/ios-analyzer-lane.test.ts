@@ -85,10 +85,13 @@ function run(summary?: string, status?: string, xcodeBuild?: '27A266a' | '27A520
 }
 
 describe('the iOS analyzer lane', () => {
-  it('retains both streams, strict arguments, and the existing source floor exclusions', () => {
-    const { result, artifacts, cwd, compilerLog } = run();
+  it('retains the raw log, both streams, strict arguments, and source floor exclusions', () => {
+    const { result, artifacts, cwd } = run();
     expect(result.status).toBe(0);
     expect(readFileSync(join(artifacts, 'compiler.log'), 'utf8')).toBe('compile evidence\n');
+    expect(readFileSync(join(artifacts, 'compiler.normalized.log'), 'utf8')).toBe(
+      'compile evidence\n'
+    );
     const log = readFileSync(join(artifacts, 'analyze.log'), 'utf8');
     expect(log).toContain('analyzer stdout marker');
     expect(log).toContain('analyzer stderr marker');
@@ -97,7 +100,7 @@ describe('the iOS analyzer lane', () => {
       'analyze',
       '--strict',
       '--compiler-log-path',
-      compilerLog,
+      join(artifacts, 'compiler.normalized.log'),
       '--config',
       '.swiftlint.yml',
     ]);

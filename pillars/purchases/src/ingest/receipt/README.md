@@ -524,15 +524,32 @@ it, and these URIs migrate with everything else.
 
 The retention worker runs at startup and every six hours thereafter. It deletes
 stored receipt files only when their modification time is at least 48 hours old
-and no purchase document references their exact receipt URI. Re-uploading the
-same bytes refreshes that modification time, protecting a new review of an
-older, unsaved receipt. Saved receipt pages remain evidence regardless of age.
+and neither a purchase document nor an external reference names their exact
+receipt URI. Re-uploading the same bytes refreshes that modification time,
+protecting a new review of an older, unsaved receipt. Saved receipt pages and
+externally referenced files remain evidence regardless of age.
 
 Discarding a draft does not delete its files immediately; abandoned and
 discarded drafts expire through the same sweep. Malformed filenames are kept.
 `PURCHASES_RECEIPT_SWEEP_INTERVAL_MS` controls the interval between completed
 passes. Runs never overlap, failures are logged and retried on the next tick,
 and shutdown stops the timer and drains the active pass before closing SQLite.
+
+### Keeping a file for another pillar
+
+`POST /receipts/store` takes the same `parts` as an upload, checks each against
+its stated media type and stores them, answering `{ receiptUris }`. It calls no
+model, so it works with no vision key, and it creates no purchase; a file that
+already became one is stored again without complaint.
+
+A stored file nobody references is still swept. `PUT /receipts/references` with
+`{ ownerUri, receiptUris }` pins files for an owner on another pillar
+(`pops://<pillar>/<type>/<id>`), in `receipt_external_references`. It is
+idempotent, and a URI naming a file the store does not hold is a `404` that pins
+nothing. `DELETE /receipts/references` with `{ ownerUri, receiptUris? }` releases
+the named pins, or all of that owner's when none are named; a pin that does not
+exist is not an error. A file held by a purchase and by an external owner
+survives until both are gone.
 
 ### Reading one back
 

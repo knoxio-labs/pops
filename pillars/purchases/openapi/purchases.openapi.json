@@ -11081,6 +11081,226 @@
         "tags": ["receipt"]
       }
     },
+    "/receipts/references": {
+      "delete": {
+        "operationId": "receipt.removeReferences",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "ownerUri": {
+                    "pattern": "^pops:\\/\\/[a-z0-9-]+\\/[a-z0-9-]+\\/[^/\\s]+$",
+                    "type": "string"
+                  },
+                  "receiptUris": {
+                    "items": {
+                      "pattern": "^pops:\\/\\/purchases\\/receipt\\/([^/\\s]+)$",
+                      "type": "string"
+                    },
+                    "maxItems": 100,
+                    "minItems": 1,
+                    "type": "array"
+                  }
+                },
+                "required": ["ownerUri"],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "ok": {
+                      "enum": [true],
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["ok"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
+          }
+        },
+        "summary": "Release an owner's pins on the named receipt files, or on all of them when none are named. A pin that does not exist is not an error.",
+        "tags": ["receipt"]
+      },
+      "put": {
+        "operationId": "receipt.addReferences",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "ownerUri": {
+                    "pattern": "^pops:\\/\\/[a-z0-9-]+\\/[a-z0-9-]+\\/[^/\\s]+$",
+                    "type": "string"
+                  },
+                  "receiptUris": {
+                    "items": {
+                      "pattern": "^pops:\\/\\/purchases\\/receipt\\/([^/\\s]+)$",
+                      "type": "string"
+                    },
+                    "maxItems": 100,
+                    "minItems": 1,
+                    "type": "array"
+                  }
+                },
+                "required": ["ownerUri", "receiptUris"],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "ok": {
+                      "enum": [true],
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["ok"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "404"
+          }
+        },
+        "summary": "Pin stored receipt files for an owner on another pillar so the retention sweep keeps them. Idempotent.",
+        "tags": ["receipt"]
+      }
+    },
+    "/receipts/store": {
+      "post": {
+        "operationId": "receipt.store",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "parts": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "dataBase64": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "mediaType": {
+                          "enum": [
+                            "image/jpeg",
+                            "image/png",
+                            "image/webp",
+                            "image/gif",
+                            "application/pdf",
+                            "text/plain"
+                          ],
+                          "type": "string"
+                        }
+                      },
+                      "required": ["mediaType", "dataBase64"],
+                      "type": "object"
+                    },
+                    "minItems": 1,
+                    "type": "array"
+                  }
+                },
+                "required": ["parts"],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "receiptUris": {
+                      "items": {
+                        "pattern": "^pops:\\/\\/purchases\\/receipt\\/([^/\\s]+)$",
+                        "type": "string"
+                      },
+                      "minItems": 1,
+                      "type": "array"
+                    }
+                  },
+                  "required": ["receiptUris"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
+          }
+        },
+        "summary": "Store receipt files without reading them. Needs no vision model and creates no purchase; an unreferenced file is swept after the retention window.",
+        "tags": ["receipt"]
+      }
+    },
     "/receipts/{sha256}": {
       "get": {
         "operationId": "receipt.read",

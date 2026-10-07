@@ -17,6 +17,9 @@ private enum EgoThreadModelFailureFixtures {
 
     static let mappedErrors: [ExpectedEgoThreadFailure] = [
         ExpectedEgoThreadFailure(
+            error: .unavailable,
+            message: "Ego is unavailable. Try again.", retryable: true),
+        ExpectedEgoThreadFailure(
             error: .unauthorized,
             message: "Your session needs attention before Ego can continue.", retryable: false),
         ExpectedEgoThreadFailure(

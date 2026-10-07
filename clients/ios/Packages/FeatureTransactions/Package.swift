@@ -19,6 +19,7 @@ let strictSwiftSettings: [SwiftSetting] = [
 // `swift test`.
 let package = Package(
     name: "FeatureTransactions",
+    defaultLocalization: "en-AU",
     platforms: [.iOS("27.0"), .macOS("15.0")],
     products: [.library(name: "FeatureTransactions", targets: ["FeatureTransactions"])],
     dependencies: [
@@ -29,6 +30,7 @@ let package = Package(
         .target(
             name: "FeatureTransactions",
             dependencies: ["AppCore", "DesignSystem"],
+            resources: [.process("Resources/Localizable.xcstrings")],
             swiftSettings: strictSwiftSettings
         ),
         .testTarget(
