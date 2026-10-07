@@ -9,9 +9,12 @@
  * `nginx.conf` — the drift-detection test fails until `pnpm gen:nginx` is
  * re-run.
  */
+import { GUEST_GUARD } from './nginx-guest-gate.js';
+
 export const NGINX_CONF_TAIL = `    # Relocated raw routes (02): Up Bank webhook → finance pillar; inventory
     # photo/document byte routes → inventory pillar. Variable-form proxy_pass
-    # so pops-shell still boots when an upstream is absent.
+    # so pops-shell still boots when an upstream is absent. The webhook stays
+    # public for Up Bank; the inventory byte routes refuse guests.
     location /webhooks/up {
         set $up_webhook_upstream http://finance-api:3004;
         proxy_pass $up_webhook_upstream;
@@ -22,6 +25,7 @@ export const NGINX_CONF_TAIL = `    # Relocated raw routes (02): Up Bank webhook
 
     location ~ ^/(api/inventory|inventory/documents)/ {
         set $inventory_upstream http://inventory-api:3002;
+${GUEST_GUARD}
         proxy_pass $inventory_upstream;
         proxy_set_header Host $host;
         proxy_set_header X-Request-Id $pops_request_id;
@@ -39,6 +43,7 @@ export const NGINX_CONF_TAIL = `    # Relocated raw routes (02): Up Bank webhook
     # \`http://media-api:3003/media/images/\` target.
     location /media/images/ {
         set $media_images_upstream http://media-api:3003;
+${GUEST_GUARD}
         proxy_pass $media_images_upstream;
         proxy_http_version 1.1;
         proxy_set_header Host $host;

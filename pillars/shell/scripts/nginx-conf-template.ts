@@ -4,12 +4,13 @@
  * Split out so the generator's renderer stays small and the literal
  * blocks (which are essentially data) live next to each other. Order:
  * the renderer concatenates
- *   HEAD → REST_INTRO → <per-pillar /<id>-api/ blocks> → orchestrator → TAIL,
+ *   guest map → HEAD → REST_INTRO → <per-pillar /<id>-api/ blocks> → orchestrator → TAIL,
  * with the last two in `nginx-conf-orchestrator.ts` and `nginx-conf-tail.ts`.
  *
  * Editing any text below changes the committed `nginx.conf` — the
  * drift-detection test will fail until `pnpm gen:nginx` is re-run.
  */
+import { NGINX_CONF_GUEST_FORBIDDEN, renderGuestMap } from './nginx-guest-gate.js';
 
 export const NGINX_CONF_HEAD = `map $http_x_request_id $pops_request_id {
     default $http_x_request_id;
@@ -51,6 +52,9 @@ server {
         return 504 '{"code":"gateway.upstream_unavailable","message":"The upstream service timed out.","requestId":"$pops_request_id","retryable":true}';
     }
 
+    # Where a gated location sends a guest. \`internal\`, so a client asking
+    # for this path directly gets a 404 like any other unknown route.
+${NGINX_CONF_GUEST_FORBIDDEN}
     # Bulk endpoints post the whole batch in one body — a two-year bank
     # statement reaches ~1.3MB at /finance-api/imports/process — so nginx's
     # 1m default rejects a normal import with a 413 before it ever reaches the
@@ -105,6 +109,14 @@ server {
         try_files $uri @missing;
     }
 `;
+
+/**
+ * Everything ahead of the per-pillar blocks: the guest map for the given raw
+ * operator list, then the fixed head.
+ */
+export function renderNginxConfHead(rawOperatorEmails: string | undefined): string {
+  return `${renderGuestMap(rawOperatorEmails)}\n${NGINX_CONF_HEAD}`;
+}
 
 /**
  * Intro comment for the generated per-pillar REST surfaces. Heads the

@@ -9,6 +9,9 @@
 #      (registry unreachable, render error, `nginx -t` rejects the output)
 #      keep the committed static fallback at $SERVED_CONF — nginx ALWAYS
 #      boots. The fallback is logged at warn level.
+#      With POPS_OPERATOR_EMAILS set, the fallback is first re-rendered with
+#      the same guest gate as the live render, so falling back never opens
+#      the gate. Unset, the baked fallback is used as is and the gate is off.
 #   2. Start nginx (master), then the registry watcher, both as children.
 #   3. Supervise: if EITHER exits, tear the other down and exit non-zero so
 #      the orchestrator restarts the container (no silent half-dead state).
@@ -59,7 +62,30 @@ boot_render() {
   return 0
 }
 
+# The baked fallback carries an inert guest gate, because the operator list is
+# only known at boot. With a list set, re-render the fallback so it enforces
+# the same gate as the live render; failing to do so exits instead of serving
+# a conf that lets guests through. Unset, today's behaviour is kept.
+prepare_fallback() {
+  if [ -z "${POPS_OPERATOR_EMAILS:-}" ]; then
+    warn "POPS_OPERATOR_EMAILS is unset; the guest gate is off and every identified user is treated as the operator"
+    return 0
+  fi
+
+  gated="$(mktemp)"
+  if ! node "$RENDER_BUNDLE" --out "$gated"; then
+    rm -f "$gated"
+    warn "could not render the guest-gated fallback conf; refusing to start with the gate off"
+    exit 1
+  fi
+  cp "$gated" "$FALLBACK_CONF"
+  rm -f "$gated"
+  log "guest gate on: fallback conf re-rendered with the operator list"
+}
+
 main() {
+  prepare_fallback
+
   # Start from the committed static fallback (baked by the Dockerfile) so a
   # partial prior render can never leave a broken file in place.
   cp "$FALLBACK_CONF" "$SERVED_CONF"
