@@ -1,23 +1,24 @@
 /**
  * The reconcile queue: what still wants a human decision.
  *
- * Derived entirely from persisted state rather than from a stored copy of
- * the solver's `review` output. A sweep re-derives everything on every run,
- * so a saved verdict would be stale the moment the next sweep disagreed
- * with it — and the queue would show reasons for links that no longer
- * exist. Two facts in the database say everything the queue needs:
+ * The queue combines persisted link state with the latest successful sweep's
+ * review evidence. A sweep replaces that evidence only for charges it
+ * reconsidered, so a scoped run cannot erase another charge's candidates.
+ * Two facts in the database decide whether a charge is awaiting a decision:
  *
  * - a link with `confirmed_at IS NULL` is a proposal awaiting a decision
  * - a charge with no link at all is unexplained
  *
- * Both are re-derived by the sweep, so the queue is always a view of what
- * the engine currently believes rather than of what it once believed.
+ * The sweep re-derives link state and replaces review evidence for the
+ * charges it considered only after Finance reads succeed. A skipped sweep
+ * therefore leaves the last successful review snapshot available.
  */
 import { and, asc, eq, isNull, sql } from 'drizzle-orm';
 
 import {
   purchaseChargeLinks,
   purchaseCharges,
+  purchaseChargeReviews,
   purchaseMatchRules,
   purchases,
   purchaseSources,
@@ -26,6 +27,7 @@ import {
 import type { SQL } from 'drizzle-orm';
 
 import type { LinkType } from '../../contract/constants.js';
+import type { ReviewReason } from '../../reconcile/types.js';
 import type { PurchasesDb } from './internal.js';
 
 export interface QueuedLink {
@@ -63,6 +65,10 @@ export interface QueueEntry {
    * treatment in the UI.
    */
   readonly proposed: readonly QueuedLink[];
+  /** Why the last successful sweep left this charge for a person to decide. */
+  readonly reviewReason: ReviewReason | null;
+  /** Finance transaction URIs admitted by the stage that asked for review. */
+  readonly reviewCandidateUris: readonly string[];
   /** `Σ proposed − charge`. Zero for a clean match, non-zero for a partial. */
   readonly deltaCents: number;
 }
@@ -115,6 +121,8 @@ export function listReconcileQueue(db: PurchasesDb, filter: QueueFilter = {}): Q
       currency: row.currency,
       amountCents: row.amountCents,
       proposed,
+      reviewReason: row.reviewReason,
+      reviewCandidateUris: row.reviewCandidateUris ?? [],
       // Signed on purpose: an over-linked charge is a bug, and clamping it
       // to zero would hide the only evidence that it happened.
       deltaCents: linked - row.amountCents,
@@ -134,6 +142,8 @@ interface UndecidedCharge {
   currency: string;
   amountCents: number;
   position: number;
+  reviewReason: ReviewReason | null;
+  reviewCandidateUris: string[] | null;
 }
 
 /**
@@ -188,10 +198,13 @@ function undecidedCharges(db: PurchasesDb, filter: QueueFilter): UndecidedCharge
       currency: purchases.currency,
       amountCents: purchaseCharges.amountCents,
       position: purchaseCharges.position,
+      reviewReason: purchaseChargeReviews.reason,
+      reviewCandidateUris: purchaseChargeReviews.candidateUris,
     })
     .from(purchaseCharges)
     .innerJoin(purchases, eq(purchaseCharges.purchaseId, purchases.id))
     .leftJoin(purchaseSources, eq(purchases.source, purchaseSources.id))
+    .leftJoin(purchaseChargeReviews, eq(purchaseChargeReviews.chargeId, purchaseCharges.id))
     .where(
       and(
         sql`${purchases.settlementMode} <> 'cash'`,

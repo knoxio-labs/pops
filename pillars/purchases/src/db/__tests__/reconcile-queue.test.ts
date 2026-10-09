@@ -11,7 +11,8 @@
  */
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { listReconcileQueue, persistProposedLinks, createPurchase } from '../index.js';
+import { createPurchase, listReconcileQueue, persistProposedLinks } from '../index.js';
+import { persistChargeReviews } from '../services/reconcile-writes.js';
 import { openTempDb, seedAmazonSource } from './helpers.js';
 
 import type { OpenedPurchasesDb, PurchasesDb } from '../index.js';
@@ -173,5 +174,55 @@ describe('kind is folded into the SQL predicate', () => {
     expect(sqlUnexplained.map((e) => e.chargeId)).toEqual(
       oldDerivationUnexplained.map((e) => e.chargeId)
     );
+  });
+});
+
+describe('persisted review evidence', () => {
+  it('replaces only reconsidered charges and clears evidence when a later sweep has no review', () => {
+    const firstChargeId = seedCharge(100);
+    const secondChargeId = seedCharge(101);
+    const purchaseIdFor = (chargeId: string): string => {
+      const row = opened.raw
+        .prepare('SELECT purchase_id as purchaseId FROM purchase_charges WHERE id = ?')
+        .get(chargeId) as { purchaseId: string } | undefined;
+      if (row === undefined) throw new Error(`Expected purchase for charge ${chargeId}`);
+      return row.purchaseId;
+    };
+
+    persistChargeReviews(
+      db,
+      [firstChargeId, secondChargeId],
+      [
+        {
+          chargeId: firstChargeId,
+          purchaseId: purchaseIdFor(firstChargeId),
+          reason: 'ambiguous',
+          candidateCount: 2,
+          candidateUris: ['pops://finance/transaction/first', 'pops://finance/transaction/second'],
+        },
+        {
+          chargeId: secondChargeId,
+          purchaseId: purchaseIdFor(secondChargeId),
+          reason: 'ambiguous-partial',
+          candidateCount: 2,
+          candidateUris: ['pops://finance/transaction/third', 'pops://finance/transaction/fourth'],
+        },
+      ]
+    );
+
+    persistChargeReviews(db, [firstChargeId], []);
+
+    const entries = queue({ limit: 10 });
+    expect(entries.find((entry) => entry.chargeId === firstChargeId)).toMatchObject({
+      reviewReason: null,
+      reviewCandidateUris: [],
+    });
+    expect(entries.find((entry) => entry.chargeId === secondChargeId)).toMatchObject({
+      reviewReason: 'ambiguous-partial',
+      reviewCandidateUris: [
+        'pops://finance/transaction/third',
+        'pops://finance/transaction/fourth',
+      ],
+    });
   });
 });

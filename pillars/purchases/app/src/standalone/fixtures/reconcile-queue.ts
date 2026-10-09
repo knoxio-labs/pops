@@ -27,6 +27,8 @@ export const RECONCILE_QUEUE: ReconcileQueueResponses[200] = {
       purchaseId: ORDER_ID,
       source: 'hardware-barn',
       sourceOrderId: 'HB-2026-114872',
+      reviewReason: null,
+      reviewCandidates: [],
       proposed: [
         {
           amountCents: 19859,
@@ -53,6 +55,8 @@ export const RECONCILE_QUEUE: ReconcileQueueResponses[200] = {
       purchaseId: 'pur_3ba1',
       source: 'grocer-co',
       sourceOrderId: 'GC-88213',
+      reviewReason: null,
+      reviewCandidates: [],
       proposed: [
         {
           amountCents: 5200,
@@ -92,6 +96,25 @@ export const RECONCILE_QUEUE: ReconcileQueueResponses[200] = {
       purchaseId: 'pur_c003',
       source: 'receipt-upload',
       sourceOrderId: null,
+      reviewReason: 'ambiguous',
+      reviewCandidates: [
+        {
+          transactionUri: 'pops://finance/transaction/txn_6101',
+          description: 'ONLINE BOOKS AU',
+          date: '2026-08-28',
+          payee: 'Online Books',
+          amountCents: 4500,
+          settlementCurrency: 'AUD',
+        },
+        {
+          transactionUri: 'pops://finance/transaction/txn_6102',
+          description: 'BOOKS & MORE',
+          date: '2026-08-29',
+          payee: 'Books & More',
+          amountCents: 4500,
+          settlementCurrency: 'AUD',
+        },
+      ],
       proposed: [],
     },
   ],

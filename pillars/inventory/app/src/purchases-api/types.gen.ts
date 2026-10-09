@@ -3471,6 +3471,20 @@ export type ReconcileQueueResponses = {
         transactionUri: string;
       }>;
       purchaseId: string;
+      reviewCandidates: Array<{
+        amountCents: number | null;
+        date: string | null;
+        description: string | null;
+        payee: string | null;
+        settlementCurrency: string | null;
+        transactionUri: string;
+      }>;
+      reviewReason:
+        | 'ambiguous'
+        | 'too-many-candidates'
+        | 'no-candidate'
+        | 'ambiguous-partial'
+        | null;
       source: string;
       sourceOrderId: string | null;
     }>;

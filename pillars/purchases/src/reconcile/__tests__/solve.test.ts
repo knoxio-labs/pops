@@ -28,11 +28,16 @@ describe('stage 1 — exact', () => {
     // A duplicate charge and its correction look identical from here, and
     // a coin flip gets it wrong half the time.
     const { links, review } = run({
-      transactions: [txn({ uri: 'a' }), txn({ uri: 'b', date: '2026-03-07' })],
+      transactions: [
+        txn({ uri: 'a' }),
+        txn({ uri: 'b', date: '2026-03-07' }),
+        txn({ uri: 'near-miss', amountCents: 3900, date: '2026-03-08' }),
+      ],
     });
     expect(links).toHaveLength(0);
     expect(review[0]?.reason).toBe('ambiguous');
     expect(review[0]?.candidateCount).toBe(2);
+    expect(review[0]?.candidateUris).toEqual(['a', 'b']);
   });
 });
 
@@ -76,6 +81,7 @@ describe('stage 2 — split', () => {
     });
     expect(links).toHaveLength(0);
     expect(review[0]?.reason).toBe('ambiguous');
+    expect(new Set(review[0]?.candidateUris)).toEqual(new Set(['a', 'b', 'c', 'd']));
   });
 });
 
@@ -101,6 +107,7 @@ describe('stage 3 — partial payment', () => {
     });
     expect(links).toHaveLength(0);
     expect(review[0]?.reason).toBe('ambiguous-partial');
+    expect(review[0]?.candidateUris).toEqual(['a', 'b']);
   });
 });
 
@@ -223,6 +230,7 @@ describe('an overcrowded window', () => {
     });
     expect(links).toHaveLength(0);
     expect(review[0]?.reason).toBe('too-many-candidates');
+    expect(review[0]?.candidateUris).toHaveLength(14);
   });
 });
 
@@ -393,7 +401,13 @@ describe('an empty world', () => {
   it('reports a charge with no candidates rather than dropping it', () => {
     const { review } = run({ transactions: [] });
     expect(review).toEqual([
-      { chargeId: 'chg-1', purchaseId: 'ord-1', reason: 'no-candidate', candidateCount: 0 },
+      {
+        chargeId: 'chg-1',
+        purchaseId: 'ord-1',
+        reason: 'no-candidate',
+        candidateCount: 0,
+        candidateUris: [],
+      },
     ]);
   });
 });
@@ -408,7 +422,13 @@ describe('a rejected pairing', () => {
     // Removed at blocking, so the charge reports having had no candidate at
     // all rather than an ambiguity it never faced.
     expect(review).toEqual([
-      { chargeId: 'chg-1', purchaseId: 'ord-1', reason: 'no-candidate', candidateCount: 0 },
+      {
+        chargeId: 'chg-1',
+        purchaseId: 'ord-1',
+        reason: 'no-candidate',
+        candidateCount: 0,
+        candidateUris: [],
+      },
     ]);
   });
 

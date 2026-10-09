@@ -2,9 +2,8 @@ import { eq } from 'drizzle-orm';
 /**
  * The reconcile surface, through the real app and a real database.
  *
- * The queue is derived from persisted state rather than from a saved copy
- * of the solver's verdict, so most of what is worth asserting here is that
- * the derivation says the same thing the sweep just decided.
+ * Queue links and review evidence come from the latest successful sweep,
+ * with live Finance details added when the queue is read.
  */
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -136,6 +135,72 @@ describe('the queue', () => {
     expect(res.body.items[0].proposed).toEqual([]);
     // Unexplained, not contested — the delta is the whole charge.
     expect(res.body.items[0].deltaCents).toBe(-4128);
+  });
+
+  it('exposes persisted ambiguity candidates with Finance details when available', async () => {
+    order(4128, 'ambiguous-candidates');
+    const finance = financeReturning(
+      {
+        id: 'first-candidate',
+        amountCents: 4128,
+        date: '2026-03-05',
+        description: 'AMAZON MARKETPLACE 1',
+        entityName: 'Amazon',
+      },
+      {
+        id: 'second-candidate',
+        amountCents: 4128,
+        date: '2026-03-06',
+        description: 'AMAZON MARKETPLACE 2',
+        entityName: 'Amazon AU',
+      }
+    );
+    await runSweep({ db: opened.db, finance, defaultWindowDays: 21 });
+
+    app = build(FINANCE_UNAVAILABLE);
+    const withoutFinance = await requestOn(app).get('/reconcile/queue').expect(200);
+    expect(withoutFinance.body.items[0]).toMatchObject({
+      reviewReason: 'ambiguous',
+      reviewCandidates: [
+        {
+          transactionUri: 'pops://finance/transaction/first-candidate',
+          description: null,
+          date: null,
+          payee: null,
+          amountCents: null,
+          settlementCurrency: null,
+        },
+        {
+          transactionUri: 'pops://finance/transaction/second-candidate',
+          description: null,
+          date: null,
+          payee: null,
+          amountCents: null,
+          settlementCurrency: null,
+        },
+      ],
+    });
+
+    app = build(finance);
+    const withFinance = await requestOn(app).get('/reconcile/queue').expect(200);
+    expect(withFinance.body.items[0].reviewCandidates).toEqual([
+      {
+        transactionUri: 'pops://finance/transaction/first-candidate',
+        description: 'AMAZON MARKETPLACE 1',
+        date: '2026-03-05',
+        payee: 'Amazon',
+        amountCents: 4128,
+        settlementCurrency: 'AUD',
+      },
+      {
+        transactionUri: 'pops://finance/transaction/second-candidate',
+        description: 'AMAZON MARKETPLACE 2',
+        date: '2026-03-06',
+        payee: 'Amazon AU',
+        amountCents: 4128,
+        settlementCurrency: 'AUD',
+      },
+    ]);
   });
 
   it('lists a proposal with a zero delta once the sweep matches', async () => {

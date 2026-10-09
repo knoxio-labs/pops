@@ -19,6 +19,7 @@
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 
+import { RECONCILE_REVIEW_REASONS } from './constants.js';
 import { purchasesReconcileBatchContract } from './rest-reconcile-batch.js';
 import { ErrorBodySchema, OkSchema, QueryBoolSchema } from './rest-schemas.js';
 import {
@@ -60,6 +61,19 @@ export const QueuedLinkSchema = z.object({
   matchRuleIsActive: z.boolean().nullable(),
 });
 
+/** A solver candidate and the current Finance details used to identify it in the queue. */
+export const QueueReviewCandidateSchema = z.object({
+  transactionUri: FinanceTransactionUriSchema,
+  description: z.string().nullable(),
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/u)
+    .nullable(),
+  payee: z.string().nullable(),
+  amountCents: CentsSchema.nullable(),
+  settlementCurrency: CurrencySchema.nullable(),
+});
+
 export const QueueEntrySchema = z.object({
   chargeId: z.string(),
   purchaseId: z.string(),
@@ -71,6 +85,10 @@ export const QueueEntrySchema = z.object({
   amountCents: CentsSchema,
   /** Empty means unexplained rather than contested — a different UI state. */
   proposed: z.array(QueuedLinkSchema),
+  /** Null when no successful sweep has recorded a review verdict for this charge. */
+  reviewReason: z.enum(RECONCILE_REVIEW_REASONS).nullable(),
+  /** Candidate transactions retained from the latest successful sweep. */
+  reviewCandidates: z.array(QueueReviewCandidateSchema),
   /**
    * `Σ proposed − charge`. Zero for a clean match, negative for a partial
    * payment, and positive only when a charge is over-linked, which is a bug

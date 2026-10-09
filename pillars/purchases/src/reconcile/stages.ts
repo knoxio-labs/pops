@@ -9,6 +9,7 @@
 import { comparableAmountCents, comparableCandidates } from './currency.js';
 import { descriptorMatcherFor, type DescriptorMatcher } from './descriptor.js';
 import { ruleMatcherFor } from './rules.js';
+import { reviewOutcome } from './stage-outcomes.js';
 import { findSubsetSummingTo, MIN_SPLIT_SIZE } from './subset-sum.js';
 import { isTransactionTypeAllowedForRole } from './transaction-types.js';
 import {
@@ -49,9 +50,14 @@ export interface BlockingContext {
 /** Leaves the descriptor to stage 4's rules, which decide it per candidate. */
 const ANY_DESCRIPTOR: DescriptorMatcher = () => true;
 
+/** Result from a matching stage, including the transactions retained for review. */
 export type MatchOutcome =
   | { kind: 'linked'; links: readonly ProposedLink[] }
-  | { kind: 'review'; reason: ChargeForReview['reason'] };
+  | {
+      kind: 'review';
+      reason: ChargeForReview['reason'];
+      candidateUris: readonly string[];
+    };
 
 /**
  * Deterministic candidate order.
@@ -191,7 +197,7 @@ export function matchExact(
   // Two transactions of the same amount in the same window is exactly the
   // case a coin flip gets wrong half the time — a duplicate charge and its
   // correction look identical from here.
-  if (hits.length > 1) return { kind: 'review', reason: 'ambiguous' };
+  if (hits.length > 1) return reviewOutcome('ambiguous', hits);
 
   const [only] = hits;
   if (only === undefined) return null;
@@ -226,9 +232,9 @@ export function matchSplit(
         }),
       };
     case 'ambiguous':
-      return { kind: 'review', reason: 'ambiguous' };
+      return reviewOutcome('ambiguous', comparable);
     case 'too-many':
-      return { kind: 'review', reason: 'too-many-candidates' };
+      return reviewOutcome('too-many-candidates', comparable);
     case 'none':
       return null;
   }
@@ -253,7 +259,7 @@ export function matchPartial(
     (candidate) => Math.abs(candidate.amountCents) < Math.abs(charge.amountCents)
   );
   if (smaller.length === 0) return null;
-  if (smaller.length > 1) return { kind: 'review', reason: 'ambiguous-partial' };
+  if (smaller.length > 1) return reviewOutcome('ambiguous-partial', smaller);
 
   const [only] = smaller;
   if (only === undefined) return null;
@@ -336,7 +342,7 @@ export function matchLearnedRule(
     (candidate) => comparableAmountCents(charge, candidate.transaction) === charge.amountCents
   );
   if (hits.length === 0) return null;
-  if (hits.length > 1) return { kind: 'review', reason: 'ambiguous' };
+  if (hits.length > 1) return reviewOutcome('ambiguous', hits);
 
   const [only] = hits;
   if (only === undefined) return null;

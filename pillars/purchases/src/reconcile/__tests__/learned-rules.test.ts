@@ -184,6 +184,7 @@ describe('a rule never revises a hit', () => {
     expect(links).toEqual([]);
     expect(review[0]?.reason).toBe('ambiguous');
     expect(review[0]?.candidateCount).toBe(2);
+    expect(review[0]?.candidateUris).toEqual(['a', 'b']);
   });
 });
 
@@ -278,7 +279,13 @@ describe('an ambiguity a rule creates', () => {
     const { links, review } = run({ ...world, rules: [rule()] });
     expect(links).toEqual([]);
     expect(review).toEqual([
-      { chargeId: 'chg-1', purchaseId: 'ord-1', reason: 'ambiguous', candidateCount: 2 },
+      {
+        chargeId: 'chg-1',
+        purchaseId: 'ord-1',
+        reason: 'ambiguous',
+        candidateCount: 2,
+        candidateUris: ['a', 'b'],
+      },
     ]);
   });
 });

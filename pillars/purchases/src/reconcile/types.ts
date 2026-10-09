@@ -7,7 +7,12 @@
  * arithmetic testable against adversarial cases and what makes
  * re-derivation safe: the same snapshot always produces the same output.
  */
-import type { LinkType, MatchType, SettlementRole } from '../contract/constants.js';
+import type {
+  LinkType,
+  MatchType,
+  ReconcileReviewReason,
+  SettlementRole,
+} from '../contract/constants.js';
 
 /**
  * A charge presented for matching.
@@ -224,22 +229,16 @@ export interface ProposedLink {
  * is a normal state, but the reason it went unmatched is what the review
  * queue renders and what makes a wrong answer diagnosable.
  */
-export type ReviewReason =
-  /** Several candidates fit equally well. Ambiguity routes here rather than guessing. */
-  | 'ambiguous'
-  /** The window holds more candidates than can be searched honestly. */
-  | 'too-many-candidates'
-  /** Nothing in the window comes close. */
-  | 'no-candidate'
-  /** A partial payment was detected but more than one transaction could be it. */
-  | 'ambiguous-partial';
+export type ReviewReason = ReconcileReviewReason;
 
 export interface ChargeForReview {
   readonly chargeId: string;
   readonly purchaseId: string;
   readonly reason: ReviewReason;
-  /** How many candidates were in scope, so the queue can show the near-misses. */
+  /** How many transactions the queue offers for this review. */
   readonly candidateCount: number;
+  /** The finance transactions the queue can offer for this review. */
+  readonly candidateUris: readonly string[];
 }
 
 export interface SolverOutput {

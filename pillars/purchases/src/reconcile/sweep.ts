@@ -20,6 +20,7 @@ import {
   tearDownUnconfirmedLinks,
   type ReconcileScope,
 } from '../db/index.js';
+import { persistChargeReviews } from '../db/services/reconcile-writes.js';
 import { learnCardAccounts } from './card-accounts.js';
 import { solve } from './solve.js';
 import { settlementWindowFor, unionOfWindows, type SettlementWindow } from './window.js';
@@ -136,6 +137,11 @@ export async function runSweep(deps: SweepDeps, scope: ReconcileScope = {}): Pro
 
     const linksTornDown = tearDownUnconfirmedLinks(tx, unconfirmedChargeIds(charges, confirmed));
     const linksWritten = persistProposedLinks(tx, solved.links);
+    persistChargeReviews(
+      tx,
+      charges.map((charge) => charge.id),
+      solved.review
+    );
 
     // Every order this sweep considered, whether or not its links actually
     // changed — recomputing an unchanged order is a no-op write, and the

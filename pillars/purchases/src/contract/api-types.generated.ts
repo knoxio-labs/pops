@@ -4668,6 +4668,21 @@ export interface operations {
                 transactionUri: string;
               }[];
               purchaseId: string;
+              reviewCandidates: {
+                amountCents: number | null;
+                date: string | null;
+                description: string | null;
+                payee: string | null;
+                settlementCurrency: string | null;
+                transactionUri: string;
+              }[];
+              /** @enum {string|null} */
+              reviewReason:
+                | 'ambiguous'
+                | 'too-many-candidates'
+                | 'no-candidate'
+                | 'ambiguous-partial'
+                | null;
               source: string;
               sourceOrderId: string | null;
             }[];

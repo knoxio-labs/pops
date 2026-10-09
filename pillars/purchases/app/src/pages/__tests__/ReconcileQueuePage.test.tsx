@@ -12,6 +12,8 @@ import type { ReactElement } from 'react';
 
 import type { LinkType, ProposedLink, QueueEntry } from '../reconcile/types';
 
+type ReviewCandidate = QueueEntry['reviewCandidates'][number];
+
 const RAW_CATALOG_KEY = rawCatalogKeyPattern('reconcile', 'merchants');
 
 const reconcileQueueMock = vi.fn();
@@ -58,7 +60,21 @@ function buildEntry(overrides: Partial<QueueEntry> = {}): QueueEntry {
     currency: 'AUD',
     amountCents: 4599,
     proposed: [buildLink()],
+    reviewReason: null,
+    reviewCandidates: [],
     deltaCents: 0,
+    ...overrides,
+  };
+}
+
+function buildReviewCandidate(overrides: Partial<ReviewCandidate> = {}): ReviewCandidate {
+  return {
+    transactionUri: 'pops://finance/transaction/tx-review-1',
+    description: 'BOOKSHOP CENTRAL',
+    date: '2026-03-07',
+    payee: 'Bookshop Central',
+    amountCents: 4599,
+    settlementCurrency: 'AUD',
     ...overrides,
   };
 }
@@ -201,6 +217,55 @@ describe('ReconcileQueuePage — copy', () => {
 });
 
 describe('ReconcileQueuePage — transaction details', () => {
+  it('shows the saved review reason and candidate transaction details', async () => {
+    queueReturns([
+      buildEntry({
+        proposed: [],
+        reviewReason: 'ambiguous',
+        reviewCandidates: [
+          buildReviewCandidate(),
+          buildReviewCandidate({
+            transactionUri: 'pops://finance/transaction/tx-review-2',
+            description: 'BOOKSHOP EAST',
+            date: '2026-03-08',
+            payee: 'Bookshop East',
+            amountCents: 4600,
+          }),
+          buildReviewCandidate({
+            transactionUri: 'pops://finance/transaction/tx-review-unavailable',
+            description: null,
+            date: null,
+            payee: null,
+            amountCents: null,
+            settlementCurrency: null,
+          }),
+        ],
+      }),
+    ]);
+    renderQueue();
+
+    expect(
+      await screen.findByText(enAUPurchases['reconcile.reviewReason.ambiguous'])
+    ).toBeVisible();
+    expect(screen.getByText(enAUPurchases['reconcile.entry.reviewCandidatesLabel'])).toBeVisible();
+    expect(screen.getByText('BOOKSHOP CENTRAL')).toBeVisible();
+    expect(screen.getByText('BOOKSHOP EAST')).toBeVisible();
+    expect(screen.getByText('7 Mar 2026')).toBeVisible();
+    expect(screen.getByText('8 Mar 2026')).toBeVisible();
+    expect(screen.getByText('Bookshop Central')).toBeVisible();
+    expect(screen.getByText('Bookshop East')).toBeVisible();
+    expect(screen.getAllByText(/45\.99/u).length).toBeGreaterThan(0);
+    expect(
+      screen.getByText(enAUPurchases['reconcile.entry.transactionDescriptionUnavailable'])
+    ).toBeVisible();
+    expect(
+      screen.getByText(enAUPurchases['reconcile.entry.transactionDateUnavailable'])
+    ).toBeVisible();
+    expect(
+      screen.getByText(enAUPurchases['reconcile.entry.transactionAmountUnavailable'])
+    ).toBeVisible();
+  });
+
   it('distinguishes equal-amount proposals by date, description and payee', async () => {
     queueReturns([
       buildEntry({
@@ -490,6 +555,45 @@ describe('ReconcileQueuePage — decisions', () => {
         transactionUri: candidate.transactionUri,
       },
     });
+    expect(await screen.findByText(enAUPurchases['reconcile.empty.title'])).toBeVisible();
+  });
+
+  it('offers stored review candidates and pins the selected transaction without searching', async () => {
+    const user = userEvent.setup();
+    const candidate = buildReviewCandidate();
+    reconcileManualMock.mockResolvedValue({ data: { ok: true }, error: undefined });
+    queueReturns(
+      [
+        entryAt(1, {
+          proposed: [],
+          reviewReason: 'ambiguous',
+          reviewCandidates: [candidate],
+        }),
+      ],
+      []
+    );
+    renderQueue();
+
+    await user.click(
+      await screen.findByRole('button', {
+        name: enAUPurchases['reconcile.action.linkManually'],
+      })
+    );
+    const dialog = screen.getByRole('dialog');
+    expect(
+      within(dialog).getByText(enAUPurchases['reconcile.manual.reviewDescription'])
+    ).toBeVisible();
+    await user.click(within(dialog).getByRole('button', { name: /BOOKSHOP CENTRAL/u }));
+
+    await waitFor(() =>
+      expect(reconcileManualMock).toHaveBeenCalledWith({
+        body: {
+          chargeId: 'charge-1',
+          transactionUri: candidate.transactionUri,
+        },
+      })
+    );
+    expect(reconcileManualCandidatesMock).not.toHaveBeenCalled();
     expect(await screen.findByText(enAUPurchases['reconcile.empty.title'])).toBeVisible();
   });
 

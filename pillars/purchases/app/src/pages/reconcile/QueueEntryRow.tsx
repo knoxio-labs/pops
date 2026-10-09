@@ -58,8 +58,59 @@ export function QueueEntryRow({ entry, isActive, onSelect }: QueueEntryRowProps)
             <ProposalLine key={link.transactionUri} link={link} currency={entry.currency} />
           ))
         )}
+        {entry.reviewReason !== null && <ReviewEvidence entry={entry} />}
       </section>
     </li>
+  );
+}
+
+function ReviewEvidence({ entry }: { entry: QueueEntry }): ReactElement {
+  const { t } = useTranslation('purchases');
+
+  return (
+    <section
+      aria-label={t('reconcile.entry.reviewEvidence')}
+      className="space-y-2 rounded border px-3 py-2"
+    >
+      <p className="text-sm">
+        <span className="font-medium">{t('reconcile.entry.reviewReasonLabel')}:</span>{' '}
+        {t(`reconcile.reviewReason.${entry.reviewReason}`)}
+      </p>
+      {entry.reviewCandidates.length > 0 && (
+        <div className="space-y-1">
+          <p className="text-muted-foreground text-xs">
+            {t('reconcile.entry.reviewCandidatesLabel')}
+          </p>
+          <ul className="space-y-1">
+            {entry.reviewCandidates.map((candidate) => (
+              <li key={candidate.transactionUri} className="text-sm">
+                <p className="truncate font-medium">
+                  {candidate.description ?? t('reconcile.entry.transactionDescriptionUnavailable')}
+                </p>
+                <div className="text-muted-foreground flex flex-wrap gap-x-2 text-xs">
+                  {candidate.date === null ? (
+                    <span>{t('reconcile.entry.transactionDateUnavailable')}</span>
+                  ) : (
+                    <time dateTime={candidate.date}>{formatDate(candidate.date)}</time>
+                  )}
+                  {candidate.payee !== null && <span>{candidate.payee}</span>}
+                  {candidate.amountCents === null ? (
+                    <span>{t('reconcile.entry.transactionAmountUnavailable')}</span>
+                  ) : (
+                    <span className="tabular-nums">
+                      {formatCents(
+                        candidate.amountCents,
+                        candidate.settlementCurrency ?? entry.currency
+                      )}
+                    </span>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </section>
   );
 }
 
