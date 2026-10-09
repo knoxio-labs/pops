@@ -59,7 +59,7 @@
     "dev:ui": "node scripts/local-dev/ui-remote-watch.mjs"
   },
   "devDependencies": {
-    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@modelcontextprotocol/sdk": "^1.31.0",
     "@pops/pillar-sdk": "workspace:*",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^24.13.4",
