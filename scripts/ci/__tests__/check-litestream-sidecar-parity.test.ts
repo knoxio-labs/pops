@@ -7,7 +7,6 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   checkSidecarWiring,
   discoverConfigIds,
-  ENV_VAR_EXCEPTIONS,
   extractEnvVarName,
   extractSidecarBlocks,
   extractSidecarIds,
@@ -280,7 +279,7 @@ describe('checkSidecarWiring', () => {
     );
   });
 
-  it('honours the documented registry env-var exception', () => {
+  it('flags registry using its former core replica-URL variable', () => {
     const lines = bodyOf(
       'registry',
       [
@@ -290,13 +289,16 @@ describe('checkSidecarWiring', () => {
         '      - pops-registry-data:/data/sqlite:ro',
         '      - ./litestream/registry.yml:/etc/litestream.yml:ro',
         '    environment:',
-        `      ${ENV_VAR_EXCEPTIONS.get('registry')}: \${${ENV_VAR_EXCEPTIONS.get('registry')}:-}`,
+        '      CORE_LITESTREAM_REPLICA_URL: ${CORE_LITESTREAM_REPLICA_URL:-}',
       ].join('\n')
     );
-    expect(checkSidecarWiring('registry', lines)).toEqual([]);
+    const violations = checkSidecarWiring('registry', lines);
+    expect(violations).toContainEqual(
+      expect.stringContaining('expected REGISTRY_LITESTREAM_REPLICA_URL')
+    );
   });
 
-  it('still fails an unlisted id passing the exact same env var shape registry is excused for', () => {
+  it("flags a sidecar using another pillar's replica-URL variable", () => {
     const lines = bodyOf(
       'unlisted',
       [
@@ -306,7 +308,7 @@ describe('checkSidecarWiring', () => {
         '      - pops-unlisted-data:/data/sqlite:ro',
         '      - ./litestream/unlisted.yml:/etc/litestream.yml:ro',
         '    environment:',
-        `      ${ENV_VAR_EXCEPTIONS.get('registry')}: \${${ENV_VAR_EXCEPTIONS.get('registry')}:-}`,
+        '      CORE_LITESTREAM_REPLICA_URL: ${CORE_LITESTREAM_REPLICA_URL:-}',
       ].join('\n')
     );
     const violations = checkSidecarWiring('unlisted', lines);

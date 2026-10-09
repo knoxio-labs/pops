@@ -999,7 +999,7 @@ services:
       - pops-registry-data:/data/sqlite:ro
       - ./litestream/registry.yml:/etc/litestream.yml:ro
     environment:
-      CORE_LITESTREAM_REPLICA_URL: ${CORE_LITESTREAM_REPLICA_URL:-}
+      REGISTRY_LITESTREAM_REPLICA_URL: ${REGISTRY_LITESTREAM_REPLICA_URL:-}
     command: ['replicate']
 
   inventory-litestream:
