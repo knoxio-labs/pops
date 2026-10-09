@@ -17,8 +17,10 @@ while matching neither Rejected (needs a `recipe_version_rejections` row) nor
 Failed (needs `error_code` and `error_message`), so an approved row appears in no
 tab at all.
 
-`POST /inbox/list` returns a `nextCursor`; this UI renders one page and does not
-consume it.
+`POST /inbox/list` returns a `nextCursor`; the Drafts tab requests 20 items at a
+time and exposes a Load more button until the cursor is exhausted. Changing any
+filter or the sort order starts from the first page and scrolls to the top. The
+60-second poll refreshes every page already loaded without discarding them.
 
 ## Approving a draft requires compiling it first
 

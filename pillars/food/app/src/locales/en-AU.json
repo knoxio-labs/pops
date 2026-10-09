@@ -680,6 +680,8 @@
   "inbox.tabs.failed": "Failed",
   "inbox.inspectorStub": "Inspector coming in PRD-135.",
   "inbox.drafts.loading": "Loading drafts…",
+  "inbox.drafts.loadMore": "Load more drafts",
+  "inbox.drafts.loadingMore": "Loading more drafts…",
   "inbox.drafts.error": "Couldn’t load drafts. {{message}}",
   "inbox.drafts.empty.none": "Inbox is empty. Paste a recipe URL into the ingest dialog to populate it.",
   "inbox.drafts.empty.filtered": "No drafts match your filters.",
