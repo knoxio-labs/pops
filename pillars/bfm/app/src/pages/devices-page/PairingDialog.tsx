@@ -52,7 +52,7 @@ export function PairingDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-md:overflow-y-auto max-md:content-start">
         <DialogHeader>
           <DialogTitle>{t(isPaired ? 'pairing.paired.title' : 'pairing.title')}</DialogTitle>
           <DialogDescription>
@@ -111,7 +111,7 @@ function PairingBody({ pairing }: { pairing: PairingCodeModel }): ReactElement {
       <QrCode
         value={pairing.issued.pairingUrl}
         title={t('pairing.qrLabel')}
-        className="w-56 rounded-md p-3"
+        className="w-48 rounded-md p-3 sm:w-56"
       />
       <p
         data-testid="pairing-code"
