@@ -6,6 +6,7 @@ import { runInNewContext } from 'node:vm';
 
 import { vi, describe, expect, it } from 'vitest';
 
+import { PairingArtifactScanFailure } from '../ios-e2e/pairing-artifact-guard.mjs';
 import { createPairingHandoff } from '../ios-e2e/pairing-handoff.mjs';
 import {
   issueAndOpenPairingLink,
@@ -213,6 +214,32 @@ describe('issueAndOpenPairingLink', { timeout: 30_000 }, () => {
     expect(spawnImpl).not.toHaveBeenCalled();
   });
 
+  it('does not deliver a live pairing link from an unexpected BFM origin', async () => {
+    const onPairingIssued = vi.fn();
+    const spawnImpl =
+      vi.fn<(command: string, args: string[], options: SpawnOptions) => ChildProcess>();
+
+    await expect(
+      issueAndOpenPairingLink({
+        issuer: 'direct',
+        endpoint: 'https://bfm.example.com',
+        expectedPairingOrigin: 'https://other.example.com',
+        brokerUrl: 'http://127.0.0.1:3011',
+        handoff: createPairingHandoff({ deviceId: simulatorId }),
+        deviceId: simulatorId,
+        onPairingIssued,
+        fetchImpl: async () => pairingResponse(),
+        spawnImpl,
+      })
+    ).rejects.toThrow('pairing response was invalid');
+
+    expect(onPairingIssued).toHaveBeenCalledWith({
+      code: pairing.code,
+      pairingUrl: pairing.pairingUrl,
+    });
+    expect(spawnImpl).not.toHaveBeenCalled();
+  });
+
   it('clears the handoff when simctl rejects delivery', async () => {
     const handoff = createPairingHandoff({ deviceId: simulatorId });
     const argsSeen: string[][] = [];
@@ -311,19 +338,67 @@ describe('runSimulatorPairing', { timeout: 30_000 }, () => {
     );
   });
 
+  it.each([
+    'http://bfm.example.com',
+    'https://bfm.example.com/mobile',
+    'https://user:password@bfm.example.com',
+    'https://bfm.example.com?next=/devices/pair',
+  ])('rejects an invalid expected BFM origin before issuing a live code: %s', async (origin) => {
+    const issuePairingLink = vi.fn(async () => 0);
+    const writeStderr = vi.fn();
+
+    const exitCode = await runSimulatorPairing({
+      endpoint: 'https://mcp.example.com/mcp',
+      deviceId: simulatorId,
+      expectedPairingOrigin: origin,
+      issuePairingLink,
+      writeStderr,
+    });
+
+    expect(exitCode).toBe(1);
+    expect(issuePairingLink).not.toHaveBeenCalled();
+    expect(writeStderr).toHaveBeenCalledWith(
+      'ios-e2e: a credential-free HTTPS BFM origin is required for live simulator pairing.\n'
+    );
+  });
+
   it('waits for the exact selected simulator to store a session before reporting success', async () => {
     const writeStdout = vi.fn();
     const writeStderr = vi.fn();
+    const scanArtifacts = vi.fn(
+      async ({
+        deviceId,
+        materials,
+      }: {
+        deviceId: string;
+        materials: Array<{ code: string; pairingUrl: string }>;
+      }) => {
+        expect(deviceId).toBe(simulatorId);
+        expect(materials).toEqual([{ code: pairing.code, pairingUrl: pairing.pairingUrl }]);
+        return {
+          scannedFiles: 2,
+          scannedRoots: 1,
+          totalRoots: 2,
+          filesWithPairingMaterial: 0,
+        };
+      }
+    );
     const issuePairingLink = vi.fn(
       async ({
         brokerUrl,
         deviceId,
+        expectedPairingOrigin,
         handoff,
+        onPairingIssued,
       }: {
         brokerUrl: string;
         deviceId: string;
+        expectedPairingOrigin: string;
         handoff: ReturnType<typeof createPairingHandoff>;
+        onPairingIssued: (material: { code: string; pairingUrl: string }) => void;
       }) => {
+        expect(expectedPairingOrigin).toBe('https://bfm.example.com');
+        onPairingIssued({ code: pairing.code, pairingUrl: pairing.pairingUrl });
         const generation = handoff.offer({
           deviceId,
           pairingBaseUrl: 'https://bfm.example.com',
@@ -354,35 +429,242 @@ describe('runSimulatorPairing', { timeout: 30_000 }, () => {
     const exitCode = await runSimulatorPairing({
       endpoint: 'https://mcp.example.com/mcp',
       deviceId: simulatorId,
+      expectedPairingOrigin: 'https://bfm.example.com',
       issuePairingLink,
+      scanArtifacts,
       writeStdout,
       writeStderr,
     });
 
     expect(exitCode).toBe(0);
+    expect(scanArtifacts).toHaveBeenCalledOnce();
+    expect(writeStdout).toHaveBeenCalledWith(
+      'ios-e2e: pairing artifact scan roots=1/2 files=2 matches=0.\n'
+    );
     expect(writeStdout).toHaveBeenCalledWith('ios-e2e: simulator stored a session for this BFM.\n');
     expect(writeStderr).not.toHaveBeenCalled();
   });
 
   it('reports delivery failure without pairing material', async () => {
-    const issuePairingLink = vi.fn(async () => 7);
+    const issuePairingLink = vi.fn(
+      async ({
+        onPairingIssued,
+      }: {
+        onPairingIssued: (material: { code: string; pairingUrl: string }) => void;
+      }) => {
+        onPairingIssued({ code: pairing.code, pairingUrl: pairing.pairingUrl });
+        return 7;
+      }
+    );
+    const scanArtifacts = vi.fn(
+      async ({ materials }: { materials: Array<{ code: string; pairingUrl: string }> }) => {
+        expect(materials).toEqual([{ code: pairing.code, pairingUrl: pairing.pairingUrl }]);
+        return {
+          scannedFiles: 2,
+          scannedRoots: 1,
+          totalRoots: 2,
+          filesWithPairingMaterial: 0,
+        };
+      }
+    );
     const writeStdout = vi.fn();
     const writeStderr = vi.fn();
 
     const exitCode = await runSimulatorPairing({
       endpoint: 'https://mcp.example.com/mcp',
       deviceId: simulatorId,
+      expectedPairingOrigin: 'https://bfm.example.com',
       issuePairingLink,
+      scanArtifacts,
       writeStdout,
       writeStderr,
     });
 
-    expect(exitCode).toBe(7);
+    expect(exitCode).toBe(1);
     expect(issuePairingLink).toHaveBeenCalledOnce();
-    expect(writeStdout).not.toHaveBeenCalled();
-    expect(writeStderr).toHaveBeenCalledWith(
-      'ios-e2e: pairing code was issued, but simulator link delivery failed (exit 7).\n'
+    expect(scanArtifacts).toHaveBeenCalledOnce();
+    expect(writeStdout).toHaveBeenCalledWith(
+      'ios-e2e: pairing artifact scan roots=1/2 files=2 matches=0.\n'
     );
+    expect(writeStderr).toHaveBeenCalledWith(
+      'ios-e2e: pairing code was issued, but simulator link delivery failed (exit 7). No retry was attempted.\n'
+    );
+  });
+
+  it('fails closed when the selected simulator log scan finds pairing material', async () => {
+    const writeStdout = vi.fn();
+    const writeStderr = vi.fn();
+    const issuePairingLink = vi.fn(
+      async ({
+        brokerUrl,
+        deviceId,
+        handoff,
+        onPairingIssued,
+      }: {
+        brokerUrl: string;
+        deviceId: string;
+        handoff: ReturnType<typeof createPairingHandoff>;
+        onPairingIssued: (material: { code: string; pairingUrl: string }) => void;
+      }) => {
+        onPairingIssued({ code: pairing.code, pairingUrl: pairing.pairingUrl });
+        const generation = handoff.offer({
+          deviceId,
+          pairingBaseUrl: 'https://bfm.example.com',
+          code: pairing.code,
+          expiresAt: pairing.expiresAt,
+        });
+        const response = await fetch(`${brokerUrl}/__e2e/pair/claim`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ deviceId, instanceId: handoff.instanceId, generation }),
+        });
+        expect(response.status).toBe(200);
+        const completion = await fetch(`${brokerUrl}/__e2e/pair/complete`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            deviceId,
+            instanceId: handoff.instanceId,
+            generation,
+            paired: true,
+          }),
+        });
+        expect(completion.status).toBe(204);
+        return 0;
+      }
+    );
+    const scanArtifacts = vi.fn(
+      async ({
+        deviceId,
+        materials,
+      }: {
+        deviceId: string;
+        materials: Array<{ code: string; pairingUrl: string }>;
+      }) => {
+        expect(deviceId).toBe(simulatorId);
+        expect(materials).toEqual([{ code: pairing.code, pairingUrl: pairing.pairingUrl }]);
+        return {
+          scannedFiles: 1,
+          scannedRoots: 1,
+          totalRoots: 2,
+          filesWithPairingMaterial: 1,
+        };
+      }
+    );
+
+    const exitCode = await runSimulatorPairing({
+      endpoint: 'https://mcp.example.com/mcp',
+      deviceId: simulatorId,
+      expectedPairingOrigin: 'https://bfm.example.com',
+      issuePairingLink,
+      scanArtifacts,
+      writeStdout,
+      writeStderr,
+    });
+
+    expect(exitCode).toBe(1);
+    expect(writeStdout).toHaveBeenCalledWith(
+      'ios-e2e: pairing artifact scan roots=1/2 files=1 matches=1.\n'
+    );
+    expect(writeStdout).not.toHaveBeenCalledWith(
+      'ios-e2e: simulator stored a session for this BFM.\n'
+    );
+    expect(writeStderr).toHaveBeenCalledWith(
+      'ios-e2e: pairing material was found in a selected-simulator artifact; pairing may already be active. No retry was attempted.\n'
+    );
+    const output = JSON.stringify([writeStdout.mock.calls, writeStderr.mock.calls]);
+    expect(output).not.toContain(pairing.code);
+    expect(output).not.toContain(pairing.pairingUrl);
+  });
+
+  it('fails closed and emits no pairing material when the artifact scan cannot complete', async () => {
+    const writeStdout = vi.fn();
+    const writeStderr = vi.fn();
+    const issuePairingLink = vi.fn(
+      async ({
+        onPairingIssued,
+      }: {
+        onPairingIssued: (material: { code: string; pairingUrl: string }) => void;
+      }) => {
+        onPairingIssued({ code: pairing.code, pairingUrl: pairing.pairingUrl });
+        return 7;
+      }
+    );
+    const scanArtifacts = vi.fn(async () => {
+      throw new PairingArtifactScanFailure('root-read-failed', 0, 0, 2);
+    });
+
+    const exitCode = await runSimulatorPairing({
+      endpoint: 'https://mcp.example.com/mcp',
+      deviceId: simulatorId,
+      expectedPairingOrigin: 'https://bfm.example.com',
+      issuePairingLink,
+      scanArtifacts,
+      writeStdout,
+      writeStderr,
+    });
+
+    expect(exitCode).toBe(1);
+    expect(issuePairingLink).toHaveBeenCalledOnce();
+    expect(scanArtifacts).toHaveBeenCalledOnce();
+    expect(writeStderr).toHaveBeenCalledWith(
+      'ios-e2e: selected simulator artifact scan failed at root-read-failed; pairing may already be active. No retry was attempted.\n'
+    );
+    const output = JSON.stringify([writeStdout.mock.calls, writeStderr.mock.calls]);
+    expect(output).not.toContain(pairing.code);
+    expect(output).not.toContain(pairing.pairingUrl);
+  });
+
+  it('scans issued material before rejecting an unexpected origin without opening the link', async () => {
+    const spawnImpl =
+      vi.fn<(command: string, args: string[], options: SpawnOptions) => ChildProcess>();
+    const writeStdout = vi.fn();
+    const writeStderr = vi.fn();
+    const scanArtifacts = vi.fn(
+      async ({ materials }: { materials: Array<{ code: string; pairingUrl: string }> }) => {
+        expect(materials).toEqual([{ code: pairing.code, pairingUrl: pairing.pairingUrl }]);
+        return {
+          scannedFiles: 2,
+          scannedRoots: 1,
+          totalRoots: 2,
+          filesWithPairingMaterial: 0,
+        };
+      }
+    );
+    const issuePairingLink = (options: {
+      endpoint: string;
+      expectedPairingOrigin: string;
+      brokerUrl: string;
+      handoff: ReturnType<typeof createPairingHandoff>;
+      deviceId: string;
+      onPairingIssued: (material: { code: string; pairingUrl: string }) => void;
+    }) =>
+      issueAndOpenPairingLink({
+        ...options,
+        issuer: 'direct',
+        fetchImpl: async () => pairingResponse(),
+        spawnImpl,
+      });
+
+    const exitCode = await runSimulatorPairing({
+      endpoint: 'https://bfm.example.com',
+      deviceId: simulatorId,
+      expectedPairingOrigin: 'https://unexpected.example.com',
+      issuePairingLink,
+      scanArtifacts,
+      writeStdout,
+      writeStderr,
+    });
+
+    expect(exitCode).toBe(1);
+    expect(scanArtifacts).toHaveBeenCalledOnce();
+    expect(spawnImpl).not.toHaveBeenCalled();
+    expect(writeStdout).toHaveBeenCalledWith(
+      'ios-e2e: pairing artifact scan roots=1/2 files=2 matches=0.\n'
+    );
+    const output = JSON.stringify([writeStdout.mock.calls, writeStderr.mock.calls]);
+    expect(output).not.toContain(pairing.code);
+    expect(output).not.toContain(pairing.pairingUrl);
   });
 });
 
@@ -428,6 +710,10 @@ describe('Maestro pairing flows', () => {
     expect(pairingSubflow).not.toContain('inputText');
     expect(stalePromptSubflow).toContain("visible: 'Open in “Pops Local”\\?'");
     expect(stalePromptSubflow).toContain('- tapOn: Cancel');
+    expect(iosTasks).toContain('POPS_IOS_PAIRING_EXPECTED_BFM_ORIGIN');
+    expect(iosTasks).toContain('pops-mcp-headers');
+    expect(iosTasks).toContain('MCP_INBOUND_TOKEN="$token"');
+    expect(iosTasks).toContain('node ../../scripts/ios-e2e/simulator-pairing.mjs');
     expect(iosTasks).not.toContain('PAIRING_CODE');
   });
 

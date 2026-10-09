@@ -88,15 +88,17 @@ describe('pairing artifact guard', () => {
     expect(JSON.stringify(result)).not.toContain(material.pairingUrl);
   });
 
-  it('ignores older artifacts and scans all new plain-text files', async () => {
+  it('ignores clearly older artifacts while matching material inside coarse-timestamp files', async () => {
     scratchDirectory = await mkdtemp(join(process.cwd(), 'tmp', 'pairing-artifact-test-'));
     const olderArtifact = join(scratchDirectory, 'previous-run.log');
     const cleanArtifact = join(scratchDirectory, 'current-run.log');
     const afterMs = Date.now();
     const oldDate = new Date(afterMs - 60_000);
+    const coarseTimestampDate = new Date(afterMs - 500);
     await writeFile(olderArtifact, material.code);
     await utimes(olderArtifact, oldDate, oldDate);
-    await writeFile(cleanArtifact, 'pairing completed without serialized code');
+    await writeFile(cleanArtifact, material.code);
+    await utimes(cleanArtifact, coarseTimestampDate, coarseTimestampDate);
 
     const result = await scanPairingArtifacts({
       root: scratchDirectory,
@@ -108,7 +110,7 @@ describe('pairing artifact guard', () => {
       scannedFiles: 1,
       scannedRoots: 1,
       totalRoots: 1,
-      filesWithPairingMaterial: 0,
+      filesWithPairingMaterial: 1,
     });
   });
 
