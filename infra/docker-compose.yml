@@ -1273,7 +1273,7 @@ services:
       - '80'
       - '9090'
     ports:
-      - '192.168.50.215:19090:9090'
+      - '${POPS_NGINX_HEALTH_BIND:-127.0.0.1}:19090:9090'
     healthcheck:
       test:
         [
