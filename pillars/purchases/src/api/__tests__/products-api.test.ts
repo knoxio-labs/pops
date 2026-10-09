@@ -8,10 +8,11 @@
  * other's paths, and that a request naming a row that is not there is refused
  * rather than answered with a body a client cannot tell from success.
  */
+import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { openTempDb, seedAmazonSource } from '../../db/__tests__/helpers.js';
-import { createPurchase, deletePurchase, upsertSource } from '../../db/index.js';
+import { createPurchase, deletePurchase, purchaseProducts, upsertSource } from '../../db/index.js';
 import { createPurchasesApiApp } from '../app.js';
 import { __resetPillarRegistryCache } from '../pillars/registry.js';
 import { createTestTransport } from './test-http.js';
@@ -259,6 +260,28 @@ describe('refusals', () => {
     const res = await requestOn(app).patch('/products/nope').send({ label: 'Anything' });
 
     expect(res.status).toBe(404);
+  });
+
+  it('refuses to rename a product with no aliases without mutating it', async () => {
+    const [orphan] = opened.db
+      .insert(purchaseProducts)
+      .values({ label: 'Unreachable product' })
+      .returning()
+      .all();
+    if (orphan === undefined) throw new Error('Expected orphan product insert to return a row');
+
+    const res = await requestOn(app)
+      .patch(`/products/${orphan.id}`)
+      .send({ label: 'Should remain unchanged' });
+
+    expect(res.status).toBe(404);
+    expect(res.body).toMatchObject({ code: 'purchases.resource.not_found' });
+    const [stored] = opened.db
+      .select({ label: purchaseProducts.label })
+      .from(purchaseProducts)
+      .where(eq(purchaseProducts.id, orphan.id))
+      .all();
+    expect(stored?.label).toBe('Unreachable product');
   });
 
   it('refuses to delete a product that does not exist', async () => {
