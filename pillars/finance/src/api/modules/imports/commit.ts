@@ -63,11 +63,9 @@ import {
   importCommitsService,
   importDraftsService,
   importsService,
-  transactionCorrectionsService,
   tagVocabularyService,
 } from '../../../db/index.js';
 import { type ContactsClient } from '../../contacts/client.js';
-import { creditTagRuleUsage } from '../tag-suggester/index.js';
 import { recordAiSuggestionOutcome } from './commit-ai-outcomes.js';
 import { recordImportBatchesPhase, type InsertedTransaction } from './commit-batches.js';
 import { applyChangeSetsPhase, applyTagRuleChangeSetsPhase } from './commit-changesets.js';
@@ -85,6 +83,7 @@ import {
 } from './commit-live-draft.js';
 import { expandLoanRepaymentRow } from './commit-loan-split.js';
 import { pairTransfersPhase } from './commit-pair-transfers.js';
+import { recordMatchedRuleUsage } from './commit-rule-usage.js';
 import { applyCommitTagVocabulary, planCommitTagVocabulary } from './commit-tag-vocabulary.js';
 import {
   assertPersistableEntityId,
@@ -170,10 +169,7 @@ function writeTransactionsPhase(
           carriesBalance: txn.balanceCents !== undefined,
         });
       }
-      if (txn.matchType === 'learned' && txn.matchRuleId) {
-        transactionCorrectionsService.incrementTransactionCorrectionUsage(tx, txn.matchRuleId);
-      }
-      creditTagRuleUsage(tx, [...new Set(txn.matchedTagRuleIds ?? [])]);
+      recordMatchedRuleUsage(tx, txn);
       // A split loan repayment is one suggestion across its legs; count it once.
       const firstLegId = inserted[firstLeg]?.id;
       if (firstLegId !== undefined) recordAiSuggestionOutcome(tx, txn, firstLegId);
