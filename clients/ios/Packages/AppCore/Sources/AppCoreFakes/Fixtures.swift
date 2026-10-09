@@ -113,12 +113,13 @@ extension PairingRequest {
 
 extension Transaction {
     /// A row whose fields a test can ignore. Every value is overridable, so a
-    /// test names only the field it is actually about.
+    /// test names only the field it is actually about. Its date defaults to the
+    /// Gregorian day at the Unix epoch.
     public static func fake(
         id: String = "txn-1",
         description: String = "Fake transaction",
         amount: MoneyAmount = MoneyAmount(minorUnits: 1999, currencyCode: "AUD"),
-        date: Date = Date(timeIntervalSince1970: 0),
+        date: CalendarDay = .unixEpoch,
         type: TransactionType = .purchase,
         entityName: String? = nil,
         tags: [String] = []

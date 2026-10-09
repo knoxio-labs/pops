@@ -24,6 +24,13 @@
     }
 
     private enum PreviewData {
+        private static func calendarDay(_ value: String) -> CalendarDay {
+            guard let day = CalendarDay(iso8601: value) else {
+                preconditionFailure("Invalid account preview day")
+            }
+            return day
+        }
+
         static let checking = Account(
             id: "acc-1", name: "Everyday", kind: .checking,
             balance: MoneyAmount(minorUnits: 428_140, currencyCode: "AUD"), archived: false,
@@ -60,7 +67,7 @@
                 AppCore.Transaction(
                     id: "txn-1", description: "Flat white",
                     amount: MoneyAmount(minorUnits: -540, currencyCode: "AUD"),
-                    date: Date(timeIntervalSince1970: 1_786_000_000), type: .purchase,
+                    date: calendarDay("2026-08-06"), type: .purchase,
                     entityName: "Sample Coffee", tags: [])
             ]
         )

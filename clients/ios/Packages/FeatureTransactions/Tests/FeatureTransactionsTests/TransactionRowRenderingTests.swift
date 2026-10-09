@@ -52,7 +52,7 @@ internal struct TransactionRowRenderingTests {
             id: "txn-1",
             description: "Flat white",
             amount: MoneyAmount(minorUnits: minorUnits, currencyCode: "AUD"),
-            date: Date(timeIntervalSince1970: 0),
+            date: .unixEpoch,
             type: .purchase,
             entityName: entityName,
             tags: tags

@@ -20,7 +20,7 @@ internal struct TransactionPresentationTests {
     private func transaction(
         description: String = "Flat white",
         minorUnits: Int = -540,
-        date: Date = Date(timeIntervalSince1970: 0),
+        date: CalendarDay = .unixEpoch,
         type: TransactionType = .purchase,
         entityName: String? = "Sample Coffee",
         tags: [String] = ["coffee"]
@@ -64,23 +64,27 @@ internal struct TransactionPresentationTests {
                 != australian.amount(transaction(minorUnits: 540)))
     }
 
-    /// The instant is the same; only the zone differs. If the zone were not
-    /// reaching the formatter, both would read the same day.
-    @Test("the date is rendered in the reader's time zone")
-    func dateFollowsTimeZone() {
-        let row = transaction(date: Date(timeIntervalSince1970: 0))
+    @Test("a transaction day is stable in opposite time zones")
+    func transactionDayIsStableAcrossTimeZones() throws {
+        let day = try #require(CalendarDay(year: 2026, month: 3, day: 5))
+        let row = transaction(date: day)
         let losAngeles = TransactionPresentation(
             locale: Locale(identifier: "en_AU"),
             timeZone: TimeZone(identifier: "America/Los_Angeles") ?? .gmt
         )
 
-        #expect(australian.date(row).contains("1970"))
-        #expect(losAngeles.date(row).contains("1969"))
+        let sydneyDate = australian.date(row)
+        let losAngelesDate = losAngeles.date(row)
+
+        #expect(sydneyDate == losAngelesDate)
+        #expect(sydneyDate.contains("5"))
+        #expect(sydneyDate.contains("Mar"))
+        #expect(sydneyDate.contains("2026"))
     }
 
     @Test("the date is rendered in the reader's locale")
-    func dateFollowsLocale() {
-        let row = transaction(date: Date(timeIntervalSince1970: 0))
+    func dateFollowsLocale() throws {
+        let row = transaction(date: try #require(CalendarDay(year: 2026, month: 3, day: 5)))
         let german = TransactionPresentation(locale: Locale(identifier: "de_DE"), timeZone: .gmt)
         let utcAustralian = TransactionPresentation(
             locale: Locale(identifier: "en_AU"), timeZone: .gmt)

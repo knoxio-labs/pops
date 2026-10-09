@@ -39,12 +39,19 @@
     }
 
     private enum PreviewData {
+        private static func calendarDay(_ value: String) -> CalendarDay {
+            guard let day = CalendarDay(iso8601: value) else {
+                preconditionFailure("Invalid transaction preview day")
+            }
+            return day
+        }
+
         static let rows: [AppCore.Transaction] = [
             AppCore.Transaction(
                 id: "txn-1",
                 description: "Flat white",
                 amount: MoneyAmount(minorUnits: -540, currencyCode: "AUD"),
-                date: Date(timeIntervalSince1970: 1_786_000_000),
+                date: calendarDay("2026-08-06"),
                 type: .purchase,
                 entityName: "Sample Coffee",
                 tags: ["coffee"]
@@ -53,7 +60,7 @@
                 id: "txn-2",
                 description: "Rent",
                 amount: MoneyAmount(minorUnits: -124_000, currencyCode: "AUD"),
-                date: Date(timeIntervalSince1970: 1_785_800_000),
+                date: calendarDay("2026-08-03"),
                 type: .transfer,
                 entityName: "Landlord",
                 tags: ["housing", "recurring"]
@@ -62,7 +69,7 @@
                 id: "txn-3",
                 description: "Salary",
                 amount: MoneyAmount(minorUnits: 420_000, currencyCode: "AUD"),
-                date: Date(timeIntervalSince1970: 1_785_600_000),
+                date: calendarDay("2026-08-01"),
                 type: .income,
                 entityName: "Employer",
                 tags: []

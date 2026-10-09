@@ -70,7 +70,7 @@ An automatic retry is not offered. The footer that provoked a failed fetch is st
 
 ## Amounts and dates
 
-Both come out of `TransactionPresentation`, which takes a locale and a time zone rather than reading the process's own. That is what makes "what does this row say" a test instead of something that passes in Sydney and fails on a UTC runner. `TransactionDetailPresentation` holds one and adds the labelled lines the detail screen draws.
+Amounts and calendar days come out of `TransactionPresentation`, which takes a locale rather than reading the process's own. A list row carries `CalendarDay`, so its Gregorian day is fixed even when the device changes time zones. The detail screen still formats its `Date` fields with the presentation's explicit time zone; `TransactionDetailPresentation` holds one and adds the labelled lines it draws.
 
 Nothing here derives a sign or a currency. The BFM sends both, `MoneyAmount` carries them as sent, and re-deriving either on a phone is how two screens end up disagreeing about whether a refund is money in.
 

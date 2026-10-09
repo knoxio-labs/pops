@@ -34,7 +34,7 @@ internal struct TransactionPresentation: Sendable {
     }
 
     internal func date(_ transaction: Transaction) -> String {
-        date(transaction.date)
+        transaction.date.formatted(locale: locale)
     }
 
     internal func date(_ date: Date) -> String {
