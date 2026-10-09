@@ -131,6 +131,8 @@ export const ProcessedTransactionSchema = ParsedTransactionSchema.extend({
   error: z.string().optional(),
   transactionType: TransactionTypeSchema.optional(),
   suggestedTags: z.array(SuggestedTagSchema).optional(),
+  /** Tag-rule IDs that matched during processing, deferred until commit. */
+  matchedTagRuleIds: z.array(z.string().min(1)).optional(),
   ruleProvenance: RuleProvenanceSchema.optional(),
   matchedRules: z.array(MatchedRuleSchema).optional(),
 });
@@ -141,6 +143,8 @@ export const ConfirmedTransactionSchema = ParsedTransactionSchema.extend({
   entityName: z.string().optional(),
   tags: z.array(z.string()).optional(),
   suggestedTags: z.array(SuggestedTagSchema).optional(),
+  /** Tag-rule IDs matched for this row; usage is counted only after insertion succeeds. */
+  matchedTagRuleIds: z.array(z.string().min(1)).optional(),
   /** How the entity assignment was produced (CF057/#3658), persisted verbatim at commit. */
   matchType: EntityMatchSchema.shape.matchType.optional(),
   /** Winning correction rule id, only set when `matchType` is `learned`. */

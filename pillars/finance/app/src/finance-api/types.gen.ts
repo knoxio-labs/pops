@@ -6574,6 +6574,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
           priority: number;
           ruleId: string;
         }>;
+        matchedTagRuleIds?: Array<string>;
         pending?: boolean;
         rawRow: string;
         ruleProvenance?: {
@@ -6645,6 +6646,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
           priority: number;
           ruleId: string;
         }>;
+        matchedTagRuleIds?: Array<string>;
         pending?: boolean;
         rawRow: string;
         ruleProvenance?: {
@@ -6716,6 +6718,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
           priority: number;
           ruleId: string;
         }>;
+        matchedTagRuleIds?: Array<string>;
         pending?: boolean;
         rawRow: string;
         ruleProvenance?: {
@@ -6787,6 +6790,7 @@ export type ImportsApplyChangeSetAndReevaluateResponses = {
           priority: number;
           ruleId: string;
         }>;
+        matchedTagRuleIds?: Array<string>;
         pending?: boolean;
         rawRow: string;
         ruleProvenance?: {
@@ -6978,6 +6982,7 @@ export type ImportsCommitImportData = {
       matchConfidence?: number;
       matchRuleId?: string;
       matchType?: 'alias' | 'exact' | 'prefix' | 'contains' | 'ai' | 'learned' | 'manual' | 'none';
+      matchedTagRuleIds?: Array<string>;
       pending?: boolean;
       rawRow: string;
       suggestedTags?: Array<{
@@ -7357,6 +7362,7 @@ export type ImportsGetImportProgressResponses = {
           priority: number;
           ruleId: string;
         }>;
+        matchedTagRuleIds?: Array<string>;
         pending?: boolean;
         rawRow: string;
         ruleProvenance?: {
@@ -7428,6 +7434,7 @@ export type ImportsGetImportProgressResponses = {
           priority: number;
           ruleId: string;
         }>;
+        matchedTagRuleIds?: Array<string>;
         pending?: boolean;
         rawRow: string;
         ruleProvenance?: {
@@ -7499,6 +7506,7 @@ export type ImportsGetImportProgressResponses = {
           priority: number;
           ruleId: string;
         }>;
+        matchedTagRuleIds?: Array<string>;
         pending?: boolean;
         rawRow: string;
         ruleProvenance?: {
@@ -7570,6 +7578,7 @@ export type ImportsGetImportProgressResponses = {
           priority: number;
           ruleId: string;
         }>;
+        matchedTagRuleIds?: Array<string>;
         pending?: boolean;
         rawRow: string;
         ruleProvenance?: {
@@ -7796,6 +7805,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
           priority: number;
           ruleId: string;
         }>;
+        matchedTagRuleIds?: Array<string>;
         pending?: boolean;
         rawRow: string;
         ruleProvenance?: {
@@ -7867,6 +7877,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
           priority: number;
           ruleId: string;
         }>;
+        matchedTagRuleIds?: Array<string>;
         pending?: boolean;
         rawRow: string;
         ruleProvenance?: {
@@ -7938,6 +7949,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
           priority: number;
           ruleId: string;
         }>;
+        matchedTagRuleIds?: Array<string>;
         pending?: boolean;
         rawRow: string;
         ruleProvenance?: {
@@ -8009,6 +8021,7 @@ export type ImportsReevaluateWithPendingRulesResponses = {
           priority: number;
           ruleId: string;
         }>;
+        matchedTagRuleIds?: Array<string>;
         pending?: boolean;
         rawRow: string;
         ruleProvenance?: {
@@ -8176,6 +8189,7 @@ export type ImportsReevaluateRowsWithPendingRulesData = {
           priority: number;
           ruleId: string;
         }>;
+        matchedTagRuleIds?: Array<string>;
         pending?: boolean;
         rawRow: string;
         ruleProvenance?: {
@@ -8247,6 +8261,7 @@ export type ImportsReevaluateRowsWithPendingRulesData = {
           priority: number;
           ruleId: string;
         }>;
+        matchedTagRuleIds?: Array<string>;
         pending?: boolean;
         rawRow: string;
         ruleProvenance?: {
@@ -8318,6 +8333,7 @@ export type ImportsReevaluateRowsWithPendingRulesData = {
           priority: number;
           ruleId: string;
         }>;
+        matchedTagRuleIds?: Array<string>;
         pending?: boolean;
         rawRow: string;
         ruleProvenance?: {
@@ -8389,6 +8405,7 @@ export type ImportsReevaluateRowsWithPendingRulesData = {
           priority: number;
           ruleId: string;
         }>;
+        matchedTagRuleIds?: Array<string>;
         pending?: boolean;
         rawRow: string;
         ruleProvenance?: {
@@ -8526,6 +8543,7 @@ export type ImportsReevaluateRowsWithPendingRulesResponses = {
           priority: number;
           ruleId: string;
         }>;
+        matchedTagRuleIds?: Array<string>;
         pending?: boolean;
         rawRow: string;
         ruleProvenance?: {
@@ -8597,6 +8615,7 @@ export type ImportsReevaluateRowsWithPendingRulesResponses = {
           priority: number;
           ruleId: string;
         }>;
+        matchedTagRuleIds?: Array<string>;
         pending?: boolean;
         rawRow: string;
         ruleProvenance?: {
@@ -8668,6 +8687,7 @@ export type ImportsReevaluateRowsWithPendingRulesResponses = {
           priority: number;
           ruleId: string;
         }>;
+        matchedTagRuleIds?: Array<string>;
         pending?: boolean;
         rawRow: string;
         ruleProvenance?: {
@@ -8739,6 +8759,7 @@ export type ImportsReevaluateRowsWithPendingRulesResponses = {
           priority: number;
           ruleId: string;
         }>;
+        matchedTagRuleIds?: Array<string>;
         pending?: boolean;
         rawRow: string;
         ruleProvenance?: {

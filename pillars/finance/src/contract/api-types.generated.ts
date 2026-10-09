@@ -11063,6 +11063,7 @@ export interface operations {
                   priority: number;
                   ruleId: string;
                 }[];
+                matchedTagRuleIds?: string[];
                 pending?: boolean;
                 rawRow: string;
                 ruleProvenance?: {
@@ -11143,6 +11144,7 @@ export interface operations {
                   priority: number;
                   ruleId: string;
                 }[];
+                matchedTagRuleIds?: string[];
                 pending?: boolean;
                 rawRow: string;
                 ruleProvenance?: {
@@ -11223,6 +11225,7 @@ export interface operations {
                   priority: number;
                   ruleId: string;
                 }[];
+                matchedTagRuleIds?: string[];
                 pending?: boolean;
                 rawRow: string;
                 ruleProvenance?: {
@@ -11303,6 +11306,7 @@ export interface operations {
                   priority: number;
                   ruleId: string;
                 }[];
+                matchedTagRuleIds?: string[];
                 pending?: boolean;
                 rawRow: string;
                 ruleProvenance?: {
@@ -11627,6 +11631,7 @@ export interface operations {
               | 'learned'
               | 'manual'
               | 'none';
+            matchedTagRuleIds?: string[];
             pending?: boolean;
             rawRow: string;
             suggestedTags?: {
@@ -12097,6 +12102,7 @@ export interface operations {
                   priority: number;
                   ruleId: string;
                 }[];
+                matchedTagRuleIds?: string[];
                 pending?: boolean;
                 rawRow: string;
                 ruleProvenance?: {
@@ -12177,6 +12183,7 @@ export interface operations {
                   priority: number;
                   ruleId: string;
                 }[];
+                matchedTagRuleIds?: string[];
                 pending?: boolean;
                 rawRow: string;
                 ruleProvenance?: {
@@ -12257,6 +12264,7 @@ export interface operations {
                   priority: number;
                   ruleId: string;
                 }[];
+                matchedTagRuleIds?: string[];
                 pending?: boolean;
                 rawRow: string;
                 ruleProvenance?: {
@@ -12337,6 +12345,7 @@ export interface operations {
                   priority: number;
                   ruleId: string;
                 }[];
+                matchedTagRuleIds?: string[];
                 pending?: boolean;
                 rawRow: string;
                 ruleProvenance?: {
@@ -12622,6 +12631,7 @@ export interface operations {
                   priority: number;
                   ruleId: string;
                 }[];
+                matchedTagRuleIds?: string[];
                 pending?: boolean;
                 rawRow: string;
                 ruleProvenance?: {
@@ -12702,6 +12712,7 @@ export interface operations {
                   priority: number;
                   ruleId: string;
                 }[];
+                matchedTagRuleIds?: string[];
                 pending?: boolean;
                 rawRow: string;
                 ruleProvenance?: {
@@ -12782,6 +12793,7 @@ export interface operations {
                   priority: number;
                   ruleId: string;
                 }[];
+                matchedTagRuleIds?: string[];
                 pending?: boolean;
                 rawRow: string;
                 ruleProvenance?: {
@@ -12862,6 +12874,7 @@ export interface operations {
                   priority: number;
                   ruleId: string;
                 }[];
+                matchedTagRuleIds?: string[];
                 pending?: boolean;
                 rawRow: string;
                 ruleProvenance?: {
@@ -13137,6 +13150,7 @@ export interface operations {
                 priority: number;
                 ruleId: string;
               }[];
+              matchedTagRuleIds?: string[];
               pending?: boolean;
               rawRow: string;
               ruleProvenance?: {
@@ -13217,6 +13231,7 @@ export interface operations {
                 priority: number;
                 ruleId: string;
               }[];
+              matchedTagRuleIds?: string[];
               pending?: boolean;
               rawRow: string;
               ruleProvenance?: {
@@ -13297,6 +13312,7 @@ export interface operations {
                 priority: number;
                 ruleId: string;
               }[];
+              matchedTagRuleIds?: string[];
               pending?: boolean;
               rawRow: string;
               ruleProvenance?: {
@@ -13377,6 +13393,7 @@ export interface operations {
                 priority: number;
                 ruleId: string;
               }[];
+              matchedTagRuleIds?: string[];
               pending?: boolean;
               rawRow: string;
               ruleProvenance?: {
@@ -13486,6 +13503,7 @@ export interface operations {
                   priority: number;
                   ruleId: string;
                 }[];
+                matchedTagRuleIds?: string[];
                 pending?: boolean;
                 rawRow: string;
                 ruleProvenance?: {
@@ -13566,6 +13584,7 @@ export interface operations {
                   priority: number;
                   ruleId: string;
                 }[];
+                matchedTagRuleIds?: string[];
                 pending?: boolean;
                 rawRow: string;
                 ruleProvenance?: {
@@ -13646,6 +13665,7 @@ export interface operations {
                   priority: number;
                   ruleId: string;
                 }[];
+                matchedTagRuleIds?: string[];
                 pending?: boolean;
                 rawRow: string;
                 ruleProvenance?: {
@@ -13726,6 +13746,7 @@ export interface operations {
                   priority: number;
                   ruleId: string;
                 }[];
+                matchedTagRuleIds?: string[];
                 pending?: boolean;
                 rawRow: string;
                 ruleProvenance?: {

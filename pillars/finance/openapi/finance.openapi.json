@@ -17451,6 +17451,13 @@
                                 },
                                 "type": "array"
                               },
+                              "matchedTagRuleIds": {
+                                "items": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "type": "array"
+                              },
                               "pending": {
                                 "type": "boolean"
                               },
@@ -17700,6 +17707,13 @@
                                     "priority"
                                   ],
                                   "type": "object"
+                                },
+                                "type": "array"
+                              },
+                              "matchedTagRuleIds": {
+                                "items": {
+                                  "minLength": 1,
+                                  "type": "string"
                                 },
                                 "type": "array"
                               },
@@ -17955,6 +17969,13 @@
                                 },
                                 "type": "array"
                               },
+                              "matchedTagRuleIds": {
+                                "items": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "type": "array"
+                              },
                               "pending": {
                                 "type": "boolean"
                               },
@@ -18204,6 +18225,13 @@
                                     "priority"
                                   ],
                                   "type": "object"
+                                },
+                                "type": "array"
+                              },
+                              "matchedTagRuleIds": {
+                                "items": {
+                                  "minLength": 1,
+                                  "type": "string"
                                 },
                                 "type": "array"
                               },
@@ -19000,6 +19028,13 @@
                             "none"
                           ],
                           "type": "string"
+                        },
+                        "matchedTagRuleIds": {
+                          "items": {
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "type": "array"
                         },
                         "pending": {
                           "type": "boolean"
@@ -19984,6 +20019,13 @@
                                 },
                                 "type": "array"
                               },
+                              "matchedTagRuleIds": {
+                                "items": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "type": "array"
+                              },
                               "pending": {
                                 "type": "boolean"
                               },
@@ -20233,6 +20275,13 @@
                                     "priority"
                                   ],
                                   "type": "object"
+                                },
+                                "type": "array"
+                              },
+                              "matchedTagRuleIds": {
+                                "items": {
+                                  "minLength": 1,
+                                  "type": "string"
                                 },
                                 "type": "array"
                               },
@@ -20488,6 +20537,13 @@
                                 },
                                 "type": "array"
                               },
+                              "matchedTagRuleIds": {
+                                "items": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "type": "array"
+                              },
                               "pending": {
                                 "type": "boolean"
                               },
@@ -20737,6 +20793,13 @@
                                     "priority"
                                   ],
                                   "type": "object"
+                                },
+                                "type": "array"
+                              },
+                              "matchedTagRuleIds": {
+                                "items": {
+                                  "minLength": 1,
+                                  "type": "string"
                                 },
                                 "type": "array"
                               },
@@ -21433,6 +21496,13 @@
                                 },
                                 "type": "array"
                               },
+                              "matchedTagRuleIds": {
+                                "items": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "type": "array"
+                              },
                               "pending": {
                                 "type": "boolean"
                               },
@@ -21682,6 +21752,13 @@
                                     "priority"
                                   ],
                                   "type": "object"
+                                },
+                                "type": "array"
+                              },
+                              "matchedTagRuleIds": {
+                                "items": {
+                                  "minLength": 1,
+                                  "type": "string"
                                 },
                                 "type": "array"
                               },
@@ -21937,6 +22014,13 @@
                                 },
                                 "type": "array"
                               },
+                              "matchedTagRuleIds": {
+                                "items": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "type": "array"
+                              },
                               "pending": {
                                 "type": "boolean"
                               },
@@ -22186,6 +22270,13 @@
                                     "priority"
                                   ],
                                   "type": "object"
+                                },
+                                "type": "array"
+                              },
+                              "matchedTagRuleIds": {
+                                "items": {
+                                  "minLength": 1,
+                                  "type": "string"
                                 },
                                 "type": "array"
                               },
@@ -22845,6 +22936,13 @@
                               },
                               "type": "array"
                             },
+                            "matchedTagRuleIds": {
+                              "items": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "type": "array"
+                            },
                             "pending": {
                               "type": "boolean"
                             },
@@ -23094,6 +23192,13 @@
                                   "priority"
                                 ],
                                 "type": "object"
+                              },
+                              "type": "array"
+                            },
+                            "matchedTagRuleIds": {
+                              "items": {
+                                "minLength": 1,
+                                "type": "string"
                               },
                               "type": "array"
                             },
@@ -23349,6 +23454,13 @@
                               },
                               "type": "array"
                             },
+                            "matchedTagRuleIds": {
+                              "items": {
+                                "minLength": 1,
+                                "type": "string"
+                              },
+                              "type": "array"
+                            },
                             "pending": {
                               "type": "boolean"
                             },
@@ -23598,6 +23710,13 @@
                                   "priority"
                                 ],
                                 "type": "object"
+                              },
+                              "type": "array"
+                            },
+                            "matchedTagRuleIds": {
+                              "items": {
+                                "minLength": 1,
+                                "type": "string"
                               },
                               "type": "array"
                             },
@@ -23939,6 +24058,13 @@
                                 },
                                 "type": "array"
                               },
+                              "matchedTagRuleIds": {
+                                "items": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "type": "array"
+                              },
                               "pending": {
                                 "type": "boolean"
                               },
@@ -24188,6 +24314,13 @@
                                     "priority"
                                   ],
                                   "type": "object"
+                                },
+                                "type": "array"
+                              },
+                              "matchedTagRuleIds": {
+                                "items": {
+                                  "minLength": 1,
+                                  "type": "string"
                                 },
                                 "type": "array"
                               },
@@ -24443,6 +24576,13 @@
                                 },
                                 "type": "array"
                               },
+                              "matchedTagRuleIds": {
+                                "items": {
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "type": "array"
+                              },
                               "pending": {
                                 "type": "boolean"
                               },
@@ -24692,6 +24832,13 @@
                                     "priority"
                                   ],
                                   "type": "object"
+                                },
+                                "type": "array"
+                              },
+                              "matchedTagRuleIds": {
+                                "items": {
+                                  "minLength": 1,
+                                  "type": "string"
                                 },
                                 "type": "array"
                               },

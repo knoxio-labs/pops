@@ -107,6 +107,26 @@ function confirmed(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function confirmedFromProcessed(transaction: ProcessImportOutput['matched'][number]) {
+  return confirmed({
+    date: transaction.date,
+    description: transaction.description,
+    amount: transaction.amount,
+    dialectAccountLabel: transaction.dialectAccountLabel,
+    rawRow: transaction.rawRow,
+    checksum: transaction.checksum,
+    transactionType: transaction.transactionType,
+    entityId: transaction.entity.entityId,
+    entityName: transaction.entity.entityName,
+    tags: transaction.suggestedTags?.map((suggestion) => suggestion.tag),
+    suggestedTags: transaction.suggestedTags,
+    matchedTagRuleIds: transaction.matchedTagRuleIds,
+    matchType: transaction.entity.matchType,
+    matchRuleId: transaction.ruleProvenance?.ruleId,
+    matchConfidence: transaction.entity.confidence,
+  });
+}
+
 interface StoredTagRule {
   confidence: number;
   times_applied: number;
@@ -398,26 +418,103 @@ describe('imports.processImport — entity-less correction rules (#3598)', () =>
 });
 
 describe('imports.processImport — correction rule usage telemetry (#3626)', () => {
-  it('bumps timesApplied + lastUsedAt on the winning rule when a live import matches it', async () => {
+  it('credits matched rules only after a successful commit and only once per committed row', async () => {
     const c = client();
     const created = await c.corrections.createOrUpdate({
       descriptionPattern: 'BUNNINGS',
       matchType: 'contains',
-      transactionType: 'purchase',
+      transactionType: 'transfer',
     });
     await c.corrections.update(created.data.id, { confidence: 0.9 });
+    const tagRule = transactionTagRulesService.createTransactionTagRule(financeDb.db, {
+      descriptionPattern: 'BUNNINGS',
+      matchType: 'contains',
+      tags: ['Hardware'],
+    });
     expect(created.data.timesApplied).toBe(0);
 
-    const { sessionId } = await c.imports.processImport({
+    const transaction = parsed({
+      description: 'BUNNINGS WAREHOUSE KINGSGROVE',
+      checksum: 'bunnings-usage-1',
+    });
+    const firstSession = await c.imports.processImport({ transactions: [transaction] });
+    const first = await waitForImportCompletion<ProcessImportOutput>(c, firstSession.sessionId);
+    const secondSession = await c.imports.processImport({ transactions: [transaction] });
+    const second = await waitForImportCompletion<ProcessImportOutput>(c, secondSession.sessionId);
+
+    const afterProcessing = await c.corrections.get(created.data.id);
+    expect(afterProcessing.data.timesApplied).toBe(0);
+    expect(afterProcessing.data.lastUsedAt).toBeNull();
+    expect(
+      transactionTagRulesService.getTransactionTagRule(financeDb.db, tagRule.id).timesApplied
+    ).toBe(0);
+
+    const processed = second.matched[0];
+    if (!processed) throw new Error('Expected Bunnings to match a correction rule');
+    expect(first.matched[0]?.matchedTagRuleIds).toContain(tagRule.id);
+
+    const failed = await c.imports.commitImport({
       transactions: [
-        parsed({ description: 'BUNNINGS WAREHOUSE KINGSGROVE', checksum: 'bunnings-usage-1' }),
+        confirmed({
+          description: processed.description,
+          amount: 42.5,
+          checksum: 'bunnings-usage-failed',
+          matchType: 'learned',
+          matchRuleId: created.data.id,
+          matchedTagRuleIds: [tagRule.id],
+        }),
       ],
     });
-    await waitForImportCompletion<ProcessImportOutput>(c, sessionId);
+    expect(failed.data.transactionsFailed).toBe(1);
+    expect((await c.corrections.get(created.data.id)).data.timesApplied).toBe(0);
+    expect(
+      transactionTagRulesService.getTransactionTagRule(financeDb.db, tagRule.id).timesApplied
+    ).toBe(0);
+
+    const payload = {
+      commitKey: '33333333-3333-4333-8333-333333333333',
+      transactions: [confirmedFromProcessed(processed)],
+    };
+    const committed = await c.imports.commitImport(payload);
+    expect(committed.data.transactionsImported).toBe(1);
 
     const after = await c.corrections.get(created.data.id);
     expect(after.data.timesApplied).toBe(1);
     expect(after.data.lastUsedAt).not.toBeNull();
+    expect(
+      transactionTagRulesService.getTransactionTagRule(financeDb.db, tagRule.id).timesApplied
+    ).toBe(1);
+
+    await c.imports.commitImport(payload);
+    expect((await c.corrections.get(created.data.id)).data.timesApplied).toBe(1);
+    expect(
+      transactionTagRulesService.getTransactionTagRule(financeDb.db, tagRule.id).timesApplied
+    ).toBe(1);
+  });
+
+  it('defers tag-rule usage for a descriptor match until its row is committed', async () => {
+    const c = client();
+    const tagRule = transactionTagRulesService.createTransactionTagRule(financeDb.db, {
+      descriptionPattern: 'INTEREST CHARGES',
+      matchType: 'contains',
+      tags: ['banking'],
+    });
+    const { sessionId } = await c.imports.processImport({
+      transactions: [parsed({ description: 'INTEREST CHARGES', checksum: 'tag-rule-usage-1' })],
+    });
+    const result = await waitForImportCompletion<ProcessImportOutput>(c, sessionId);
+    const processed = result.matched[0];
+    if (!processed) throw new Error('Expected the descriptor to classify the interest charge');
+
+    expect(processed.matchedTagRuleIds).toContain(tagRule.id);
+    expect(
+      transactionTagRulesService.getTransactionTagRule(financeDb.db, tagRule.id).timesApplied
+    ).toBe(0);
+
+    await c.imports.commitImport({ transactions: [confirmedFromProcessed(processed)] });
+    const after = transactionTagRulesService.getTransactionTagRule(financeDb.db, tagRule.id);
+    expect(after.timesApplied).toBe(1);
+    expect(after.lastUsedAt).not.toBeNull();
   });
 
   it('does not bump usage from a pending-rules preview (reevaluateWithPendingRules)', async () => {

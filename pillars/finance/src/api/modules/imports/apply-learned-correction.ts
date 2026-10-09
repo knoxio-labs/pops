@@ -57,6 +57,12 @@ export interface ApplyLearnedCorrectionArgs {
    * telemetry, the matched tag rules' included; `isPreview` still wins over it.
    */
   countsAsUsage?: (result: ApplyLearnedCorrectionResult) => boolean;
+  /**
+   * Increment usage telemetry immediately. Set false when a confirmed import
+   * carries the matched IDs to commit, where successfully inserted rows are
+   * credited transactionally.
+   */
+  recordUsage?: boolean;
 }
 
 export interface ApplyLearnedCorrectionResult {
@@ -176,9 +182,11 @@ function resolveApplyResult(
  * fresh SELECT+sort per transaction. `rules` omitted falls back to a live DB
  * query per call, for one-off callers with no run-level rule set to share.
  *
- * Usage telemetry (`timesApplied`/`lastUsedAt`) is bumped whenever the match is
- * against a real (non-preview) rule set, the rule actually produced an outcome,
- * and `countsAsUsage` accepts that outcome. The preview gate is
+ * Usage telemetry (`timesApplied`/`lastUsedAt`) is bumped immediately whenever
+ * the match is against a real (non-preview) rule set, the rule actually
+ * produced an outcome, `countsAsUsage` accepts that outcome, and `recordUsage`
+ * is not false. Deferred callers still receive the matched tag-rule IDs on the
+ * processed row so a successful commit can credit them transactionally. The preview gate is
  * `!args.isPreview`, not whether `rules` was supplied: a fetch-once `rules`
  * array from the real table is still real usage, while a `rules` array merged
  * with un-persisted pending ChangeSets (`isPreview: true`) must never count as
@@ -221,10 +229,19 @@ export function applyLearnedCorrection(
     matchedRules
   );
 
-  if (result && !args.isPreview && (args.countsAsUsage?.(result) ?? true)) {
+  if (
+    result &&
+    args.recordUsage !== false &&
+    !args.isPreview &&
+    (args.countsAsUsage?.(result) ?? true)
+  ) {
     transactionCorrectionsService.incrementTransactionCorrectionUsage(db, correction.id);
     creditTagRuleUsage(db, matchedTagRuleIds);
   }
 
-  return result;
+  if (!result) return null;
+  return {
+    ...result,
+    processed: { ...result.processed, matchedTagRuleIds },
+  };
 }

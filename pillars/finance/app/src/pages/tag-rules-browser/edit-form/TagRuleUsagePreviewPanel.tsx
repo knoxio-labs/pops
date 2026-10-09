@@ -7,6 +7,8 @@ import { Loader2 } from 'lucide-react';
 
 import { formatDate } from '@pops/ui';
 
+import { RULE_USAGE_DESCRIPTION } from '../../../components/imports/rule-usage-copy';
+
 import type { TagRule } from '../types';
 import type { TagRuleUsagePreviewMatch } from './useTagRuleUsagePreview';
 
@@ -24,7 +26,7 @@ function UsageStats({ rule }: { rule: TagRule }) {
   return (
     <dl className="grid grid-cols-2 gap-2 text-sm">
       <div>
-        <dt className="text-xs text-muted-foreground">Times applied</dt>
+        <dt className="text-xs text-muted-foreground">Committed uses</dt>
         <dd className="tabular-nums font-medium">{rule.timesApplied}</dd>
       </div>
       <div>
@@ -80,6 +82,7 @@ export function TagRuleUsagePreviewPanel({ rule, preview }: TagRuleUsagePreviewP
   return (
     <div className="flex flex-col gap-3 min-w-0" data-testid="tag-rule-usage-preview-panel">
       <UsageStats rule={rule} />
+      <p className="text-xs text-muted-foreground">{RULE_USAGE_DESCRIPTION}</p>
       <div>
         <h3 className="text-sm font-semibold">Match history</h3>
         <p className="text-xs text-muted-foreground" data-testid="usage-preview-count">

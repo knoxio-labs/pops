@@ -75,6 +75,7 @@ import {
   enqueueOutboxCandidatesPhase,
   preCreatePendingContacts,
 } from './commit-contacts-precreate.js';
+import { resolveCommitEntityId } from './commit-entity-resolution.js';
 import {
   batchSourceFor,
   commitLiveDraftPhase,
@@ -83,12 +84,9 @@ import {
 } from './commit-live-draft.js';
 import { expandLoanRepaymentRow } from './commit-loan-split.js';
 import { pairTransfersPhase } from './commit-pair-transfers.js';
+import { recordMatchedRuleUsage } from './commit-rule-usage.js';
 import { applyCommitTagVocabulary, planCommitTagVocabulary } from './commit-tag-vocabulary.js';
-import {
-  assertPersistableEntityId,
-  COMMIT_TEMP_ENTITY_PREFIX,
-  validateCommitPayload,
-} from './commit-validation.js';
+import { validateCommitPayload } from './commit-validation.js';
 import { reclassifyExistingTransactions } from './reclassify-existing.js';
 
 import type {
@@ -112,18 +110,6 @@ interface WriteTxnsResult {
   failedDetails: FailedTransactionDetail[];
   /** The rows successfully inserted this commit, for the pairing and batch phases. */
   inserted: InsertedTransaction[];
-}
-
-function resolveTxnEntityId(
-  entityId: string | undefined,
-  tempIdMap: Map<string, string>
-): string | undefined {
-  if (entityId == null) return undefined;
-  const resolved = entityId.startsWith(COMMIT_TEMP_ENTITY_PREFIX)
-    ? tempIdMap.get(entityId)
-    : entityId;
-  assertPersistableEntityId(entityId, resolved);
-  return resolved;
 }
 
 function writeTransactionsPhase(
@@ -150,7 +136,7 @@ function writeTransactionsPhase(
   const orderedTransactions = payload.transactions.toSorted((a, b) => a.date.localeCompare(b.date));
 
   for (const txn of orderedTransactions) {
-    const entityId = resolveTxnEntityId(txn.entityId, tempIdMap);
+    const entityId = resolveCommitEntityId(txn.entityId, tempIdMap);
     try {
       // A loan repayment expands to its interest + principal legs here
       // (POPS-2830); every other row is its own single-element array, so the
@@ -168,6 +154,7 @@ function writeTransactionsPhase(
           carriesBalance: txn.balanceCents !== undefined,
         });
       }
+      recordMatchedRuleUsage(tx, txn);
       // A split loan repayment is one suggestion across its legs; count it once.
       const firstLegId = inserted[firstLeg]?.id;
       if (firstLegId !== undefined) recordAiSuggestionOutcome(tx, txn, firstLegId);

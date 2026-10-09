@@ -39,7 +39,7 @@ No transaction and no rule is written before step 7. Every entity creation, corr
 
 A correction proposal that never becomes a rule does not affect future imports. Editing the entity on a rule-matched row saves the row correction in the local import before opening the proposal, so rejecting or dismissing the proposal leaves that edit available for commit. Overriding an entity the matcher chose on its own — a rule, an AI guess, or one of the alias/exact/prefix/contains stages — opens the correction proposal immediately, as does assigning a row that has similar siblings anywhere in the run. Everything else (a first-time merchant on an unmatched row) still offers the rule, through a "Save & Learn" toast rather than the dialog. `findSimilar` therefore scans the `matched` bucket too: a wrong auto-match puts its whole merchant in `matched`, and scanning only uncertain/failed reported "nothing similar" for exactly the case the rule exists to fix.
 
-"Nothing is written" is not literally true, and the exceptions bite. Rejecting a correction proposal in step 4 persists rejection feedback to finance's settings table immediately. And every `POST /imports/process` — including the re-runs the wizard fires on resume or dead-session recovery — bumps `timesApplied` on every rule that matched.
+"Nothing is written" is not literally true, and the exceptions bite. Rejecting a correction proposal in step 4 persists rejection feedback to finance's settings table immediately. Rule usage is credited only when a matched transaction is committed; re-running `POST /imports/process` on resume or dead-session recovery does not increment it.
 
 ## What survives a reload
 

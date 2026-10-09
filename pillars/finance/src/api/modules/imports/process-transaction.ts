@@ -90,6 +90,7 @@ export function classifyWithoutAi(args: ProcessTransactionArgs): ClassifyStageRe
     knownTags: context.knownTags,
     rules: context.correctionRules,
     entityDefaultTags: context.entityDefaultTags,
+    recordUsage: false,
   });
   if (correctionApplied) {
     return {

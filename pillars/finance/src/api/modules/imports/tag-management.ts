@@ -91,3 +91,20 @@ export function buildSuggestedTags(db: FinanceDb, opts: BuildSuggestedTagsOption
     onTagRulesMatched: opts.onTagRulesMatched,
   });
 }
+
+/**
+ * Build import suggestions without changing rule telemetry and return the
+ * matched tag-rule IDs for the commit phase to credit after a row is inserted.
+ */
+export function buildImportSuggestedTags(
+  db: FinanceDb,
+  opts: Omit<BuildSuggestedTagsOptions, 'recordTagRuleUsage' | 'onTagRulesMatched'>
+): { suggestions: SuggestedTag[]; matchedTagRuleIds: string[] } {
+  const matchedTagRuleIds: string[] = [];
+  const suggestions = buildSuggestedTags(db, {
+    ...opts,
+    recordTagRuleUsage: false,
+    onTagRulesMatched: (ids) => matchedTagRuleIds.push(...ids),
+  });
+  return { suggestions, matchedTagRuleIds };
+}

@@ -2,8 +2,8 @@
 
 Turns parsed bank rows into committed transactions, in two phases:
 
-- `POST /imports/process` — dedups by checksum, then classifies each surviving row. It creates no transactions, but it is **not** side-effect free: every correction and tag rule that fires has its `timesApplied` and `lastUsedAt` bumped, gated on `!isPreview`.
-- `POST /imports/commit` — writes the transactions themselves, applies rule ChangeSets, and re-classifies history, in one SQLite transaction.
+- `POST /imports/process` — dedups by checksum, then classifies each surviving row. It creates no transactions and does not change rule usage telemetry; matched rule IDs travel with each row for commit.
+- `POST /imports/commit` — writes the transactions themselves, applies rule ChangeSets, credits usage for successfully inserted rows, and re-classifies history, in one SQLite transaction. A `commitKey` replay returns the recorded result without crediting usage again.
 
 Between them the wizard buffers edits, entity creations and rule ChangeSets client-side. `POST /imports/reevaluate-pending` re-runs matching against DB rules merged with that pending set; `GET /imports/progress` polls a running process session. A live draft has no process session, because its rows arrive pre-mapped and skip `process`, so it sends its rows in the body to `POST /imports/reevaluate-pending-rows` instead: the same evaluator, with nothing loaded and nothing written back.
 
@@ -57,7 +57,7 @@ Each carries a file-header comment explaining its own mechanics. Read the header
 ## Rules that span files
 
 - **Reference data is fetched once per run, never per row.** Entity names, aliases and default tags come live from the `contacts` pillar — finance keeps no entity mirror. The correction rule set is loaded once and threaded through `ProcessContext`. Entity-key normalization is cached against the lookup map's identity, so **building a map and then mutating it mid-run yields stale keys** — build a fresh one.
-- **Processing mutates rule telemetry.** Because `process` bumps usage counters, re-running it over the same batch — which the wizard does on resume, and on any dead-session recovery — inflates `timesApplied` for every rule that fires. Preview paths pass `isPreview` precisely to avoid this.
+- **Processing defers rule telemetry.** The matched rule IDs travel with each row, and commit credits them only after that row is inserted successfully. Re-running the same batch on resume or dead-session recovery does not change `timesApplied`; previews and failed inserts do not count either.
 - **Tag suggestion runs after matching**, in `../tag-suggester/` — its header documents the source priority and dedup.
 
 ## Pending drafts
