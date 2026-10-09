@@ -12,7 +12,7 @@ header explains what it does; this page is the ordering across them.
 | Authoring / CI          | `generate-nginx-conf.ts` (static, `--check`)      | Renders the committed `../nginx.conf`. `--check` fails CI when it drifts.                               |
 | Image build             | `bundle-nginx-tools.ts`                           | Bundles the render + watch CLIs for the runtime image.                                                  |
 | Container boot          | `../docker-entrypoint.sh` → the render bundle     | Retries a failed live-registry render twice at one-second intervals, then falls back to the baked conf. |
-| Container life          | `watch-registry-and-reload-cli.ts` (watch bundle) | Re-renders + validates + reloads on each registry SSE event.                                            |
+| Container life          | `watch-registry-and-reload-cli.ts` (watch bundle) | Reconciles from each connection snapshot, then re-renders + validates + reloads on registry events.     |
 | Deploy, outside the pod | `register-with-registry.ts`                       | Announces the shell to the registry. Never runs in the browser or in the image.                         |
 
 The boot render and the watcher run the _same_ dynamic renderer; the watcher is
@@ -66,6 +66,10 @@ the watcher all read `POPS_OPERATOR_EMAILS` from the container's environment:
   else, and exits if that render fails, so no path serves an open gate. A
   malformed entry is ignored with a warning; the gate still enforces.
 
-Watcher env vars are listed in `watch-registry-and-reload.ts`'s header and the
-health-endpoint payload in `nginx-generator-health.ts`'s; the `gen:nginx*`
-script names are in `../package.json`.
+Watcher env vars are listed in `watch-registry-and-reload.ts`'s header. The
+validation-failure threshold defaults to one `nginx -t` failure:
+`/health` returns 503 when the threshold is reached.
+`/metrics` exposes `nginx_generator_last_error_at` in Unix seconds and the
+consecutive validation-failure count for Prometheus scrapes. The payload shape
+is in `nginx-generator-health.ts`; the `gen:nginx*` script names are in
+`../package.json`.

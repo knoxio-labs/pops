@@ -3,10 +3,10 @@
  * generator (`./generate-nginx-conf.ts`), so a pillar registering at runtime
  * (ADR-027) picks up edge routing without a fresh shell image.
  *
- * Opens `GET <registry-url>/registry/subscribe`, ignores the initial
- * `pillar.snapshot` frame, and on every subsequent registered /
- * deregistered / health-changed event triggers a trailing-debounced
- * regen + nginx -t + reload cycle. The `nginx -t` gate runs between
+ * Opens `GET <registry-url>/registry/subscribe`, rebuilding once from each
+ * `pillar.snapshot` frame and on every subsequent registered / deregistered /
+ * health-changed event. Each event triggers a trailing-debounced regen +
+ * nginx -t + reload cycle. The `nginx -t` gate runs between
  * regen and reload so a bad rendered conf cannot crash a live nginx;
  * on failure the reload is skipped and `nginx_generator_last_error_at`
  * flips on the optional health endpoint until the next clean cycle.
@@ -15,6 +15,7 @@
  * POPS_NGINX_RELOAD_CMD, POPS_NGINX_CONFIG_TEST_CMD (default
  * `nginx -t -c <output>`; empty string disables the gate),
  * POPS_NGINX_DEBOUNCE_MS, POPS_NGINX_BACKOFF_MS,
+ * POPS_NGINX_VALIDATION_FAILURE_THRESHOLD,
  * POPS_NGINX_HEALTH_PORT / _HOST / _PATH, POPS_OPERATOR_EMAILS (the guest
  * gate's operator list, so a re-render keeps the gate the boot render had).
  */
@@ -42,6 +43,7 @@ const DEFAULT_OUTPUT_PATH = resolve(SCRIPT_DIR, '..', 'nginx.conf');
 const DEFAULT_RELOAD_CMD = 'nginx -s reload';
 const MAX_BACKOFF_MS = 30_000;
 
+/** Parsed runtime configuration for registry-driven nginx regeneration. */
 interface WatcherConfig {
   readonly registryUrl: string;
   readonly outputPath: string;
@@ -49,6 +51,7 @@ interface WatcherConfig {
   readonly configTestCmd: string;
   readonly debounceMs: number;
   readonly backoffMs: number;
+  readonly validationFailureThreshold: number;
   readonly healthPort: number | null;
   readonly healthHost: string;
   readonly healthPath: string;
@@ -76,6 +79,7 @@ function defaultConfigTestCmd(outputPath: string): string {
   return `nginx -t -c ${shellQuote(outputPath)}`;
 }
 
+/** Reads watcher settings from the process environment with safe defaults. */
 function readConfig(env: NodeJS.ProcessEnv): WatcherConfig {
   const outputPath = env['POPS_NGINX_OUTPUT'] ?? DEFAULT_OUTPUT_PATH;
   const rawConfigTestCmd = env['POPS_NGINX_CONFIG_TEST_CMD'];
@@ -86,6 +90,7 @@ function readConfig(env: NodeJS.ProcessEnv): WatcherConfig {
     configTestCmd: rawConfigTestCmd ?? defaultConfigTestCmd(outputPath),
     debounceMs: parseIntEnv(env['POPS_NGINX_DEBOUNCE_MS'], 250),
     backoffMs: parseIntEnv(env['POPS_NGINX_BACKOFF_MS'], 1000),
+    validationFailureThreshold: parseIntEnv(env['POPS_NGINX_VALIDATION_FAILURE_THRESHOLD'], 1),
     healthPort: parseOptionalPortEnv(env['POPS_NGINX_HEALTH_PORT']),
     healthHost: env['POPS_NGINX_HEALTH_HOST'] ?? '0.0.0.0',
     healthPath: env['POPS_NGINX_HEALTH_PATH'] ?? '/health',
@@ -120,12 +125,14 @@ async function runRegen(config: WatcherConfig): Promise<void> {
   await writeFile(config.outputPath, conf, 'utf8');
 }
 
+/** Injectable I/O used to exercise one registry connection without real nginx. */
 export interface RunOnceDeps {
   readonly health?: NginxGeneratorHealth;
   readonly execImpl?: (cmd: string) => Promise<void>;
   readonly regenerateImpl?: (config: WatcherConfig) => Promise<void>;
 }
 
+/** Runs one registry stream and reconciles each watched event it receives. */
 async function runOnce(
   config: WatcherConfig,
   signal: AbortSignal,
@@ -180,8 +187,13 @@ async function sleep(ms: number, signal: AbortSignal): Promise<void> {
   });
 }
 
+/** Injectable I/O used by the reconnecting registry watcher. */
 export type WatchRegistryDeps = RunOnceDeps;
 
+/**
+ * Watches registry events, reconnecting after the SSE stream ends or fails.
+ * Each connection snapshot triggers a rebuild to reconcile missed events.
+ */
 export async function watchRegistryAndReload(
   config: WatcherConfig,
   signal: AbortSignal,

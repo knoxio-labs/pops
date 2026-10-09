@@ -1264,17 +1264,25 @@ services:
       # registry outage the image falls back to the committed static conf.
       # registry-api shares the frontend network, so the in-cluster host wins.
       POPS_REGISTRY_URL: ${POPS_REGISTRY_URL:-http://registry-api:3001}
-      # Surfaces the watcher's `nginx_generator_last_error_at` health state
-      # (degraded on a failed re-render). Internal-only; not in `expose`.
+      # The watcher exposes health and Prometheus metrics for the LAN monitor.
       POPS_NGINX_HEALTH_PORT: '9090'
+      POPS_NGINX_HEALTH_HOST: '0.0.0.0'
+      POPS_NGINX_VALIDATION_FAILURE_THRESHOLD: '1'
       POPS_OPERATOR_EMAILS: ${POPS_OPERATOR_EMAILS:-}
     expose:
       - '80'
+      - '9090'
+    ports:
+      - '192.168.50.215:19090:9090'
     healthcheck:
-      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:80/healthz']
+      test:
+        [
+          'CMD-SHELL',
+          'wget -q --spider http://127.0.0.1:80/healthz && wget -q --spider http://127.0.0.1:9090/health',
+        ]
       interval: 30s
       timeout: 5s
-      retries: 3
+      retries: 1
 
   # API docs browser — Stoplight Elements pointed at every contract
   # package's OpenAPI snapshot (Theme 13 PRD-219). Purely static; the
