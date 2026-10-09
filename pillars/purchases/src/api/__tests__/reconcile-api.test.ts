@@ -16,10 +16,12 @@ import {
   purchaseCharges,
   recordMatchRule,
 } from '../../db/index.js';
+import { persistChargeReviews } from '../../db/services/reconcile-writes.js';
 import { runSweep } from '../../reconcile/sweep.js';
 import { createPurchasesApiApp } from '../app.js';
 import { FINANCE_UNAVAILABLE, financeReturning } from '../finance/__tests__/fixtures.js';
 import { __resetPillarRegistryCache } from '../pillars/registry.js';
+import { makeReconcileHandlers } from '../rest/reconcile-handlers.js';
 import { createTestTransport } from './test-http.js';
 
 import type { Express } from 'express';
@@ -121,6 +123,61 @@ afterEach(() => {
 });
 
 describe('the queue', () => {
+  it('skips Finance lookup for a malformed persisted review candidate URI', async () => {
+    const purchaseId = createPurchase(opened.db, {
+      source: 'amazon',
+      sourceOrderId: 'malformed-review-candidate',
+      ingestMethod: 'export',
+      orderedAt: '2026-03-04T00:00:00Z',
+      currency: 'AUD',
+      totalCents: 4128,
+      checksum: 'malformed-review-candidate',
+      charges: [{ amountCents: 4128, role: 'capture' }],
+    });
+    const charge = opened.db
+      .select({ id: purchaseCharges.id })
+      .from(purchaseCharges)
+      .where(eq(purchaseCharges.purchaseId, purchaseId))
+      .get();
+    if (charge === undefined) throw new Error('Expected the purchase charge to be stored');
+
+    persistChargeReviews(
+      opened.db,
+      [charge.id],
+      [
+        {
+          chargeId: charge.id,
+          purchaseId,
+          reason: 'ambiguous-partial',
+          candidateCount: 2,
+          candidateUris: ['not-a-finance-transaction'],
+        },
+      ]
+    );
+
+    let lookupCalls = 0;
+    const lookup: FinanceTransactionLookup = {
+      fetchTransactionsByIds: async () => {
+        lookupCalls += 1;
+        return { kind: 'ok', transactions: [] };
+      },
+    };
+    const result = await makeReconcileHandlers(opened.db, undefined, lookup).queue({ query: {} });
+
+    expect(result.status).toBe(200);
+    expect(result.body.items[0]?.reviewCandidates).toEqual([
+      {
+        transactionUri: 'not-a-finance-transaction',
+        description: null,
+        date: null,
+        payee: null,
+        amountCents: null,
+        settlementCurrency: null,
+      },
+    ]);
+    expect(lookupCalls).toBe(0);
+  });
+
   it('is empty before anything is ingested', async () => {
     const res = await requestOn(app).get('/reconcile/queue').expect(200);
     expect(res.body.items).toEqual([]);
@@ -181,6 +238,17 @@ describe('the queue', () => {
       ],
     });
 
+    app = createPurchasesApiApp({
+      vision: null,
+      purchasesDb: opened,
+      version: '1.2.3',
+      selfBaseUrl: 'http://localhost:3013',
+    });
+    const withoutLookup = await requestOn(app).get('/reconcile/queue').expect(200);
+    expect(withoutLookup.body.items[0].reviewCandidates).toEqual(
+      withoutFinance.body.items[0].reviewCandidates
+    );
+
     app = build(finance);
     const withFinance = await requestOn(app).get('/reconcile/queue').expect(200);
     expect(withFinance.body.items[0].reviewCandidates).toEqual([
@@ -201,6 +269,31 @@ describe('the queue', () => {
         settlementCurrency: 'AUD',
       },
     ]);
+  });
+
+  it('keeps persisted ambiguity candidates when the Finance detail lookup throws', async () => {
+    order(4128, 'finance-detail-lookup-fails');
+    const finance = financeReturning(
+      { id: 'first-candidate', amountCents: 4128, date: '2026-03-05' },
+      { id: 'second-candidate', amountCents: 4128, date: '2026-03-06' }
+    );
+    await runSweep({ db: opened.db, finance, defaultWindowDays: 21 });
+
+    app = build({
+      ...finance,
+      fetchTransactionsByIds: async () => {
+        throw new Error('Finance detail lookup failed');
+      },
+    });
+    const res = await requestOn(app).get('/reconcile/queue').expect(200);
+
+    expect(res.body.items[0]).toMatchObject({
+      reviewReason: 'ambiguous',
+      reviewCandidates: [
+        { transactionUri: 'pops://finance/transaction/first-candidate', description: null },
+        { transactionUri: 'pops://finance/transaction/second-candidate', description: null },
+      ],
+    });
   });
 
   it('lists a proposal with a zero delta once the sweep matches', async () => {
