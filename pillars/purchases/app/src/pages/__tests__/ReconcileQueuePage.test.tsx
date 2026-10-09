@@ -558,6 +558,61 @@ describe('ReconcileQueuePage — decisions', () => {
     expect(await screen.findByText(enAUPurchases['reconcile.empty.title'])).toBeVisible();
   });
 
+  it('localizes Finance search failures in the manual-link picker', async () => {
+    const user = userEvent.setup();
+    reconcileManualCandidatesMock.mockRejectedValue(new Error('Finance offline'));
+    queueReturns([entryAt(1, { proposed: [], deltaCents: -4599 })]);
+    renderQueue();
+
+    await user.click(
+      await screen.findByRole('button', {
+        name: enAUPurchases['reconcile.action.linkManually'],
+      })
+    );
+    await user.type(
+      screen.getByPlaceholderText(enAUPurchases['reconcile.manual.searchPlaceholder']),
+      'AMAZON'
+    );
+
+    const expectedMessage = enAUPurchases['reconcile.manual.searchFailed'].replace(
+      '{{message}}',
+      'Finance offline'
+    );
+    expect(await screen.findByText(expectedMessage)).toBeVisible();
+  });
+
+  it('keeps stored review candidates visible when Finance search fails', async () => {
+    const user = userEvent.setup();
+    const candidate = buildReviewCandidate();
+    reconcileManualCandidatesMock.mockRejectedValue(new Error('Finance offline'));
+    queueReturns([
+      entryAt(1, {
+        proposed: [],
+        reviewReason: 'ambiguous',
+        reviewCandidates: [candidate],
+      }),
+    ]);
+    renderQueue();
+
+    await user.click(
+      await screen.findByRole('button', {
+        name: enAUPurchases['reconcile.action.linkManually'],
+      })
+    );
+    const dialog = screen.getByRole('dialog');
+    await user.type(
+      within(dialog).getByPlaceholderText(enAUPurchases['reconcile.manual.searchPlaceholder']),
+      'AMAZON'
+    );
+
+    const expectedMessage = enAUPurchases['reconcile.manual.reviewSearchFailed'].replace(
+      '{{message}}',
+      'Finance offline'
+    );
+    await waitFor(() => expect(dialog.textContent).toContain(expectedMessage));
+    expect(within(dialog).getByRole('button', { name: /BOOKSHOP CENTRAL/u })).toBeVisible();
+  });
+
   it('offers stored review candidates and pins the selected transaction without searching', async () => {
     const user = userEvent.setup();
     const candidate = buildReviewCandidate();

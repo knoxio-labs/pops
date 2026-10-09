@@ -105,22 +105,20 @@ function ManualLinkDialog({
   onSelect,
 }: ManualLinkDialogProps): ReactElement {
   const { t } = useTranslation('purchases');
-  const linkMessage = linkError instanceof Error ? linkError.message : undefined;
-  const searchMessage = searchError instanceof Error ? searchError.message : undefined;
+  const localizedSearchError = localizeErrorMessage(searchError, (message) =>
+    t('reconcile.manual.searchFailed', { message })
+  );
   const description = manualLinkDescription(
-    linkMessage === undefined
-      ? undefined
-      : t('reconcile.manual.linkFailed', { message: linkMessage }),
+    localizeErrorMessage(linkError, (message) => t('reconcile.manual.linkFailed', { message })),
     hasReviewCandidates,
-    searchMessage === undefined
-      ? undefined
-      : t('reconcile.manual.reviewSearchFailed', { message: searchMessage }),
+    localizeErrorMessage(searchError, (message) =>
+      t('reconcile.manual.reviewSearchFailed', { message })
+    ),
     {
       review: t('reconcile.manual.reviewDescription'),
       fallback: t('reconcile.manual.description'),
     }
   );
-
   return (
     <SearchPickerDialog<ManualCandidateOption>
       trigger={
@@ -144,9 +142,17 @@ function ManualLinkDialog({
       minChars={hasReviewCandidates ? 0 : 2}
       minCharsMessage={t('reconcile.manual.typeToSearch')}
       emptyMessage={t('reconcile.manual.noResults')}
-      errorMessage={hasReviewCandidates ? undefined : searchMessage}
+      errorMessage={hasReviewCandidates ? undefined : localizedSearchError}
     />
   );
+}
+
+function localizeErrorMessage(
+  error: unknown,
+  localize: (message: string) => string
+): string | undefined {
+  if (!(error instanceof Error)) return undefined;
+  return localize(error.message);
 }
 
 function renderManualCandidate(
