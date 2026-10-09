@@ -83,6 +83,11 @@ function pairingQr(): SVGElement {
   return svg;
 }
 
+async function findDeviceRevokeButton(): Promise<HTMLElement> {
+  const table = await screen.findByTestId('device-table');
+  return within(table).getByRole('button', { name: "Revoke Joao's iPhone" });
+}
+
 /**
  * `shouldAdvanceTime` is load-bearing: React Query settles on macrotasks, and
  * a fully frozen clock deadlocks every `findBy*` in this file. The cost is
@@ -506,7 +511,7 @@ describe('DevicesPage — revoking a device', () => {
   it('asks for confirmation, naming the device, before cutting it off', async () => {
     const user = renderPage();
 
-    await user.click(await screen.findByRole('button', { name: "Revoke Joao's iPhone" }));
+    await user.click(await findDeviceRevokeButton());
 
     expect(
       await screen.findByRole('heading', { name: "Revoke Joao's iPhone?" })
@@ -517,7 +522,7 @@ describe('DevicesPage — revoking a device', () => {
   it('cancels without touching the pillar', async () => {
     const user = renderPage();
 
-    await user.click(await screen.findByRole('button', { name: "Revoke Joao's iPhone" }));
+    await user.click(await findDeviceRevokeButton());
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
 
     await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
@@ -527,7 +532,7 @@ describe('DevicesPage — revoking a device', () => {
   it('revokes by id on confirmation and refreshes the list', async () => {
     const user = renderPage();
 
-    await user.click(await screen.findByRole('button', { name: "Revoke Joao's iPhone" }));
+    await user.click(await findDeviceRevokeButton());
     listDevicesMock.mockResolvedValue(
       devicesResponse(device({ revokedAt: '2026-08-08T12:00:00.000Z' }))
     );
@@ -548,7 +553,7 @@ describe('DevicesPage — revoking a device', () => {
     revokeDeviceMock.mockResolvedValue(errorResponse(503, 'bfm down'));
     const user = renderPage();
 
-    await user.click(await screen.findByRole('button', { name: "Revoke Joao's iPhone" }));
+    await user.click(await findDeviceRevokeButton());
     await user.click(screen.getByRole('button', { name: 'Revoke' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/still trusted/);
@@ -559,7 +564,7 @@ describe('DevicesPage — revoking a device', () => {
     revokeDeviceMock.mockResolvedValue(errorResponse(404, 'gone'));
     const user = renderPage();
 
-    await user.click(await screen.findByRole('button', { name: "Revoke Joao's iPhone" }));
+    await user.click(await findDeviceRevokeButton());
     await user.click(screen.getByRole('button', { name: 'Revoke' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/refused the request/);
@@ -580,7 +585,7 @@ describe('DevicesPage — revoking a device', () => {
     );
     const user = renderPage();
 
-    await user.click(await screen.findByRole('button', { name: "Revoke Joao's iPhone" }));
+    await user.click(await findDeviceRevokeButton());
     await user.click(screen.getByRole('button', { name: 'Revoke' }));
     await screen.findByRole('button', { name: 'Revoking…' });
 
@@ -610,7 +615,7 @@ describe('DevicesPage — revoking a device', () => {
     );
     const user = renderPage();
 
-    await user.click(await screen.findByRole('button', { name: "Revoke Joao's iPhone" }));
+    await user.click(await findDeviceRevokeButton());
     await user.click(screen.getByRole('button', { name: 'Revoke' }));
     await screen.findByRole('button', { name: 'Revoking…' });
 
@@ -627,7 +632,7 @@ describe('DevicesPage — revoking a device', () => {
   it('still closes on Escape when no revocation is running', async () => {
     const user = renderPage();
 
-    await user.click(await screen.findByRole('button', { name: "Revoke Joao's iPhone" }));
+    await user.click(await findDeviceRevokeButton());
     await user.keyboard('{Escape}');
 
     await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
@@ -643,7 +648,7 @@ describe('DevicesPage — revoking a device', () => {
   it('does not report a revocation failure when only the refresh fails', async () => {
     const user = renderPage();
 
-    await user.click(await screen.findByRole('button', { name: "Revoke Joao's iPhone" }));
+    await user.click(await findDeviceRevokeButton());
     listDevicesMock.mockResolvedValue(errorResponse(503, 'bfm down'));
     await user.click(screen.getByRole('button', { name: 'Revoke' }));
 
@@ -656,7 +661,7 @@ describe('DevicesPage — revoking a device', () => {
     revokeDeviceMock.mockResolvedValueOnce(errorResponse(503, 'bfm down'));
     const user = renderPage();
 
-    await user.click(await screen.findByRole('button', { name: "Revoke Joao's iPhone" }));
+    await user.click(await findDeviceRevokeButton());
     await user.click(screen.getByRole('button', { name: 'Revoke' }));
     await screen.findByRole('alert');
 

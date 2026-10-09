@@ -238,6 +238,55 @@ test.describe('bfm — Devices', () => {
     await expect(row.getByText('Trusted')).toBeVisible();
   });
 
+  test('keeps device actions reachable on a phone without horizontal scrolling', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await stubOperatorApi(page);
+    await openDevices(page);
+
+    const cards = page.getByRole('list', { name: 'Devices' });
+    await expect(cards).toBeVisible();
+    const card = cards.getByRole('listitem');
+    const revoke = card.getByRole('button', { name: "Revoke Joao's iPhone" });
+    await expect(revoke).toBeVisible();
+    await expect(page.getByTestId('device-table')).toBeHidden();
+
+    const widths = await page.evaluate(() => ({
+      document: document.documentElement.scrollWidth,
+      viewport: document.documentElement.clientWidth,
+    }));
+    expect(widths.document).toBeLessThanOrEqual(widths.viewport);
+
+    const actionHeight = await revoke.evaluate((button) => button.getBoundingClientRect().height);
+    expect(actionHeight).toBeGreaterThanOrEqual(44);
+  });
+
+  test('keeps pairing footer actions reachable in a short viewport with larger text', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 375, height: 375 });
+    await stubOperatorApi(page, { ttlSeconds: 1 });
+    await openDevices(page);
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = '125%';
+    });
+
+    await page.getByRole('button', { name: 'Pair a new device' }).click();
+    const dialog = page.getByRole('dialog');
+    const mintAnother = dialog.getByRole('button', { name: 'Mint another' });
+    const done = dialog.getByRole('button', { name: 'Done' });
+    await expect(mintAnother).toBeVisible();
+
+    const scrollHeight = await dialog.evaluate((element) => element.scrollHeight);
+    const clientHeight = await dialog.evaluate((element) => element.clientHeight);
+    expect(scrollHeight).toBeGreaterThan(clientHeight);
+
+    await mintAnother.scrollIntoViewIfNeeded();
+    await expect(mintAnother).toBeInViewport();
+    await expect(done).toBeInViewport();
+  });
+
   test('revokes only after confirmation, and the row flips to revoked', async ({ page }) => {
     await stubOperatorApi(page);
     await openDevices(page);
