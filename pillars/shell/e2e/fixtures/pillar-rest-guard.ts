@@ -31,6 +31,15 @@ export interface PillarRestGuardOptions {
    * once per test from `page` fixture setup.
    */
   allowUnroutedPillarRest: string | false;
+
+  /** Exact unmatched requests expected by a regression that exercises the guard itself. */
+  expectedUnroutedPillarRestCalls: readonly ExpectedUnroutedPillarRestCall[] | undefined;
+}
+
+/** One exact pillar REST request the guard regression expects to catch. */
+export interface ExpectedUnroutedPillarRestCall {
+  readonly method: string;
+  readonly pathAndQuery: string;
 }
 
 const SETTLEMENT_TIMEOUT_MS = 5_000;
@@ -82,8 +91,12 @@ async function settlePendingRequests(settlement: RequestSettlement): Promise<voi
 
 export const test = base.extend<PillarRestGuardOptions>({
   allowUnroutedPillarRest: [false, { option: true }],
+  expectedUnroutedPillarRestCalls: [undefined, { option: true }],
 
-  page: async ({ page, context, allowUnroutedPillarRest }, runTest) => {
+  page: async (
+    { page, context, allowUnroutedPillarRest, expectedUnroutedPillarRestCalls },
+    runTest
+  ) => {
     const unrouted: UnroutedPillarCall[] = [];
     const pendingRequests = new Set<Request>();
     const requestChangeWaiters = new Set<() => void>();
@@ -165,6 +178,16 @@ export const test = base.extend<PillarRestGuardOptions>({
       page.off('request', trackRequest);
       page.off('requestfinished', settleRequest);
       page.off('requestfailed', settleRequest);
+    }
+
+    if (expectedUnroutedPillarRestCalls !== undefined) {
+      expect(
+        unrouted.map(({ method, url }) => {
+          const requestUrl = new URL(url);
+          return { method, pathAndQuery: requestUrl.pathname + requestUrl.search };
+        })
+      ).toEqual(expectedUnroutedPillarRestCalls);
+      return;
     }
 
     if (allowUnroutedPillarRest !== false || unrouted.length === 0) return;

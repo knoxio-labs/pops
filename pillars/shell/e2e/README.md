@@ -51,6 +51,12 @@ the fixture reports every recorded method and URL after the page settles.
 The registry-health test response also uses context routing so page cleanup
 does not forward background health checks to the unavailable backend.
 
+The guard regression can declare exact expected fallback calls with
+`expectedUnroutedPillarRestCalls`; teardown compares the captured method and
+path/query list exactly, so that test still fails if another unmatched request
+appears. It also verifies that a page-level stub wins before `page.unrouteAll()`
+and that the context fallback catches the request afterward.
+
 When a script or pillar REST request is still in flight after a test and its
 hooks finish, teardown waits for the tracked requests to finish and then for
 100ms without another relevant request. The event-driven wait has a five-second

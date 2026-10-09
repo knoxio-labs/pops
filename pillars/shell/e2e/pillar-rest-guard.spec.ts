@@ -1,41 +1,35 @@
 import { expect, test } from './fixtures/pillar-rest-guard';
 
-const GUARD_PROBE_PATH = '/finance-api/POPS-4033-guard-probe';
-const LATE_SCRIPT_PATH = '/pops-4033-late-guard-probe.js';
-
 test.describe('Pillar REST guard', () => {
-  test.fail(
-    'catches a request issued by a late script after the test body',
-    async ({ page, context }) => {
-      await page.route(/\/pops-4033-guard-page$/, (route) =>
-        route.fulfill({
-          status: 200,
-          contentType: 'text/html',
-          body: '<!doctype html><html><body><h1>guard probe</h1></body></html>',
-        })
-      );
-      await page.goto('/pops-4033-guard-page');
-      await expect(page.getByRole('heading', { name: 'guard probe' })).toBeVisible();
+  test.use({
+    expectedUnroutedPillarRestCalls: [
+      { method: 'GET', pathAndQuery: '/finance-api/__e2e__/late-request' },
+    ],
+  });
 
-      await context.route(`**${LATE_SCRIPT_PATH}`, async (route) => {
-        await new Promise<void>((resolve) => setTimeout(resolve, 50));
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/javascript',
-          body: `fetch('${GUARD_PROBE_PATH}').catch(() => undefined);`,
-        });
-      });
+  test('catches a late request after page routes are cleared', async ({ page }) => {
+    await page.route('**/__e2e__/rest-guard', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'text/html',
+        body: '<!doctype html><html><body></body></html>',
+      })
+    );
+    await page.goto('/__e2e__/rest-guard');
 
-      await page.unrouteAll({ behavior: 'ignoreErrors' });
-      const scriptRequest = page.waitForEvent('request', (request) =>
-        request.url().endsWith(LATE_SCRIPT_PATH)
-      );
-      await page.evaluate((path) => {
-        const script = document.createElement('script');
-        script.src = path;
-        document.head.append(script);
-      }, LATE_SCRIPT_PATH);
-      await scriptRequest;
-    }
-  );
+    await page.route('**/finance-api/__e2e__/stubbed', (route) => route.fulfill({ status: 204 }));
+    const stubbedStatus = await page.evaluate(
+      async () => (await fetch('/finance-api/__e2e__/stubbed')).status
+    );
+    expect(stubbedStatus).toBe(204);
+
+    await page.unrouteAll();
+
+    const lateResponse = await page.evaluate(async () => {
+      const response = await fetch('/finance-api/__e2e__/late-request');
+      return { status: response.status, body: await response.json() };
+    });
+    expect(lateResponse.status).toBe(599);
+    expect(lateResponse.body).toMatchObject({ error: 'unstubbed-pillar-rest-call' });
+  });
 });
