@@ -12,7 +12,7 @@ extension Fixtures {
             id: "txn-flat-white",
             description: "Flat white",
             amount: money(-540),
-            date: Date(timeIntervalSince1970: 1_786_000_000),
+            date: calendarDay("2026-08-06"),
             type: .purchase,
             entityName: "Sample Coffee",
             tags: ["coffee"]
@@ -21,7 +21,7 @@ extension Fixtures {
             id: "txn-woolworths",
             description: "Woolworths Metro Surry Hills",
             amount: money(-8_412),
-            date: Date(timeIntervalSince1970: 1_785_950_000),
+            date: calendarDay("2026-08-05"),
             type: .purchase,
             entityName: "Woolworths",
             tags: ["groceries"]
@@ -30,7 +30,7 @@ extension Fixtures {
             id: "txn-rent",
             description: "Rent",
             amount: money(-124_000),
-            date: Date(timeIntervalSince1970: 1_785_800_000),
+            date: calendarDay("2026-08-03"),
             type: .transfer,
             entityName: "Landlord",
             tags: ["housing", "recurring"]
@@ -39,7 +39,7 @@ extension Fixtures {
             id: "txn-salary",
             description: "Salary",
             amount: money(420_000),
-            date: Date(timeIntervalSince1970: 1_785_600_000),
+            date: calendarDay("2026-08-01"),
             type: .income,
             entityName: "Employer",
             tags: []
@@ -48,7 +48,7 @@ extension Fixtures {
             id: "txn-opal",
             description: "Opal top up",
             amount: money(-4_000),
-            date: Date(timeIntervalSince1970: 1_785_500_000),
+            date: calendarDay("2026-07-31"),
             type: .purchase,
             entityName: nil,
             tags: ["transport", "recurring"]
@@ -57,7 +57,7 @@ extension Fixtures {
             id: "txn-kmart-refund",
             description: "Kmart Broadway",
             amount: money(2_100),
-            date: Date(timeIntervalSince1970: 1_785_400_000),
+            date: calendarDay("2026-07-30"),
             type: .refund,
             entityName: "Kmart",
             tags: ["home"]
@@ -66,12 +66,19 @@ extension Fixtures {
             id: "txn-council-rates",
             description: "Council rates",
             amount: money(-46_150),
-            date: Date(timeIntervalSince1970: 1_785_300_000),
+            date: calendarDay("2026-07-29"),
             type: .tax,
             entityName: "City of Sydney",
             tags: ["housing"]
         ),
     ]
+
+    private static func calendarDay(_ value: String) -> CalendarDay {
+        guard let day = CalendarDay(iso8601: value) else {
+            preconditionFailure("Invalid transaction fixture day")
+        }
+        return day
+    }
 
     /// The fuller record behind ``transactionRows``' first row, as a fetch
     /// returns it after the tap.
@@ -79,7 +86,7 @@ extension Fixtures {
         id: transactionRows[0].id,
         description: transactionRows[0].description,
         amount: transactionRows[0].amount,
-        date: transactionRows[0].date,
+        date: Date(timeIntervalSince1970: 1_786_000_000),
         type: transactionRows[0].type,
         account: "Everyday",
         entityName: transactionRows[0].entityName,

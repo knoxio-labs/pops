@@ -9,14 +9,22 @@ import Testing
 /// transaction type an older build has never heard of.
 @Suite("BFMTransactionsRepository mapping")
 internal struct TransactionsMappingTests {
-    private func page(_ json: String) async throws -> TransactionPage {
+    private func page(
+        _ json: String,
+        timeZone: TimeZone = TransactionsWire.timeZone
+    ) async throws -> TransactionPage {
         try await BFMTransactionsRepository
-            .stubbed(StubTransport(status: .ok, json: json))
+            .stubbed(StubTransport(status: .ok, json: json), timeZone: timeZone)
             .transactions(after: nil)
     }
 
-    private func onlyRow(_ json: String) async throws -> Transaction {
-        try #require(try await page(TransactionsWire.page(json)).transactions.first)
+    private func onlyRow(
+        _ json: String,
+        timeZone: TimeZone = TransactionsWire.timeZone
+    ) async throws -> Transaction {
+        try #require(
+            try await page(TransactionsWire.page(json), timeZone: timeZone).transactions.first
+        )
     }
 
     @Test("a row becomes a transaction in the app's own vocabulary")
@@ -26,7 +34,7 @@ internal struct TransactionsMappingTests {
         #expect(transaction.id == "txn-1")
         #expect(transaction.description == "Coffee")
         #expect(transaction.amount == MoneyAmount(minorUnits: 1999, currencyCode: "AUD"))
-        #expect(transaction.date == (try TransactionsWire.midnight(year: 2026, month: 3, day: 5)))
+        #expect(transaction.date == (try #require(CalendarDay(year: 2026, month: 3, day: 5))))
         #expect(transaction.type == .purchase)
         #expect(transaction.entityName == "Cafe")
         #expect(transaction.tags == ["food"])
@@ -113,14 +121,29 @@ internal struct TransactionsMappingTests {
         #expect(try await onlyRow(json).entityName == nil)
     }
 
-    /// Date-only, read in the device's zone so the day the server named is the
-    /// day the row shows. Parsed in UTC it would be 11 hours early here, which
-    /// renders as the same date in Sydney and the previous one in Los Angeles.
-    @Test("a date-only value lands on midnight in the reader's own zone")
-    func dateIsReadInTheGivenZone() async throws {
-        let transaction = try await onlyRow(
-            TransactionsWire.row(amountMinorUnits: 100, date: "2026-01-01"))
+    @Test("a date-only row keeps its day in opposite time zones")
+    func dateIsIndependentOfTimeZone() async throws {
+        let sydney = try await onlyRow(
+            TransactionsWire.row(amountMinorUnits: 100, date: "2026-01-01"),
+            timeZone: try #require(TimeZone(identifier: "Australia/Sydney"))
+        )
+        let losAngeles = try await onlyRow(
+            TransactionsWire.row(amountMinorUnits: 100, date: "2026-01-01"),
+            timeZone: try #require(TimeZone(identifier: "America/Los_Angeles"))
+        )
 
-        #expect(transaction.date == (try TransactionsWire.midnight(year: 2026, month: 1, day: 1)))
+        let expected = try #require(CalendarDay(year: 2026, month: 1, day: 1))
+        #expect(sydney.date == expected)
+        #expect(losAngeles.date == expected)
+    }
+
+    @Test("a non-calendar wire date fails the whole page")
+    func invalidCalendarDateFailsMapping() async {
+        await #expect(throws: RepositoryError.contractMismatch) {
+            try await page(
+                TransactionsWire.page(
+                    TransactionsWire.row(amountMinorUnits: 100, date: "2026-02-30"))
+            )
+        }
     }
 }

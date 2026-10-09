@@ -39,7 +39,7 @@ internal struct AccountRecentTransactionsView: View {
     private func row(_ transaction: AppCore.Transaction) -> some View {
         PopsRow(
             title: transaction.description,
-            subtitle: transaction.date.formatted(date: .abbreviated, time: .omitted)
+            subtitle: transaction.date.formatted()
         ) {
             Text(transaction.amount.formatted())
                 .font(.popsMonospaced)

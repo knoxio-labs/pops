@@ -19,10 +19,8 @@ public struct BFMTransactionsRepository: TransactionsRepository {
 
     /// - Parameters:
     ///   - client: Already carrying whatever authenticates a `/mobile/*` call.
-    ///   - timeZone: The zone a date-only value is read in. It is the device's
-    ///     own because that is the zone the row is later formatted back in, and
-    ///     those two have to agree or a transaction dated the 5th renders as
-    ///     the 4th for everybody west of UTC. Injected so a test can pin it.
+    ///   - timeZone: The zone used to map date-only transaction-detail values.
+    ///     List rows use ``CalendarDay`` and do not depend on a time zone.
     public init(
         client: BFMHTTPClient,
         timeZone: @escaping @Sendable () -> TimeZone = { .autoupdatingCurrent }
@@ -211,9 +209,9 @@ extension BFMTransactionsRepository {
     /// carrying this build. `currency` is a plain `Swift.String` for the same
     /// reason.
     private func row(from wire: ListTransactionRow) throws -> Transaction {
-        guard
-            let date = Self.day(from: wire.date, in: timeZone())
-        else { throw RepositoryError.contractMismatch }
+        guard let date = CalendarDay(iso8601: wire.date) else {
+            throw RepositoryError.contractMismatch
+        }
 
         return Transaction(
             id: wire.id,

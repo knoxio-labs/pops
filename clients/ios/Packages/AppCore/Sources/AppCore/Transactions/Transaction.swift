@@ -8,16 +8,27 @@ public struct Transaction: Hashable, Sendable, Identifiable {
     public let id: String
     public let description: String
     public let amount: MoneyAmount
-    public let date: Date
+    /// The Gregorian calendar day supplied by finance, without a time-zone anchor.
+    public let date: CalendarDay
     public let type: TransactionType
     public let entityName: String?
     public let tags: [String]
 
+    /// Creates a transaction row from values mapped by an AppCore repository.
+    ///
+    /// - Parameters:
+    ///   - id: Stable transaction identifier.
+    ///   - description: The transaction description supplied by finance.
+    ///   - amount: The amount and currency supplied by finance.
+    ///   - date: The Gregorian calendar day supplied by finance.
+    ///   - type: The transaction type supplied by finance.
+    ///   - entityName: The optional entity associated with the transaction.
+    ///   - tags: The tags supplied by finance.
     public init(
         id: String,
         description: String,
         amount: MoneyAmount,
-        date: Date,
+        date: CalendarDay,
         type: TransactionType,
         entityName: String?,
         tags: [String]

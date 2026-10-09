@@ -79,23 +79,23 @@ internal enum TransactionsWire {
 }
 
 extension BFMTransactionsRepository {
-    /// A repository over a stubbed transport, in the one time zone every date
-    /// assertion in these suites is written against.
-    internal static func stubbed(_ transport: StubTransport) throws -> BFMTransactionsRepository {
+    /// A repository over a stubbed transport with a pinned detail-date time zone.
+    internal static func stubbed(
+        _ transport: StubTransport,
+        timeZone: TimeZone = TransactionsWire.timeZone
+    ) throws -> BFMTransactionsRepository {
         BFMTransactionsRepository(
             client: BFMHTTPClient(
                 baseURL: try #require(URL(string: "https://bfm.example")),
                 transport: transport
             ),
-            timeZone: { TransactionsWire.timeZone }
+            timeZone: { timeZone }
         )
     }
 }
 
 extension TransactionsWire {
-    /// Deliberately not UTC. A date-only value read in the wrong zone lands on
-    /// the right instant only when the offset is zero, so a suite pinned to UTC
-    /// would pass against a repository that ignored the zone entirely.
+    /// Deliberately not UTC so detail-date assertions prove the injected zone is used.
     internal static let timeZone = TimeZone(identifier: "Australia/Sydney") ?? .gmt
 
     /// Midnight on the given day, in that zone.
