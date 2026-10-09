@@ -544,6 +544,15 @@ jobs:
         working-directory: .
         run: pnpm install --frozen-lockfile --filter "@pops/bfm..." --filter "@pops/inventory..."
 
+      - name: Create a disposable simulator for Maestro
+        if: github.event_name == 'merge_group' || inputs['full-validation'] == true
+        run: |
+          set -euo pipefail
+          simulator_udid="$(xcrun simctl create "POPS-E2E-disposable-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+            com.apple.CoreSimulator.SimDeviceType.iPhone-17 \
+            com.apple.CoreSimulator.SimRuntime.iOS-27-0)"
+          echo "POPS_IOS_E2E_SIMULATOR_UDID=$simulator_udid" >> "$GITHUB_ENV"
+
       # Last, because it is the only step here that depends on every earlier
       # one: it installs the products `build:for-testing` wrote and drives the
       # simulator `test` booted. Its own task rebuilds when those are missing,

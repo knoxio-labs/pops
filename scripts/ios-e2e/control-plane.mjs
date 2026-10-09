@@ -50,7 +50,11 @@
 import { createServer } from 'node:http';
 
 import { deviceIdFrom, mintAgedAccessToken } from './aged-access-token.mjs';
+import { handlePairingClaim, handlePairingCompletion } from './pairing-handoff.mjs';
 import { boundAddress } from './server-address.mjs';
+import { isSimulatorIdentifier } from './simulator-pairing.mjs';
+
+/** @typedef {ReturnType<typeof import('./pairing-handoff.mjs').createPairingHandoff>} PairingHandoff */
 
 /** Not a path any BFM route lives under, which is what keeps the two apart. */
 const CONTROL_PREFIX = '/__e2e/';
@@ -61,6 +65,7 @@ const CONTROL_PREFIX = '/__e2e/';
  * switch here, because it is a sequence of real calls to the pillar.
  */
 const USER_DEFINED_TYPE_PATH = '/__e2e/inventory/user-defined-type';
+const PAIRING_STATUS_PATH = '/__e2e/pair/status';
 
 /** The only prefix that carries a bearer token — `AuthenticatingMiddleware` agrees. */
 const AUTHENTICATED_PREFIX = '/mobile/';
@@ -112,6 +117,11 @@ function forwardable(name) {
  */
 function isOriginForm(target) {
   return typeof target === 'string' && target.startsWith('/') && !target.startsWith('//');
+}
+
+/** @param {unknown} value @returns {value is Record<string, unknown>} */
+function isRecord(value) {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 /**
@@ -207,6 +217,9 @@ function agedAuthorization(header, secret) {
  *     isSyncOutage: () => boolean,
  *     publishUserDefinedType: () => Promise<Record<string, unknown>>,
  *   },
+ *   simulatorDeviceId?: string,
+ *   pairingHandoff?: PairingHandoff,
+ *   pairSimulator?: (options: { deviceId: string, pairingBaseUrl: string, brokerUrl: string }) => Promise<number>,
  *   host?: string,
  * }} options
  * @returns {Promise<{ url: string, port: number, state: () => Record<string, unknown>, close: () => Promise<void> }>}
@@ -217,6 +230,9 @@ export async function startControlPlane({
   upstream,
   purchases,
   inventory,
+  simulatorDeviceId,
+  pairingHandoff,
+  pairSimulator,
   host = '127.0.0.1',
 }) {
   /**
@@ -262,6 +278,7 @@ export async function startControlPlane({
       counters.bootstrapFailures = 0;
       bootstrapFailureArmed = false;
       bootstrapOutage = false;
+      pairingHandoff?.reset();
       upstream.setFinanceOutage(false);
       upstream.setFinanceOpenApiUnreachable(false);
       upstream.setFinanceContractMismatch(false);
@@ -382,6 +399,8 @@ export async function startControlPlane({
           'POST /__e2e/inventory/sync-down',
           'POST /__e2e/inventory/sync-up',
           `POST ${USER_DEFINED_TYPE_PATH}`,
+          'POST /__e2e/pair',
+          'POST /__e2e/pair/claim',
           'POST /__e2e/reset',
           'GET /__e2e/state',
         ],
@@ -438,7 +457,11 @@ export async function startControlPlane({
      * @param {Record<string, unknown>} body
      */
     const json = (status, body) => {
-      response.writeHead(status, { 'content-type': 'application/json' });
+      response.writeHead(status, {
+        'cache-control': 'no-store',
+        'content-type': 'application/json',
+        pragma: 'no-cache',
+      });
       response.end(JSON.stringify(body));
     };
 
@@ -451,6 +474,157 @@ export async function startControlPlane({
     }
 
     const target = new URL(request.url, bfmBaseUrl);
+
+    if (target.pathname === '/__e2e/pair/claim' || target.pathname === '/__e2e/pair/complete') {
+      if (pairingHandoff === undefined || host !== '127.0.0.1') {
+        return json(503, { message: 'ios-e2e pairing handoff is unavailable.' });
+      }
+      const handle =
+        target.pathname === '/__e2e/pair/claim' ? handlePairingClaim : handlePairingCompletion;
+      void handle(request, response, pairingHandoff).then((handled) => {
+        if (!handled && !response.writableEnded) {
+          json(400, { message: 'ios-e2e pairing handoff request is invalid.' });
+        }
+      });
+      return;
+    }
+
+    if (request.method === 'POST' && target.pathname === '/__e2e/pair') {
+      void (async () => {
+        if (
+          host !== '127.0.0.1' ||
+          pairSimulator === undefined ||
+          simulatorDeviceId === undefined ||
+          pairingHandoff === undefined
+        ) {
+          json(503, { message: 'ios-e2e native pairing is unavailable.' });
+          return;
+        }
+
+        let rawBody;
+        try {
+          rawBody = await readBody(request);
+        } catch {
+          json(400, { message: 'ios-e2e native pairing request is invalid.' });
+          return;
+        }
+        if (rawBody.byteLength > 1024) {
+          json(400, { message: 'ios-e2e native pairing request is invalid.' });
+          return;
+        }
+
+        /** @type {unknown} */
+        let body;
+        try {
+          body = JSON.parse(rawBody.toString('utf8'));
+        } catch {
+          json(400, { message: 'ios-e2e native pairing request is invalid.' });
+          return;
+        }
+        if (
+          !isRecord(body) ||
+          typeof body['deviceId'] !== 'string' ||
+          !isSimulatorIdentifier(body['deviceId']) ||
+          body['deviceId'] !== simulatorDeviceId ||
+          typeof body['pairingBaseUrl'] !== 'string'
+        ) {
+          json(400, { message: 'ios-e2e native pairing request is invalid.' });
+          return;
+        }
+
+        /** @type {URL} */
+        let pairingBaseUrl;
+        try {
+          pairingBaseUrl = new URL(body['pairingBaseUrl']);
+        } catch {
+          json(400, { message: 'ios-e2e native pairing request is invalid.' });
+          return;
+        }
+
+        const allowedOrigins = new Set([new URL(bfmBaseUrl).origin, controlUrl]);
+        if (
+          !allowedOrigins.has(pairingBaseUrl.origin) ||
+          pairingBaseUrl.pathname !== '/' ||
+          pairingBaseUrl.search !== '' ||
+          pairingBaseUrl.hash !== '' ||
+          pairingBaseUrl.username !== '' ||
+          pairingBaseUrl.password !== ''
+        ) {
+          json(400, { message: 'ios-e2e native pairing request is invalid.' });
+          return;
+        }
+
+        let exitCode;
+        try {
+          exitCode = await pairSimulator({
+            deviceId: body['deviceId'],
+            pairingBaseUrl: pairingBaseUrl.origin,
+            brokerUrl: controlUrl,
+          });
+        } catch {
+          json(502, { message: 'ios-e2e native pairing failed; issuance status is unknown.' });
+          return;
+        }
+        if (exitCode !== 0) {
+          json(502, { message: 'ios-e2e native pairing link delivery failed.' });
+          return;
+        }
+
+        json(202, { triggerDispatched: true });
+      })();
+      return;
+    }
+
+    if (request.method === 'POST' && target.pathname === PAIRING_STATUS_PATH) {
+      void (async () => {
+        if (
+          host !== '127.0.0.1' ||
+          simulatorDeviceId === undefined ||
+          pairingHandoff === undefined
+        ) {
+          json(503, { message: 'ios-e2e native pairing is unavailable.' });
+          return;
+        }
+
+        let rawBody;
+        try {
+          rawBody = await readBody(request);
+        } catch {
+          json(400, { message: 'ios-e2e native pairing status request is invalid.' });
+          return;
+        }
+        if (rawBody.byteLength > 1024) {
+          json(400, { message: 'ios-e2e native pairing status request is invalid.' });
+          return;
+        }
+
+        /** @type {unknown} */
+        let body;
+        try {
+          body = JSON.parse(rawBody.toString('utf8'));
+        } catch {
+          json(400, { message: 'ios-e2e native pairing status request is invalid.' });
+          return;
+        }
+        if (
+          !isRecord(body) ||
+          Object.keys(body).length !== 1 ||
+          body['deviceId'] !== simulatorDeviceId
+        ) {
+          json(400, { message: 'ios-e2e native pairing status request is invalid.' });
+          return;
+        }
+
+        if (!(await pairingHandoff.waitForPairing())) {
+          pairingHandoff.reset();
+          json(502, { message: 'ios-e2e simulator did not store a session for this BFM.' });
+          return;
+        }
+
+        json(200, { paired: true });
+      })();
+      return;
+    }
 
     if (request.method === 'POST' && target.pathname === USER_DEFINED_TYPE_PATH) {
       void inventory
@@ -494,8 +668,9 @@ export async function startControlPlane({
   await listening;
 
   const { port } = boundAddress(server, 'ios-e2e control plane');
+  const controlUrl = `http://${host}:${port}`;
   return {
-    url: `http://${host}:${port}`,
+    url: controlUrl,
     port,
     state,
     // Connections destroyed for the reason `upstream-stub.mjs` gives: the

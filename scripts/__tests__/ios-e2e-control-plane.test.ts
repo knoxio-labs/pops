@@ -2,13 +2,15 @@ import { createHmac } from 'node:crypto';
 import { createServer, type IncomingMessage, type Server } from 'node:http';
 import { connect } from 'node:net';
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { deviceIdFrom, mintAgedAccessToken } from '../ios-e2e/aged-access-token.mjs';
 import { startControlPlane } from '../ios-e2e/control-plane.mjs';
+import { createPairingHandoff } from '../ios-e2e/pairing-handoff.mjs';
 import { startPurchasesStub } from '../ios-e2e/purchases-stub.mjs';
 
 const SECRET = 'ios-e2e-access-token-secret-not-a-real-key';
+const SIMULATOR_ID = '11111111-1111-4111-8111-111111111111';
 
 /** The claims a bfm access token carries, as this test needs to read them. */
 interface Claims {
@@ -123,6 +125,12 @@ interface Seen {
   body: string;
 }
 
+interface PairingDeliveryRequest {
+  deviceId: string;
+  pairingBaseUrl: string;
+  brokerUrl: string;
+}
+
 describe('the control plane', () => {
   let bfm: Server;
   let seen: Seen[];
@@ -133,6 +141,8 @@ describe('the control plane', () => {
   let inventoryReachable: boolean;
   let inventorySyncOutage: boolean;
   let publishUserDefinedType: () => Promise<Record<string, unknown>>;
+  let pairingDelivery: (options: PairingDeliveryRequest) => Promise<number>;
+  let pairingHandoff: ReturnType<typeof createPairingHandoff>;
   let control: Awaited<ReturnType<typeof startControlPlane>>;
 
   beforeEach(async () => {
@@ -144,6 +154,8 @@ describe('the control plane', () => {
     inventoryReachable = false;
     inventorySyncOutage = false;
     publishUserDefinedType = () => Promise.resolve({ typeId: 'type-1', revision: 2 });
+    pairingDelivery = async () => 1;
+    pairingHandoff = createPairingHandoff({ deviceId: SIMULATOR_ID });
 
     bfm = createServer((request: IncomingMessage, response) => {
       const chunks: Buffer[] = [];
@@ -182,6 +194,9 @@ describe('the control plane', () => {
         isFinanceContractMismatch: () => contractMismatch,
       },
       purchases,
+      simulatorDeviceId: SIMULATOR_ID,
+      pairingHandoff,
+      pairSimulator: (options) => pairingDelivery(options),
       inventory: {
         setReachable: (active: boolean) => {
           inventoryReachable = active;
@@ -206,6 +221,265 @@ describe('the control plane', () => {
   const arm = () => call('/__e2e/access-token/expire-next', { method: 'POST' });
   const bearer = (deviceId: string) =>
     `Bearer ${mintAgedAccessToken({ deviceId, secret: SECRET, expiredForSeconds: 1 })}`;
+
+  it('acknowledges trigger dispatch separately from stored-session completion', async () => {
+    const deviceId = SIMULATOR_ID;
+    const code = '7QK4-9M2X-P3ND';
+    let generation = 0;
+    const deliver = vi.fn(async ({ deviceId, pairingBaseUrl }: PairingDeliveryRequest) => {
+      generation = pairingHandoff.offer({
+        deviceId,
+        pairingBaseUrl,
+        code,
+        expiresAt: new Date(Date.now() + 60_000).toISOString(),
+      });
+      return 0;
+    });
+    pairingDelivery = deliver;
+
+    const response = await call('/__e2e/pair', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ deviceId, pairingBaseUrl: control.url }),
+    });
+    const body = await response.text();
+
+    expect(response.status).toBe(202);
+    expect(body).toBe('{"triggerDispatched":true}');
+    expect(body).not.toContain(code);
+    expect(pairingHandoff.readCounts()).toEqual({ claims: 0, completions: 0, paired: 0 });
+    expect(deliver).toHaveBeenCalledWith({
+      deviceId,
+      pairingBaseUrl: control.url,
+      brokerUrl: control.url,
+    });
+
+    const status = call('/__e2e/pair/status', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ deviceId }),
+    });
+    const metadata = { deviceId, instanceId: pairingHandoff.instanceId, generation };
+    const claim = await call('/__e2e/pair/claim', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(metadata),
+    });
+    expect(claim.status).toBe(200);
+    expect(await claim.text()).toContain(code);
+    const completion = await call('/__e2e/pair/complete', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ ...metadata, paired: true }),
+    });
+    expect(completion.status).toBe(204);
+    const statusResponse = await status;
+    const statusBody = await statusResponse.text();
+
+    expect(statusResponse.status).toBe(200);
+    expect(statusBody).toBe('{"paired":true}');
+    expect(statusBody).not.toContain(code);
+    expect(seen).toEqual([]);
+  });
+
+  it('does not report success when the app fails to store its session', async () => {
+    const deviceId = SIMULATOR_ID;
+    const code = '7QK4-9M2X-P3ND';
+    let generation = 0;
+    pairingDelivery = async ({ deviceId, pairingBaseUrl }: PairingDeliveryRequest) => {
+      generation = pairingHandoff.offer({
+        deviceId,
+        pairingBaseUrl,
+        code,
+        expiresAt: new Date(Date.now() + 60_000).toISOString(),
+      });
+      return 0;
+    };
+
+    const dispatched = await call('/__e2e/pair', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ deviceId, pairingBaseUrl: control.url }),
+    });
+    expect(dispatched.status).toBe(202);
+
+    const metadata = { deviceId, instanceId: pairingHandoff.instanceId, generation };
+    const claim = await call('/__e2e/pair/claim', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(metadata),
+    });
+    expect(claim.status).toBe(200);
+    const completion = await call('/__e2e/pair/complete', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ ...metadata, paired: false }),
+    });
+    expect(completion.status).toBe(204);
+    const response = await call('/__e2e/pair/status', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ deviceId }),
+    });
+    const body = await response.text();
+
+    expect(response.status).toBe(502);
+    expect(body).toBe('{"message":"ios-e2e simulator did not store a session for this BFM."}');
+    expect(body).not.toContain(code);
+  });
+
+  it('rejects a pairing-status request for any simulator other than the selected one', async () => {
+    const response = await call('/__e2e/pair/status', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ deviceId: '22222222-2222-4222-8222-222222222222' }),
+    });
+
+    expect(response.status).toBe(400);
+    expect(await response.text()).toBe(
+      '{"message":"ios-e2e native pairing status request is invalid."}'
+    );
+  });
+
+  it('claims one pairing code only for the exact simulator and current generation without forwarding it', async () => {
+    const code = '7QK4-9M2X-P3ND';
+    const generation = pairingHandoff.offer({
+      deviceId: SIMULATOR_ID,
+      pairingBaseUrl: control.url,
+      code,
+      expiresAt: new Date(Date.now() + 60_000).toISOString(),
+    });
+
+    const wrongDevice = await call('/__e2e/pair/claim', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        deviceId: '22222222-2222-4222-8222-222222222222',
+        instanceId: pairingHandoff.instanceId,
+        generation,
+      }),
+    });
+    const staleGeneration = await call('/__e2e/pair/claim', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        deviceId: SIMULATOR_ID,
+        instanceId: pairingHandoff.instanceId,
+        generation: generation + 1,
+      }),
+    });
+    const accepted = await call('/__e2e/pair/claim', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        deviceId: SIMULATOR_ID,
+        instanceId: pairingHandoff.instanceId,
+        generation,
+      }),
+    });
+    const acceptedBody = await accepted.text();
+    const replay = await call('/__e2e/pair/claim', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        deviceId: SIMULATOR_ID,
+        instanceId: pairingHandoff.instanceId,
+        generation,
+      }),
+    });
+
+    expect(wrongDevice.status).toBe(409);
+    expect(await wrongDevice.text()).not.toContain(code);
+    expect(staleGeneration.status).toBe(409);
+    expect(await staleGeneration.text()).not.toContain(code);
+    expect(accepted.status).toBe(200);
+    expect(accepted.headers.get('cache-control')).toBe('no-store');
+    expect(acceptedBody).toContain(code);
+    expect(replay.status).toBe(409);
+    expect(await replay.text()).not.toContain(code);
+    expect(seen).toEqual([]);
+  });
+
+  it('rejects malformed, mismatched, or non-local pairing requests without reflecting values', async () => {
+    const secret = 'SYNTHETIC-PAIR-CODE';
+    const deliver = vi.fn(async () => 0);
+    pairingDelivery = deliver;
+    const requests = [
+      'not-json',
+      JSON.stringify({ deviceId: 'invalid', pairingBaseUrl: control.url }),
+      JSON.stringify({
+        deviceId: '------------------------------------',
+        pairingBaseUrl: control.url,
+      }),
+      JSON.stringify({
+        deviceId: '22222222-2222-4222-8222-222222222222',
+        pairingBaseUrl: control.url,
+      }),
+      JSON.stringify({
+        deviceId: SIMULATOR_ID,
+        pairingBaseUrl: `https://outside.example/devices/pair?code=${secret}`,
+      }),
+    ];
+
+    for (const body of requests) {
+      const response = await call('/__e2e/pair', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body,
+      });
+      const message = await response.text();
+
+      expect(response.status).toBe(400);
+      expect(message).toBe('{"message":"ios-e2e native pairing request is invalid."}');
+      expect(message).not.toContain(secret);
+    }
+
+    expect(deliver).not.toHaveBeenCalled();
+    expect(seen).toEqual([]);
+  });
+
+  it('does not return pairing material when issuance fails', async () => {
+    const secret = 'SYNTHETIC-PAIR-CODE';
+    pairingDelivery = async () => {
+      throw new Error(`simctl failure included ${secret}`);
+    };
+
+    const response = await call('/__e2e/pair', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        deviceId: SIMULATOR_ID,
+        pairingBaseUrl: control.url,
+      }),
+    });
+    const message = await response.text();
+
+    expect(response.status).toBe(502);
+    expect(message).toBe(
+      '{"message":"ios-e2e native pairing failed; issuance status is unknown."}'
+    );
+    expect(message).not.toContain(secret);
+    expect(seen).toEqual([]);
+  });
+
+  it('reports link-delivery failure without claiming pairing succeeded', async () => {
+    pairingDelivery = async () => 7;
+
+    const response = await call('/__e2e/pair', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        deviceId: SIMULATOR_ID,
+        pairingBaseUrl: control.url,
+      }),
+    });
+
+    expect(response.status).toBe(502);
+    expect(await response.json()).toEqual({
+      message: 'ios-e2e native pairing link delivery failed.',
+    });
+    expect(seen).toEqual([]);
+  });
 
   it('forwards method, path, query and body, and hands the answer back', async () => {
     const answered = await call('/mobile/finance/transactions?cursor=abc', {
@@ -357,6 +631,13 @@ describe('the control plane', () => {
     await call('/mobile/bootstrap', { headers: { authorization: bearer('device-1') } });
     await call('/devices/refresh', { method: 'POST', body: '{}' });
 
+    const pairingGeneration = pairingHandoff.offer({
+      deviceId: SIMULATOR_ID,
+      pairingBaseUrl: control.url,
+      code: '7QK4-9M2X-P3ND',
+      expiresAt: new Date(Date.now() + 60_000).toISOString(),
+    });
+
     expect(await (await call('/__e2e/reset', { method: 'POST' })).json()).toEqual({
       armed: false,
       substitutions: 0,
@@ -373,6 +654,13 @@ describe('the control plane', () => {
       inventoryReachable: false,
       inventorySyncOutage: false,
     });
+    expect(
+      pairingHandoff.claim({
+        deviceId: SIMULATOR_ID,
+        instanceId: pairingHandoff.instanceId,
+        generation: pairingGeneration,
+      })
+    ).toBeNull();
     expect(outage).toBe(false);
     expect(openApiUnreachable).toBe(false);
     expect(contractMismatch).toBe(false);

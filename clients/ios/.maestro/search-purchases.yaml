@@ -7,6 +7,7 @@ name: Search finds a seeded purchase, fails at the pillar and recovers, then ope
 - clearState
 - clearKeychain
 - launchApp
+- runFlow: subflows/dismiss-stale-pairing-open-prompt.yaml
 
 - assertVisible:
     id: 'pairing-code-field'

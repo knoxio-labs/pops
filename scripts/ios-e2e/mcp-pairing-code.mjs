@@ -1,14 +1,11 @@
-#!/usr/bin/env node
 import { randomUUID } from 'node:crypto';
+
 /**
  * Request an iOS pairing code through the POPS MCP gateway.
  *
- * The bridge stays on the host because the simulator flow must not carry the
- * MCP bearer secret. It prints only the pairing code on stdout; diagnostics
- * are deliberately generic so an MCP error body cannot become a secret sink.
+ * The caller stays on the host because neither pairing material nor the MCP
+ * bearer secret belongs in a simulator-facing process.
  */
-import { resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 const MCP_PROTOCOL_VERSION = '2025-06-18';
 const TOOL_NAME = 'bfm.devicePairing.issueCode';
@@ -32,9 +29,7 @@ export class PairingMcpFailure extends Error {
 }
 
 /**
- * Create an isolated, per-run inbound credential for the locally spawned MCP
- * gateway. The explicit empty file setting prevents an inherited mounted-token
- * path from taking precedence over this test-only token.
+ * Creates an isolated inbound credential for the locally spawned MCP gateway.
  *
  * @returns {{ token: string, environment: NodeJS.ProcessEnv }}
  */
@@ -47,6 +42,24 @@ export function createMcpInboundAuth() {
       MCP_INBOUND_TOKEN_FILE: '',
     },
   };
+}
+
+/**
+ * Checks that the local gateway is ready with both credentials and at least one registered tool.
+ *
+ * @param {unknown} value
+ * @returns {boolean}
+ */
+export function isMcpReadyResponse(value) {
+  return (
+    isRecord(value) &&
+    value['status'] === 'ready' &&
+    value['apiKeyConfigured'] === true &&
+    value['inboundAuthConfigured'] === true &&
+    typeof value['tools'] === 'number' &&
+    Number.isSafeInteger(value['tools']) &&
+    value['tools'] > 0
+  );
 }
 
 /**
@@ -84,6 +97,59 @@ export async function callMcpTool({
   arguments: toolArguments,
   fetchImpl = fetch,
 }) {
+  const { body, contentType } = await sendMcpRequest({
+    endpoint,
+    token,
+    method: 'tools/call',
+    params: { name, arguments: toolArguments },
+    fetchImpl,
+  });
+  return parseMcpToolResult(body, contentType);
+}
+
+/**
+ * Checks the authenticated MCP tool list for the pairing-code issuer without calling it.
+ *
+ * @param {{ endpoint: string, token?: string, fetchImpl?: typeof fetch, signal?: AbortSignal }} options
+ * @returns {Promise<boolean>}
+ */
+export async function hasPairingCodeIssuerTool({ endpoint, token, fetchImpl = fetch, signal }) {
+  const { body, contentType } = await sendMcpRequest({
+    endpoint,
+    token,
+    method: 'tools/list',
+    params: {},
+    fetchImpl,
+    signal,
+  });
+  const message = parseJsonRpcMessage(body, contentType);
+  const toolList =
+    isRecord(message) && isRecord(message['result']) ? message['result']['tools'] : null;
+  if (
+    !isRecord(message) ||
+    !isRecord(message['result']) ||
+    message['error'] !== undefined ||
+    !Array.isArray(toolList) ||
+    toolList.some(
+      /** @param {unknown} tool */
+      (tool) => !isRecord(tool) || typeof tool['name'] !== 'string'
+    )
+  ) {
+    throw new PairingMcpFailure('mcp-response');
+  }
+  return toolList.some(
+    /** @param {unknown} tool */
+    (tool) => isRecord(tool) && tool['name'] === TOOL_NAME
+  );
+}
+
+/**
+ * Sends one stateless Streamable HTTP MCP request and reads its private response body.
+ *
+ * @param {{ endpoint: string, token?: string, method: 'tools/call' | 'tools/list', params: Record<string, unknown>, fetchImpl: typeof fetch, signal?: AbortSignal }} options
+ * @returns {Promise<{ body: string, contentType: string | null }>}
+ */
+async function sendMcpRequest({ endpoint, token, method, params, fetchImpl, signal }) {
   const headers = {
     accept: 'application/json, text/event-stream',
     'content-type': 'application/json',
@@ -100,9 +166,10 @@ export async function callMcpTool({
       body: JSON.stringify({
         jsonrpc: '2.0',
         id: 1,
-        method: 'tools/call',
-        params: { name, arguments: toolArguments },
+        method,
+        params,
       }),
+      ...(signal === undefined ? {} : { signal }),
     });
   } catch {
     throw new PairingMcpFailure('mcp-transport');
@@ -115,7 +182,7 @@ export async function callMcpTool({
   } catch {
     throw new PairingMcpFailure('mcp-response');
   }
-  return parseMcpToolResult(body, response.headers.get('content-type'));
+  return { body, contentType: response.headers.get('content-type') };
 }
 
 /**
@@ -222,10 +289,12 @@ function parsePairingToolContent(result) {
 }
 
 /**
+ * Checks the exact response shape the BFM pairing issuers return.
+ *
  * @param {unknown} value
  * @returns {value is PairingCode}
  */
-function isPairingCode(value) {
+export function isPairingCode(value) {
   return (
     isRecord(value) &&
     typeof value['code'] === 'string' &&
@@ -241,26 +310,4 @@ function isPairingCode(value) {
  */
 function isRecord(value) {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-const invokedDirectly =
-  process.argv[1] !== undefined && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
-
-if (invokedDirectly) {
-  const endpoint = process.env['POPS_MCP_URL']?.trim();
-  if (endpoint === undefined || endpoint.length === 0) {
-    process.stderr.write('ios-e2e: POPS_MCP_URL is required for MCP pairing.\n');
-    process.exitCode = 1;
-  } else {
-    try {
-      const pairing = await issuePairingCodeViaMcp({
-        endpoint,
-        token: process.env['MCP_INBOUND_TOKEN'],
-      });
-      process.stdout.write(`${pairing.code}\n`);
-    } catch (error) {
-      process.stderr.write(`${formatPairingMcpFailure(error)}\n`);
-      process.exitCode = 1;
-    }
-  }
 }

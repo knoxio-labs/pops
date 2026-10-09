@@ -97,10 +97,14 @@ test.describe('Shell — app-rail navigation', () => {
       'page'
     );
   });
+});
 
-  test('an unknown route renders the not-found page, not a blank frame', async ({ page }) => {
-    await page.goto('/definitely-not-a-pillar');
+test('an unknown route renders the not-found page, not a blank frame', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await stubShellBoot(page, []);
+  await page.goto('/definitely-not-a-pillar');
 
-    await expect(page.getByRole('heading', { name: /not found|404/i })).toBeVisible();
-  });
+  await expect(page.getByRole('heading', { name: /not found|404/i })).toBeVisible();
+  expect(errors).toHaveLength(0);
 });

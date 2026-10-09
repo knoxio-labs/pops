@@ -22,6 +22,8 @@ internal struct RootView: View {
     @State private var pairingModel: PairingViewModel
     #if DEBUG && targetEnvironment(simulator)
         @State private var pendingSimulatorPairing = false
+        @State private var simulatorPairingHandoff: SimulatorPairingURL.Handoff?
+        @State private var simulatorPairingBaseURL: URL?
     #endif
 
     /// The pillar named by the last `pops` URL this build could not route
@@ -67,11 +69,27 @@ internal struct RootView: View {
             }
             #if DEBUG && targetEnvironment(simulator)
                 .onChange(of: simulatorPairingReady) { _, ready in
-                    guard ready else { return }
+                    guard
+                        ready,
+                        let handoff = simulatorPairingHandoff,
+                        let baseURL = simulatorPairingBaseURL
+                    else { return }
                     pendingSimulatorPairing = false
                     Task {
                         await pairingModel.pair()
+                        let pairedForOrigin: Bool
+                        if case .paired(let device) = composition.shell.session.state {
+                            pairedForOrigin = SimulatorPairingURL.hasSameOrigin(
+                                device.baseURL,
+                                baseURL
+                            )
+                        } else {
+                            pairedForOrigin = false
+                        }
+                        _ = await SimulatorPairingCompletion.send(handoff, paired: pairedForOrigin)
                         pairingModel.codeText = ""
+                        simulatorPairingHandoff = nil
+                        simulatorPairingBaseURL = nil
                     }
                 }
             #endif
@@ -104,8 +122,16 @@ internal struct RootView: View {
             }
             .onOpenURL { url in
                 #if DEBUG && targetEnvironment(simulator)
-                    if SimulatorPairingURL.handle(url, consume: { pairingModel.didScan($0) }) {
-                        pendingSimulatorPairing = true
+                    if SimulatorPairingURL.handle(
+                        url,
+                        consume: { handoff in
+                            guard simulatorPairingHandoff == nil else { return true }
+                            simulatorPairingHandoff = handoff
+                            pendingSimulatorPairing = true
+                            Task { await prepareSimulatorPairing(handoff) }
+                            return true
+                        })
+                    {
                         return
                     }
                 #endif
@@ -141,10 +167,37 @@ internal struct RootView: View {
 
     #if DEBUG && targetEnvironment(simulator)
         private var simulatorPairingReady: Bool {
-            guard pendingSimulatorPairing, case .pairing = composition.shell.destination else {
-                return false
-            }
+            guard
+                pendingSimulatorPairing,
+                simulatorPairingHandoff != nil,
+                simulatorPairingBaseURL != nil,
+                case .pairing = composition.shell.destination
+            else { return false }
             return pairingModel.canSubmit
+        }
+
+        @MainActor
+        private func prepareSimulatorPairing(_ handoff: SimulatorPairingURL.Handoff) async {
+            await composition.shell.restoreSession()
+            guard case .paired = composition.shell.session.state else {
+                guard
+                    let details = await SimulatorPairingURL.claim(handoff),
+                    let baseURL = URL(string: details.pairingBaseUrl),
+                    pairingModel.receivePairingDetails(baseURL: baseURL, code: details.code)
+                else {
+                    clearSimulatorPairingHandoff()
+                    return
+                }
+                simulatorPairingBaseURL = baseURL
+                return
+            }
+            clearSimulatorPairingHandoff()
+        }
+
+        private func clearSimulatorPairingHandoff() {
+            pendingSimulatorPairing = false
+            simulatorPairingHandoff = nil
+            simulatorPairingBaseURL = nil
         }
     #endif
 
@@ -153,10 +206,21 @@ internal struct RootView: View {
         case .launching:
             LaunchView()
         case .pairing(let reason):
-            PairingView(
-                model: pairingModel,
-                returningBecause: reason
-            )
+            #if DEBUG && targetEnvironment(simulator)
+                if pendingSimulatorPairing {
+                    ProgressView("Pairing this simulator")
+                } else {
+                    PairingView(
+                        model: pairingModel,
+                        returningBecause: reason
+                    )
+                }
+            #else
+                PairingView(
+                    model: pairingModel,
+                    returningBecause: reason
+                )
+            #endif
         case .content(let surface):
             ContentView(
                 surface: surface,

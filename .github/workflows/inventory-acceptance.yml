@@ -163,6 +163,14 @@ jobs:
         working-directory: .
         run: pnpm install --frozen-lockfile --filter "@pops/registry..." --filter "@pops/inventory..." --filter "@pops/bfm..." --filter "@pops/mcp..."
 
+      - name: Create a disposable simulator for Maestro
+        run: |
+          set -euo pipefail
+          simulator_udid="$(xcrun simctl create "POPS-E2E-disposable-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+            com.apple.CoreSimulator.SimDeviceType.iPhone-17 \
+            com.apple.CoreSimulator.SimRuntime.iOS-27-0)"
+          echo "POPS_IOS_E2E_SIMULATOR_UDID=$simulator_udid" >> "$GITHUB_ENV"
+
       - name: Run the acceptance suite with the iOS layer
         working-directory: .
         run: |

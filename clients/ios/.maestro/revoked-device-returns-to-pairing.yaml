@@ -4,6 +4,7 @@ name: A device revoked mid-use lands back on pairing, and says why
 - clearState
 - clearKeychain
 - launchApp
+- runFlow: subflows/dismiss-stale-pairing-open-prompt.yaml
 
 - assertVisible:
     id: 'pairing-code-field'

@@ -7,7 +7,7 @@ an unpaired launch:
 
 | Flow                                            | What it proves                                                                                                                                                                                                                                                                                                                             |
 | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `pairing-to-transaction-detail.yaml`            | A pairing code reaches the list, and a row reaches the full record behind it.                                                                                                                                                                                                                                                              |
+| `pairing-to-transaction-detail.yaml`            | The native pairing handoff reaches the list, and a row reaches the full record behind it.                                                                                                                                                                                                                                                  |
 | `expired-session-refreshes-silently.yaml`       | A refused access token is renewed and the request retried, with nothing on screen.                                                                                                                                                                                                                                                         |
 | `revoked-device-returns-to-pairing.yaml`        | A revoked device lands back on pairing, saying which of the two reasons it was.                                                                                                                                                                                                                                                            |
 | `unreachable-transactions-say-so.yaml`          | Transactions that cannot be fetched say so instead of reading as an empty list.                                                                                                                                                                                                                                                            |
@@ -23,51 +23,77 @@ an unpaired launch:
 
 ## Running them
 
-From the **repo root**, one command:
+From the **repo root**, create a disposable simulator and pass its exact ID:
 
 ```bash
-mise run e2e:ios
+simulator=$(xcrun simctl create "POPS-E2E-disposable-local" \
+  com.apple.CoreSimulator.SimDeviceType.iPhone-17 \
+  com.apple.CoreSimulator.SimRuntime.iOS-27-0)
+POPS_IOS_E2E_SIMULATOR_UDID="$simulator" mise run e2e:ios
 ```
 
-That boots a real `@pops/bfm` against a temporary SQLite database, points it at
-a registry-and-finance fixture, starts the control plane the recovery flows
-throw their switches through, builds the app if it needs building, installs it
-on the simulator every other lane uses, and runs each flow against a pairing
-code minted for it over the BFM's own operator route. To exercise the
-production MCP path as well, use:
+The harness rejects the shared iOS test simulator and any non-loopback BFM or
+control-plane URL before it builds the fixture or reaches a pairing endpoint.
+It boots a real `@pops/bfm` against a temporary SQLite database, points it at a
+registry-and-finance fixture, starts the control plane the recovery flows throw
+their switches through, builds the app if it needs building, installs it on the
+selected disposable simulator, and runs each flow with a fresh pairing code
+delivered by the host's private simulator handoff. To exercise the local MCP
+issuer as well, use:
 
 ```bash
-mise run e2e:ios:mcp
+POPS_IOS_E2E_SIMULATOR_UDID="$simulator" mise run e2e:ios:mcp
 ```
 
 That starts a real MCP process with the fixture's narrowly scoped service
-account, asks `bfm.devicePairing.issueCode` for each flow's code, and passes
-only the returned code into Maestro. The bearer used between the host bridge
-and MCP never enters the simulator or a Maestro variable.
+account and asks `bfm.devicePairing.issueCode` for each flow's code. The host
+keeps each code and pairing URL in memory, then opens a broker trigger through
+`simctl` containing only the loopback address, selected simulator ID and public
+broker-instance and generation metadata. The app claims the details in a
+single no-store response and submits them through its real pairing flow.
+Maestro receives only server addresses and the simulator identifier; the
+harness scans new artifacts and that simulator's CoreSimulator logs against
+the issued pairing material before the run completes.
 `scripts/ios-e2e/run.mjs` is that command and carries the reasoning for each
 part of it, including why it runs the pillar with Node rather than Docker and
 why it does not use port 3014.
 
 For a simulator paired against a live BFM, use
 `mise -C clients/ios run e2e:pair:mcp`. It requires the local Debug app to be
-installed and unpaired on the selected simulator. `Pops` alone registers the
-`pops://` scheme. The host requests one code through MCP and opens the existing
-BFM pairing link through a native URL route compiled only for Debug simulator
-builds. The code and link stay out of Maestro variables, its input actions,
-logs and artifacts; the command captures and discards redacted `simctl` output.
-This task only delivers the link. It does not run a Maestro flow or verify that
-the BFM accepted the code.
+installed and unpaired on an explicitly selected disposable simulator via
+`POPS_IOS_E2E_SIMULATOR_UDID`, and requires
+`POPS_IOS_PAIRING_EXPECTED_BFM_ORIGIN` set to the HTTPS origin configured by
+the non-secret `BFM_PUBLIC_BASE_URL` deployment setting. The issuer's pairing
+URL must match that origin, `/devices/pair`, and the single returned code
+before the code is delivered. `Pops` alone registers
+the `pops://` scheme. The host requests one code through MCP and opens a
+non-secret broker trigger through a native URL route compiled only for Debug
+simulator builds. The app claims the code from the loopback broker once, with
+caching and redirects disabled. Debug simulator builds allow ATS local
+networking for this loopback request; device and Release builds carry no such
+exception. This task waits for the app to report a committed session for the
+expected BFM origin, then scans new logs for that exact simulator and fresh
+Maestro artifacts for the issued code and URL. It prints only scan counts and
+never retries an uncertain issuance or pairing; it does not run a Maestro
+flow.
 
-`mise run e2e:ios -- --serve-only` stops after booting: it prints both server
-addresses and a live pairing code so the screens can be driven by hand.
-`mise run e2e:ios:mcp -- --serve-only` does the same through MCP. In either
-case, the code is printed once and is consumed by the first pairing attempt.
+`mise run e2e:ios -- --serve-only` starts the same local fixture without running
+Maestro. It requires the selected disposable simulator to have the unpaired
+Debug app installed, pairs it through the native handoff, prints the two server
+addresses and keeps the fixture running until Ctrl-C.
 
 `mise -C clients/ios run e2e` is the client's half on its own. It takes
-`POPS_BFM_BASE_URL` and `POPS_E2E_CONTROL_URL` and speaks nothing but HTTP to
-either. Both are required rather than one being optional, because a lane that
-quietly drives one flow instead of six reports the same green as a lane that
-drove all of them.
+`POPS_BFM_BASE_URL`, `POPS_E2E_CONTROL_URL` and the exact disposable simulator
+ID, and speaks HTTP to the local loopback control plane. For each flow, the
+host privately issues a code and opens a non-secret broker trigger through a
+Debug-simulator-only `pops://` route. A flow dismisses only a stale “Open in
+Pops Local?” confirmation before checking the unpaired screen, then accepts
+that confirmation only after dispatching its current trigger. The app claims
+the code once and the flow waits for stored-session completion before
+continuing; the pairing screen stays hidden until the handoff finishes so a
+failed handoff cannot capture the code in a screenshot.
+The task rejects missing, malformed, or non-disposable simulator IDs before
+booting or installing the app; the root harness passes the ID it validated.
 
 **The flows are found, not listed.** The task globs `.maestro/*.yaml`, so a new
 flow runs without anything being added anywhere — and an empty glob fails the
@@ -187,31 +213,14 @@ assertion is worth only as much as the positive one in front of it. Every
 `assertNotVisible` here sits behind an `assertVisible` that settles the screen
 first; moving one above it turns it into a line that cannot fail.
 
-**Typing does not wait either, and that is the sharper edge of the same rule.**
-`inputText` is not addressed to a field: it types into whatever holds keyboard
-focus, and `tapOn` returns once the tap has been delivered rather than once the
-tapped field has become first responder. On a loaded machine the keystrokes can
-arrive first, and iOS drops them — both commands report `COMPLETED`, the field
-keeps what it already held, and the flow fails much later on something that
-reads like an unrelated bug. This is not hypothetical: it is what
-`expired-session-refreshes-silently.yaml` failed on in the merge queue, as a
-`transactions-list` that was never going to appear, because the server field
-still held the Debug prefill and pairing had dialled a port nothing was
-listening on.
-
-So the pairing preamble lives in `subflows/enter-the-pairing-details.yaml`,
-where both fields are typed, then both are asserted, and the whole entry is
-retried until both hold what was meant for them. Asserting each field the
-moment it is typed is not enough, and the reason is the same race one step
-along: the tap that moves focus to the second field can miss too, and the
-erase-and-type behind it then lands on the first field — which by then has
-already been asserted and is never looked at again. Checking both at the end of
-an attempt, and re-typing both on the next one, is what keeps the values that
-reach `Pair` the values that were checked. Anything else that types into this
-app should do the same. Maestro's `focused` selector looks like the signal to
-wait on and is not: it is mapped from XCUITest's `hasFocus`, the focus engine's
-notion, which reads false on a SwiftUI `TextField` that is holding the
-keyboard.
+The pairing preamble lives in `subflows/enter-the-pairing-details.yaml`, where
+one `runScript` asks the host control plane to issue and dispatch a private
+pairing handoff, and a later one waits for its completion. The code and pairing
+URL stay in host memory; the simulator argument contains only the loopback
+broker and public instance/generation metadata. `simctl` output is discarded,
+and the app claims the code once over HTTP. The control plane reports dispatch
+separately and reports pairing success only after the app stores credentials
+for the expected BFM origin.
 
 The transaction rows the flows expect come from
 `scripts/ios-e2e/transactions-fixture.mjs`. Purchase rows and month figures

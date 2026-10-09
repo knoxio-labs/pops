@@ -66,6 +66,10 @@ describe('PillarUnavailableRoute', () => {
       expect(fetchPillarHealth).toHaveBeenCalledTimes(1);
     });
 
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'pillarUnavailableRetry' })).toBeEnabled();
+    });
+
     const button = screen.getByRole('button', { name: 'pillarUnavailableRetry' });
     await act(async () => {
       fireEvent.click(button);

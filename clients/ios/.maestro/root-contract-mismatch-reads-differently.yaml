@@ -4,6 +4,7 @@ name: A pillar answering something unreadable reads differently from unavailable
 - clearState
 - clearKeychain
 - launchApp
+- runFlow: subflows/dismiss-stale-pairing-open-prompt.yaml
 
 - assertVisible:
     id: 'pairing-code-field'
