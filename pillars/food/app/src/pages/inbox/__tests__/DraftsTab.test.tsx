@@ -1,8 +1,16 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createInstance } from 'i18next';
-import { useMemo, useState, type ReactElement } from 'react';
+import { useMemo, useState, type ReactElement, type ReactNode } from 'react';
 import { I18nextProvider, initReactI18next } from 'react-i18next';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -30,6 +38,7 @@ vi.mock('../../../food-api/index.js', () => ({
 
 import { DEFAULT_DRAFTS_FILTERS, type DraftsFiltersState } from '../drafts-filters.js';
 import { DraftsTab } from '../DraftsTab.js';
+import { useDraftsTab } from '../useDraftsTab.js';
 
 function makeRow(over: Partial<InboxDraftRow> = {}): InboxDraftRow {
   return {
@@ -77,7 +86,7 @@ function Wrapper({
   children,
   client: providedClient,
 }: {
-  children: ReactElement;
+  children: ReactNode;
   client?: QueryClient;
 }): ReactElement {
   const i18n = useMemo(() => {
@@ -257,20 +266,23 @@ describe('DraftsTab', () => {
       };
     });
 
-    render(
-      <Wrapper>
-        <StatefulHost now={FIXED_NOW} />
-      </Wrapper>
-    );
-    expect(await screen.findByText('Blocked draft 1')).toBeInTheDocument();
+    const { result } = renderHook(() => useDraftsTab({ filters: DEFAULT_DRAFTS_FILTERS }), {
+      wrapper: Wrapper,
+    });
+    await waitFor(() => {
+      expect(result.current.rows).toHaveLength(20);
+    });
 
     for (let pageIndex = 1; pageIndex < 25; pageIndex += 1) {
-      fireEvent.click(await screen.findByRole('button', { name: 'Load more drafts' }));
-      expect(await screen.findByText(`Blocked draft ${pageIndex * 20 + 20}`)).toBeInTheDocument();
+      await act(async () => {
+        result.current.fetchNextPage();
+      });
+      await waitFor(() => {
+        expect(result.current.rows).toHaveLength((pageIndex + 1) * 20);
+      });
     }
 
-    expect(screen.queryByRole('button', { name: 'Load more drafts' })).not.toBeInTheDocument();
-    expect(screen.getAllByTestId('draft-row')).toHaveLength(500);
+    expect(result.current.rows).toHaveLength(500);
     expect(requestBodies).toHaveLength(25);
     expect(requestBodies.map((body) => body.cursor ?? null)).toEqual([
       null,
@@ -341,6 +353,7 @@ describe('DraftsTab', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Load more drafts' }));
     expect(await screen.findByText('Filtered draft two')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Load more drafts' })).not.toBeInTheDocument();
     scrollTo.mockClear();
     await user.selectOptions(screen.getByTestId('drafts-sort'), 'newest');
     expect(await screen.findByText('Sorted draft')).toBeInTheDocument();
