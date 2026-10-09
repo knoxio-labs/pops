@@ -177,6 +177,17 @@ know how a receipt arrived.
 reading them is transcription like any other field. What is absent is
 asking the model to decide that some _item_ line was really a discount.
 
+A reduction printed against one item stays in that line's net amount. It
+does not also enter `discounts`, which is for order-level reductions applied
+after the line amounts. A $5.00 item reduced to $0.00 remains one zero-value
+line and does not reduce the order a second time.
+
+An invoice may also show a combination-package summary followed by priced
+component lines. When those components sum to the package price, report the
+components once and omit the summary row. If the invoice has no component
+breakdown, report the package once. The extra summary is not another
+purchase and must not be balanced with an invented discount.
+
 Money arrives as a string. The model transcribes what is stated and this
 layer parses it, so a malformed amount is a located failure rather than a
 silent zero. Quantity is optional, and absent means the source did not say
@@ -247,9 +258,9 @@ with nothing else coupling them, so a test asserts the prompt names every
 field the schema requires. Adding a field without teaching the model about
 it fails there rather than silently producing extractions that lack it.
 
-Usage, cost and latency go to the ai pillar through `@pops/ai-telemetry`,
-so a drop-zone that quietly becomes expensive shows up where everything
-else does.
+Usage, cost, latency and the provider stop reason go to the ai pillar through
+`@pops/ai-telemetry`, so a drop-zone that quietly becomes expensive shows up
+where everything else does.
 
 ## The endpoint
 

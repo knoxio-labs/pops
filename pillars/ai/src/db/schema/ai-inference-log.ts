@@ -16,6 +16,7 @@ export const aiInferenceLog = sqliteTable(
     cached: integer('cached').notNull().default(0),
     contextId: text('context_id'),
     errorMessage: text('error_message'),
+    stopReason: text('stop_reason'),
     metadata: text('metadata'),
     createdAt: text('created_at').notNull(),
   },

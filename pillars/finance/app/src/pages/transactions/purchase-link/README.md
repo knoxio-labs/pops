@@ -65,9 +65,10 @@ Silence alone would not do, though, because silence is also the answer for a
 transaction no order explains — which is most of a statement. An outage and a
 page nothing was bought on would render as the same empty column. So the
 heading says so: `PurchaseLinkHeader` adds a muted "Unavailable" beside the
-column name, carrying the full caveat as its `title` and as screen-reader-only
-text, and `usePurchaseLinkSummaries` returns `unavailable` alongside the map so
-the heading can know.
+column name, shows the full caveat in a tooltip on pointer hover or keyboard
+focus, and keeps the caveat in the heading's accessible name. The row indicator
+uses the same tooltip interaction for its state hint. `usePurchaseLinkSummaries`
+returns `unavailable` alongside the map so the heading can know.
 
 Three things that shape is chosen against:
 

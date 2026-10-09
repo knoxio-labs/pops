@@ -33,12 +33,21 @@ import {
 import type { AiDb } from '../services/internal.js';
 
 const MIGRATION_PATH = join(__dirname, '../../../migrations/0001_ai_baseline.sql');
+const STOP_REASON_MIGRATION_PATH = join(
+  __dirname,
+  '../../../migrations/0003_add_ai_inference_log_stop_reason.sql'
+);
 
 function freshDb(): AiDb {
   const raw = new Database(':memory:');
   raw.pragma('foreign_keys = ON');
   const sql = readFileSync(MIGRATION_PATH, 'utf8');
   for (const stmt of sql.split('--> statement-breakpoint')) {
+    const trimmed = stmt.trim();
+    if (trimmed.length > 0) raw.exec(trimmed);
+  }
+  const stopReasonMigration = readFileSync(STOP_REASON_MIGRATION_PATH, 'utf8');
+  for (const stmt of stopReasonMigration.split('--> statement-breakpoint')) {
     const trimmed = stmt.trim();
     if (trimmed.length > 0) raw.exec(trimmed);
   }
@@ -92,6 +101,7 @@ describe('createInferenceLog', () => {
     expect(row.domain).toBeNull();
     expect(row.contextId).toBeNull();
     expect(row.errorMessage).toBeNull();
+    expect(row.stopReason).toBeNull();
     expect(row.metadata).toBeNull();
   });
 
@@ -119,6 +129,12 @@ describe('createInferenceLog', () => {
     expect(row.contextId).toBe('ctx_123');
     expect(row.metadata).toBe('{"foo":"bar"}');
   });
+
+  it('persists an optional stop reason on the inference row', () => {
+    const row = createInferenceLog(db, logBase({ stopReason: 'refusal' }));
+
+    expect(row.stopReason).toBe('refusal');
+  });
 });
 
 describe('listInferenceLogs', () => {
@@ -143,6 +159,15 @@ describe('listInferenceLogs', () => {
       '2026-06-02T00:00:00.000Z',
       '2026-06-01T00:00:00.000Z',
     ]);
+  });
+
+  it('returns stop reasons on raw ledger rows', () => {
+    createInferenceLog(
+      db,
+      logBase({ createdAt: '2026-06-04T00:00:00.000Z', stopReason: 'max_tokens' })
+    );
+
+    expect(listInferenceLogs(db, {}, 10, 0)[0]?.stopReason).toBe('max_tokens');
   });
 
   it('honours limit + offset', () => {

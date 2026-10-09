@@ -8,6 +8,7 @@
  * prevents a regression from slipping past lint refactors in the future.
  */
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { TagEditor } from './TagEditor';
@@ -20,6 +21,46 @@ const FACETS = [
 ] as const;
 
 describe('TagEditor', () => {
+  it('shows tag provenance details on keyboard focus', async () => {
+    const user = userEvent.setup();
+    render(
+      <TagEditor
+        currentTags={['Groceries']}
+        availableTags={[]}
+        tagMeta={new Map([['Groceries', { source: 'rule', pattern: 'WOOLWORTHS' }]])}
+        onSave={vi.fn()}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /Edit tags/i }));
+    const marker = screen.getByRole('button', { name: 'Rule' });
+    expect(marker).toHaveClass('min-h-11', 'min-w-11');
+    for (let index = 0; index < 8 && !marker.matches(':focus'); index += 1) {
+      await user.tab();
+    }
+
+    expect(marker).toHaveFocus();
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Rule, Matched "WOOLWORTHS"');
+  });
+
+  it('keeps tag provenance details available on pointer hover', async () => {
+    const user = userEvent.setup();
+    render(
+      <TagEditor
+        currentTags={['Groceries']}
+        availableTags={[]}
+        tagMeta={new Map([['Groceries', { source: 'rule', pattern: 'WOOLWORTHS' }]])}
+        onSave={vi.fn()}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /Edit tags/i }));
+    const marker = screen.getByRole('button', { name: 'Rule' });
+    await user.hover(marker);
+
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Rule, Matched "WOOLWORTHS"');
+  });
+
   it('opens the popover and shows the tag input when the trigger is clicked', () => {
     render(
       <TagEditor

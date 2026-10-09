@@ -1,6 +1,6 @@
 # @pops/ai-telemetry
 
-The client side of cross-pillar AI telemetry. A pillar that calls Claude wraps the call in `callWithLogging` (or `callWithLoggingStream`) and gets usage, cost, latency and errors reported to the `ai` pillar's `POST /ai-usage/record` ingest — fire-and-forget, off the hot path.
+The client side of cross-pillar AI telemetry. A pillar that calls Claude wraps the call in `callWithLogging` (or `callWithLoggingStream`) and gets usage, cost, latency, errors and provider stop reasons reported to the `ai` pillar's `POST /ai-usage/record` ingest — fire-and-forget, off the hot path. Non-streaming callers return `stopReason`; streaming callers provide `extractStopReason` for the captured terminal reason.
 
 The wire shape is `InferenceRecordSchema` in `src/record-schema.ts` — read that file's header.
 

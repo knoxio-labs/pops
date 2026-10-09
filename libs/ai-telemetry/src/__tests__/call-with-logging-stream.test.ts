@@ -49,14 +49,24 @@ describe('callWithLoggingStream', () => {
     ];
     const out = await drain(
       callWithLoggingStream(
-        { ...ctx, stream: () => fromEvents(events), extractUsage },
+        {
+          ...ctx,
+          stream: () => fromEvents(events),
+          extractUsage,
+          extractStopReason: () => 'refusal',
+        },
         { report, lookupPricing: pricing }
       )
     );
     expect(out).toEqual(events);
     await vi.waitFor(() => expect(report).toHaveBeenCalledTimes(1));
     const record = report.mock.calls[0]?.[0];
-    expect(record).toMatchObject({ status: 'success', inputTokens: 10, outputTokens: 5 });
+    expect(record).toMatchObject({
+      status: 'success',
+      inputTokens: 10,
+      outputTokens: 5,
+      stopReason: 'refusal',
+    });
     // (10/1e6)*3 + (5/1e6)*15 = 0.000105
     expect(record?.costUsd).toBeCloseTo(0.000105, 9);
   });

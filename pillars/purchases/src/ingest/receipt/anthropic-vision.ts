@@ -157,6 +157,7 @@ export function createAnthropicVision(): ReceiptVision | null {
                   inputTokens: message.usage.input_tokens,
                   outputTokens: message.usage.output_tokens,
                 },
+                ...(message.stop_reason !== null ? { stopReason: message.stop_reason } : {}),
               };
             },
           },

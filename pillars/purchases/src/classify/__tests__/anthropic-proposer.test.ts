@@ -43,9 +43,15 @@ const BATCH: readonly ProposalCandidate[] = [
   },
 ];
 
-function anthropicMessage(text: string, inputTokens = 100, outputTokens = 20) {
+function anthropicMessage(
+  text: string,
+  inputTokens = 100,
+  outputTokens = 20,
+  stopReason: string = 'end_turn'
+) {
   return {
     content: [{ type: 'text', text }],
+    stop_reason: stopReason,
     usage: { input_tokens: inputTokens, output_tokens: outputTokens },
   };
 }
@@ -152,13 +158,19 @@ describe('propose', () => {
       status: 'success',
       inputTokens: 321,
       outputTokens: 88,
+      stopReason: 'end_turn',
     });
   });
 
   it('returns null when the model responds with no text', async () => {
-    captureReports();
-    createMock.mockResolvedValue({ content: [], usage: { input_tokens: 10, output_tokens: 0 } });
+    const captured = captureReports();
+    createMock.mockResolvedValue({
+      stop_reason: null,
+      content: [],
+      usage: { input_tokens: 10, output_tokens: 0 },
+    });
     expect(await createAnthropicItemKindProposer()?.propose(BATCH)).toBeNull();
+    expect(await captured.nextReport()).not.toHaveProperty('stopReason');
   });
 
   it('reports an error record and rethrows when the API call throws', async () => {

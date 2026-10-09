@@ -21,6 +21,8 @@ export const InferenceRecordSchema = z.object({
   costUsd: z.number().nonnegative().finite(),
   latencyMs: z.number().int().nonnegative(),
   status: z.enum(['success', 'error', 'timeout', 'budget-blocked']),
+  /** Provider-supplied reason the model stopped generating. */
+  stopReason: z.string().min(1).max(128).optional(),
   /** Stored as 0|1 server-side. */
   cached: z.boolean(),
   /** Opaque low-cardinality FK to the originating row; no whitespace (PII guard). */

@@ -5,6 +5,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  captureTelemetryRecord,
   CURRENT_MODEL,
   cutOffMessage,
   HAIKU_MODEL,
@@ -85,6 +86,15 @@ describe('AnthropicGenerationLlm.generate', () => {
       text: '# Doc\n\nhalf a sent',
       outputTruncated: true,
     });
+  });
+
+  it('reports max_tokens when the model cuts off a generation', async () => {
+    const report = captureTelemetryRecord();
+    createMock.mockResolvedValue(cutOffMessage('# Doc\n\nhalf a sent'));
+
+    await new AnthropicGenerationLlm().generate('sys', 'topic');
+
+    expect((await report).stopReason).toBe('max_tokens');
   });
 
   it('reports a refusal as its own outcome, not as empty text', async () => {

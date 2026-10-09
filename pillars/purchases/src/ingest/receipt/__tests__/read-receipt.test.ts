@@ -16,7 +16,14 @@ import { parseAmountCents } from '../../money.js';
 import { ExtractedLineSchema, ExtractedReceiptSchema, parseExtraction } from '../extraction.js';
 import { readReceipt } from '../read-receipt.js';
 import { extractionPrompt, kindOf, MEDIA_TYPES, PROMPT_FIELDS } from '../vision.js';
+import {
+  ikeaCombinationComponentsReading,
+  ikeaCombinationDoubleCountReading,
+  ikeaZeroPriceClickAndCollectReading,
+  ikeaZeroPriceClickAndCollectDoubleDiscountReading,
+} from './__fixtures__/ikea-invoice-readings.js';
 
+import type { ExtractedReceipt } from '../extraction.js';
 import type { ReceiptMediaType, ReceiptPart, ReceiptVision, VisionStop } from '../vision.js';
 
 const IMAGE: ReceiptPart = { mediaType: 'image/jpeg', dataBase64: 'ZmFrZQ==' };
@@ -29,6 +36,19 @@ const saying = (answer: string | null | VisionStop): ReceiptVision => ({
 });
 const failing = (error: unknown): ReceiptVision => ({
   read: () => Promise.reject(error),
+});
+
+const promptConditionedReading = (
+  requirements: readonly string[],
+  corrected: ExtractedReceipt,
+  legacy: ExtractedReceipt
+): ReceiptVision => ({
+  read: async (parts) => {
+    const prompt = extractionPrompt(parts.map(({ mediaType }) => mediaType));
+    return JSON.stringify(
+      requirements.every((requirement) => prompt.includes(requirement)) ? corrected : legacy
+    );
+  },
 });
 
 const GOOD = JSON.stringify({
@@ -173,6 +193,66 @@ describe('what a media type is taken to be', () => {
   });
 });
 
+describe('IKEA invoice readings', () => {
+  it('counts a combination package through its component lines once', async () => {
+    const outcome = await readReceipt(
+      promptConditionedReading(
+        ['components sum to the package price', 'omit the package summary'],
+        ikeaCombinationComponentsReading,
+        ikeaCombinationDoubleCountReading
+      ),
+      [{ mediaType: 'application/pdf', dataBase64: 'ZmFrZQ==' }]
+    );
+
+    expect(outcome.kind).toBe('read');
+    if (outcome.kind !== 'read') return;
+    expect(outcome.extracted.lines.map((line) => line.description)).toEqual([
+      'Synthetic BESTÅ component A',
+      'Synthetic BESTÅ component B',
+    ]);
+    expect(outcome.extracted.discounts).toEqual([]);
+    expect(outcome.gate.lineTotalCents).toBe(43600);
+    expect(outcome.gate.discountCents).toBe(0);
+    expect(
+      outcome.gate.lineTotalCents -
+        outcome.gate.discountCents +
+        outcome.gate.surchargeCents +
+        outcome.gate.shippingCents +
+        (outcome.gate.taxIncluded ? 0 : outcome.gate.taxCents)
+    ).toBe(outcome.gate.totalCents);
+  });
+
+  it('does not count a zero-price item discount again at order level', async () => {
+    const outcome = await readReceipt(
+      promptConditionedReading(
+        [
+          'line-specific reduction already applied',
+          'already reflected in the reported net line amount',
+        ],
+        ikeaZeroPriceClickAndCollectReading,
+        ikeaZeroPriceClickAndCollectDoubleDiscountReading
+      ),
+      [{ mediaType: 'application/pdf', dataBase64: 'ZmFrZQ==' }]
+    );
+
+    expect(outcome.kind).toBe('read');
+    if (outcome.kind !== 'read') return;
+    expect(outcome.extracted.lines.at(-1)).toMatchObject({
+      description: 'Collect at IKEA Store',
+      amount: '$0.00',
+    });
+    expect(outcome.extracted.discounts).toEqual([]);
+    expect(outcome.gate.discountCents).toBe(0);
+    expect(
+      outcome.gate.lineTotalCents -
+        outcome.gate.discountCents +
+        outcome.gate.surchargeCents +
+        outcome.gate.shippingCents +
+        (outcome.gate.taxIncluded ? 0 : outcome.gate.taxCents)
+    ).toBe(outcome.gate.totalCents);
+  });
+});
+
 describe('the prompt', () => {
   it('names every field the schema requires, whatever was uploaded', () => {
     // The prompt and the schema are two statements of one contract, and
@@ -248,6 +328,22 @@ describe('the prompt', () => {
 
     const lines = PROMPT_FIELDS['lines'] ?? '';
     expect(lines).toMatch(/shipping row belongs in "shipping"/u);
+  });
+
+  it('does not count a combination package and its component lines twice', () => {
+    const lines = PROMPT_FIELDS['lines'] ?? '';
+    expect(lines).toMatch(/combination package/iu);
+    expect(lines).toMatch(/components sum to the package price/iu);
+    expect(lines).toMatch(/omit the package summary/iu);
+  });
+
+  it('keeps a line-level discount already reflected in its amount out of order discounts', () => {
+    const amount = PROMPT_FIELDS['amount'] ?? '';
+    const discounts = PROMPT_FIELDS['discounts'] ?? '';
+    expect(amount).toMatch(/net money charged for that line/iu);
+    expect(amount).toMatch(/line-specific reduction/iu);
+    expect(discounts).toMatch(/already reflected in the reported net line amount/iu);
+    expect(discounts).toMatch(/remains one \$0\.00 line and adds nothing here/iu);
   });
 
   it('carries the load-bearing instructions into every kind', () => {

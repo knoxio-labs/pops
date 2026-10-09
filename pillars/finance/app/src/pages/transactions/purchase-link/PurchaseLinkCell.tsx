@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
-import { Badge } from '@pops/ui';
+import { Badge, Tooltip, TooltipContent, TooltipTrigger } from '@pops/ui';
 
 import type { TransactionLinkSummary } from './types';
 
@@ -69,21 +69,25 @@ export function PurchaseLinkCell({
   const combined = summary.purchaseCount > 1;
 
   return (
-    <button
-      type="button"
-      onClick={onOpen}
-      title={t(HINT_KEY[state])}
-      className="flex min-h-11 min-w-11 items-center gap-1 rounded-sm focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2"
-    >
-      <Badge variant={state === 'autoLinked' ? 'outline' : 'secondary'}>
-        {t(LABEL_KEY[state])}
-      </Badge>
-      {combined && (
-        <span className="text-muted-foreground text-xs">
-          {t('transactions.purchaseLink.orders', { count: summary.purchaseCount })}
-        </span>
-      )}
-      <span className="sr-only">{t('transactions.purchaseLink.open')}</span>
-    </button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          onClick={onOpen}
+          className="flex min-h-11 min-w-11 items-center gap-1 rounded-sm focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2"
+        >
+          <Badge variant={state === 'autoLinked' ? 'outline' : 'secondary'}>
+            {t(LABEL_KEY[state])}
+          </Badge>
+          {combined && (
+            <span className="text-muted-foreground text-xs">
+              {t('transactions.purchaseLink.orders', { count: summary.purchaseCount })}
+            </span>
+          )}
+          <span className="sr-only">{t('transactions.purchaseLink.open')}</span>
+        </button>
+      </TooltipTrigger>
+      <TooltipContent>{t(HINT_KEY[state])}</TooltipContent>
+    </Tooltip>
   );
 }

@@ -9,7 +9,7 @@
  *
  * Field → column mapping (no column renames): `cached(bool)→0|1`,
  * `promptVersion→metadata.prompt_version`, `contextId→context_id`,
- * `errorMessage→error_message`. The merged `metadata` JSON is capped
+ * `errorMessage→error_message`, `stopReason→stop_reason`. The merged `metadata` JSON is capped
  * defensively (~4 KB) to block accidental prompt dumping.
  *
  * `domain` is validated to a low-cardinality, whitespace-free token before the
@@ -71,6 +71,7 @@ export function makeIngestHandler(db: AiDb) {
             cached: body.cached ? 1 : 0,
             contextId: body.contextId ?? null,
             errorMessage: body.errorMessage ?? null,
+            stopReason: body.stopReason ?? null,
             metadata: metadataJson,
           });
         } catch (err) {

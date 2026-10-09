@@ -5,7 +5,8 @@ import { Button, TextInput } from '@pops/ui';
 import { describeTag, groupTagsByFacet, type TagCreationIntent } from '../../lib/tags';
 import { FacetHeading, TagChip } from '../tags/TagChip';
 import { TagCreationRow } from '../tags/TagCreationRow';
-import { describeSourceMeta, type SourceMarkerText } from './sourceMeta';
+import { ProvenanceBadge } from './ProvenanceBadge';
+import { describeSourceMeta } from './sourceMeta';
 import { type TagMetaEntry } from './utils';
 
 interface PanelProps {
@@ -24,23 +25,6 @@ interface PanelProps {
   onAddTag: (tag: string) => void;
   onRemoveTag: (tag: string) => void;
   onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
-}
-
-/**
- * The source marker riding alongside a chip whose tag came from `onSuggest`.
- * Secondary to the chip's own hash colour — it never replaces it, only adds
- * the rule/AI/entity provenance next to it.
- */
-function ProvenanceBadge({ icon, visibleText, accessibleText }: SourceMarkerText) {
-  return (
-    <span
-      className="inline-flex items-center gap-0.5 text-2xs uppercase tracking-wide text-muted-foreground"
-      title={accessibleText}
-    >
-      <span aria-hidden="true">{icon}</span>
-      {visibleText}
-    </span>
-  );
 }
 
 function CurrentTags({
