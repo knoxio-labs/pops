@@ -680,6 +680,8 @@
   "inbox.tabs.failed": "Falharam",
   "inbox.inspectorStub": "Inspetor chegará na PRD-135.",
   "inbox.drafts.loading": "Carregando rascunhos…",
+  "inbox.drafts.loadMore": "Carregar mais rascunhos",
+  "inbox.drafts.loadingMore": "Carregando mais rascunhos…",
   "inbox.drafts.error": "Não foi possível carregar os rascunhos. {{message}}",
   "inbox.drafts.empty.none": "A caixa de entrada está vazia. Cole uma URL de receita no diálogo de ingestão para preenchê-la.",
   "inbox.drafts.empty.filtered": "Nenhum rascunho corresponde aos seus filtros.",

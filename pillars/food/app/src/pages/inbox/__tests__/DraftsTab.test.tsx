@@ -1,19 +1,28 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createInstance } from 'i18next';
 import { useMemo, useState, type ReactElement } from 'react';
 import { I18nextProvider, initReactI18next } from 'react-i18next';
 import { MemoryRouter } from 'react-router';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import enAUFood from '../../../locales/en-AU.json';
 
-import type { InboxListResponses } from '../../../food-api/types.gen.js';
+import type { InboxListData, InboxListResponses } from '../../../food-api/types.gen.js';
 
 type InboxDraftRow = InboxListResponses[200]['items'][number];
+type InboxListRequest = Pick<InboxListData, 'body'>;
+type InboxListMockReply =
+  | { data: InboxListResponses[200] }
+  | {
+      error: { code: string; message: string; requestId: string; retryable: boolean };
+      response: { status: number };
+    };
 
-const inboxListMock = vi.hoisted(() => vi.fn());
+const inboxListMock = vi.hoisted(() =>
+  vi.fn<(request: InboxListRequest) => Promise<InboxListMockReply>>()
+);
 
 vi.mock('../../../food-api/index.js', () => ({
   inboxList: inboxListMock,
@@ -46,10 +55,17 @@ function mockList(items: InboxDraftRow[], nextCursor: string | null = null): voi
   inboxListMock.mockResolvedValue({ data: { items, nextCursor } });
 }
 
-function lastBody(): Record<string, unknown> {
+function lastBody(): NonNullable<InboxListRequest['body']> {
   const call = inboxListMock.mock.calls.at(-1);
   if (call === undefined) throw new Error('inboxList was not called');
-  return (call[0] as { body: Record<string, unknown> }).body;
+  const body = call[0].body;
+  if (body === undefined) throw new Error('inboxList body was not provided');
+  return body;
+}
+
+function requestBody(request: InboxListRequest): NonNullable<InboxListRequest['body']> {
+  if (request.body === undefined) throw new Error('inboxList body was not provided');
+  return request.body;
 }
 
 function StatefulHost({ now }: { now: Date }): ReactElement {
@@ -57,7 +73,13 @@ function StatefulHost({ now }: { now: Date }): ReactElement {
   return <DraftsTab filters={filters} onFiltersChange={setFilters} now={now} />;
 }
 
-function Wrapper({ children }: { children: ReactElement }): ReactElement {
+function Wrapper({
+  children,
+  client: providedClient,
+}: {
+  children: ReactElement;
+  client?: QueryClient;
+}): ReactElement {
   const i18n = useMemo(() => {
     const instance = createInstance();
     void instance.use(initReactI18next).init({
@@ -71,8 +93,8 @@ function Wrapper({ children }: { children: ReactElement }): ReactElement {
     return instance;
   }, []);
   const client = useMemo(
-    () => new QueryClient({ defaultOptions: { queries: { retry: false } } }),
-    []
+    () => providedClient ?? new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+    [providedClient]
   );
   return (
     <QueryClientProvider client={client}>
@@ -86,8 +108,14 @@ function Wrapper({ children }: { children: ReactElement }): ReactElement {
 const FIXED_NOW = new Date('2026-06-10T18:00:00Z');
 
 beforeEach(() => {
-  vi.clearAllMocks();
+  vi.resetAllMocks();
+  vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
   mockList([]);
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+  vi.restoreAllMocks();
 });
 
 describe('DraftsTab', () => {
@@ -206,6 +234,207 @@ describe('DraftsTab', () => {
       expect(lastBody().sort).toBe('newest');
     });
   });
+
+  it('traverses 500 blocked drafts in 20-item cursor pages', async () => {
+    const requestBodies: NonNullable<InboxListRequest['body']>[] = [];
+    inboxListMock.mockImplementation(async (request) => {
+      const body = requestBody(request);
+      requestBodies.push(body);
+      const pageIndex = body.cursor === undefined ? 0 : Number(body.cursor.slice('cursor-'.length));
+      const start = pageIndex * 20;
+      const items = Array.from({ length: 20 }, (_, index) =>
+        makeRow({
+          versionId: start + index + 1,
+          title: `Blocked draft ${start + index + 1}`,
+          qualityBand: 'blocked',
+        })
+      );
+      return {
+        data: {
+          items,
+          nextCursor: pageIndex < 24 ? `cursor-${pageIndex + 1}` : null,
+        },
+      };
+    });
+
+    render(
+      <Wrapper>
+        <StatefulHost now={FIXED_NOW} />
+      </Wrapper>
+    );
+    expect(await screen.findByText('Blocked draft 1')).toBeInTheDocument();
+
+    for (let pageIndex = 1; pageIndex < 25; pageIndex += 1) {
+      fireEvent.click(await screen.findByRole('button', { name: 'Load more drafts' }));
+      expect(await screen.findByText(`Blocked draft ${pageIndex * 20 + 20}`)).toBeInTheDocument();
+    }
+
+    expect(screen.queryByRole('button', { name: 'Load more drafts' })).not.toBeInTheDocument();
+    expect(screen.getAllByTestId('draft-row')).toHaveLength(500);
+    expect(requestBodies).toHaveLength(25);
+    expect(requestBodies.map((body) => body.cursor ?? null)).toEqual([
+      null,
+      ...Array.from({ length: 24 }, (_, index) => `cursor-${index + 1}`),
+    ]);
+    expect(requestBodies.every((body) => body.limit === 20)).toBe(true);
+  }, 30_000);
+
+  it('resets pages and scroll position when filters or sort change', async () => {
+    const requestBodies: NonNullable<InboxListRequest['body']>[] = [];
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+    inboxListMock.mockImplementation(async (request) => {
+      const body = requestBody(request);
+      requestBodies.push(body);
+      if (body.sort === 'newest') {
+        return {
+          data: { items: [makeRow({ versionId: 5, title: 'Sorted draft' })], nextCursor: null },
+        };
+      }
+      if (body.kinds?.includes('url-web')) {
+        return body.cursor === undefined
+          ? {
+              data: {
+                items: [makeRow({ versionId: 3, title: 'Filtered draft one' })],
+                nextCursor: 'filtered-cursor',
+              },
+            }
+          : {
+              data: {
+                items: [makeRow({ versionId: 4, title: 'Filtered draft two' })],
+                nextCursor: null,
+              },
+            };
+      }
+      return body.cursor === undefined
+        ? {
+            data: {
+              items: [makeRow({ versionId: 1, title: 'Default draft one' })],
+              nextCursor: 'default-cursor',
+            },
+          }
+        : {
+            data: {
+              items: [makeRow({ versionId: 2, title: 'Default draft two' })],
+              nextCursor: null,
+            },
+          };
+    });
+
+    render(
+      <Wrapper>
+        <StatefulHost now={FIXED_NOW} />
+      </Wrapper>
+    );
+    const user = userEvent.setup();
+    expect(await screen.findByText('Default draft one')).toBeInTheDocument();
+    await user.click(await screen.findByRole('button', { name: 'Load more drafts' }));
+    expect(await screen.findByText('Default draft two')).toBeInTheDocument();
+
+    scrollTo.mockClear();
+    await user.click(screen.getByRole('button', { name: 'Web URL' }));
+    expect(await screen.findByText('Filtered draft one')).toBeInTheDocument();
+    expect(screen.queryByText('Default draft one')).not.toBeInTheDocument();
+    expect(screen.queryByText('Default draft two')).not.toBeInTheDocument();
+    expect(lastBody().cursor).toBeUndefined();
+    expect(lastBody().kinds).toEqual(['url-web']);
+    expect(scrollTo).toHaveBeenLastCalledWith({ top: 0, behavior: 'auto' });
+
+    await user.click(await screen.findByRole('button', { name: 'Load more drafts' }));
+    expect(await screen.findByText('Filtered draft two')).toBeInTheDocument();
+    scrollTo.mockClear();
+    await user.selectOptions(screen.getByTestId('drafts-sort'), 'newest');
+    expect(await screen.findByText('Sorted draft')).toBeInTheDocument();
+    expect(screen.queryByText('Filtered draft one')).not.toBeInTheDocument();
+    expect(screen.queryByText('Filtered draft two')).not.toBeInTheDocument();
+    expect(lastBody().cursor).toBeUndefined();
+    expect(lastBody().sort).toBe('newest');
+    expect(scrollTo).toHaveBeenLastCalledWith({ top: 0, behavior: 'auto' });
+
+    scrollTo.mockClear();
+    await user.click(screen.getByRole('button', { name: 'Clear filters' }));
+    expect(await screen.findByText('Default draft one')).toBeInTheDocument();
+    expect(screen.queryByText('Default draft two')).not.toBeInTheDocument();
+    expect(lastBody().cursor).toBeUndefined();
+    expect(scrollTo).toHaveBeenLastCalledWith({ top: 0, behavior: 'auto' });
+    expect(requestBodies.at(-1)?.limit).toBe(20);
+  });
+
+  it('refreshes every loaded page on the 60-second poll without resetting scroll', async () => {
+    vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
+    vi.useFakeTimers();
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+    const requestBodies: NonNullable<InboxListRequest['body']>[] = [];
+    const responseTitles: string[] = [];
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    let refreshed = false;
+    inboxListMock.mockImplementation(async (request) => {
+      const body = requestBody(request);
+      requestBodies.push(body);
+      const secondPage = body.cursor === 'poll-cursor';
+      const pageNumber = secondPage ? 2 : 1;
+      const title = `${secondPage ? 'Second' : 'First'} ${refreshed ? 'refreshed' : 'initial'}`;
+      responseTitles.push(title);
+      return {
+        data: {
+          items: [
+            makeRow({
+              versionId: pageNumber,
+              title,
+            }),
+          ],
+          nextCursor: secondPage ? null : 'poll-cursor',
+        },
+      };
+    });
+
+    render(
+      <Wrapper client={queryClient}>
+        <StatefulHost now={FIXED_NOW} />
+      </Wrapper>
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(screen.getByText('First initial')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Load more drafts' }));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(screen.getByText('Second initial')).toBeInTheDocument();
+
+    scrollTo.mockClear();
+    refreshed = true;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60_000);
+    });
+    await act(async () => {
+      await Promise.resolve();
+      await vi.advanceTimersByTimeAsync(1);
+    });
+
+    expect(requestBodies).toHaveLength(4);
+    expect(responseTitles).toEqual([
+      'First initial',
+      'Second initial',
+      'First refreshed',
+      'Second refreshed',
+    ]);
+    expect(queryClient?.getQueryCache().getAll()[0]?.state.data).toMatchObject({
+      pages: [
+        { items: [{ title: 'First refreshed' }] },
+        { items: [{ title: 'Second refreshed' }] },
+      ],
+    });
+    expect(screen.getAllByTestId('draft-row').map((row) => row.textContent)).toEqual([
+      expect.stringContaining('First refreshed'),
+      expect.stringContaining('Second refreshed'),
+    ]);
+    expect(requestBodies.slice(2).map((body) => body.cursor ?? null)).toEqual([
+      null,
+      'poll-cursor',
+    ]);
+    expect(scrollTo).not.toHaveBeenCalled();
+  }, 15_000);
 
   it('renders the kind chip as a link with target=_blank for url-* rows', async () => {
     mockList([makeRow({ ingestKind: 'url-web' })]);

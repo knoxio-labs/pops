@@ -3,10 +3,11 @@
  * source of truth; this component receives the decoded filter state and an
  * `onFiltersChange` callback to push updates upward.
  */
-import { type ReactElement } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { type ReactElement, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { ErrorState } from '@pops/ui';
+import { Button, ErrorState } from '@pops/ui';
 
 import { FoodApiError } from '../../food-api-helpers.js';
 import { DraftRow } from './DraftRow.js';
@@ -21,11 +22,24 @@ interface Props {
   now?: Date;
 }
 
+/** Renders the drafts inbox for the current URL-synchronized filters. */
 export function DraftsTab({ filters, onFiltersChange, now }: Props): ReactElement {
   const { t } = useTranslation('food');
-  const { rows, isLoading, isError, error } = useDraftsTab({ filters });
+  const queryClient = useQueryClient();
+  const filtersKey = JSON.stringify(filters);
+  const previousFiltersKey = useRef(filtersKey);
+  const { rows, isLoading, isError, error, hasNextPage, isFetchingNextPage, fetchNextPage } =
+    useDraftsTab({ filters });
   const onClear = () => onFiltersChange(DEFAULT_DRAFTS_FILTERS);
   const filtersChanged = !filtersEqualDefault(filters);
+
+  useEffect(() => {
+    if (previousFiltersKey.current === filtersKey) return;
+    previousFiltersKey.current = filtersKey;
+    queryClient.removeQueries({ queryKey: ['food', 'inbox', 'list'], type: 'inactive' });
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }, [filtersKey, queryClient]);
+
   return (
     <section className="space-y-4" data-testid="drafts-tab">
       <DraftsFilters value={filters} onChange={onFiltersChange} onClear={onClear} t={t} />
@@ -35,13 +49,22 @@ export function DraftsTab({ filters, onFiltersChange, now }: Props): ReactElemen
         <EmptyState filtersChanged={filtersChanged} onClear={onClear} t={t} />
       )}
       {rows.length > 0 && (
-        <ul className="space-y-2">
-          {rows.map((row) => (
-            <li key={row.versionId}>
-              <DraftRow row={row} now={now} t={t} />
-            </li>
-          ))}
-        </ul>
+        <div className="space-y-3">
+          <ul className="space-y-2">
+            {rows.map((row) => (
+              <li key={row.versionId}>
+                <DraftRow row={row} now={now} t={t} />
+              </li>
+            ))}
+          </ul>
+          {hasNextPage && (
+            <div className="flex justify-center pt-2">
+              <Button variant="outline" onClick={fetchNextPage} disabled={isFetchingNextPage}>
+                {isFetchingNextPage ? t('inbox.drafts.loadingMore') : t('inbox.drafts.loadMore')}
+              </Button>
+            </div>
+          )}
+        </div>
       )}
     </section>
   );
