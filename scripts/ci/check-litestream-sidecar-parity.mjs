@@ -17,11 +17,8 @@
  * *its own* config (`./litestream/<id>.yml` at `/etc/litestream.yml`) and
  * *its own* data volume (`pops-<id>-data` at `/data/sqlite`) — not merely a
  * config and a volume. It also checks that the replica-URL env var it reads
- * is named after its own id (`<ID>_LITESTREAM_REPLICA_URL`), with one named
- * exception: `registry-litestream` passes `CORE_LITESTREAM_REPLICA_URL`
- * instead, a known and documented mismatch (see infra/README.md, "litestream/")
- * that is tracked separately from this guard, not a wiring bug this guard
- * should flag.
+ * is named after its own id (`<ID>_LITESTREAM_REPLICA_URL`), the convention
+ * used by its config.
  *
  * A config with no sidecar is the deceptive failure mode: it reads as "this
  * pillar is backed up" to anyone auditing the directory, including its own
@@ -67,19 +64,6 @@ const COMPOSE_PATH = join(repoRoot, 'infra', 'docker-compose.yml');
 const SIDECAR_SUFFIX = '-litestream';
 const CONFIG_TARGET = '/etc/litestream.yml';
 const DATA_TARGET = '/data/sqlite';
-
-/**
- * The one documented case where a sidecar's replica-URL env var does not
- * follow the `<ID>_LITESTREAM_REPLICA_URL` pattern: `registry-litestream`
- * passes `CORE_LITESTREAM_REPLICA_URL` (the pillar's pre-rename name),
- * recorded in infra/README.md ("litestream/") as a known mismatch tracked
- * on its own, not something this guard should report as wiring drift.
- * Keyed and valued explicitly rather than skipped by id, so a second
- * exception cannot be added without also stating its env var.
- *
- * @type {ReadonlyMap<string, string>}
- */
-export const ENV_VAR_EXCEPTIONS = new Map([['registry', 'CORE_LITESTREAM_REPLICA_URL']]);
 
 /**
  * Discover the ids of every Litestream reference config, from disk.
@@ -262,7 +246,7 @@ export function extractEnvVarName(lines) {
 /**
  * Check one sidecar's own body against what a sidecar named `<id>-litestream`
  * is supposed to mount and read — its own config, its own data volume, and
- * (bar the documented `registry` exception) its own replica-URL env var.
+ * its own replica-URL env var.
  *
  * @param {string} id
  * @param {string[]} lines  The sidecar's own body lines, as produced by `extractSidecarBlocks`.
@@ -289,7 +273,7 @@ export function checkSidecarWiring(id, lines) {
     violations.push(`mounts ${dataMount.source} at ${DATA_TARGET}, expected ${expectedDataVolume}`);
   }
 
-  const expectedEnvVar = ENV_VAR_EXCEPTIONS.get(id) ?? `${id.toUpperCase()}_LITESTREAM_REPLICA_URL`;
+  const expectedEnvVar = `${id.toUpperCase()}_LITESTREAM_REPLICA_URL`;
   const actualEnvVar = extractEnvVarName(lines);
   if (actualEnvVar !== expectedEnvVar) {
     violations.push(
@@ -327,7 +311,7 @@ const USAGE =
   'Usage: node scripts/ci/check-litestream-sidecar-parity.mjs [--self-test]\n' +
   'Fails if an infra/litestream/<id>.yml has no <id>-litestream service in ' +
   'infra/docker-compose.yml, vice versa, or a matched sidecar does not mount its ' +
-  'own config and data volume.';
+  'own config and data volume or pass through its replica-URL variable.';
 
 /**
  * @typedef {{ kind: 'help' } | { kind: 'self-test' } | { kind: 'run' } | { kind: 'error', message: string }} ParsedArgs
@@ -361,8 +345,7 @@ export function parseArgs(args) {
 /**
  * Self-test: prove the detector flags a synthetic missing/orphan id and
  * passes a clean fixture, that the wiring check catches a wrong config path,
- * a wrong data volume, a missing mount, honours the `registry` exception
- * while still failing an unlisted id with the identical shape, and that
+ * a wrong data volume, a missing mount, a wrong replica-URL variable, and that
  * argument parsing recognises `--help`, `--self-test`, a plain run, and
  * rejects anything else. CI runs this so a regression that neuters the
  * guard is caught without relying on a real tree violation.
@@ -465,7 +448,9 @@ function selfTest() {
   const wrongConfigOk = wiringOf('wrongconfig').some((v) => v.includes('litestream/finance.yml'));
   const wrongVolumeOk = wiringOf('wrongvolume').some((v) => v.includes('pops-finance-data'));
   const missingMountOk = wiringOf('missingmount').some((v) => v.includes('missing a volume'));
-  const registryExceptionOk = wiringOf('registry').length === 0;
+  const registryEnvMismatchOk = wiringOf('registry').some((v) =>
+    v.includes('expected REGISTRY_LITESTREAM_REPLICA_URL')
+  );
   const unlistedStillFailsOk = wiringOf('unlisted').some((v) =>
     v.includes('UNLISTED_LITESTREAM_REPLICA_URL')
   );
@@ -487,7 +472,7 @@ function selfTest() {
     wrongConfigOk &&
     wrongVolumeOk &&
     missingMountOk &&
-    registryExceptionOk &&
+    registryEnvMismatchOk &&
     unlistedStillFailsOk &&
     longFormOk &&
     helpOk &&
@@ -504,7 +489,7 @@ function selfTest() {
     console.error(`  caught a sidecar mounting the wrong config: ${wrongConfigOk}`);
     console.error(`  caught a sidecar mounting the wrong volume: ${wrongVolumeOk}`);
     console.error(`  caught a sidecar missing a mount:        ${missingMountOk}`);
-    console.error(`  honoured the registry env-var exception: ${registryExceptionOk}`);
+    console.error(`  caught registry using the legacy env var: ${registryEnvMismatchOk}`);
     console.error(`  still failed an unlisted id, same shape: ${unlistedStillFailsOk}`);
     console.error(`  read long-form volume syntax:            ${longFormOk}`);
     console.error(`  recognised --help/-h:                    ${helpOk}`);
@@ -515,7 +500,7 @@ function selfTest() {
     console.log(
       'self-test OK — guard catches a config with no sidecar, a sidecar with no config, a ' +
         'sidecar mounting the wrong config or volume, a missing mount, an unlisted id passing ' +
-        "another pillar's env var, reads long-form volumes, honours the registry exception, " +
+        "another pillar's env var, flags registry's legacy env var, reads long-form volumes, " +
         'and rejects an unrecognised argument.'
     );
   }
