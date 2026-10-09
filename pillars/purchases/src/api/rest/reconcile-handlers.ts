@@ -14,6 +14,7 @@ import {
 import { nowIso } from '../../db/services/internal.js';
 import { purchaseErrorBody } from '../errors.js';
 import { makeManualReconcileHandlers } from './manual-reconcile-handlers.js';
+import { toWireReviewCandidate } from './reconcile-queue-wire.js';
 import { toPurchaseChargeLinkBody } from './serializers.js';
 
 import type { z } from 'zod';
@@ -54,6 +55,10 @@ function financeTransactionIds(entries: readonly QueueEntry[]): string[] {
       const id = link.transactionUri.match(FINANCE_TRANSACTION_URI)?.[1];
       if (id !== undefined) ids.add(id);
     }
+    for (const uri of entry.reviewCandidateUris) {
+      const id = uri.match(FINANCE_TRANSACTION_URI)?.[1];
+      if (id !== undefined) ids.add(id);
+    }
   }
   return [...ids];
 }
@@ -88,6 +93,9 @@ function toWireEntries(
         transactionPayee: transaction?.entityName ?? null,
       };
     }),
+    reviewCandidates: entry.reviewCandidateUris.map((uri) =>
+      toWireReviewCandidate(uri, transactionsById)
+    ),
   }));
 }
 
@@ -102,7 +110,6 @@ function toWireLinkedPurchases(entries: readonly LinkedPurchase[]) {
   }));
 }
 
-/** Builds reconciliation routes and optionally decorates queue proposals with Finance details. */
 /** Builds the reconciliation routes and the optional Finance-backed manual-link routes. */
 export function makeReconcileHandlers(
   db: PurchasesDb,

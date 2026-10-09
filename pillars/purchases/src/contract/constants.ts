@@ -51,6 +51,16 @@ export const PURCHASE_STATUSES = [
 ] as const;
 export type PurchaseStatus = (typeof PURCHASE_STATUSES)[number];
 
+/** Why the reconciliation ladder left a charge for a person to decide. */
+export const RECONCILE_REVIEW_REASONS = [
+  'ambiguous',
+  'too-many-candidates',
+  'no-candidate',
+  'ambiguous-partial',
+] as const;
+/** Closed set of reasons the reconciliation ladder can leave a charge for a person to decide. */
+export type ReconcileReviewReason = (typeof RECONCILE_REVIEW_REASONS)[number];
+
 /**
  * Fulfilment state of one delivery.
  *

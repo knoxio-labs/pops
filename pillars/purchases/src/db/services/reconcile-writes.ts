@@ -11,6 +11,7 @@ import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 import {
   purchaseChargeLinks,
   purchaseCharges,
+  purchaseChargeReviews,
   purchaseLinkRejections,
   purchases,
 } from '../schema.js';
@@ -19,7 +20,7 @@ import { recordMatchRule } from './match-rules.js';
 import { recomputeStatusForCharges } from './purchase-status.js';
 import { mutateChunked } from './sqlite-chunk.js';
 
-import type { ProposedLink } from '../../reconcile/types.js';
+import type { ChargeForReview, ProposedLink } from '../../reconcile/types.js';
 
 /**
  * Delete every UNCONFIRMED link belonging to the given charges.
@@ -160,6 +161,41 @@ export function persistProposedLinks(db: PurchasesDb, links: readonly ProposedLi
       .run().changes;
   }
   return written;
+}
+
+/** Replace the last successful review snapshot for only the charges this sweep reconsidered. */
+export function persistChargeReviews(
+  db: PurchasesDb,
+  chargeIds: readonly string[],
+  reviews: readonly ChargeForReview[]
+): number {
+  if (chargeIds.length === 0) return 0;
+
+  mutateChunked(
+    chargeIds,
+    (chunk) =>
+      db
+        .delete(purchaseChargeReviews)
+        .where(inArray(purchaseChargeReviews.chargeId, [...chunk]))
+        .run().changes
+  );
+
+  const inScope = new Set(chargeIds);
+  const scopedReviews = reviews.filter((review) => inScope.has(review.chargeId));
+  return mutateChunked(
+    scopedReviews,
+    (chunk) =>
+      db
+        .insert(purchaseChargeReviews)
+        .values(
+          chunk.map((review) => ({
+            chargeId: review.chargeId,
+            reason: review.reason,
+            candidateUris: [...review.candidateUris],
+          }))
+        )
+        .run().changes
+  );
 }
 
 /** Outcome of manually linking an unexplained charge. */

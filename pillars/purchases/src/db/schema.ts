@@ -15,6 +15,7 @@
  *     │    └─ purchase_item_notes       verbatim merchant prose, ordered
  *     ├─ purchase_charges               every charge, matched or not
  *     │    ├─ purchase_charge_links     charge → finance transaction
+ *     │    ├─ purchase_charge_reviews   last sweep's review reason/candidates
  *     │    ├─ purchase_link_rejections  pairings a human ruled out
  *     │    └─ purchase_item_allocations which charge paid for which line
  *     ├─ purchase_documents             evidence → documents
@@ -44,6 +45,7 @@ import type { InferInsertModel, InferSelectModel } from 'drizzle-orm';
 import type { purchaseCapture as purchaseCaptureTable } from './schema/capture.js';
 import type {
   purchaseCharges as purchaseChargesTable,
+  purchaseChargeReviews as purchaseChargeReviewsTable,
   purchaseChargeLinks as purchaseChargeLinksTable,
   purchaseItemAllocations as purchaseItemAllocationsTable,
   purchaseLinkRejections as purchaseLinkRejectionsTable,
@@ -77,6 +79,7 @@ import type { purchaseSources as purchaseSourcesTable } from './schema/sources.j
 export {
   purchaseChargeLinks,
   purchaseCharges,
+  purchaseChargeReviews,
   purchaseItemAllocations,
   purchaseLinkRejections,
 } from './schema/charges.js';
@@ -114,6 +117,8 @@ export type PurchaseItemNoteRow = InferSelectModel<typeof purchaseItemNotesTable
 export type PurchaseTagRow = InferSelectModel<typeof purchaseTagsTable>;
 export type PurchaseChargeRow = InferSelectModel<typeof purchaseChargesTable>;
 export type PurchaseChargeInsert = InferInsertModel<typeof purchaseChargesTable>;
+export type PurchaseChargeReviewRow = InferSelectModel<typeof purchaseChargeReviewsTable>;
+export type PurchaseChargeReviewInsert = InferInsertModel<typeof purchaseChargeReviewsTable>;
 export type PurchaseChargeLinkRow = InferSelectModel<typeof purchaseChargeLinksTable>;
 export type PurchaseChargeLinkInsert = InferInsertModel<typeof purchaseChargeLinksTable>;
 export type PurchaseItemAllocationRow = InferSelectModel<typeof purchaseItemAllocationsTable>;

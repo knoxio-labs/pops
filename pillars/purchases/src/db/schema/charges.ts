@@ -1,6 +1,6 @@
 /**
- * `purchase_charges`, `purchase_charge_links` and
- * `purchase_item_allocations` — the money layer.
+ * `purchase_charges`, `purchase_charge_links`, `purchase_charge_reviews`
+ * and `purchase_item_allocations` — the money layer and its review snapshot.
  *
  * **A charge exists whether or not finance has seen it.** The merchant
  * tells us it took $56.78 off a Visa on the 2nd; the bank statement that
@@ -10,12 +10,16 @@
  * unexplained when in fact we know exactly what was charged and are only
  * waiting for the counterpart to land.
  *
- * So there are two tables, not one:
+ * The money relationship uses two tables, not one:
  *
  *   `purchase_charges`       what was (or will be) charged. Merchant-asserted
  *                            or engine-derived. Never depends on finance.
  *   `purchase_charge_links`  charge ↔ `pops://finance/transaction/<id>`.
  *                            Absent until the transaction lands.
+ *
+ * `purchase_charge_reviews` separately retains the latest successful
+ * sweep's reason and candidate transaction URIs; it does not change the
+ * money accounted to an order.
  *
  * That split makes the useful question answerable: of an order's total, how
  * much is matched to a real transaction, how much is a charge we know about
@@ -40,6 +44,7 @@ import {
   CHARGE_ORIGINS,
   LINK_TYPES,
   MIN_MATCH_CONFIDENCE,
+  RECONCILE_REVIEW_REASONS,
   SETTLEMENT_ROLES,
 } from '../../contract/constants.js';
 import { purchaseItems } from './items.js';
@@ -230,6 +235,15 @@ export const purchaseLinkRejections = sqliteTable(
     index('idx_purchase_link_rejections_charge').on(t.chargeId),
   ]
 );
+
+/** The latest successful sweep's reason and candidate transactions for one charge. */
+export const purchaseChargeReviews = sqliteTable('purchase_charge_reviews', {
+  chargeId: text('charge_id')
+    .primaryKey()
+    .references(() => purchaseCharges.id, { onDelete: 'cascade' }),
+  reason: text('reason', { enum: RECONCILE_REVIEW_REASONS }).notNull(),
+  candidateUris: text('candidate_uris', { mode: 'json' }).$type<string[]>().notNull(),
+});
 
 /**
  * How one charge distributes across the lines it paid for.

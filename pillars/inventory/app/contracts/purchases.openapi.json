@@ -12361,6 +12361,62 @@
                           "purchaseId": {
                             "type": "string"
                           },
+                          "reviewCandidates": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "amountCents": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": -9007199254740991,
+                                  "nullable": true,
+                                  "type": "integer"
+                                },
+                                "date": {
+                                  "nullable": true,
+                                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                                  "type": "string"
+                                },
+                                "description": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "payee": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "settlementCurrency": {
+                                  "nullable": true,
+                                  "pattern": "^[A-Z]{3}$",
+                                  "type": "string"
+                                },
+                                "transactionUri": {
+                                  "pattern": "^pops:\\/\\/finance\\/transaction\\/([^/\\s]+)$",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "transactionUri",
+                                "description",
+                                "date",
+                                "payee",
+                                "amountCents",
+                                "settlementCurrency"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "reviewReason": {
+                            "enum": [
+                              "ambiguous",
+                              "too-many-candidates",
+                              "no-candidate",
+                              "ambiguous-partial",
+                              null
+                            ],
+                            "nullable": true,
+                            "type": "string"
+                          },
                           "source": {
                             "type": "string"
                           },
@@ -12379,6 +12435,8 @@
                           "currency",
                           "amountCents",
                           "proposed",
+                          "reviewReason",
+                          "reviewCandidates",
                           "deltaCents"
                         ],
                         "type": "object"

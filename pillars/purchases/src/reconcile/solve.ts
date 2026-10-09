@@ -84,7 +84,7 @@ export function solve(input: SolverInput): SolverOutput {
     if (outcome === null) {
       deferred.push(charge);
     } else {
-      apply(state, charge, outcome, candidates.length);
+      apply(state, charge, outcome);
     }
   }
 
@@ -157,7 +157,7 @@ function settleByLearnedRule(
   const candidates = ruleCandidatesFor(charge, input.transactions, state.claimed, blocking);
   const outcome = matchLearnedRule(charge, candidates);
   if (outcome === null) return;
-  apply(state, charge, outcome, candidates.length);
+  apply(state, charge, outcome);
 }
 
 /** Phase 3 for one charge: partial payment, or the review queue. */
@@ -171,17 +171,13 @@ function settlePartially(
   const outcome = matchPartial(charge, candidates) ?? {
     kind: 'review' as const,
     reason: candidates.length === 0 ? ('no-candidate' as const) : ('ambiguous' as const),
+    candidateUris: candidates.map((candidate) => candidate.uri),
   };
-  apply(state, charge, outcome, candidates.length);
+  apply(state, charge, outcome);
 }
 
 /** Record one charge's outcome — a set of links, or a place in the queue. */
-function apply(
-  state: SolveState,
-  charge: SolvableCharge,
-  outcome: MatchOutcome,
-  candidateCount: number
-): void {
+function apply(state: SolveState, charge: SolvableCharge, outcome: MatchOutcome): void {
   if (outcome.kind === 'linked') {
     for (const link of outcome.links) {
       state.links.push(link);
@@ -192,7 +188,8 @@ function apply(
       chargeId: charge.id,
       purchaseId: charge.purchaseId,
       reason: outcome.reason,
-      candidateCount,
+      candidateCount: outcome.candidateUris.length,
+      candidateUris: outcome.candidateUris,
     });
   }
   state.settled.add(charge.id);

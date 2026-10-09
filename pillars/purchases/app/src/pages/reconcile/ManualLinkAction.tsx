@@ -6,13 +6,14 @@ import { Button, SearchPickerDialog } from '@pops/ui';
 
 import { unwrap } from '../../purchases-api-helpers.js';
 import { reconcileManual } from '../../purchases-api/index.js';
+import { mergeCandidates, type ManualCandidateOption } from './manual-link-options.js';
+import { ManualCandidateResult } from './ManualCandidateResult.js';
 import { useManualCandidateSearch } from './useManualCandidateSearch.js';
 import { RECONCILE_QUEUE_QUERY_KEY } from './useReconcileQueue.js';
 
 import type { ReactElement } from 'react';
 
 import type { QueueEntry } from './types.js';
-import type { Candidate } from './useManualCandidateSearch.js';
 
 interface ManualLinkActionProps {
   entry: QueueEntry;
@@ -29,9 +30,10 @@ export function ManualLinkAction({
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const candidates = useManualCandidateSearch(open);
+  const results = mergeCandidates(entry.reviewCandidates, candidates.results);
   const mutation = useMutation({
     meta: { errorHandled: true },
-    mutationFn: async (candidate: Candidate) =>
+    mutationFn: async (candidate: ManualCandidateOption) =>
       unwrap(
         await reconcileManual({
           body: { chargeId: entry.chargeId, transactionUri: candidate.transactionUri },
@@ -60,10 +62,14 @@ export function ManualLinkAction({
       onOpenChange={updateOpen}
       search={candidates.search}
       onSearchChange={candidates.setSearch}
-      results={candidates.results}
-      isLoading={candidates.isFetching || mutation.isPending}
+      results={results}
+      isLoading={
+        mutation.isPending || (candidates.isFetching && entry.reviewCandidates.length === 0)
+      }
       searchError={candidates.error}
       linkError={mutation.error}
+      hasReviewCandidates={entry.reviewCandidates.length > 0}
+      fallbackCurrency={entry.currency}
       onSelect={(candidate) => mutation.mutate(candidate)}
     />
   );
@@ -75,11 +81,13 @@ interface ManualLinkDialogProps {
   onOpenChange: (open: boolean) => void;
   search: string;
   onSearchChange: (value: string) => void;
-  results: Candidate[];
+  results: ManualCandidateOption[];
   isLoading: boolean;
   searchError: unknown;
   linkError: unknown;
-  onSelect: (candidate: Candidate) => void;
+  hasReviewCandidates: boolean;
+  fallbackCurrency: string;
+  onSelect: (candidate: ManualCandidateOption) => void;
 }
 
 function ManualLinkDialog({
@@ -92,14 +100,27 @@ function ManualLinkDialog({
   isLoading,
   searchError,
   linkError,
+  hasReviewCandidates,
+  fallbackCurrency,
   onSelect,
 }: ManualLinkDialogProps): ReactElement {
   const { t } = useTranslation('purchases');
-  const linkMessage = errorMessage(linkError);
-  const searchMessage = errorMessage(searchError);
-
+  const localizedSearchError = localizeErrorMessage(searchError, (message) =>
+    t('reconcile.manual.searchFailed', { message })
+  );
+  const description = manualLinkDescription(
+    localizeErrorMessage(linkError, (message) => t('reconcile.manual.linkFailed', { message })),
+    hasReviewCandidates,
+    localizeErrorMessage(searchError, (message) =>
+      t('reconcile.manual.reviewSearchFailed', { message })
+    ),
+    {
+      review: t('reconcile.manual.reviewDescription'),
+      fallback: t('reconcile.manual.description'),
+    }
+  );
   return (
-    <SearchPickerDialog<Candidate>
+    <SearchPickerDialog<ManualCandidateOption>
       trigger={
         <Button size="sm" variant="outline" disabled={disabled}>
           {t('reconcile.action.linkManually')}
@@ -108,75 +129,57 @@ function ManualLinkDialog({
       open={open}
       onOpenChange={onOpenChange}
       title={t('reconcile.manual.title')}
-      description={
-        linkMessage === undefined
-          ? t('reconcile.manual.description')
-          : t('reconcile.manual.linkFailed', { message: linkMessage })
-      }
+      description={description}
       searchPlaceholder={t('reconcile.manual.searchPlaceholder')}
       search={search}
       onSearchChange={onSearchChange}
       isLoading={isLoading}
       results={results}
-      renderResult={(candidate) => (
-        <ManualCandidateResult
-          candidate={candidate}
-          disabled={isLoading}
-          onSelect={() => onSelect(candidate)}
-        />
-      )}
-      getResultKey={(candidate) => candidate.transactionUri}
-      minChars={2}
-      minCharsMessage={t('reconcile.manual.typeToSearch')}
-      emptyMessage={
-        searchMessage === undefined
-          ? t('reconcile.manual.noResults')
-          : t('reconcile.manual.searchFailed', { message: searchMessage })
+      renderResult={(candidate) =>
+        renderManualCandidate(candidate, isLoading, fallbackCurrency, onSelect)
       }
+      getResultKey={(candidate) => candidate.transactionUri}
+      minChars={hasReviewCandidates ? 0 : 2}
+      minCharsMessage={t('reconcile.manual.typeToSearch')}
+      emptyMessage={t('reconcile.manual.noResults')}
+      errorMessage={hasReviewCandidates ? undefined : localizedSearchError}
     />
   );
 }
 
-interface ManualCandidateResultProps {
-  candidate: Candidate;
-  disabled: boolean;
-  onSelect: () => void;
+function localizeErrorMessage(
+  error: unknown,
+  localize: (message: string) => string
+): string | undefined {
+  if (!(error instanceof Error)) return undefined;
+  return localize(error.message);
 }
 
-function ManualCandidateResult({
-  candidate,
-  disabled,
-  onSelect,
-}: ManualCandidateResultProps): ReactElement {
+function renderManualCandidate(
+  candidate: ManualCandidateOption,
+  disabled: boolean,
+  fallbackCurrency: string,
+  onSelect: (candidate: ManualCandidateOption) => void
+): ReactElement {
   return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="lg"
+    <ManualCandidateResult
+      candidate={candidate}
       disabled={disabled}
-      className="h-auto min-h-11 w-full justify-start whitespace-normal py-2 text-left"
-      onClick={onSelect}
-    >
-      <span className="min-w-0 flex-1">
-        <span className="block truncate font-medium">{candidate.description}</span>
-        <span className="text-muted-foreground block text-xs">
-          {candidate.date}
-          {candidate.payee === null ? '' : ` · ${candidate.payee}`}
-          {' · '}
-          {formatCandidateAmount(candidate)}
-        </span>
-      </span>
-    </Button>
+      fallbackCurrency={fallbackCurrency}
+      onSelect={() => onSelect(candidate)}
+    />
   );
 }
 
-function errorMessage(error: unknown): string | undefined {
-  return error instanceof Error ? error.message : undefined;
-}
-
-function formatCandidateAmount(candidate: Candidate): string {
-  return new Intl.NumberFormat(undefined, {
-    style: 'currency',
-    currency: candidate.settlementCurrency,
-  }).format(candidate.amountCents / 100);
+function manualLinkDescription(
+  linkFailure: string | undefined,
+  hasReviewCandidates: boolean,
+  searchFailure: string | undefined,
+  descriptions: { review: string; fallback: string }
+): string {
+  if (linkFailure !== undefined) return linkFailure;
+  if (!hasReviewCandidates) return descriptions.fallback;
+  return [descriptions.review, searchFailure]
+    .filter((message): message is string => message !== undefined)
+    .join(' ');
 }

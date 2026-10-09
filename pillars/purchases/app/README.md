@@ -110,20 +110,23 @@ Fixtures live in `src/standalone/fixtures/`, typed against the generated
 
 Choose data that makes the page's own reasoning visible rather than the
 smallest payload that typechecks. The existing ones are picked that way: the
-queue holds a charge nothing can explain, the merchant roll-up holds an
-unattributed bucket with a residual, the dictionary holds a product that is
-only part-asserted, and the order is short by its shipping. A fixture where
-everything reconciles renders a page that looks right and demonstrates nothing.
+queue holds an ambiguous charge with retained candidates, the merchant roll-up
+holds an unattributed bucket with a residual, the dictionary holds a product
+that is only part-asserted, and the order is short by its shipping. A fixture
+where everything reconciles renders a page that looks right and demonstrates
+nothing.
 
 ### Cross-pillar calls
 
 Every request this app issues goes to its own contract. The purchases API
-batches a Finance lookup for the transaction date and payee shown in the
-reconcile queue; that decoration can be missing while the saved transaction
-description still renders. Inventory units and documents remain unresolved
-`pops://` references (see "One order" below). The closest thing to a missing
-sibling is an operation the harness has no handler for, which reaches the page
-as an unusable response the same way — and is covered by `standalone.test.tsx`.
+batches a Finance lookup for proposal and review-candidate transaction details
+shown in the reconcile queue. Review reasons and candidate URIs come from the
+latest successful sweep, so the queue still identifies candidates when Finance
+is unavailable; live descriptions and amounts may be missing. Inventory units
+and documents remain unresolved `pops://` references (see "One order" below).
+The closest thing to a missing sibling is an operation the harness has no
+handler for, which reaches the page as an unusable response the same way — and
+is covered by `standalone.test.tsx`.
 
 ## The reconcile queue
 
@@ -136,10 +139,11 @@ returns one entry per charge carrying 0..n proposed transactions, so the charge
 is the stable side and the transactions are the plural one. Laying it out the
 other way would make every row a different height for no gain.
 
-The API batches those proposals through Finance's transaction-id filter to add
-the posting date and payee. It keeps the description stored with the proposal,
-so the row remains useful when Finance is unavailable; missing live details
-show as unavailable rather than failing the queue.
+The API batches proposals and retained review candidates through Finance's
+transaction-id filter to add current details. A successful sweep stores the
+reason it left a charge for review and the transaction URIs it considered.
+Those URIs remain in the queue when Finance is unavailable; missing live
+details show as unavailable rather than failing the queue.
 
 A stage-4 proposal is labelled as a rule and shows the stored descriptor
 pattern and source that admitted it. The decision bar can deactivate that
@@ -182,9 +186,11 @@ back as unexplained rather than leaving the queue.
 
 An unexplained charge (no proposals) has nothing to confirm or delete, so the
 accept and reject actions stay disabled. The toolbar offers **Link transaction**
-for that row. It searches Finance by transaction description through
-`GET /reconcile/manual-candidates`, then `POST /reconcile/manual` re-fetches the
-selected transaction before creating a `manual`, confidence-1 link with
+for that row. When the last sweep retained candidates, the dialog offers them
+immediately and still lets the operator search Finance for another. Search
+uses transaction descriptions through `GET /reconcile/manual-candidates`, then
+`POST /reconcile/manual` re-fetches the selected transaction before creating a
+`manual`, confidence-1 link with
 `confirmedAt` set in the same transaction. The link uses the full charge amount
 and remains pinned through later sweeps. Finance outages leave the charge
 unlinked and return a retryable error.
