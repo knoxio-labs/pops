@@ -13,6 +13,7 @@ describe('readConfig', () => {
     expect(cfg.reloadCmd).toBe('nginx -s reload');
     expect(cfg.debounceMs).toBe(250);
     expect(cfg.backoffMs).toBe(1000);
+    expect(cfg.validationFailureThreshold).toBe(1);
     expect(cfg.outputPath.endsWith('pillars/shell/nginx.conf')).toBe(true);
   });
 
@@ -23,18 +24,25 @@ describe('readConfig', () => {
       POPS_NGINX_RELOAD_CMD: 'docker kill -s HUP nginx',
       POPS_NGINX_DEBOUNCE_MS: '500',
       POPS_NGINX_BACKOFF_MS: '2000',
+      POPS_NGINX_VALIDATION_FAILURE_THRESHOLD: '4',
     });
     expect(cfg.registryUrl).toBe('http://alt:9000');
     expect(cfg.outputPath).toBe('/tmp/foo.conf');
     expect(cfg.reloadCmd).toBe('docker kill -s HUP nginx');
     expect(cfg.debounceMs).toBe(500);
     expect(cfg.backoffMs).toBe(2000);
+    expect(cfg.validationFailureThreshold).toBe(4);
   });
 
   it('rejects non-positive integers and falls back to defaults', () => {
-    const cfg = readConfig({ POPS_NGINX_DEBOUNCE_MS: '-3', POPS_NGINX_BACKOFF_MS: 'abc' });
+    const cfg = readConfig({
+      POPS_NGINX_DEBOUNCE_MS: '-3',
+      POPS_NGINX_BACKOFF_MS: 'abc',
+      POPS_NGINX_VALIDATION_FAILURE_THRESHOLD: '0',
+    });
     expect(cfg.debounceMs).toBe(250);
     expect(cfg.backoffMs).toBe(1000);
+    expect(cfg.validationFailureThreshold).toBe(1);
   });
 
   it('leaves the guest gate inert when POPS_OPERATOR_EMAILS is absent', () => {

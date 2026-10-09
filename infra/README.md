@@ -54,10 +54,14 @@ release that starts reading it.
 
 **Host env vars** — `POPS_IMAGE_TAG`, `POPS_IMAGE_OWNER`, `POPS_MOLTBOT_DIR`,
 `POPS_DOMAIN`, `POPS_REGISTRY_URL`,
-`BUILD_VERSION`, `MCP_BIND_ADDR`, `CEREBRUM_EGO_MCP_URL`, `PAPERLESS_BASE_URL`,
+`POPS_NGINX_HEALTH_BIND`, `BUILD_VERSION`, `MCP_BIND_ADDR`, `CEREBRUM_EGO_MCP_URL`, `PAPERLESS_BASE_URL`,
 `PAPERLESS_API_TOKEN`, `ANTHROPIC_API_KEY`, the `EMBEDDING_*` / `FOOD_*` /
 `*_LITESTREAM_REPLICA_URL` sets, `DOCKER_CONFIG_DIR`, `DOCKER_API_VERSION`, `TZ`.
 Each pillar's `*_SQLITE_PATH` and `*_SELF_BASE_URL` are inline, not host env.
+
+`POPS_NGINX_HEALTH_BIND` controls the host address for the shell watcher's
+health and metrics port, which defaults to `127.0.0.1`. Set it to the private
+interface used by a separate monitoring host when that host needs to scrape it.
 
 **Ego MCP gateway auth** — `CEREBRUM_EGO_MCP_URL` defaults to empty, leaving
 Ego's optional gateway client disabled until the `mcp` profile is running and

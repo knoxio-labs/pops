@@ -2,14 +2,13 @@
  * End-to-end integration test for the nginx event-reload watcher.
  *
  * Spins up the SHELL watcher (`watchRegistryAndReload`) against a fake
- * in-process SSE registry, fires `pillar.registered` + `pillar.deregistered`
- * frames, and asserts that:
+ * in-process SSE registry, exercises the connection snapshot and lifecycle
+ * event frames, and asserts that:
  *
- *   - `regenerate` ran twice (once per lifecycle transition).
- *   - The reload command ran twice (gating passed both times).
- *   - The validate command (`nginx -t -c ...`) ran twice.
- *   - On a forced validate failure, the reload is skipped and the
- *     `nginx_generator_last_error_at` health surface flips to degraded.
+ *   - `regenerate` ran for the snapshot and both lifecycle transitions.
+ *   - The reload and validate commands ran after each successful cycle.
+ *   - Repeated forced validation failures skip reloads and eventually make
+ *     the health surface degraded.
  *   - On the next successful cycle, the error clears.
  *
  * Mirrors the in-process e2e in
@@ -195,45 +194,56 @@ describe('watchRegistryAndReload — end-to-end through the SHELL watcher', () =
     harness = await startHarness();
     const h = harness;
     await h.registry.waitForSubscriber();
+    await waitFor(() => h.regenCalls.length === 1 && h.exec.calls.length === 2);
+    expect(h.regenCalls.length).toBe(1);
+    expect(h.exec.calls.filter((c) => c === 'nginx -s reload')).toHaveLength(1);
+    expect(h.exec.calls.filter((c) => c.startsWith('nginx -t'))).toHaveLength(1);
 
     h.registry.emit('pillar.registered', '{"pillarId":"externalDrop"}');
-    await waitFor(() => h.regenCalls.length >= 1 && h.exec.calls.length >= 2);
+    await waitFor(() => h.regenCalls.length === 2 && h.exec.calls.length === 4);
 
-    expect(h.regenCalls.length).toBe(1);
+    expect(h.regenCalls.length).toBe(2);
     expect(h.exec.calls.some((c) => c.startsWith('nginx -t'))).toBe(true);
-    expect(h.exec.calls.filter((c) => c === 'nginx -s reload').length).toBe(1);
+    expect(h.exec.calls.filter((c) => c === 'nginx -s reload')).toHaveLength(2);
 
     const reloadsAfterRegister = h.exec.calls.filter((c) => c === 'nginx -s reload').length;
     const validatesAfterRegister = h.exec.calls.filter((c) => c.startsWith('nginx -t')).length;
-    expect(reloadsAfterRegister).toBe(1);
-    expect(validatesAfterRegister).toBe(1);
+    expect(reloadsAfterRegister).toBe(2);
+    expect(validatesAfterRegister).toBe(2);
 
     h.registry.emit('pillar.deregistered', '{"pillarId":"externalDrop"}');
-    await waitFor(() => h.regenCalls.length >= 2 && h.exec.calls.length >= 4);
+    await waitFor(() => h.regenCalls.length === 3 && h.exec.calls.length === 6);
 
-    expect(h.regenCalls.length).toBe(2);
-    expect(h.exec.calls.filter((c) => c === 'nginx -s reload').length).toBe(2);
-    expect(h.exec.calls.filter((c) => c.startsWith('nginx -t')).length).toBe(2);
+    expect(h.regenCalls.length).toBe(3);
+    expect(h.exec.calls.filter((c) => c === 'nginx -s reload').length).toBe(3);
+    expect(h.exec.calls.filter((c) => c.startsWith('nginx -t')).length).toBe(3);
 
     expect(h.health.snapshot().status).toBe('ok');
     expect(h.health.snapshot().nginx_generator_last_error_at).toBeNull();
   });
 
-  it('skips reload + flips health to degraded when nginx -t fails, then recovers on the next clean cycle', async () => {
+  it('marks repeated nginx -t failures degraded, then recovers on the next clean cycle', async () => {
     harness = await startHarness();
     const h = harness;
     await h.registry.waitForSubscriber();
+    await waitFor(() => h.regenCalls.length === 1 && h.exec.calls.length === 2);
     h.exec.setFailingCmd('nginx -t');
 
-    h.registry.emit('pillar.registered', '{"pillarId":"flaky"}');
-    await waitFor(
-      () => h.regenCalls.length >= 1 && h.exec.calls.some((c) => c.startsWith('nginx -t'))
-    );
+    const failures = [
+      ['pillar.registered', '{"pillarId":"flaky"}'],
+      ['pillar.health-changed', '{"pillarId":"flaky"}'],
+      ['pillar.deregistered', '{"pillarId":"flaky"}'],
+    ] as const;
+    let expectedFailures = 0;
+    for (const [event, data] of failures) {
+      expectedFailures += 1;
+      h.registry.emit(event, data);
+      await waitFor(() => h.health.snapshot().consecutiveValidationFailures === expectedFailures);
+      if (expectedFailures === 1) expect(h.health.snapshot().status).toBe('degraded');
+    }
 
-    expect(h.regenCalls.length).toBe(1);
-    expect(h.exec.calls.filter((c) => c === 'nginx -s reload').length).toBe(0);
-
-    await waitFor(() => h.health.snapshot().status === 'degraded');
+    expect(h.health.snapshot().status).toBe('degraded');
+    expect(h.exec.calls.filter((c) => c === 'nginx -s reload')).toHaveLength(1);
     const degradedSnap = h.health.snapshot();
     expect(degradedSnap.status).toBe('degraded');
     expect(degradedSnap.lastError?.stage).toBe('validate');
@@ -241,7 +251,7 @@ describe('watchRegistryAndReload — end-to-end through the SHELL watcher', () =
 
     h.exec.setFailingCmd(null);
     h.registry.emit('pillar.health-changed', '{"pillarId":"flaky"}');
-    await waitFor(() => h.exec.calls.filter((c) => c === 'nginx -s reload').length >= 1);
+    await waitFor(() => h.exec.calls.filter((c) => c === 'nginx -s reload').length === 2);
     await waitFor(() => h.health.snapshot().status === 'ok');
 
     const recoveredSnap = h.health.snapshot();
@@ -251,12 +261,18 @@ describe('watchRegistryAndReload — end-to-end through the SHELL watcher', () =
     expect(recoveredSnap.lastSuccessAt).not.toBeNull();
   });
 
-  it('ignores the initial pillar.snapshot frame — no regen on connect', async () => {
+  it('rebuilds after every registry snapshot, including after reconnect', async () => {
     harness = await startHarness();
     const h = harness;
-    await new Promise((r) => setTimeout(r, 50));
-    expect(h.regenCalls.length).toBe(0);
-    expect(h.exec.calls.length).toBe(0);
+    await h.registry.waitForSubscriber();
+    await waitFor(() => h.regenCalls.length === 1 && h.exec.calls.length === 2);
+
+    h.registry.endStream();
+    await h.registry.waitForSubscriber();
+    await waitFor(() => h.regenCalls.length === 2 && h.exec.calls.length === 4);
+
+    expect(h.exec.calls.filter((c) => c === 'nginx -s reload')).toHaveLength(2);
+    expect(h.exec.calls.filter((c) => c.startsWith('nginx -t'))).toHaveLength(2);
   });
 
   it('does not invoke validate when POPS_NGINX_CONFIG_TEST_CMD is explicitly empty', async () => {

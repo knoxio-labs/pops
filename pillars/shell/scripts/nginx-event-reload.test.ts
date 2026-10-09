@@ -40,8 +40,8 @@ describe('isWatchedEvent', () => {
     expect(isWatchedEvent(name)).toBe(true);
   });
 
-  it('returns false for the snapshot event', () => {
-    expect(isWatchedEvent('pillar.snapshot')).toBe(false);
+  it('returns true for the snapshot event so every connection reconciles', () => {
+    expect(isWatchedEvent('pillar.snapshot')).toBe(true);
   });
 
   it('returns false for unrelated events', () => {

@@ -33,7 +33,7 @@ async function main(): Promise<void> {
   process.once('SIGINT', onSignal);
   process.once('SIGTERM', onSignal);
 
-  const health = createNginxGeneratorHealth();
+  const health = createNginxGeneratorHealth(config.validationFailureThreshold);
   let healthEndpoint: { close: () => Promise<void> } | undefined;
   if (config.healthPort !== null) {
     healthEndpoint = await startHealthEndpoint({

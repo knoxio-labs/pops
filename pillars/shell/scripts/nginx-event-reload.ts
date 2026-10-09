@@ -23,34 +23,43 @@
  * propagate out of `trigger()` (the watcher must stay up).
  */
 
+/** Registry events that require rebuilding the dynamic nginx configuration. */
 export type WatchedEventName =
+  | 'pillar.snapshot'
   | 'pillar.registered'
   | 'pillar.deregistered'
   | 'pillar.health-changed';
 
+/** All registry event names that trigger a dynamic nginx rebuild. */
 export const WATCHED_EVENTS: readonly WatchedEventName[] = [
+  'pillar.snapshot',
   'pillar.registered',
   'pillar.deregistered',
   'pillar.health-changed',
 ];
 
+/** Returns whether a registry event should trigger a configuration rebuild. */
 export function isWatchedEvent(name: string): name is WatchedEventName {
-  return (WATCHED_EVENTS as readonly string[]).includes(name);
+  return WATCHED_EVENTS.some((event) => event === name);
 }
 
+/** Logging callbacks used by the reload handler. */
 export interface ReloadLogger {
   readonly info: (message: string) => void;
   readonly error: (message: string, error?: unknown) => void;
 }
 
+/** Pipeline stage associated with a failed watcher cycle. */
 export type ReloadStage = 'regenerate' | 'validate' | 'reload';
 
+/** Error details emitted when a watcher cycle fails. */
 export interface ReloadErrorEvent {
   readonly stage: ReloadStage;
   readonly message: string;
   readonly at: Date;
 }
 
+/** Dependencies and optional callbacks for a debounced reload handler. */
 export interface CreateReloadHandlerOptions {
   readonly regenerate: () => Promise<void>;
   /**
@@ -75,6 +84,7 @@ export interface CreateReloadHandlerOptions {
   readonly onError?: (event: ReloadErrorEvent) => void;
 }
 
+/** Controls event scheduling and shutdown for a reload handler. */
 export interface ReloadHandler {
   readonly trigger: (event: WatchedEventName) => void;
   readonly flush: () => Promise<void>;
