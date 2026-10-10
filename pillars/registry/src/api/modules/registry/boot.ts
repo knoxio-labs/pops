@@ -97,6 +97,7 @@ function planBootTransitions(
       previousStatus: row.status,
       nextStatus: 'unknown',
       at: nowIso,
+      origin: row.origin,
     });
   }
   return { updates, transitions };

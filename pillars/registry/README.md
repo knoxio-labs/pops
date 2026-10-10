@@ -48,6 +48,9 @@ where `manifest.pillar` MUST equal `pillarId` (a mismatch is rejected).
 Consumers stream registry changes over Server-Sent Events at
 `GET /registry/subscribe`: an initial `pillar.snapshot` frame, then
 `pillar.registered`, `pillar.deregistered`, and `pillar.health-changed` frames.
+`pillar.health-changed` is emitted when either a heartbeat restores a pillar or
+the background ticker persists a missed-heartbeat transition; both carry the
+pillar origin and a null entry so subscribers can refresh the snapshot.
 
 Additional raw HTTP routes that ts-rest cannot model:
 

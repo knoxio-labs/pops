@@ -12,6 +12,7 @@
  */
 import { EventEmitter } from 'node:events';
 
+import type { StatusTransition } from '../../../db/index.js';
 import type { RegistryEntry } from './types.js';
 
 export type RegistryEventName = 'registered' | 'deregistered' | 'health-changed';
@@ -55,6 +56,19 @@ export function emitRegistryEvent(payload: Omit<RegistryEventPayload, 'emittedAt
     emittedAt: new Date().toISOString(),
   };
   registryEventBus.emit(EVENT_KEY, enriched);
+}
+
+/**
+ * Publish a persisted heartbeat-ticker transition using the same health event
+ * shape as heartbeat-route recovery events.
+ */
+export function emitHeartbeatHealthChanged(transition: StatusTransition): void {
+  emitRegistryEvent({
+    event: 'health-changed',
+    pillarId: transition.pillarId,
+    entry: null,
+    origin: transition.origin,
+  });
 }
 
 export function subscribeToRegistryEvents(
