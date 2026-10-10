@@ -76,6 +76,7 @@ export function runHeartbeatTick(
         previousStatus: row.status,
         nextStatus: computed,
         at: nowIso,
+        origin: row.origin,
       });
       continue;
     }

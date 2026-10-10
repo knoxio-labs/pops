@@ -9,13 +9,15 @@ import { eq } from 'drizzle-orm';
 import { pillarRegistry } from '../schema.js';
 
 import type { CoreDb } from './internal.js';
-import type { PillarStatus } from './pillar-registry.js';
+import type { PillarOrigin, PillarStatus } from './pillar-registry.js';
 
+/** Persisted status change with the registration origin used by event consumers. */
 export interface StatusTransition {
   readonly pillarId: string;
   readonly previousStatus: PillarStatus;
   readonly nextStatus: PillarStatus;
   readonly at: string;
+  readonly origin: PillarOrigin;
 }
 
 export interface ApplyStatusUpdate {

@@ -15,10 +15,17 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { z } from 'zod';
 
-import { openCoreDb, type OpenedCoreDb } from '../../db/index.js';
+import { openCoreDb, pillarRegistryService, type OpenedCoreDb } from '../../db/index.js';
 import { createCoreApiApp } from '../app.js';
-import { registryEventBus, registryEventListenerCount } from '../modules/registry/event-bus.js';
+import {
+  emitHeartbeatHealthChanged,
+  registryEventBus,
+  registryEventListenerCount,
+} from '../modules/registry/event-bus.js';
+import { UNAVAILABLE_AFTER_MS } from '../modules/registry/status.js';
+import { runHeartbeatTick } from '../modules/registry/ticker.js';
 import { createTestTransport } from './test-http.js';
 
 import type { AddressInfo } from 'node:net';
@@ -26,6 +33,16 @@ import type { AddressInfo } from 'node:net';
 import type { ManifestPayload } from '@pops/pillar-sdk';
 
 const { requestOn } = createTestTransport();
+
+const HealthChangedPayloadSchema = z
+  .object({
+    event: z.literal('health-changed'),
+    pillarId: z.string(),
+    entry: z.null(),
+    emittedAt: z.string(),
+    origin: z.enum(['internal', 'external']),
+  })
+  .strict();
 
 let tmpDir: string;
 let coreDb: OpenedCoreDb;
@@ -116,7 +133,11 @@ interface SseEvent {
 
 interface SseClient {
   events: SseEvent[];
-  waitFor: (predicate: (evt: SseEvent) => boolean, timeoutMs?: number) => Promise<SseEvent>;
+  waitFor: (
+    predicate: (evt: SseEvent) => boolean,
+    timeoutMs?: number,
+    fromIndex?: number
+  ) => Promise<SseEvent>;
   close: () => Promise<void>;
   destroyed: Promise<void>;
 }
@@ -190,10 +211,11 @@ function openSseClient(url: string): Promise<SseClient> {
 
       const waitFor = (
         predicate: (evt: SseEvent) => boolean,
-        timeoutMs = 2000
+        timeoutMs = 2000,
+        fromIndex = 0
       ): Promise<SseEvent> =>
         new Promise<SseEvent>((resolveWait, rejectWait) => {
-          const existing = events.find(predicate);
+          const existing = events.slice(fromIndex).find(predicate);
           if (existing) {
             resolveWait(existing);
             return;
@@ -256,6 +278,58 @@ describe('GET /registry/subscribe', () => {
     expect(payload.pillarId).toBe('finance');
     expect(payload.entry?.pillarId).toBe('finance');
     expect(payload.entry?.baseUrl).toBe('http://finance-api:3004');
+
+    await client.close();
+  });
+
+  it('forwards missed-heartbeat transitions with the same payload shape as recovery', async () => {
+    await registerFinance();
+
+    const client = await openSseClient(`${baseUrl}/registry/subscribe`);
+    await client.waitFor((evt) => evt.event === 'pillar.snapshot');
+
+    const now = new Date();
+    const staleHeartbeat = new Date(now.getTime() - UNAVAILABLE_AFTER_MS - 1);
+    const heartbeat = pillarRegistryService.recordHeartbeat(coreDb.db, 'finance', {
+      now: staleHeartbeat.toISOString(),
+    });
+    expect(heartbeat.registration?.status).toBe('healthy');
+
+    const transitions = runHeartbeatTick(coreDb.db, {
+      now,
+      onTransition: emitHeartbeatHealthChanged,
+    });
+    expect(transitions).toHaveLength(1);
+    expect(pillarRegistryService.getPillarRegistration(coreDb.db, 'finance')?.status).toBe(
+      'unavailable'
+    );
+
+    const down = HealthChangedPayloadSchema.parse(
+      (await client.waitFor((evt) => evt.event === 'pillar.health-changed')).data
+    );
+    expect(down).toMatchObject({ pillarId: 'finance', origin: 'external' });
+
+    const recoveryEventIndex = client.events.length;
+    const recoveryResponse = await requestOn(app).post('/core.registry.heartbeat').send({
+      pillarId: 'finance',
+    });
+    expect(recoveryResponse.status).toBe(200);
+
+    const recovery = HealthChangedPayloadSchema.parse(
+      (
+        await client.waitFor(
+          (evt) => evt.event === 'pillar.health-changed',
+          2000,
+          recoveryEventIndex
+        )
+      ).data
+    );
+    expect(recovery).toMatchObject({
+      event: down.event,
+      pillarId: down.pillarId,
+      entry: down.entry,
+      origin: down.origin,
+    });
 
     await client.close();
   });

@@ -23,6 +23,7 @@ import { createCoreApiApp } from './app.js';
 import { resolveCoreSqlitePath } from './core-sqlite-path.js';
 import { assertFeatureKeysAreCoreOwned } from './modules/features/key-ownership.js';
 import { reconcileRegistryOnBoot } from './modules/registry/boot.js';
+import { emitHeartbeatHealthChanged } from './modules/registry/event-bus.js';
 import { startEvictionTicker } from './modules/registry/eviction-ticker.js';
 import { startHeartbeatTicker } from './modules/registry/ticker.js';
 import { buildRegistryManifest } from './registry-manifest.js';
@@ -72,7 +73,9 @@ const server = app.listen(port, () => {
   console.warn(`[core-api] Listening on port ${port}`);
 });
 
-const stopHeartbeatTicker = startHeartbeatTicker(coreDb.db);
+const stopHeartbeatTicker = startHeartbeatTicker(coreDb.db, {
+  onTransition: emitHeartbeatHealthChanged,
+});
 const stopEvictionTicker = startEvictionTicker(coreDb.db);
 
 // The bootstrap handshake registers the pillar with its own registry once
