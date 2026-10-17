@@ -1,3 +1,5 @@
+import { useId } from 'react';
+
 import { Checkbox, ComboboxSelect, Input, Textarea } from '@pops/ui';
 
 import { fieldInputProps, fieldInputValue } from '../../pages/item-form/field-input-props';
@@ -136,4 +138,3 @@ export function BulkFieldInputControl({
   }
   return <BulkTextFieldInputControl field={field} value={value} onChange={onChange} />;
 }
-import { useId } from 'react';
