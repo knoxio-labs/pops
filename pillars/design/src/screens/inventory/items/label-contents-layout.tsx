@@ -1,4 +1,5 @@
 import { labelContents, shortLabelContents } from '@/fixtures/inventory/label-contents-layout';
+import { Wine } from 'lucide-react';
 
 import { FieldIcon, QrCode } from '@pops/ui';
 
@@ -13,6 +14,7 @@ const TWO_COLUMN_MINIMUM = 9;
 interface LabelContentsPreviewProps {
   columns: 1 | 2;
   contents: readonly string[];
+  fragile?: boolean;
 }
 
 function contentColumnCount(columns: 1 | 2, itemCount: number): 1 | 2 {
@@ -29,7 +31,59 @@ function splitContents(
   return [contents.slice(0, splitAt), contents.slice(splitAt)];
 }
 
-function LabelContentsPreview({ columns, contents }: LabelContentsPreviewProps): ReactElement {
+function LabelHeader({ fragile }: { fragile: boolean }): ReactElement {
+  return (
+    <header className="flex shrink-0 flex-wrap gap-5 border-b border-print-rule pb-4">
+      <div className="shrink-0" style={{ width: QR_SIZE, height: QR_SIZE }}>
+        <QrCode
+          value="pops://inventory/item/550e8400-e29b-41d4-a716-446655440000"
+          title="Open Books 2 in inventory"
+          className="max-w-none"
+        />
+      </div>
+
+      {fragile ? (
+        <div className="ml-auto shrink-0" style={{ width: QR_SIZE, height: QR_SIZE }}>
+          <Wine className="size-full" strokeWidth={2} role="img" aria-label="Fragile" />
+        </div>
+      ) : null}
+
+      <div
+        className={
+          fragile
+            ? 'flex w-full flex-col gap-3'
+            : 'flex min-w-0 flex-1 flex-col justify-center gap-3'
+        }
+      >
+        <h1 className="text-2xl leading-tight font-bold text-print-ink">Books 2</h1>
+        <dl className="space-y-1.5 text-sm leading-tight">
+          <div className="flex items-baseline gap-1.5">
+            <dt className="font-medium">Destination:</dt>
+            <dd className="font-semibold">Storage</dd>
+          </div>
+          <div>
+            <dt className="sr-only">Unpack in</dt>
+            <dd className="flex items-center gap-1.5 font-semibold">
+              <FieldIcon name="PackageOpenUp" />
+              Office
+            </dd>
+          </div>
+          <div className="flex items-baseline gap-1.5">
+            <dt className="font-medium">Stackable:</dt>
+            <dd className="font-semibold">Yes</dd>
+          </div>
+        </dl>
+      </div>
+    </header>
+  );
+}
+
+/** Previews the physical label, with an optional warning matching the QR's dimensions. */
+export function LabelContentsPreview({
+  columns,
+  contents,
+  fragile = false,
+}: LabelContentsPreviewProps): ReactElement {
   const visibleColumns = contentColumnCount(columns, contents.length);
   const contentGroups = splitContents(contents, visibleColumns);
 
@@ -39,36 +93,7 @@ function LabelContentsPreview({ columns, contents }: LabelContentsPreviewProps):
       style={{ width: LABEL_WIDTH, height: LABEL_HEIGHT }}
     >
       <div className="flex min-h-0 w-full flex-col">
-        <header className="flex shrink-0 gap-5 border-b border-print-rule pb-4">
-          <div className="shrink-0" style={{ width: QR_SIZE, height: QR_SIZE }}>
-            <QrCode
-              value="pops://inventory/item/550e8400-e29b-41d4-a716-446655440000"
-              title="Open Books 2 in inventory"
-              className="max-w-none"
-            />
-          </div>
-
-          <div className="flex min-w-0 flex-1 flex-col justify-center gap-3">
-            <h1 className="text-2xl leading-tight font-bold text-print-ink">Books 2</h1>
-            <dl className="space-y-1.5 text-sm leading-tight">
-              <div className="flex items-baseline gap-1.5">
-                <dt className="font-medium">Destination:</dt>
-                <dd className="font-semibold">Storage</dd>
-              </div>
-              <div>
-                <dt className="sr-only">Unpack in</dt>
-                <dd className="flex items-center gap-1.5 font-semibold">
-                  <FieldIcon name="PackageOpenUp" />
-                  Office
-                </dd>
-              </div>
-              <div className="flex items-baseline gap-1.5">
-                <dt className="font-medium">Stackable:</dt>
-                <dd className="font-semibold">Yes</dd>
-              </div>
-            </dl>
-          </div>
-        </header>
+        <LabelHeader fragile={fragile} />
 
         <section className="min-h-0 flex-1 pt-3">
           <h2 className="mb-2 text-sm font-bold text-print-ink">Contents ({contents.length})</h2>
