@@ -108,7 +108,11 @@ export function StartAtControl({ job }: { job: PrintJob }) {
         onFocus={() => setEditing(String(job.startAt))}
         onBlur={() => setEditing(null)}
         onChange={(event) => {
-          setEditing(event.target.value);
+          setEditing(
+            event.currentTarget.ownerDocument.activeElement === event.currentTarget
+              ? event.target.value
+              : null
+          );
           job.setStartAt(Number(event.target.value));
         }}
         containerClassName="w-36"

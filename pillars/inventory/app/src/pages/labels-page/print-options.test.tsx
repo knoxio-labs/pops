@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 
@@ -7,11 +7,31 @@ import { useLabelJob } from './useLabelJob';
 
 function StartAtHarness() {
   const job = useLabelJob([], { sheetId: null });
-  return <StartAtControl job={job} />;
+  return (
+    <>
+      <StartAtControl job={job} />
+      <button type="button" onClick={() => job.setStartAt(3)}>
+        Choose label 3
+      </button>
+    </>
+  );
 }
 
 describe('StartAtControl', () => {
   beforeEach(() => localStorage.clear());
+
+  it('reflects an external position after an unfocused stepper change', async () => {
+    const user = userEvent.setup();
+    render(<StartAtHarness />);
+    const input = screen.getByRole('spinbutton', { name: 'Start at label' });
+    const increment = screen.getAllByRole('button', { name: '' })[1];
+    if (increment === undefined) throw new Error('The increment stepper is missing.');
+    await user.click(increment);
+    expect(input).toHaveValue(2);
+    expect(input).not.toHaveFocus();
+    await user.click(screen.getByRole('button', { name: 'Choose label 3' }));
+    expect(input).toHaveValue(3);
+  });
 
   it('keeps a cleared draft editable without inserting the clamped value', async () => {
     const user = userEvent.setup();
@@ -30,8 +50,8 @@ describe('StartAtControl', () => {
     const user = userEvent.setup();
     render(<StartAtHarness />);
     const input = screen.getByRole('spinbutton', { name: 'Start at label' });
-    await user.click(input);
-    fireEvent.change(input, { target: { value: '0' } });
+    await user.clear(input);
+    await user.type(input, '0');
     expect(input).toHaveValue(0);
     await user.tab();
     expect(input).toHaveValue(1);
