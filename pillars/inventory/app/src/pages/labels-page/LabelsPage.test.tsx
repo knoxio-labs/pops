@@ -452,3 +452,35 @@ describe('the sheet', () => {
     expect(await screen.findByText('1 label on 1 sheet, label 1')).toBeInTheDocument();
   });
 });
+
+describe('fragile labels', () => {
+  it('adds the warning to every copy of one item and can remove it without editing inventory', async () => {
+    renderPage(`?ids=${BOX},${GRINDER}&sheet=L7165`);
+    const toggle = await screen.findByRole('switch', { name: 'Fragile label for Kitchen 12' });
+    expect(screen.queryByRole('img', { name: 'Fragile: cracked glass' })).not.toBeInTheDocument();
+    fireEvent.click(toggle);
+    expect(screen.getAllByRole('img', { name: 'Fragile: cracked glass' })).toHaveLength(2);
+    expect(
+      screen.getByRole('switch', { name: 'Fragile label for Coffee grinder' })
+    ).not.toBeChecked();
+    fireEvent.click(toggle);
+    expect(screen.queryByRole('img', { name: 'Fragile: cracked glass' })).not.toBeInTheDocument();
+    expect(api.syncMutations).not.toHaveBeenCalled();
+  });
+
+  it('keeps the warning on the printable sheet and resets it for a new job', async () => {
+    const print = vi.spyOn(window, 'print').mockImplementation(() => {
+      expect(document.querySelectorAll('[data-label-fragile]')).toHaveLength(2);
+    });
+    const first = renderPage(`?ids=${BOX}&sheet=L7165`);
+    fireEvent.click(await screen.findByRole('switch', { name: 'Fragile label for Kitchen 12' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Print 2 labels' }));
+    expect(print).toHaveBeenCalledOnce();
+    first.unmount();
+    renderPage(`?ids=${BOX}&sheet=L7165`);
+    expect(
+      await screen.findByRole('switch', { name: 'Fragile label for Kitchen 12' })
+    ).not.toBeChecked();
+    expect(screen.queryByRole('img', { name: 'Fragile: cracked glass' })).not.toBeInTheDocument();
+  });
+});

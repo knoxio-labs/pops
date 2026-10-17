@@ -1,6 +1,6 @@
 import { labelContents, shortLabelContents } from '@/fixtures/inventory/label-contents-layout';
 
-import { FieldIcon, QrCode } from '@pops/ui';
+import { FieldIcon, FragileIcon, QrCode } from '@pops/ui';
 
 import type { ScreenMeta, ScreenStates } from '@/contract';
 import type { ReactElement } from 'react';
@@ -28,25 +28,6 @@ function splitContents(
 
   const splitAt = Math.ceil(contents.length / 2);
   return [contents.slice(0, splitAt), contents.slice(splitAt)];
-}
-
-function FragileMark(): ReactElement {
-  return (
-    <svg
-      viewBox="0 0 64 64"
-      className="size-full"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={4}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      role="img"
-      aria-label="Fragile: cracked glass"
-    >
-      <path d="M18 5h28l3 18c2 11-6 20-17 20s-19-9-17-20L18 5Z" />
-      <path d="m35 5-8 13 10 7-9 10 4 8M32 43v16M21 59h22" />
-    </svg>
-  );
 }
 
 function LabelIdentity(): ReactElement {
@@ -88,7 +69,7 @@ function LabelHeader({ fragile }: { fragile: boolean }): ReactElement {
       <LabelIdentity />
       {fragile ? (
         <div className="shrink-0" style={{ width: symbolSize, height: symbolSize }}>
-          <FragileMark />
+          <FragileIcon size="100%" />
         </div>
       ) : null}
     </header>

@@ -59,11 +59,15 @@ function contentColumns(count: number, rows: number, widthMm: number): 1 | 2 | 3
   return 1;
 }
 
-/** Fits a QR header above contents, or declines when a readable body cannot fit. */
+/**
+ * Fits a QR header above contents, or declines when a readable body cannot fit.
+ * An inline reservation reduces header text width but leaves body width intact.
+ */
 export function headerPlan(
   label: ResolvedLabel,
   subject: PrintSubject,
-  layout: SheetLayout
+  layout: SheetLayout,
+  inlineReservationMm = 0
 ): LabelPlan | null {
   if (!label.parts.includes('qr') || !label.parts.includes('contents') || !label.contents.length) {
     return null;
@@ -72,7 +76,7 @@ export function headerPlan(
   const widthMm = layout.labelWidthMm - scale.paddingMm * 2;
   const heightMm = layout.labelHeightMm - scale.paddingMm * 2;
   const qrMm = Math.min(scale.qrMm, 32);
-  const textWidth = widthMm - qrMm - LABEL_GAP_MM;
+  const textWidth = widthMm - qrMm - LABEL_GAP_MM - inlineReservationMm;
   if (qrMm < MIN_QR_MM || textWidth < MIN_TEXT_MM.container) return null;
   const pt = Math.min(12, Math.max(6, Math.floor(scale.namePt * 0.8 * 2) / 2));
   const contentsPt = Math.min(pt, 9);

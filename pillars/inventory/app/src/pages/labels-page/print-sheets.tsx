@@ -45,7 +45,14 @@ function SlotContent({ slot, props }: SlotProps) {
   if (slot.kind === 'blank') return null;
   const entry = props.labels[slot.label];
   if (!entry) return null;
-  return <PrintLabel label={entry.label} subject={entry.subject} layout={props.layout} />;
+  return (
+    <PrintLabel
+      label={entry.label}
+      subject={entry.subject}
+      layout={props.layout}
+      fragile={entry.fragile}
+    />
+  );
 }
 
 function Slot({ slot, props, firstPage }: SlotProps) {

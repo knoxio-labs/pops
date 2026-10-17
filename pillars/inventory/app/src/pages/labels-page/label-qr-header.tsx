@@ -11,6 +11,7 @@ interface QrHeaderLabelProps {
   name: ReactNode;
   code: ReactNode;
   fields: ReactNode;
+  fragile?: ReactNode;
 }
 
 interface ContentLine {
@@ -86,6 +87,7 @@ export function QrHeaderLabel({
   name,
   code,
   fields,
+  fragile,
 }: QrHeaderLabelProps): ReactElement {
   return (
     <div className="flex h-full min-h-0 w-full flex-col overflow-hidden" data-label-qr-header>
@@ -104,6 +106,7 @@ export function QrHeaderLabel({
           {code ? <div className="max-w-full shrink-0">{code}</div> : null}
           {fields ? <div className="max-w-full shrink-0">{fields}</div> : null}
         </div>
+        {fragile}
       </header>
 
       <div

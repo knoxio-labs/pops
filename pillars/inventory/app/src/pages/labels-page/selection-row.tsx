@@ -6,7 +6,7 @@
 import { Package, Pencil, Plus, Tag, X } from 'lucide-react';
 import { useState } from 'react';
 
-import { Button } from '@pops/ui';
+import { Button, Switch } from '@pops/ui';
 
 import { CodeField } from './code-field';
 import { saveSuggestedCode } from './useSaveCode';
@@ -17,6 +17,8 @@ import type { CodeSaveResult } from './useSaveCode';
 /** Props for {@link SelectionRow}. */
 export interface SelectionRowProps {
   subject: LabelSubject;
+  fragile?: boolean;
+  onFragileChange?: (fragile: boolean) => void;
   /** The box's contents that are not in the job yet. */
   contentsToAdd: LabelSubject[];
   saveCode: (subject: LabelSubject, code: string) => Promise<CodeSaveResult>;
@@ -125,6 +127,16 @@ export function SelectionRow(row: SelectionRowProps) {
           ) : null}
         </p>
         <CodeArea row={row} />
+        {row.onFragileChange ? (
+          <label className="flex min-h-11 items-center justify-between gap-3 text-xs">
+            Fragile
+            <Switch
+              checked={row.fragile ?? false}
+              onCheckedChange={row.onFragileChange}
+              aria-label={`Fragile label for ${subject.name}`}
+            />
+          </label>
+        ) : null}
         {contentsToAdd.length > 0 ? (
           <Button
             size="sm"

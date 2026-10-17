@@ -173,6 +173,8 @@ function LabelsContent({
       <div className={GRID}>
         <LabelsSelection
           data={data}
+          fragileIds={job.fragileIds}
+          onFragileChange={job.setFragile}
           needsCode={new Set(job.uncoded.map((subject) => subject.id))}
           saveCode={save}
           addControl={addControl}
