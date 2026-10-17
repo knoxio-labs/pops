@@ -1,4 +1,5 @@
 import { fireEvent, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
 import { catalogueTypes, chooseOption, renderComputedField, savedExpression } from './test-utils';
@@ -412,5 +413,66 @@ describe('expression version on save', () => {
 
     expect(screen.queryByText(UPGRADE)).not.toBeInTheDocument();
     expect(onOperation).toHaveBeenLastCalledWith(expect.objectContaining({ expressionVersion: 2 }));
+  });
+});
+
+describe('expression actions inside the field form', () => {
+  it('never saves while replacing, wrapping, or clearing a node', () => {
+    const { onOperation } = renderComputedField({ volume: loaded(literal(5), INTEGER) });
+    fireEvent.click(screen.getByRole('button', { name: 'Replace node' }));
+    expect(onOperation).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    expect(onOperation).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Replace node' }));
+    pick('Fixed value');
+    fireEvent.click(screen.getByRole('button', { name: 'Wrap in an operation' }));
+    expect(onOperation).not.toHaveBeenCalled();
+    pick('Negative of');
+    fireEvent.click(screen.getByRole('button', { name: 'Clear expression' }));
+    expect(onOperation).not.toHaveBeenCalled();
+  });
+
+  it('never saves while editing coalesce inputs', () => {
+    const { onOperation } = renderComputedField({
+      volume: loaded({ op: 'coalesce', values: [read('count'), literal(2), literal(3)] }, INTEGER),
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Move Input 2 up' }));
+    expect(onOperation).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Move Input 1 down' }));
+    expect(onOperation).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Input 3' }));
+    expect(onOperation).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Add input' }));
+    expect(onOperation).not.toHaveBeenCalled();
+  });
+
+  it('never saves while opening references to follow', () => {
+    const { onOperation } = renderComputedField({ volume: loaded(read('count'), INTEGER) });
+    fireEvent.click(screen.getByRole('button', { name: 'Follow a reference' }));
+    expect(onOperation).not.toHaveBeenCalled();
+  });
+});
+
+describe('computed literal typing', () => {
+  it('preserves the integer draft, focus, and sign while typing through negative zero', async () => {
+    const user = userEvent.setup();
+    const { onOperation } = renderComputedField({ volume: loaded(literal(1), INTEGER) });
+    const input = screen.getByLabelText('Value (Integer)');
+    await user.clear(input);
+    await user.type(input, '-05');
+    expect(input).toHaveFocus();
+    expect(input).toHaveValue('-05');
+    save();
+    expect(savedExpression(onOperation)).toEqual(literal(-5));
+  });
+
+  it('keeps measurement literals focused through multiple keystrokes', async () => {
+    const user = userEvent.setup();
+    renderComputedField({ volume: loaded(literal({ amount: '1', unit: 'cm³' })) });
+    const input = screen.getByLabelText('Value (Measurement in cm³)');
+    await user.clear(input);
+    await user.type(input, '12.50');
+    expect(input).toHaveFocus();
+    expect(input).toHaveValue('12.50');
   });
 });

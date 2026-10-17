@@ -1,36 +1,18 @@
+import { useId } from 'react';
+
 import { Checkbox, ComboboxSelect, Input, Textarea } from '@pops/ui';
 
-import { decimalPlacesFromPresentation } from '../../catalogue-editor/decimal-places';
+import { fieldInputProps, fieldInputValue } from '../../pages/item-form/field-input-props';
 import { blankDraft } from '../../pages/item-form/form-draft';
 import { ReferenceField } from '../../pages/item-form/reference-field';
-import { type BulkFieldInput } from './bulk-action-model.js';
+import { bulkFieldInputError, type BulkFieldInput } from './bulk-action-model.js';
+import { bulkFormField } from './bulk-field-definition.js';
 import { isBulkReferenceInput } from './bulk-reference-model.js';
 
 import type { ReactElement } from 'react';
 
 import type { CatalogueType } from '../../inventory-web/useCatalogueLookups.js';
-import type { FormFieldDef } from '../../pages/item-form/field-model';
 import type { DraftAction } from '../../pages/item-form/form-draft';
-
-function formFieldOf(field: CatalogueType['fields'][number]): FormFieldDef {
-  return {
-    id: field.id,
-    key: field.key,
-    label: field.label,
-    kind: field.kind,
-    cardinality: field.cardinality,
-    required: field.required,
-    storage: field.storage,
-    allowOverride: field.allowOverride,
-    help: field.help,
-    fixedUnit: field.fixedUnit,
-    decimalPlaces: decimalPlacesFromPresentation(field.presentation),
-    enumOptions: field.enumOptions,
-    referenceKinds: field.referenceKinds,
-    referenceTypeIds: field.referenceTypeIds,
-    expression: field.expression,
-  };
-}
 
 function referenceDraft(
   field: CatalogueType['fields'][number],
@@ -55,7 +37,7 @@ function BulkReferenceFieldInputControl({
   value: BulkFieldInput;
   onChange: (value: BulkFieldInput) => void;
 }): ReactElement {
-  const formField = formFieldOf(field);
+  const formField = bulkFormField(field);
   const draft = referenceDraft(field, value);
   const dispatch = (action: DraftAction): void => {
     if (action.type === 'field-refs' && action.fieldId === field.id) onChange(action.refs);
@@ -70,23 +52,48 @@ function BulkReferenceFieldInputControl({
   );
 }
 
-function textInputType(
-  field: CatalogueType['fields'][number]
-): 'text' | 'number' | 'date' | 'datetime-local' | 'url' {
-  if (field.kind === 'integer' || field.kind === 'decimal' || field.kind === 'measurement') {
-    return 'number';
-  }
-  if (field.kind === 'date') return 'date';
-  if (field.kind === 'date_time') return 'datetime-local';
-  if (field.kind === 'url') return 'url';
-  return 'text';
-}
-
 function stringControlValue(value: BulkFieldInput): string | string[] {
   if (typeof value === 'string') return value;
   if (!Array.isArray(value)) return '';
   const strings = value.filter((entry): entry is string => typeof entry === 'string');
   return strings.length === value.length ? strings : '';
+}
+
+function BulkTextFieldInputControl({
+  field,
+  value,
+  onChange,
+}: {
+  field: CatalogueType['fields'][number];
+  value: BulkFieldInput;
+  onChange: (value: BulkFieldInput) => void;
+}): ReactElement {
+  const errorId = useId();
+  const error = bulkFieldInputError(field, value);
+  const inputProps = {
+    'aria-label': field.label,
+    'aria-invalid': error !== null || undefined,
+    'aria-describedby': error === null ? undefined : errorId,
+    value: fieldInputValue(field.kind, typeof value === 'string' ? value : ''),
+  };
+  return (
+    <div className="grid gap-1.5">
+      {field.kind === 'long_text' ? (
+        <Textarea {...inputProps} rows={3} onChange={(event) => onChange(event.target.value)} />
+      ) : (
+        <Input
+          {...inputProps}
+          {...fieldInputProps(field.kind)}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      )}
+      {error === null ? null : (
+        <p id={errorId} role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      )}
+    </div>
+  );
 }
 
 /** Renders the catalogue-specific control for a bulk field value. */
@@ -129,22 +136,5 @@ export function BulkFieldInputControl({
       />
     );
   }
-  if (field.kind === 'long_text') {
-    return (
-      <Textarea
-        aria-label={field.label}
-        value={typeof value === 'string' ? value : ''}
-        rows={3}
-        onChange={(event) => onChange(event.target.value)}
-      />
-    );
-  }
-  return (
-    <Input
-      aria-label={field.label}
-      type={textInputType(field)}
-      value={typeof value === 'string' ? value : ''}
-      onChange={(event) => onChange(event.target.value)}
-    />
-  );
+  return <BulkTextFieldInputControl field={field} value={value} onChange={onChange} />;
 }

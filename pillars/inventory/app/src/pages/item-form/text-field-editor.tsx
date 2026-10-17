@@ -1,4 +1,8 @@
+import { useState } from 'react';
+
 import { Button, Input, Textarea } from '@pops/ui';
+
+import { fieldInputProps, fieldInputValue } from './field-input-props';
 
 import type { ReactElement } from 'react';
 
@@ -12,31 +16,10 @@ interface TextFieldEditorProps {
   readonly dispatch: (action: DraftAction) => void;
 }
 
-function inputType(field: FormFieldDef): 'text' | 'number' | 'date' | 'datetime-local' | 'url' {
-  if (field.kind === 'integer' || field.kind === 'decimal' || field.kind === 'measurement')
-    return 'number';
-  if (field.kind === 'date') return 'date';
-  if (field.kind === 'date_time') return 'datetime-local';
-  if (field.kind === 'url') return 'url';
-  return 'text';
-}
-
 function textValues(draft: ItemDraft, field: FormFieldDef): readonly string[] {
   const values = draft.fields.text[field.id];
   if (values === undefined || values.length === 0) return [''];
   return values;
-}
-
-function keyedTextValues(
-  fieldId: string,
-  values: readonly string[]
-): readonly { readonly key: string; readonly index: number; readonly value: string }[] {
-  const occurrences = new Map<string, number>();
-  return values.map((value, index) => {
-    const occurrence = (occurrences.get(value) ?? 0) + 1;
-    occurrences.set(value, occurrence);
-    return { key: `${fieldId}-${value}-${occurrence}`, index, value };
-  });
 }
 
 function setText({
@@ -64,6 +47,7 @@ function TextValue({
   values,
   error,
   dispatch,
+  onRemove,
 }: {
   readonly field: FormFieldDef;
   readonly value: string;
@@ -71,15 +55,10 @@ function TextValue({
   readonly values: readonly string[];
   readonly error?: string;
   readonly dispatch: TextFieldEditorProps['dispatch'];
+  readonly onRemove: () => void;
 }): ReactElement {
   const onChange = (nextValue: string): void =>
     setText({ dispatch, field, valueIndex: index, value: nextValue, current: values });
-  const remove = (): void =>
-    dispatch({
-      type: 'field-text',
-      fieldId: field.id,
-      values: values.filter((_, valueIndex) => valueIndex !== index),
-    });
   const label = `${field.label} ${index + 1}`;
   return (
     <div className="flex gap-2">
@@ -97,8 +76,8 @@ function TextValue({
         ) : (
           <Input
             id={index === 0 ? `field-${field.id}` : undefined}
-            type={inputType(field)}
-            value={value}
+            {...fieldInputProps(field.kind)}
+            value={fieldInputValue(field.kind, value)}
             onChange={(event) => onChange(event.target.value)}
             aria-label={label}
             aria-invalid={error !== undefined}
@@ -110,7 +89,7 @@ function TextValue({
         ) : null}
       </div>
       {field.cardinality === 'many' && values.length > 1 ? (
-        <Button type="button" variant="ghost" size="sm" onClick={remove}>
+        <Button type="button" variant="ghost" size="sm" onClick={onRemove}>
           Remove
         </Button>
       ) : null}
@@ -126,18 +105,30 @@ export function TextFieldEditor({
   dispatch,
 }: TextFieldEditorProps): ReactElement {
   const values = textValues(draft, field);
-  const keyedValues = keyedTextValues(field.id, values);
+  const [keys, setKeys] = useState(() => values.map(() => crypto.randomUUID()));
+  if (keys.length !== values.length) {
+    setKeys(values.map((_, index) => keys[index] ?? crypto.randomUUID()));
+  }
+  const removeValue = (index: number): void => {
+    setKeys(keys.filter((_, keyIndex) => keyIndex !== index));
+    dispatch({
+      type: 'field-text',
+      fieldId: field.id,
+      values: values.filter((_, valueIndex) => valueIndex !== index),
+    });
+  };
   return (
     <div className="space-y-2">
-      {keyedValues.map(({ key, value, index }) => (
+      {keys.map((key, index) => (
         <TextValue
           key={key}
           field={field}
-          value={value}
+          value={values[index] ?? ''}
           index={index}
           values={values}
           error={error}
           dispatch={dispatch}
+          onRemove={() => removeValue(index)}
         />
       ))}
       {field.cardinality === 'many' ? (
@@ -145,9 +136,10 @@ export function TextFieldEditor({
           type="button"
           variant="outline"
           size="sm"
-          onClick={() =>
-            dispatch({ type: 'field-text', fieldId: field.id, values: [...values, ''] })
-          }
+          onClick={() => {
+            setKeys([...keys, crypto.randomUUID()]);
+            dispatch({ type: 'field-text', fieldId: field.id, values: [...values, ''] });
+          }}
         >
           Add value
         </Button>

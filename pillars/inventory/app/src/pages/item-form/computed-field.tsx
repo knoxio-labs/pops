@@ -1,6 +1,7 @@
 import { Input } from '@pops/ui';
 
 import { formatComputedValueResult } from './computed-value';
+import { fieldInputProps, fieldInputValue } from './field-input-props';
 
 import type { ReactElement } from 'react';
 
@@ -16,16 +17,6 @@ export interface ComputedFieldProps {
   readonly computed: ComputedDisplay | undefined;
   readonly error?: string;
   readonly dispatch: (action: DraftAction) => void;
-}
-
-function inputType(field: FormFieldDef): 'text' | 'number' | 'date' | 'datetime-local' | 'url' {
-  if (field.kind === 'integer' || field.kind === 'decimal' || field.kind === 'measurement') {
-    return 'number';
-  }
-  if (field.kind === 'date') return 'date';
-  if (field.kind === 'date_time') return 'datetime-local';
-  if (field.kind === 'url') return 'url';
-  return 'text';
 }
 
 function displayText(
@@ -70,8 +61,8 @@ export function ComputedField({
         <div className="flex items-start gap-2">
           <Input
             id={`field-${field.id}`}
-            type={inputType(field)}
-            value={draft.overrides[field.id] ?? ''}
+            {...fieldInputProps(field.kind)}
+            value={fieldInputValue(field.kind, draft.overrides[field.id] ?? '')}
             onChange={(event) =>
               dispatch({ type: 'override', fieldId: field.id, value: event.target.value || null })
             }

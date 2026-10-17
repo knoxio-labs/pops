@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { testType } from './type-tree-test-utils';
@@ -180,5 +181,29 @@ describe('TypeForm parent chooser', () => {
 
     expect(screen.getByText('Parent type could not be found.')).toBeInTheDocument();
     expect(screen.queryByText('Unrelated parent issue')).not.toBeInTheDocument();
+  });
+});
+
+describe('TypeForm typing', () => {
+  it('keeps focus and separators while typing an explicit key', async () => {
+    const user = userEvent.setup();
+    const onSave = renderForm();
+    await user.type(screen.getByLabelText('Type label'), 'Travel gear');
+    const key = screen.getByLabelText('Key');
+    await user.clear(key);
+    await user.type(key, 'custom_key');
+    expect(key).toHaveFocus();
+    expect(key).toHaveValue('custom_key');
+    await user.type(screen.getByLabelText('Description'), 'A useful description');
+    expect(screen.getByLabelText('Description')).toHaveFocus();
+    await user.click(screen.getByRole('button', { name: 'Create type' }));
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ key: 'custom_key' }));
+  });
+
+  it('rejects a key with no usable characters', () => {
+    renderForm();
+    fireEvent.change(screen.getByLabelText('Type label'), { target: { value: 'Gear' } });
+    fireEvent.change(screen.getByLabelText('Key'), { target: { value: '___' } });
+    expect(screen.getByRole('button', { name: 'Create type' })).toBeDisabled();
   });
 });

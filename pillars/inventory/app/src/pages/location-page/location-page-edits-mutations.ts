@@ -46,17 +46,22 @@ interface MutationOptions {
   readonly setRenamingId: (id: string | null) => void;
   readonly setError: (message: string | null) => void;
   readonly onDeleted: (parentId: string | null) => void;
+  readonly onCreated?: () => void;
 }
 
 function useCreateMutation(
   queryClient: QueryClient,
   setCreatingUnder: (id: string | null) => void,
-  setError: (message: string | null) => void
+  setError: (message: string | null) => void,
+  onCreated: (() => void) | undefined
 ) {
   return useMutation({
     mutationFn: async ({ name, parentId }: CreatePlaceInput) =>
       unwrap(await locationsCreate({ body: { name, parentId, sortOrder: 0 } })),
-    onSuccess: () => setCreatingUnder(null),
+    onSuccess: () => {
+      setCreatingUnder(null);
+      onCreated?.();
+    },
     onError: (reason: unknown) => setError(inventoryErrorMessage(reason)),
     onSettled: () => invalidateLocationData(queryClient),
   });
@@ -151,8 +156,9 @@ export function usePlaceEditMutations(options: MutationOptions) {
     setRenamingId,
     setError,
     onDeleted,
+    onCreated,
   } = options;
-  const create = useCreateMutation(queryClient, setCreatingUnder, setError);
+  const create = useCreateMutation(queryClient, setCreatingUnder, setError, onCreated);
   const rename = useRenameMutation(queryClient, setRenamingId, setError);
   const move = useMoveMutation(queryClient, world, setLastMove, setError);
   const remove = useRemoveMutation(queryClient, setDeleting, setError, onDeleted);

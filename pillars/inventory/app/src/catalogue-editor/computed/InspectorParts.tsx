@@ -18,6 +18,7 @@ function NodeActions() {
   return (
     <div className="flex shrink-0">
       <Button
+        type="button"
         variant="ghost"
         size="icon"
         className="min-h-11 min-w-11"
@@ -27,6 +28,7 @@ function NodeActions() {
         <Replace className="h-4 w-4" />
       </Button>
       <Button
+        type="button"
         variant="ghost"
         size="icon"
         className="min-h-11 min-w-11"
@@ -36,6 +38,7 @@ function NodeActions() {
         <Parentheses className="h-4 w-4" />
       </Button>
       <Button
+        type="button"
         variant="ghost"
         size="icon"
         className="min-h-11 min-w-11"

@@ -13,7 +13,7 @@ const DATE_TIME = /^(\d{4}-\d{2}-\d{2})T([01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\
 const REFERENCE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
 function lengthError(label: string, value: string, limit: number): string | null {
-  if (value.length <= limit) return null;
+  if (Array.from(value).length <= limit) return null;
   return `${label} allows up to ${limit.toLocaleString('en-AU')} characters.`;
 }
 
@@ -25,7 +25,9 @@ function integerError(label: string, value: string): string | null {
 }
 
 function decimalError(label: string, value: string): string | null {
-  if (!DECIMAL.test(value)) return `${label} needs a number, like 12.50.`;
+  if (!DECIMAL.test(value) || /^-0(?:\.0+)?$/u.test(value)) {
+    return `${label} needs a number, like 12.50.`;
+  }
   const unsigned = value.startsWith('-') ? value.slice(1) : value;
   const [whole = '', fraction = ''] = unsigned.split('.');
   const significantDigits = `${whole}${fraction}`.replace(/^0+/u, '').length;
@@ -40,7 +42,9 @@ function isCalendarDate(value: string): boolean {
   const year = Number(match[1]);
   const month = Number(match[2]);
   const day = Number(match[3]);
-  const date = new Date(Date.UTC(year, month - 1, day));
+  const date = new Date(0);
+  date.setUTCFullYear(year, month - 1, day);
+  date.setUTCHours(0, 0, 0, 0);
   return (
     date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
   );

@@ -42,7 +42,7 @@ function typeOperation({
 }): CatalogueOperation {
   return {
     kind: 'put_type',
-    ...(type === undefined ? { key: key.trim() } : { id: type.id }),
+    ...(type === undefined ? { key: catalogueKeyFromLabel(key) } : { id: type.id }),
     label: label.trim(),
     description: description.trim().length === 0 ? null : description.trim(),
     capabilities: containment ? ['containment'] : [],
@@ -51,7 +51,7 @@ function typeOperation({
 }
 
 function typeFormIsValid(label: string, key: string, type: CatalogueType | undefined): boolean {
-  return label.trim().length > 0 && (type !== undefined || key.trim().length > 0);
+  return label.trim().length > 0 && (type !== undefined || catalogueKeyFromLabel(key).length > 0);
 }
 
 /** Edits type identity and capabilities, or creates a new catalogue type. */
@@ -129,7 +129,7 @@ function useTypeFormState(
   };
   const changeKey = (value: string) => {
     setKeyEdited(true);
-    setKey(catalogueKeyFromLabel(value));
+    setKey(value);
   };
   return {
     changeKey,

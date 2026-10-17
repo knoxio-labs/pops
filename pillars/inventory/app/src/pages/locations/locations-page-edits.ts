@@ -17,8 +17,14 @@ export function useLocationsEdits({
   tallyOf: Parameters<typeof usePlaceEdits>[0]['tallyOf'];
   onDeleted: (parentId: string | null) => void;
 }): LocationEdits {
-  const base = usePlaceEdits({ online, world, tallyOf, onDeleted });
   const [creatingUnder, setCreatingUnder] = useState<string | null | undefined>(undefined);
+  const base = usePlaceEdits({
+    online,
+    world,
+    tallyOf,
+    onDeleted,
+    onCreated: () => setCreatingUnder(undefined),
+  });
   const startCreate = useCallback(
     (parentId: string | null): void => {
       if (!online) return;
@@ -27,13 +33,6 @@ export function useLocationsEdits({
       else base.startCreate(parentId);
     },
     [base, online]
-  );
-  const commitCreate = useCallback(
-    (name: string): void => {
-      base.commitCreate(name);
-      if (name.trim() !== '') setCreatingUnder(undefined);
-    },
-    [base]
   );
   const cancelCreate = useCallback((): void => {
     setCreatingUnder(undefined);
@@ -53,7 +52,7 @@ export function useLocationsEdits({
     pendingDelete: base.pendingDelete,
     error: base.error,
     startCreate,
-    commitCreate,
+    commitCreate: base.commitCreate,
     cancelCreate,
     startRename,
     commitRename: base.commitRename,

@@ -89,7 +89,7 @@ function IdentityInputs({
           id="catalogue-field-key"
           className="min-h-11 font-mono"
           value={keyValue}
-          disabled={useFieldFormContext().shapeLocked}
+          disabled={field !== undefined}
           onChange={(event) => onKeyChange(event.target.value)}
         />
         {keyIssues.map((issue) => (

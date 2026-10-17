@@ -32,6 +32,18 @@ const cable: FormTypeDef = {
 };
 
 describe('item form view', () => {
+  it.each(['9007199254740992', '9'.repeat(400)])('blocks unsafe quantity %s', (quantity) => {
+    const view = deriveForm({ ...blankDraft(), name: 'Cable', quantity, submitted: true }, []);
+    expect(view.quantityError).toBe('Quantity is too large to store.');
+    expect(view.blockers).toContain('Quantity is too large to store.');
+  });
+
+  it.each(['1', '9007199254740991'])('accepts safe positive quantity %s', (quantity) => {
+    const view = deriveForm({ ...blankDraft(), name: 'Cable', quantity, submitted: true }, []);
+    expect(view.quantityError).toBeNull();
+    expect(view.blockers).toEqual([]);
+  });
+
   it('requires only a name and does not require catalogue fields', () => {
     const draft = { ...blankDraft(), typeId: 'cable' };
     const emptyName = deriveForm(draft, [cable]);

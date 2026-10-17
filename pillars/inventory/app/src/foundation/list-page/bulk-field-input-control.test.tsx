@@ -76,6 +76,37 @@ function search(): WebSearchApi {
 }
 
 describe('BulkFieldInputControl', () => {
+  it('explains invalid scalar input and clears the error when the draft is corrected', () => {
+    const field = { ...referenceField, kind: 'integer' as const };
+    const { rerender } = render(
+      <BulkFieldInputControl field={field} value="9007199254740993" onChange={vi.fn()} />
+    );
+    const input = screen.getByLabelText('Related');
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByRole('alert')).toHaveTextContent('Related is too large to store.');
+    expect(input).toHaveAccessibleDescription('Related is too large to store.');
+    rerender(<BulkFieldInputControl field={field} value="12" onChange={vi.fn()} />);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(input).not.toHaveAttribute('aria-invalid');
+  });
+
+  it.each([
+    { kind: 'integer', type: 'number', step: '1' },
+    { kind: 'decimal', type: 'number', step: 'any' },
+    { kind: 'measurement', type: 'number', step: 'any' },
+    { kind: 'date_time', type: 'datetime-local', step: '0.001' },
+  ] as const)(
+    'matches the $kind input constraints to its wire contract',
+    ({ kind, type, step }) => {
+      render(
+        <BulkFieldInputControl field={{ ...referenceField, kind }} value="" onChange={vi.fn()} />
+      );
+      const input = screen.getByLabelText('Related');
+      expect(input).toHaveAttribute('type', type);
+      expect(input).toHaveAttribute('step', step);
+    }
+  );
+
   it('uses the typed reference editor and keeps the selected target metadata', () => {
     mocks.useWebSearch.mockReturnValue(search());
     const onChange = vi.fn();

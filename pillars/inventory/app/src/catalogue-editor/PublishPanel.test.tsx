@@ -237,9 +237,17 @@ describe('PublishPanel', () => {
       target: { value: '  Adds date-time fields  ' },
     });
     fireEvent.change(screen.getByLabelText('Minimum client protocol'), {
-      target: { value: '0' },
+      target: { value: '' },
     });
+    expect(screen.getByLabelText('Minimum client protocol')).toHaveValue(null);
     expect(screen.getByRole('button', { name: 'Publish revision' })).toBeDisabled();
+
+    for (const value of ['0', '-1', '1.5', '9007199254740992']) {
+      fireEvent.change(screen.getByLabelText('Minimum client protocol'), {
+        target: { value },
+      });
+      expect(screen.getByRole('button', { name: 'Publish revision' })).toBeDisabled();
+    }
 
     fireEvent.change(screen.getByLabelText('Minimum client protocol'), {
       target: { value: '3' },

@@ -18,6 +18,7 @@ import { FieldFormConstraints } from './FieldFormConstraints';
 import { FieldFormProvider } from './FieldFormContext';
 import { FieldFormIdentity } from './FieldFormIdentity';
 import { EnumOptions } from './FieldFormOptions';
+import { catalogueKeyFromLabel } from './types';
 import { useFieldFormState } from './useFieldFormState';
 import { useOperationPreview } from './useOperationPreview';
 
@@ -121,7 +122,9 @@ function createOperation(value: FieldFormContextValue, typeId: string): Catalogu
   return {
     kind: 'put_field',
     typeId,
-    ...(value.field === undefined ? { key: value.keyValue } : { id: value.field.id }),
+    ...(value.field === undefined
+      ? { key: catalogueKeyFromLabel(value.keyValue) }
+      : { id: value.field.id }),
     label: value.label.trim(),
     help: value.help.trim() === '' ? null : value.help.trim(),
     required: value.required,

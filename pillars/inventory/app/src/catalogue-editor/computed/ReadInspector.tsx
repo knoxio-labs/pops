@@ -98,6 +98,7 @@ function ReferencePath({ resolved }: { resolved: ResolvedRead }) {
       <li className="flex items-center gap-1">
         <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
         <Button
+          type="button"
           variant="outline"
           size="sm"
           className="min-h-8"

@@ -123,7 +123,7 @@ export function PhotosField({
       </h3>
       <FileUpload
         multiple
-        accept="image/*"
+        accept="image/*,.heic,.heif"
         acceptHint={null}
         prompt="Add from disk"
         onFilesSelected={onFiles}

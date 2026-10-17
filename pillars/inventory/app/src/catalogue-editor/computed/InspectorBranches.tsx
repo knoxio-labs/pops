@@ -109,6 +109,7 @@ function ArgumentControls({ index, count, slot }: { index: number; count: number
   return (
     <>
       <Button
+        type="button"
         variant="ghost"
         size="icon"
         className="min-h-9 min-w-9"
@@ -119,6 +120,7 @@ function ArgumentControls({ index, count, slot }: { index: number; count: number
         <ArrowUp className="h-4 w-4" />
       </Button>
       <Button
+        type="button"
         variant="ghost"
         size="icon"
         className="min-h-9 min-w-9"
@@ -129,6 +131,7 @@ function ArgumentControls({ index, count, slot }: { index: number; count: number
         <ArrowDown className="h-4 w-4" />
       </Button>
       <Button
+        type="button"
         variant="ghost"
         size="icon"
         className="min-h-9 min-w-9"
@@ -169,6 +172,7 @@ export function CoalesceInputs({ node }: { node: Extract<ExpressionNode, { op: '
       </ol>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Button
+          type="button"
           variant="outline"
           size="sm"
           className="min-h-9"

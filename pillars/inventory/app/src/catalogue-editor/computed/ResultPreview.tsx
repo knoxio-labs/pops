@@ -131,7 +131,7 @@ function Outcome({ preview, onRetry }: { preview: PreviewState; onRetry: () => v
             The calculation did not run. Nothing was saved and the draft is unchanged.
           </AlertDescription>
           <div className="col-start-2 mt-2">
-            <Button variant="outline" size="sm" onClick={onRetry}>
+            <Button type="button" variant="outline" size="sm" onClick={onRetry}>
               <RefreshCw className="h-4 w-4" />
               Try again
             </Button>

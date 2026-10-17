@@ -14,6 +14,7 @@ import type {
   WebListResponses,
 } from '../../inventory-api/types.gen.js';
 import type { ItemRowModel } from '../model/model.js';
+import type { BulkFieldInput } from './bulk-action-model.js';
 
 type Catalogue = TypesReadCatalogueResponses[200];
 type CatalogueType = Catalogue['types'][number];
@@ -151,6 +152,115 @@ function webItem(id: string, fieldValues: WebItem['fieldValues'] = []): WebItem 
 }
 
 describe('bulk action model', () => {
+  it.each<{
+    kind: CatalogueField['kind'];
+    input: BulkFieldInput;
+    expected: unknown[];
+    fixedUnit?: string;
+  }>([
+    { kind: 'short_text', input: '  Cotton  ', expected: ['Cotton'] },
+    {
+      kind: 'long_text',
+      input: ' First line\nsecond line ',
+      expected: [' First line\nsecond line '],
+    },
+    { kind: 'integer', input: '9007199254740991', expected: [9007199254740991] },
+    { kind: 'integer', input: '-9007199254740991', expected: [-9007199254740991] },
+    { kind: 'decimal', input: '12.50', expected: ['12.50'] },
+    { kind: 'boolean', input: false, expected: [false] },
+    {
+      kind: 'measurement',
+      fixedUnit: 'kg',
+      input: '12.50',
+      expected: [{ amount: '12.50', unit: 'kg' }],
+    },
+    { kind: 'date', input: '2024-02-29', expected: ['2024-02-29'] },
+    {
+      kind: 'date_time',
+      input: '2026-10-17T13:25:12.123',
+      expected: [new Date('2026-10-17T13:25:12.123').toISOString()],
+    },
+    { kind: 'url', input: 'https://example.com/item', expected: ['https://example.com/item'] },
+  ])('encodes $kind values in the backend wire format', ({ kind, input, expected, fixedUnit }) => {
+    const definition = field('type-a', 'value', 'Value', { kind, fixedUnit: fixedUnit ?? null });
+    expect(encodeBulkFieldValues(definition, input)).toEqual(expected);
+    expect(bulkFieldPatch(definition, input)).toEqual({ fieldId: 'value', values: expected });
+  });
+
+  it('encodes selected enum and reference UUIDs in the backend wire format', () => {
+    const optionId = 'b5197526-c95f-4e77-865e-80d46d6df101';
+    const targetId = 'b5197526-c95f-4e77-865e-80d46d6df102';
+    const enumField = field('type-a', 'option', 'Option', {
+      kind: 'enum',
+      enumOptions: [
+        { id: optionId, key: 'option', label: 'Option', archivedAt: null, sortOrder: 0 },
+      ],
+    });
+    const referenceField = field('type-a', 'reference', 'Reference', {
+      kind: 'reference',
+      referenceKinds: ['item'],
+    });
+    expect(encodeBulkFieldValues(enumField, optionId)).toEqual([{ optionId }]);
+    expect(
+      encodeBulkFieldValues(referenceField, [{ id: targetId, kind: 'item', label: 'Target' }])
+    ).toEqual([{ targetKind: 'item', targetId }]);
+    expect(encodeBulkFieldValues(enumField, 'missing')).toBeNull();
+    expect(
+      encodeBulkFieldValues(referenceField, [
+        { id: targetId, kind: 'location', label: 'Wrong kind' },
+      ])
+    ).toBeNull();
+  });
+
+  it.each<{
+    kind: CatalogueField['kind'];
+    input: BulkFieldInput;
+    fixedUnit?: string;
+  }>([
+    { kind: 'short_text', input: 'x'.repeat(201) },
+    { kind: 'long_text', input: 'x'.repeat(20_001) },
+    { kind: 'long_text', input: ` ${'x'.repeat(20_000)}` },
+    { kind: 'integer', input: '9007199254740993' },
+    { kind: 'integer', input: '-9007199254740992' },
+    { kind: 'integer', input: '1.5' },
+    { kind: 'integer', input: '1e2' },
+    { kind: 'decimal', input: '1e2' },
+    { kind: 'decimal', input: '-0.00' },
+    { kind: 'decimal', input: '1234567890123456789' },
+    { kind: 'decimal', input: '0.1234567890' },
+    { kind: 'measurement', fixedUnit: 'kg', input: 'NaN' },
+    { kind: 'measurement', fixedUnit: 'kg', input: '1e2' },
+    { kind: 'boolean', input: 'true' },
+    { kind: 'date', input: '2026-02-29' },
+    { kind: 'date_time', input: '2026-02-29T13:25' },
+    { kind: 'date_time', input: '2026-10-17T25:00' },
+    { kind: 'url', input: 'http://example.com' },
+    { kind: 'url', input: 'example.com' },
+    { kind: 'short_text', input: ['one', 'two'] },
+  ])('blocks invalid $kind input', ({ kind, input, fixedUnit }) => {
+    const definition = field('type-a', 'value', 'Value', { kind, fixedUnit: fixedUnit ?? null });
+    expect(encodeBulkFieldValues(definition, input)).toBeNull();
+    expect(bulkFieldPatch(definition, input)).toBeNull();
+  });
+
+  it.each([
+    'short_text',
+    'long_text',
+    'integer',
+    'decimal',
+    'measurement',
+    'date',
+    'date_time',
+    'url',
+  ] as const)('keeps empty optional %s inputs from producing a write', (kind) => {
+    const definition = field('type-a', 'value', 'Value', {
+      kind,
+      fixedUnit: 'kg',
+      required: false,
+    });
+    expect(bulkFieldPatch(definition, '   ')).toBeNull();
+  });
+
   it('offers only writable fields and counts the compatible selected rows', () => {
     const editable = field('type-a', 'name', 'Name');
     const reference = field('type-a', 'related', 'Related', { kind: 'reference' });
@@ -214,6 +324,7 @@ describe('bulk action model', () => {
     expect(encodeBulkFieldValues(integer, '4.5')).toBeNull();
     expect(encodeBulkFieldValues(enumField, ['red'])).toEqual([{ optionId: 'red' }]);
     expect(encodeBulkFieldValues(enumField, ['old'])).toBeNull();
+    expect(encodeBulkFieldValues({ ...enumField, cardinality: 'one' }, ['red', 'red'])).toBeNull();
     expect(encodeBulkFieldValues(measurement, '2.5')).toEqual([{ amount: '2.5', unit: 'kg' }]);
     expect(
       encodeBulkFieldValues(reference, [
