@@ -506,7 +506,7 @@ describe('protocol-2 inventory writes', () => {
     expect(result.isError).toBe(true);
     expect(result.content[0]).toEqual({
       type: 'text',
-      text: 'At least one of itemName, note, fieldValues, externalIds, or provenance is required',
+      text: 'At least one of itemName, note, code, fieldValues, externalIds, or provenance is required',
     });
     expect(inventory.sync.mutations).not.toHaveBeenCalled();
   });

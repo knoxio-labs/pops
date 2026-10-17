@@ -13,6 +13,7 @@ import {
 } from './inventory-item-mutation-input.js';
 import { itemMutationResult } from './inventory-item-mutation-result.js';
 import { createProvenanceSchema, updateProvenanceSchema } from './inventory-item-provenance.js';
+import { updateItemMutation } from './inventory-item-update.js';
 import { sendItemMutation } from './inventory-sync-client.js';
 import { reqStr, toolError } from './utils.js';
 
@@ -26,11 +27,18 @@ const retryIdentityProperties = {
   },
 } as const;
 
+const codeSchema = {
+  type: ['string', 'null'],
+  minLength: 1,
+  maxLength: 64,
+  description: 'Unique sticker code (trimmed, 1–64 characters); null clears it',
+} as const;
+
 const itemsCreate: ToolDef = {
   name: 'inventory.items.create',
   readOnly: false,
   description:
-    'Create a protocol-2 item. Read inventory.catalogue.get first, then send its current revision, stable type ID and complete stable field-value set. To create the item already overriding a computed field whose allowOverride is true, add that field with source "override" and exactly one value; any other field sent as an override is refused. Reuse mutationId and entityId together when retrying an uncertain call. provenance records the purchase the item came from.',
+    'Create a protocol-2 item. Read inventory.catalogue.get first, then send its current revision, stable type ID and complete stable field-value set. To create the item already overriding a computed field whose allowOverride is true, add that field with source "override" and exactly one value; any other field sent as an override is refused. Reuse mutationId and entityId together when retrying an uncertain call. code sets the unique sticker code; omit it or use null for no code. provenance records the purchase the item came from.',
   inputSchema: {
     type: 'object',
     additionalProperties: false,
@@ -53,6 +61,7 @@ const itemsCreate: ToolDef = {
       },
       fieldValues: { type: 'array', items: createFieldValueSchema },
       note: { type: ['string', 'null'], description: 'Optional note' },
+      code: codeSchema,
       provenance: createProvenanceSchema,
       ...retryIdentityProperties,
     },
@@ -73,6 +82,7 @@ const itemsCreate: ToolDef = {
           values: input.value.fieldValues,
           ...(input.value.note === undefined ? {} : { note: input.value.note }),
         },
+        ...(input.value.code === undefined ? {} : { code: input.value.code }),
         ...(input.value.provenance === undefined ? {} : { legacy: input.value.provenance }),
       },
       baseRevision: null,
@@ -87,7 +97,7 @@ const itemsUpdate: ToolDef = {
   name: 'inventory.items.update',
   readOnly: false,
   description:
-    'Edit an item at an observed item revision using the current catalogue revision. Read inventory.items.get and inventory.catalogue.get first. fieldValues is a stable field-ID patch; null clears an optional value. externalIds replaces the identifier list. provenance patches the purchase facts; null clears them all.',
+    'Edit an item at an observed item revision using the current catalogue revision. Read inventory.items.get and inventory.catalogue.get first. fieldValues is a stable field-ID patch; null clears an optional value. code sets the unique sticker code; null clears it. A code-only update is valid. Code is applied before other edits, which can fail separately; retry unchanged with the same mutationId. externalIds replaces the identifier list. provenance patches the purchase facts; null clears them all.',
   inputSchema: {
     type: 'object',
     additionalProperties: false,
@@ -116,6 +126,7 @@ const itemsUpdate: ToolDef = {
         description:
           "Replaces the item's whole external-identifier list; read the current list with inventory.items.get first and send it back with your change. [] clears it.",
       },
+      code: codeSchema,
       provenance: updateProvenanceSchema,
       ...retryIdentityProperties,
     },
@@ -124,20 +135,7 @@ const itemsUpdate: ToolDef = {
   handler: async (args) => {
     const input = parseUpdateItemMutationInput(args);
     if (!input.ok) return toolError(input.error);
-    const result = await sendItemMutation({
-      entityId: input.value.id,
-      op: 'item.edit',
-      args: {
-        ...(input.value.itemName === undefined ? {} : { name: input.value.itemName }),
-        ...(input.value.note === undefined ? {} : { note: input.value.note }),
-        ...(input.value.fieldValues === undefined ? {} : { values: input.value.fieldValues }),
-        ...(input.value.externalIds === undefined ? {} : { externalIds: input.value.externalIds }),
-        ...(input.value.provenance === undefined ? {} : { legacy: input.value.provenance }),
-      },
-      baseRevision: input.value.itemRevision,
-      catalogueRevision: input.value.catalogueRevision,
-      ...(input.value.mutationId === undefined ? {} : { mutationId: input.value.mutationId }),
-    });
+    const result = await updateItemMutation(input.value);
     return itemMutationResult(input.value.id, result);
   },
 };
