@@ -46,7 +46,7 @@ export function SheetFitNotice({ job }: { job: PrintJob }) {
   if (job.block === 'too-small') {
     return (
       <p className="rounded-md border border-destructive/40 px-3 py-2 text-sm" role="alert">
-        {job.subjects.some((subject) => job.fragileIds.has(subject.id)) ? (
+        {job.fragileTooSmall ? (
           <>
             This sheet cannot fit the fragile warning beside readable label content. Choose a larger
             sheet.

@@ -80,6 +80,8 @@ export interface PrintJob {
   pages: SheetPage[];
   uncoded: PrintSubject[];
   block: PrintBlock;
+  /** True only when a marked label failed to fit the selected stock. */
+  fragileTooSmall: boolean;
   outcome: PrintOutcome;
   /** Where the next job starts if this one printed. */
   nextStart: number;
@@ -184,6 +186,7 @@ export function useLabelJob(subjects: PrintSubject[], seed: LabelJobSeed): Print
     pages: planSheets(labels.length, startAt, layout),
     uncoded,
     block,
+    fragileTooSmall: plan.fragileTooSmall,
     outcome,
     nextStart,
     setContent,

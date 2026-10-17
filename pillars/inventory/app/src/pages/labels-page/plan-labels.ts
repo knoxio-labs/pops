@@ -59,10 +59,12 @@ export function planLabels({
   entries: PrintLabelEntry[];
   adjustments: { trimmed: number; fallback: number };
   tooSmall: boolean;
+  fragileTooSmall: boolean;
 } {
   let trimmed = 0;
   let fallback = 0;
   let tooSmall = false;
+  let fragileTooSmall = false;
   const entries: PrintLabelEntry[] = [];
   for (const subject of expandCopies(subjects, (entry) => copies[entry.kind])) {
     const wanted = previewLabel(subject, content, details.get(subject.id) ?? NO_DETAILS);
@@ -70,6 +72,7 @@ export function planLabels({
     const label = fitPrintedLabel(wanted, layout, fragile);
     if (label === null) {
       tooSmall = true;
+      fragileTooSmall ||= fragile;
       continue;
     }
     if (label.parts.length < wanted.parts.length || label.fields.length < wanted.fields.length) {
@@ -78,5 +81,5 @@ export function planLabels({
     if (label.fallback) fallback += 1;
     entries.push({ subject, label, ...(fragile ? { fragile } : {}) });
   }
-  return { entries, adjustments: { trimmed, fallback }, tooSmall };
+  return { entries, adjustments: { trimmed, fallback }, tooSmall, fragileTooSmall };
 }
