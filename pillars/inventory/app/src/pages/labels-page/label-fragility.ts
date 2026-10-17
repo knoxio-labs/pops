@@ -2,7 +2,7 @@ import { effectiveType } from '../../lib/type-tree.js';
 import { fieldValuesFor } from './label-field-values';
 
 import type { CatalogueField, CatalogueType } from '../../catalogue-editor/types.js';
-import type { WebItem } from './useLabelSubjects';
+import type { WebItem } from './label-item';
 
 /** Existing item metadata that controls the printed handling warning and manual fallback. */
 export interface LabelFragility {

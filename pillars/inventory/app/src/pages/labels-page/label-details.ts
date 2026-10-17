@@ -10,9 +10,8 @@ import { fieldValuesFor } from './label-field-values';
 import type { LabelDetails, LabelFieldValue, PrintSubject } from '@pops/inventory/labels';
 
 import type { CatalogueField, CatalogueType } from '../../catalogue-editor/types.js';
-import type { WebListResponses } from '../../inventory-api/types.gen.js';
+import type { WebItem } from './label-item';
 
-type WebItem = WebListResponses[200]['items'][number];
 type LabelContent = Pick<PrintSubject, 'name' | 'quantity'>;
 
 function isRecord(value: unknown): value is Record<string, unknown> {

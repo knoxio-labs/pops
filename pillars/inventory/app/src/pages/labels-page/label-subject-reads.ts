@@ -2,9 +2,9 @@ import { unwrap } from '../../inventory-api-helpers.js';
 import { webList } from '../../inventory-api/index.js';
 import { MAX_LABEL_IDS } from './label-params.js';
 
-import type { WebListData, WebListResponses } from '../../inventory-api/types.gen.js';
+import type { WebListData } from '../../inventory-api/types.gen.js';
+import type { WebItem } from './label-item';
 
-type WebItem = WebListResponses[200]['items'][number];
 type LabelItemQuery = Pick<
   WebListData['query'],
   'ids' | 'containingItemId' | 'within' | 'includeInactive'

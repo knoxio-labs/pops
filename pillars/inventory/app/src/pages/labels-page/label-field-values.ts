@@ -1,5 +1,5 @@
 import type { CatalogueField } from '../../catalogue-editor/types.js';
-import type { WebItem } from './useLabelSubjects';
+import type { WebItem } from './label-item';
 
 /** Reads override, stored, computed or legacy values in label display precedence. */
 export function fieldValuesFor(item: WebItem, field: CatalogueField): readonly unknown[] {

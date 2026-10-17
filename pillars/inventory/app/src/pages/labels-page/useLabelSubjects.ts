@@ -20,11 +20,10 @@ import { listLabelItems } from './label-subject-reads.js';
 
 import type { LabelDetails, PrintSubject } from '@pops/inventory/labels';
 
-import type { WebListResponses } from '../../inventory-api/types.gen.js';
 import type { LabelFragility } from './label-fragility.js';
+import type { WebItem } from './label-item';
 
-/** One item as `GET /web/items` returns it. */
-export type WebItem = WebListResponses[200]['items'][number];
+export type { WebItem } from './label-item';
 
 /** A job's item, with what the page needs beyond its label: revision and type. */
 export interface LabelSubject extends PrintSubject {
