@@ -110,6 +110,8 @@ Capacity follows the remaining height after the header; overflow reserves a row
 for `+N more`. Small labels retain the compact layout, and QR sizes never drop
 below the existing scan-size minimum. When QR and text need trimming, fitting
 keeps the QR and the code only if selected; it never adds an unchecked part.
+Code fitting allows for the wider system monospace used by Safari in both the
+preview and printout; codes that cannot fit at the minimum size still wrap.
 
 Label handling warnings use the configured boolean field keyed `Fragile`
 (case-insensitive), including inherited catalogue fields. A true value on the

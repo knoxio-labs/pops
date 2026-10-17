@@ -6,8 +6,8 @@
 
 const MM_PER_PT = 25.4 / 72;
 
-/** Advance width of one monospace character, as a fraction of its point size. */
-const MONO_ADVANCE_EM = 0.6;
+/** Covers the wider system monospace selected by WebKit (about 0.618 em). */
+const MONO_ADVANCE_EM = 0.62;
 
 /** Point size that fits `code` on one line `widthMm` wide, capped at `maxPt` and floored at `minPt`. */
 export function fitCodePt(code: string, widthMm: number, maxPt: number, minPt: number): number {

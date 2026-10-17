@@ -363,6 +363,12 @@ describe('expandCopies', () => {
 });
 
 describe('fitCodePt', () => {
+  it('rejects a size that fits a 0.6 em font but wraps in the WebKit system font', () => {
+    expect(codeFitsOneLine('BOX-OFFICE-4', 59.6, 23)).toBe(false);
+    expect(codeFitsOneLine('BOX-OFFICE-4', 59.6, 22.5)).toBe(true);
+    expect(fitCodePt('BOX-OFFICE-4', 59.6, 36, 16)).toBe(22.5);
+  });
+
   it('prints a short code at the layout size', () => {
     expect(fitCodePt('B412', 40, 30, 12)).toBe(30);
   });
