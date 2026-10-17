@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { customLayout, MIN_QR_MM, planLabel } from '../labels/index.js';
+import { customLayout, MIN_QR_MM, planLabel, sheetLayout } from '../labels/index.js';
 
 import type { LabelPart, ResolvedLabel } from '../labels/index.js';
 import type { PrintSubject } from '../labels/label-subject.js';
@@ -50,6 +50,27 @@ function contents(count: number): string[] {
 }
 
 describe('QR header label planning', () => {
+  it('fits a box code beside the QR with the wider WebKit system monospace', () => {
+    const layout = sheetLayout('L7169');
+    const code = 'BOX-OFFICE-4';
+    const plan = planLabel(
+      showing(['qr', 'name', 'code', 'contents'], contents(20), [
+        { id: 'unpack', label: 'Unpack in', value: 'Office' },
+      ]),
+      { ...subject, name: '3D printing + towels', code },
+      layout
+    );
+    const textWidthMm = layout.labelWidthMm - layout.scale.paddingMm * 2 - 32 - 1.5;
+    if (!plan.code) throw new Error('selected code must be planned');
+
+    expect(plan.arrangement).toBe('qr-header');
+    expect(plan.code.pt).toBe(22.5);
+    expect(code.length * 0.6181640625 * plan.code.pt * (25.4 / 72)).toBeLessThan(textWidthMm);
+    expect(plan.fields?.shown).toHaveLength(1);
+    expect(plan.contents?.shown).toHaveLength(20);
+    expect(plan.contents?.more).toBe(0);
+  });
+
   it('uses one, two, then three content columns at capacity boundaries', () => {
     const first = planLabel(showing(['qr', 'name', 'contents'], contents(1)), subject, wide);
     expect(first.arrangement).toBe('qr-header');
