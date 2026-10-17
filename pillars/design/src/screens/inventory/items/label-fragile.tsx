@@ -18,7 +18,7 @@ function FragileLabelReview({ detected = false }: { detected?: boolean }): React
         <div className="w-full space-y-3 rounded-lg border bg-background p-4">
           <h1 className="text-lg font-semibold">Fragile label</h1>
           <p className="text-sm text-muted-foreground">
-            A fragile item anywhere inside this item, including nested containers, adds the warning.
+            This item or any fragile item inside it, including nested containers, adds the warning.
           </p>
           <div className="flex min-h-11 items-center justify-between gap-4">
             <label
@@ -41,7 +41,7 @@ function FragileLabelReview({ detected = false }: { detected?: boolean }): React
               : 'Turn on to add the warning when fragility has not been recorded.'}
           </p>
           <p className="text-xs text-muted-foreground">
-            99.1 × 139 mm label · 32 mm QR · 32 mm fragile symbol
+            99.1 × 139 mm label · QR, text and fragile symbol in one row · 24 mm symbols
           </p>
         </div>
         <LabelContentsPreview columns={1} contents={shortLabelContents} fragile={fragile} />
