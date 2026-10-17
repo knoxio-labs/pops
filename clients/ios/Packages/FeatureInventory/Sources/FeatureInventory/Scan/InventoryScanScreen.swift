@@ -62,9 +62,10 @@ internal struct InventoryScanScreen: View {
             source: Binding(
                 get: { pickingLibraryPhoto ? .library : nil },
                 set: { pickingLibraryPhoto = $0 != nil })
-        ) { data in
+        ) { photos in
             #if canImport(UIKit)
-                if let payload = InventoryScanLibraryDecoding.decode(data) {
+                if let data = photos.first, let payload = InventoryScanLibraryDecoding.decode(data)
+                {
                     _ = model.didScan(payload)
                 }
             #endif
