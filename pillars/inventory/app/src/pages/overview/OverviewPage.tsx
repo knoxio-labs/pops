@@ -76,6 +76,7 @@ function Panels({ model }: { model: OverviewPageModel }): ReactElement {
         />
         <RecentWorkPanel
           events={model.events}
+          eventHref={model.eventHref}
           now={model.now}
           disabledReason={model.online ? undefined : context.disabledReason}
           onNavigate={model.navigate}

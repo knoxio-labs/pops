@@ -16,23 +16,28 @@ export interface RecentWorkPanelProps {
   now: string;
   disabledReason?: string;
   onNavigate: (path: string) => void;
+  eventHref: (event: EventModel) => string;
   onUndo: (event: EventModel) => void;
   className?: string;
 }
 
 function RecentWorkRow({
   event,
+  href,
   now,
   disabledReason,
   onUndo,
 }: {
   event: EventModel;
+  href: string;
   now: string;
   disabledReason?: string;
   onUndo: (event: EventModel) => void;
 }): ReactElement {
   return (
     <PanelRow
+      href={href}
+      label={`Open ${event.itemName}`}
       mark={<EventMark event={event} />}
       title={
         <>
@@ -74,6 +79,7 @@ export function RecentWorkPanel({
   now,
   disabledReason,
   onNavigate,
+  eventHref,
   onUndo,
   className,
 }: RecentWorkPanelProps): ReactElement {
@@ -93,6 +99,7 @@ export function RecentWorkPanel({
         <RecentWorkRow
           key={event.id}
           event={event}
+          href={eventHref(event)}
           now={now}
           disabledReason={disabledReason}
           onUndo={onUndo}

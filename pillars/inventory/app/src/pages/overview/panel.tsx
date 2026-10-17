@@ -1,4 +1,5 @@
 import { ArrowRight } from 'lucide-react';
+import { Link } from 'react-router';
 
 import { Button, Card, cn } from '@pops/ui';
 
@@ -62,20 +63,24 @@ export function PanelEmpty({ children }: { children: ReactNode }): ReactElement 
   );
 }
 
-/** Renders a compact two-line panel row with an optional verb group. */
+/** Renders a linked panel row with independent trailing actions. */
 export function PanelRow({
+  href,
+  label,
   mark,
   title,
   detail,
   verbs,
 }: {
+  href: string;
+  label: string;
   mark: ReactNode;
   title: ReactNode;
   detail: ReactNode;
   verbs?: ReactNode;
 }): ReactElement {
   return (
-    <li className="flex items-center gap-3 px-4 py-2 hover:bg-muted/50">
+    <li className="relative flex min-h-11 items-center gap-3 px-4 py-2 hover:bg-muted/50">
       {mark}
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 items-center gap-1.5 text-sm">{title}</div>
@@ -83,7 +88,12 @@ export function PanelRow({
           {detail}
         </div>
       </div>
-      {verbs ? <div className="flex shrink-0 items-center gap-0.5">{verbs}</div> : null}
+      <Link
+        to={href}
+        aria-label={label}
+        className="absolute inset-0 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+      />
+      {verbs ? <div className="relative flex shrink-0 items-center gap-0.5">{verbs}</div> : null}
     </li>
   );
 }

@@ -46,6 +46,8 @@ export function OpenContainerRow({
 }): ReactElement {
   return (
     <PanelRow
+      href={`/inventory/items/${encodeURIComponent(item.id)}`}
+      label={`Open ${item.name}`}
       mark={<ItemMark item={item} />}
       title={
         <>
@@ -110,6 +112,8 @@ export function InHandRow({
 }): ReactElement {
   return (
     <PanelRow
+      href={`/inventory/items/${encodeURIComponent(item.id)}`}
+      label={`Open ${item.name}`}
       mark={<ItemMark item={item} />}
       title={
         <>
