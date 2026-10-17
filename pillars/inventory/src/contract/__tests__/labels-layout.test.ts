@@ -106,6 +106,14 @@ describe('fitToSheet', () => {
     expect(fitToSheet(wanted, narrow)).toEqual(showing(['qr', 'code']));
   });
 
+  it.each([
+    showing(['qr', 'name']),
+    showing(['qr', 'contents'], { contents: ['Glasses'] }),
+    showing(['qr'], { fields: [{ id: 'box.unpack', label: 'Unpack in', value: 'Kitchen' }] }),
+  ])('never adds an unselected code when trimming $parts', (wanted) => {
+    expect(fitToSheet(wanted, narrow)).toEqual(showing(['qr']));
+  });
+
   it('refuses a QR on labels too small for one to scan, but not text alone', () => {
     expect(fillQrMm(tiny)).toBeLessThan(MIN_QR_MM);
     expect(fitToSheet(showing(['qr']), tiny)).toBeNull();

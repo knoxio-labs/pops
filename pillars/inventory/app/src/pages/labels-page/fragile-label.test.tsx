@@ -5,6 +5,7 @@ import { sheetLayout } from '@pops/inventory/labels';
 
 import { storeCustomSheet } from './label-storage';
 import { ContentLabel } from './label-templates';
+import { planLabels } from './plan-labels';
 import { SheetFitNotice } from './print-options';
 import { useLabelJob } from './useLabelJob';
 
@@ -55,6 +56,42 @@ describe('printed fragile warning', () => {
       expect(screen.getByRole('img', { name: 'Fragile: cracked glass' })).toBeInTheDocument();
       if (withContents)
         expect(screen.getByRole('list', { name: 'Contents' })).toHaveTextContent('CupsPlates');
+    }
+  );
+
+  it.each([null, 'BOX-KITCHEN-1'])(
+    'does not print an unchecked code after fitting L7159 with code=%s',
+    (code) => {
+      const selected = { ...subject, code };
+      const layout = sheetLayout('L7159');
+      const planned = planLabels({
+        subjects: [selected],
+        copies: { container: 4, item: 1 },
+        content: { kind: 'parts', parts: ['qr', 'name'], fields: ['box.unpack'] },
+        details: new Map([
+          [
+            subject.id,
+            {
+              typeName: 'Storage box',
+              fields: [{ id: 'box.unpack', label: 'Unpack in', value: 'Kitchen' }],
+              contents: [],
+            },
+          ],
+        ]),
+        layout,
+        fragileIds: new Set([subject.id]),
+      });
+      expect(planned.tooSmall).toBe(false);
+      expect(planned.entries).toHaveLength(4);
+      expect(planned.adjustments.trimmed).toBe(4);
+      for (const entry of planned.entries) {
+        expect(entry.label.parts).not.toContain('code');
+        const { container, unmount } = render(<ContentLabel {...entry} layout={layout} />);
+        expect(screen.getByRole('img', { name: 'QR code for Books 2' })).toBeInTheDocument();
+        expect(screen.getByRole('img', { name: 'Fragile: cracked glass' })).toBeInTheDocument();
+        expect(container.querySelector('[data-code-pt], [data-missing-code]')).toBeNull();
+        unmount();
+      }
     }
   );
 
