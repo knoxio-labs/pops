@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -342,6 +343,59 @@ beforeEach(() => {
 });
 
 describe('OverviewPage', () => {
+  it.each([
+    ['Open containers', 'Open Blue box', 0, '/inventory/items/box-1'],
+    ['In hand', 'Open Lamp', 0, '/inventory/items/item-1'],
+    ['Recent work', 'Open Lamp', 1, '/inventory/items/item-1'],
+  ])('opens the item from %s', (_panel, label, index, destination) => {
+    renderPage();
+
+    const link = screen.getAllByRole('link', { name: label })[index];
+    expect(link).toHaveAttribute('href', destination);
+    if (link === undefined) throw new Error(`Missing ${label} link`);
+    fireEvent.click(link);
+    expect(screen.getByTestId('location')).toHaveTextContent(destination);
+    expect(verbs.setAccess).not.toHaveBeenCalled();
+    expect(verbs.putBack).not.toHaveBeenCalled();
+    expect(mocks.revertEvent).not.toHaveBeenCalled();
+  });
+
+  it('opens a recent location change at the location rather than an item', () => {
+    currentEvents = [
+      rawEvent({ entityKind: 'location', entityId: 'garage', entityName: 'Garage' }),
+    ];
+    renderPage();
+
+    fireEvent.click(screen.getByRole('link', { name: 'Open Garage' }));
+    expect(screen.getByTestId('location')).toHaveTextContent('/inventory/locations/garage');
+  });
+
+  it('keeps recent work clickable when Undo is unavailable', () => {
+    currentEvents = [rawEvent({ undoable: false })];
+    renderPage();
+
+    const links = screen.getAllByRole('link', { name: 'Open Lamp' });
+    expect(links).toHaveLength(2);
+    expect(
+      screen.queryByRole('button', { name: 'Undo Moved to Garage on Lamp' })
+    ).not.toBeInTheDocument();
+    const recentLink = links[1];
+    if (recentLink === undefined) throw new Error('Missing recent work link');
+    fireEvent.click(recentLink);
+    expect(screen.getByTestId('location')).toHaveTextContent('/inventory/items/item-1');
+  });
+
+  it('supports keyboard navigation to item details while offline', async () => {
+    currentOnline = false;
+    const user = userEvent.setup();
+    renderPage();
+
+    screen.getByRole('link', { name: 'Open Blue box' }).focus();
+    await user.keyboard('{Enter}');
+    expect(screen.getByTestId('location')).toHaveTextContent('/inventory/items/box-1');
+    expect(verbs.setAccess).not.toHaveBeenCalled();
+  });
+
   it('uses the server ordering and display limits for overview reads', () => {
     renderPage();
 
@@ -425,6 +479,7 @@ describe('OverviewPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Close Blue box' }));
     await waitFor(() => expect(verbs.setAccess).toHaveBeenCalledWith('box-1', 'closed'));
+    expect(screen.getByTestId('location')).toHaveTextContent(/^\/inventory$/u);
     expect(mocks.showUndoToast).toHaveBeenCalledWith(
       expect.objectContaining({ concept: 'closed', message: 'Closed Blue box', onUndo: undo })
     );
@@ -468,6 +523,7 @@ describe('OverviewPage', () => {
     expect(mocks.showUndoToast).toHaveBeenCalledWith(
       expect.objectContaining({ concept: 'move', message: 'Moved Lamp to Garage' })
     );
+    expect(screen.getByTestId('location')).toHaveTextContent(/^\/inventory$/u);
   });
 
   it('keeps a refused Put back reason in the row', async () => {
@@ -479,6 +535,7 @@ describe('OverviewPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Put back Lamp' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Not saved. The box is closed.');
+    expect(screen.getByTestId('location')).toHaveTextContent(/^\/inventory$/u);
   });
 
   it('shows the pending Saving badge only while a row is in flight', () => {
@@ -513,6 +570,7 @@ describe('OverviewPage', () => {
       expect(mocks.revertEvent).toHaveBeenCalledWith({ seq: 7, entityId: 'item-1' })
     );
     expect(mocks.toastCustom).toHaveBeenCalled();
+    expect(screen.getByTestId('location')).toHaveTextContent(/^\/inventory$/u);
 
     mocks.revertEvent.mockRejectedValueOnce(new mocks.TestUndoRefusedError());
     fireEvent.click(screen.getByRole('button', { name: 'Undo Moved to Garage on Lamp' }));

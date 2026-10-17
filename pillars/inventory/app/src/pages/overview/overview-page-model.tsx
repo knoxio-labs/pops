@@ -118,6 +118,7 @@ export interface OverviewPageModel {
   readonly openContainers: ReturnType<typeof useOverviewReads>['openContainers'];
   readonly inHand: ReturnType<typeof useOverviewReads>['inHand'];
   readonly events: readonly EventModel[];
+  readonly eventHref: (event: EventModel) => string;
   readonly world: PlacementWorld;
   readonly rejections: Readonly<Record<string, string>>;
   readonly pendingIds: ReadonlySet<string>;
@@ -161,6 +162,11 @@ export function useOverviewPageModel(): OverviewPageModel {
     openContainers: reads.openContainers,
     inHand: reads.inHand,
     events: reads.eventModels,
+    eventHref: (event) => {
+      const source = reads.eventById.get(event.id);
+      const collection = source?.entityKind === 'location' ? 'locations' : 'items';
+      return `/inventory/${collection}/${encodeURIComponent(event.itemId)}`;
+    },
     world: reads.world,
     rejections: actions.rejections,
     pendingIds: actions.pendingIds,
