@@ -102,8 +102,8 @@ internal struct InventoryItemDetailView<Capability: View>: View {
             source: Binding(
                 get: { retakingPhoto?.source },
                 set: { newValue in if newValue == nil { retakingPhoto = nil } })
-        ) { data in
-            guard let sha256 = retakingPhoto?.sha256 else { return }
+        ) { photos in
+            guard let sha256 = retakingPhoto?.sha256, let data = photos.first else { return }
             retakingPhoto = nil
             Task { await model.retakePhoto(sha256, with: data) }
         }

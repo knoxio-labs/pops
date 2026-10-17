@@ -63,12 +63,14 @@ internal struct InventoryItemFormView: View {
         .interactiveDismissDisabled(model.hasStagedWork)
         .task(id: generation) { await model.load() }
         .onDisappear { model.cancelScanPrefill() }
-        .inventoryPhotoPickerSheet(source: $pickingPhoto) { data in
-            if let sha256 = retakingSha256 {
+        .inventoryPhotoPickerSheet(
+            source: $pickingPhoto, selectionLimit: retakingSha256 == nil ? 0 : 1
+        ) { photos in
+            if let sha256 = retakingSha256, let data = photos.first {
                 retakingSha256 = nil
                 Task { await model.retake(replacing: sha256, with: data) }
             } else {
-                Task { await model.photoCaptured(data) }
+                Task { await model.photosSelected(photos) }
             }
         }
         .inventoryUndoCapsule(photoUndoOffer) { offer in
@@ -116,7 +118,10 @@ internal struct InventoryItemFormView: View {
                 HStack(spacing: PopsSpacing.sm) {
                     InventoryPhotoStrip(
                         photos: model.draft.photos,
-                        capture: { pickingPhoto = $0 },
+                        capture: {
+                            retakingSha256 = nil
+                            pickingPhoto = $0
+                        },
                         retry: { sha256 in Task { await model.retryUpload(sha256: sha256) } },
                         remove: { sha256 in Task { await model.removePhoto(sha256: sha256) } },
                         retake: { sha256, source in

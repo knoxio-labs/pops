@@ -2,6 +2,19 @@ import AppCore
 import Foundation
 
 extension InventoryItemFormModel {
+    internal func photosSelected(_ photos: [Data]) async {
+        let staged = photos.compactMap { data -> (sha256: String, data: Data)? in
+            let sha256 = InventoryPhotoHashing.sha256(of: data)
+            localPhotoData[sha256] = data
+            guard !draft.photos.contains(where: { $0.sha256 == sha256 }) else { return nil }
+            draft.photos.append(InventoryFormPhoto(sha256: sha256, upload: .uploading))
+            return (sha256, data)
+        }
+        for photo in staged {
+            await upload(sha256: photo.sha256, data: photo.data)
+        }
+    }
+
     internal func thumbnail(_ sha256: String) async -> Data? {
         if let local = localPhotoData[sha256] { return local }
         return try? await store.photo(sha256, variant: .thumb)
@@ -16,11 +29,7 @@ extension InventoryItemFormModel {
     /// touches `draft.photos` beyond that one entry — the create or edit this
     /// form performs is never blocked by a photo that could not be sent.
     internal func photoCaptured(_ jpegData: Data) async {
-        let sha256 = InventoryPhotoHashing.sha256(of: jpegData)
-        localPhotoData[sha256] = jpegData
-        guard !draft.photos.contains(where: { $0.sha256 == sha256 }) else { return }
-        draft.photos.append(InventoryFormPhoto(sha256: sha256, upload: .uploading))
-        await upload(sha256: sha256, data: jpegData)
+        await photosSelected([jpegData])
     }
 
     /// Retries a photo whose upload failed, reusing the bytes captured

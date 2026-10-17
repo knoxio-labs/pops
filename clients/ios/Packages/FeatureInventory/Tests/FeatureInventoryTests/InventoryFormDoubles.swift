@@ -70,6 +70,7 @@ internal final class RecordingFormStore: InventoryStore, Sendable {
         var observers: [UUID: @Sendable (FormFixtureSource) -> Void] = [:]
         var uploaded: [(sha256: String, data: Data)] = []
         var uploadFailure: Error?
+        var beforeUpload: (@Sendable () async -> Void)?
         var discarded: [String] = []
     }
 
@@ -81,6 +82,10 @@ internal final class RecordingFormStore: InventoryStore, Sendable {
 
     internal var performed: [InventoryCommand] { state.withLock { $0.performed } }
     internal var resolutions: [InventoryRepairChoice] { state.withLock { $0.resolutions } }
+    internal func observeUploads(_ beforeUpload: @escaping @Sendable () async -> Void) {
+        state.withLock { $0.beforeUpload = beforeUpload }
+    }
+
     internal var uploaded: [(sha256: String, data: Data)] { state.withLock { $0.uploaded } }
     internal var discarded: [String] { state.withLock { $0.discarded } }
 
@@ -175,6 +180,7 @@ internal final class RecordingFormStore: InventoryStore, Sendable {
     func uploadPhoto(
         sha256: String, data: Data, contentType: InventoryMediaContentType
     ) async throws -> InventoryMediaUploadResult {
+        await state.withLock { $0.beforeUpload }?()
         try state.withLock { current in
             current.uploaded.append((sha256, data))
             if let failure = current.uploadFailure { throw failure }

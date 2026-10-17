@@ -27,17 +27,13 @@ internal enum InventoryPhotoSource: String, Identifiable {
         }
     }
 
-    /// `UIImagePickerController`, for both sources: SwiftUI's own
-    /// `PhotosPicker` covers the library alone, and there is no first-party
-    /// SwiftUI camera capture on this project's SDK floor.
     internal struct InventoryPhotoPicker: UIViewControllerRepresentable {
-        internal let source: InventoryPhotoSource
         internal let onPicked: (Data) -> Void
         internal let onCancel: () -> Void
 
         internal func makeUIViewController(context: Context) -> UIImagePickerController {
             let controller = UIImagePickerController()
-            controller.sourceType = source == .camera ? .camera : .photoLibrary
+            controller.sourceType = .camera
             controller.delegate = context.coordinator
             return controller
         }
@@ -91,24 +87,31 @@ internal enum InventoryPhotoSource: String, Identifiable {
 #endif
 
 extension View {
-    /// Presents the system image picker for whichever source `source`
-    /// names, and clears it however the picker ends: a photo picked, or the
-    /// person backing out. On the host toolchain (no `UIKit`) this is a
-    /// no-op — nothing ships that ever sets `source` there.
     @ViewBuilder
     internal func inventoryPhotoPickerSheet(
-        source: Binding<InventoryPhotoSource?>, onPicked: @escaping (Data) -> Void
+        source: Binding<InventoryPhotoSource?>, selectionLimit: Int = 1,
+        onPicked: @escaping ([Data]) -> Void
     ) -> some View {
         #if canImport(UIKit)
             fullScreenCover(item: source) { pickedSource in
-                InventoryPhotoPicker(
-                    source: pickedSource,
-                    onPicked: {
-                        source.wrappedValue = nil
-                        onPicked($0)
-                    },
-                    onCancel: { source.wrappedValue = nil }
-                )
+                Group {
+                    switch pickedSource {
+                    case .camera:
+                        InventoryPhotoPicker(
+                            onPicked: {
+                                onPicked([$0])
+                                source.wrappedValue = nil
+                            },
+                            onCancel: { source.wrappedValue = nil })
+                    case .library:
+                        InventoryLibraryPhotoPicker(
+                            selectionLimit: selectionLimit,
+                            onPicked: {
+                                onPicked($0)
+                                source.wrappedValue = nil
+                            })
+                    }
+                }
                 .ignoresSafeArea()
             }
         #else
