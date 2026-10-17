@@ -13,6 +13,7 @@ import { saveSuggestedCode } from './useSaveCode';
 
 import type { ReactNode } from 'react';
 
+import type { LabelFragility } from './label-fragility';
 import type { LabelSubject } from './useLabelSubjects';
 import type { CodeSaveResult } from './useSaveCode';
 
@@ -20,6 +21,7 @@ import type { CodeSaveResult } from './useSaveCode';
 export interface SelectionPanelProps {
   subjects: LabelSubject[];
   fragileIds?: ReadonlySet<string>;
+  fragility?: ReadonlyMap<string, LabelFragility>;
   onFragileChange?: (id: string, fragile: boolean) => void;
   /** Ids of items whose labels print a code they do not have yet. */
   needsCode: ReadonlySet<string>;
@@ -119,7 +121,9 @@ export function SelectionPanel(props: SelectionPanelProps) {
               subject={subject}
               fragile={props.fragileIds?.has(subject.id)}
               onFragileChange={
-                props.onFragileChange
+                props.onFragileChange &&
+                !props.fragility?.get(subject.id)?.recorded &&
+                !props.fragility?.get(subject.id)?.fragile
                   ? (fragile) => props.onFragileChange?.(subject.id, fragile)
                   : undefined
               }

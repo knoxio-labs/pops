@@ -110,12 +110,20 @@ Capacity follows the remaining height after the header; overflow reserves a row
 for `+N more`. Small labels retain the compact layout, and QR sizes never drop
 below the existing scan-size minimum.
 
-Each item in a label print job has a manual Fragile switch. It affects every
-copy of that item's label in the current job, without editing the inventory
-record. Marked labels place QR, text and a cracked-glass handling symbol in one
-row; both symbols share a size of up to 24 mm. A sheet too small for the warning
-and a readable QR blocks printing. Inventory has no canonical fragility marker;
-automatic detection across an item's descendants is tracked in POPS-5972.
+Label handling warnings use the configured boolean field keyed `Fragile`
+(case-insensitive), including inherited catalogue fields. A true value on the
+selected item or any contained descendant adds the cracked-glass symbol; the
+same field is omitted from printed text so the warning appears once. Overrides
+and computed values share the label field-value reader. The manual print-job
+switch appears only when the selected item has no Fragile field and its contents
+do not already trigger the warning; it never edits inventory records.
+
+QR, text and the handling symbol share one row; both symbols have the same size,
+up to 24 mm. Printing is blocked while the selected items, full paginated tree
+or catalogue are being refreshed, when a required read or computed Fragile value
+is unavailable, or when stock cannot fit the warning beside a readable QR.
+Contained inactive items participate in the handling warning without being added
+to the selected labels or direct contents list.
 
 The primitive vocabulary is closed: short and long text, integer, exact decimal,
 boolean, enum, fixed-unit measurement, date, date-time, HTTPS URL and item or

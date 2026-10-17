@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { detailsFor } from './label-details';
+import { treeFragility } from './label-fragility';
 
 import type { CatalogueField, CatalogueType } from '../../catalogue-editor/types';
 import type { WebListResponses } from '../../inventory-api/types.gen';
@@ -214,5 +215,131 @@ describe('detailsFor', () => {
         new Map()
       ).contents
     ).toEqual(['Alpha', 'Zulu']);
+  });
+});
+
+const fragileField = field({
+  id: 'fragile-field',
+  key: 'Fragile',
+  label: 'Handling',
+  kind: 'boolean',
+});
+const fragileType: CatalogueType = { ...type, fields: [fragileField] };
+const fragileTypes = new Map([[type.id, fragileType]]);
+
+function withFragility(value: unknown): WebItem {
+  return {
+    ...item,
+    fieldValues: [
+      { catalogueRevision: 1, fieldId: fragileField.id, source: 'stored', values: [value] },
+    ],
+  };
+}
+
+describe('configured item fragility', () => {
+  it.each([true, false, 'Yes', 'false', null])(
+    'requires boolean true instead of formatted truthiness: %s',
+    (value) => {
+      const result = treeFragility(withFragility(value), [], fragileTypes);
+      expect(result.fragile).toBe(value === true);
+      expect(result.recorded).toBe(true);
+      expect(result.fields).toEqual(new Set(['appliance.Fragile']));
+      expect(result.error).toBeNull();
+    }
+  );
+
+  it('inherits the Fragile field and preserves its defining type key for deduplication', () => {
+    const child: CatalogueType = {
+      ...type,
+      id: 'child-type',
+      key: 'child',
+      parentTypeId: type.id,
+      fields: [],
+    };
+    const result = treeFragility(
+      { ...withFragility(true), typeId: child.id, typeKey: child.key },
+      [],
+      new Map([
+        [type.id, fragileType],
+        [child.id, child],
+      ])
+    );
+    expect(result.fragile).toBe(true);
+    expect(result.fields.has('appliance.Fragile')).toBe(true);
+  });
+
+  it('uses an explicit false override instead of stored true', () => {
+    const original = withFragility(true);
+    const result = treeFragility(
+      {
+        ...original,
+        fieldValues: [
+          ...original.fieldValues,
+          { catalogueRevision: 1, fieldId: fragileField.id, source: 'override', values: [false] },
+        ],
+      },
+      [],
+      fragileTypes
+    );
+    expect(result.fragile).toBe(false);
+  });
+
+  it('warns for any supplied nested descendant even when the selected item is false', () => {
+    const descendant = { ...withFragility(true), id: 'deep-child' };
+    expect(treeFragility(withFragility(false), [descendant], fragileTypes).fragile).toBe(true);
+    expect(treeFragility(withFragility(false), [], fragileTypes).fragile).toBe(false);
+  });
+
+  it('reports unavailable computed fragility instead of silently treating it as false', () => {
+    const types = new Map([
+      [type.id, { ...fragileType, fields: [{ ...fragileField, storage: 'computed' as const }] }],
+    ]);
+    const missing = { ...item, fieldValues: [], computedValues: [] };
+    expect(treeFragility(missing, [], types).error).toBeInstanceOf(Error);
+    expect(
+      treeFragility(
+        {
+          ...missing,
+          fieldValues: [
+            { catalogueRevision: 1, fieldId: fragileField.id, source: 'override', values: [false] },
+          ],
+        },
+        [],
+        types
+      ).error
+    ).toBeNull();
+  });
+
+  it('retains the manual fallback only when no Fragile field already exists', () => {
+    expect(treeFragility(item, [], new Map()).recorded).toBe(false);
+    expect(
+      treeFragility({ ...item, typeId: null, fields: { Fragile: true } }, [], new Map()).fragile
+    ).toBe(true);
+    expect(
+      treeFragility({ ...item, typeId: null, fields: { Fragile: 'Yes' } }, [], new Map()).recorded
+    ).toBe(false);
+  });
+});
+
+describe('computed Fragile values', () => {
+  it.each(['ok', 'overridden'] as const)('uses effective boolean values in state %s', (state) => {
+    const types = new Map([
+      [type.id, { ...fragileType, fields: [{ ...fragileField, storage: 'computed' as const }] }],
+    ]);
+    const base = {
+      fieldId: fragileField.id,
+      source: 'computed' as const,
+      catalogueRevision: 1,
+      dependencies: [],
+      traversedItemIds: [],
+    };
+    const effective: WebItem['computedValues'][number] =
+      state === 'ok'
+        ? { ...base, state: 'ok', values: [true] }
+        : { ...base, state: 'overridden', values: [true], override: { catalogueRevision: 1 } };
+    const computed: WebItem = { ...item, fieldValues: [], computedValues: [effective] };
+    const result = treeFragility(computed, [], types);
+    expect(result.fragile).toBe(true);
+    expect(result.error).toBeNull();
   });
 });

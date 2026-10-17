@@ -108,11 +108,23 @@ beforeEach(() => {
     ].map((held) => [held.id, held])
   );
   api.webList.mockImplementation(
-    async ({ query }: { query: { ids?: string; containingItemId?: string } }) => {
+    async ({ query }: { query: { ids?: string; containingItemId?: string; within?: string } }) => {
       const wanted = query.ids?.split(',');
-      const listed = [...items.values()].filter((held) =>
-        wanted ? wanted.includes(held.id) : held.containingItemId === query.containingItemId
-      );
+      const inTree = (held: FakeItem): boolean => {
+        const seen = new Set<string>();
+        let parent = held.containingItemId;
+        while (parent !== null && !seen.has(parent)) {
+          if (parent === query.within) return true;
+          seen.add(parent);
+          parent = items.get(parent)?.containingItemId ?? null;
+        }
+        return false;
+      };
+      const listed = [...items.values()].filter((held) => {
+        if (wanted) return wanted.includes(held.id);
+        if (query.within) return inTree(held);
+        return held.containingItemId === query.containingItemId;
+      });
       return ok({ items: listed, nextCursor: null });
     }
   );
@@ -482,5 +494,67 @@ describe('fragile labels', () => {
       await screen.findByRole('switch', { name: 'Fragile label for Kitchen 12' })
     ).not.toBeChecked();
     expect(screen.queryByRole('img', { name: 'Fragile: cracked glass' })).not.toBeInTheDocument();
+  });
+});
+
+describe('existing Fragile metadata', () => {
+  it('uses the real field as the warning and removes the duplicate manual control and text', async () => {
+    items.set(
+      BOX,
+      item(BOX, 'Kitchen glasses', 'B412', {
+        isContainer: true,
+        typeKey: 'storage_box',
+        fields: { Fragile: true },
+      })
+    );
+    renderPage(`?ids=${BOX}&sheet=L7169`);
+    await screen.findAllByRole('img', { name: 'Fragile: cracked glass' });
+    expect(
+      screen.queryByRole('switch', { name: 'Fragile label for Kitchen glasses' })
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Label shows: Auto' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Fragile' }));
+    expect(screen.getAllByRole('img', { name: 'Fragile: cracked glass' })).toHaveLength(2);
+    expect(screen.queryByText('Fragile:')).not.toBeInTheDocument();
+    expect(screen.queryByText('Yes')).not.toBeInTheDocument();
+  });
+
+  it('inherits warnings through a nested container but not an unrelated branch', async () => {
+    items.set(
+      MACHINE,
+      item(MACHINE, 'Inner crate', 'C1', { isContainer: true, containingItemId: BOX })
+    );
+    items.set(
+      JUG,
+      item(JUG, 'Fragile jug', 'J1', { containingItemId: MACHINE, fields: { Fragile: true } })
+    );
+    renderPage(`?ids=${BOX},${GRINDER}&sheet=L7169`);
+    await screen.findAllByRole('img', { name: 'Fragile: cracked glass' });
+    expect(screen.getAllByRole('img', { name: 'Fragile: cracked glass' })).toHaveLength(2);
+    expect(
+      screen.queryByRole('switch', { name: 'Fragile label for Kitchen 12' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('switch', { name: 'Fragile label for Coffee grinder' })
+    ).toBeInTheDocument();
+  });
+
+  it('shows a read failure instead of a perpetual contents-expansion loading state', async () => {
+    api.webList.mockImplementation(async ({ query }: { query: { ids?: string } }) => {
+      if (query.ids) return ok({ items: [items.get(BOX)], nextCursor: null });
+      throw new Error('Contents unavailable');
+    });
+    renderPage(`?ids=${BOX}&contents=1`);
+    expect(await screen.findByRole('alert')).toHaveTextContent('Contents unavailable');
+    expect(screen.queryByRole('button', { name: 'Print 2 labels' })).not.toBeInTheDocument();
+  });
+});
+
+describe('empty label selection', () => {
+  it('keeps the Add controls available when no ids were selected', async () => {
+    renderPage('?sheet=L7169');
+    expect(await screen.findByRole('button', { name: 'Add items' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Print labels' })).toBeDisabled();
+    expect(api.webList).not.toHaveBeenCalled();
   });
 });

@@ -5,7 +5,7 @@
  * the job's choices above the preview on the right, and Print in the
  * header; printing is the browser's own dialog.
  */
-import { Plus, Printer } from 'lucide-react';
+import { Printer } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 
@@ -18,7 +18,7 @@ import {
   labelContentForShows,
   useInventoryDefaults,
 } from '../../inventory-web/useInventoryDefaults.js';
-import { AddDialog } from './add-dialog';
+import { LabelAddControl } from './label-add-control';
 import { MAX_LABEL_IDS, readLabelParams } from './label-params';
 import { loadSheetId } from './label-storage';
 import { LabelsSelection } from './labels-selection';
@@ -121,13 +121,21 @@ function useExpandContents(
   setIds: (ids: string[], dropContents: boolean) => void
 ) {
   useEffect(() => {
-    if (!params.contents || data.isLoading || data.contentsLoading) return;
+    if (!params.contents || data.isLoading || data.contentsLoading || data.error) return;
     const expanded = params.ids.flatMap((id) => [
       id,
       ...(data.contents.get(id) ?? []).map((held) => held.id),
     ]);
     setIds(expanded, true);
-  }, [params.contents, params.ids, data.isLoading, data.contentsLoading, data.contents, setIds]);
+  }, [
+    params.contents,
+    params.ids,
+    data.isLoading,
+    data.contentsLoading,
+    data.contents,
+    data.error,
+    setIds,
+  ]);
 }
 
 function LabelsContent({
@@ -144,6 +152,8 @@ function LabelsContent({
   const job = useLabelJob(data.subjects, {
     content: params.content,
     details: data.details,
+    fragility: data.fragility,
+    readsPending: data.contentsLoading,
     sheetId: params.sheetId,
   });
   const { save } = useSaveCode();
@@ -154,12 +164,7 @@ function LabelsContent({
   };
   const add = (ids: string[]) => setIds([...params.ids, ...ids]);
   const addControl = (
-    <AddDialog
-      trigger={
-        <Button size="sm" variant="outline" prefix={<Plus className="size-4" aria-hidden />}>
-          Add
-        </Button>
-      }
+    <LabelAddControl
       open={addOpen}
       onOpenChange={setAddOpen}
       selectedIds={new Set(params.ids)}
@@ -203,7 +208,6 @@ export function LabelsPage() {
   const { params, setIds, setContent } = useIdsParam(defaults);
   const data = useLabelSubjects(params.ids);
   useExpandContents(params, data, setIds);
-  if (settings.isPending || data.isLoading || params.contents) return <LabelsLoading />;
   if (data.error) {
     return (
       <Alert variant="destructive">
@@ -212,5 +216,6 @@ export function LabelsPage() {
       </Alert>
     );
   }
+  if (settings.isPending || data.isLoading || params.contents) return <LabelsLoading />;
   return <LabelsContent data={data} params={params} setIds={setIds} setContent={setContent} />;
 }

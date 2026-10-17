@@ -43,6 +43,12 @@ function CopiesChoice({ job, kind }: { job: PrintJob; kind: PrintSubject['kind']
  * nothing: a QR smaller than its minimum is a label no phone reads.
  */
 export function SheetFitNotice({ job }: { job: PrintJob }) {
+  if (job.block === 'loading')
+    return (
+      <p className="text-sm text-muted-foreground" role="status">
+        Checking fragility in the selected items and their contents…
+      </p>
+    );
   if (job.block === 'too-small') {
     return (
       <p className="rounded-md border border-destructive/40 px-3 py-2 text-sm" role="alert">

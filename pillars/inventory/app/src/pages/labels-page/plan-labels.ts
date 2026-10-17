@@ -11,6 +11,8 @@ import type {
   SheetLayout,
 } from '@pops/inventory/labels';
 
+import type { LabelFragility } from './label-fragility';
+
 /** One label of the job: what it is for and the content it prints with. */
 export interface PrintLabelEntry {
   subject: PrintSubject;
@@ -37,6 +39,20 @@ function previewLabel(
   return { ...label, parts: [...label.parts, 'code'] };
 }
 
+function resolvedForPrint(
+  subject: PrintSubject,
+  content: LabelContent,
+  details: LabelDetails,
+  { recorded, manual }: { recorded: LabelFragility | undefined; manual: boolean }
+) {
+  const fragile = recorded?.fragile || (!recorded?.recorded && manual);
+  const printable =
+    fragile && recorded
+      ? { ...details, fields: details.fields.filter((field) => !recorded.fields.has(field.id)) }
+      : details;
+  return { wanted: previewLabel(subject, content, printable), fragile };
+}
+
 /** What {@link planLabels} arranges: the items, their copies and the job's choices. */
 export interface LabelPlanInput {
   subjects: readonly PrintSubject[];
@@ -45,6 +61,7 @@ export interface LabelPlanInput {
   details: ReadonlyMap<string, LabelDetails>;
   layout: SheetLayout;
   fragileIds?: ReadonlySet<string>;
+  fragility?: ReadonlyMap<string, LabelFragility>;
 }
 
 /** Every label of the job, fitted to the sheet, with the counts the page reports. */
@@ -55,6 +72,7 @@ export function planLabels({
   details,
   layout,
   fragileIds,
+  fragility,
 }: LabelPlanInput): {
   entries: PrintLabelEntry[];
   adjustments: { trimmed: number; fallback: number };
@@ -67,8 +85,12 @@ export function planLabels({
   let fragileTooSmall = false;
   const entries: PrintLabelEntry[] = [];
   for (const subject of expandCopies(subjects, (entry) => copies[entry.kind])) {
-    const wanted = previewLabel(subject, content, details.get(subject.id) ?? NO_DETAILS);
-    const fragile = fragileIds?.has(subject.id) ?? false;
+    const { wanted, fragile } = resolvedForPrint(
+      subject,
+      content,
+      details.get(subject.id) ?? NO_DETAILS,
+      { recorded: fragility?.get(subject.id), manual: fragileIds?.has(subject.id) ?? false }
+    );
     const label = fitPrintedLabel(wanted, layout, fragile);
     if (label === null) {
       tooSmall = true;
