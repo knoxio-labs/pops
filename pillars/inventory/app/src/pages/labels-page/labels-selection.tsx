@@ -33,6 +33,7 @@ export function LabelsSelection({
         onFragileChange={onFragileChange}
         needsCode={needsCode}
         contents={data.contents}
+        fragility={data.fragility}
         missing={data.missing}
         saveCode={saveCode}
         addControl={addControl}

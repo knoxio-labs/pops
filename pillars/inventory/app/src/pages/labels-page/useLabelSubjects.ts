@@ -3,20 +3,25 @@
  * (`GET /web/items?ids=`), with what each listed box holds and a suggested
  * code for every item that has none (`POST /codes/suggest`).
  */
-import { keepPreviousData, useQueries, useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useIsFetching, useQueries, useQuery } from '@tanstack/react-query';
 
 import { unwrap } from '../../inventory-api-helpers.js';
-import { codesSuggest, webList } from '../../inventory-api/index.js';
+import { codesSuggest } from '../../inventory-api/index.js';
 import { INVENTORY_SYNC_PROTOCOL } from '../../inventory-web/mutation-client.js';
-import { WEB_ITEMS_QUERY_KEY } from '../../inventory-web/queryKeys.js';
+import {
+  PUBLISHED_CATALOGUE_QUERY_KEY,
+  WEB_ITEMS_QUERY_KEY,
+} from '../../inventory-web/queryKeys.js';
 import { usePublishedCatalogue } from '../../inventory-web/useCatalogueLookups.js';
 import { compareInventoryNames } from '../../lib/sort-names.js';
 import { detailsFor } from './label-details.js';
-import { MAX_LABEL_IDS } from './label-params';
+import { treeFragility } from './label-fragility.js';
+import { listLabelItems } from './label-subject-reads.js';
 
 import type { LabelDetails, PrintSubject } from '@pops/inventory/labels';
 
 import type { WebListResponses } from '../../inventory-api/types.gen.js';
+import type { LabelFragility } from './label-fragility.js';
 
 /** One item as `GET /web/items` returns it. */
 export type WebItem = WebListResponses[200]['items'][number];
@@ -45,11 +50,6 @@ export function toLabelSubject(item: WebItem, suggestedCode: string | null = nul
   };
 }
 
-async function listItems(query: { ids?: string; containingItemId?: string }): Promise<WebItem[]> {
-  const page = unwrap(await webList({ query: { ...query, limit: MAX_LABEL_IDS } }));
-  return page.items;
-}
-
 async function suggestCode(item: WebItem): Promise<string | null> {
   const result = unwrap(
     await codesSuggest({
@@ -62,9 +62,9 @@ async function suggestCode(item: WebItem): Promise<string | null> {
 
 /** The job's items in the order asked for, with the ids that matched no live item. */
 export interface LabelSubjects {
-  /** True until the listed items first arrive; later changes keep the last answer showing. */
+  /** True until the listed items first arrive. */
   isLoading: boolean;
-  /** True while any listed box's contents are still being read. */
+  /** True while selected items, contents, descendants, or the catalogue refresh. */
   contentsLoading: boolean;
   error: Error | null;
   subjects: LabelSubject[];
@@ -72,6 +72,8 @@ export interface LabelSubjects {
   missing: string[];
   /** What each box in the job holds, by the box's id. */
   contents: ReadonlyMap<string, LabelSubject[]>;
+  /** Fragility from each selected item and its full contained tree. */
+  fragility: ReadonlyMap<string, LabelFragility>;
   /** Field values and box contents available to the label-content picker. */
   details: ReadonlyMap<string, LabelDetails>;
 }
@@ -81,14 +83,40 @@ function useContents(items: WebItem[]) {
   const results = useQueries({
     queries: boxes.map((box) => ({
       queryKey: [...WEB_ITEMS_QUERY_KEY, 'label-contents', box.id] as const,
-      queryFn: () => listItems({ containingItemId: box.id }),
+      queryFn: () => listLabelItems({ containingItemId: box.id }),
     })),
   });
   const contents = new Map<string, WebItem[]>();
   boxes.forEach((box, index) =>
     contents.set(box.id, (results[index]?.data ?? []).toSorted(compareInventoryNames))
   );
-  return { contents, isLoading: results.some((result) => result.isLoading) };
+  return {
+    contents,
+    isLoading: results.some((result) => result.isPending || result.isFetching),
+    error: results.find((result) => result.error !== null)?.error ?? null,
+  };
+}
+
+function useDescendants(items: WebItem[]) {
+  const boxes = items.filter((item) => item.isContainer);
+  const results = useQueries({
+    queries: boxes.map((box) => ({
+      queryKey: [...WEB_ITEMS_QUERY_KEY, 'label-descendants', box.id] as const,
+      queryFn: () => listLabelItems({ within: box.id, includeInactive: true }),
+    })),
+  });
+  const descendants = new Map<string, WebItem[]>();
+  boxes.forEach((box, index) =>
+    descendants.set(
+      box.id,
+      (results[index]?.data ?? []).filter((descendant) => descendant.id !== box.id)
+    )
+  );
+  return {
+    descendants,
+    isLoading: results.some((result) => result.isPending || result.isFetching),
+    error: results.find((result) => result.error !== null)?.error ?? null,
+  };
 }
 
 function useSuggestions(items: WebItem[]) {
@@ -106,34 +134,64 @@ function useSuggestions(items: WebItem[]) {
 
 /** Loads the items behind `ids`, each box's contents, and codes to suggest. */
 export function useLabelSubjects(ids: readonly string[]): LabelSubjects {
-  const { typeById } = usePublishedCatalogue();
+  const catalogue = usePublishedCatalogue();
+  const catalogueFetching = useIsFetching({ queryKey: PUBLISHED_CATALOGUE_QUERY_KEY }) > 0;
   const listed = useQuery({
     queryKey: [...WEB_ITEMS_QUERY_KEY, 'labels', ids] as const,
-    queryFn: () => listItems({ ids: ids.join(',') }),
+    queryFn: () => listLabelItems({ ids: ids.join(',') }),
     enabled: ids.length > 0,
     placeholderData: keepPreviousData,
   });
-  const items = listed.data ?? [];
+  const items = listed.isPlaceholderData ? [] : (listed.data ?? []);
   const byId = new Map(items.map((item) => [item.id, item]));
   const ordered = ids.flatMap((id) => {
     const item = byId.get(id);
     return item ? [item] : [];
   });
   const boxContents = useContents(ordered);
+  const tree = useDescendants(ordered);
   const suggestions = useSuggestions(ordered);
   const subject = (item: WebItem) => toLabelSubject(item, suggestions.get(item.id) ?? null);
   const contents = new Map(
     [...boxContents.contents].map(([boxId, held]) => [boxId, held.map(subject)])
   );
+  const fragility = new Map(
+    ordered.map((item) => [
+      item.id,
+      treeFragility(item, tree.descendants.get(item.id) ?? [], catalogue.typeById),
+    ])
+  );
   return {
     isLoading: listed.isLoading,
-    contentsLoading: boxContents.isLoading,
-    error: listed.error,
+    contentsLoading:
+      listed.isPlaceholderData ||
+      listed.isFetching ||
+      boxContents.isLoading ||
+      tree.isLoading ||
+      catalogue.isPending ||
+      catalogueFetching,
+    error: readError(
+      listed.error,
+      boxContents.error,
+      tree.error,
+      catalogue.error,
+      ...[...fragility.values()].map((value) => value.error)
+    ),
     subjects: ordered.map(subject),
     missing: listed.data && !listed.isPlaceholderData ? ids.filter((id) => !byId.has(id)) : [],
     contents,
+    fragility,
     details: new Map(
-      ordered.map((item) => [item.id, detailsFor(item, contents.get(item.id) ?? [], typeById)])
+      ordered.map((item) => [
+        item.id,
+        detailsFor(item, contents.get(item.id) ?? [], catalogue.typeById),
+      ])
     ),
   };
+}
+
+function readError(...errors: readonly unknown[]): Error | null {
+  const error = errors.find((value) => value !== null && value !== undefined);
+  if (error === undefined) return null;
+  return error instanceof Error ? error : new Error(String(error));
 }

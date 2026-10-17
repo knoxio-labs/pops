@@ -5,6 +5,7 @@ import {
 import { fieldIconFromPresentation } from '../../catalogue-editor/field-icon.js';
 import { compareInventoryNames } from '../../lib/sort-names.js';
 import { effectiveType, typePathLabel } from '../../lib/type-tree.js';
+import { fieldValuesFor } from './label-field-values';
 
 import type { LabelDetails, LabelFieldValue, PrintSubject } from '@pops/inventory/labels';
 
@@ -56,21 +57,6 @@ function valueText(value: unknown, field?: CatalogueField): string {
   if (typeof value === 'boolean') return value ? 'Yes' : 'No';
   if (isRecord(value)) return objectValueText(value, field);
   return '';
-}
-
-function fieldValuesFor(item: WebItem, field: CatalogueField): readonly unknown[] {
-  const overrides = item.fieldValues.find(
-    (entry) => entry.fieldId === field.id && entry.source === 'override'
-  );
-  if (overrides !== undefined) return overrides.values;
-  const stored = item.fieldValues.find(
-    (entry) => entry.fieldId === field.id && entry.source === 'stored'
-  );
-  if (stored !== undefined) return stored.values;
-  const computed = item.computedValues.find((entry) => entry.fieldId === field.id);
-  if (computed?.state === 'ok' || computed?.state === 'overridden') return computed.values;
-  const legacy = item.fields[field.key] ?? item.fields[field.label];
-  return legacy === undefined ? [] : [legacy];
 }
 
 function catalogueDetailsFor(

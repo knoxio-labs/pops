@@ -63,3 +63,48 @@ describe('label fit failure causes', () => {
     expect(plan.fragileTooSmall).toBe(false);
   });
 });
+
+describe('recorded fragility', () => {
+  it('prints the recorded true as one symbol without the selected text field', () => {
+    const field = { id: 'box.Fragile', label: 'Fragile', value: 'Yes' };
+    const plan = planLabels({
+      ...job,
+      fragileIds: new Set(),
+      layout: sheetLayout('L7165'),
+      content: { kind: 'parts', parts: ['qr', 'name', 'code'], fields: [field.id] },
+      details: new Map([[marked.id, { typeName: 'Box', fields: [field], contents: [] }]]),
+      fragility: new Map([
+        [marked.id, { fragile: true, recorded: true, fields: new Set([field.id]), error: null }],
+      ]),
+    });
+    const entry = plan.entries.find((value) => value.subject.id === marked.id);
+    expect(entry?.fragile).toBe(true);
+    expect(entry?.label.fields).toEqual([]);
+    expect(entry?.label.parts).toEqual(['qr', 'name', 'code']);
+  });
+
+  it('does not allow the manual fallback to override a recorded false', () => {
+    const plan = planLabels({
+      ...job,
+      layout: sheetLayout('L7165'),
+      fragility: new Map([
+        [
+          marked.id,
+          { fragile: false, recorded: true, fields: new Set(['box.Fragile']), error: null },
+        ],
+      ]),
+    });
+    expect(plan.entries.find((value) => value.subject.id === marked.id)?.fragile).toBeUndefined();
+  });
+
+  it('keeps the manual fallback when no recorded field exists', () => {
+    const plan = planLabels({
+      ...job,
+      layout: sheetLayout('L7165'),
+      fragility: new Map([
+        [marked.id, { fragile: false, recorded: false, fields: new Set<string>(), error: null }],
+      ]),
+    });
+    expect(plan.entries.find((value) => value.subject.id === marked.id)?.fragile).toBe(true);
+  });
+});

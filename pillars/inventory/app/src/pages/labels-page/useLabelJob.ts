@@ -42,6 +42,7 @@ import type {
   SheetPage,
 } from '@pops/inventory/labels';
 
+import type { LabelFragility } from './label-fragility';
 import type { PrintLabelEntry } from './plan-labels';
 
 /**
@@ -51,12 +52,14 @@ import type { PrintLabelEntry } from './plan-labels';
 export type PrintOutcome = 'none' | 'asking' | 'printed' | 'cancelled';
 
 /** Why Print is off: nothing to print, an item still without a code, or labels too small for a QR. */
-export type PrintBlock = 'empty' | 'uncoded' | 'too-small' | null;
+export type PrintBlock = 'empty' | 'uncoded' | 'too-small' | 'loading' | null;
 
 /** The job's starting choices, from the page's address and inventory settings. */
 export interface LabelJobSeed {
   content?: LabelContent;
   details?: ReadonlyMap<string, LabelDetails>;
+  fragility?: ReadonlyMap<string, LabelFragility>;
+  readsPending?: boolean;
   /** A preset's size code or `custom`; null opens on the sheet this browser last used. */
   sheetId: string | null;
 }
@@ -130,6 +133,14 @@ function printBlock(labels: number, uncoded: number, tooSmall: boolean): PrintBl
   return uncoded > 0 ? 'uncoded' : null;
 }
 
+function uncodedSubjects(subjects: PrintSubject[], labels: PrintLabelEntry[]): PrintSubject[] {
+  return subjects.filter(
+    (subject) =>
+      subject.code === null &&
+      labels.some((entry) => entry.subject.id === subject.id && entry.label.parts.includes('code'))
+  );
+}
+
 function useFragileLabels() {
   const [fragileIds, setFragileIds] = useState<ReadonlySet<string>>(new Set());
   return {
@@ -156,19 +167,18 @@ export function useLabelJob(subjects: PrintSubject[], seed: LabelJobSeed): Print
   const plan = planLabels({
     subjects,
     fragileIds: fragile.fragileIds,
+    fragility: seed.fragility,
     copies,
     content,
     details: seed.details ?? new Map(),
     layout,
   });
   const labels = plan.entries;
-  const uncoded = subjects.filter(
-    (subject) =>
-      subject.code === null &&
-      labels.some((entry) => entry.subject.id === subject.id && entry.label.parts.includes('code'))
-  );
+  const uncoded = uncodedSubjects(subjects, labels);
   const nextStart = nextStartAt(labels.length, startAt, layout);
-  const block = printBlock(labels.length, uncoded.length, plan.tooSmall);
+  const block = seed.readsPending
+    ? 'loading'
+    : printBlock(labels.length, uncoded.length, plan.tooSmall);
 
   return {
     subjects,
