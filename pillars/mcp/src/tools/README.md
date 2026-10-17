@@ -130,6 +130,12 @@ though nothing enforces it mechanically.
   must retain quantity 1; use discard rather than setting quantity to zero.
   A caller may retain and resend `mutationId` after an uncertain response, so retries converge on the
   producer's idempotency boundary instead of creating a second command.
+  `code` on create and update accepts a trimmed 1–64-character sticker code or
+  null (no code). An update can carry only `code`; omission preserves it.
+  Updates apply `item.setCode` before `item.edit`, using the returned revision.
+  These are separate commands: a later edit failure does not roll back the code.
+  Retry the unchanged arguments with the same `mutationId` to replay both outcomes
+  safely. Code collisions return an error including the holder's name and ID.
   `provenance` on create and update is the shape `items.get` returns, written
   through the producer's legacy purchase columns (`inventory-item-provenance.ts`).
   `transactionUri` accepts only `pops://finance/transaction/<id>`, the one URI

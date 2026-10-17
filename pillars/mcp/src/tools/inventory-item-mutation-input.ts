@@ -1,4 +1,5 @@
 import { requiredPositiveInteger } from './inventory-catalogue-input.js';
+import { parseCode, parseExternalIds } from './inventory-item-identifiers.js';
 import {
   optionalFieldValuePatches,
   optionalUuid,
@@ -8,6 +9,7 @@ import {
 import { optionalProvenance } from './inventory-item-provenance.js';
 import { nullStr, reqStr } from './utils.js';
 
+import type { ExternalIdInput } from './inventory-item-identifiers.js';
 import type { CreateFieldValueInput, FieldValuePatchInput } from './inventory-item-input.js';
 import type { LegacyProvenancePatch } from './inventory-item-provenance.js';
 
@@ -22,6 +24,7 @@ export interface CreateItemMutationInput {
   readonly entityId?: string;
   readonly mutationId?: string;
   readonly note?: string | null;
+  readonly code?: string | null;
   readonly provenance?: LegacyProvenancePatch;
 }
 
@@ -35,18 +38,15 @@ export interface UpdateItemMutationInput {
   readonly mutationId?: string;
   readonly itemName?: string;
   readonly note?: string | null;
+  readonly code?: string | null;
   readonly provenance?: LegacyProvenancePatch;
-}
-
-/** One non-empty external identifier sent as part of an item-edit replacement. */
-export interface ExternalIdInput {
-  readonly kind: string;
-  readonly value: string;
 }
 
 function parseCreateExtras(
   args: Record<string, unknown>
-): Parsed<Pick<CreateItemMutationInput, 'note' | 'provenance'>> {
+): Parsed<Pick<CreateItemMutationInput, 'note' | 'code' | 'provenance'>> {
+  const code = parseCode(args);
+  if (!code.ok) return code;
   const note = nullStr(args, 'note');
   if ('note' in args && note === undefined) return { ok: false, error: 'Invalid field: note' };
   const provenance = optionalProvenance(args, false);
@@ -55,6 +55,7 @@ function parseCreateExtras(
     ok: true,
     value: {
       ...(note === undefined ? {} : { note }),
+      ...(code.value === undefined ? {} : { code: code.value }),
       ...(provenance.value === undefined ? {} : { provenance: provenance.value }),
     },
   };
@@ -94,13 +95,15 @@ export function parseCreateItemMutationInput(
 
 function parseUpdateText(
   args: Record<string, unknown>
-): Parsed<Pick<UpdateItemMutationInput, 'itemName' | 'note'>> {
+): Parsed<Pick<UpdateItemMutationInput, 'itemName' | 'note' | 'code'>> {
   let itemName: string | undefined;
   if ('itemName' in args) {
     const parsed = reqStr(args, 'itemName');
     if (parsed === null) return { ok: false, error: 'Invalid field: itemName' };
     itemName = parsed;
   }
+  const code = parseCode(args);
+  if (!code.ok) return code;
   const note = nullStr(args, 'note');
   if ('note' in args && note === undefined) return { ok: false, error: 'Invalid field: note' };
   return {
@@ -108,41 +111,9 @@ function parseUpdateText(
     value: {
       ...(itemName === undefined ? {} : { itemName }),
       ...(note === undefined ? {} : { note }),
+      ...(code.value === undefined ? {} : { code: code.value }),
     },
   };
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
-
-function parseExternalIds(
-  args: Record<string, unknown>
-): Parsed<readonly ExternalIdInput[] | undefined> {
-  if (args['externalIds'] === undefined) return { ok: true, value: undefined };
-  const externalIds = args['externalIds'];
-  if (!Array.isArray(externalIds)) return { ok: false, error: 'externalIds must be an array' };
-
-  const parsed: ExternalIdInput[] = [];
-  for (const [index, entry] of externalIds.entries()) {
-    const path = `externalIds[${String(index)}]`;
-    if (!isRecord(entry)) return { ok: false, error: `${path} must be an object` };
-    for (const key of Object.keys(entry)) {
-      if (key !== 'kind' && key !== 'value') {
-        return { ok: false, error: `${path}.${key} is not allowed` };
-      }
-    }
-    const kind = entry['kind'];
-    if (typeof kind !== 'string' || kind.length === 0) {
-      return { ok: false, error: `${path}.kind must be a non-empty string` };
-    }
-    const value = entry['value'];
-    if (typeof value !== 'string' || value.length === 0) {
-      return { ok: false, error: `${path}.value must be a non-empty string` };
-    }
-    parsed.push({ kind, value });
-  }
-  return { ok: true, value: parsed };
 }
 
 function parseUpdateFields(
@@ -165,12 +136,13 @@ function parseUpdateFields(
 }
 
 function hasUpdateChange(
-  text: Pick<UpdateItemMutationInput, 'itemName' | 'note'>,
+  text: Pick<UpdateItemMutationInput, 'itemName' | 'note' | 'code'>,
   fields: Pick<UpdateItemMutationInput, 'fieldValues' | 'externalIds' | 'provenance'>
 ): boolean {
   return (
     text.itemName !== undefined ||
     text.note !== undefined ||
+    text.code !== undefined ||
     fields.fieldValues !== undefined ||
     fields.externalIds !== undefined ||
     fields.provenance !== undefined
@@ -196,7 +168,8 @@ export function parseUpdateItemMutationInput(
   if (!hasUpdateChange(text.value, fields.value)) {
     return {
       ok: false,
-      error: 'At least one of itemName, note, fieldValues, externalIds, or provenance is required',
+      error:
+        'At least one of itemName, note, code, fieldValues, externalIds, or provenance is required',
     };
   }
   return {
