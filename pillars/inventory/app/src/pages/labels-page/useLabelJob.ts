@@ -64,6 +64,9 @@ export interface LabelJobSeed {
 /** The job as the page renders it, with the actions that change it. */
 export interface PrintJob {
   subjects: PrintSubject[];
+  /** Item ids manually marked fragile for this print job only. */
+  fragileIds: ReadonlySet<string>;
+  setFragile: (id: string, fragile: boolean) => void;
   content: LabelContent;
   /** Every field the selected items have, for the label-content picker. */
   fields: LabelFieldChoice[];
@@ -125,8 +128,23 @@ function printBlock(labels: number, uncoded: number, tooSmall: boolean): PrintBl
   return uncoded > 0 ? 'uncoded' : null;
 }
 
+function useFragileLabels() {
+  const [fragileIds, setFragileIds] = useState<ReadonlySet<string>>(new Set());
+  return {
+    fragileIds,
+    setFragile: (id: string, fragile: boolean) =>
+      setFragileIds((current) => {
+        const next = new Set(current);
+        if (fragile) next.add(id);
+        else next.delete(id);
+        return next;
+      }),
+  };
+}
+
 /** The label page's job over `subjects`. */
 export function useLabelJob(subjects: PrintSubject[], seed: LabelJobSeed): PrintJob {
+  const fragile = useFragileLabels();
   const sheet = useSheet(seed);
   const { layout } = sheet;
   const [content, setContent] = useState<LabelContent>(seed.content ?? DEFAULT_LABEL_CONTENT);
@@ -135,6 +153,7 @@ export function useLabelJob(subjects: PrintSubject[], seed: LabelJobSeed): Print
   const startAt = clampStartAt(sheet.requestedStart, layout);
   const plan = planLabels({
     subjects,
+    fragileIds: fragile.fragileIds,
     copies,
     content,
     details: seed.details ?? new Map(),
@@ -151,6 +170,7 @@ export function useLabelJob(subjects: PrintSubject[], seed: LabelJobSeed): Print
 
   return {
     subjects,
+    ...fragile,
     content,
     fields: fieldChoices(subjects.map((subject) => seed.details?.get(subject.id) ?? NO_DETAILS)),
     layout,

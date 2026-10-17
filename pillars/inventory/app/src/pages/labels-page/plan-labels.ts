@@ -1,10 +1,6 @@
-import {
-  autoParts,
-  expandCopies,
-  fitToSheet,
-  NO_DETAILS,
-  resolveLabel,
-} from '@pops/inventory/labels';
+import { autoParts, expandCopies, NO_DETAILS, resolveLabel } from '@pops/inventory/labels';
+
+import { fitPrintedLabel } from './fragile-label-layout';
 
 import type {
   CopiesByKind,
@@ -19,6 +15,8 @@ import type {
 export interface PrintLabelEntry {
   subject: PrintSubject;
   label: ResolvedLabel;
+  /** Whether this print job adds a fragile handling warning. */
+  fragile?: boolean;
 }
 
 function wantsCode(content: LabelContent, kind: PrintSubject['kind']): boolean {
@@ -46,10 +44,18 @@ export interface LabelPlanInput {
   content: LabelContent;
   details: ReadonlyMap<string, LabelDetails>;
   layout: SheetLayout;
+  fragileIds?: ReadonlySet<string>;
 }
 
 /** Every label of the job, fitted to the sheet, with the counts the page reports. */
-export function planLabels({ subjects, copies, content, details, layout }: LabelPlanInput): {
+export function planLabels({
+  subjects,
+  copies,
+  content,
+  details,
+  layout,
+  fragileIds,
+}: LabelPlanInput): {
   entries: PrintLabelEntry[];
   adjustments: { trimmed: number; fallback: number };
   tooSmall: boolean;
@@ -60,7 +66,8 @@ export function planLabels({ subjects, copies, content, details, layout }: Label
   const entries: PrintLabelEntry[] = [];
   for (const subject of expandCopies(subjects, (entry) => copies[entry.kind])) {
     const wanted = previewLabel(subject, content, details.get(subject.id) ?? NO_DETAILS);
-    const label = fitToSheet(wanted, layout);
+    const fragile = fragileIds?.has(subject.id) ?? false;
+    const label = fitPrintedLabel(wanted, layout, fragile);
     if (label === null) {
       tooSmall = true;
       continue;
@@ -69,7 +76,7 @@ export function planLabels({ subjects, copies, content, details, layout }: Label
       trimmed += 1;
     }
     if (label.fallback) fallback += 1;
-    entries.push({ subject, label });
+    entries.push({ subject, label, ...(fragile ? { fragile } : {}) });
   }
   return { entries, adjustments: { trimmed, fallback }, tooSmall };
 }

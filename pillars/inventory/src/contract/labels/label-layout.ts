@@ -163,23 +163,37 @@ function sharedPlan(label: ResolvedLabel, subject: PrintSubject, layout: SheetLa
   };
 }
 
-/** The measured label for one item on this sheet; call {@link fitToSheet} first. */
+/**
+ * The measured label for one item on this sheet; call {@link fitToSheet} first.
+ * An inline reservation reduces header text width while preserving full-width
+ * header contents, or reduces the entire width for other arrangements.
+ */
 export function planLabel(
   label: ResolvedLabel,
   subject: PrintSubject,
-  layout: SheetLayout
+  layout: SheetLayout,
+  inlineReservationMm = 0
 ): LabelPlan {
+  if (!Number.isFinite(inlineReservationMm) || inlineReservationMm < 0) {
+    throw new RangeError('inline reservation must be finite and nonnegative');
+  }
+  const contentLayout =
+    inlineReservationMm === 0
+      ? layout
+      : { ...layout, labelWidthMm: layout.labelWidthMm - inlineReservationMm };
   if (label.parts.includes('qr') && !hasText(label)) {
     return {
       arrangement: 'qr-fill',
-      qrMm: fillQrMm(layout),
+      qrMm: fillQrMm(contentLayout),
       name: null,
       code: null,
       fields: null,
       contents: null,
     };
   }
-  const header = headerPlan(label, subject, layout);
+  const header = headerPlan(label, subject, layout, inlineReservationMm);
   if (header) return header;
-  return isSolo(label) ? soloPlan(label, subject, layout) : sharedPlan(label, subject, layout);
+  return isSolo(label)
+    ? soloPlan(label, subject, contentLayout)
+    : sharedPlan(label, subject, contentLayout);
 }

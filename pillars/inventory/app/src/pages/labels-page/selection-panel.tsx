@@ -19,6 +19,8 @@ import type { CodeSaveResult } from './useSaveCode';
 /** Props for {@link SelectionPanel}. */
 export interface SelectionPanelProps {
   subjects: LabelSubject[];
+  fragileIds?: ReadonlySet<string>;
+  onFragileChange?: (id: string, fragile: boolean) => void;
   /** Ids of items whose labels print a code they do not have yet. */
   needsCode: ReadonlySet<string>;
   contents: ReadonlyMap<string, LabelSubject[]>;
@@ -115,6 +117,12 @@ export function SelectionPanel(props: SelectionPanelProps) {
             <SelectionRow
               key={subject.id}
               subject={subject}
+              fragile={props.fragileIds?.has(subject.id)}
+              onFragileChange={
+                props.onFragileChange
+                  ? (fragile) => props.onFragileChange?.(subject.id, fragile)
+                  : undefined
+              }
               contentsToAdd={(contents.get(subject.id) ?? []).filter((held) => !inJob.has(held.id))}
               saveCode={props.saveCode}
               onAdd={props.onAdd}

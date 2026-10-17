@@ -1,5 +1,5 @@
 import { itemUri } from '@pops/inventory/labels';
-import { FieldIcon, isFieldIconName, QrCode, cn } from '@pops/ui';
+import { FieldIcon, FragileIcon, isFieldIconName, QrCode, cn } from '@pops/ui';
 
 import type { CSSProperties, ReactElement, ReactNode } from 'react';
 
@@ -20,6 +20,19 @@ export function LabelQr({ subject, sizeMm }: { subject: PrintSubject; sizeMm: nu
         title={`QR code for ${subject.name}`}
         className="max-w-none"
       />
+    </div>
+  );
+}
+
+/** Renders the handling warning at the same physical size as its QR. */
+export function LabelFragile({ sizeMm }: { sizeMm: number }): ReactElement {
+  return (
+    <div
+      className="shrink-0"
+      style={{ width: `${sizeMm}mm`, height: `${sizeMm}mm` }}
+      data-label-fragile
+    >
+      <FragileIcon size="100%" />
     </div>
   );
 }

@@ -1,14 +1,23 @@
-import { autoParts, LABEL_GAP_MM, planLabel } from '@pops/inventory/labels';
+import { autoParts, LABEL_GAP_MM } from '@pops/inventory/labels';
 import { cn } from '@pops/ui';
 
+import { planPrintedLabel } from './fragile-label-layout';
 import { QrHeaderLabel } from './label-qr-header';
-import { CodeOrMissing, ContentsList, FieldList, LabelName, LabelQr } from './label-template-parts';
+import {
+  CodeOrMissing,
+  ContentsList,
+  FieldList,
+  LabelFragile,
+  LabelName,
+  LabelQr,
+} from './label-template-parts';
 
 import type { LabelPlan, PrintSubject, ResolvedLabel, SheetLayout } from '@pops/inventory/labels';
 
 interface LabelProps {
   subject: PrintSubject;
   layout: SheetLayout;
+  fragile?: boolean;
 }
 
 function TextColumn({ plan, subject, layout }: LabelProps & { plan: LabelPlan }) {
@@ -31,11 +40,17 @@ function TextColumn({ plan, subject, layout }: LabelProps & { plan: LabelPlan })
   );
 }
 
-function HeaderLabel({ plan, subject, layout }: LabelProps & { plan: LabelPlan }) {
+function HeaderLabel({
+  plan,
+  subject,
+  layout,
+  fragileMm,
+}: LabelProps & { plan: LabelPlan; fragileMm: number | null }) {
   if (!plan.header || !plan.contents) return null;
   return (
     <QrHeaderLabel
       header={plan.header}
+      fragile={fragileMm === null ? null : <LabelFragile sizeMm={fragileMm} />}
       contents={plan.contents}
       qr={plan.qrMm === null ? null : <LabelQr subject={subject} sizeMm={plan.qrMm} />}
       name={
@@ -52,8 +67,13 @@ function HeaderLabel({ plan, subject, layout }: LabelProps & { plan: LabelPlan }
 }
 
 /** One label showing the content resolved for the item and the selected sheet. */
-export function ContentLabel({ subject, layout, label }: LabelProps & { label: ResolvedLabel }) {
-  const plan = planLabel(label, subject, layout);
+export function ContentLabel({
+  subject,
+  layout,
+  label,
+  fragile = false,
+}: LabelProps & { label: ResolvedLabel }) {
+  const { plan, fragileMm } = planPrintedLabel(label, subject, layout, fragile);
   if (plan.arrangement === 'qr-header') {
     return (
       <div
@@ -61,7 +81,7 @@ export function ContentLabel({ subject, layout, label }: LabelProps & { label: R
         style={{ padding: `${layout.scale.paddingMm}mm` }}
         data-arrangement={plan.arrangement}
       >
-        <HeaderLabel plan={plan} subject={subject} layout={layout} />
+        <HeaderLabel plan={plan} subject={subject} layout={layout} fragileMm={fragileMm} />
       </div>
     );
   }
@@ -78,6 +98,7 @@ export function ContentLabel({ subject, layout, label }: LabelProps & { label: R
       {plan.arrangement === 'qr-fill' ? null : (
         <TextColumn plan={plan} subject={subject} layout={layout} />
       )}
+      {fragileMm === null ? null : <LabelFragile sizeMm={fragileMm} />}
     </div>
   );
 }
@@ -87,16 +108,30 @@ function autoLabel(kind: PrintSubject['kind']): ResolvedLabel {
 }
 
 /** QR, name and code: the label Auto gives a box. */
-export function ContainerLabel({ subject, layout }: LabelProps) {
-  return <ContentLabel subject={subject} layout={layout} label={autoLabel('container')} />;
+export function ContainerLabel({ subject, layout, fragile }: LabelProps) {
+  return (
+    <ContentLabel
+      subject={subject}
+      layout={layout}
+      label={autoLabel('container')}
+      fragile={fragile}
+    />
+  );
 }
 
 /** QR and code: the label Auto gives a thing. */
-export function ItemLabel({ subject, layout }: LabelProps) {
-  return <ContentLabel subject={subject} layout={layout} label={autoLabel('item')} />;
+export function ItemLabel({ subject, layout, fragile }: LabelProps) {
+  return (
+    <ContentLabel subject={subject} layout={layout} label={autoLabel('item')} fragile={fragile} />
+  );
 }
 
 /** One label in the resolved content choice. */
-export function PrintLabel({ subject, layout, label }: LabelProps & { label: ResolvedLabel }) {
-  return <ContentLabel subject={subject} layout={layout} label={label} />;
+export function PrintLabel({
+  subject,
+  layout,
+  label,
+  fragile,
+}: LabelProps & { label: ResolvedLabel }) {
+  return <ContentLabel subject={subject} layout={layout} label={label} fragile={fragile} />;
 }

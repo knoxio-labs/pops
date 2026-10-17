@@ -102,6 +102,7 @@ export * from './components/EditableCell';
 export * from './components/ErrorBoundary';
 export * from './components/FieldError';
 export * from './components/FieldIcon';
+export * from './components/FragileIcon';
 export * from './components/FieldLabel';
 export * from './components/InfiniteScrollTable';
 export * from './components/KeyCombo';
