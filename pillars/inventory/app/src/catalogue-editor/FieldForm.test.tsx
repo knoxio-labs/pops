@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { FieldForm } from './FieldForm';
@@ -478,5 +479,47 @@ describe('FieldForm configuration branches', () => {
     expect(
       screen.getByText('Up to 18 significant digits, up to 9 decimal places.')
     ).toBeInTheDocument();
+  });
+});
+
+describe('FieldForm typing and validity', () => {
+  it('keeps focus while typing a new field identity and explicit key', async () => {
+    const user = userEvent.setup();
+    const onOperation = renderNewField([], []);
+    const key = screen.getByLabelText('Key');
+    await user.clear(key);
+    await user.type(key, 'custom_key');
+    expect(key).toHaveFocus();
+    expect(key).toHaveValue('custom_key');
+    const label = screen.getByLabelText('Field label');
+    await user.type(label, ' updated');
+    expect(label).toHaveFocus();
+    const help = screen.getByLabelText('Help text');
+    await user.type(help, 'Help across several keystrokes');
+    expect(help).toHaveFocus();
+    await user.click(screen.getByRole('button', { name: 'Create field' }));
+    expect(onOperation).toHaveBeenCalledWith(expect.objectContaining({ key: 'custom_key' }));
+  });
+
+  it('rejects a new field key with no usable characters', () => {
+    renderNewField([], []);
+    fireEvent.change(screen.getByLabelText('Field label'), { target: { value: 'Detail' } });
+    fireEvent.change(screen.getByLabelText('Key'), { target: { value: '___' } });
+    expect(screen.getByRole('button', { name: 'Create field' })).toBeDisabled();
+  });
+
+  it('locks the identity key of an existing unpublished field', () => {
+    renderField(field());
+    expect(screen.getByLabelText('Key')).toBeDisabled();
+  });
+
+  it('ignores a hidden decimal precision after switching away from a decimal kind', () => {
+    renderField(field({ kind: 'decimal' }));
+    fireEvent.change(screen.getByLabelText('Decimal places'), { target: { value: '10' } });
+    expect(screen.getByRole('button', { name: 'Save field' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('combobox', { name: 'Primitive kind' }));
+    fireEvent.click(screen.getByRole('option', { name: 'Short text' }));
+    expect(screen.queryByLabelText('Decimal places')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save field' })).toBeEnabled();
   });
 });

@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 import { valueTypeLabel } from '@pops/inventory/expression';
 import {
   Badge,
@@ -26,7 +28,7 @@ function textHint(value: string): string {
   return 'Kept exactly as typed, including spaces.';
 }
 
-function integerOrText(text: string): LiteralValue {
+function integerOrText(text: string): string | number {
   const parsed = Number(text);
   return /^-?\d+$/u.test(text) && Number.isSafeInteger(parsed) ? parsed : text;
 }
@@ -108,14 +110,31 @@ function LiteralInput({
       </div>
     );
   if (typeof value === 'object') return <p className="font-mono text-sm">{value.targetId}</p>;
+  return <ScalarLiteral value={value} integer={integer} commit={commit} />;
+}
+
+function ScalarLiteral({
+  value,
+  integer,
+  commit,
+}: {
+  value: string | number;
+  integer: boolean;
+  commit: Commit;
+}) {
+  const [draft, setDraft] = useState({ value, text: String(value) });
+  const text = Object.is(draft.value, value) ? draft.text : String(value);
   return (
     <div className="space-y-1">
       <Input
         id="literal-value"
-        value={String(value)}
-        onChange={(event) =>
-          commit(integer ? integerOrText(event.target.value) : event.target.value)
-        }
+        value={text}
+        onChange={(event) => {
+          const nextText = event.target.value;
+          const nextValue = integer ? integerOrText(nextText) : nextText;
+          setDraft({ value: nextValue, text: nextText });
+          commit(nextValue);
+        }}
         inputMode={integer ? 'numeric' : undefined}
         className="min-h-11 whitespace-pre font-mono"
       />
@@ -141,6 +160,7 @@ export function LiteralInspector({ value }: { value: LiteralValue }) {
         Value{expected === undefined ? '' : ` (${valueTypeLabel(expected)})`}
       </Label>
       <LiteralInput
+        key={selectedPath}
         value={value}
         choiceField={choiceFieldAt(context, root, selectedPath)}
         integer={expected?.kind === 'integer' || typeof value === 'number'}

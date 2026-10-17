@@ -94,7 +94,7 @@ export function reasonReady(act: LifecycleAct, preset: string | null, text: stri
 /** Why a split cannot go ahead, or null when it can. */
 export function splitProblem(quantity: number, splitOff: number): string | null {
   if (quantity < 2) return 'Only a group of two or more can be split.';
-  if (!Number.isInteger(splitOff) || splitOff < 1) return 'Split off at least 1.';
+  if (!Number.isSafeInteger(splitOff) || splitOff < 1) return 'Split off at least 1.';
   if (splitOff >= quantity) {
     return `Split off at most ${quantity - 1}, so at least 1 stays here.`;
   }
@@ -109,6 +109,7 @@ export function quantityProblem(
 ): string | null {
   if (isContainer) return 'A container is always one thing.';
   if (!Number.isInteger(next)) return 'Use a whole number.';
+  if (!Number.isSafeInteger(next)) return 'That quantity is too large to store.';
   if (next < 1) return 'At least 1. To get rid of all of them, discard the item.';
   if (next === current) return 'That is the current quantity.';
   return null;

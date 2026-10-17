@@ -122,6 +122,7 @@ export function OperationPalette({ mode }: { mode: PaletteMode }) {
         </div>
         {selected.op !== 'empty' && (
           <Button
+            type="button"
             variant="ghost"
             size="icon"
             className="min-h-11 min-w-11"

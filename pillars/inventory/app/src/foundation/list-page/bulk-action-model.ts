@@ -1,4 +1,8 @@
 import { effectiveFields } from '../../lib/type-tree.js';
+import { fieldError } from '../../pages/item-form/field-rules';
+import { fieldWireValues } from '../../pages/item-form/field-values';
+import { blankDraft } from '../../pages/item-form/form-draft';
+import { bulkFormField } from './bulk-field-definition.js';
 import {
   encodeBulkReferenceValues,
   isBulkReferenceInput,
@@ -119,9 +123,19 @@ export function initialBulkFieldInput(field: CatalogueType['fields'][number]): B
   return '';
 }
 
-function textInputValues(input: BulkFieldInput): string[] {
+function textInputValues(input: BulkFieldInput, preserveEdges = false): string[] {
   if (typeof input === 'boolean' || isBulkReferenceInput(input)) return [];
-  return (Array.isArray(input) ? input : [input]).map((value) => value.trim()).filter(Boolean);
+  return (Array.isArray(input) ? input : [input])
+    .map((value) => (preserveEdges ? value : value.trim()))
+    .filter((value) => value.trim() !== '');
+}
+
+/** Returns a shared item-form validation problem for the current bulk field draft. */
+export function bulkFieldInputError(
+  field: CatalogueType['fields'][number],
+  input: BulkFieldInput
+): string | null {
+  return fieldError(bulkFormField(field), textInputValues(input, field.kind === 'long_text'));
 }
 
 function encodeEnumValues(
@@ -138,28 +152,6 @@ function encodeEnumValues(
   return selected.map((optionId) => ({ optionId }));
 }
 
-function encodeNumericValue(
-  field: CatalogueType['fields'][number],
-  input: BulkFieldInput
-): readonly FieldWireValue[] | null {
-  const value = textInputValues(input)[0];
-  if (value === undefined) return null;
-  const number = Number(value);
-  if (!Number.isFinite(number) || (field.kind === 'integer' && !Number.isInteger(number))) {
-    return null;
-  }
-  return [number];
-}
-
-function encodeMeasurementValue(
-  field: CatalogueType['fields'][number],
-  input: BulkFieldInput
-): readonly FieldWireValue[] | null {
-  const value = textInputValues(input)[0];
-  if (value === undefined || field.fixedUnit === null) return null;
-  return [{ amount: value, unit: field.fixedUnit }];
-}
-
 /** Encodes one bulk field input in the stable catalogue value format. */
 export function encodeBulkFieldValues(
   field: CatalogueType['fields'][number],
@@ -169,13 +161,15 @@ export function encodeBulkFieldValues(
   if (!supportsBulkField(field)) return null;
   if (field.kind === 'boolean') return typeof input === 'boolean' ? [input] : null;
   if (field.kind === 'reference') return encodeBulkReferenceValues(field, input, types);
-  if (field.kind === 'enum') return encodeEnumValues(field, input);
-  if (field.kind === 'integer' || field.kind === 'decimal') {
-    return encodeNumericValue(field, input);
-  }
-  if (field.kind === 'measurement') return encodeMeasurementValue(field, input);
-  const value = textInputValues(input)[0];
-  return value === undefined ? null : [value];
+  if (field.kind === 'enum' && encodeEnumValues(field, input) === null) return null;
+  const values = textInputValues(input, field.kind === 'long_text');
+  const formField = bulkFormField(field);
+  if (values.length === 0 || bulkFieldInputError(field, input) !== null) return null;
+  const draft = blankDraft();
+  return fieldWireValues(
+    { ...draft, fields: { ...draft.fields, text: { [field.id]: values } } },
+    formField
+  );
 }
 
 /** Formats a selected-item count with the correct singular or plural noun. */

@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 import { labelsPerSheet, MIN_QR_MM } from '@pops/inventory/labels';
 /**
  * The job's choices, side by side above the preview: template, sheet and
@@ -90,6 +92,7 @@ export function SheetFitNotice({ job }: { job: PrintJob }) {
  * peeled off. Choosing a label on the first sheet of the preview sets it too.
  */
 export function StartAtControl({ job }: { job: PrintJob }) {
+  const [editing, setEditing] = useState<string | null>(null);
   return (
     <div className="flex items-center gap-2">
       <label htmlFor="print-start" className="text-xs font-medium text-muted-foreground">
@@ -97,12 +100,17 @@ export function StartAtControl({ job }: { job: PrintJob }) {
       </label>
       <NumberInput
         id="print-start"
-        value={job.startAt}
+        value={editing ?? job.startAt}
         min={1}
         max={labelsPerSheet(job.layout)}
         step={1}
         showSteppers
-        onChange={(event) => job.setStartAt(Number(event.target.value))}
+        onFocus={() => setEditing(String(job.startAt))}
+        onBlur={() => setEditing(null)}
+        onChange={(event) => {
+          setEditing(event.target.value);
+          job.setStartAt(Number(event.target.value));
+        }}
         containerClassName="w-36"
       />
     </div>

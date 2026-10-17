@@ -1,6 +1,10 @@
 import { useState } from 'react';
 
-import { decimalPlacesInput, decimalPlacesInputIsValid } from './decimal-places';
+import {
+  decimalPlacesInput,
+  decimalPlacesInputIsValid,
+  supportsDecimalPlaces,
+} from './decimal-places';
 import { EMPTY } from './expression/edit';
 import { fromWire, toWire } from './expression/wire';
 import { fieldIconFromPresentation } from './field-icon';
@@ -145,8 +149,8 @@ function formContext(
 function isValid(value: FieldFormContextValue): boolean {
   return (
     value.label.trim() !== '' &&
-    (value.field !== undefined || value.keyValue !== '') &&
-    decimalPlacesInputIsValid(value.decimalPlaces) &&
+    (value.field !== undefined || catalogueKeyFromLabel(value.keyValue) !== '') &&
+    (!supportsDecimalPlaces(value.kind) || decimalPlacesInputIsValid(value.decimalPlaces)) &&
     (value.kind !== 'measurement' || value.fixedUnit.trim() !== '') &&
     (value.kind !== 'reference' || value.referenceKinds.length > 0) &&
     (value.storage === 'stored' || toWire(value.expression) !== null)
@@ -168,7 +172,7 @@ export function useFieldFormState(args: Args): State {
     },
     changeKey: (value) => {
       form.setKeyEdited(true);
-      form.setKeyValue(catalogueKeyFromLabel(value));
+      form.setKeyValue(value);
     },
   };
 }

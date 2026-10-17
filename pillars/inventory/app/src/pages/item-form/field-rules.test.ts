@@ -43,6 +43,35 @@ function typeWith(...fields: FormFieldDef[]): FormTypeDef {
 }
 
 describe('item form field rules', () => {
+  it.each(['short_text', 'long_text'] as const)(
+    'counts Unicode scalar values for %s limits',
+    (kind) => {
+      const limit = kind === 'short_text' ? 200 : 20_000;
+      expect(atomError(field('Text', kind), '😀'.repeat(limit))).toBeNull();
+      expect(atomError(field('Text', kind), '😀'.repeat(limit + 1))).toContain('characters');
+    }
+  );
+
+  it.each(['decimal', 'measurement'] as const)('rejects negative zero for %s', (kind) => {
+    for (const value of ['-0', '-0.0', '-0.000000000']) {
+      expect(atomError(field('Amount', kind), value)).toContain('number');
+    }
+    for (const value of ['0', '0.00', '-0.001']) {
+      expect(atomError(field('Amount', kind), value)).toBeNull();
+    }
+  });
+
+  it.each(['date', 'date_time'] as const)('validates early Gregorian years for %s', (kind) => {
+    const valueFor = (date: string): string =>
+      kind === 'date_time' ? `${date}T12:00:00.000Z` : date;
+    for (const value of ['0000-02-29', '0001-01-01', '0099-12-31', '2000-02-29']) {
+      expect(atomError(field('Date', kind), valueFor(value))).toBeNull();
+    }
+    for (const value of ['0001-02-29', '0100-02-29', '2026-00-01', '2026-13-01']) {
+      expect(atomError(field('Date', kind), valueFor(value))).not.toBeNull();
+    }
+  });
+
   it('validates every scalar catalogue kind and rejects malformed values', () => {
     expect(atomError(field('short', 'short_text'), 'ok')).toBeNull();
     expect(atomError(field('short', 'short_text'), 'x'.repeat(201))).toContain('200');

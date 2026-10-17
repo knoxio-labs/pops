@@ -32,10 +32,15 @@ export function PublishDialog({
   open,
 }: PublishDialogProps) {
   const [note, setNote] = useState('');
-  const [minimumProtocol, setMinimumProtocol] = useState(catalogue.revision.minimumProtocol);
-  const validProtocol = Number.isInteger(minimumProtocol) && minimumProtocol >= 1;
+  const [minimumProtocol, setMinimumProtocol] = useState(
+    String(catalogue.revision.minimumProtocol)
+  );
+  const protocol = Number(minimumProtocol);
+  const validProtocol =
+    /^\d+$/.test(minimumProtocol) && Number.isSafeInteger(protocol) && protocol >= 1;
   function publish(): void {
-    onPublish({ note: note.trim() === '' ? null : note.trim(), minimumProtocol });
+    if (!validProtocol || isPending) return;
+    onPublish({ note: note.trim() === '' ? null : note.trim(), minimumProtocol: protocol });
   }
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -62,7 +67,7 @@ export function PublishDialog({
               type="number"
               min={1}
               value={minimumProtocol}
-              onChange={(event) => setMinimumProtocol(event.target.valueAsNumber)}
+              onChange={(event) => setMinimumProtocol(event.target.value)}
             />
           </div>
         </div>

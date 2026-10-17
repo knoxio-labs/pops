@@ -30,7 +30,9 @@ const WHOLE_NUMBER = /^\d+$/u;
 function quantityError(draft: ItemDraft, type: FormTypeDef | null): string | null {
   if (type?.containment === true) return null;
   if (!WHOLE_NUMBER.test(draft.quantity.trim())) return 'Quantity needs a whole number.';
-  return Number(draft.quantity) >= 1 ? null : 'Quantity is at least 1.';
+  const quantity = Number(draft.quantity);
+  if (!Number.isSafeInteger(quantity)) return 'Quantity is too large to store.';
+  return quantity >= 1 ? null : 'Quantity is at least 1.';
 }
 
 function allFields(types: readonly FormTypeDef[]): ReadonlyMap<string, FormFieldDef> {

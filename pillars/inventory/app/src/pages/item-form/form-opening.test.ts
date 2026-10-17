@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { buildWorld } from '../../foundation/model/placement-model';
+import { draftFieldEntries } from './field-values';
+import { blankDraft } from './form-draft';
 import {
   createOpening,
   duplicateOpening,
@@ -195,7 +197,7 @@ describe('item form opening', () => {
       text: {
         'colour-option': ['option-red'],
         weight: ['12.50'],
-        registered: ['2026-01-02T03:04'],
+        registered: ['2026-01-02T03:04:05.000Z'],
       },
       refs: {
         related: [
@@ -213,6 +215,24 @@ describe('item form opening', () => {
       },
       booleans: {},
     });
+  });
+
+  it.each([
+    '2026-01-02T03:04:05.678Z',
+    '2026-07-02T20:59:59.001Z',
+    '2026-04-04T15:30:00.000Z',
+    '2026-04-04T16:30:00.000Z',
+    '2026-11-01T08:30:00.000Z',
+    '2026-11-01T09:30:00.000Z',
+  ])('retains the instant and milliseconds when opening and saving %s', (timestamp) => {
+    const fields = fieldDraftsFromStableValues(
+      [{ fieldId: 'registered', values: [timestamp] }],
+      typed
+    );
+    expect(fields.text.registered).toEqual([timestamp]);
+    expect(draftFieldEntries({ ...blankDraft(), fields }, typed)).toEqual([
+      { fieldId: 'registered', values: [timestamp] },
+    ]);
   });
 });
 

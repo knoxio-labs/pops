@@ -16,11 +16,13 @@ export function usePlaceEdits({
   world,
   tallyOf,
   onDeleted,
+  onCreated,
 }: {
   readonly online: boolean;
   readonly world: PlacementWorld;
   readonly tallyOf: (id: string) => PlaceTally;
   readonly onDeleted: (parentId: string | null) => void;
+  readonly onCreated?: () => void;
 }): PlaceEditsApi {
   const queryClient = useQueryClient();
   const placeMutations = usePlaceMutations();
@@ -34,6 +36,7 @@ export function usePlaceEdits({
     setRenamingId: state.setRenamingId,
     setError: state.setError,
     onDeleted,
+    onCreated,
   });
   const actions = usePlaceEditActions({
     online,

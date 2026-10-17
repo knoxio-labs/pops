@@ -151,7 +151,7 @@ describe('RestoreDialog', () => {
 });
 
 describe('SplitDialog', () => {
-  it('blocks splitting the whole group and sends the count with the new name', () => {
+  it('blocks splitting the whole group and describes the inherited name and place', () => {
     const onConfirm = vi.fn();
     render(
       <SplitDialog
@@ -177,11 +177,32 @@ describe('SplitDialog', () => {
     expect(confirm).toBeEnabled();
     fireEvent.click(confirm);
 
-    expect(onConfirm).toHaveBeenCalledWith(2, 'Cables');
+    expect(screen.queryByRole('textbox', { name: 'New item name' })).not.toBeInTheDocument();
+    expect(screen.getByText(/Creates another Cables with 2, in Desk/u)).toBeInTheDocument();
+    expect(onConfirm).toHaveBeenCalledWith(2);
   });
 });
 
 describe('QuantityDialog', () => {
+  it('blocks quantities beyond the safe integer range', () => {
+    const onConfirm = vi.fn();
+    render(
+      <QuantityDialog
+        itemName="Cables"
+        quantity={3}
+        open
+        onOpenChange={vi.fn()}
+        onConfirm={onConfirm}
+      />
+    );
+    fireEvent.change(screen.getByLabelText('Quantity'), { target: { value: '9007199254740993' } });
+    expect(screen.getByRole('alert')).toHaveTextContent('That quantity is too large to store.');
+    const confirm = screen.getByRole('button', { name: 'Set quantity' });
+    expect(confirm).toBeDisabled();
+    fireEvent.click(confirm);
+    expect(onConfirm).not.toHaveBeenCalled();
+  });
+
   it('requires a changed whole quantity and confirms the new value', () => {
     const onConfirm = vi.fn();
     render(

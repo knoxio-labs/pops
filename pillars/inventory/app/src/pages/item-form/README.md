@@ -25,6 +25,11 @@ field is removed from the item. Edit mutations carry the published catalogue
 revision, start at the opening item revision, and advance their base revision
 after each applied command.
 
+Date-time controls display local time and preserve seconds and milliseconds. Drafts
+retain saved UTC instants so unchanged values survive repeated daylight-saving
+hours; editing a date-time replaces it with the chosen local time, which saving
+converts to UTC.
+
 `item.create` carries neither computed overrides nor photos, so a create
 applies them afterwards against the new item: overrides through the override
 commands, a copy's photos by re-attaching their stored hashes. The item already

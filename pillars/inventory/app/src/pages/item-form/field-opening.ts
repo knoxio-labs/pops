@@ -29,7 +29,7 @@ function nonEmpty(value: string | null | undefined): string | null {
 
 function dateTimeForDraft(value: string): string {
   const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? value : parsed.toISOString().slice(0, 16);
+  return Number.isNaN(parsed.getTime()) ? value : parsed.toISOString();
 }
 
 function enumTextValue(field: FormFieldDef, value: unknown): string {
