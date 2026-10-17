@@ -1,6 +1,7 @@
 import { getPillar } from '../pillar-client.js';
 import { itemDeleteTool } from './inventory-item-delete.js';
 import { itemOverrideTools } from './inventory-item-overrides.js';
+import { itemQuantityTool } from './inventory-item-quantity.js';
 import { itemWriteTools } from './inventory-items-write.js';
 import { mapRows, withUri } from './uri.js';
 import { mapCallResult, optBool, optNum, optStr, reqStr, toolError } from './utils.js';
@@ -105,5 +106,6 @@ export const itemTools: readonly ToolDef[] = [
   itemGet,
   ...itemWriteTools,
   ...itemOverrideTools,
+  itemQuantityTool,
   itemDeleteTool,
 ];

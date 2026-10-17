@@ -22,6 +22,7 @@ const expectedWrites = [
   'inventory.items.changeType',
   'inventory.items.setOverride',
   'inventory.items.clearOverride',
+  'inventory.items.setQuantity',
   'inventory.items.delete',
   'inventory.items.move',
   'inventory.items.store',

@@ -124,8 +124,11 @@ though nothing enforces it mechanically.
 - `inventory.items.*` uses the protocol-2 generic item contract. Reads expose
   stable `typeId`, `catalogueRevision` and field IDs. Create, edit and type
   changes require the caller's observed catalogue revision; edit, type change
-  and delete also require the observed item revision. A caller may retain and
-  resend `mutationId` after an uncertain response, so retries converge on the
+  and delete also require the observed item revision.
+  `inventory.items.setQuantity` sets an absolute positive whole-number count
+  using the observed item revision, without a catalogue revision. Containers
+  must retain quantity 1; use discard rather than setting quantity to zero.
+  A caller may retain and resend `mutationId` after an uncertain response, so retries converge on the
   producer's idempotency boundary instead of creating a second command.
   `provenance` on create and update is the shape `items.get` returns, written
   through the producer's legacy purchase columns (`inventory-item-provenance.ts`).
