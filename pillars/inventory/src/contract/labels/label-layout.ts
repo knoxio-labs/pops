@@ -67,15 +67,20 @@ function needsRoom(label: ResolvedLabel): boolean {
 
 /**
  * The parts a label keeps on this sheet. A QR beside text that the sheet
- * cannot fit steps down to the item label (QR and code), as the approved
- * box label did; null when the label wants a QR and no QR that scans fits.
+ * cannot fit keeps the QR and any selected code, dropping other text.
+ * Never adds an unselected part; null when no scannable QR fits.
  */
 export function fitToSheet(label: ResolvedLabel, layout: SheetLayout): ResolvedLabel | null {
   if (!label.parts.includes('qr')) return label;
   if (!hasText(label)) return fillQrMm(layout) >= MIN_QR_MM ? label : null;
   if (templateFits(layout, needsRoom(label) ? 'container' : 'item')) return label;
   if (templateFits(layout, 'item')) {
-    return { parts: ['qr', 'code'], fields: [], contents: [], fallback: label.fallback };
+    return {
+      parts: label.parts.filter((part) => part === 'qr' || part === 'code'),
+      fields: [],
+      contents: [],
+      fallback: label.fallback,
+    };
   }
   return null;
 }

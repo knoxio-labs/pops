@@ -108,7 +108,8 @@ when the sheet has room, with contents listed underneath. The planner chooses th
 fewest columns needed (up to three), keeping each column at least 40 mm wide.
 Capacity follows the remaining height after the header; overflow reserves a row
 for `+N more`. Small labels retain the compact layout, and QR sizes never drop
-below the existing scan-size minimum.
+below the existing scan-size minimum. When QR and text need trimming, fitting
+keeps the QR and the code only if selected; it never adds an unchecked part.
 
 Each item in a label print job has a manual Fragile switch. It affects every
 copy of that item's label in the current job, without editing the inventory
