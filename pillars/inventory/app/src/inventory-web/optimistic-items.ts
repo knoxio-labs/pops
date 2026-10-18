@@ -26,9 +26,16 @@ class QueryClientOptimisticItems {
   private applying = false;
 
   constructor(private readonly queryClient: QueryClient) {
-    queryClient
-      .getQueryCache()
-      .subscribe(() => !this.applying && [...this.ledgers.keys()].forEach((id) => this.rebase(id)));
+    queryClient.getQueryCache().subscribe((event) => {
+      if (
+        this.applying ||
+        event.type !== 'updated' ||
+        event.action.type !== 'success' ||
+        !isWebItemQuery(event.query.queryKey)
+      )
+        return;
+      for (const id of this.ledgers.keys()) this.rebase(id);
+    });
   }
 
   displayed = (id: string): WebItem => {

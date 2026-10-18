@@ -1,4 +1,4 @@
-import { QueryClient } from '@tanstack/react-query';
+import { QueryClient, QueryObserver } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { optimisticItemsFor } from './optimistic-items.js';
@@ -290,6 +290,36 @@ describe('optimisticItemsFor', () => {
     noWorkRelease();
     expect(invalidate).toHaveBeenCalledTimes(1);
   });
+
+  it.each(['open', 'closed'] as const)(
+    'does not rewrite pending %s access when query observers change',
+    (access) => {
+      const queryClient = new QueryClient();
+      seedCaches(
+        queryClient,
+        item('item-1', { isContainer: true, access: access === 'open' ? 'closed' : 'open' })
+      );
+      const optimistic = optimisticItemsFor(queryClient);
+      const token = optimistic.begin('item-1', (value) => ({ ...value, access }));
+      const write = vi.spyOn(queryClient, 'setQueriesData');
+      const observer = new QueryObserver(queryClient, {
+        queryKey: [...webItemDetailQueryKey('item-1'), 50],
+        enabled: false,
+      });
+      const unsubscribe = observer.subscribe(() => undefined);
+      observer.setOptions({
+        queryKey: [...webItemDetailQueryKey('item-1'), 50],
+        enabled: false,
+        staleTime: Infinity,
+      });
+      unsubscribe();
+
+      expect(write).not.toHaveBeenCalled();
+      expect(optimistic.displayed('item-1').access).toBe(access);
+      optimistic.refuse('item-1', token);
+      expect(optimistic.displayed('item-1').access).toBe(access === 'open' ? 'closed' : 'open');
+    }
+  );
 
   it('throws when displayed has no cached item', () => {
     const optimistic = optimisticItemsFor(new QueryClient());
