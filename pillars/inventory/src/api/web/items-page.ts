@@ -11,13 +11,8 @@ import { WEB_ITEMS_SORTS } from '../../contract/rest-web.js';
 import { items, type ItemRow } from '../../db/index.js';
 import { ValidationError } from '../shared/errors.js';
 import { decodeCursor, encodeCursor } from '../sync/cursor.js';
-import { hiddenInactiveCount, readWebItemContentCounts } from './items-page-counts.js';
-import {
-  countRows,
-  matchConditions,
-  textSearchFor,
-  unfilteredConditions,
-} from './items-page-filters.js';
+import { readWebItemContentCounts, readWebItemsTotals } from './items-page-counts.js';
+import { textSearchFor, webItemsConditions } from './items-page-filters.js';
 import {
   cursorCondition,
   cursorFor,
@@ -147,10 +142,10 @@ export function readWebItemsPage(
   request: { cursor?: string; limit: number; sort?: WebItemsSort }
 ): WebItemsPage {
   const textSearch = filter.q === undefined ? null : textSearchFor(filter.q);
-  const match = matchConditions(db, filter);
+  const conditions = webItemsConditions(db, filter);
+  const match = [...conditions.baseline, ...conditions.filtered, ...conditions.lifecycle];
   if (textSearch !== null) match.push(textSearch.match);
-  const total = countRows(db, match);
-  const unfilteredTotal = countRows(db, unfilteredConditions(filter));
+  const totals = readWebItemsTotals(db, filter, conditions, textSearch?.match);
   let descriptor: SortDescriptor | null;
   let after: SQL | undefined;
   if (textSearch === null) {
@@ -184,8 +179,6 @@ export function readWebItemsPage(
     rows: page,
     contentCounts: readWebItemContentCounts(db, page),
     nextCursor,
-    total,
-    unfilteredTotal,
-    hiddenInactiveCount: hiddenInactiveCount(db, filter, total, textSearch?.match),
+    ...totals,
   };
 }

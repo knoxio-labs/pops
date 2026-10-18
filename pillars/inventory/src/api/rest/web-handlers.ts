@@ -11,6 +11,8 @@ import { toSyncEvents } from '../sync/events.js';
 import { readItemHistory } from '../sync/history.js';
 import { loadItemExtras, projectItems, toSyncItem } from '../sync/wire.js';
 import { readWebItemsPage } from '../web/items-page.js';
+import { readWebPlacementSources } from '../web/placement-sources.js';
+import { readWebTypeArrivalCounts } from '../web/type-arrival-counts.js';
 import { runHttp } from './error-mapping.js';
 
 import type { ServerInferRequest } from '@ts-rest/core';
@@ -30,6 +32,18 @@ export interface WebHandlerDeps {
 /** Handlers for `web.*`: the filtered item catalogue and item detail with history. */
 export function makeWebHandlers({ db, documents }: WebHandlerDeps) {
   return {
+    placementSources: ({ query }: Req['placementSources']) =>
+      runHttp(() => ({
+        status: 200 as const,
+        body: db.transaction((tx) => readWebPlacementSources(tx, query)),
+      })),
+
+    typeArrivalCounts: () =>
+      runHttp(() => ({
+        status: 200 as const,
+        body: { counts: db.transaction((tx) => readWebTypeArrivalCounts(tx)) },
+      })),
+
     list: ({ query }: Req['list']) =>
       runHttp(async () => {
         if (query.typeKey !== undefined && query.untyped === 'true') {

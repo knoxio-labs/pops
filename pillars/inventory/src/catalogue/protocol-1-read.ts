@@ -11,6 +11,8 @@ import {
 } from './protocol-1-projection.js';
 
 import type { CommandDb } from '../db/command-db.js';
+import type { ItemFieldValueRow } from '../db/row-types.js';
+import type { PersistedItemType } from './catalogue-types.js';
 import type { Protocol1Fields } from './protocol-1-types.js';
 
 export type { Protocol1Projection, Protocol1ProjectionIssue } from './protocol-1-projection.js';
@@ -30,6 +32,15 @@ function loadLegacyFields(
     .from(itemFieldValues)
     .where(and(eq(itemFieldValues.itemId, itemId), eq(itemFieldValues.source, 'stored')))
     .all();
+  return projectLegacyFields(type, rows, cardinality, issues);
+}
+
+function projectLegacyFields(
+  type: PersistedItemType,
+  rows: readonly ItemFieldValueRow[],
+  cardinality: 'reject' | 'omit',
+  issues: Protocol1ProjectionIssue[] | undefined
+): Protocol1Fields {
   const fields: Protocol1Fields = {};
   const definitions = new Map(type.fields.map((field) => [field.id, field]));
   const multipleValueFieldIds = new Set(
@@ -72,6 +83,27 @@ export function loadLegacyFieldsWithIssues(
   const issues: Protocol1ProjectionIssue[] = [];
   return {
     fields: loadLegacyFields(db, itemId, protocol >= 1 ? 'omit' : 'reject', issues),
+    issues,
+  };
+}
+
+/** Projects preloaded stored rows with the same item-scoped compatibility issues as sync reads. */
+export function projectLegacyFieldsWithIssues(
+  type: PersistedItemType | null,
+  rows: readonly ItemFieldValueRow[],
+  protocol: number
+): Protocol1Projection {
+  const issues: Protocol1ProjectionIssue[] = [];
+  return {
+    fields:
+      type === null
+        ? {}
+        : projectLegacyFields(
+            type,
+            rows.filter((row) => row.source === 'stored'),
+            protocol >= 1 ? 'omit' : 'reject',
+            issues
+          ),
     issues,
   };
 }

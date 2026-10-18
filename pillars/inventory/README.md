@@ -341,6 +341,13 @@ offers typed Set type and Set field sheets, plus reversible Retire and Discard
 actions; each applied item write records its own history event and one undo
 toast covers the completed batch.
 
+Placement choices use the cursor-paged `GET /web/placement-sources` projection
+of active containers, without item field, document or photo enrichment. The
+Type arrived banner reads all legacy-label match counts from
+`GET /web/type-arrival-counts`. Both supporting reads share the browser query
+cache. Item pages calculate current filtered, baseline and hidden-inactive
+totals together; pagination cursors do not retain stale totals.
+
 BFM's `GET /mobile/inventory/items` exposes the same bounded query and result
 contract to the phone. It is a browse path; mobile replica sync continues to
 use the separate snapshot and change-feed routes.

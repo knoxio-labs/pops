@@ -254,6 +254,9 @@ import type {
   WebMovingGetData,
   WebMovingGetErrors,
   WebMovingGetResponses,
+  WebPlacementSourcesData,
+  WebPlacementSourcesErrors,
+  WebPlacementSourcesResponses,
   WebReportsEntriesData,
   WebReportsEntriesResponses,
   WebReportsValuesData,
@@ -266,6 +269,8 @@ import type {
   WebSummaryGetResponses,
   WebSyncLedgerGetData,
   WebSyncLedgerGetResponses,
+  WebTypeArrivalCountsData,
+  WebTypeArrivalCountsResponses,
 } from './types.gen';
 
 export type Options<
@@ -1527,6 +1532,18 @@ export const webMovingGet = <ThrowOnError extends boolean = false>(
   });
 
 /**
+ * Lightweight active containers for placement pickers, in id order
+ */
+export const webPlacementSources = <ThrowOnError extends boolean = false>(
+  options: Options<WebPlacementSourcesData, ThrowOnError>
+): RequestResult<WebPlacementSourcesResponses, WebPlacementSourcesErrors, ThrowOnError> =>
+  (options.client ?? client).get<
+    WebPlacementSourcesResponses,
+    WebPlacementSourcesErrors,
+    ThrowOnError
+  >({ url: '/web/placement-sources', ...options });
+
+/**
  * Active inventory report entries with provenance and effective placement
  */
 export const webReportsEntries = <ThrowOnError extends boolean = false>(
@@ -1578,5 +1595,16 @@ export const webSyncLedgerGet = <ThrowOnError extends boolean = false>(
 ): RequestResult<WebSyncLedgerGetResponses, unknown, ThrowOnError> =>
   (options?.client ?? client).get<WebSyncLedgerGetResponses, unknown, ThrowOnError>({
     url: '/web/sync/ledger',
+    ...options,
+  });
+
+/**
+ * Legacy-label match counts for every current published type
+ */
+export const webTypeArrivalCounts = <ThrowOnError extends boolean = false>(
+  options?: Options<WebTypeArrivalCountsData, ThrowOnError>
+): RequestResult<WebTypeArrivalCountsResponses, unknown, ThrowOnError> =>
+  (options?.client ?? client).get<WebTypeArrivalCountsResponses, unknown, ThrowOnError>({
+    url: '/web/type-arrival-counts',
     ...options,
   });

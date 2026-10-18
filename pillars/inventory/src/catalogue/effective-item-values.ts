@@ -1,5 +1,6 @@
 import { computedValueCacheFor } from './computed-value-runtime-cache.js';
 import { evaluateComputedValue } from './computed-values.js';
+import { preloadEffectiveDependencies } from './effective-item-preload.js';
 import { EffectiveItemRows } from './effective-item-rows.js';
 import { computedWire, storedWire } from './effective-item-value-wire.js';
 import { evaluateExpression } from './expression-evaluator.js';
@@ -16,6 +17,7 @@ import type {
   SnapshotFieldValue,
   ValidatedExpression,
 } from './expression-types.js';
+import type { ItemValueReader } from './item-value-reader.js';
 import type { EffectiveItemFieldValue, ReadItemFieldValue } from './item-value-types.js';
 
 function expressionKey(typeId: string, fieldId: string): string {
@@ -35,15 +37,19 @@ export class EffectiveValueReader {
   constructor(
     db: CommandDb,
     private readonly catalogue: PersistedCatalogue,
-    private readonly cache: ComputedValueCache | null = computedValueCacheFor(db)
+    private readonly cache: ComputedValueCache | null = computedValueCacheFor(db),
+    hydration?: { readonly itemIds: readonly string[]; readonly values?: ItemValueReader }
   ) {
-    this.#rows = new EffectiveItemRows(db);
+    this.#rows = new EffectiveItemRows(db, hydration?.itemIds, hydration?.values);
     this.#expressions = new Map(
       validateCatalogueExpressions(catalogue).map((expression) => [
         expressionKey(expression.field.typeId, expression.field.fieldId),
         expression,
       ])
     );
+    if (hydration !== undefined) {
+      preloadEffectiveDependencies(this.#rows, catalogue, this.#expressions, hydration.itemIds);
+    }
   }
 
   read(itemId: string): readonly EffectiveItemFieldValue[] {
@@ -177,6 +183,6 @@ export function readEffectiveItemFieldValuesForItems(
   catalogue: PersistedCatalogue,
   itemIds: readonly string[]
 ): ReadonlyMap<string, readonly EffectiveItemFieldValue[]> {
-  const reader = new EffectiveValueReader(db, catalogue);
+  const reader = new EffectiveValueReader(db, catalogue, computedValueCacheFor(db), { itemIds });
   return new Map(itemIds.map((itemId) => [itemId, reader.read(itemId)]));
 }

@@ -92,11 +92,13 @@ export {
   webLocationsGone,
   webLocationsTallies,
   webMovingGet,
+  webPlacementSources,
   webReportsEntries,
   webReportsValues,
   webSearchList,
   webSummaryGet,
   webSyncLedgerGet,
+  webTypeArrivalCounts,
 } from './sdk.gen';
 export type {
   CatalogueErrorBody,
@@ -515,6 +517,11 @@ export type {
   WebMovingGetErrors,
   WebMovingGetResponse,
   WebMovingGetResponses,
+  WebPlacementSourcesData,
+  WebPlacementSourcesError,
+  WebPlacementSourcesErrors,
+  WebPlacementSourcesResponse,
+  WebPlacementSourcesResponses,
   WebReportsEntriesData,
   WebReportsEntriesResponse,
   WebReportsEntriesResponses,
@@ -534,4 +541,7 @@ export type {
   WebSyncLedgerGetData,
   WebSyncLedgerGetResponse,
   WebSyncLedgerGetResponses,
+  WebTypeArrivalCountsData,
+  WebTypeArrivalCountsResponse,
+  WebTypeArrivalCountsResponses,
 } from './types.gen';

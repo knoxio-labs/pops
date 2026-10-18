@@ -3,13 +3,43 @@ import { WEB_SEARCH_QUERY_KEY } from './useWebSearch.js';
 
 import type { QueryClient } from '@tanstack/react-query';
 
+import type { WebPlacementSourcesResponses } from '../inventory-api/types.gen.js';
 import type { WebItem } from './item-row-model.js';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
-const isWebItem = (value: unknown): value is WebItem =>
+type PlacementSource = WebPlacementSourcesResponses[200]['items'][number];
+
+const isItemRecord = (value: unknown): value is Record<string, unknown> =>
   isRecord(value) && typeof value.id === 'string' && isRecord(value.placement);
+
+const isWebItem = (value: unknown): value is WebItem =>
+  isItemRecord(value) &&
+  typeof value.revision === 'number' &&
+  typeof value.seq === 'number' &&
+  Array.isArray(value.fieldValues) &&
+  Array.isArray(value.computedValues);
+
+function placementSource(item: WebItem): PlacementSource {
+  return {
+    id: item.id,
+    name: item.name,
+    typeId: item.typeId,
+    typeKey: item.typeKey,
+    legacyType: item.legacyType,
+    note: item.note,
+    code: item.code,
+    quantity: item.quantity,
+    lifecycle: item.lifecycle,
+    placement: item.placement,
+    previousPlacement: item.previousPlacement,
+    isContainer: item.isContainer,
+    access: item.access,
+    isFull: item.isFull,
+    updatedAt: item.updatedAt,
+  };
+}
 
 const hasPrefix = (key: readonly unknown[], prefix: readonly unknown[]): boolean =>
   prefix.every((part, index) => key[index] === part);
@@ -28,6 +58,7 @@ function visitItems(value: unknown, visit: (item: WebItem) => void): void {
 
 function replaceItems(value: unknown, id: string, replacement: WebItem): unknown {
   if (isWebItem(value)) return value.id === id ? replacement : value;
+  if (isItemRecord(value)) return value.id === id ? placementSource(replacement) : value;
   if (Array.isArray(value)) {
     const next = value.map((entry) => replaceItems(entry, id, replacement));
     return next.some((entry, index) => entry !== value[index]) ? next : value;
@@ -39,7 +70,7 @@ function replaceItems(value: unknown, id: string, replacement: WebItem): unknown
   return Object.keys(next).some((key) => next[key] !== value[key]) ? next : value;
 }
 
-/** Finds the newest loaded copy of an item across all supported web caches. */
+/** Finds the newest full item for mutation revisions; lightweight placement sources are excluded. */
 export function highestCachedItem(queryClient: QueryClient, id: string): WebItem | undefined {
   let highest: WebItem | undefined;
   const consider = (item: WebItem) => {
@@ -52,7 +83,7 @@ export function highestCachedItem(queryClient: QueryClient, id: string): WebItem
   return highest;
 }
 
-/** Replaces one item in a cached web result while preserving unrelated references. */
+/** Updates full items and lightweight placement projections while preserving unrelated references. */
 export function replaceCachedItem(value: unknown, id: string, replacement: WebItem): unknown {
   return replaceItems(value, id, replacement);
 }

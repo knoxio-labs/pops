@@ -1,11 +1,12 @@
-import { useQueries, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useCallback, useMemo, useState } from 'react';
 
 import { unwrap } from '../inventory-api-helpers.js';
-import { typesReadCatalogue, webList } from '../inventory-api/index.js';
+import { typesReadCatalogue, webTypeArrivalCounts } from '../inventory-api/index.js';
 import { WEB_ITEMS_QUERY_KEY } from './queryKeys.js';
 import { usePublishedCatalogue } from './useCatalogueLookups.js';
 
+import type { WebTypeArrivalCountsResponses } from '../inventory-api/types.gen.js';
 import type { CatalogueType } from './useCatalogueLookups.js';
 
 /** The local-storage key for browser-local Type arrived dismissals. */
@@ -117,38 +118,37 @@ function useBaseCatalogue(baseRevision: number | null): readonly BaseType[] | nu
   }, [baseRevision, query.data]);
 }
 
-function useArrivalCounts(candidates: readonly CatalogueType[]) {
-  return useQueries({
-    queries: candidates.map((type) => ({
-      queryKey: [...WEB_ITEMS_QUERY_KEY, 'type-arrival', type.key] as const,
-      staleTime: Infinity,
-      queryFn: async () =>
-        unwrap(
-          await webList({
-            query: { legacyLabelOf: type.key, untyped: 'true', limit: 1 },
-          })
-        ),
-    })),
+function useArrivalCounts(
+  candidates: readonly CatalogueType[],
+  revision: number | null,
+  enabled: boolean
+) {
+  return useQuery({
+    queryKey: [
+      ...WEB_ITEMS_QUERY_KEY,
+      'type-arrival',
+      revision,
+      candidates.map((type) => type.key),
+    ] as const,
+    enabled,
+    staleTime: Infinity,
+    queryFn: async ({ signal }) => unwrap(await webTypeArrivalCounts({ signal })),
   });
 }
 
 function firstArrival(
   candidates: readonly CatalogueType[],
-  queries: readonly {
+  query: {
     isPending: boolean;
     isError: boolean;
-    data: { total: number } | undefined;
-  }[]
+    data: WebTypeArrivalCountsResponses[200] | undefined;
+  }
 ): TypeArrival | null {
-  for (let index = 0; index < candidates.length; index += 1) {
-    const query = queries[index];
-    if (query === undefined || query.isPending || query.isError || query.data === undefined) {
-      return null;
-    }
-    if (query.data.total > 0) {
-      const type = candidates[index];
-      if (type !== undefined) return { type, matches: query.data.total };
-    }
+  if (query.isPending || query.isError || query.data === undefined) return null;
+  for (const type of candidates) {
+    const matches = query.data.counts[type.key];
+    if (matches === undefined) return null;
+    if (matches > 0) return { type, matches };
   }
   return null;
 }
@@ -163,10 +163,14 @@ export function useTypeArrival(): TypeArrivals {
   const base = useBaseCatalogue(baseRevision);
   const candidates = useMemo(() => {
     if (!catalogueReady || (baseRevision !== null && base === null)) return [];
-    return arrivalCandidates(catalogue.types, base, dismissed);
-  }, [base, baseRevision, catalogue.types, catalogueReady, dismissed]);
-  const matchQueries = useArrivalCounts(candidates);
-  const arrival = firstArrival(candidates, matchQueries);
+    return arrivalCandidates(catalogue.types, base, []);
+  }, [base, baseRevision, catalogue.types, catalogueReady]);
+  const visibleCandidates = useMemo(
+    () => candidates.filter((type) => !dismissed.includes(type.id)),
+    [candidates, dismissed]
+  );
+  const matchQuery = useArrivalCounts(candidates, catalogue.revision, visibleCandidates.length > 0);
+  const arrival = firstArrival(visibleCandidates, matchQuery);
   const dismiss = useCallback((typeId: string) => {
     setDismissed((current) => (current.includes(typeId) ? current : [...current, typeId]));
     dismissType(typeId);

@@ -1,10 +1,7 @@
 import { eq } from 'drizzle-orm';
 
 import { itemFieldValues } from '../db/schema.js';
-import { loadPublishedCatalogue } from './catalogue.js';
-import { referenceState, referenceValue } from './item-value-references.js';
-import { parseSyncValue } from './item-value-sync-read.js';
-import { ItemFieldSetError } from './item-value-types.js';
+import { ItemValueReader } from './item-value-reader.js';
 import { validateItemFieldValues } from './item-value-validation.js';
 
 import type { CommandDb } from '../domain/commands/entities.js';
@@ -14,7 +11,6 @@ import type {
   ItemFieldValueInput,
   ReadItemFieldValue,
 } from './item-value-types.js';
-import type { PrimitiveWireValue } from './value-types.js';
 
 export {
   assertIncomingReferencesPermitType,
@@ -100,66 +96,9 @@ export function findCatalogueType(
   return types.find((type) => type.id === typeId) ?? null;
 }
 
-function appendFieldValue(
-  db: CommandDb,
-  result: ReadItemFieldValue[],
-  row: typeof itemFieldValues.$inferSelect,
-  value: PrimitiveWireValue
-): void {
-  const reference = referenceValue(value);
-  const parsed = reference ? { ...reference, targetState: referenceState(db, reference) } : value;
-  const previous = result.at(-1);
-  if (
-    previous?.fieldId === row.fieldId &&
-    previous.source === row.source &&
-    previous.catalogueRevision === row.catalogueRevision
-  ) {
-    result[result.length - 1] = { ...previous, values: [...previous.values, parsed] };
-    return;
-  }
-  result.push({
-    fieldId: row.fieldId,
-    source: row.source,
-    catalogueRevision: row.catalogueRevision,
-    values: [parsed],
-  });
-}
-
-/** Reads canonical values and annotates references with their current state. */
-function readItemFieldValuesInternal(
-  db: CommandDb,
-  itemId: string,
-  preserveStructurallyValidValues: boolean
-): readonly ReadItemFieldValue[] {
-  const rows = db
-    .select()
-    .from(itemFieldValues)
-    .where(eq(itemFieldValues.itemId, itemId))
-    .orderBy(
-      itemFieldValues.fieldId,
-      itemFieldValues.source,
-      itemFieldValues.catalogueRevision,
-      itemFieldValues.ordinal
-    )
-    .all();
-  const result: ReadItemFieldValue[] = [];
-  for (const row of rows) {
-    const field = loadPublishedCatalogue(db, row.catalogueRevision)
-      ?.types.flatMap((type) => type.fields)
-      .find((entry) => entry.id === row.fieldId);
-    if (!field) {
-      if (preserveStructurallyValidValues) continue;
-      throw new ItemFieldSetError('field_unknown', row.fieldId, 'stored definition is unavailable');
-    }
-    const parsed = parseSyncValue(field, row.valueJson, preserveStructurallyValidValues);
-    appendFieldValue(db, result, row, parsed);
-  }
-  return result;
-}
-
 /** Reads canonical values strictly, throwing when a stored row is invalid. */
 export function readItemFieldValues(db: CommandDb, itemId: string): readonly ReadItemFieldValue[] {
-  return readItemFieldValuesInternal(db, itemId, false);
+  return new ItemValueReader(db, [itemId]).read(itemId);
 }
 
 /**
@@ -172,5 +111,5 @@ export function readItemFieldValuesForSync(
   db: CommandDb,
   itemId: string
 ): readonly ReadItemFieldValue[] {
-  return readItemFieldValuesInternal(db, itemId, true);
+  return new ItemValueReader(db, [itemId]).read(itemId, true);
 }

@@ -16,6 +16,25 @@ import type {
 /** The generated web item shape accepted by the shared row-model mapper. */
 export type WebItem = WebListResponses['200']['items'][number];
 
+type RowItem = Pick<
+  WebItem,
+  | 'id'
+  | 'name'
+  | 'typeId'
+  | 'typeKey'
+  | 'legacyType'
+  | 'code'
+  | 'quantity'
+  | 'isContainer'
+  | 'access'
+  | 'isFull'
+  | 'lifecycle'
+  | 'placement'
+  | 'previousPlacement'
+  | 'note'
+  | 'updatedAt'
+>;
+
 /** The generated location payload returned after creating a location. */
 export type CreatedLocation = LocationsCreateResponses[201]['data'];
 
@@ -40,7 +59,7 @@ function toLifecycle(value: string): Lifecycle {
   return isLifecycle(value) ? value : 'active';
 }
 
-function toPlacement(item: WebItem): Placement {
+function toPlacement(item: RowItem): Placement {
   if (item.placement.kind === 'hand') {
     return { kind: 'in-hand' };
   }
@@ -53,7 +72,7 @@ function toPlacement(item: WebItem): Placement {
 }
 
 function toPreviousPlacement(
-  item: WebItem,
+  item: RowItem,
   context: ItemRowModelContext
 ): PreviousPlacement | null {
   if (item.previousPlacement === null) {
@@ -78,7 +97,7 @@ function toPreviousPlacement(
   };
 }
 
-function toTypeName(item: WebItem, context: ItemRowModelContext): string | null {
+function toTypeName(item: RowItem, context: ItemRowModelContext): string | null {
   if (item.typeId === null) {
     return null;
   }
@@ -86,8 +105,8 @@ function toTypeName(item: WebItem, context: ItemRowModelContext): string | null 
   return context.typeNames?.get(item.typeId) ?? item.typeKey ?? item.legacyType ?? null;
 }
 
-/** Maps one generated web item into the foundation row model used by pickers and rows. */
-export function toItemRowModel(item: WebItem, context: ItemRowModelContext = {}): ItemRowModel {
+/** Maps the shared display fields of full web items or lightweight placement sources into a row. */
+export function toItemRowModel(item: RowItem, context: ItemRowModelContext = {}): ItemRowModel {
   return {
     id: item.id,
     name: item.name,
