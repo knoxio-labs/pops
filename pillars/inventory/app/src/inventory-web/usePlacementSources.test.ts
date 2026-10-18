@@ -10,6 +10,8 @@ import type {
   LocationsTreeResponses,
   WebListData,
   WebListResponses,
+  WebPlacementSourcesData,
+  WebPlacementSourcesResponses,
 } from '../inventory-api/types.gen.js';
 
 const mocks = vi.hoisted(() => ({
@@ -17,6 +19,7 @@ const mocks = vi.hoisted(() => ({
   locationsTree: vi.fn(),
   typesReadCatalogue: vi.fn(),
   webList: vi.fn(),
+  webPlacementSources: vi.fn(),
 }));
 
 vi.mock('../inventory-api/index.js', () => ({
@@ -24,6 +27,7 @@ vi.mock('../inventory-api/index.js', () => ({
   locationsTree: (...args: unknown[]) => mocks.locationsTree(...args),
   typesReadCatalogue: (...args: unknown[]) => mocks.typesReadCatalogue(...args),
   webList: (...args: unknown[]) => mocks.webList(...args),
+  webPlacementSources: (...args: unknown[]) => mocks.webPlacementSources(...args),
 }));
 
 vi.mock('./recents.js', () => ({
@@ -38,6 +42,7 @@ import { usePlacementSources } from './usePlacementSources';
 
 type WebItem = WebListResponses['200']['items'][number];
 type LocationTreeResponse = LocationsTreeResponses[200];
+type PlacementSource = WebPlacementSourcesResponses[200]['items'][number];
 
 const catalogue = {
   revision: {
@@ -104,6 +109,26 @@ function item(id: string, overrides: Partial<WebItem> = {}): WebItem {
   return { ...baseItem, ...overrides, id, name: id };
 }
 
+function container(id: string, access: 'open' | 'closed'): PlacementSource {
+  return {
+    id,
+    name: id,
+    access,
+    isContainer: true,
+    isFull: false,
+    code: 'BOX',
+    typeId: null,
+    typeKey: null,
+    legacyType: null,
+    quantity: 1,
+    lifecycle: 'active',
+    placement: { kind: 'location', locationId: 'room' },
+    previousPlacement: null,
+    note: 'Container note',
+    updatedAt: '2026-09-02T00:00:00.000Z',
+  };
+}
+
 function ok<T>(data: T) {
   return { data, error: undefined, response: { status: 200 } };
 }
@@ -133,44 +158,24 @@ beforeEach(() => {
       message: 'Location created',
     })
   );
-  mocks.webList.mockImplementation(async ({ query: _query }: { query: WebListData['query'] }) =>
-    emptyPage()
-  );
+  mocks.webList.mockResolvedValue(emptyPage());
+  mocks.webPlacementSources.mockResolvedValue(ok({ items: [], nextCursor: null }));
 });
 
 describe('usePlacementSources', () => {
-  it('loads every active open and closed container page and passes recents through', async () => {
-    mocks.webList.mockImplementation(async ({ query }: { query: WebListData['query'] }) => {
-      if (query.access === 'open') {
-        return query.cursor === undefined
+  it('loads lightweight containers once per page without a hydrated item list request', async () => {
+    mocks.webPlacementSources.mockImplementation(
+      async ({ query }: { query: WebPlacementSourcesData['query'] }) =>
+        query?.cursor === undefined
           ? ok({
-              ...emptyPage().data,
-              items: [item('open-1')],
-              nextCursor: 'open-next',
+              items: [container('open-1', 'open'), container('closed-1', 'closed')],
+              nextCursor: 'next',
             })
           : ok({
-              ...emptyPage().data,
-              items: [item('open-2')],
+              items: [container('open-2', 'open'), container('closed-2', 'closed')],
               nextCursor: null,
-            });
-      }
-
-      if (query.access === 'closed') {
-        return query.cursor === undefined
-          ? ok({
-              ...emptyPage().data,
-              items: [item('closed-1')],
-              nextCursor: 'closed-next',
             })
-          : ok({
-              ...emptyPage().data,
-              items: [item('closed-2')],
-              nextCursor: null,
-            });
-      }
-
-      return emptyPage();
-    });
+    );
     const client = createTestQueryClient();
     const { result } = renderHook(
       () => usePlacementSources({ kind: 'place', locationId: 'room' }),
@@ -178,30 +183,96 @@ describe('usePlacementSources', () => {
     );
 
     await waitFor(() => expect(result.current.openContainers).toHaveLength(2));
-    await waitFor(() => expect(result.current.closedContainers).toHaveLength(2));
-
-    expect(mocks.webList).toHaveBeenCalledWith({
-      query: {
-        access: 'open',
-        isContainer: 'true',
-        cursor: undefined,
-        limit: WEB_ITEMS_MAX_IDS,
-      },
+    expect(result.current.closedContainers).toHaveLength(2);
+    expect(mocks.webPlacementSources).toHaveBeenCalledTimes(2);
+    expect(mocks.webPlacementSources).toHaveBeenNthCalledWith(1, {
+      query: { cursor: undefined, limit: WEB_ITEMS_MAX_IDS },
+      signal: expect.any(AbortSignal),
     });
-    expect(mocks.webList).toHaveBeenCalledWith({
-      query: {
-        access: 'closed',
-        isContainer: 'true',
-        cursor: undefined,
-        limit: WEB_ITEMS_MAX_IDS,
-      },
+    expect(mocks.webPlacementSources).toHaveBeenNthCalledWith(2, {
+      query: { cursor: 'next', limit: WEB_ITEMS_MAX_IDS },
+      signal: expect.any(AbortSignal),
+    });
+    expect(mocks.webList).not.toHaveBeenCalled();
+    expect(result.current.openContainers[0]).toMatchObject({
+      id: 'open-1',
+      code: 'BOX',
+      note: 'Container note',
+      container: { access: 'open', full: false },
+      placement: { kind: 'location', locationId: 'room' },
     });
     expect(result.current.recents).toEqual([{ kind: 'location', locationId: 'recent-location' }]);
+  });
+
+  it('shares the container request between simultaneous placement pickers', async () => {
+    mocks.webPlacementSources.mockResolvedValue(
+      ok({ items: [container('shared', 'open')], nextCursor: null })
+    );
+    const client = createTestQueryClient();
+    const { result } = renderHook(
+      () => ({
+        first: usePlacementSources({ kind: 'place', locationId: 'room' }),
+        second: usePlacementSources({ kind: 'place', locationId: 'another-room' }),
+      }),
+      { wrapper: withQueryClient(client) }
+    );
+
+    await waitFor(() => expect(result.current.first.isLoading).toBe(false));
+    expect(result.current.second.openContainers).toEqual(result.current.first.openContainers);
+    expect(mocks.webPlacementSources).toHaveBeenCalledOnce();
+    expect(mocks.webList).not.toHaveBeenCalled();
+  });
+
+  it('aborts an unused container request before fetching another page', async () => {
+    let resolvePage:
+      | ((page: ReturnType<typeof ok<WebPlacementSourcesResponses[200]>>) => void)
+      | undefined;
+    let requestSignal: AbortSignal | undefined;
+    mocks.webPlacementSources.mockImplementation(({ signal }: { signal: AbortSignal }) => {
+      requestSignal = signal;
+      return new Promise<ReturnType<typeof ok<WebPlacementSourcesResponses[200]>>>((resolve) => {
+        resolvePage = resolve;
+      });
+    });
+    const client = createTestQueryClient();
+    const hook = renderHook(() => usePlacementSources({ kind: 'place', locationId: 'room' }), {
+      wrapper: withQueryClient(client),
+    });
+    await waitFor(() => expect(mocks.webPlacementSources).toHaveBeenCalledOnce());
+    hook.unmount();
+    expect(requestSignal?.aborted).toBe(true);
+    await act(async () => {
+      if (resolvePage === undefined) throw new Error('container request was not started');
+      resolvePage(ok({ items: [container('first', 'open')], nextCursor: 'next' }));
+    });
+    expect(mocks.webPlacementSources).toHaveBeenCalledOnce();
+  });
+
+  it('reports a failed page without exposing an incomplete container world', async () => {
+    mocks.webPlacementSources
+      .mockResolvedValueOnce(ok({ items: [container('first', 'open')], nextCursor: 'next' }))
+      .mockRejectedValueOnce(new Error('container page failed'));
+    const client = createTestQueryClient();
+    const { result } = renderHook(
+      () => usePlacementSources({ kind: 'place', locationId: 'room' }),
+      {
+        wrapper: withQueryClient(client),
+      }
+    );
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.error).toEqual(new Error('container page failed'));
+    expect(result.current.openContainers).toEqual([]);
+    expect(result.current.closedContainers).toEqual([]);
+    expect(mocks.webList).not.toHaveBeenCalled();
   });
 
   it('dedupes subject ids, chunks them at the contract limit, and includes inactive items', async () => {
     const ids = Array.from({ length: WEB_ITEMS_MAX_IDS + 2 }, (_, index) => `subject-${index}`);
     const subjectIds = [...ids, ids[0] ?? '', 'shared'];
+    mocks.webPlacementSources.mockResolvedValue(
+      ok({ items: [container('shared', 'open')], nextCursor: null })
+    );
     mocks.webList.mockImplementation(async ({ query }: { query: WebListData['query'] }) => {
       if (query.ids !== undefined) {
         const firstId = query.ids.split(',')[0] ?? 'missing';
@@ -210,10 +281,6 @@ describe('usePlacementSources', () => {
           items: [item(firstId, { lifecycle: 'retired' })],
           nextCursor: null,
         });
-      }
-
-      if (query.access === 'open' || query.access === 'closed') {
-        return ok({ ...emptyPage().data, items: [item('shared')] });
       }
 
       return emptyPage();
@@ -229,6 +296,8 @@ describe('usePlacementSources', () => {
       ([request]) => request.query.ids !== undefined
     );
     expect(subjectCalls).toHaveLength(2);
+    expect(mocks.webList).toHaveBeenCalledTimes(2);
+    expect(result.current.subjectItemsQuery.data?.[0]?.fieldValues).toEqual([]);
     expect(subjectCalls.map(([request]) => request.query.ids.split(',').length)).toEqual([
       WEB_ITEMS_MAX_IDS,
       3,

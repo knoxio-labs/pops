@@ -20951,6 +20951,220 @@
         "tags": ["webMoving"]
       }
     },
+    "/web/placement-sources": {
+      "get": {
+        "operationId": "web.placementSources",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "cursor",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": true,
+            "schema": {
+              "default": 200,
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "access": {
+                            "enum": ["open", "closed", null],
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "code": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "id": {
+                            "type": "string"
+                          },
+                          "isContainer": {
+                            "type": "boolean"
+                          },
+                          "isFull": {
+                            "nullable": true,
+                            "type": "boolean"
+                          },
+                          "legacyType": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "lifecycle": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "note": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "placement": {
+                            "oneOf": [
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "kind": {
+                                    "enum": ["location"],
+                                    "type": "string"
+                                  },
+                                  "locationId": {
+                                    "minLength": 1,
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["kind", "locationId"],
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "itemId": {
+                                    "minLength": 1,
+                                    "type": "string"
+                                  },
+                                  "kind": {
+                                    "enum": ["container"],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["kind", "itemId"],
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "kind": {
+                                    "enum": ["hand"],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["kind"],
+                                "type": "object"
+                              }
+                            ]
+                          },
+                          "previousPlacement": {
+                            "nullable": true,
+                            "oneOf": [
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "kind": {
+                                    "enum": ["location"],
+                                    "type": "string"
+                                  },
+                                  "locationId": {
+                                    "minLength": 1,
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["kind", "locationId"],
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "itemId": {
+                                    "minLength": 1,
+                                    "type": "string"
+                                  },
+                                  "kind": {
+                                    "enum": ["container"],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["kind", "itemId"],
+                                "type": "object"
+                              }
+                            ]
+                          },
+                          "quantity": {
+                            "maximum": 9007199254740991,
+                            "minimum": -9007199254740991,
+                            "type": "integer"
+                          },
+                          "typeId": {
+                            "format": "uuid",
+                            "nullable": true,
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                            "type": "string"
+                          },
+                          "typeKey": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "typeId",
+                          "typeKey",
+                          "legacyType",
+                          "note",
+                          "code",
+                          "quantity",
+                          "lifecycle",
+                          "placement",
+                          "previousPlacement",
+                          "isContainer",
+                          "access",
+                          "isFull",
+                          "updatedAt"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "nextCursor": {
+                      "nullable": true,
+                      "type": "string"
+                    }
+                  },
+                  "required": ["items", "nextCursor"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
+          }
+        },
+        "summary": "Lightweight active containers for placement pickers, in id order",
+        "tags": ["web"]
+      }
+    },
     "/web/reports/entries": {
       "get": {
         "operationId": "webReports.entries",
@@ -23142,6 +23356,38 @@
         },
         "summary": "Every device's latest sync ledger, merged",
         "tags": ["webSyncLedger"]
+      }
+    },
+    "/web/type-arrival-counts": {
+      "get": {
+        "operationId": "web.typeArrivalCounts",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "counts": {
+                      "additionalProperties": {
+                        "maximum": 9007199254740991,
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "type": "object"
+                    }
+                  },
+                  "required": ["counts"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          }
+        },
+        "summary": "Legacy-label match counts for every current published type",
+        "tags": ["web"]
       }
     }
   }

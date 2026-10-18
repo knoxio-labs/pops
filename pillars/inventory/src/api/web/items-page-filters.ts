@@ -11,14 +11,12 @@ import {
   type SQLWrapper,
 } from 'drizzle-orm';
 
-import {
-  descendantIds,
-  loadPublishedCatalogue,
-  resolvePublishedType,
-} from '../../catalogue/index.js';
+import { descendantIds, loadPublishedCatalogue } from '../../catalogue/index.js';
+import { normalizeLegacyLabels } from '../../catalogue/legacy-labels.js';
 import { catalogueRevisions, itemTypes, items } from '../../db/index.js';
 import { atEffectiveLocationSql, withinSql } from './placement-scope.js';
 
+import type { PersistedCatalogue } from '../../catalogue/index.js';
 import type { WEB_LIFECYCLES, WEB_PLACEMENT_KINDS } from '../../contract/rest-web.js';
 import type { CommandDb } from '../../domain/commands/index.js';
 
@@ -62,9 +60,7 @@ function strictBooleanCondition(column: SQLWrapper, value: boolean): SQL {
   return value ? sql`${column} = 1` : sql`(${column} IS NULL OR ${column} = 0)`;
 }
 
-/** Returns the item-type predicate for a case-insensitive published type key and its descendants. */
-export function typeKeyCondition(db: CommandDb, typeKey: string): SQL {
-  const catalogue = loadPublishedCatalogue(db);
+function catalogueTypeKeyCondition(catalogue: PersistedCatalogue | null, typeKey: string): SQL {
   if (catalogue === null) return sql`0`;
 
   const type = catalogue.types.find(
@@ -75,10 +71,15 @@ export function typeKeyCondition(db: CommandDb, typeKey: string): SQL {
   return inArray(items.typeId, [type.id, ...descendantIds(catalogue.types, type.id)]);
 }
 
-function typeConditions(db: CommandDb, filter: WebItemsFilter): SQL[] {
+/** Returns the item-type predicate for a case-insensitive published type key and its descendants. */
+export function typeKeyCondition(db: CommandDb, typeKey: string): SQL {
+  return catalogueTypeKeyCondition(loadPublishedCatalogue(db), typeKey);
+}
+
+function typeConditions(catalogue: PersistedCatalogue | null, filter: WebItemsFilter): SQL[] {
   const conditions: SQL[] = [];
   if (filter.typeKey !== undefined) {
-    conditions.push(typeKeyCondition(db, filter.typeKey));
+    conditions.push(catalogueTypeKeyCondition(catalogue, filter.typeKey));
   }
   if (filter.untyped !== undefined) {
     conditions.push(filter.untyped ? isNull(items.typeId) : isNotNull(items.typeId));
@@ -111,17 +112,13 @@ function containerConditions(filter: WebItemsFilter): SQL[] {
   return conditions;
 }
 
-function legacyLabelCondition(db: CommandDb, typeKey: string): SQL[] {
-  const type = resolvePublishedType(db, { key: typeKey });
-  if (type === null) return [sql`0`];
+function legacyLabelCondition(catalogue: PersistedCatalogue | null, typeKey: string): SQL[] {
+  const type = catalogue?.types.find(
+    (candidate) => candidate.key.toLocaleLowerCase() === typeKey.toLocaleLowerCase()
+  );
+  if (type === undefined) return [sql`0`];
 
-  const labels = [
-    ...new Set(
-      type.legacyLabels
-        .map((label) => label.trim().toLowerCase())
-        .filter((label) => label.length > 0)
-    ),
-  ];
+  const labels = normalizeLegacyLabels(type.legacyLabels);
   if (labels.length === 0) return [sql`0`];
 
   return [
@@ -131,10 +128,14 @@ function legacyLabelCondition(db: CommandDb, typeKey: string): SQL[] {
   ];
 }
 
-function locationConditions(db: CommandDb, filter: WebItemsFilter): SQL[] {
+function locationConditions(
+  db: CommandDb,
+  catalogue: PersistedCatalogue | null,
+  filter: WebItemsFilter
+): SQL[] {
   const conditions: SQL[] = [];
   if (filter.legacyLabelOf !== undefined) {
-    conditions.push(...legacyLabelCondition(db, filter.legacyLabelOf));
+    conditions.push(...legacyLabelCondition(catalogue, filter.legacyLabelOf));
   }
   if (filter.within !== undefined) conditions.push(withinSql(db, filter.within) ?? sql`0`);
   if (filter.effectiveLocationId !== undefined) {
@@ -148,32 +149,28 @@ function lifecycleConditions(filter: WebItemsFilter): SQL[] {
   return filter.includeInactive === true ? [] : [eq(items.lifecycle, 'active')];
 }
 
-/** Build every filter predicate for one web item list request. */
-export function matchConditions(db: CommandDb, filter: WebItemsFilter): SQL[] {
-  return [
-    isNull(items.deletedAt),
-    ...typeConditions(db, filter),
-    ...placementConditions(filter),
-    ...containerConditions(filter),
-    ...locationConditions(db, filter),
-    ...lifecycleConditions(filter),
-  ];
+/** Resolved predicates shared by page selection and its current aggregate counts. */
+export interface WebItemsConditions {
+  readonly baseline: readonly SQL[];
+  readonly filtered: readonly SQL[];
+  readonly lifecycle: readonly SQL[];
 }
 
-/** Build the filters used by the web list's unfiltered baseline count. */
-export function unfilteredConditions(filter: WebItemsFilter): SQL[] {
-  return [isNull(items.deletedAt), ...containerConditions(filter), ...lifecycleConditions(filter)];
-}
-
-/** Build the filters used to count inactive rows hidden by the default view. */
-export function hiddenInactiveConditions(db: CommandDb, filter: WebItemsFilter): SQL[] {
-  return [
-    isNull(items.deletedAt),
-    ...typeConditions(db, filter),
-    ...placementConditions(filter),
-    ...containerConditions(filter),
-    ...locationConditions(db, filter),
-  ];
+/** Resolve catalogue and placement filters once for a web item list request. */
+export function webItemsConditions(db: CommandDb, filter: WebItemsFilter): WebItemsConditions {
+  const catalogue =
+    filter.typeKey === undefined && filter.legacyLabelOf === undefined
+      ? null
+      : loadPublishedCatalogue(db);
+  return {
+    baseline: [isNull(items.deletedAt), ...containerConditions(filter)],
+    filtered: [
+      ...typeConditions(catalogue, filter),
+      ...placementConditions(filter),
+      ...locationConditions(db, catalogue, filter),
+    ],
+    lifecycle: lifecycleConditions(filter),
+  };
 }
 
 /** Count rows matching a SQL predicate list in the caller's read transaction. */

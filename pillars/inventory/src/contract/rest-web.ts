@@ -92,6 +92,36 @@ export const WebItemsResponseSchema = z.object({
   hiddenInactiveCount: z.number().int().nonnegative(),
 });
 
+/** Container facts used by placement pickers, without item detail hydration. */
+export const WebPlacementSourceSchema = SyncItemSchema.pick({
+  id: true,
+  name: true,
+  typeId: true,
+  typeKey: true,
+  legacyType: true,
+  note: true,
+  code: true,
+  quantity: true,
+  lifecycle: true,
+  placement: true,
+  previousPlacement: true,
+  isContainer: true,
+  access: true,
+  isFull: true,
+  updatedAt: true,
+});
+
+/** One id-ordered page of active, live containers of either access state. */
+export const WebPlacementSourcesResponseSchema = z.object({
+  items: z.array(WebPlacementSourceSchema),
+  nextCursor: z.string().nullable(),
+});
+
+/** Active, live, untyped legacy-label matches keyed by current published type key. */
+export const WebTypeArrivalCountsResponseSchema = z.object({
+  counts: z.record(z.string(), z.number().int().nonnegative()),
+});
+
 const WebItemHistorySchema = z.object({
   events: z.array(SyncEventSchema),
   nextCursor: z.string().nullable(),
@@ -103,6 +133,22 @@ const WebItemDetailResponse = z.object({
 });
 
 export const inventoryWebContract = c.router({
+  placementSources: {
+    method: 'GET',
+    path: '/web/placement-sources',
+    query: z.object({
+      cursor: z.string().optional(),
+      limit: z.coerce.number().int().min(1).max(200).default(200),
+    }),
+    responses: { 200: WebPlacementSourcesResponseSchema, 400: ErrorBodySchema },
+    summary: 'Lightweight active containers for placement pickers, in id order',
+  },
+  typeArrivalCounts: {
+    method: 'GET',
+    path: '/web/type-arrival-counts',
+    responses: { 200: WebTypeArrivalCountsResponseSchema },
+    summary: 'Legacy-label match counts for every current published type',
+  },
   list: {
     method: 'GET',
     path: '/web/items',

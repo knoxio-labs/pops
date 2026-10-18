@@ -6710,6 +6710,74 @@ export type WebMovingGetResponses = {
 
 export type WebMovingGetResponse = WebMovingGetResponses[keyof WebMovingGetResponses];
 
+export type WebPlacementSourcesData = {
+  body?: never;
+  path?: never;
+  query: {
+    cursor?: string;
+    limit: number;
+  };
+  url: '/web/placement-sources';
+};
+
+export type WebPlacementSourcesErrors = {
+  /**
+   * 400
+   */
+  400: ErrorBody;
+};
+
+export type WebPlacementSourcesError = WebPlacementSourcesErrors[keyof WebPlacementSourcesErrors];
+
+export type WebPlacementSourcesResponses = {
+  /**
+   * 200
+   */
+  200: {
+    items: Array<{
+      access: 'open' | 'closed' | null;
+      code: string | null;
+      id: string;
+      isContainer: boolean;
+      isFull: boolean | null;
+      legacyType: string | null;
+      lifecycle: string;
+      name: string;
+      note: string | null;
+      placement:
+        | {
+            kind: 'location';
+            locationId: string;
+          }
+        | {
+            itemId: string;
+            kind: 'container';
+          }
+        | {
+            kind: 'hand';
+          };
+      previousPlacement:
+        | {
+            kind: 'location';
+            locationId: string;
+          }
+        | {
+            itemId: string;
+            kind: 'container';
+          }
+        | null;
+      quantity: number;
+      typeId: string | null;
+      typeKey: string | null;
+      updatedAt: string;
+    }>;
+    nextCursor: string | null;
+  };
+};
+
+export type WebPlacementSourcesResponse =
+  WebPlacementSourcesResponses[keyof WebPlacementSourcesResponses];
+
 export type WebReportsEntriesData = {
   body?: never;
   path?: never;
@@ -7262,3 +7330,24 @@ export type WebSyncLedgerGetResponses = {
 };
 
 export type WebSyncLedgerGetResponse = WebSyncLedgerGetResponses[keyof WebSyncLedgerGetResponses];
+
+export type WebTypeArrivalCountsData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/web/type-arrival-counts';
+};
+
+export type WebTypeArrivalCountsResponses = {
+  /**
+   * 200
+   */
+  200: {
+    counts: {
+      [key: string]: number;
+    };
+  };
+};
+
+export type WebTypeArrivalCountsResponse =
+  WebTypeArrivalCountsResponses[keyof WebTypeArrivalCountsResponses];

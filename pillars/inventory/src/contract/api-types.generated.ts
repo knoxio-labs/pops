@@ -1261,6 +1261,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/web/placement-sources': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Lightweight active containers for placement pickers, in id order */
+    get: operations['web.placementSources'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/web/reports/entries': {
     parameters: {
       query?: never;
@@ -1338,6 +1355,23 @@ export interface paths {
     };
     /** Every device's latest sync ledger, merged */
     get: operations['webSyncLedger.get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/web/type-arrival-counts': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Legacy-label match counts for every current published type */
+    get: operations['web.typeArrivalCounts'];
     put?: never;
     post?: never;
     delete?: never;
@@ -9579,6 +9613,86 @@ export interface operations {
       };
     };
   };
+  'web.placementSources': {
+    parameters: {
+      query: {
+        cursor?: string;
+        limit: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            items: {
+              /** @enum {string|null} */
+              access: 'open' | 'closed' | null;
+              code: string | null;
+              id: string;
+              isContainer: boolean;
+              isFull: boolean | null;
+              legacyType: string | null;
+              lifecycle: string;
+              name: string;
+              note: string | null;
+              placement:
+                | {
+                    /** @enum {string} */
+                    kind: 'location';
+                    locationId: string;
+                  }
+                | {
+                    itemId: string;
+                    /** @enum {string} */
+                    kind: 'container';
+                  }
+                | {
+                    /** @enum {string} */
+                    kind: 'hand';
+                  };
+              previousPlacement:
+                | (
+                    | {
+                        /** @enum {string} */
+                        kind: 'location';
+                        locationId: string;
+                      }
+                    | {
+                        itemId: string;
+                        /** @enum {string} */
+                        kind: 'container';
+                      }
+                  )
+                | null;
+              quantity: number;
+              /** Format: uuid */
+              typeId: string | null;
+              typeKey: string | null;
+              updatedAt: string;
+            }[];
+            nextCursor: string | null;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+    };
+  };
   'webReports.entries': {
     parameters: {
       query?: never;
@@ -10207,6 +10321,30 @@ export interface operations {
               since: string;
               summary: string;
             }[];
+          };
+        };
+      };
+    };
+  };
+  'web.typeArrivalCounts': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            counts: {
+              [key: string]: number;
+            };
           };
         };
       };

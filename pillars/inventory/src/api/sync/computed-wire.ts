@@ -1,9 +1,7 @@
-import {
-  loadPublishedCatalogue,
-  readEffectiveItemFieldValues,
-  type EffectiveItemFieldValue,
-  type ReadItemFieldValue,
-} from '../../catalogue/index.js';
+import { computedValueCacheFor } from '../../catalogue/computed-value-runtime-cache.js';
+import { EffectiveValueReader } from '../../catalogue/effective-item-values.js';
+import { type EffectiveItemFieldValue, type ReadItemFieldValue } from '../../catalogue/index.js';
+import { ItemValueReader } from '../../catalogue/item-value-reader.js';
 
 import type { SyncComputedValue } from '../../contract/rest-sync-computed-schemas.js';
 import type { CommandDb } from '../../domain/commands/index.js';
@@ -117,6 +115,20 @@ function projectComputedValues(
   return projected;
 }
 
+function recordComputedFailure(
+  itemId: string,
+  error: unknown,
+  issues: Map<string, SyncItemProjectionIssue[]>
+): void {
+  console.error('[inventory-sync] computed projection failed', { itemId, error });
+  issues.set(itemId, [
+    projectionIssue(
+      null,
+      'A computed value could not be evaluated for this item. No value was changed.'
+    ),
+  ]);
+}
+
 /**
  * Evaluates every computed field of `ids` against the active published
  * catalogue, through one dependency snapshot in the caller's read
@@ -126,26 +138,33 @@ function projectComputedValues(
 export function loadComputedValues(
   db: CommandDb,
   ids: readonly string[],
-  persisted: ReadonlyMap<string, readonly ReadItemFieldValue[]>
+  persisted: ReadonlyMap<string, readonly ReadItemFieldValue[]>,
+  valueReader = new ItemValueReader(db, ids)
 ): ComputedValuesProjection {
-  const catalogue = loadPublishedCatalogue(db);
+  const catalogue = valueReader.catalogue();
   if (catalogue === null || ids.length === 0) {
     return { values: new Map(), issues: new Map() };
   }
   const effective = new Map<string, readonly EffectiveItemFieldValue[]>();
   const issues = new Map<string, SyncItemProjectionIssue[]>();
+  let reader: EffectiveValueReader;
+  try {
+    reader = new EffectiveValueReader(db, catalogue, computedValueCacheFor(db), {
+      itemIds: ids,
+      values: valueReader,
+    });
+  } catch (error) {
+    for (const itemId of ids) {
+      recordComputedFailure(itemId, error, issues);
+    }
+    return { values: new Map(ids.map((itemId) => [itemId, []])), issues };
+  }
   for (const itemId of ids) {
     try {
-      effective.set(itemId, readEffectiveItemFieldValues(db, catalogue, itemId));
+      effective.set(itemId, reader.read(itemId));
     } catch (error) {
-      console.error('[inventory-sync] computed projection failed', { itemId, error });
       effective.set(itemId, []);
-      issues.set(itemId, [
-        projectionIssue(
-          null,
-          'A computed value could not be evaluated for this item. No value was changed.'
-        ),
-      ]);
+      recordComputedFailure(itemId, error, issues);
     }
   }
   const values = new Map<string, SyncComputedValue[]>();

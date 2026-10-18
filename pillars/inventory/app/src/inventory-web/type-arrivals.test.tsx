@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { PUBLISHED_CATALOGUE_QUERY_KEY } from './queryKeys.js';
 import { createTestQueryClient, withQueryClient } from './test-utils.js';
 import {
   arrivalCandidates,
@@ -9,21 +10,26 @@ import {
   useTypeArrival,
 } from './type-arrivals.js';
 
-import type { TypesReadCatalogueResponses, WebListResponses } from '../inventory-api/types.gen.js';
+import type {
+  TypesReadCatalogueResponses,
+  WebTypeArrivalCountsResponses,
+} from '../inventory-api/types.gen.js';
 import type { CatalogueType } from './useCatalogueLookups.js';
 
 const mocks = vi.hoisted(() => ({
   typesReadCatalogue: vi.fn(),
   webList: vi.fn(),
+  webTypeArrivalCounts: vi.fn(),
 }));
 
 vi.mock('../inventory-api/index.js', () => ({
   typesReadCatalogue: (...args: unknown[]) => mocks.typesReadCatalogue(...args),
   webList: (...args: unknown[]) => mocks.webList(...args),
+  webTypeArrivalCounts: (...args: unknown[]) => mocks.webTypeArrivalCounts(...args),
 }));
 
 type Catalogue = TypesReadCatalogueResponses[200];
-type WebPage = WebListResponses['200'];
+type ArrivalCounts = WebTypeArrivalCountsResponses[200];
 
 function type(
   id: string,
@@ -74,15 +80,8 @@ function ok<T>(data: T) {
   return { data, error: undefined, response: { status: 200 } };
 }
 
-function page(total: number): WebPage {
-  return {
-    contentCounts: {},
-    hiddenInactiveCount: 0,
-    items: [],
-    nextCursor: null,
-    total,
-    unfilteredTotal: total,
-  };
+function counts(values: Record<string, number>): ArrivalCounts {
+  return { counts: values };
 }
 
 function deferred<T>() {
@@ -174,9 +173,7 @@ describe('useTypeArrival', () => {
     mocks.typesReadCatalogue.mockImplementation((options?: { query?: { revision?: number } }) =>
       options?.query?.revision === 7 ? Promise.resolve(ok(base)) : Promise.resolve(ok(current))
     );
-    mocks.webList.mockImplementation(({ query }: { query: { legacyLabelOf?: string } }) =>
-      Promise.resolve(ok(page(query.legacyLabelOf === 'first' ? 0 : 4)))
-    );
+    mocks.webTypeArrivalCounts.mockResolvedValue(ok(counts({ first: 0, second: 4 })));
 
     const client = createTestQueryClient();
     const { result } = renderHook(() => useTypeArrival(), {
@@ -189,6 +186,9 @@ describe('useTypeArrival', () => {
       mocks.typesReadCatalogue.mock.calls.filter(([options]) => options?.query?.revision === 7)
     ).toHaveLength(1);
     expect(result.current.arrival?.matches).toBe(4);
+    expect(mocks.webTypeArrivalCounts).toHaveBeenCalledOnce();
+    expect(mocks.webTypeArrivalCounts).toHaveBeenCalledWith({ signal: expect.any(AbortSignal) });
+    expect(mocks.webList).not.toHaveBeenCalled();
   });
 
   it('sends no count for a type unchanged since the base revision', async () => {
@@ -204,7 +204,7 @@ describe('useTypeArrival', () => {
       wrapper: withQueryClient(client),
     });
     await waitFor(() => expect(result.current.arrival).toBeNull());
-    expect(mocks.webList).not.toHaveBeenCalled();
+    expect(mocks.webTypeArrivalCounts).not.toHaveBeenCalled();
   });
 
   it('sends no count while the base revision is pending or after it failed', async () => {
@@ -220,7 +220,7 @@ describe('useTypeArrival', () => {
     await waitFor(() =>
       expect(mocks.typesReadCatalogue).toHaveBeenCalledWith({ query: { revision: 7 } })
     );
-    expect(mocks.webList).not.toHaveBeenCalled();
+    expect(mocks.webTypeArrivalCounts).not.toHaveBeenCalled();
     expect(pending.result.current.arrival).toBeNull();
 
     mocks.typesReadCatalogue.mockImplementation((options?: { query?: { revision?: number } }) =>
@@ -234,7 +234,7 @@ describe('useTypeArrival', () => {
     });
     await waitFor(() => expect(mocks.typesReadCatalogue).toHaveBeenCalledTimes(4));
     await waitFor(() => expect(failed.result.current.arrival).toBeNull());
-    expect(mocks.webList).not.toHaveBeenCalled();
+    expect(mocks.webTypeArrivalCounts).not.toHaveBeenCalled();
   });
 
   it('fetches nothing while the published revision is null', async () => {
@@ -246,27 +246,149 @@ describe('useTypeArrival', () => {
 
     expect(result.current.arrival).toBeNull();
     await waitFor(() => expect(mocks.typesReadCatalogue).toHaveBeenCalledOnce());
-    expect(mocks.webList).not.toHaveBeenCalled();
+    expect(mocks.webTypeArrivalCounts).not.toHaveBeenCalled();
   });
 
   it('makes no base read for the first revision', async () => {
     const current = catalogue([type('garden', 'garden', 0, ['Garden'])], null);
     mocks.typesReadCatalogue.mockResolvedValue(ok(current));
-    mocks.webList.mockResolvedValue(ok(page(0)));
+    mocks.webTypeArrivalCounts.mockResolvedValue(ok(counts({ garden: 0 })));
     const client = createTestQueryClient();
     const { result } = renderHook(() => useTypeArrival(), {
       wrapper: withQueryClient(client),
     });
 
-    await waitFor(() => expect(mocks.webList).toHaveBeenCalledOnce());
+    await waitFor(() => expect(mocks.webTypeArrivalCounts).toHaveBeenCalledOnce());
     expect(mocks.typesReadCatalogue).toHaveBeenCalledTimes(1);
     expect(result.current.arrival).toBeNull();
+  });
+
+  it('uses one count request for every candidate and reveals the next match from cache on dismiss', async () => {
+    const current = catalogue(
+      [type('second', 'second', 1, ['Second']), type('first', 'first', 0, ['First'])],
+      null
+    );
+    mocks.typesReadCatalogue.mockResolvedValue(ok(current));
+    mocks.webTypeArrivalCounts.mockResolvedValue(ok(counts({ first: 2, second: 5 })));
+    const client = createTestQueryClient();
+    const { result, rerender } = renderHook(() => useTypeArrival(), {
+      wrapper: withQueryClient(client),
+    });
+    await waitFor(() => expect(result.current.arrival?.type.id).toBe('first'));
+    expect(result.current.arrival?.matches).toBe(2);
+    act(() => result.current.dismiss('first'));
+    await waitFor(() => expect(result.current.arrival?.type.id).toBe('second'));
+    expect(result.current.arrival?.matches).toBe(5);
+    act(() => rerender());
+    expect(mocks.webTypeArrivalCounts).toHaveBeenCalledOnce();
+    expect(mocks.webList).not.toHaveBeenCalled();
+  });
+
+  it('refreshes counts for a newer published revision with the same candidate keys', async () => {
+    const current = catalogue([type('garden', 'garden', 0, ['Garden'])], null);
+    mocks.typesReadCatalogue.mockResolvedValue(ok(current));
+    mocks.webTypeArrivalCounts
+      .mockResolvedValueOnce(ok(counts({ garden: 2 })))
+      .mockResolvedValueOnce(ok(counts({ garden: 0 })));
+    const client = createTestQueryClient();
+    const { result } = renderHook(() => useTypeArrival(), {
+      wrapper: withQueryClient(client),
+    });
+    await waitFor(() => expect(result.current.arrival?.matches).toBe(2));
+    act(() => {
+      client.setQueryData(PUBLISHED_CATALOGUE_QUERY_KEY, {
+        ...current,
+        revision: { ...current.revision, revision: 9 },
+      });
+    });
+    await waitFor(() => expect(mocks.webTypeArrivalCounts).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(result.current.arrival).toBeNull());
+  });
+
+  it('does not show a later candidate until the count request finishes successfully', async () => {
+    const current = catalogue(
+      [type('first', 'first', 0, ['First']), type('second', 'second', 1, ['Second'])],
+      null
+    );
+    const pendingCounts = deferred<ReturnType<typeof ok<ArrivalCounts>>>();
+    mocks.typesReadCatalogue.mockResolvedValue(ok(current));
+    mocks.webTypeArrivalCounts.mockReturnValue(pendingCounts.promise);
+    const client = createTestQueryClient();
+    const { result } = renderHook(() => useTypeArrival(), {
+      wrapper: withQueryClient(client),
+    });
+    await waitFor(() => expect(mocks.webTypeArrivalCounts).toHaveBeenCalledOnce());
+    expect(result.current.arrival).toBeNull();
+    await act(async () => pendingCounts.resolve(ok(counts({ first: 0, second: 3 }))));
+    await waitFor(() => expect(result.current.arrival?.type.id).toBe('second'));
+  });
+
+  it('hides arrivals on a failed count response and does not use stale matches', async () => {
+    const current = catalogue([type('garden', 'garden', 0, ['Garden'])], null);
+    mocks.typesReadCatalogue.mockResolvedValue(ok(current));
+    mocks.webTypeArrivalCounts.mockResolvedValueOnce(ok(counts({ garden: 3 })));
+    const client = createTestQueryClient();
+    const { result } = renderHook(() => useTypeArrival(), {
+      wrapper: withQueryClient(client),
+    });
+    await waitFor(() => expect(result.current.arrival?.type.id).toBe('garden'));
+    mocks.webTypeArrivalCounts.mockRejectedValueOnce(new Error('count unavailable'));
+    await act(async () => {
+      await client.invalidateQueries({ queryKey: ['inventory', 'web', 'items'] });
+    });
+    await waitFor(() => expect(result.current.arrival).toBeNull());
+    expect(mocks.webTypeArrivalCounts).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not skip a candidate omitted from a successful count response', async () => {
+    const current = catalogue(
+      [type('first', 'first', 0, ['First']), type('second', 'second', 1, ['Second'])],
+      null
+    );
+    mocks.typesReadCatalogue.mockResolvedValue(ok(current));
+    mocks.webTypeArrivalCounts.mockResolvedValue(ok(counts({ second: 4 })));
+    const client = createTestQueryClient();
+    const { result } = renderHook(() => useTypeArrival(), {
+      wrapper: withQueryClient(client),
+    });
+    await waitFor(() => expect(mocks.webTypeArrivalCounts).toHaveBeenCalledOnce());
+    expect(result.current.arrival).toBeNull();
+  });
+
+  it('sends no request when all candidate types were already dismissed', async () => {
+    dismissType('garden');
+    mocks.typesReadCatalogue.mockResolvedValue(
+      ok(catalogue([type('garden', 'garden', 0, ['Garden'])], null))
+    );
+    const client = createTestQueryClient();
+    const { result } = renderHook(() => useTypeArrival(), {
+      wrapper: withQueryClient(client),
+    });
+    await waitFor(() => expect(mocks.typesReadCatalogue).toHaveBeenCalledOnce());
+    expect(result.current.arrival).toBeNull();
+    expect(mocks.webTypeArrivalCounts).not.toHaveBeenCalled();
+  });
+
+  it('cancels an unused count request', async () => {
+    mocks.typesReadCatalogue.mockResolvedValue(
+      ok(catalogue([type('garden', 'garden', 0, ['Garden'])], null))
+    );
+    let requestSignal: AbortSignal | undefined;
+    mocks.webTypeArrivalCounts.mockImplementation(({ signal }: { signal: AbortSignal }) => {
+      requestSignal = signal;
+      return new Promise(() => undefined);
+    });
+    const client = createTestQueryClient();
+    const hook = renderHook(() => useTypeArrival(), { wrapper: withQueryClient(client) });
+    await waitFor(() => expect(mocks.webTypeArrivalCounts).toHaveBeenCalledOnce());
+    hook.unmount();
+    expect(requestSignal?.aborted).toBe(true);
   });
 
   it('dismiss hides the type and stores its id', async () => {
     const current = catalogue([type('garden', 'garden', 0, ['Garden'])], null);
     mocks.typesReadCatalogue.mockResolvedValue(ok(current));
-    mocks.webList.mockResolvedValue(ok(page(3)));
+    mocks.webTypeArrivalCounts.mockResolvedValue(ok(counts({ garden: 3 })));
     const client = createTestQueryClient();
     const { result } = renderHook(() => useTypeArrival(), {
       wrapper: withQueryClient(client),
@@ -281,7 +403,7 @@ describe('useTypeArrival', () => {
   it('a throwing localStorage reads as nothing dismissed and still hides on dismiss', async () => {
     const current = catalogue([type('garden', 'garden', 0, ['Garden'])], null);
     mocks.typesReadCatalogue.mockResolvedValue(ok(current));
-    mocks.webList.mockResolvedValue(ok(page(3)));
+    mocks.webTypeArrivalCounts.mockResolvedValue(ok(counts({ garden: 3 })));
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new Error('storage blocked');
     });

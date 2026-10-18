@@ -132,8 +132,32 @@ function bundleFields(
   ];
 }
 
-/** Activates protocol 2, then publishes {@link ReferenceComputedCatalogue} as the next catalogue revision. */
-export function publishReferenceComputedTypes(db: CommandDb): ReferenceComputedCatalogue {
+function kitWeightDefinition(
+  draft: CatalogueDescriptor,
+  ids: Pick<ReferenceComputedCatalogue, 'kitTypeId' | 'kitPartFieldId' | 'weightFieldId'>,
+  secondPart: boolean
+): DraftOperation {
+  return computed(ids.kitTypeId, 'partWeight', {
+    op: secondPart ? 'add' : 'multiply',
+    left: { op: 'read', path: [ids.kitPartFieldId], fieldId: ids.weightFieldId },
+    right: secondPart
+      ? {
+          op: 'read',
+          path: [fieldId(draft, ids.kitTypeId, 'otherPart')],
+          fieldId: ids.weightFieldId,
+        }
+      : { op: 'literal', value: 2 },
+  });
+}
+
+/**
+ * Activates protocol 2 and publishes the reference-computed fixture. When
+ * `secondPart` is true, the kit sums two references to the same weight field.
+ */
+export function publishReferenceComputedTypes(
+  db: CommandDb,
+  secondPart = false
+): ReferenceComputedCatalogue {
   activatePersistedCatalogueProtocol(db);
   const created = createCatalogueDraft(db, 1, AUTHOR);
   const revision = created.revision.revision;
@@ -148,17 +172,14 @@ export function publishReferenceComputedTypes(db: CommandDb): ReferenceComputedC
   const withStored = patchCatalogueDraft(db, target(withTypes), [
     weight(partTypeId),
     reference(kitTypeId, 'part', partTypeId),
+    ...(secondPart ? [reference(kitTypeId, 'otherPart', partTypeId)] : []),
     reference(bundleTypeId, 'kit', kitTypeId),
   ]).draft;
   const weightFieldId = fieldId(withStored, partTypeId, 'weight');
   const kitPartFieldId = fieldId(withStored, kitTypeId, 'part');
   const bundleKitFieldId = fieldId(withStored, bundleTypeId, 'kit');
   const withKitWeight = patchCatalogueDraft(db, target(withStored), [
-    computed(kitTypeId, 'partWeight', {
-      op: 'multiply',
-      left: { op: 'read', path: [kitPartFieldId], fieldId: weightFieldId },
-      right: { op: 'literal', value: 2 },
-    }),
+    kitWeightDefinition(withStored, { kitTypeId, kitPartFieldId, weightFieldId }, secondPart),
   ]).draft;
   const kitWeightFieldId = fieldId(withKitWeight, kitTypeId, 'partWeight');
   const withBundle = patchCatalogueDraft(

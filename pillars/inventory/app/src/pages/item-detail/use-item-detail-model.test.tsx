@@ -155,8 +155,7 @@ function source(
     isError: error !== null,
     error,
     locationsQuery: { refetch: locationRefetch },
-    openContainersQuery: { refetch: locationRefetch },
-    closedContainersQuery: { refetch: locationRefetch },
+    containersQuery: { refetch: locationRefetch },
     subjectItemsQuery: { refetch: subjectItemsRefetch },
   };
 }
@@ -365,7 +364,7 @@ describe('useItemDetailModel', () => {
     hook.result.current.retry();
 
     await waitFor(() => expect(detailRefetch).toHaveBeenCalledOnce());
-    expect(relatedLocationRefetch).toHaveBeenCalledTimes(3);
+    expect(relatedLocationRefetch).toHaveBeenCalledTimes(2);
     expect(relatedSubjectRefetch).toHaveBeenCalledOnce();
     expect(mocks.connectionsGraph).toHaveBeenCalledWith(
       expect.objectContaining({ query: { maxDepth: 10 } })

@@ -13,12 +13,14 @@ import type {
   WebListResponses,
   WebGetResponses,
   WebSearchListResponses,
+  WebPlacementSourcesResponses,
 } from '../inventory-api/types.gen.js';
 
 type WebItem = WebListResponses['200']['items'][number];
 type WebListPage = WebListResponses['200'];
 type WebDetail = WebGetResponses['200'];
 type WebSearchPage = WebSearchListResponses['200'];
+type PlacementSource = WebPlacementSourcesResponses[200]['items'][number];
 
 const baseItem: WebItem = {
   access: null,
@@ -54,6 +56,26 @@ const baseItem: WebItem = {
 
 function item(id: string, overrides: Partial<WebItem> = {}): WebItem {
   return { ...baseItem, ...overrides, id };
+}
+
+function containerSource(): PlacementSource {
+  return {
+    access: 'closed',
+    code: 'BOX',
+    id: 'item-1',
+    isContainer: true,
+    isFull: false,
+    legacyType: null,
+    lifecycle: 'active',
+    name: 'Container',
+    note: null,
+    placement: { kind: 'location', locationId: 'old-room' },
+    previousPlacement: null,
+    quantity: 1,
+    typeId: null,
+    typeKey: null,
+    updatedAt: '2026-09-01T00:00:00.000Z',
+  };
 }
 
 function listPage(items: readonly WebItem[]): WebListPage {
@@ -126,6 +148,52 @@ beforeEach(() => {
 });
 
 describe('optimisticItemsFor', () => {
+  it('does not use a lightweight container as a mutation base', () => {
+    const queryClient = new QueryClient();
+    queryClient.setQueryData([...PLACEMENT_SOURCES_QUERY_KEY, 'containers'], [containerSource()]);
+    const optimistic = optimisticItemsFor(queryClient);
+
+    expect(() => optimistic.displayed('item-1')).toThrow('item item-1 is not loaded');
+    expect(() => optimistic.baseRevision('item-1')).toThrow('item item-1 is not loaded');
+    expect(() => optimistic.begin('item-1', (value) => ({ ...value, name: 'Changed' }))).toThrow(
+      'item item-1 is not loaded'
+    );
+  });
+
+  it('uses full revisions loaded after placement sources and keeps optimistic projections lightweight', () => {
+    const queryClient = new QueryClient();
+    const source = containerSource();
+    const sourceKey = [...PLACEMENT_SOURCES_QUERY_KEY, 'containers'];
+    queryClient.setQueryData(sourceKey, [source]);
+    const original = item('item-1', { ...source, revision: 7, seq: 11 });
+    queryClient.setQueryData([...webItemDetailQueryKey('item-1'), 50], detailPage(original));
+    const newest = { ...original, revision: 8, seq: 12, note: 'Newest note' };
+    queryClient.setQueryData([...WEB_ITEMS_QUERY_KEY, 'list', { sort: 'name' }, 50], {
+      pages: [listPage([newest])],
+      pageParams: [undefined],
+    });
+    const optimistic = optimisticItemsFor(queryClient);
+    expect(optimistic.displayed('item-1')).toEqual(newest);
+    expect(optimistic.baseRevision('item-1')).toBe(8);
+
+    const token = optimistic.begin('item-1', (value) => ({ ...value, name: 'Changed' }));
+
+    expect(optimistic.displayed('item-1').fieldValues).toEqual([]);
+    expect(optimistic.displayed('item-1').computedValues).toEqual([]);
+    expect(queryClient.getQueryData(sourceKey)).toEqual([
+      { ...source, name: 'Changed', note: 'Newest note' },
+    ]);
+
+    optimistic.refuse('item-1', token);
+    expect(queryClient.getQueryData(sourceKey)).toEqual([{ ...source, note: 'Newest note' }]);
+    const nextToken = optimistic.begin('item-1', (value) => ({ ...value, name: 'Accepted' }));
+    optimistic.acknowledge('item-1', nextToken, { revision: 9, seq: 13 });
+    expect(optimistic.baseRevision('item-1')).toBe(9);
+    expect(queryClient.getQueryData(sourceKey)).toEqual([
+      { ...source, name: 'Accepted', note: 'Newest note' },
+    ]);
+  });
+
   it('begin patches every list, placement, detail and history cache copy', () => {
     const queryClient = new QueryClient();
     const original = item('item-1');

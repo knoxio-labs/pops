@@ -5,7 +5,12 @@ import { WEB_ITEMS_MAX_IDS } from '@pops/inventory';
 
 import { buildWorld } from '../foundation/model/placement-model';
 import { unwrap } from '../inventory-api-helpers.js';
-import { locationsCreate, locationsTree, webList } from '../inventory-api/index.js';
+import {
+  locationsCreate,
+  locationsTree,
+  webList,
+  webPlacementSources,
+} from '../inventory-api/index.js';
 import { flattenLocationTree, toItemRowModel } from './item-row-model.js';
 import { appendNode, nextSortOrder } from './location-tree-cache.js';
 import { LOCATION_TREE_QUERY_KEY, PLACEMENT_SOURCES_QUERY_KEY } from './queryKeys.js';
@@ -14,16 +19,10 @@ import { useCatalogueLookups } from './useCatalogueLookups.js';
 
 import type { PickerSubject } from '../foundation/model/contracts';
 import type { ItemRowModel } from '../foundation/model/model';
-import type {
-  LocationTreeNode,
-  LocationsTreeResponses,
-  WebListData,
-} from '../inventory-api/types.gen.js';
+import type { LocationTreeNode, LocationsTreeResponses } from '../inventory-api/types.gen.js';
 
 const PLACEMENT_PAGE_LIMIT = WEB_ITEMS_MAX_IDS;
 
-type WebItemFilters = Omit<WebListData['query'], 'cursor' | 'limit'>;
-type WebItem = Parameters<typeof toItemRowModel>[0];
 const EMPTY_LOCATION_TREE: LocationTreeNode[] = [];
 
 /** Input accepted by the placement-picker location creation mutation. */
@@ -32,18 +31,19 @@ export interface CreateLocationInput {
   readonly parentId: string | null;
 }
 
-async function fetchAllWebItems(filters: WebItemFilters): Promise<WebItem[]> {
-  const items: WebItem[] = [];
+async function fetchAllPlacementItems<Item>(
+  signal: AbortSignal,
+  fetchPage: (cursor: string | undefined) => Promise<{ items: Item[]; nextCursor: string | null }>
+): Promise<Item[]> {
+  const items: Item[] = [];
   let cursor: string | undefined;
-
   do {
-    const page = unwrap(
-      await webList({ query: { ...filters, cursor, limit: PLACEMENT_PAGE_LIMIT } })
-    );
+    signal.throwIfAborted();
+    const page = await fetchPage(cursor);
+    signal.throwIfAborted();
     items.push(...page.items);
     cursor = page.nextCursor ?? undefined;
   } while (cursor !== undefined);
-
   return items;
 }
 
@@ -59,10 +59,15 @@ function subjectChunksFor(subject: PickerSubject): string[][] {
   return chunks;
 }
 
-function useContainerQuery(access: 'open' | 'closed') {
+function useContainerQuery() {
   return useQuery({
-    queryKey: [...PLACEMENT_SOURCES_QUERY_KEY, 'containers', access] as const,
-    queryFn: () => fetchAllWebItems({ access, isContainer: 'true' }),
+    queryKey: [...PLACEMENT_SOURCES_QUERY_KEY, 'containers'] as const,
+    queryFn: ({ signal }) =>
+      fetchAllPlacementItems(signal, async (cursor) =>
+        unwrap(
+          await webPlacementSources({ query: { cursor, limit: PLACEMENT_PAGE_LIMIT }, signal })
+        )
+      ),
   });
 }
 
@@ -70,11 +75,23 @@ function useSubjectItemsQuery(subjectChunks: readonly string[][]) {
   return useQuery({
     queryKey: [...PLACEMENT_SOURCES_QUERY_KEY, 'subject', subjectChunks] as const,
     enabled: subjectChunks.length > 0,
-    queryFn: async () =>
+    queryFn: async ({ signal }) =>
       (
         await Promise.all(
           subjectChunks.map((ids) =>
-            fetchAllWebItems({ ids: ids.join(','), includeInactive: true })
+            fetchAllPlacementItems(signal, async (cursor) =>
+              unwrap(
+                await webList({
+                  query: {
+                    ids: ids.join(','),
+                    includeInactive: true,
+                    cursor,
+                    limit: PLACEMENT_PAGE_LIMIT,
+                  },
+                  signal,
+                })
+              )
+            )
           )
         )
       ).flat(),
@@ -89,14 +106,13 @@ function usePlacementQueries(subjectChunks: readonly string[][]) {
 
   return {
     locationsQuery,
-    openContainersQuery: useContainerQuery('open'),
-    closedContainersQuery: useContainerQuery('closed'),
+    containersQuery: useContainerQuery(),
     subjectItemsQuery: useSubjectItemsQuery(subjectChunks),
   };
 }
 
 function mapItems(
-  data: readonly WebItem[] | undefined,
+  data: readonly Parameters<typeof toItemRowModel>[0][] | undefined,
   context: Parameters<typeof toItemRowModel>[1]
 ) {
   return (data ?? []).map((item) => toItemRowModel(item, context));
@@ -107,8 +123,9 @@ function usePlacementItems(
   context: Parameters<typeof toItemRowModel>[1]
 ) {
   return useMemo(() => {
-    const openContainers = mapItems(queries.openContainersQuery.data, context);
-    const closedContainers = mapItems(queries.closedContainersQuery.data, context);
+    const containers = mapItems(queries.containersQuery.data, context);
+    const openContainers = containers.filter((item) => item.container?.access === 'open');
+    const closedContainers = containers.filter((item) => item.container?.access === 'closed');
     const subjectItems = mapItems(queries.subjectItemsQuery.data, context);
     const byId = new Map<string, ItemRowModel>();
 
@@ -122,12 +139,7 @@ function usePlacementItems(
       subjectItems,
       items: [...byId.values()],
     };
-  }, [
-    context,
-    queries.closedContainersQuery.data,
-    queries.openContainersQuery.data,
-    queries.subjectItemsQuery.data,
-  ]);
+  }, [context, queries.containersQuery.data, queries.subjectItemsQuery.data]);
 }
 
 function usePlacementLocations(query: ReturnType<typeof usePlacementQueries>['locationsQuery']) {
@@ -176,15 +188,13 @@ export function usePlacementSources(subject: PickerSubject) {
   const createLocation = useCreateLocation();
   const error =
     queries.locationsQuery.error ??
-    queries.openContainersQuery.error ??
-    queries.closedContainersQuery.error ??
+    queries.containersQuery.error ??
     queries.subjectItemsQuery.error ??
     catalogue.error;
   const isLoading = [
     catalogue.isPending,
     queries.locationsQuery.isPending,
-    queries.openContainersQuery.isPending,
-    queries.closedContainersQuery.isPending,
+    queries.containersQuery.isPending,
     subjectChunks.length > 0 && queries.subjectItemsQuery.isPending,
   ].some(Boolean);
 
