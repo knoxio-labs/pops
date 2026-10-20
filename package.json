@@ -59,23 +59,23 @@
     "dev:ui": "node scripts/local-dev/ui-remote-watch.mjs"
   },
   "devDependencies": {
-    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@modelcontextprotocol/sdk": "^1.32.1",
     "@pops/pillar-sdk": "workspace:*",
     "@types/js-yaml": "^4.0.9",
-    "@types/node": "^24.13.4",
-    "dependency-cruiser": "^18.2.0",
+    "@types/node": "^24.19.2",
+    "dependency-cruiser": "^18.6.0",
     "husky": "^9.1.7",
-    "js-yaml": "^5.4.2",
-    "lint-staged": "^17.5.1",
-    "oxfmt": "^0.67.0",
-    "oxlint": "^1.82.0",
-    "oxlint-tsgolint": "^7.0.2001",
-    "smol-toml": "^1.8.0",
-    "tsx": "^4.23.13",
+    "js-yaml": "^5.5.0",
+    "lint-staged": "^17.6.0",
+    "oxfmt": "^0.73.0",
+    "oxlint": "^1.88.0",
+    "oxlint-tsgolint": "^7.0.2004",
+    "smol-toml": "^1.9.1",
+    "tsx": "^4.23.15",
     "typescript": "^6.0.3",
     "vitest": "^4.1.11",
     "yaml": "^2.9.1",
-    "zod": "^4.6.2"
+    "zod": "^4.6.7"
   },
   "engines": {
     "node": "^24"
