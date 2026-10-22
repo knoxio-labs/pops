@@ -370,6 +370,29 @@ describe('runTextIngest — error paths', () => {
 });
 
 describe('extractWithClaudeText — shared surface', () => {
+  it('asks the Haiku 5.5 default for low effort, the 2048-token cap and no temperature', async () => {
+    delete process.env['FOOD_TEXT_LLM_MODEL'];
+    const requests: AnthropicCreateParams[] = [];
+    const create = vi.fn(async (params: AnthropicCreateParams) => {
+      requests.push(params);
+      return mockMessage(JSON.stringify(happyRecipeJson()));
+    });
+    __setTextIngestClientForTests({ messages: { create } });
+
+    await extractWithClaudeText({
+      body: 'transcribed caption',
+      source: 'text',
+      contextId: 'ingest_source:101',
+    });
+
+    expect(requests[0]).toMatchObject({
+      model: 'claude-haiku-5-5',
+      max_tokens: 2048,
+      output_config: { effort: 'low' },
+    });
+    expect(requests[0]).not.toHaveProperty('temperature');
+  });
+
   it('keeps temperature 0 for Haiku 4.5', async () => {
     const requests: AnthropicCreateParams[] = [];
     const create = vi.fn(async (params: AnthropicCreateParams) => {

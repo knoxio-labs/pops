@@ -136,6 +136,33 @@ describe('propose', () => {
     expect(request.messages[0]?.content).toContain('1. (amazon) Robot vacuum [asin B0ROBOTVAC]');
   });
 
+  it('asks the Haiku 5.5 default for low effort, a 4000-token cap and no temperature', async () => {
+    captureReports();
+    createMock.mockResolvedValue(anthropicMessage('{"proposals":[]}'));
+
+    await createAnthropicItemKindProposer()?.propose(BATCH);
+
+    const [request] = createMock.mock.calls[0] as [Record<string, unknown>];
+    expect(request).toMatchObject({
+      model: 'claude-haiku-5-5',
+      max_tokens: 4000,
+      output_config: { effort: 'low' },
+    });
+    expect(request).not.toHaveProperty('temperature');
+  });
+
+  it('sends a Haiku 4.5 override its own cap and no effort', async () => {
+    process.env[MODEL_VAR] = 'claude-haiku-4-5';
+    captureReports();
+    createMock.mockResolvedValue(anthropicMessage('{"proposals":[]}'));
+
+    await createAnthropicItemKindProposer()?.propose(BATCH);
+
+    const [request] = createMock.mock.calls[0] as [Record<string, unknown>];
+    expect(request).toMatchObject({ model: 'claude-haiku-4-5', max_tokens: 4000 });
+    expect(request).not.toHaveProperty('output_config');
+  });
+
   it("reports usage under its own operation, not the receipt reader's", async () => {
     // Two Claude callers in one pillar. Sharing an operation name would
     // make a runaway sweep indistinguishable from receipt uploads.

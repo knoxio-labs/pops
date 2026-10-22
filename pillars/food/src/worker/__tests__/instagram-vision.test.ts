@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { extractWithTextFallback } from '../handlers/instagram/text-fallback.js';
 import {
   extractWithClaudeVision,
   MAX_KEYFRAMES_TO_VISION,
@@ -37,6 +38,51 @@ const VALID_JSON = JSON.stringify({
     },
   ],
   steps: [{ body: 'Mix everything.', duration_min: null, temperature_c: null }],
+});
+
+describe('instagram request shape', () => {
+  const readImpl = vi.fn(async () => Buffer.from('fakebytes'));
+
+  it('asks the Haiku 5.5 vision default for low effort and the 2000-token cap', async () => {
+    const { client, createSpy } = clientReturning(VALID_JSON);
+    await extractWithClaudeVision(
+      { caption: 'cap', transcript: null, keyframePaths: ['/tmp/000.jpg'] },
+      { client, readFileImpl: readImpl }
+    );
+    const request: unknown = createSpy.mock.calls[0]?.[0];
+    expect(request).toMatchObject({
+      model: 'claude-haiku-5-5',
+      max_tokens: 2000,
+      output_config: { effort: 'low' },
+    });
+    expect(request).not.toHaveProperty('temperature');
+  });
+
+  it('sends a Haiku 4.5 vision override no effort', async () => {
+    const { client, createSpy } = clientReturning(VALID_JSON);
+    await extractWithClaudeVision(
+      { caption: 'cap', transcript: null, keyframePaths: ['/tmp/000.jpg'] },
+      { client, model: 'claude-haiku-4-5', readFileImpl: readImpl }
+    );
+    const request: unknown = createSpy.mock.calls[0]?.[0];
+    expect(request).toMatchObject({ model: 'claude-haiku-4-5', max_tokens: 2000 });
+    expect(request).not.toHaveProperty('output_config');
+  });
+
+  it('asks the Haiku 5.5 text-fallback default for low effort and the 2000-token cap', async () => {
+    const { client, createSpy } = clientReturning(VALID_JSON);
+    await extractWithTextFallback(
+      { caption: 'A long enough caption describing a full recipe in prose.' },
+      { client }
+    );
+    const request: unknown = createSpy.mock.calls[0]?.[0];
+    expect(request).toMatchObject({
+      model: 'claude-haiku-5-5',
+      max_tokens: 2000,
+      output_config: { effort: 'low' },
+    });
+    expect(request).not.toHaveProperty('temperature');
+  });
 });
 
 describe('extractWithClaudeVision', () => {

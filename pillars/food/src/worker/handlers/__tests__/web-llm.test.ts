@@ -248,6 +248,13 @@ describe('processWithLlm', () => {
     expect(result.meta.stages['dsl_build']).toMatchObject({ ok: true });
     expect(result.meta.total_cost_usd).toBeGreaterThan(0);
 
+    const request: unknown = vi.mocked(client.messages.create).mock.calls[0]?.[0];
+    expect(request).toMatchObject({
+      model: 'claude-haiku-5-5',
+      max_tokens: 2048,
+      output_config: { effort: 'low' },
+    });
+
     const record = await nextTelemetry();
     expect(telemetryRecords.length).toBe(1);
     expect(record).toMatchObject({

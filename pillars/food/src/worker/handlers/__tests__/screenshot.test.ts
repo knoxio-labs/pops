@@ -140,7 +140,13 @@ describe('runScreenshotIngest', () => {
     expect(client.messages.create).toHaveBeenCalledTimes(1);
     const callArg = client.messages.create.mock.calls[0]?.[0];
     if (callArg === undefined) throw new Error('unreachable');
-    expect(callArg.model).toBe(SCREENSHOT_DEFAULT_MODEL);
+    expect(SCREENSHOT_DEFAULT_MODEL).toBe('claude-haiku-5-5');
+    expect(callArg).toMatchObject({
+      model: SCREENSHOT_DEFAULT_MODEL,
+      max_tokens: 2048,
+      output_config: { effort: 'low' },
+    });
+    expect(callArg).not.toHaveProperty('temperature');
     const source = base64ImageSource(callArg);
     expect(source.media_type).toBe('image/png');
     expect(source.data.length).toBeGreaterThan(0);
@@ -158,6 +164,8 @@ describe('runScreenshotIngest', () => {
     expect(result.ok).toBe(true);
     const callArg = client.messages.create.mock.calls[0]?.[0];
     expect(callArg?.model).toBe('claude-haiku-4-5');
+    expect(callArg).toMatchObject({ max_tokens: 2048 });
+    expect(callArg).not.toHaveProperty('output_config');
   });
 
   it('marks the result partial when ingredients/steps are empty', async () => {
