@@ -63,7 +63,8 @@ export function toDetailProvenance(
   };
 }
 
-function titleCase(value: string): string {
+/** Turns a wire key such as `owner_manual` into display text (`Owner manual`). */
+export function titleCase(value: string): string {
   return value
     .replaceAll(/[_-]+/g, ' ')
     .replaceAll(/\s+/g, ' ')
@@ -77,6 +78,7 @@ export function toDetailDocuments(rows: DocumentsListForItemResponse['data']): D
     id: row.id,
     title: row.title ?? `Document #${row.paperlessDocumentId}`,
     kind: titleCase(row.documentType),
+    documentType: row.documentType,
     added: longDate(row.createdAt) ?? row.createdAt,
     paperlessDocumentId: row.paperlessDocumentId,
     missing: row.missing === true,
