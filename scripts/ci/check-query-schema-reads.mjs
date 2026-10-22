@@ -1008,6 +1008,12 @@ export const INVENTORY_ROUTES = [
   },
   {
     method: 'get',
+    path: '/documents',
+    handlerFile: 'pillars/inventory/src/api/rest/documents-handlers.ts',
+    handlerKey: 'listForPaperlessDocument',
+  },
+  {
+    method: 'get',
     path: '/items/{itemId}/fixtures',
     handlerFile: 'pillars/inventory/src/api/rest/fixtures-handlers.ts',
     handlerKey: 'listForItem',
