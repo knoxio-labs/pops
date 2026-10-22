@@ -100,8 +100,7 @@ internal enum BFMEgoStreamOpening: Sendable {
 internal struct BFMEgoByteTransport: Sendable {
     private static let rejectedBodyLimit = 64 * 1024
 
-    private let baseURL: URL
-    private let authorizer: any BFMStreamAuthorizer
+    private let authorization: BFMRawAuthorization
     private let source: any BFMByteSource
 
     internal init(
@@ -109,42 +108,22 @@ internal struct BFMEgoByteTransport: Sendable {
         authorizer: any BFMStreamAuthorizer,
         source: any BFMByteSource = URLSessionByteSource()
     ) {
-        self.baseURL = baseURL
-        self.authorizer = authorizer
+        authorization = BFMRawAuthorization(baseURL: baseURL, authorizer: authorizer)
         self.source = source
     }
 
     internal func open(body: Data) async throws -> BFMEgoStreamOpening {
-        let credential = await authorizer.currentStreamCredential()
-        let (response, bytes) = try await source.open(
-            request(body: body, accessToken: credential?.accessToken))
-
-        if response.statusCode == 401, let credential {
-            _ = await Self.readBody(from: bytes, upTo: Self.rejectedBodyLimit)
-            let refreshedCredential = try await authorizer.refreshedStreamCredential(
-                replacing: credential.accessToken,
-                at: baseURL
-            )
-            let (retryResponse, retryBytes) = try await source.open(
-                request(body: body, accessToken: refreshedCredential.accessToken))
-            return await opening(
-                for: retryResponse,
-                bytes: retryBytes,
-                credential: refreshedCredential,
-                tokens: [credential.accessToken, refreshedCredential.accessToken]
-            )
-        }
-
-        return await opening(
-            for: response,
-            bytes: bytes,
-            credential: credential,
-            tokens: credential.map { [$0.accessToken] } ?? []
+        let exchange = try await authorization.exchange(
+            { accessToken in
+                try await source.open(request(body: body, accessToken: accessToken))
+            },
+            discard: { bytes in _ = await Self.readBody(from: bytes, upTo: Self.rejectedBodyLimit) }
         )
+        return await opening(for: exchange)
     }
 
     private func request(body: Data, accessToken: String?) -> URLRequest {
-        var url = baseURL
+        var url = authorization.baseURL
         for component in ["mobile", "ego", "chat", "stream"] {
             url.append(path: component)
         }
@@ -154,28 +133,23 @@ internal struct BFMEgoByteTransport: Sendable {
         request.httpBody = body
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
-        if let accessToken {
-            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-        }
+        BFMRawAuthorization.authorize(&request, accessToken: accessToken)
         return request
     }
 
     private func opening(
-        for response: HTTPURLResponse,
-        bytes: AsyncThrowingStream<[UInt8], any Error>,
-        credential: BFMStreamCredential?,
-        tokens: [String]
+        for exchange: BFMRawAuthorization.Exchange<AsyncThrowingStream<[UInt8], any Error>>
     ) async -> BFMEgoStreamOpening {
+        let response = exchange.response
         guard response.statusCode != 200 else {
-            return .streaming(bytes)
+            return .streaming(exchange.payload)
         }
 
-        let body = await Self.readBody(from: bytes, upTo: Self.rejectedBodyLimit)
-        if response.statusCode == 403, Self.isDeviceRevocation(body), let credential {
-            await authorizer.deviceWasRevoked(ifCredentialRevision: credential.revision)
-        }
+        let body = await Self.readBody(from: exchange.payload, upTo: Self.rejectedBodyLimit)
+        await authorization.noteRefusal(
+            status: response.statusCode, body: body, credential: exchange.credential)
 
-        let safeBody = Self.redact(tokens: tokens, from: body)
+        let safeBody = Self.redact(tokens: exchange.tokens, from: body)
         let retryAfter = response.value(forHTTPHeaderField: "Retry-After")
             .flatMap { Int($0.trimmingCharacters(in: .whitespacesAndNewlines)) }
             .flatMap { $0 >= 0 ? $0 : nil }
@@ -203,14 +177,6 @@ internal struct BFMEgoByteTransport: Sendable {
         return body
     }
 
-    private static func isDeviceRevocation(_ body: Data) -> Bool {
-        guard let refusal = try? JSONDecoder().decode(BFMEgoForbiddenResponse.self, from: body)
-        else {
-            return false
-        }
-        return refusal.code == "bfm.auth.device_revoked" || refusal.code == "device_revoked"
-    }
-
     private static func redact(tokens: [String], from body: Data) -> Data {
         let secrets = tokens.filter { !$0.isEmpty }.map { Array($0.utf8) }
         guard !secrets.isEmpty else {
@@ -234,10 +200,6 @@ internal struct BFMEgoByteTransport: Sendable {
         }
         return Data(safeBytes)
     }
-}
-
-private struct BFMEgoForbiddenResponse: Decodable {
-    let code: String?
 }
 
 private enum BFMByteSourceError: Error {

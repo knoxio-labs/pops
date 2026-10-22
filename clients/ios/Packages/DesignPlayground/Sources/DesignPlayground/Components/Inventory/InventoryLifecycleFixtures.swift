@@ -41,7 +41,7 @@ internal enum InventoryLifecycleFixtures {
             InventoryPhoto(
                 caption: "Front", isBroken: false, imageData: SamplePhoto.data("wifi-router"))
         ],
-        documents: .linked(["Setup guide"]),
+        documents: .linked([InventoryDocumentLine("Setup guide", symbol: "book.closed")]),
         activity: [
             lifecycle("retired", "Retired", .retired, when: "14 Aug", month: "August 2026"),
             move(

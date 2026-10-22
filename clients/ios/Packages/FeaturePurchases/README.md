@@ -18,7 +18,8 @@ That boundary is asserted, not merely intended: `ModuleBoundaryTests` in `AppCor
 | ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
 | Staging photographed or picked pages into receipts                       | here — `PurchaseStagingModel`, `StagedReceipts`                                                                        |
 | Reading staged receipts and reviewing the drafts they became             | here — `PurchaseReadingViewModel`, `PurchaseReviewView`                                                                |
-| The document camera itself, and pages becoming bytes                     | here — `ReceiptDocumentScanner`, `ReceiptPageEncoder`                                                                  |
+| Pages of a scan becoming bytes                                           | here — `ReceiptDocumentScanner`, `ReceiptPageEncoder`                                                                  |
+| The document camera and file picker controllers themselves               | `DesignSystem` — `PopsDocumentCamera`, `PopsDocumentPicker`, shared with Inventory                                     |
 | The hand-entry action, with no camera involved                           | here — `PurchaseHandEntryView`, `PurchaseHandEntryViewModel`                                                           |
 | The editable form a reading — or a blank entry — becomes                 | here — `ReceiptDraft`, `ReceiptDraftForm`, `ReceiptDraftView`                                                          |
 | Turning an edited `ReceiptDraft` into the BFM's cents-based save payload | here — `ReceiptDraftSaveMapping`, `AppCore`'s `ReceiptMoneyText`                                                       |

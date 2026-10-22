@@ -57,6 +57,24 @@ internal struct InventorySymbol: Hashable, Sendable {
     internal static let torch = InventorySymbol(system: "flashlight.off.fill")
     internal static let library = InventorySymbol(system: "photo.on.rectangle")
     internal static let unavailable = InventorySymbol(system: "slash.circle")
+    internal static let addDocument = InventorySymbol(system: "doc.badge.plus")
+    internal static let chooseFile = InventorySymbol(system: "folder")
+    internal static let scanDocument = InventorySymbol(system: "doc.viewfinder")
+    internal static let documentKind = InventorySymbol(system: "tag")
+    internal static let unlink = InventorySymbol(system: "minus.circle")
+    internal static let dismiss = InventorySymbol(system: "xmark.circle")
+    internal static let processing = InventorySymbol(system: "clock")
+
+    /// A linked document's glyph, by what kind of document it is.
+    internal static func document(_ kind: InventoryDocumentKind) -> InventorySymbol {
+        switch kind {
+        case .receipt: InventorySymbol(system: "receipt")
+        case .warranty: InventorySymbol(system: "checkmark.seal")
+        case .manual: InventorySymbol(system: "book.closed")
+        case .invoice: InventorySymbol(system: "doc.plaintext")
+        case .other: InventorySymbol(system: "doc")
+        }
+    }
 
     /// Maps a catalogue's platform-neutral icon token to an iOS symbol.
     internal static func catalogue(_ token: InventoryCatalogueIconToken) -> InventorySymbol {

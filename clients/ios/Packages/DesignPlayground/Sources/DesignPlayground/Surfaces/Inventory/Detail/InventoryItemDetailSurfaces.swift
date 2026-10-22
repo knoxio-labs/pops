@@ -33,6 +33,7 @@ internal enum InventoryItemDetailStaging {
             state("destroyed", "Destroyed", InventoryItemDetailFixtures.destroyed),
             state("queued-edit", "Queued local edit", InventoryItemDetailFixtures.queuedEdit),
             state("stale", "Stale server copy", InventoryItemDetailFixtures.stale),
+            state("documents", "Documents in every state", documentStates),
             state(
                 "missing-paperless", "Paperless unreachable",
                 InventoryItemDetailFixtures.missingPaperless),
@@ -55,6 +56,18 @@ internal enum InventoryItemDetailStaging {
     {
         DesignState(id, title) { InventoryItemDetailView(detail: detail) }
     }
+
+    /// Every row the Documents section draws: linked, missing from
+    /// Paperless, still processing, and refused.
+    private static let documentStates = InventoryItemDetail(
+        item: InventoryItemDetailFixtures.missingPaperless.item,
+        documents: .linked([
+            InventoryDocumentLine("Warranty card", symbol: "checkmark.seal"),
+            InventoryDocumentLine("Manual", symbol: "book.closed", status: .missing),
+            InventoryDocumentLine("Scan.pdf", status: .processing),
+            InventoryDocumentLine(
+                "Invoice", status: .failed(reason: "Paperless could not read it")),
+        ]))
 
     private static let subtype = InventoryItemDetail(
         item: InventoryFoundationItem(

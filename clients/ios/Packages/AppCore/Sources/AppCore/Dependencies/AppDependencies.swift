@@ -18,6 +18,8 @@ public struct AppDependencies: Sendable {
     public let barcodeLookup: any InventoryBarcodeLookupService
     /// Online reads and edits of assemblies and their parts.
     public let parts: any InventoryPartsService
+    /// Online reads and edits of an item's Paperless documents.
+    public let documents: any InventoryDocumentsService
     public let ego: any EgoRepository
 
     public init(
@@ -48,6 +50,9 @@ public struct AppDependencies: Sendable {
         // Defaulted like the other Inventory assists: a caller with no BFM
         // shows no Parts section rather than failing to compile.
         parts: any InventoryPartsService = UnboundInventoryPartsService(),
+        // Defaulted like parts: a caller with no BFM draws the item page's
+        // documents from the replica alone.
+        documents: any InventoryDocumentsService = UnboundInventoryDocumentsService(),
         // Ego is the newest seam; existing composition roots receive the
         // failure-first implementation until the phone transport is wired.
         ego: any EgoRepository = UnboundEgoRepository()
@@ -63,6 +68,7 @@ public struct AppDependencies: Sendable {
         self.codeSuggestions = codeSuggestions
         self.barcodeLookup = barcodeLookup
         self.parts = parts
+        self.documents = documents
         self.ego = ego
     }
 
@@ -83,6 +89,7 @@ public struct AppDependencies: Sendable {
         codeSuggestions: UnboundInventoryCodeSuggestionService(),
         barcodeLookup: UnboundInventoryBarcodeLookupService(),
         parts: UnboundInventoryPartsService(),
+        documents: UnboundInventoryDocumentsService(),
         ego: UnboundEgoRepository()
     )
 }
