@@ -3,8 +3,8 @@
  *
  * Canonical definitions for inventory-owned tables (items, events, mutations,
  * media, sync_meta, locations, fixtures, item_connections, item_parts,
- * item_fixture_connections, item_documents, item_photos, item_uploaded_files,
- * settings, device_sync_ledgers).
+ * item_fixture_connections, item_documents, item_document_ingestions, item_photos,
+ * item_uploaded_files, settings, device_sync_ledgers).
  */
 export {
   EVENT_ACTOR_KINDS,
@@ -17,6 +17,11 @@ export { fixtures } from './schema/fixtures.js';
 export { itemConnections } from './schema/item-connections.js';
 export { itemParts } from './schema/item-parts.js';
 export { itemDocuments } from './schema/item-documents.js';
+export {
+  DOCUMENT_INGESTION_STATES,
+  itemDocumentIngestions,
+  type DocumentIngestionState,
+} from './schema/item-document-ingestions.js';
 export { itemFixtureConnections } from './schema/item-fixture-connections.js';
 export { itemPhotos } from './schema/item-photos.js';
 export { itemUploadedFiles } from './schema/item-uploaded-files.js';

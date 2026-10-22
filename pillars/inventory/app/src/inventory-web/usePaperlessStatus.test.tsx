@@ -23,6 +23,8 @@ const state: PaperlessStatusResponse['data'] = {
   baseUrl: 'https://paperless.example',
   configured: true,
   documentCount: 4,
+  maxUploadBytes: 104857600,
+  allowedMimeTypes: ['application/pdf', 'image/*', 'text/*'],
 };
 
 function ok<T>(data: T) {

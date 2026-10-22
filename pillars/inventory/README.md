@@ -49,7 +49,9 @@ Two supported call paths:
 OpenAPI is the canonical wire contract; the TS types are a downstream view for
 ergonomics. `GET /items/:itemId/documents` adds a nullable `missing` flag to
 each link: `true` means Paperless returned 404, `false` means it resolved, and
-`null` means the documents bridge could not establish the state.
+`null` means the documents bridge could not establish the state. Beside the
+paginated links it returns the item's uploads still `pending` and those that
+`failed` (see "Item documents in Paperless").
 
 ## Layout
 
@@ -395,8 +397,9 @@ exists. `/health`, `/pillars` and `/openapi` are outside the contract and
 stay ungated. The raw byte-serving routes in `files/router.ts` and
 `media/router.ts` are not contract routes either, but they are declared to
 the gate explicitly (`photos.file`, `documentFiles.file`,
-`documents.thumbnail`, `inventory.media.upload`, `inventory.media.read`) and
-held to the same scope semantics as the contract surface.
+`documents.thumbnail`, `documents.upload`, `documents.file`,
+`inventory.media.upload`, `inventory.media.read`) and held to the same scope
+semantics as the contract surface.
 
 A caller presenting an `X-API-Key` is held to the service account behind it:
 an unknown or revoked key is `401`, a live key whose grant misses the
@@ -535,6 +538,44 @@ minimumProtocol }`. The expected value makes concurrent operator actions a
 - Connections, fixtures and uploaded files are not on the snapshot or the
   feed: Inventory ADR-002 keeps them on their current tables and routes.
   Whether the phone needs connections at all is POPS-4110.
+
+## Item documents in Paperless
+
+Files live in Paperless; inventory keeps the link (`item_documents`) and,
+while Paperless consumes an upload, a row in `item_document_ingestions`.
+
+| Route                                   | What it does                                                                                     |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `POST /items/:itemId/documents/upload`  | Raw: body is the file, `Content-Type` its MIME, query `documentType`, `fileName`, `title?`. 202. |
+| `GET /items/:itemId/documents`          | Resolves the item's pending uploads, then `{ data, pending, failed, pagination }`.               |
+| `PATCH /documents/:id`                  | `{ documentType?, title? }`; a title change is made in Paperless first.                          |
+| `DELETE /documents/:id`                 | Unlink. The Paperless document is kept.                                                          |
+| `DELETE /document-ingestions/:id`       | Dismiss a pending or failed upload.                                                              |
+| `GET /api/inventory/documents/:id/file` | Raw: the linked file, streamed from documents; `Range` and 206 pass through.                     |
+
+The upload streams to documents' `POST /paperless/documents` and records a
+`pending` row once documents answers 202. The size cap and MIME allowlist are
+documents'; its 400/412/413/415/422/502/503 pass through unchanged and nothing
+is written. Documents cuts a chunked body the moment it passes the cap without
+answering, so when the upload leg dies the route compares the bytes it
+forwarded with the `maxUploadBytes` documents' status route states and answers
+413 or 503 accordingly.
+
+A pending row settles when its task does: `done` and `duplicate` replace it
+with a link in one transaction (titled with the upload's title, else its file
+name; a duplicate of a document the item already links only removes the row);
+`failed` keeps it as `failed` with Paperless's reason until dismissed; a task
+documents answers 404 for fails with "Paperless lost the task". Any other
+failure to reach documents leaves the row pending. Listing an item resolves its
+rows; `api/cron/resolve-document-ingestions.ts` sweeps every pending row every
+five minutes, so an item nobody opens still settles.
+
+A title edit that Paperless refuses changes nothing locally: 412 when Paperless
+is unconfigured, 503 when documents is unreachable, 404 when the document is
+gone, 502 otherwise.
+
+These calls go to documents without a credential, as `documents/client.ts`
+does, and rely on the docker network perimeter.
 
 ## Cross-pillar reconciliation
 

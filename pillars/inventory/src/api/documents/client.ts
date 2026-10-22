@@ -20,12 +20,28 @@ import { isOk, pillar, type CallResult, type PillarHandle } from '@pops/pillar-s
 /** The documents pillar id, as registered with the registry. */
 export const DOCUMENTS_PILLAR_ID = 'documents';
 
-/** Mirrors the `paperless.status` response `data` shape. */
+/**
+ * Inventory's `paperless.status` answer. The upload limits are documents'
+ * own, relayed so clients can pre-check a file; `null` when documents did
+ * not report them.
+ */
 export interface PaperlessStatus {
   configured: boolean;
   available: boolean;
   baseUrl: string | null;
   documentCount: number | null;
+  maxUploadBytes: number | null;
+  allowedMimeTypes: string[] | null;
+}
+
+/** The documents pillar's `paperless.status` `data`; the limits are absent before it published them. */
+export interface UpstreamPaperlessStatus {
+  configured: boolean;
+  available: boolean;
+  baseUrl: string | null;
+  documentCount: number | null;
+  maxUploadBytes?: number;
+  allowedMimeTypes?: string[];
 }
 
 /** Mirrors one entry of the `paperless.search` response `data` array. */
@@ -45,7 +61,7 @@ export interface PaperlessSearchDocument {
  */
 export type DocumentsRouter = {
   paperless: {
-    status: () => Promise<{ data: PaperlessStatus }>;
+    status: () => Promise<{ data: UpstreamPaperlessStatus }>;
     search: (input: { query: string }) => Promise<{ data: PaperlessSearchDocument[] }>;
     get: (input: { id: number }) => Promise<{ data: PaperlessSearchDocument }>;
   };
@@ -55,7 +71,7 @@ export interface DocumentsClient {
   /**
    * Whether paperless-ngx is configured + reachable, per the documents
    * pillar. Degrades to `{ configured: false, available: false, baseUrl:
-   * null, documentCount: null }` when `documents` itself is unreachable — a conservative "assume
+   * null, documentCount: null, maxUploadBytes: null, allowedMimeTypes: null }` when `documents` itself is unreachable — a conservative "assume
    * not usable" rather than claiming knowledge inventory doesn't have.
    */
   getPaperlessStatus(): Promise<PaperlessStatus>;
@@ -97,9 +113,21 @@ export function createDocumentsClient(
       const result = await handleFactory().paperless.status();
       if (!isOk(result)) {
         warnDegraded('paperless.status', result);
-        return { configured: false, available: false, baseUrl: null, documentCount: null };
+        return {
+          configured: false,
+          available: false,
+          baseUrl: null,
+          documentCount: null,
+          maxUploadBytes: null,
+          allowedMimeTypes: null,
+        };
       }
-      return result.value.data;
+      const { maxUploadBytes, allowedMimeTypes, ...rest } = result.value.data;
+      return {
+        ...rest,
+        maxUploadBytes: maxUploadBytes ?? null,
+        allowedMimeTypes: allowedMimeTypes ?? null,
+      };
     },
 
     async searchPaperlessDocuments(query: string): Promise<PaperlessSearchDocument[] | null> {

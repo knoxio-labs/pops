@@ -49,6 +49,8 @@
 import { createServiceAccountScopeGate } from '@pops/pillar-express';
 
 import { inventoryContract } from '../../contract/rest.js';
+import { DOCUMENT_FILE_ROUTE_PATH } from '../files/document-download-route.js';
+import { ITEM_DOCUMENT_UPLOAD_ROUTE_PATH } from '../files/document-upload-route.js';
 import {
   DOCUMENT_THUMBNAIL_ROUTE_PATH,
   ITEM_DOCUMENT_FILE_ROUTE_PATH,
@@ -110,6 +112,8 @@ export const INVENTORY_RAW_ROUTE_SCOPES = {
   },
   documents: {
     thumbnail: { method: 'GET', path: DOCUMENT_THUMBNAIL_ROUTE_PATH },
+    upload: { method: 'POST', path: ITEM_DOCUMENT_UPLOAD_ROUTE_PATH },
+    file: { method: 'GET', path: DOCUMENT_FILE_ROUTE_PATH },
   },
 } as const satisfies RawRouteTree;
 

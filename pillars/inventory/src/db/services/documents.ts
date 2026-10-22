@@ -20,7 +20,12 @@ import {
   DocumentNotFoundError,
 } from './documents-errors.js';
 
-import type { DocumentListResult, ItemDocumentRow, LinkDocumentInput } from './documents-types.js';
+import type {
+  DocumentListResult,
+  DocumentType,
+  ItemDocumentRow,
+  LinkDocumentInput,
+} from './documents-types.js';
 import type { InventoryDb } from './internal.js';
 
 export {
@@ -102,6 +107,36 @@ export function unlink(db: InventoryDb, id: number): void {
   if (!row) throw new DocumentNotFoundError(id);
 
   db.delete(itemDocuments).where(eq(itemDocuments.id, id)).run();
+}
+
+/** One link by id. Throws `DocumentNotFoundError` if no row matches. */
+export function get(db: InventoryDb, id: number): ItemDocumentRow {
+  const [row] = db.select().from(itemDocuments).where(eq(itemDocuments.id, id)).all();
+  if (!row) throw new DocumentNotFoundError(id);
+  return row;
+}
+
+/** The link fields a caller may change; an absent key is left alone. */
+export interface UpdateDocumentInput {
+  documentType?: DocumentType;
+  title?: string;
+}
+
+/** Change the given fields of a link. Throws `DocumentNotFoundError` if no row matches. */
+export function update(db: InventoryDb, id: number, input: UpdateDocumentInput): ItemDocumentRow {
+  const changes = {
+    ...(input.documentType === undefined ? {} : { documentType: input.documentType }),
+    ...(input.title === undefined ? {} : { title: input.title }),
+  };
+  if (Object.keys(changes).length === 0) return get(db, id);
+  const [row] = db
+    .update(itemDocuments)
+    .set(changes)
+    .where(eq(itemDocuments.id, id))
+    .returning()
+    .all();
+  if (!row) throw new DocumentNotFoundError(id);
+  return row;
 }
 
 /**

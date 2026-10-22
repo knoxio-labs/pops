@@ -29,6 +29,9 @@ import type {
   DocumentFilesUploadData,
   DocumentFilesUploadErrors,
   DocumentFilesUploadResponses,
+  DocumentsDismissIngestionData,
+  DocumentsDismissIngestionErrors,
+  DocumentsDismissIngestionResponses,
   DocumentsLinkData,
   DocumentsLinkErrors,
   DocumentsLinkResponses,
@@ -37,6 +40,9 @@ import type {
   DocumentsUnlinkData,
   DocumentsUnlinkErrors,
   DocumentsUnlinkResponses,
+  DocumentsUpdateData,
+  DocumentsUpdateErrors,
+  DocumentsUpdateResponses,
   FixturesConnectData,
   FixturesConnectErrors,
   FixturesConnectResponses,
@@ -354,12 +360,50 @@ export const connectionsConnect = <ThrowOnError extends boolean = false>(
   });
 
 /**
- * Unlink a document by link id
+ * Dismiss a pending or failed upload
+ */
+export const documentsDismissIngestion = <ThrowOnError extends boolean = false>(
+  options: Options<DocumentsDismissIngestionData, ThrowOnError>
+): RequestResult<
+  DocumentsDismissIngestionResponses,
+  DocumentsDismissIngestionErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).delete<
+    DocumentsDismissIngestionResponses,
+    DocumentsDismissIngestionErrors,
+    ThrowOnError
+  >({
+    url: '/document-ingestions/{id}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Unlink a document by link id (the Paperless document is kept)
  */
 export const documentsUnlink = <ThrowOnError extends boolean = false>(
   options: Options<DocumentsUnlinkData, ThrowOnError>
 ): RequestResult<DocumentsUnlinkResponses, DocumentsUnlinkErrors, ThrowOnError> =>
   (options.client ?? client).delete<DocumentsUnlinkResponses, DocumentsUnlinkErrors, ThrowOnError>({
+    url: '/documents/{id}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Change the given fields of a link; a title change is also made in Paperless, and nothing changes if that fails
+ */
+export const documentsUpdate = <ThrowOnError extends boolean = false>(
+  options: Options<DocumentsUpdateData, ThrowOnError>
+): RequestResult<DocumentsUpdateResponses, DocumentsUpdateErrors, ThrowOnError> =>
+  (options.client ?? client).patch<DocumentsUpdateResponses, DocumentsUpdateErrors, ThrowOnError>({
     url: '/documents/{id}',
     ...options,
     headers: {
@@ -579,7 +623,7 @@ export const connectionsTrace = <ThrowOnError extends boolean = false>(
   });
 
 /**
- * List documents linked to an item
+ * List an item's linked documents (paginated) and its uploads still pending or failed, after resolving the pending ones
  */
 export const documentsListForItem = <ThrowOnError extends boolean = false>(
   options: Options<DocumentsListForItemData, ThrowOnError>
@@ -900,7 +944,7 @@ export const paperlessSearch = <ThrowOnError extends boolean = false>(
   });
 
 /**
- * Whether Paperless-ngx is configured and reachable
+ * Whether Paperless-ngx is configured and reachable, and the upload limits documents enforces
  */
 export const paperlessStatus = <ThrowOnError extends boolean = false>(
   options?: Options<PaperlessStatusData, ThrowOnError>

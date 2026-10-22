@@ -3,7 +3,8 @@
  *
  * Hosts inventory pillar tables (items, events, mutations, media, sync_meta,
  * locations, fixtures, item_connections, item_documents, item_photos,
- * item_uploaded_files, item_fixture_connections) per ADR-026.
+ * item_document_ingestions, item_uploaded_files, item_fixture_connections) per
+ * ADR-026.
  */
 export * from './errors.js';
 export * from './row-types.js';
@@ -21,6 +22,7 @@ export {
 export * as locationsService from './services/locations.js';
 export * as connectionsService from './services/connections.js';
 export * as documentsService from './services/documents.js';
+export * as documentIngestionsService from './services/document-ingestions.js';
 export * as crossPillarUrisService from './services/cross-pillar-uris.js';
 
 export type {
@@ -62,6 +64,14 @@ export type {
 } from './services/documents.js';
 
 export { DOCUMENT_TYPES, toItemDocument } from './services/documents.js';
+
+export {
+  DocumentIngestionNotFoundError,
+  type CreateIngestionInput,
+  type IngestionCompletion,
+} from './services/document-ingestions.js';
+
+export type { UpdateDocumentInput } from './services/documents.js';
 
 export {
   DocumentConflictError,

@@ -12,6 +12,7 @@ import type { PillarRegistryEntry } from '@pops/types';
 import type { OpenedInventoryDb } from '../db/index.js';
 import type { AiClient } from './ai/client.js';
 import type { DocumentsClient } from './documents/client.js';
+import type { DocumentUploadsClient } from './documents/uploads-client.js';
 import type { InventoryIdentityResolver } from './middleware/identity.js';
 
 export interface InventoryApiDeps {
@@ -32,6 +33,12 @@ export interface InventoryApiDeps {
    * `pillars/inventory/src/api/rest/handlers.ts`.
    */
   documents?: DocumentsClient;
+  /**
+   * The documents-pillar calls behind uploaded item documents: the raw
+   * upload and download legs, task resolution and title sync. Optional —
+   * production omits it (defaults to the live client); tests inject a fake.
+   */
+  documentUploads?: DocumentUploadsClient;
   /**
    * The `ai` pillar client backing `codes/suggest`'s model suggestions. Optional —
    * production omits it (defaults to the live `pillar('ai')` proxy); tests
