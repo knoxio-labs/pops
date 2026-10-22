@@ -39,6 +39,11 @@ export type GatewayFailure =
    * photograph, asked for as an image.
    */
   | (GatewayFailureBase & { readonly kind: 'unsupported-media'; readonly status: 415 })
+  /**
+   * The producer will not act until something outside the request is set up:
+   * Paperless not connected behind inventory's document routes.
+   */
+  | (GatewayFailureBase & { readonly kind: 'precondition-failed'; readonly status: 412 })
   | (GatewayFailureBase & { readonly kind: 'gateway-misconfigured'; readonly status: 502 })
   /**
    * The producer knows the caller, shows it the resource, and will not let it

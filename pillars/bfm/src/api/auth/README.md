@@ -193,6 +193,12 @@ passes through `require-device.ts` and the `ego.chat` gate listed in
 device verification. The iOS app reads this stream outside the generated BFM
 client.
 
+The raw item-document upload (`POST /mobile/inventory/items/:id/documents`,
+`inventory.write`) and file (`GET /mobile/inventory/documents/:id/file`,
+`inventory.read`) are outside it too, because their bodies are bytes. Both are
+gated through `UNCONTRACTED_MOBILE_ROUTES` and mounted ahead of the body
+parsers, so a refused upload is never read.
+
 The counters are process-local, which is exact for one container and wrong for
 two — POPS-1474 tracks that, with the trigger pinned to whichever change first
 adds a replica.
