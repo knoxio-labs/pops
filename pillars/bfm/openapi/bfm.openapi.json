@@ -12043,6 +12043,13 @@
                 "schema": {
                   "additionalProperties": false,
                   "properties": {
+                    "allowedMimeTypes": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "nullable": true,
+                      "type": "array"
+                    },
                     "failed": {
                       "items": {
                         "additionalProperties": false,
@@ -12131,6 +12138,13 @@
                       },
                       "type": "array"
                     },
+                    "maxUploadBytes": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "nullable": true,
+                      "type": "integer"
+                    },
                     "pending": {
                       "items": {
                         "additionalProperties": false,
@@ -12177,7 +12191,7 @@
                       "type": "array"
                     }
                   },
-                  "required": ["linked", "pending", "failed"],
+                  "required": ["maxUploadBytes", "allowedMimeTypes", "linked", "pending", "failed"],
                   "type": "object"
                 }
               }

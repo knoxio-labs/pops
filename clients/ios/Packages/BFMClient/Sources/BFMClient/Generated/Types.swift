@@ -46015,6 +46015,8 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/inventory/items/{id}/documents/GET/responses/200/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/inventory/items/{id}/documents/GET/responses/200/content/json/allowedMimeTypes`.
+                        internal var allowedMimeTypes: [Swift.String]?
                         /// - Remark: Generated from `#/paths/mobile/inventory/items/{id}/documents/GET/responses/200/content/json/FailedPayload`.
                         internal struct FailedPayloadPayload: Codable, Hashable, Sendable {
                             /// - Remark: Generated from `#/paths/mobile/inventory/items/{id}/documents/GET/responses/200/content/json/FailedPayload/createdAt`.
@@ -46203,6 +46205,8 @@ internal enum Operations {
                         internal typealias LinkedPayload = [Operations.MobileInventory_listItemDocuments.Output.Ok.Body.JsonPayload.LinkedPayloadPayload]
                         /// - Remark: Generated from `#/paths/mobile/inventory/items/{id}/documents/GET/responses/200/content/json/linked`.
                         internal var linked: Operations.MobileInventory_listItemDocuments.Output.Ok.Body.JsonPayload.LinkedPayload
+                        /// - Remark: Generated from `#/paths/mobile/inventory/items/{id}/documents/GET/responses/200/content/json/maxUploadBytes`.
+                        internal var maxUploadBytes: Swift.Int?
                         /// - Remark: Generated from `#/paths/mobile/inventory/items/{id}/documents/GET/responses/200/content/json/PendingPayload`.
                         internal struct PendingPayloadPayload: Codable, Hashable, Sendable {
                             /// - Remark: Generated from `#/paths/mobile/inventory/items/{id}/documents/GET/responses/200/content/json/PendingPayload/createdAt`.
@@ -46308,25 +46312,37 @@ internal enum Operations {
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
+                        ///   - allowedMimeTypes:
                         ///   - failed:
                         ///   - linked:
+                        ///   - maxUploadBytes:
                         ///   - pending:
                         internal init(
+                            allowedMimeTypes: [Swift.String]? = nil,
                             failed: Operations.MobileInventory_listItemDocuments.Output.Ok.Body.JsonPayload.FailedPayload,
                             linked: Operations.MobileInventory_listItemDocuments.Output.Ok.Body.JsonPayload.LinkedPayload,
+                            maxUploadBytes: Swift.Int? = nil,
                             pending: Operations.MobileInventory_listItemDocuments.Output.Ok.Body.JsonPayload.PendingPayload
                         ) {
+                            self.allowedMimeTypes = allowedMimeTypes
                             self.failed = failed
                             self.linked = linked
+                            self.maxUploadBytes = maxUploadBytes
                             self.pending = pending
                         }
                         internal enum CodingKeys: String, CodingKey {
+                            case allowedMimeTypes
                             case failed
                             case linked
+                            case maxUploadBytes
                             case pending
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
                             let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.allowedMimeTypes = try container.decodeIfPresent(
+                                [Swift.String].self,
+                                forKey: .allowedMimeTypes
+                            )
                             self.failed = try container.decode(
                                 Operations.MobileInventory_listItemDocuments.Output.Ok.Body.JsonPayload.FailedPayload.self,
                                 forKey: .failed
@@ -46335,13 +46351,19 @@ internal enum Operations {
                                 Operations.MobileInventory_listItemDocuments.Output.Ok.Body.JsonPayload.LinkedPayload.self,
                                 forKey: .linked
                             )
+                            self.maxUploadBytes = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .maxUploadBytes
+                            )
                             self.pending = try container.decode(
                                 Operations.MobileInventory_listItemDocuments.Output.Ok.Body.JsonPayload.PendingPayload.self,
                                 forKey: .pending
                             )
                             try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "allowedMimeTypes",
                                 "failed",
                                 "linked",
+                                "maxUploadBytes",
                                 "pending"
                             ])
                         }

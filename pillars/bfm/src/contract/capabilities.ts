@@ -219,7 +219,8 @@ export const MOBILE_CAPABILITY_SCOPES: Readonly<Record<MobileCapability, readonl
    * the snapshot/changes/history routes. See
    * `pillars/inventory/src/contract/rest-sync.ts`. `inventory.media` is the raw
    * media store's own scope (A13), which `getMedia` reaches. `inventory.documents`
-   * lists an item's documents and reads a document's file. `inventory.codes`
+   * lists an item's documents and reads a document's file, and
+   * `inventory.paperless.status` the upload limits that list reports. `inventory.codes`
    * is not here: nothing this capability calls suggests a code.
    */
   'inventory.read': [
@@ -228,6 +229,7 @@ export const MOBILE_CAPABILITY_SCOPES: Readonly<Record<MobileCapability, readonl
     'inventory.types.read',
     'inventory.media',
     'inventory.documents',
+    'inventory.paperless.status',
   ],
   /**
    * Several prefixes for the same reason `inventory.read`'s are widened: the

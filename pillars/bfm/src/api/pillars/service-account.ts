@@ -41,7 +41,8 @@ export const BFM_SERVICE_ACCOUNT_NAME = 'bfm';
  * is inventory's raw content-addressed media store's own scope, reached by
  * the media relay's `PUT`/`GET` (A13). `inventory.documents` covers an item's
  * Paperless documents: the list, edit, unlink and dismiss contract routes
- * and the raw upload and file routes. Every later mobile
+ * and the raw upload and file routes; `inventory.paperless.status` reads the
+ * upload limits the list reports, and nothing else under `inventory.paperless`. Every later mobile
  * surface—including barcode lookup—widens this list in its own ticket,
  * so it stays a readable record of what bfm calls rather than a wildcard
  * nobody can audit. Scopes match by dot prefix, so `finance.transactions`
@@ -88,6 +89,7 @@ export const BFM_SERVICE_ACCOUNT_SCOPES: readonly string[] = [
   'inventory.codes',
   'inventory.media',
   'inventory.documents',
+  'inventory.paperless.status',
   'barcode.lookup',
   'cerebrum.ego',
 ];

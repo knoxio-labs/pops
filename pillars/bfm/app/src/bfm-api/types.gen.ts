@@ -4182,6 +4182,7 @@ export type MobileInventoryListItemDocumentsResponses = {
    * 200
    */
   200: {
+    allowedMimeTypes: Array<string> | null;
     failed: Array<{
       createdAt: string;
       documentType: string;
@@ -4199,6 +4200,7 @@ export type MobileInventoryListItemDocumentsResponses = {
       paperlessDocumentId: number;
       title: string | null;
     }>;
+    maxUploadBytes: number | null;
     pending: Array<{
       createdAt: string;
       documentType: string;

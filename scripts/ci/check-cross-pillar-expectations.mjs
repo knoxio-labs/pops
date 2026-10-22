@@ -690,6 +690,16 @@ export const EXPECTATIONS = [
   {
     consumer: 'bfm',
     producer: 'inventory',
+    operationId: 'paperless.status',
+    path: '/paperless/status',
+    method: 'get',
+    // The upload limits the document list reports come from here.
+    query: [],
+    usedBy: 'pillars/bfm/src/api/inventory/documents-client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'inventory',
     operationId: 'documents.update',
     path: '/documents/{id}',
     method: 'patch',

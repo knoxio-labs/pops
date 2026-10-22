@@ -56,8 +56,23 @@ export const MobileDocumentIngestionSchema = z.object({
 
 export type MobileDocumentIngestion = z.infer<typeof MobileDocumentIngestionSchema>;
 
-/** `GET /mobile/inventory/items/:id/documents`: every link, and every unfinished upload. */
-export const MobileItemDocumentsSchema = z.object({
+/**
+ * The documents pillar's upload limits, for a pre-check before uploading.
+ * `null` when Paperless or its status could not be read; the upload still
+ * enforces them either way.
+ */
+export const MobileDocumentUploadLimitsSchema = z.object({
+  maxUploadBytes: z.int().positive().nullable(),
+  allowedMimeTypes: z.array(z.string()).nullable(),
+});
+
+export type MobileDocumentUploadLimits = z.infer<typeof MobileDocumentUploadLimitsSchema>;
+
+/**
+ * `GET /mobile/inventory/items/:id/documents`: every link, every unfinished
+ * upload, and the upload limits.
+ */
+export const MobileItemDocumentsSchema = MobileDocumentUploadLimitsSchema.extend({
   linked: z.array(MobileLinkedItemDocumentSchema),
   pending: z.array(MobileDocumentIngestionSchema),
   failed: z.array(MobileDocumentIngestionSchema),

@@ -1,7 +1,9 @@
 /**
  * bfm's leg into inventory's `documents.*` contract: list an item's links and
  * unfinished uploads, edit a link, unlink it, dismiss an upload. Each call
- * needs the `inventory.documents` scope on bfm's service account.
+ * needs the `inventory.documents` scope on bfm's service account; the list
+ * also reads the upload limits from `paperless.status`
+ * (`inventory.paperless.status`).
  *
  * The raw upload and file download are `document-bytes-client.ts`; they have
  * no OpenAPI operation `pillar()` could call.
@@ -10,8 +12,10 @@ import { z } from 'zod';
 
 import {
   MobileDocumentIngestionSchema,
+  MobileDocumentUploadLimitsSchema,
   MobileItemDocumentSchema,
   MobileLinkedItemDocumentSchema,
+  type MobileDocumentUploadLimits,
   type MobileItemDocument,
   type MobileItemDocuments,
   type MobileUpdateItemDocumentBody,
@@ -27,6 +31,9 @@ const INVENTORY_PILLAR_ID = 'inventory';
 const LIST_PAGE_LIMIT = 500;
 
 type InventoryDocumentsRouter = {
+  paperless: {
+    status: (input: Record<string, never>) => Promise<unknown>;
+  };
   documents: {
     listForItem: (input: { itemId: string; limit: number; offset: number }) => Promise<unknown>;
     update: (input: { id: number } & MobileUpdateItemDocumentBody) => Promise<unknown>;
@@ -43,6 +50,10 @@ const ListPageSchema = z.object({
 });
 
 type ListPage = z.infer<typeof ListPageSchema>;
+
+const StatusSchema = z.object({ data: MobileDocumentUploadLimitsSchema });
+
+const UNKNOWN_LIMITS: MobileDocumentUploadLimits = { maxUploadBytes: null, allowedMimeTypes: null };
 
 const UpdatedSchema = z.object({ data: MobileItemDocumentSchema });
 
@@ -71,11 +82,26 @@ async function listPage(
   return parseOrMismatch(INVENTORY_PILLAR_ID, outcome, ListPageSchema, 'documents.listForItem');
 }
 
+/**
+ * The limits are a convenience for the phone's pre-check, so a status that
+ * cannot be read degrades them to unknown rather than failing the list.
+ */
+async function uploadLimits(gateway: PillarGateway): Promise<MobileDocumentUploadLimits> {
+  const outcome = await gateway.call<InventoryDocumentsRouter, unknown>(
+    INVENTORY_PILLAR_ID,
+    (handle) => handle.paperless.status({})
+  );
+  const parsed = parseOrMismatch(INVENTORY_PILLAR_ID, outcome, StatusSchema, 'paperless.status');
+  if (isGatewayOk(parsed)) return parsed.value.data;
+  console.warn(`[bfm-api] inventory.paperless.status failed (${parsed.kind}); limits unknown`);
+  return UNKNOWN_LIMITS;
+}
+
 async function list(
   gateway: PillarGateway,
   itemId: string
 ): Promise<GatewayOutcome<MobileItemDocuments>> {
-  const first = await listPage(gateway, itemId, 0);
+  const [first, limits] = await Promise.all([listPage(gateway, itemId, 0), uploadLimits(gateway)]);
   if (!isGatewayOk(first)) return first;
   const linked = [...first.value.data];
   let page = first.value;
@@ -88,7 +114,7 @@ async function list(
   }
   return {
     kind: 'ok',
-    value: { linked, pending: first.value.pending, failed: first.value.failed },
+    value: { ...limits, linked, pending: first.value.pending, failed: first.value.failed },
   };
 }
 

@@ -389,7 +389,10 @@ stream. The upload takes the file as the body, its MIME type as
 query; it answers `202` with the recorded ingestion. A producer refusal keeps
 its status (400, 404, 412, 413, 415, 422, 502, 503) and its ADR-054 envelope,
 with `details.upstream` added. `412` means Paperless is not connected. The
-upload limits are the documents pillar's; bfm does not restate them.
+upload limits are the documents pillar's; bfm does not restate them. The
+list reports them (`maxUploadBytes`, `allowedMimeTypes`) from Inventory's
+`paperless.status`, under the `inventory.paperless.status` scope, and reports
+`null` for both when that status cannot be read.
 
 ## The mobile shape
 
@@ -721,7 +724,7 @@ and send it in that header, against the registry's admin surface reachable
 externally through the shell proxy:
 
 ```bash
-curl -sS -X POST https://pops.local/registry-api/service-accounts -H 'Content-Type: application/json' -H "cf-access-jwt-assertion: $ACCESS_JWT" -d '{"name":"bfm","scopes":["finance.transactions","finance.transactionHistory","finance.transactionAttachments","finance.accounts","finance.checkpoints","finance.delegatedSubject","purchases.purchase","purchases.search","purchases.receipt","inventory.sync","inventory.types.catalogue","inventory.types.read","inventory.codes","inventory.media","inventory.documents","barcode.lookup","cerebrum.ego"]}'
+curl -sS -X POST https://pops.local/registry-api/service-accounts -H 'Content-Type: application/json' -H "cf-access-jwt-assertion: $ACCESS_JWT" -d '{"name":"bfm","scopes":["finance.transactions","finance.transactionHistory","finance.transactionAttachments","finance.accounts","finance.checkpoints","finance.delegatedSubject","purchases.purchase","purchases.search","purchases.receipt","inventory.sync","inventory.types.catalogue","inventory.types.read","inventory.codes","inventory.media","inventory.documents","inventory.paperless.status","barcode.lookup","cerebrum.ego"]}'
 ```
 
 Two deployment shapes let a bare `curl` through, which is why this can work on

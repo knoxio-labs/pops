@@ -63,9 +63,20 @@ interface Recorded {
   input: unknown;
 }
 
+const LIMITS = { maxUploadBytes: 104857600, allowedMimeTypes: ['application/pdf', 'image/*'] };
+
+const statusOk: Procedure = () =>
+  Promise.resolve({
+    kind: 'ok',
+    value: {
+      data: { configured: true, available: true, baseUrl: null, documentCount: 0, ...LIMITS },
+    },
+  });
+
 function documentsFactory(
   routes: Partial<Record<'listForItem' | 'update' | 'unlink' | 'dismissIngestion', Procedure>>,
-  calls: Recorded[]
+  calls: Recorded[],
+  status: Procedure = statusOk
 ): PillarHandleFactory {
   const recorded = Object.fromEntries(
     Object.entries(routes).map(([name, procedure]) => [
@@ -77,7 +88,7 @@ function documentsFactory(
     ])
   );
   return <TRouter>(pillarId: string) =>
-    fakePillarHandle<TRouter>(pillarId, { documents: recorded });
+    fakePillarHandle<TRouter>(pillarId, { documents: recorded, paperless: { status } });
 }
 
 interface FetchCall {
@@ -168,6 +179,7 @@ describe('GET /mobile/inventory/items/:id/documents', () => {
       { path: 'documents.listForItem', input: { itemId: 'item-1', limit: 500, offset: 0 } },
     ]);
     expect(res.body).toEqual({
+      ...LIMITS,
       linked: [
         {
           id: 1,
@@ -190,6 +202,80 @@ describe('GET /mobile/inventory/items/:id/documents', () => {
         },
       ],
       failed: [expect.objectContaining({ id: 8, state: 'failed', reason: 'Paperless refused it' })],
+    });
+  });
+
+  it('reports the limits as unknown, and still lists, when the status cannot be read', async () => {
+    const factory = documentsFactory(
+      {
+        listForItem: () =>
+          Promise.resolve({
+            kind: 'ok',
+            value: {
+              data: [linkRow(1)],
+              pending: [],
+              failed: [],
+              pagination: { total: 1, limit: 500, offset: 0, hasMore: false },
+            },
+          }),
+      },
+      [],
+      () => Promise.resolve({ kind: 'unavailable', pillar: 'inventory' })
+    );
+    const { app, token } = open({ factory });
+
+    const res = await requestOn(app, (r) =>
+      r.get('/mobile/inventory/items/item-1/documents').set('Authorization', `Bearer ${token}`)
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body.maxUploadBytes).toBeNull();
+    expect(res.body.allowedMimeTypes).toBeNull();
+    expect(res.body.linked).toHaveLength(1);
+  });
+
+  it('passes null limits through when inventory does not know them', async () => {
+    const factory = documentsFactory(
+      {
+        listForItem: () =>
+          Promise.resolve({
+            kind: 'ok',
+            value: {
+              data: [],
+              pending: [],
+              failed: [],
+              pagination: { total: 0, limit: 500, offset: 0, hasMore: false },
+            },
+          }),
+      },
+      [],
+      () =>
+        Promise.resolve({
+          kind: 'ok',
+          value: {
+            data: {
+              configured: false,
+              available: false,
+              baseUrl: null,
+              documentCount: null,
+              maxUploadBytes: null,
+              allowedMimeTypes: null,
+            },
+          },
+        })
+    );
+    const { app, token } = open({ factory });
+
+    const res = await requestOn(app, (r) =>
+      r.get('/mobile/inventory/items/item-1/documents').set('Authorization', `Bearer ${token}`)
+    );
+
+    expect(res.body).toEqual({
+      maxUploadBytes: null,
+      allowedMimeTypes: null,
+      linked: [],
+      pending: [],
+      failed: [],
     });
   });
 
