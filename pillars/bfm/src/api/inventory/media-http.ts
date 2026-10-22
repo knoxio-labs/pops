@@ -4,14 +4,14 @@
  * credential attached, and the one failure fold (an auth fault, or anything
  * unrecognised) both routes map identically.
  */
-import { SERVICE_ACCOUNT_HEADER } from '@pops/pillar-sdk/server';
+import { buildRawDiscovery, SERVICE_ACCOUNT_HEADER } from '@pops/pillar-sdk/server';
 
-import { buildRawDiscovery } from '../pillars/raw-discovery.js';
 import { INVENTORY_PROTOCOL_HEADER, INVENTORY_SYNC_PROTOCOL_VERSION } from './handle-factory.js';
 import { gatewayMisconfigured, INVENTORY_MEDIA_PILLAR_ID, unavailable } from './media-outcomes.js';
 
+import type { RawDiscovery } from '@pops/pillar-sdk/server';
+
 import type { GatewayFailure } from '../pillars/gateway.js';
-import type { RawDiscovery } from '../pillars/raw-discovery.js';
 
 /** Kept for existing media client consumers; new relays share `RawDiscovery`. */
 export type InventoryMediaDiscovery = RawDiscovery;

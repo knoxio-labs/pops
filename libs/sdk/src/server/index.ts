@@ -16,6 +16,8 @@ export {
   runWithRequestId,
 } from './request-context.js';
 export { InternalBaseUrlTransport } from './transport.js';
+export { buildRawDiscovery } from './raw-discovery.js';
+export type { RawDiscovery } from './raw-discovery.js';
 export { createSinkHandler } from './sinks.js';
 export type { SinkHandler, SinkHandlerOptions, SinkInvocationResult } from './sinks.js';
 export {
