@@ -516,6 +516,14 @@
               "schema": {
                 "additionalProperties": false,
                 "properties": {
+                  "containerId": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "locationId": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
                   "name": {
                     "maxLength": 200,
                     "type": "string"
@@ -578,7 +586,7 @@
             "description": "426"
           }
         },
-        "summary": "Free codes for a new item: a stem followed by the next unused numbers",
+        "summary": "Free codes for a new item, suggested from the codes already in use and where it is going",
         "tags": ["codes"]
       }
     },

@@ -9,6 +9,7 @@ import type { ServiceAccountVerifier } from '@pops/pillar-sdk/server';
 import type { PillarRegistryEntry } from '@pops/types';
 
 import type { OpenedAiDb } from '../db/index.js';
+import type { CodeModel } from './modules/ai-codes/model.js';
 
 export interface AiApiDeps {
   /** Open handle to the ai pillar's SQLite. */
@@ -26,6 +27,11 @@ export interface AiApiDeps {
    * verifier in `app.ts`; tests inject a fake here instead.
    */
   serviceAccountVerifier?: ServiceAccountVerifier;
+  /**
+   * The model behind `POST /codes/suggest`. Omitted in production, which builds
+   * the Anthropic-backed one; tests inject a fake, or null for "no API key".
+   */
+  codeModel?: CodeModel | null;
 }
 
 export interface HealthResponse {

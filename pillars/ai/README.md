@@ -117,16 +117,26 @@ Every route the gate covers stays reachable with NO credential at all — the
 AI-ops UI's browser traffic through the shell's nginx presents none, and this
 gate leaves that unconditionally admitted, exactly as before it existed. A
 caller that DOES present an `X-API-Key` is held to the service account
-behind it, scoped by the contract's own shape: `POST /codes/rank` requires
-`ai.codes.rank`.
+behind it, scoped by the contract's own shape: `POST /codes/suggest` requires
+`ai.codes.suggest`.
 
 Today's only credentialled caller is inventory's `codes/suggest`
-(`pillars/inventory/src/api/ai/client.ts`), reordering the deterministic
-candidates it already computed. Its registry service account needs
-`ai.codes.rank` granted before this ships, or every call 403s and
-`codes/suggest` silently falls back to its own deterministic order — a
-missing grant degrades gracefully here, but is still worth fixing before
-release.
+(`pillars/inventory/src/api/ai/client.ts`). Its registry service account needs
+`ai.codes.suggest`; without it every call 403s and inventory quietly falls
+back to deterministic numbering.
+
+## Code suggestions
+
+`POST /codes/suggest` asks a model for sticker codes that continue the codes
+already in use, given the new item and where it is going
+(`src/api/modules/ai-codes/`). The model is `claude-opus-5-5` at low effort,
+overridable with `AI_CODES_MODEL`; the key is read from
+`ANTHROPIC_API_KEY_FILE`, then `ANTHROPIC_API_KEY`, then the deprecated
+`CLAUDE_API_KEY`. Usage lands in this pillar's own ledger as domain `ai`,
+operation `codes-suggest`. Every failure is a 503 (no key, refusal, truncated or
+malformed reply, nothing usable left after filtering), which inventory treats
+as "number deterministically". The answer is advisory: inventory re-checks each
+code against the codes it holds.
 
 ## Error responses
 

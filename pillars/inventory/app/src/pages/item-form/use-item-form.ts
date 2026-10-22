@@ -130,6 +130,7 @@ export function useItemForm(opening: ItemFormOpening, sources: FormSources): Ite
     name: draft.name,
     typeKey,
     typeLabel,
+    placement: draft.placement,
     online: !offline,
     editingId: opening.editing?.id ?? null,
     dispatch,

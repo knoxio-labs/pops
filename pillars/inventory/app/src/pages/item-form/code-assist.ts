@@ -1,3 +1,5 @@
+import type { Placement } from '../../foundation/model/model';
+
 /** The item currently holding a code another item tried to use. */
 export interface CodeHolder {
   readonly id: string;
@@ -116,4 +118,14 @@ export function nextCode(code: string | null): string {
   const [, prefix = '', digits = ''] = match;
   const bumped = (BigInt(digits) + 1n).toString();
   return `${prefix}${bumped.padStart(digits.length, '0')}`;
+}
+
+/** The `codes/suggest` destination fields for a draft placement; in hand sends none. */
+export function suggestDestination(placement: Placement): {
+  readonly locationId?: string;
+  readonly containerId?: string;
+} {
+  if (placement.kind === 'location') return { locationId: placement.locationId };
+  if (placement.kind === 'container') return { containerId: placement.containerId };
+  return {};
 }

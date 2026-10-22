@@ -73,7 +73,19 @@ type InventorySyncShape = {
       item: { id: string; revision: number; photos: { sha256: string }[] };
     };
   };
+  codes: {
+    suggest: (input: CodeSuggestionRequest) => { suggestions: string[] };
+  };
 };
+
+/** What `POST /codes/suggest` is asked for: the item, and optionally where it goes. */
+export interface CodeSuggestionRequest {
+  name: string;
+  typeKey?: string;
+  locationId?: string;
+  containerId?: string;
+  stem?: string;
+}
 
 function inventorySync(): PillarHandle<InventorySyncShape> {
   return getPillar<InventorySyncShape>('inventory', {
@@ -137,4 +149,11 @@ export async function withCurrentRevision(
   const revision = await fetchItemRevision(id);
   if (revision.kind !== 'ok') return revision;
   return send(revision.value);
+}
+
+/** Ask inventory for free sticker codes; it consults the `ai` pillar and checks each is unused. */
+export async function suggestItemCodes(
+  request: CodeSuggestionRequest
+): Promise<CallResult<{ suggestions: string[] }>> {
+  return inventorySync().codes.suggest(request);
 }

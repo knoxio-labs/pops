@@ -10,12 +10,14 @@ import { SERVICE_ACCOUNT_HEADER, type ServiceAccountVerifier } from '@pops/pilla
 import { loadPublishedCatalogue } from '../../catalogue/index.js';
 import { ACTOR_HEADER, PROTOCOL_HEADER } from '../../contract/rest-sync.js';
 import { runMutations } from '../../domain/commands/index.js';
-import { createAiClient, isPermutation, type AiClient } from '../ai/client.js';
+import { createAiClient, type AiClient } from '../ai/client.js';
 import { inventoryErrors } from '../errors.js';
 import { resolveActor } from '../sync/actor.js';
 import { readProtocol1Catalogue } from '../sync/catalogue.js';
 import { readChanges } from '../sync/changes.js';
-import { suggestCodes } from '../sync/codes.js';
+import { buildCodeContext } from '../sync/code-context.js';
+import { readCodeSettings } from '../sync/code-pattern.js';
+import { keepFreeCodes, suggestCodes, SUGGESTION_COUNT } from '../sync/codes.js';
 import { deviceActorRequired, SyncRequestError } from '../sync/errors.js';
 import { toSyncEvents } from '../sync/events.js';
 import { readItemHistory } from '../sync/history.js';
@@ -177,49 +179,34 @@ export function makeTypesHandlers(db: InventoryDb) {
 }
 
 /**
- * Handlers for `codes.*`: the deterministic suggestions, ranked through the
- * `ai` pillar when a service-account key is configured (Inventory ADR-002
- * Phase C, POPS-4081).
+ * Handlers for `codes.*`. A suggestion comes from the `ai` pillar's model,
+ * which sees every code in use and where the new item is going; whatever it
+ * proposes is filtered here to codes that are actually free. With no usable
+ * model answer, deterministic numbering (`../sync/codes.ts`) answers instead.
  *
  * @param ai Defaults to the live `pillar('ai')` client; tests inject a stub
- *   to exercise the ranked and fallback paths without a network round-trip.
+ *   to exercise the model and fallback paths without a network round-trip.
  */
 export function makeCodesHandlers(db: InventoryDb, ai: AiClient = createAiClient()) {
+  async function modelCodes(body: CodesReq['suggest']['body']): Promise<string[]> {
+    try {
+      const proposed = await ai.suggestCodes(buildCodeContext(db, body), SUGGESTION_COUNT);
+      return proposed === undefined ? [] : keepFreeCodes(db, proposed, body.stem);
+    } catch (error) {
+      console.error('[inventory-api] ai.suggestCodes threw; using deterministic codes', error);
+      return [];
+    }
+  }
+
   return {
     suggest: async ({ body }: CodesReq['suggest']) => {
       if (body.name.trim() === '') inventoryErrors.name_required();
-      const deterministic = suggestCodes(db, body);
-      if (deterministic.length === 0) {
+      if (!readCodeSettings(db).suggest) {
         return { status: 200 as const, body: { suggestions: [] } };
       }
-      let ranked: string[] | undefined;
-      try {
-        ranked = await ai.rankCodeCandidates(deterministic, {
-          name: body.name,
-          ...(body.typeKey === undefined ? {} : { typeKey: body.typeKey }),
-        });
-      } catch (error) {
-        // `createAiClient` never throws (every failure degrades inside it),
-        // but ranking is an enhancement, not a requirement, for ANY `AiClient`
-        // this handler is given — a throwing implementation degrades exactly
-        // like an `undefined` one rather than turning `codes/suggest` into a
-        // 500 over a purely cosmetic ordering.
-        console.error(
-          '[inventory-api] ai.rankCodeCandidates threw; using deterministic order',
-          error
-        );
-        ranked = undefined;
-      }
-      // Re-checked here, not just trusted from the injected `ai` client: the
-      // "never a held code" guarantee must hold for whatever `AiClient` is
-      // wired in, since only the deterministic candidates are known to be
-      // free.
-      const suggestions =
-        ranked !== undefined && isPermutation(deterministic, ranked) ? ranked : deterministic;
-      return {
-        status: 200 as const,
-        body: { suggestions },
-      };
+      const fromModel = await modelCodes(body);
+      const suggestions = fromModel.length > 0 ? fromModel : suggestCodes(db, body);
+      return { status: 200 as const, body: { suggestions } };
     },
   };
 }

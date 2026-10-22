@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { codeBlocksSave, codeEntry, codeReducer, nextCode } from './code-assist';
+import {
+  codeBlocksSave,
+  codeEntry,
+  codeReducer,
+  nextCode,
+  suggestDestination,
+} from './code-assist';
 
 describe('item form code assist', () => {
   it('accepts an offered code on Enter without replacing a blank suggestion with a guess', () => {
@@ -34,5 +40,23 @@ describe('item form code assist', () => {
     expect(nextCode('A1B')).toBe('');
     expect(nextCode('')).toBe('');
     expect(nextCode(null)).toBe('');
+  });
+});
+
+describe('suggestDestination', () => {
+  it('sends the location for a location placement', () => {
+    expect(suggestDestination({ kind: 'location', locationId: 'office' })).toEqual({
+      locationId: 'office',
+    });
+  });
+
+  it('sends the container for a container placement', () => {
+    expect(suggestDestination({ kind: 'container', containerId: 'box-1' })).toEqual({
+      containerId: 'box-1',
+    });
+  });
+
+  it('sends nothing for an item in hand', () => {
+    expect(suggestDestination({ kind: 'in-hand' })).toEqual({});
   });
 });

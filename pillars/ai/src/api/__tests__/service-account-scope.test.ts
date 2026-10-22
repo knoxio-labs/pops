@@ -6,7 +6,7 @@
  * real callers — the shell's browser traffic, and the internal-credentialled
  * telemetry senders on `/ai-usage/record` — present no `X-API-Key`, so this
  * asserts they keep working exactly as before this gate existed. The
- * credentialled cases are `codes/rank`'s own contract: inventory's
+ * credentialled cases are `codes/suggest`'s own contract: inventory's
  * `codes/suggest` is the first (and, today, only) caller to present one.
  */
 import { mkdtempSync, rmSync } from 'node:fs';
@@ -28,6 +28,14 @@ const { requestOn } = createTestTransport();
 
 const KEY = 'pops_sa_abcdefgh.a-secret-that-never-leaves-this-file';
 
+const SUGGEST_BODY = { item: { name: 'Widget' }, existing: [], count: 1 };
+
+const codeModel = () =>
+  Promise.resolve({
+    kind: 'text' as const,
+    text: JSON.stringify({ suggestions: [{ code: 'WID-1', reason: 'new family' }] }),
+  });
+
 let tmpDir: string;
 let aiDb: OpenedAiDb;
 
@@ -46,6 +54,7 @@ function app(verify: ServiceAccountVerifier): Express {
     version: '0.0.1-test',
     selfBaseUrl: 'http://localhost:3008',
     serviceAccountVerifier: verify,
+    codeModel,
   });
 }
 
@@ -67,17 +76,15 @@ describe('the ai scope map', () => {
     expect(aiScopeMap.routes.every((route) => route.scope.startsWith('ai.'))).toBe(true);
   });
 
-  it('names ai.codes.rank for the new route', () => {
-    expect(aiScopeMap.routes.map((route) => route.scope)).toContain('ai.codes.rank');
+  it('names ai.codes.suggest for the new route', () => {
+    expect(aiScopeMap.routes.map((route) => route.scope)).toContain('ai.codes.suggest');
   });
 });
 
 describe('a request with no credential', () => {
-  it('reaches /codes/rank without one — the ADR-044 default posture', async () => {
+  it('reaches /codes/suggest without one — the ADR-044 default posture', async () => {
     const verify = vi.fn(verifierReturning({ outcome: 'rejected' }));
-    const response = await requestOn(app(verify))
-      .post('/codes/rank')
-      .send({ name: 'Widget', candidates: ['ABC001'] });
+    const response = await requestOn(app(verify)).post('/codes/suggest').send(SUGGEST_BODY);
 
     expect(response.status).toBe(200);
     expect(verify).not.toHaveBeenCalled();
@@ -95,9 +102,9 @@ describe('a request with no credential', () => {
 describe('a live credential whose grant does not cover the operation', () => {
   it('403s an account granted a neighbouring scope', async () => {
     const response = await requestOn(app(verifierReturning(grantedScopes(['ai.aiUsage']))))
-      .post('/codes/rank')
+      .post('/codes/suggest')
       .set('x-api-key', KEY)
-      .send({ name: 'Widget', candidates: ['ABC001'] });
+      .send(SUGGEST_BODY);
 
     expect(response.status).toBe(403);
     expect(response.body).toMatchObject({ message: expect.stringContaining('not authorised') });
@@ -106,32 +113,32 @@ describe('a live credential whose grant does not cover the operation', () => {
   it('names the account and the missing scope so the grant can be widened', async () => {
     const warn = vi.spyOn(console, 'warn');
     await requestOn(app(verifierReturning(grantedScopes(['ai.aiUsage']))))
-      .post('/codes/rank')
+      .post('/codes/suggest')
       .set('x-api-key', KEY)
-      .send({ name: 'Widget', candidates: ['ABC001'] });
+      .send(SUGGEST_BODY);
 
     const logged = warn.mock.calls.flat().join(' ');
     expect(logged).toContain('pops_api_key');
-    expect(logged).toContain('ai.codes.rank');
+    expect(logged).toContain('ai.codes.suggest');
     expect(logged).not.toContain(KEY);
   });
 });
 
 describe('a live credential whose grant covers the operation', () => {
-  it('admits an account scoped exactly to ai.codes.rank', async () => {
-    const response = await requestOn(app(verifierReturning(grantedScopes(['ai.codes.rank']))))
-      .post('/codes/rank')
+  it('admits an account scoped exactly to ai.codes.suggest', async () => {
+    const response = await requestOn(app(verifierReturning(grantedScopes(['ai.codes.suggest']))))
+      .post('/codes/suggest')
       .set('x-api-key', KEY)
-      .send({ name: 'Widget', candidates: ['ABC001'] });
+      .send(SUGGEST_BODY);
 
     expect(response.status).toBe(200);
   });
 
   it('matches by dot prefix — a plain "ai" grant covers it too', async () => {
     const response = await requestOn(app(verifierReturning(grantedScopes(['ai']))))
-      .post('/codes/rank')
+      .post('/codes/suggest')
       .set('x-api-key', KEY)
-      .send({ name: 'Widget', candidates: ['ABC001'] });
+      .send(SUGGEST_BODY);
 
     expect(response.status).toBe(200);
   });
@@ -140,9 +147,9 @@ describe('a live credential whose grant covers the operation', () => {
 describe('failing closed', () => {
   it('401s a key the registry does not recognise, rather than falling back to network trust', async () => {
     const response = await requestOn(app(verifierReturning({ outcome: 'rejected' })))
-      .post('/codes/rank')
+      .post('/codes/suggest')
       .set('x-api-key', KEY)
-      .send({ name: 'Widget', candidates: ['ABC001'] });
+      .send(SUGGEST_BODY);
 
     expect(response.status).toBe(401);
   });
@@ -151,9 +158,9 @@ describe('failing closed', () => {
     const response = await requestOn(
       app(verifierReturning({ outcome: 'unavailable', detail: 'ECONNREFUSED' }))
     )
-      .post('/codes/rank')
+      .post('/codes/suggest')
       .set('x-api-key', KEY)
-      .send({ name: 'Widget', candidates: ['ABC001'] });
+      .send(SUGGEST_BODY);
 
     expect(response.status).toBe(503);
   });

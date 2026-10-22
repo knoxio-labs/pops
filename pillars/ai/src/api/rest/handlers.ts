@@ -11,6 +11,7 @@ import { initServer } from '@ts-rest/express';
 
 import { aiContract } from '../../contract/rest.js';
 import { type OpenedAiDb } from '../../db/index.js';
+import { type CodeModel } from '../modules/ai-codes/model.js';
 import { makeAiAlertsHandlers } from './ai-alerts-handlers.js';
 import { makeAiBudgetsHandlers } from './ai-budgets-handlers.js';
 import { makeAiObservabilityHandlers } from './ai-observability-handlers.js';
@@ -26,6 +27,7 @@ const server: ReturnType<typeof initServer> = initServer();
 
 export function makeAiRestHandlers(deps: {
   aiDb: OpenedAiDb;
+  codeModel?: CodeModel | null;
 }): ReturnType<typeof server.router<typeof aiContract>> {
   const db = deps.aiDb.db;
   return server.router(aiContract, {
@@ -36,7 +38,10 @@ export function makeAiRestHandlers(deps: {
     aiUsage: makeAiUsageHandlers(db),
     aiIngest: makeIngestHandler(db),
     aiPricing: makePricingHandler(db),
-    codes: makeAiCodesHandlers(),
+    codes:
+      deps.codeModel === undefined
+        ? makeAiCodesHandlers(db)
+        : makeAiCodesHandlers(db, deps.codeModel),
     jobs: makeAiJobsHandlers(),
     settings: makeAiSettingsHandlers(db),
   });

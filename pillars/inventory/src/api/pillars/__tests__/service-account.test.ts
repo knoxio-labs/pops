@@ -108,7 +108,7 @@ describe('the account grant', () => {
    */
   it('names exactly the operations the outbound legs call', () => {
     expect([...INVENTORY_SERVICE_ACCOUNT_SCOPES]).toEqual([
-      'ai.codes.rank',
+      'ai.codes.suggest',
       'finance.transactions.get',
     ]);
   });

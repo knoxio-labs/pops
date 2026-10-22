@@ -1,4 +1,5 @@
 import { catalogueTools } from './inventory-catalogue.js';
+import { codeSuggestTool } from './inventory-codes.js';
 import { connectionTools } from './inventory-connections.js';
 import { itemValidationTool } from './inventory-item-validation.js';
 import { itemTools } from './inventory-items.js';
@@ -13,6 +14,7 @@ import type { ToolDef } from './index.js';
 export const inventoryTools: readonly ToolDef[] = [
   ...catalogueTools,
   itemValidationTool,
+  codeSuggestTool,
   ...locationTools,
   ...itemTools,
   ...connectionTools,

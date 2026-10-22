@@ -18,7 +18,8 @@
  * PII/cardinality guard the plan calls for without pulling the heavy
  * module-registry build into the pillar image.)
  */
-import { aiUsageService, type AiDb } from '../../db/index.js';
+import { type AiDb } from '../../db/index.js';
+import { recordInference } from '../modules/ai-usage/record.js';
 import { ValidationError } from '../shared/errors.js';
 import { logger } from '../shared/logger.js';
 import { runHttp } from './error-mapping.js';
@@ -29,19 +30,8 @@ import type { aiIngestContract } from '../../contract/rest-ingest.js';
 
 type Req = ServerInferRequest<typeof aiIngestContract>;
 
-/** Max serialized `metadata` length (bytes) persisted; longer payloads are dropped. */
-const METADATA_JSON_CAP = 4096;
-
 /** A caller pillar id / domain token: lowercase, no whitespace, bounded. */
 const DOMAIN_PATTERN = /^[a-z0-9][a-z0-9_-]{0,63}$/;
-
-function capJson(value: unknown): string | null {
-  if (value === undefined) return null;
-  const json = JSON.stringify(value);
-  if (json === undefined) return null;
-  if (json.length > METADATA_JSON_CAP) return null;
-  return json;
-}
 
 export function makeIngestHandler(db: AiDb) {
   return {
@@ -53,26 +43,8 @@ export function makeIngestHandler(db: AiDb) {
           });
         }
 
-        const merged: Record<string, unknown> = { ...body.metadata };
-        if (body.promptVersion !== undefined) merged['prompt_version'] = body.promptVersion;
-        const metadataJson = Object.keys(merged).length > 0 ? capJson(merged) : null;
-
         try {
-          aiUsageService.createInferenceLog(db, {
-            provider: body.provider,
-            model: body.model,
-            operation: body.operation,
-            domain: body.domain,
-            inputTokens: body.inputTokens,
-            outputTokens: body.outputTokens,
-            costUsd: body.costUsd,
-            latencyMs: body.latencyMs,
-            status: body.status,
-            cached: body.cached ? 1 : 0,
-            contextId: body.contextId ?? null,
-            errorMessage: body.errorMessage ?? null,
-            metadata: metadataJson,
-          });
+          recordInference(db, body);
         } catch (err) {
           logger.warn({ err }, '[ai.record] inference-log insert failed (best-effort)');
         }

@@ -64,9 +64,9 @@ import type {
   AiUsageGetHistoryResponses,
   AiUsageGetStatsData,
   AiUsageGetStatsResponses,
-  CodesRankData,
-  CodesRankErrors,
-  CodesRankResponses,
+  CodesSuggestData,
+  CodesSuggestErrors,
+  CodesSuggestResponses,
   JobsCancelData,
   JobsCancelErrors,
   JobsCancelResponses,
@@ -481,13 +481,13 @@ export const aiUsageGetStats = <ThrowOnError extends boolean = false>(
   });
 
 /**
- * Rank candidate inventory codes most-likely-first (deterministic, no model call)
+ * Suggest sticker codes for a new inventory item from the codes already in use
  */
-export const codesRank = <ThrowOnError extends boolean = false>(
-  options?: Options<CodesRankData, ThrowOnError>
-): RequestResult<CodesRankResponses, CodesRankErrors, ThrowOnError> =>
-  (options?.client ?? client).post<CodesRankResponses, CodesRankErrors, ThrowOnError>({
-    url: '/codes/rank',
+export const codesSuggest = <ThrowOnError extends boolean = false>(
+  options?: Options<CodesSuggestData, ThrowOnError>
+): RequestResult<CodesSuggestResponses, CodesSuggestErrors, ThrowOnError> =>
+  (options?.client ?? client).post<CodesSuggestResponses, CodesSuggestErrors, ThrowOnError>({
+    url: '/codes/suggest',
     ...options,
     headers: {
       'Content-Type': 'application/json',

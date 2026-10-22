@@ -33,7 +33,7 @@ export interface InventoryApiDeps {
    */
   documents?: DocumentsClient;
   /**
-   * The `ai` pillar client backing `codes/suggest`'s ranking. Optional —
+   * The `ai` pillar client backing `codes/suggest`'s model suggestions. Optional —
    * production omits it (defaults to the live `pillar('ai')` proxy); tests
    * inject a stub. See `pillars/inventory/src/api/rest/handlers.ts`.
    */

@@ -3,10 +3,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { unwrap } from '../../inventory-api-helpers.js';
 import { codesSuggest } from '../../inventory-api/index.js';
 import { useWebSearch } from '../../inventory-web/useWebSearch.js';
-import { codeEntry } from './code-assist';
+import { codeEntry, suggestDestination } from './code-assist';
 
 import type { Dispatch } from 'react';
 
+import type { Placement } from '../../foundation/model/model';
 import type { CodeEntry } from './code-assist';
 import type { DraftAction } from './form-draft';
 
@@ -16,6 +17,7 @@ export interface UseCodeAssistOptions {
   readonly name: string;
   readonly typeKey: string | null;
   readonly typeLabel: string | null;
+  readonly placement: Placement;
   readonly online: boolean;
   readonly editingId: string | null;
   readonly dispatch: Dispatch<DraftAction>;
@@ -70,8 +72,12 @@ function useCodeSuggestion({
   dispatch,
   name,
   online,
+  placement,
   typeKey,
-}: Pick<UseCodeAssistOptions, 'dispatch' | 'name' | 'online' | 'typeKey'>): () => void {
+}: Pick<
+  UseCodeAssistOptions,
+  'dispatch' | 'name' | 'online' | 'placement' | 'typeKey'
+>): () => void {
   return useCallback((): void => {
     if (!online) {
       dispatch({ type: 'code', action: { type: 'offline' } });
@@ -83,6 +89,7 @@ function useCodeSuggestion({
       body: {
         name: name.trim(),
         ...(typeKey === null ? {} : { typeKey }),
+        ...suggestDestination(placement),
       },
     })
       .then((result) => {
@@ -95,12 +102,12 @@ function useCodeSuggestion({
       .catch(() => {
         dispatch({ type: 'code', action: { type: 'unavailable' } });
       });
-  }, [dispatch, name, online, typeKey]);
+  }, [dispatch, name, online, placement, typeKey]);
 }
 
 /** Provides suggestion, typed-code checking and offline behaviour for a form. */
 export function useCodeAssist(options: UseCodeAssistOptions): CodeAssistApi {
-  const { dispatch, editingId, entry, name, online, typeKey } = options;
+  const { dispatch, editingId, entry, name, online, placement, typeKey } = options;
   const [typedCode, setTypedCode] = useState(() =>
     entry.status === 'checking' ? entry.value : ''
   );
@@ -118,7 +125,7 @@ export function useCodeAssist(options: UseCodeAssistOptions): CodeAssistApi {
     searchStatus: search.status,
     typedCode,
   });
-  const suggest = useCodeSuggestion({ dispatch, name, online, typeKey });
+  const suggest = useCodeSuggestion({ dispatch, name, online, placement, typeKey });
 
   const type = useCallback(
     (value: string): void => {

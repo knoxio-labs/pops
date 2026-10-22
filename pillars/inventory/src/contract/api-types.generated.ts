@@ -12,7 +12,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Free codes for a new item: a stem followed by the next unused numbers */
+    /** Free codes for a new item, suggested from the codes already in use and where it is going */
     post: operations['codes.suggest'];
     delete?: never;
     options?: never;
@@ -1585,6 +1585,8 @@ export interface operations {
     requestBody?: {
       content: {
         'application/json': {
+          containerId?: string;
+          locationId?: string;
           name: string;
           stem?: string;
           typeKey?: string;
