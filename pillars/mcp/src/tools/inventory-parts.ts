@@ -3,7 +3,7 @@ import { mapCallResult, reqStr, toolError } from './utils.js';
 
 import type { PillarHandle } from '@pops/pillar-sdk/client';
 
-import type { ToolDef } from './index.js';
+import type { ToolDef } from './tool-def.js';
 
 type ItemInput = { itemId: string };
 type PartInput = { itemId: string; partItemId: string };
