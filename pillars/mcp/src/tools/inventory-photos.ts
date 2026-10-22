@@ -55,7 +55,7 @@ const createUpload: ToolDef = {
     if (baseUrl === undefined) {
       return toolError('Cannot build an upload URL: the gateway does not know its public address.');
     }
-    const grant = uploadTokens.mint();
+    const grant = uploadTokens.mint({ kind: 'photo' });
     if (grant === undefined) {
       return toolError(
         'Too many unused upload URLs are outstanding. Use or let the existing ones expire, then retry.'

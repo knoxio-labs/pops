@@ -159,10 +159,33 @@ though nothing enforces it mechanically.
   `item.attachPhoto`/`item.removePhoto`, which take no base revision. An image
   never travels through tool arguments: a model cannot emit megabytes of
   base64.
+- Item documents live in Paperless; inventory keeps the links. Everything
+  inventory can reach goes through inventory, because the MCP key holds the
+  `inventory` root: `documents.search` calls inventory's `paperless.search`
+  pass-through, and `inventory.documents.list`, `.link`, `.update`, `.unlink`
+  and `.dismissFailed` call inventory's `documents.*` routes. `list` adds each
+  link's `webPath`, the item's page relative to the pops web origin (the
+  gateway knows no web origin). There is no download tool: a model cannot use
+  the bytes.
+- `inventory.documents.createUpload` mints the same single-use URL as photos,
+  carrying a document target: item, kind, file name, title, and the
+  `maxUploadBytes` and `allowedMimeTypes` documents states, read through
+  inventory's `paperless.status` pass-through (scope
+  `inventory.paperless.status`); with no limits reported it refuses to mint.
+  The upload route streams the body to inventory's raw
+  `POST /items/:itemId/documents/upload`; nothing is held in memory, and no limit is declared in mcp. Images are valid documents
+  (documents allows `image/*`, e.g. a photographed receipt); a document URL
+  refuses only what documents would, while a photo URL refuses anything not
+  JPEG or HEIC, naming the document tool.
+- `documents.delete` calls documents' `write.delete` directly, since inventory
+  has no route that deletes from Paperless; it needs `documents.write.delete`.
+  Inventory cannot list the links to one Paperless id, so the tool cannot
+  check them and refuses unless `force: true`.
 
 ## Not here
 
-No tools exist for `ai`, `food`, `lists`, `registry`, or `documents` — those
-pillars are unreachable through MCP until an adapter is added. The one
+No tools exist for `ai`, `food`, `lists`, or `registry` — those pillars are
+unreachable through MCP until an adapter is added. `documents` is reached
+only for its upload limits and deletion (above). The one
 cross-pillar query, `tags.things.list`, makes a single call to the orchestrator,
 which fans out to registered tag carriers and reports each carrier's status.
