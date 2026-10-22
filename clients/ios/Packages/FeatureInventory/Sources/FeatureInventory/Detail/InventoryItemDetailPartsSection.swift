@@ -9,7 +9,9 @@ internal struct InventoryItemDetailPartsSection: View {
     @State private var model: InventoryItemPartsModel
     private let store: any InventoryStore
 
-    internal init(itemId: InventoryItem.ID, service: any InventoryPartsService, store: any InventoryStore) {
+    internal init(
+        itemId: InventoryItem.ID, service: any InventoryPartsService, store: any InventoryStore
+    ) {
         _model = State(initialValue: InventoryItemPartsModel(itemId: itemId, service: service))
         self.store = store
     }
@@ -82,8 +84,12 @@ internal struct InventoryItemPartsContent: View {
                 Button {
                     adding = true
                 } label: {
-                    Label { Text("Add parts") } icon: { InventorySymbol.addPart.image }
-                        .font(.popsBody)
+                    Label {
+                        Text("Add parts")
+                    } icon: {
+                        InventorySymbol.addPart.image
+                    }
+                    .font(.popsBody)
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(Color.popsInventory)

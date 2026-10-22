@@ -8,7 +8,8 @@ import Observation
 @MainActor @Observable
 internal final class InventoryCandidatePages {
     /// The query for one page of candidates matching `text`, from `cursor`.
-    internal typealias PageQuery = @Sendable (String, InventoryPageCursor?) ->
+    internal typealias PageQuery =
+        @Sendable (String, InventoryPageCursor?) ->
         InventoryQuery<InventoryPage<InventoryStoreCandidate>>
 
     internal var query: String
