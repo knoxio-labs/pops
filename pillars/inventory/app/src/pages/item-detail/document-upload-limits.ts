@@ -1,24 +1,26 @@
-import { z } from 'zod';
-
 import { formatBytes } from '@pops/ui';
 
 import type { FileValidationErrorReason } from '@pops/ui';
 
+import type { PaperlessStatusResponse } from '../../inventory-api/types.gen.js';
 import type { DocumentUploadLimits } from './detail-model-types';
 
-const UploadLimitsSchema = z.object({
-  maxUploadBytes: z.number().int().positive(),
-  allowedMimeTypes: z.array(z.string().min(1)).min(1),
-});
+type StatusLimits = Pick<PaperlessStatusResponse['data'], 'maxUploadBytes' | 'allowedMimeTypes'>;
 
 /**
- * Reads documents' upload cap and MIME allowlist from a Paperless status
- * payload. The limits belong to documents and inventory only passes them on,
- * so a status without them yields null rather than a guessed limit.
+ * Reads documents' upload cap and MIME allowlist from inventory's Paperless
+ * status. Documents leaves them null when it cannot state them; the upload is
+ * then checked by the server only, never against a guessed limit.
  */
-export function uploadLimitsOf(status: object | null | undefined): DocumentUploadLimits | null {
-  const parsed = UploadLimitsSchema.safeParse(status);
-  return parsed.success ? parsed.data : null;
+export function uploadLimitsOf(
+  status: StatusLimits | null | undefined
+): DocumentUploadLimits | null {
+  if (status === null || status === undefined) return null;
+  const { maxUploadBytes, allowedMimeTypes } = status;
+  if (maxUploadBytes === null || allowedMimeTypes === null || allowedMimeTypes.length === 0) {
+    return null;
+  }
+  return { maxUploadBytes, allowedMimeTypes };
 }
 
 /** The `accept` list a file picker and the pre-check use for these limits. */

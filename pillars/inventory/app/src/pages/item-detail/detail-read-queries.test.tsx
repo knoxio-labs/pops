@@ -62,7 +62,16 @@ async function advance(ms: number): Promise<void> {
 beforeEach(() => {
   vi.useFakeTimers();
   mocks.paperlessStatus.mockResolvedValue({
-    data: { data: { configured: true, available: true, baseUrl: null, documentCount: 0 } },
+    data: {
+      data: {
+        configured: true,
+        available: true,
+        baseUrl: null,
+        documentCount: 0,
+        maxUploadBytes: 104857600,
+        allowedMimeTypes: ['application/pdf'],
+      },
+    },
     error: undefined,
   });
   mocks.fixturesListForItem.mockResolvedValue({ data: { data: [] }, error: undefined });

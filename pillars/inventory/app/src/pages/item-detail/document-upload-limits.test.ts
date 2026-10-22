@@ -2,13 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import { acceptFor, uploadLimitsOf, uploadRefusal } from './document-upload-limits';
 
-const status = { configured: true, available: true, baseUrl: null, documentCount: 0 };
+const status = { maxUploadBytes: null, allowedMimeTypes: null };
 
 describe('uploadLimitsOf', () => {
   it('reads the cap and allowlist documents states', () => {
     expect(
       uploadLimitsOf({
-        ...status,
         maxUploadBytes: 104857600,
         allowedMimeTypes: ['application/pdf', 'image/*', 'text/*'],
       })
@@ -24,9 +23,9 @@ describe('uploadLimitsOf', () => {
     expect(uploadLimitsOf(undefined)).toBeNull();
   });
 
-  it('yields null for a malformed cap or an empty allowlist', () => {
-    expect(uploadLimitsOf({ maxUploadBytes: 0, allowedMimeTypes: ['text/*'] })).toBeNull();
-    expect(uploadLimitsOf({ maxUploadBytes: 1.5, allowedMimeTypes: ['text/*'] })).toBeNull();
+  it('yields null when either limit is missing or the allowlist is empty', () => {
+    expect(uploadLimitsOf({ maxUploadBytes: 10, allowedMimeTypes: null })).toBeNull();
+    expect(uploadLimitsOf({ maxUploadBytes: null, allowedMimeTypes: ['text/*'] })).toBeNull();
     expect(uploadLimitsOf({ maxUploadBytes: 10, allowedMimeTypes: [] })).toBeNull();
   });
 });
