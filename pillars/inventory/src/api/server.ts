@@ -24,7 +24,9 @@ import { backfillPhotoMedia, openInventoryDb } from '../db/index.js';
 import { createInventoryApiApp } from './app.js';
 import { startCrossPillarReconciliationWorker } from './cron/reconcile-cross-pillar.js';
 import { resolveReconcileIntervalMs } from './cron/reconcile-interval.js';
+import { startDocumentIngestionSweep } from './cron/resolve-document-ingestions.js';
 import { createDocumentsClient } from './documents/client.js';
+import { createDocumentUploadsClient } from './documents/uploads-client.js';
 import { resolveInventorySqlitePath } from './inventory-sqlite-path.js';
 import { buildInventoryCapabilityReporter, buildInventoryManifest } from './manifest.js';
 import { getInventoryImagesDir } from './modules/photos/paths.js';
@@ -62,11 +64,13 @@ const reconcileIntervalMs = resolveReconcileIntervalMs();
 configureInventoryServerSdk();
 
 const inventoryDb = openInventoryDb(resolveInventorySqlitePath());
+const documentUploads = createDocumentUploadsClient();
 const app = createInventoryApiApp({
   inventoryDb,
   version,
   selfBaseUrl,
   documents: createDocumentsClient(),
+  documentUploads,
 });
 
 const server = app.listen(port, () => {
@@ -88,6 +92,15 @@ backfillPhotoMedia(inventoryDb.db, getInventoryImagesDir()).then(
   }
 );
 
+const cronLogger = {
+  info: (message: string, context?: Record<string, unknown>) => {
+    console.warn(`[inventory-api] ${message}`, context ?? {});
+  },
+  warn: (message: string, context?: Record<string, unknown>) => {
+    console.error(`[inventory-api] ${message}`, context ?? {});
+  },
+};
+
 /**
  * Soft-URI reconciliation cron: resolves `items.purchase_transaction_uri`
  * against finance and stamps `purchase_transaction_stale_at` when finance
@@ -104,14 +117,13 @@ const reconcileUriWorker = startCrossPillarReconciliationWorker({
   db: inventoryDb.db,
   // Overridable so a smoke test does not wait a day for the second tick.
   ...(reconcileIntervalMs === undefined ? {} : { intervalMs: reconcileIntervalMs }),
-  logger: {
-    info: (message, context) => {
-      console.warn(`[inventory-api] ${message}`, context ?? {});
-    },
-    warn: (message, context) => {
-      console.error(`[inventory-api] ${message}`, context ?? {});
-    },
-  },
+  logger: cronLogger,
+});
+
+const documentIngestionSweep = startDocumentIngestionSweep({
+  db: inventoryDb.db,
+  uploads: documentUploads,
+  logger: cronLogger,
 });
 
 let pillarHandle: PillarBootstrapHandle | undefined;
@@ -129,6 +141,7 @@ function shutdown(signal: NodeJS.Signals): void {
   shuttingDown = true;
   console.warn(`[inventory-api] Shutting down (${signal})`);
   reconcileUriWorker.stop();
+  documentIngestionSweep.stop();
   void shutdownPillar({
     label: 'inventory-api',
     steps: [{ name: 'deregister', run: () => pillarHandle?.stop() }],

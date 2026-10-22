@@ -38,6 +38,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/document-ingestions/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Dismiss a pending or failed upload */
+    delete: operations['documents.dismissIngestion'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/documents/{id}': {
     parameters: {
       query?: never;
@@ -48,11 +65,12 @@ export interface paths {
     get?: never;
     put?: never;
     post?: never;
-    /** Unlink a document by link id */
+    /** Unlink a document by link id (the Paperless document is kept) */
     delete: operations['documents.unlink'];
     options?: never;
     head?: never;
-    patch?: never;
+    /** Change the given fields of a link; a title change is also made in Paperless, and nothing changes if that fails */
+    patch: operations['documents.update'];
     trace?: never;
   };
   '/fixtures': {
@@ -255,7 +273,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** List documents linked to an item */
+    /** List an item's linked documents (paginated) and its uploads still pending or failed, after resolving the pending ones */
     get: operations['documents.listForItem'];
     put?: never;
     /** Link a Paperless document to an item */
@@ -1745,6 +1763,62 @@ export interface operations {
       };
     };
   };
+  'documents.dismissIngestion': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': Record<string, never>;
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            message: string;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+    };
+  };
   'documents.unlink': {
     parameters: {
       query?: never;
@@ -1792,6 +1866,101 @@ export interface operations {
       };
       /** @description 409 */
       409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+    };
+  };
+  'documents.update': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          /** @enum {string} */
+          documentType?: 'receipt' | 'warranty' | 'manual' | 'invoice' | 'other';
+          title?: string;
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              createdAt: string;
+              documentType: string;
+              id: number;
+              itemId: string;
+              paperlessDocumentId: number;
+              title: string | null;
+            };
+            message: string;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 412 */
+      412: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 502 */
+      502: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 503 */
+      503: {
         headers: {
           [name: string]: unknown;
         };
@@ -2991,12 +3160,36 @@ export interface operations {
               paperlessDocumentId: number;
               title: string | null;
             }[];
+            failed: {
+              createdAt: string;
+              documentType: string;
+              fileName: string;
+              id: number;
+              itemId: string;
+              reason: string | null;
+              /** @enum {string} */
+              state: 'pending' | 'failed';
+              taskId: string;
+              title: string | null;
+            }[];
             pagination: {
               hasMore: boolean;
               limit: number;
               offset: number;
               total: number;
             };
+            pending: {
+              createdAt: string;
+              documentType: string;
+              fileName: string;
+              id: number;
+              itemId: string;
+              reason: string | null;
+              /** @enum {string} */
+              state: 'pending' | 'failed';
+              taskId: string;
+              title: string | null;
+            }[];
           };
         };
       };

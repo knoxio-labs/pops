@@ -774,6 +774,87 @@
         "tags": ["connections"]
       }
     },
+    "/document-ingestions/{id}": {
+      "delete": {
+        "operationId": "documents.dismissIngestion",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "exclusiveMinimum": true,
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {},
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "409"
+          }
+        },
+        "summary": "Dismiss a pending or failed upload",
+        "tags": ["documents"]
+      }
+    },
     "/documents/{id}": {
       "delete": {
         "operationId": "documents.unlink",
@@ -851,7 +932,159 @@
             "description": "409"
           }
         },
-        "summary": "Unlink a document by link id",
+        "summary": "Unlink a document by link id (the Paperless document is kept)",
+        "tags": ["documents"]
+      },
+      "patch": {
+        "operationId": "documents.update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "exclusiveMinimum": true,
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "documentType": {
+                    "enum": ["receipt", "warranty", "manual", "invoice", "other"],
+                    "type": "string"
+                  },
+                  "title": {
+                    "maxLength": 128,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "createdAt": {
+                          "type": "string"
+                        },
+                        "documentType": {
+                          "type": "string"
+                        },
+                        "id": {
+                          "type": "number"
+                        },
+                        "itemId": {
+                          "type": "string"
+                        },
+                        "paperlessDocumentId": {
+                          "type": "number"
+                        },
+                        "title": {
+                          "nullable": true,
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "itemId",
+                        "paperlessDocumentId",
+                        "documentType",
+                        "title",
+                        "createdAt"
+                      ],
+                      "type": "object"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["data", "message"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "409"
+          },
+          "412": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "412"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "502"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "503"
+          }
+        },
+        "summary": "Change the given fields of a link; a title change is also made in Paperless, and nothing changes if that fails",
         "tags": ["documents"]
       }
     },
@@ -3787,6 +4020,56 @@
                       },
                       "type": "array"
                     },
+                    "failed": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "documentType": {
+                            "type": "string"
+                          },
+                          "fileName": {
+                            "type": "string"
+                          },
+                          "id": {
+                            "type": "number"
+                          },
+                          "itemId": {
+                            "type": "string"
+                          },
+                          "reason": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "state": {
+                            "enum": ["pending", "failed"],
+                            "type": "string"
+                          },
+                          "taskId": {
+                            "type": "string"
+                          },
+                          "title": {
+                            "nullable": true,
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "itemId",
+                          "taskId",
+                          "documentType",
+                          "title",
+                          "fileName",
+                          "state",
+                          "reason",
+                          "createdAt"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
                     "pagination": {
                       "additionalProperties": false,
                       "properties": {
@@ -3805,9 +4088,59 @@
                       },
                       "required": ["total", "limit", "offset", "hasMore"],
                       "type": "object"
+                    },
+                    "pending": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "documentType": {
+                            "type": "string"
+                          },
+                          "fileName": {
+                            "type": "string"
+                          },
+                          "id": {
+                            "type": "number"
+                          },
+                          "itemId": {
+                            "type": "string"
+                          },
+                          "reason": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "state": {
+                            "enum": ["pending", "failed"],
+                            "type": "string"
+                          },
+                          "taskId": {
+                            "type": "string"
+                          },
+                          "title": {
+                            "nullable": true,
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "itemId",
+                          "taskId",
+                          "documentType",
+                          "title",
+                          "fileName",
+                          "state",
+                          "reason",
+                          "createdAt"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
                     }
                   },
-                  "required": ["data", "pagination"],
+                  "required": ["data", "pending", "failed", "pagination"],
                   "type": "object"
                 }
               }
@@ -3815,7 +4148,7 @@
             "description": "200"
           }
         },
-        "summary": "List documents linked to an item",
+        "summary": "List an item's linked documents (paginated) and its uploads still pending or failed, after resolving the pending ones",
         "tags": ["documents"]
       },
       "post": {

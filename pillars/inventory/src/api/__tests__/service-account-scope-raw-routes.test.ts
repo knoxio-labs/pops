@@ -98,6 +98,8 @@ describe('the raw route scope map', () => {
       'GET inventory.photos.file',
       'GET inventory.documentFiles.file',
       'GET inventory.documents.thumbnail',
+      'POST inventory.documents.upload',
+      'GET inventory.documents.file',
     ]);
   });
 

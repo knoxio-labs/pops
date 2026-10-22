@@ -38,6 +38,8 @@ import { makeWebSummaryHandlers } from './web-summary-handlers.js';
 
 import type { ServiceAccountVerifier } from '@pops/pillar-sdk/server';
 
+import type { DocumentUploadsClient } from '../documents/uploads-client.js';
+
 const server: ReturnType<typeof initServer> = initServer();
 
 export function makeInventoryRestHandlers(deps: {
@@ -49,6 +51,8 @@ export function makeInventoryRestHandlers(deps: {
    * without a network round-trip.
    */
   documents?: DocumentsClient;
+  /** The documents-pillar task and title calls behind uploaded item documents. */
+  documentUploads: DocumentUploadsClient;
   /**
    * The `ai` pillar client backing `codes/suggest`'s ranking. Production
    * omits this so it defaults to the live `pillar('ai')` proxy; tests inject
@@ -72,7 +76,7 @@ export function makeInventoryRestHandlers(deps: {
     connections: makeConnectionsHandlers(db),
     fixtures: makeFixturesHandlers(db, documents),
     photos: makePhotosHandlers(db),
-    documents: makeDocumentsHandlers(db, documents),
+    documents: makeDocumentsHandlers(db, documents, deps.documentUploads),
     documentFiles: makeDocumentFilesHandlers(db),
     reports: makeReportsHandlers(db),
     paperless: makePaperlessHandlers(documents),

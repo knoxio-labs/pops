@@ -9,6 +9,7 @@ import type {
   events,
   fixtures,
   itemConnections,
+  itemDocumentIngestions,
   itemDocuments,
   itemFieldValues,
   itemTypeFields,
@@ -38,6 +39,7 @@ export type ItemConnectionRow = typeof itemConnections.$inferSelect;
 export type ItemConnectionInsert = typeof itemConnections.$inferInsert;
 export type ItemDocumentRow = typeof itemDocuments.$inferSelect;
 export type ItemDocumentInsert = typeof itemDocuments.$inferInsert;
+export type ItemDocumentIngestionRow = typeof itemDocumentIngestions.$inferSelect;
 export type ItemFixtureConnectionRow = typeof itemFixtureConnections.$inferSelect;
 export type ItemFixtureConnectionInsert = typeof itemFixtureConnections.$inferInsert;
 export type ItemPhotoRow = typeof itemPhotos.$inferSelect;

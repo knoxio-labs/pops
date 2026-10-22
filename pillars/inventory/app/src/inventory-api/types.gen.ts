@@ -276,6 +276,50 @@ export type ConnectionsConnectResponses = {
 export type ConnectionsConnectResponse =
   ConnectionsConnectResponses[keyof ConnectionsConnectResponses];
 
+export type DocumentsDismissIngestionData = {
+  /**
+   * Body
+   */
+  body?: {
+    [key: string]: never;
+  };
+  path: {
+    id: number;
+  };
+  query?: never;
+  url: '/document-ingestions/{id}';
+};
+
+export type DocumentsDismissIngestionErrors = {
+  /**
+   * 400
+   */
+  400: ErrorBody;
+  /**
+   * 404
+   */
+  404: ErrorBody;
+  /**
+   * 409
+   */
+  409: ErrorBody;
+};
+
+export type DocumentsDismissIngestionError =
+  DocumentsDismissIngestionErrors[keyof DocumentsDismissIngestionErrors];
+
+export type DocumentsDismissIngestionResponses = {
+  /**
+   * 200
+   */
+  200: {
+    message: string;
+  };
+};
+
+export type DocumentsDismissIngestionResponse =
+  DocumentsDismissIngestionResponses[keyof DocumentsDismissIngestionResponses];
+
 export type DocumentsUnlinkData = {
   /**
    * Body
@@ -317,6 +361,69 @@ export type DocumentsUnlinkResponses = {
 };
 
 export type DocumentsUnlinkResponse = DocumentsUnlinkResponses[keyof DocumentsUnlinkResponses];
+
+export type DocumentsUpdateData = {
+  /**
+   * Body
+   */
+  body?: {
+    documentType?: 'receipt' | 'warranty' | 'manual' | 'invoice' | 'other';
+    title?: string;
+  };
+  path: {
+    id: number;
+  };
+  query?: never;
+  url: '/documents/{id}';
+};
+
+export type DocumentsUpdateErrors = {
+  /**
+   * 400
+   */
+  400: ErrorBody;
+  /**
+   * 404
+   */
+  404: ErrorBody;
+  /**
+   * 409
+   */
+  409: ErrorBody;
+  /**
+   * 412
+   */
+  412: ErrorBody;
+  /**
+   * 502
+   */
+  502: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
+};
+
+export type DocumentsUpdateError = DocumentsUpdateErrors[keyof DocumentsUpdateErrors];
+
+export type DocumentsUpdateResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: {
+      createdAt: string;
+      documentType: string;
+      id: number;
+      itemId: string;
+      paperlessDocumentId: number;
+      title: string | null;
+    };
+    message: string;
+  };
+};
+
+export type DocumentsUpdateResponse = DocumentsUpdateResponses[keyof DocumentsUpdateResponses];
 
 export type FixturesListData = {
   body?: never;
@@ -1296,12 +1403,34 @@ export type DocumentsListForItemResponses = {
       paperlessDocumentId: number;
       title: string | null;
     }>;
+    failed: Array<{
+      createdAt: string;
+      documentType: string;
+      fileName: string;
+      id: number;
+      itemId: string;
+      reason: string | null;
+      state: 'pending' | 'failed';
+      taskId: string;
+      title: string | null;
+    }>;
     pagination: {
       hasMore: boolean;
       limit: number;
       offset: number;
       total: number;
     };
+    pending: Array<{
+      createdAt: string;
+      documentType: string;
+      fileName: string;
+      id: number;
+      itemId: string;
+      reason: string | null;
+      state: 'pending' | 'failed';
+      taskId: string;
+      title: string | null;
+    }>;
   };
 };
 
