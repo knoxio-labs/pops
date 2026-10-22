@@ -23,17 +23,17 @@ export type InventoryDocumentsShape = {
   };
   paperless: {
     search: (input: { query: string }) => unknown;
+    status: () => InventoryPaperlessStatus;
   };
 };
 
-/** The upload limits documents states on `GET /paperless/status`. */
-export type DocumentsStatus = {
-  data: { maxUploadBytes: number; allowedMimeTypes: string[] };
+/** Inventory's `paperless.status`, which relays documents' upload limits; `null` when documents gave none. */
+export type InventoryPaperlessStatus = {
+  data: { maxUploadBytes: number | null; allowedMimeTypes: string[] | null };
 };
 
-/** The slice of documents' contract the gateway calls directly: its limits and Paperless deletion. */
+/** The slice of documents' contract the gateway calls directly: Paperless deletion. */
 export type DocumentsShape = {
-  paperless: { status: () => DocumentsStatus };
   write: { delete: (input: IdInput) => unknown };
 };
 
@@ -42,7 +42,7 @@ export function inventoryDocuments(): PillarHandle<InventoryDocumentsShape> {
   return getPillar<InventoryDocumentsShape>('inventory');
 }
 
-/** The documents pillar's handle, for its limits and Paperless deletion. */
+/** The documents pillar's handle, for Paperless deletion. */
 export function documentsPillar(): PillarHandle<DocumentsShape> {
   return getPillar<DocumentsShape>('documents');
 }

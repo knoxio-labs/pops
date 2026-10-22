@@ -16,9 +16,9 @@ const inventory = {
     unlink: vi.fn(),
     dismissIngestion: vi.fn(),
   },
-  paperless: { search: vi.fn() },
+  paperless: { search: vi.fn(), status: vi.fn() },
 };
-const documents = { paperless: { status: vi.fn() }, write: { delete: vi.fn() } };
+const documents = { write: { delete: vi.fn() } };
 
 vi.mock('../pillar-client.js', () => ({
   getPillar: (id: string) => {
@@ -70,7 +70,7 @@ beforeEach(() => {
       ],
     })
   );
-  documents.paperless.status.mockResolvedValue(callOk(LIMITS));
+  inventory.paperless.status.mockResolvedValue(callOk(LIMITS));
   documents.write.delete.mockResolvedValue(callOk(undefined));
 });
 
@@ -194,7 +194,7 @@ describe('inventory.documents.createUpload', () => {
     const result = await createUpload.handler(args, context);
     expect(result.isError).toBe(true);
     expect(extractText(result)).toContain(field);
-    expect(documents.paperless.status).not.toHaveBeenCalled();
+    expect(inventory.paperless.status).not.toHaveBeenCalled();
   });
 
   it('refuses without a public address and mints nothing', async () => {
@@ -204,15 +204,29 @@ describe('inventory.documents.createUpload', () => {
     expect(mint).not.toHaveBeenCalled();
   });
 
-  it("names documents' status scope when documents refuses the credential", async () => {
-    documents.paperless.status.mockResolvedValueOnce({ ...unauthorized, pillar: 'documents' });
+  it("names inventory's status scope when inventory refuses the credential", async () => {
+    inventory.paperless.status.mockResolvedValueOnce({ ...unauthorized, pillar: 'inventory' });
     const mint = vi.spyOn(tokens, 'mint');
     const result = await createUpload.handler(
       { itemId: 'i', documentType: 'receipt', fileName: 'f.pdf' },
       context
     );
     expect(result.isError).toBe(true);
-    expect(extractText(result)).toContain("'documents.paperless.status'");
+    expect(extractText(result)).toContain("'inventory.paperless.status'");
+    expect(mint).not.toHaveBeenCalled();
+  });
+
+  it('refuses and mints nothing when documents reported no limits', async () => {
+    inventory.paperless.status.mockResolvedValueOnce(
+      callOk({ data: { maxUploadBytes: null, allowedMimeTypes: null } })
+    );
+    const mint = vi.spyOn(tokens, 'mint');
+    const result = await createUpload.handler(
+      { itemId: 'i', documentType: 'receipt', fileName: 'f.pdf' },
+      context
+    );
+    expect(result.isError).toBe(true);
+    expect(extractText(result)).toContain('upload limits are unknown');
     expect(mint).not.toHaveBeenCalled();
   });
 

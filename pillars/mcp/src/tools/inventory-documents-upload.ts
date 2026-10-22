@@ -2,7 +2,7 @@ import { UPLOAD_ROUTE_PREFIX } from '../uploads/upload-route.js';
 import { UPLOAD_TOKEN_TTL_MS, uploadTokens } from '../uploads/upload-tokens.js';
 import {
   coerceDocumentType,
-  documentsPillar,
+  inventoryDocuments,
   documentTypeProperty,
   titleProperty,
 } from './inventory-documents-shared.js';
@@ -14,7 +14,7 @@ import type { DocumentUploadTarget, UploadTokenStore } from '../uploads/upload-t
 import type { ToolContext, ToolDef } from './tool-def.js';
 
 const UPLOAD_SCOPE = 'inventory.documents.upload';
-const LIMITS_SCOPE = 'documents.paperless.status';
+const LIMITS_SCOPE = 'inventory.paperless.status';
 
 const MIME_BY_EXTENSION: Readonly<Record<string, string>> = {
   pdf: 'application/pdf',
@@ -73,9 +73,14 @@ async function createDocumentUpload(
   if (baseUrl === undefined) {
     return toolError('Cannot build an upload URL: the gateway does not know its public address.');
   }
-  const status = await documentsPillar().paperless.status();
+  const status = await inventoryDocuments().paperless.status();
   if (status.kind !== 'ok') return mapCallResult(status, LIMITS_SCOPE);
   const { maxUploadBytes, allowedMimeTypes } = status.value.data;
+  if (maxUploadBytes === null || allowedMimeTypes === null) {
+    return toolError(
+      'Paperless is not reachable through documents, so its upload limits are unknown. Retry once documents is up.'
+    );
+  }
   const grant = tokens.mint({ ...target, maxBytes: maxUploadBytes, allowedMimeTypes });
   if (grant === undefined) {
     return toolError(

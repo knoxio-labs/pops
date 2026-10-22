@@ -169,11 +169,11 @@ though nothing enforces it mechanically.
   the bytes.
 - `inventory.documents.createUpload` mints the same single-use URL as photos,
   carrying a document target: item, kind, file name, title, and the
-  `maxUploadBytes` and `allowedMimeTypes` it reads from documents'
-  `paperless.status` (scope `documents.paperless.status`; inventory's
-  pass-through does not expose the limits). The upload route streams the body
-  to inventory's raw `POST /items/:itemId/documents/upload`; nothing is held in
-  memory, and no limit is declared in mcp. Images are valid documents
+  `maxUploadBytes` and `allowedMimeTypes` documents states, read through
+  inventory's `paperless.status` pass-through (scope
+  `inventory.paperless.status`); with no limits reported it refuses to mint.
+  The upload route streams the body to inventory's raw
+  `POST /items/:itemId/documents/upload`; nothing is held in memory, and no limit is declared in mcp. Images are valid documents
   (documents allows `image/*`, e.g. a photographed receipt); a document URL
   refuses only what documents would, while a photo URL refuses anything not
   JPEG or HEIC, naming the document tool.
