@@ -1,42 +1,25 @@
-import { defineErrors } from '@pops/pillar-express';
 import { getRequestId, mintRequestId } from '@pops/pillar-sdk/server';
 
 import { getPaperlessClient } from '../modules/paperless/index.js';
 import { PaperlessApiError } from '../modules/paperless/types.js';
+import {
+  ALLOWED_UPLOAD_MIME_TYPES,
+  resolveMaxUploadBytes,
+} from '../modules/paperless/upload-limits.js';
+import {
+  paperlessErrors,
+  requirePaperlessClient,
+  throwPaperlessFailure,
+} from '../paperless-errors.js';
+import { toWireDocument } from './wire-document.js';
 
 import type { ServerInferRequest } from '@ts-rest/core';
 
 import type { ErrorBody } from '@pops/types';
 
 import type { documentsPaperlessContract } from '../../contract/rest-paperless.js';
-import type { PaperlessClient } from '../modules/paperless/client.js';
-import type { PaperlessDocument } from '../modules/paperless/types.js';
 
 type Req = ServerInferRequest<typeof documentsPaperlessContract>;
-
-/** Registered paperless failures returned by the typed handler surface. */
-export const paperlessErrors = defineErrors('documents', {
-  not_configured: {
-    area: 'paperless',
-    status: 412,
-    message: 'Paperless-ngx is not configured.',
-    retryable: false,
-  },
-  not_found: {
-    area: 'paperless',
-    status: 404,
-    message: 'The requested Paperless document was not found.',
-    retryable: false,
-  },
-});
-
-interface WireDocument {
-  id: number;
-  title: string;
-  created: string;
-  originalFileName: string;
-  thumbnailUrl: string;
-}
 
 function errorBody(code: string, message: string, retryable: boolean): ErrorBody {
   return {
@@ -58,16 +41,6 @@ function notConfigured() {
   };
 }
 
-function toWireDocument(client: PaperlessClient, doc: PaperlessDocument): WireDocument {
-  return {
-    id: doc.id,
-    title: doc.title,
-    created: doc.created,
-    originalFileName: doc.originalFileName,
-    thumbnailUrl: client.getDocumentThumbnailUrl(doc.id),
-  };
-}
-
 /**
  * Re-throw anything that is not a Paperless 404 as a 500.
  *
@@ -85,7 +58,14 @@ function rethrowNonNotFound(err: unknown): never {
   throw err;
 }
 
-/** Handlers for the `paperless.*` sub-router. No db; `search`/`get` return 412 when Paperless is unconfigured. */
+function uploadLimits() {
+  return {
+    maxUploadBytes: resolveMaxUploadBytes(),
+    allowedMimeTypes: [...ALLOWED_UPLOAD_MIME_TYPES],
+  };
+}
+
+/** Handlers for the `paperless.*` sub-router. No db; every route but `status` is 412 when Paperless is unconfigured. */
 export function makePaperlessHandlers() {
   return {
     status: async () => {
@@ -94,7 +74,13 @@ export function makePaperlessHandlers() {
         return {
           status: 200 as const,
           body: {
-            data: { configured: false, available: false, baseUrl: null, documentCount: null },
+            data: {
+              configured: false,
+              available: false,
+              baseUrl: null,
+              documentCount: null,
+              ...uploadLimits(),
+            },
           },
         };
       }
@@ -108,6 +94,7 @@ export function makePaperlessHandlers() {
               available: true,
               baseUrl: client.getBaseUrl(),
               documentCount,
+              ...uploadLimits(),
             },
           },
         };
@@ -120,6 +107,7 @@ export function makePaperlessHandlers() {
               available: false,
               baseUrl: client.getBaseUrl(),
               documentCount: null,
+              ...uploadLimits(),
             },
           },
         };
@@ -165,6 +153,15 @@ export function makePaperlessHandlers() {
         }
         return rethrowNonNotFound(err);
       }
+    },
+
+    task: async ({ params }: Req['task']) => {
+      const client = requirePaperlessClient();
+      const task = await client
+        .getTask(params.taskId)
+        .catch((err: unknown) => throwPaperlessFailure(err));
+      if (task === null) return paperlessErrors.task_not_found({ taskId: params.taskId });
+      return { status: 200 as const, body: { data: task } };
     },
   };
 }

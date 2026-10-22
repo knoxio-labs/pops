@@ -122,6 +122,11 @@ export interface PaperlessDocumentType {
   documentCount: number;
 }
 
+/** Only the fields `PaperlessClient.updateDocument` may change. */
+export interface PaperlessDocumentPatch {
+  readonly title?: string;
+}
+
 export interface PaperlessSearchResult {
   documents: PaperlessDocument[];
   count: number;

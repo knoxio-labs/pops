@@ -1,10 +1,12 @@
 /**
- * Raw (non-ts-rest) byte-serving route for the documents pillar:
+ * Raw (non-ts-rest) byte routes for the documents pillar:
  * - `GET /documents/:id/thumbnail` — Paperless-ngx thumbnail proxy
+ * - `GET /paperless/documents/:id/download` — document file, Range-aware
+ * - `POST /paperless/documents` — streamed upload to `post_document`
  *
- * GET-only and validated by numeric id, so it needs no DB handle. Deliberately
- * NOT a ts-rest contract route (mirrors media's `/media/images`) so it adds
- * no OpenAPI surface.
+ * Deliberately NOT ts-rest contract routes (mirrors media's `/media/images`):
+ * their bodies are bytes, so they add no OpenAPI surface. The scope gate
+ * declares each one in `middleware/service-account-scope.ts`.
  *
  * Moved from `pillars/inventory/src/api/files/router.ts` (workstream 13,
  * ADR-039). Inventory's own byte-serving route now proxies HERE over a raw
@@ -17,6 +19,8 @@ import { defineErrors, PopsError } from '@pops/pillar-express';
 
 import { getPaperlessClient } from '../modules/paperless/index.js';
 import { PaperlessApiError } from '../modules/paperless/types.js';
+import { DOWNLOAD_ROUTE_PATH, handleDownload } from './download-route.js';
+import { handleUpload, UPLOAD_ROUTE_PATH } from './upload-route.js';
 
 const THUMBNAIL_CACHE_CONTROL = 'public, max-age=3600';
 
@@ -83,6 +87,9 @@ export function createDocumentsFilesRouter(): ExpressRouter {
       return thumbnailErrors.upstream_failure();
     }
   });
+
+  router.get(DOWNLOAD_ROUTE_PATH, handleDownload);
+  router.post(UPLOAD_ROUTE_PATH, handleUpload);
 
   return router;
 }

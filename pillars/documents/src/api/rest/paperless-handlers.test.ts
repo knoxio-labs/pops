@@ -21,6 +21,11 @@ vi.mock('../modules/paperless/index.js', () => ({
 }));
 
 const { makePaperlessHandlers } = await import('./paperless-handlers.js');
+
+const defaultLimits = {
+  maxUploadBytes: 104_857_600,
+  allowedMimeTypes: ['application/pdf', 'image/*', 'text/*'],
+};
 const { PaperlessApiError } = await import('../modules/paperless/types.js');
 
 /** A client stub with every method present, so a test overrides only what it exercises. */
@@ -46,13 +51,27 @@ const wireDocument = { ...paperlessDocument, thumbnailUrl: 'https://paperless.ex
 
 beforeEach(() => {
   mockGetPaperlessClient.mockReset();
+  vi.stubEnv('DOCUMENTS_MAX_UPLOAD_BYTES', '');
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
 });
 
 describe('paperless.status', () => {
+  it('reports the upload cap DOCUMENTS_MAX_UPLOAD_BYTES sets', async () => {
+    vi.stubEnv('DOCUMENTS_MAX_UPLOAD_BYTES', '2048');
+    mockGetPaperlessClient.mockReturnValue(null);
+
+    const result = await makePaperlessHandlers().status();
+
+    expect(result.body.data).toMatchObject({
+      maxUploadBytes: 2048,
+      allowedMimeTypes: defaultLimits.allowedMimeTypes,
+    });
+  });
+
   it('reports unconfigured when no client is available', async () => {
     mockGetPaperlessClient.mockReturnValue(null);
     const handlers = makePaperlessHandlers();
@@ -62,7 +81,13 @@ describe('paperless.status', () => {
     expect(result).toEqual({
       status: 200,
       body: {
-        data: { configured: false, available: false, baseUrl: null, documentCount: null },
+        data: {
+          configured: false,
+          available: false,
+          baseUrl: null,
+          documentCount: null,
+          ...defaultLimits,
+        },
       },
     });
   });
@@ -86,6 +111,7 @@ describe('paperless.status', () => {
           available: true,
           baseUrl: 'https://paperless.example',
           documentCount: 123,
+          ...defaultLimits,
         },
       },
     });
@@ -110,6 +136,7 @@ describe('paperless.status', () => {
           available: false,
           baseUrl: 'https://paperless.example',
           documentCount: null,
+          ...defaultLimits,
         },
       },
     });
