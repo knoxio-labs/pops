@@ -1,19 +1,12 @@
-/**
- * Raw pillar discovery for BFM calls that cannot go through `pillar()` —
- * notably byte streams, which are not one `CallResult`.
- */
 import {
   DiscoveryCache,
   HttpDiscoveryTransport,
   type DiscoveryTransport,
-} from '@pops/pillar-sdk/client';
-import {
-  getServerSdkConfig,
-  InternalBaseUrlTransport,
-  type ServerSdkConfig,
-} from '@pops/pillar-sdk/server';
+} from '../client/index.js';
+import { getServerSdkConfig, type ServerSdkConfig } from './config.js';
+import { InternalBaseUrlTransport } from './transport.js';
 
-/** Matches `libs/sdk/src/client/factory.ts`'s own default. */
+/** Matches `../client/factory.ts`'s own default. */
 const DEFAULT_DISCOVERY_TTL_MS = 60_000;
 
 /** What a raw lookup needs to answer: enough to build a request, nothing else. */
@@ -22,8 +15,13 @@ export interface RawDiscovery {
 }
 
 /**
- * Build the raw discovery seam from server SDK config, optionally injecting
- * its sources for consumers and tests that need to control the registry.
+ * Resolve a pillar's base URL for a call that cannot go through `pillar()`,
+ * such as a raw byte route with no OpenAPI operation. Applies the same
+ * registry discovery and `internalBaseUrls` overrides `pillar()` does, but
+ * attaches no credential: the caller adds `SERVICE_ACCOUNT_HEADER` itself.
+ *
+ * Reads the server SDK config when called, so build it after
+ * `configureServerSdk`. Both sources are injectable for tests.
  */
 export function buildRawDiscovery(
   options: {

@@ -21,6 +21,10 @@ straight through to these routes; the outcome vocabulary here (`alreadyStored`,
 `hash_mismatch`, `413`, `415`, `media_not_found`) is what bfm forwards, not
 reinterpreted at the proxy.
 
+The MCP gateway's `PUT /uploads/:token` (`pillars/mcp/src/uploads/`) also
+stores here, under its own service account, for photos added through
+`inventory.items.attachPhoto`.
+
 ## The seam into `item.attachPhoto`
 
 The command layer (`src/domain/commands/`) owns `item_photos` and decides

@@ -1,5 +1,15 @@
 import type { CallToolResult, Tool } from '@modelcontextprotocol/sdk/types.js';
 
+/** Per-request facts a handler may need beyond its arguments. */
+export interface ToolContext {
+  /**
+   * The gateway's origin as the calling client reached it (`MCP_PUBLIC_URL`
+   * when set, else the `/mcp` request's protocol and `Host`). `undefined`
+   * outside an HTTP request, e.g. in a unit test.
+   */
+  readonly publicBaseUrl?: string;
+}
+
 export interface ToolDef {
   name: string;
   description: string;
@@ -9,7 +19,7 @@ export interface ToolDef {
    * may. Advertised to MCP clients as the `readOnlyHint` annotation.
    */
   readOnly: boolean;
-  handler: (args: Record<string, unknown>) => Promise<CallToolResult>;
+  handler: (args: Record<string, unknown>, context?: ToolContext) => Promise<CallToolResult>;
   /**
    * The dot-prefixed producer scope (see `hasScopeFor` in
    * `@pops/pillar-sdk/server`) a caller's service account must hold for this

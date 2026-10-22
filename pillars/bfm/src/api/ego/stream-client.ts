@@ -1,14 +1,14 @@
-import { SERVICE_ACCOUNT_HEADER, resolveApiKey } from '@pops/pillar-sdk/server';
+import { buildRawDiscovery, SERVICE_ACCOUNT_HEADER, resolveApiKey } from '@pops/pillar-sdk/server';
 
-import { buildRawDiscovery } from '../pillars/raw-discovery.js';
 import { readUpstreamFrame, SseReader } from './stream-wire.js';
+
+import type { RawDiscovery } from '@pops/pillar-sdk/server';
 
 import type {
   MobileEgoStreamBody,
   MobileEgoStreamFrame,
 } from '../../contract/mobile-ego-schemas.js';
 import type { GatewayFailure } from '../pillars/gateway.js';
-import type { RawDiscovery } from '../pillars/raw-discovery.js';
 
 const CEREBRUM_PILLAR_ID = 'cerebrum';
 const STREAM_PATH = '/ego/chat/stream';

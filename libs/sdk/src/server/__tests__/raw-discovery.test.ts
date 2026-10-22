@@ -1,21 +1,9 @@
-/** The shared raw lookup applies server SDK base-URL overrides to a snapshot. */
 import { describe, expect, it, vi } from 'vitest';
 
-import { buildBfmManifest } from '../../manifest.js';
+import { discoveredPillar } from '../../client/__tests__/fixtures.js';
 import { buildRawDiscovery } from '../raw-discovery.js';
 
-import type { DiscoveredPillar, DiscoveryTransport } from '@pops/pillar-sdk/client';
-
-function discoveredPillar(pillarId: string, baseUrl: string): DiscoveredPillar {
-  return {
-    pillarId,
-    baseUrl,
-    status: 'healthy',
-    manifest: { ...buildBfmManifest('1.0.0'), pillar: pillarId },
-    lastSeenAt: '2026-08-08T00:00:00.000Z',
-    registered: true,
-  };
-}
+import type { DiscoveredPillar, DiscoveryTransport } from '../../client/index.js';
 
 function transport(...pillars: DiscoveredPillar[]): DiscoveryTransport {
   return { fetchSnapshot: vi.fn(() => Promise.resolve(pillars)) };
@@ -24,8 +12,8 @@ function transport(...pillars: DiscoveredPillar[]): DiscoveryTransport {
 describe('buildRawDiscovery', () => {
   it('applies a configured override, preserves discovered URLs, and returns undefined for unknown pillars', async () => {
     const baseTransport = transport(
-      discoveredPillar('finance', 'http://finance-from-registry'),
-      discoveredPillar('media', 'http://media-from-registry')
+      discoveredPillar({ pillarId: 'finance', baseUrl: 'http://finance-from-registry' }),
+      discoveredPillar({ pillarId: 'media', baseUrl: 'http://media-from-registry' })
     );
     const discovery = buildRawDiscovery({
       config: { internalBaseUrls: { finance: 'http://finance-internal' } },
@@ -44,7 +32,7 @@ describe('buildRawDiscovery', () => {
 
   it('uses discovered base URLs when no overrides are configured', async () => {
     const baseTransport = transport(
-      discoveredPillar('inventory', 'http://inventory-from-registry')
+      discoveredPillar({ pillarId: 'inventory', baseUrl: 'http://inventory-from-registry' })
     );
     const discovery = buildRawDiscovery({ config: {}, baseTransport });
 
