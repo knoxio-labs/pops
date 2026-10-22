@@ -4,6 +4,8 @@ export type {
   DetailConnection,
   DetailDocument,
   DetailFact,
+  DetailIngestion,
+  DocumentUploadLimits,
   DetailPhoto,
   DetailProvenance,
   DetailSectionId,
@@ -27,3 +29,5 @@ export {
   toDetailPhotos,
   toDetailProvenance,
 } from './detail-sections';
+export { toDetailIngestions } from './detail-ingestions';
+export { uploadLimitsOf } from './document-upload-limits';

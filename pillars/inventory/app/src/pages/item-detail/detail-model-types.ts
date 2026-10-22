@@ -42,10 +42,28 @@ export interface DetailDocument {
   id: number;
   title: string;
   kind: string;
+  /** The wire kind, which the kind editor starts from. */
+  documentType: string;
   added: string;
   paperlessDocumentId: number;
   /** Whether Paperless no longer has the linked document. */
   missing: boolean;
+}
+
+/** One upload Paperless has not finished, or could not process. */
+export interface DetailIngestion {
+  id: number;
+  /** The title the upload asked for, else its file name. */
+  title: string;
+  kind: string;
+  /** Why Paperless refused it; null while pending or when Paperless gave none. */
+  reason: string | null;
+}
+
+/** The upload cap and MIME allowlist documents states for Paperless uploads. */
+export interface DocumentUploadLimits {
+  maxUploadBytes: number;
+  allowedMimeTypes: readonly string[];
 }
 
 /** Availability of the Paperless integration. */
@@ -76,8 +94,11 @@ export interface ItemDetailModel {
     photos: readonly DetailPhoto[];
   } | null;
   documents: readonly DetailDocument[] | null;
+  pendingDocuments: readonly DetailIngestion[];
+  failedDocuments: readonly DetailIngestion[];
   paperless: PaperlessState | null;
-  paperlessBaseUrl: string | null;
+  /** Null when the status read does not carry documents' limits; uploads are then checked by the server only. */
+  uploadLimits: DocumentUploadLimits | null;
   connections: readonly DetailConnection[] | null;
   /** Empty until the history-row ticket supplies the preview rows. */
   events: readonly EventModel[];
