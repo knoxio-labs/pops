@@ -100,6 +100,29 @@ export type ExpressionV1 =
       values: Array<ExpressionV1>;
     };
 
+export type ItemParts = {
+  assembly: {
+    code: string | null;
+    itemId: string;
+    name: string;
+  } | null;
+  canHaveParts: boolean;
+  parts: Array<{
+    code: string | null;
+    itemId: string;
+    lifecycle: string;
+    name: string;
+    placement: {
+      containingItemId: string | null;
+      containingItemName: string | null;
+      kind: 'location' | 'container' | 'hand';
+      locationId: string | null;
+      locationName: string | null;
+    };
+    typeId: string | null;
+  }>;
+};
+
 export type LocationTreeNode = {
   children: Array<LocationTreeNode>;
   id: string;
@@ -1462,6 +1485,128 @@ export type FixturesConnectResponses = {
 };
 
 export type FixturesConnectResponse = FixturesConnectResponses[keyof FixturesConnectResponses];
+
+export type ItemsGetPartsData = {
+  body?: never;
+  path: {
+    itemId: string;
+  };
+  query?: never;
+  url: '/items/{itemId}/parts';
+};
+
+export type ItemsGetPartsErrors = {
+  /**
+   * 400
+   */
+  400: ErrorBody;
+  /**
+   * 404
+   */
+  404: ErrorBody;
+  /**
+   * 409
+   */
+  409: ErrorBody;
+};
+
+export type ItemsGetPartsError = ItemsGetPartsErrors[keyof ItemsGetPartsErrors];
+
+export type ItemsGetPartsResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: ItemParts;
+  };
+};
+
+export type ItemsGetPartsResponse = ItemsGetPartsResponses[keyof ItemsGetPartsResponses];
+
+export type ItemsAddPartData = {
+  /**
+   * Body
+   */
+  body?: {
+    partItemId: string;
+  };
+  path: {
+    itemId: string;
+  };
+  query?: never;
+  url: '/items/{itemId}/parts';
+};
+
+export type ItemsAddPartErrors = {
+  /**
+   * 400
+   */
+  400: ErrorBody;
+  /**
+   * 404
+   */
+  404: ErrorBody;
+  /**
+   * 409
+   */
+  409: ErrorBody;
+};
+
+export type ItemsAddPartError = ItemsAddPartErrors[keyof ItemsAddPartErrors];
+
+export type ItemsAddPartResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: ItemParts;
+  };
+};
+
+export type ItemsAddPartResponse = ItemsAddPartResponses[keyof ItemsAddPartResponses];
+
+export type ItemsRemovePartData = {
+  /**
+   * Body
+   */
+  body?: {
+    [key: string]: never;
+  };
+  path: {
+    itemId: string;
+    partItemId: string;
+  };
+  query?: never;
+  url: '/items/{itemId}/parts/{partItemId}';
+};
+
+export type ItemsRemovePartErrors = {
+  /**
+   * 400
+   */
+  400: ErrorBody;
+  /**
+   * 404
+   */
+  404: ErrorBody;
+  /**
+   * 409
+   */
+  409: ErrorBody;
+};
+
+export type ItemsRemovePartError = ItemsRemovePartErrors[keyof ItemsRemovePartErrors];
+
+export type ItemsRemovePartResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: ItemParts;
+  };
+};
+
+export type ItemsRemovePartResponse = ItemsRemovePartResponses[keyof ItemsRemovePartResponses];
 
 export type PhotosListForItemData = {
   body?: never;

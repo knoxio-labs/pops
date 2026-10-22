@@ -25,8 +25,22 @@ const EMPTY_ISSUES: readonly InventoryApiIssue[] = [];
 const EMPTY_ISSUE_SOURCES: CatalogueIssueSources = [];
 const EMPTY_TYPES: readonly CatalogueType[] = [];
 
+const CONTAINMENT = 'containment';
+const PARTS = 'parts';
+
+/** The type's capabilities with the two editable toggles applied and every other one kept. */
+function nextCapabilities(
+  existing: readonly string[],
+  containment: boolean,
+  parts: boolean
+): string[] {
+  const kept = existing.filter((capability) => capability !== CONTAINMENT && capability !== PARTS);
+  return [...(containment ? [CONTAINMENT] : []), ...(parts ? [PARTS] : []), ...kept];
+}
+
 function typeOperation({
   containment,
+  parts,
   description,
   key,
   label,
@@ -34,6 +48,7 @@ function typeOperation({
   type,
 }: {
   readonly containment: boolean;
+  readonly parts: boolean;
   readonly description: string;
   readonly key: string;
   readonly label: string;
@@ -45,7 +60,7 @@ function typeOperation({
     ...(type === undefined ? { key: catalogueKeyFromLabel(key) } : { id: type.id }),
     label: label.trim(),
     description: description.trim().length === 0 ? null : description.trim(),
-    capabilities: containment ? ['containment'] : [],
+    capabilities: nextCapabilities(type?.capabilities ?? [], containment, parts),
     parentTypeId,
   };
 }
@@ -78,6 +93,7 @@ export function TypeForm({
     >
       <TypeFormDetails
         containment={formState.containment}
+        parts={formState.parts}
         description={formState.description}
         keyValue={formState.key}
         label={formState.label}
@@ -89,6 +105,7 @@ export function TypeForm({
         operation={formState.operation}
         validationIssues={issues}
         onContainmentChange={formState.setContainment}
+        onPartsChange={formState.setParts}
         onDescriptionChange={formState.setDescription}
         onKeyChange={formState.changeKey}
         onLabelChange={formState.changeLabel}
@@ -105,6 +122,13 @@ export function TypeForm({
   );
 }
 
+function useCapabilityToggles(type: CatalogueType | undefined) {
+  const capabilities = type?.capabilities ?? [];
+  const [containment, setContainment] = useState(capabilities.includes(CONTAINMENT));
+  const [parts, setParts] = useState(capabilities.includes(PARTS));
+  return { containment, parts, setContainment, setParts };
+}
+
 function useTypeFormState(
   type: CatalogueType | undefined,
   onPreview?: (operation: CatalogueOperation) => void
@@ -113,13 +137,11 @@ function useTypeFormState(
   const [key, setKey] = useState(type?.key ?? '');
   const [description, setDescription] = useState(type?.description ?? '');
   const [parentTypeId, setParentTypeId] = useState(type?.parentTypeId ?? null);
-  const [containment, setContainment] = useState(
-    type?.capabilities.includes('containment') ?? false
-  );
+  const { containment, parts, setContainment, setParts } = useCapabilityToggles(type);
   const [keyEdited, setKeyEdited] = useState(type !== undefined);
   const valid = typeFormIsValid(label, key, type);
   const operation = valid
-    ? typeOperation({ containment, description, key, label, parentTypeId, type })
+    ? typeOperation({ containment, parts, description, key, label, parentTypeId, type })
     : null;
   useOperationPreview(operation, onPreview);
 
@@ -140,9 +162,11 @@ function useTypeFormState(
     label,
     operation,
     parentTypeId,
+    parts,
     setContainment,
     setDescription,
     setParentTypeId,
+    setParts,
     valid,
   };
 }

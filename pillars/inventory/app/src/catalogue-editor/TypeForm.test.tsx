@@ -207,3 +207,37 @@ describe('TypeForm typing', () => {
     expect(screen.getByRole('button', { name: 'Create type' })).toBeDisabled();
   });
 });
+
+describe('TypeForm capabilities', () => {
+  it('grants the parts capability on a new type', async () => {
+    const onSave = renderForm();
+    await userEvent.type(screen.getByLabelText('Type label'), 'Blender kit');
+    await userEvent.click(screen.getByRole('switch', { name: 'Parts capability' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Create type' }));
+
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ capabilities: ['parts'] }));
+  });
+
+  it('keeps parts and unknown capabilities when only containment changes', async () => {
+    const kit = { ...pillows, capabilities: ['parts', 'future_capability'] };
+    const onSave = renderForm({ type: kit });
+
+    expect(screen.getByRole('switch', { name: 'Parts capability' })).toBeChecked();
+    await userEvent.click(screen.getByRole('switch', { name: 'Containment capability' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Save type' }));
+
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ capabilities: ['containment', 'parts', 'future_capability'] })
+    );
+  });
+
+  it('removes only the parts capability when it is switched off', async () => {
+    const kit = { ...pillows, capabilities: ['containment', 'parts'] };
+    const onSave = renderForm({ type: kit });
+
+    await userEvent.click(screen.getByRole('switch', { name: 'Parts capability' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Save type' }));
+
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ capabilities: ['containment'] }));
+  });
+});

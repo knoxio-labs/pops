@@ -4,6 +4,7 @@
 
 Accepted — 2026-09-16.
 Amended 2026-09-26 (POPS-4848): types form a single-parent tree.
+Amended 2026-10-22: assemblies and parts.
 
 ## Context
 
@@ -56,20 +57,20 @@ both clients, the contract, and this pillar's code.
 
 ### The thing itself
 
-| Word                    | Means                                                                                                                                                                 | Not                                      |
-| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
-| **Item**                | Anything tracked. The only noun for a tracked thing.                                                                                                                  | "object", "asset", "thing", "entry"      |
-| **Type**                | The catalogue-defined shape an item has: its fields and capabilities, its own and its ancestors'.                                                                     | "category", "template", "kind", "class"  |
-| **Parent type**         | The type a type inherits fields and capabilities from; at most one.                                                                                                   | "category", "supertype", "base"          |
-| **Subtype**             | A type with a parent.                                                                                                                                                 | "child type", "subcategory"              |
-| **Field**               | One slot a type declares; its subtypes inherit it.                                                                                                                    | "property", "attribute", "key"           |
-| **Value**               | What one item records for one field.                                                                                                                                  | "property value", "data"                 |
-| **Value kind**          | What sort of value a field takes: text, integer, exact decimal, yes/no, enum, measurement, date, date-time, HTTPS URL or reference.                                   | "type" (reserved, above), "data type"    |
-| **Note**                | Free prose on an item. Where anything the type does not ask for goes.                                                                                                 | "description", "comment", "custom field" |
-| **Capability**          | A behaviour a type grants. It contributes header actions and page sections to the item, and nothing else. Containment, connection, and (for fixtures) being wired in. | a field; a tag; a permission             |
-| **Inventory code**      | The identifier POPS assigns and prints on a label.                                                                                                                    | "ID", "barcode", "SKU"                   |
-| **External identifier** | An identifier someone else assigned: a barcode, a serial, a model number.                                                                                             | "code" unqualified                       |
-| **Quantity**            | How many identical items one record stands for.                                                                                                                       | "count", "amount", "stock"               |
+| Word                    | Means                                                                                                                                                                        | Not                                      |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| **Item**                | Anything tracked. The only noun for a tracked thing.                                                                                                                         | "object", "asset", "thing", "entry"      |
+| **Type**                | The catalogue-defined shape an item has: its fields and capabilities, its own and its ancestors'.                                                                            | "category", "template", "kind", "class"  |
+| **Parent type**         | The type a type inherits fields and capabilities from; at most one.                                                                                                          | "category", "supertype", "base"          |
+| **Subtype**             | A type with a parent.                                                                                                                                                        | "child type", "subcategory"              |
+| **Field**               | One slot a type declares; its subtypes inherit it.                                                                                                                           | "property", "attribute", "key"           |
+| **Value**               | What one item records for one field.                                                                                                                                         | "property value", "data"                 |
+| **Value kind**          | What sort of value a field takes: text, integer, exact decimal, yes/no, enum, measurement, date, date-time, HTTPS URL or reference.                                          | "type" (reserved, above), "data type"    |
+| **Note**                | Free prose on an item. Where anything the type does not ask for goes.                                                                                                        | "description", "comment", "custom field" |
+| **Capability**          | A behaviour a type grants. It contributes header actions and page sections to the item, and nothing else. Containment, parts, connection, and (for fixtures) being wired in. | a field; a tag; a permission             |
+| **Inventory code**      | The identifier POPS assigns and prints on a label.                                                                                                                           | "ID", "barcode", "SKU"                   |
+| **External identifier** | An identifier someone else assigned: a barcode, a serial, a model number.                                                                                                    | "code" unqualified                       |
+| **Quantity**            | How many identical items one record stands for.                                                                                                                              | "count", "amount", "stock"               |
 
 An item with the containment capability is a **container** — a word for a role,
 not for a second entity. A container is an item: it has a type, a placement, a
@@ -140,6 +141,23 @@ is then independent. Records do not merge on their own when two groups end up
 in the same container, because two groups of the same thing bought a year apart
 are frequently not interchangeable. Whether a manual merge exists at all is
 open.
+
+### Assemblies and parts
+
+| Word         | Means                                                                              | Not                                  |
+| ------------ | ---------------------------------------------------------------------------------- | ------------------------------------ |
+| **Assembly** | An item whose type grants the **parts** capability: a kit, a set, a modular couch. | "aggregate", "bundle", "parent item" |
+| **Part**     | An item that belongs to one assembly.                                              | "component", "child", "accessory"    |
+
+A part is a whole item, with its own type, fields, photos and placement. Being
+a part says what it belongs to, not where it is: a couch module can sit in
+storage while the couch is in the lounge, so the assembly's section lists
+where each part is. An item is a part of at most one assembly, never of itself
+or of its own parts, and assemblies nest (a food processor set inside a
+blender kit).
+
+Retyping an assembly onto a type without the capability leaves its parts
+listed, so they can still be removed; it only stops new ones being added.
 
 ### Where a thing is
 
