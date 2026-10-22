@@ -43,6 +43,13 @@
 import { z } from 'zod';
 
 import { expect, test } from './fixtures/pillar-rest-guard';
+import {
+  MovieSchema,
+  PaginationMetaSchema,
+  RotationSchedulerStatusResponseSchema,
+  TvShowSchema,
+  WatchlistStatusResponseSchema,
+} from './helpers/media-schemas';
 import { assertMatchesContract, json, fulfilWith, stubShellBoot } from './helpers/pillar-rest';
 
 import type { Page } from '@playwright/test';
@@ -120,91 +127,14 @@ const TvShowSearchResponseSchema = z
   .object({ results: z.array(TvShowSearchResultSchema) })
   .strict();
 
-/**
- * Mirrors `MovieSchema` (`pillars/media/src/contract/rest-movies.ts`). See
- * the `rotationStatus` note above for why it is nullable here.
- */
-const MovieSchema = z
-  .object({
-    id: z.number(),
-    tmdbId: z.number(),
-    imdbId: z.string().nullable(),
-    title: z.string(),
-    originalTitle: z.string().nullable(),
-    overview: z.string().nullable(),
-    tagline: z.string().nullable(),
-    releaseDate: z.string().nullable(),
-    runtime: z.number().nullable(),
-    status: z.string().nullable(),
-    originalLanguage: z.string().nullable(),
-    budget: z.number().nullable(),
-    revenue: z.number().nullable(),
-    posterPath: z.string().nullable(),
-    posterUrl: z.string().nullable(),
-    backdropPath: z.string().nullable(),
-    backdropUrl: z.string().nullable(),
-    logoPath: z.string().nullable(),
-    logoUrl: z.string().nullable(),
-    posterOverridePath: z.string().nullable(),
-    voteAverage: z.number().nullable(),
-    voteCount: z.number().nullable(),
-    genres: z.array(z.string()),
-    createdAt: z.string(),
-    updatedAt: z.string(),
-    rotationStatus: z.enum(['leaving', 'protected']).nullable(),
-    rotationExpiresAt: z.string().nullable(),
-  })
-  .strict();
-
 /** `POST /library/movies` 200 — `mediaLibraryContract.addMovie` (`rest-library.ts`). */
 const AddMovieResponseSchema = z
   .object({ data: MovieSchema, created: z.boolean(), message: z.string() })
   .strict();
 
-/** `PaginationMetaSchema` (`pillars/media/src/contract/rest-schemas.ts`). */
-const PaginationMetaSchema = z
-  .object({
-    total: z.number(),
-    limit: z.number(),
-    offset: z.number(),
-    hasMore: z.boolean(),
-  })
-  .strict();
-
 /** `GET /movies` 200 — `mediaMoviesContract.list` (`rest-movies.ts`). */
 const MovieListResponseSchema = z
   .object({ data: z.array(MovieSchema), pagination: PaginationMetaSchema })
-  .strict();
-
-/** Mirrors `TvShowSchema` (`pillars/media/src/contract/rest-tv-shows-schemas.ts`). */
-const TvShowSchema = z
-  .object({
-    id: z.number(),
-    tvdbId: z.number(),
-    name: z.string(),
-    originalName: z.string().nullable(),
-    overview: z.string().nullable(),
-    firstAirDate: z.string().nullable(),
-    lastAirDate: z.string().nullable(),
-    status: z.string().nullable(),
-    originalLanguage: z.string().nullable(),
-    numberOfSeasons: z.number().nullable(),
-    numberOfEpisodes: z.number().nullable(),
-    episodeRunTime: z.number().nullable(),
-    posterPath: z.string().nullable(),
-    posterUrl: z.string().nullable(),
-    backdropPath: z.string().nullable(),
-    backdropUrl: z.string().nullable(),
-    logoPath: z.string().nullable(),
-    logoUrl: z.string().nullable(),
-    posterOverridePath: z.string().nullable(),
-    voteAverage: z.number().nullable(),
-    voteCount: z.number().nullable(),
-    genres: z.array(z.string()),
-    networks: z.array(z.string()),
-    createdAt: z.string(),
-    updatedAt: z.string(),
-  })
   .strict();
 
 /** `GET /tv-shows` 200 — `mediaTvShowsContract.list` (`rest-tv-shows.ts`). */
@@ -268,28 +198,6 @@ const LeavingMovieSchema = z
 
 /** `GET /rotation/scheduler/leaving` 200 — `rotationSchedulerRoutes.schedulerLeavingMovies`. */
 const RotationLeavingResponseSchema = z.object({ data: z.array(LeavingMovieSchema) }).strict();
-
-/** Mirrors `SchedulerStatusSchema` (`pillars/media/src/contract/rest-rotation-scheduler.ts`). */
-const RotationSchedulerStatusResponseSchema = z
-  .object({
-    data: z
-      .object({
-        isRunning: z.boolean(),
-        isCycleRunning: z.boolean(),
-        intervalMs: z.number(),
-        cronExpression: z.string(),
-        lastCycleAt: z.string().nullable(),
-        lastCycleError: z.string().nullable(),
-        nextRunAt: z.string().nullable(),
-      })
-      .strict(),
-  })
-  .strict();
-
-/** `GET /watchlist/status` 200 — `mediaWatchlistContract.status` (`rest-watchlist.ts`). */
-const WatchlistStatusResponseSchema = z
-  .object({ onWatchlist: z.boolean(), entryId: z.number().nullable() })
-  .strict();
 
 // ---------------------------------------------------------------------------
 // Fixture — a movie NOT in the mocked library. Inception (tmdbId 27205)
