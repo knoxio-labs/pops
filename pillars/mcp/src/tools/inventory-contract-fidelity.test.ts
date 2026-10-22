@@ -13,6 +13,8 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
+import { DOCUMENT_TYPES } from '../uploads/upload-tokens.js';
+import { documentTools } from './documents.js';
 import { cataloguePreviewComputedField } from './inventory-catalogue-computed-preview.js';
 import { catalogueDraftOperationInputSchema } from './inventory-catalogue-preview.js';
 import {
@@ -383,5 +385,29 @@ describe('inventory MCP schema fidelity', () => {
       expect(mcpKeys, `MCP input lacks ${key}`).toContain(key);
     expect(producerFieldKeys.toSorted()).toEqual(Object.keys(mcpFieldKeys).toSorted());
     for (const key of Object.values(mcpFieldKeys)) expect(mcpKeys).toContain(key);
+  });
+
+  it('offers the producer document kinds and update keys on the document tools', () => {
+    const linkBody = requestSchema(spec, '/items/{itemId}/documents', 'post');
+    const producerKinds = strings(
+      property(property(property(linkBody, 'properties'), 'documentType'), 'enum'),
+      'producer document kinds'
+    );
+    expect([...DOCUMENT_TYPES]).toEqual(producerKinds);
+
+    const updateBody = requestSchema(spec, '/documents/{id}', 'patch');
+    const producerUpdateKeys = Object.keys(object(property(updateBody, 'properties'), 'update'));
+    const updateTool = documentTools.find((tool) => tool.name === 'inventory.documents.update');
+    if (updateTool === undefined) throw new Error('inventory.documents.update is missing');
+    const mcpUpdateKeys = Object.keys(
+      object(property(updateTool.inputSchema, 'properties'), 'MCP update properties')
+    ).filter((key) => key !== 'id');
+    expect(mcpUpdateKeys.toSorted()).toEqual(producerUpdateKeys.toSorted());
+    const producerTitle = object(property(property(updateBody, 'properties'), 'title'), 'title');
+    const mcpTitle = object(
+      property(property(updateTool.inputSchema, 'properties'), 'title'),
+      'MCP title'
+    );
+    expect(mcpTitle['maxLength']).toEqual(producerTitle['maxLength']);
   });
 });
