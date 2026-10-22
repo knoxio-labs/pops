@@ -98,7 +98,7 @@ describe('PaperlessClient.searchDocuments', () => {
     ]);
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toContain('/api/documents/?query=bill&page=1');
-    expect((init.headers as Record<string, string>)['Authorization']).toBe('Token token');
+    expect(new Headers(init.headers).get('Authorization')).toBe('Token token');
   });
 
   it('throws PaperlessApiError with the upstream detail message on a non-ok response', async () => {
@@ -137,7 +137,7 @@ describe('PaperlessClient.getDocumentCount', () => {
     await expect(client.getDocumentCount()).resolves.toBe(123);
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe('https://paperless.example/api/documents/?page_size=1');
-    expect((init.headers as Record<string, string>)['Authorization']).toBe('Token token');
+    expect(new Headers(init.headers).get('Authorization')).toBe('Token token');
   });
 });
 

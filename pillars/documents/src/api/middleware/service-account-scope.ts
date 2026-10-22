@@ -1,6 +1,8 @@
 import { createServiceAccountScopeGate, defineErrors } from '@pops/pillar-express';
 
 import { documentsContract } from '../../contract/rest.js';
+import { DOWNLOAD_ROUTE_PATH } from '../files/download-route.js';
+import { UPLOAD_ROUTE_PATH } from '../files/upload-route.js';
 
 import type { RequestHandler } from 'express';
 
@@ -9,9 +11,17 @@ import type { ContractScopeMap, ServiceAccountVerifier } from '@pops/pillar-sdk/
 
 const DOCUMENTS_SCOPE_ROOT = 'documents';
 
+/**
+ * Raw byte routes, nested so reads share `documents.paperless` with the
+ * contract's reads and the upload shares `documents.write` with its writes.
+ */
 const DOCUMENTS_RAW_ROUTE_SCOPES = {
   paperless: {
     thumbnail: { method: 'GET', path: '/documents/:id/thumbnail' },
+    download: { method: 'GET', path: DOWNLOAD_ROUTE_PATH },
+  },
+  write: {
+    upload: { method: 'POST', path: UPLOAD_ROUTE_PATH },
   },
 } as const satisfies RawRouteTree;
 
@@ -47,11 +57,11 @@ const gate = createServiceAccountScopeGate({
 /** Every documents contract route projected onto its required scope. */
 export const documentsScopeMap: ContractScopeMap = gate.scopeMap;
 
-/** The raw thumbnail route projected onto its required scope. */
+/** The raw byte routes projected onto their required scopes. */
 export const documentsRawScopeMap: ContractScopeMap = gate.rawScopeMap;
 
 /**
- * Build the documents gate for contract and thumbnail requests.
+ * Build the documents gate for contract and raw byte-route requests.
  *
  * @param verify Resolves a presented key to its principal. Production passes a
  *   registry-backed verifier; tests inject a fake.

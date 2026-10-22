@@ -23,6 +23,7 @@ import { resolveSelfBaseUrl } from '@pops/pillar-sdk/pillar-env';
 
 import { createDocumentsApiApp } from './app.js';
 import { buildDocumentsManifest } from './manifest.js';
+import { resolveMaxUploadBytes } from './modules/paperless/upload-limits.js';
 
 const DEFAULT_PORT = 3012;
 
@@ -37,6 +38,8 @@ function resolvePort(): number {
 }
 
 const port = resolvePort();
+// A malformed cap fails the boot, not the first upload.
+resolveMaxUploadBytes();
 const version = process.env['BUILD_VERSION'] ?? 'dev';
 
 const selfBaseUrl = resolveSelfBaseUrl({

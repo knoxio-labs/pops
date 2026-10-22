@@ -1,6 +1,6 @@
 /**
  * `paperless.*` sub-router — Paperless-ngx integration status, document
- * search and single-document resolution. This is the canonical wire
+ * search, single-document resolution and upload task status. This is the canonical wire
  * definition for the documents pillar's paperless bridge (ADR-035 /
  * ADR-039); `search` and `get` return 412 when Paperless is not configured.
  *
@@ -32,6 +32,20 @@ export const PaperlessDocumentSchema = z.object({
   thumbnailUrl: z.string(),
 });
 
+/** A Paperless (Celery) task id as `POST /paperless/documents` returns it. */
+export const PaperlessTaskIdSchema = z.string().regex(/^[A-Za-z0-9_-]{1,72}$/);
+
+/**
+ * Where an upload stands. `documentId` is the new document on `done` and the
+ * existing one on `duplicate`; `reason` says why a task produced no new
+ * document, when Paperless reports one.
+ */
+export const PaperlessTaskStatusSchema = z.object({
+  state: z.enum(['pending', 'done', 'duplicate', 'failed']),
+  documentId: z.number().int().positive().nullable(),
+  reason: z.string().nullable(),
+});
+
 export const documentsPaperlessContract = c.router({
   status: {
     method: 'GET',
@@ -43,10 +57,13 @@ export const documentsPaperlessContract = c.router({
           available: z.boolean(),
           baseUrl: z.string().nullable(),
           documentCount: z.number().int().nonnegative().nullable(),
+          maxUploadBytes: z.number().int().positive(),
+          allowedMimeTypes: z.array(z.string()),
         }),
       }),
     },
-    summary: 'Whether Paperless-ngx is configured and reachable',
+    summary:
+      'Whether Paperless-ngx is configured and reachable, and the upload limits POST /paperless/documents enforces',
   },
   search: {
     method: 'GET',
@@ -68,5 +85,18 @@ export const documentsPaperlessContract = c.router({
       412: ErrorBodySchema,
     },
     summary: 'Resolve one Paperless-ngx document by id (404 when it no longer exists)',
+  },
+  task: {
+    method: 'GET',
+    path: '/paperless/tasks/:taskId',
+    pathParams: z.object({ taskId: PaperlessTaskIdSchema }),
+    responses: {
+      200: z.object({ data: PaperlessTaskStatusSchema }),
+      404: ErrorBodySchema,
+      412: ErrorBodySchema,
+      502: ErrorBodySchema,
+      503: ErrorBodySchema,
+    },
+    summary: 'Resolve the consumption task an upload returned (404 for an unknown task id)',
   },
 });

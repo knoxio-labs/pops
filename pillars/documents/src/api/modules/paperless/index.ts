@@ -7,10 +7,13 @@
 import { PaperlessClient } from './client.js';
 
 export { PaperlessClient } from './client.js';
+export { type PaperlessUploadMeta } from './multipart.js';
+export { type PaperlessTaskState, type PaperlessTaskStatus } from './task-state.js';
 export {
   PaperlessApiError,
   type PaperlessCorrespondent,
   type PaperlessDocument,
+  type PaperlessDocumentPatch,
   type PaperlessDocumentType,
   type PaperlessSearchResult,
   type PaperlessTag,

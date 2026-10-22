@@ -58,14 +58,84 @@ describe('documents scope maps', () => {
     expect(paperlessStatusScope()).toBe('documents.paperless.status');
   });
 
-  it('covers the raw Paperless thumbnail route', () => {
-    expect(documentsRawScopeMap.routes).toEqual([
-      {
-        method: 'GET',
-        path: '/documents/:id/thumbnail',
-        scope: 'documents.paperless.thumbnail',
-      },
-    ]);
+  it('covers every raw byte route, reads under documents.paperless and the upload under documents.write', () => {
+    expect(documentsRawScopeMap.routes).toEqual(
+      expect.arrayContaining([
+        { method: 'GET', path: '/documents/:id/thumbnail', scope: 'documents.paperless.thumbnail' },
+        {
+          method: 'GET',
+          path: '/paperless/documents/:id/download',
+          scope: 'documents.paperless.download',
+        },
+        { method: 'POST', path: '/paperless/documents', scope: 'documents.write.upload' },
+      ])
+    );
+    expect(documentsRawScopeMap.routes).toHaveLength(3);
+  });
+
+  it('puts task reads under documents.paperless and document changes under documents.write', () => {
+    const scopes = documentsScopeMap.routes.map(({ method, path, scope }) => ({
+      method,
+      path,
+      scope,
+    }));
+    expect(scopes).toEqual(
+      expect.arrayContaining([
+        { method: 'GET', path: '/paperless/tasks/:taskId', scope: 'documents.paperless.task' },
+        { method: 'PATCH', path: '/paperless/documents/:id', scope: 'documents.write.update' },
+        { method: 'DELETE', path: '/paperless/documents/:id', scope: 'documents.write.delete' },
+      ])
+    );
+  });
+});
+
+describe('the read/write scope boundary', () => {
+  const readGrant = verifierReturning(grantedScopes(['documents.paperless']));
+  const writeGrant = verifierReturning(grantedScopes(['documents.write']));
+
+  it('403s a documents.paperless grant on an upload, before any byte is read', async () => {
+    const response = await requestOn(app(readGrant))
+      .post('/paperless/documents?fileName=a.pdf')
+      .set('x-api-key', TEST_API_KEY)
+      .set('content-type', 'application/pdf')
+      .send(Buffer.from('%PDF'));
+
+    expect(response.status).toBe(403);
+    expect(response.body).toMatchObject({ details: { requiredScope: 'documents.write.upload' } });
+  });
+
+  it('403s a documents.paperless grant on PATCH and DELETE', async () => {
+    const api = requestOn(app(readGrant));
+    const patch = await api
+      .patch('/paperless/documents/7')
+      .set('x-api-key', TEST_API_KEY)
+      .send({ title: 'x' });
+    const remove = await api.delete('/paperless/documents/7').set('x-api-key', TEST_API_KEY);
+
+    expect(patch.status).toBe(403);
+    expect(remove.status).toBe(403);
+  });
+
+  it('lets a documents.write grant reach the upload route, which then reports Paperless unconfigured', async () => {
+    const response = await requestOn(app(writeGrant))
+      .post('/paperless/documents?fileName=a.pdf')
+      .set('x-api-key', TEST_API_KEY)
+      .set('content-type', 'application/pdf')
+      .send(Buffer.from('%PDF'));
+
+    expect(response.status).toBe(412);
+    expect(response.body).toMatchObject({ code: 'documents.paperless.not_configured' });
+  });
+
+  it('403s a documents.write grant on the download and task reads', async () => {
+    const api = requestOn(app(writeGrant));
+    const download = await api
+      .get('/paperless/documents/7/download')
+      .set('x-api-key', TEST_API_KEY);
+    const task = await api.get('/paperless/tasks/abc').set('x-api-key', TEST_API_KEY);
+
+    expect(download.status).toBe(403);
+    expect(task.status).toBe(403);
   });
 });
 

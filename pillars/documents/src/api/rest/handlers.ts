@@ -9,6 +9,7 @@ import { initServer } from '@ts-rest/express';
 
 import { documentsContract } from '../../contract/rest.js';
 import { makePaperlessHandlers } from './paperless-handlers.js';
+import { makeWriteHandlers } from './write-handlers.js';
 
 const server: ReturnType<typeof initServer> = initServer();
 
@@ -17,5 +18,6 @@ export function makeDocumentsRestHandlers(): ReturnType<
 > {
   return server.router(documentsContract, {
     paperless: makePaperlessHandlers(),
+    write: makeWriteHandlers(),
   });
 }

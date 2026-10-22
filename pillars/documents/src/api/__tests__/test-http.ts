@@ -48,12 +48,14 @@ const APP_HEADER = 'x-pops-test-app';
 const keepAliveAgent = new http.Agent({ keepAlive: true });
 
 /**
- * The documents API suites are read-only today, so `get` is the whole
- * surface. Add a verb here when a suite needs one rather than reaching back
- * for bare `supertest(app)`.
+ * The verbs the documents API suites use. Add one here when a suite needs it
+ * rather than reaching back for bare `supertest(app)`.
  */
 export interface BoundAgent {
   get(url: string): supertest.Test;
+  post(url: string): supertest.Test;
+  patch(url: string): supertest.Test;
+  delete(url: string): supertest.Test;
 }
 
 export interface TestTransport {
@@ -121,8 +123,12 @@ export function createTestTransport(): TestTransport {
   return {
     requestOn(app) {
       const id = idFor(app);
+      const agent = supertest(server);
       return {
-        get: (url) => supertest(server).get(url).set(APP_HEADER, id).agent(keepAliveAgent),
+        get: (url) => agent.get(url).set(APP_HEADER, id).agent(keepAliveAgent),
+        post: (url) => agent.post(url).set(APP_HEADER, id).agent(keepAliveAgent),
+        patch: (url) => agent.patch(url).set(APP_HEADER, id).agent(keepAliveAgent),
+        delete: (url) => agent.delete(url).set(APP_HEADER, id).agent(keepAliveAgent),
       };
     },
   };

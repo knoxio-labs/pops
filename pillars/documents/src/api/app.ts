@@ -3,10 +3,11 @@
  *
  * Hosts the minimal `/health` + `/pillars` probes plus the pillar's REST
  * surface generated from `src/contract/rest.ts` via ts-rest, plus the raw
- * paperless thumbnail proxy. Kept as a factory so the test suite can spin
- * up an in-process `supertest` instance without binding a real port.
+ * paperless byte routes (thumbnail, download, upload). Kept as a factory
+ * so the test suite can spin up an in-process `supertest` instance without
+ * binding a real port.
  *
- * Contract and thumbnail routes validate presented service-account keys.
+ * Contract and raw byte routes validate presented service-account keys.
  * The inventory bridge call has no key and retains the network-perimeter
  * posture; the health, pillars and OpenAPI probes stay outside the gate.
  */
@@ -56,7 +57,7 @@ const documentsErrors = defineErrors('documents', {
   },
 });
 
-/** Build the documents app with contract and thumbnail service-account scopes. */
+/** Build the documents app with contract and raw byte-route service-account scopes. */
 export function createDocumentsApiApp(deps: DocumentsApiDeps): Express {
   const app = express();
   const errors = createPillarErrorHandlers({ pillar: 'documents' });
@@ -99,10 +100,9 @@ export function createDocumentsApiApp(deps: DocumentsApiDeps): Express {
     },
   });
 
-  // Raw (non-ts-rest) byte-serving route for the Paperless thumbnail proxy.
-  // Mounted after the contract endpoints; its `/documents/:id/thumbnail`
-  // path doesn't collide with any contract path, so it adds no OpenAPI
-  // surface.
+  // Raw (non-ts-rest) byte routes: thumbnail, download and upload. Mounted
+  // after the contract endpoints and behind the scope gate; none of their
+  // method + path pairs collides with a contract route.
   app.use(createDocumentsFilesRouter());
 
   app.use(errors.notFound);
