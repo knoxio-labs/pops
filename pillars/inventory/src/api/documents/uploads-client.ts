@@ -23,7 +23,10 @@ import {
 } from '@pops/pillar-sdk/client';
 import { lookupPillar as defaultLookupPillar } from '@pops/pillar-sdk/discovery';
 
-import { DOCUMENTS_PILLAR_ID } from './client.js';
+// Declared here rather than imported from `client.ts`: the cross-pillar
+// expectations guard resolves a `pillar()` producer only from a module-level
+// const in the calling file.
+const DOCUMENTS_PILLAR_ID = 'documents';
 
 /** Mirrors documents' `PaperlessTaskStatusSchema`. */
 export interface PaperlessTaskStatus {

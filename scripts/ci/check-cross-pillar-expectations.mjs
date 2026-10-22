@@ -941,6 +941,28 @@ export const EXPECTATIONS = [
     usedBy: 'pillars/inventory/src/api/documents/client.ts',
   },
   {
+    consumer: 'inventory',
+    producer: 'documents',
+    operationId: 'paperless.task',
+    path: '/paperless/tasks/{taskId}',
+    method: 'get',
+    query: [],
+    pathParams: ['taskId'],
+    usedBy: 'pillars/inventory/src/api/documents/uploads-client.ts',
+  },
+  {
+    consumer: 'inventory',
+    producer: 'documents',
+    operationId: 'write.update',
+    path: '/paperless/documents/{id}',
+    method: 'patch',
+    // The title travels in the body, which this guard does not model; what it
+    // pins is that the PATCH still exists at this path.
+    query: [],
+    pathParams: ['id'],
+    usedBy: 'pillars/inventory/src/api/documents/uploads-client.ts',
+  },
+  {
     consumer: 'ai',
     producer: 'cerebrum',
     operationId: 'nudges.create',
