@@ -553,7 +553,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Whether Paperless-ngx is configured and reachable */
+    /** Whether Paperless-ngx is configured and reachable, and the upload limits documents enforces */
     get: operations['paperless.status'];
     put?: never;
     post?: never;
@@ -4447,10 +4447,12 @@ export interface operations {
         content: {
           'application/json': {
             data: {
+              allowedMimeTypes: string[] | null;
               available: boolean;
               baseUrl: string | null;
               configured: boolean;
               documentCount: number | null;
+              maxUploadBytes: number | null;
             };
           };
         };

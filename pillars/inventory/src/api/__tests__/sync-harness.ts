@@ -45,6 +45,8 @@ export function paperless(status: Partial<PaperlessStatus> = {}): DocumentsClien
         available: true,
         baseUrl: null,
         documentCount: null,
+        maxUploadBytes: null,
+        allowedMimeTypes: null,
         ...status,
       }),
     searchPaperlessDocuments: () => Promise.resolve([]),

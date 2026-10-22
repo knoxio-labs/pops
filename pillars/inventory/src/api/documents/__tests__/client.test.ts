@@ -17,7 +17,7 @@ import {
   createDocumentsClient,
   type DocumentsRouter,
   type PaperlessSearchDocument,
-  type PaperlessStatus,
+  type UpstreamPaperlessStatus,
 } from '../client.js';
 
 function ok<T>(value: T): CallResult<T> {
@@ -48,7 +48,7 @@ const callDynamic: CallDynamicFn = () => {
 };
 
 interface StubImpls {
-  status?: () => Promise<CallResult<{ data: PaperlessStatus }>>;
+  status?: () => Promise<CallResult<{ data: UpstreamPaperlessStatus }>>;
   search?: (input: { query: string }) => Promise<CallResult<{ data: PaperlessSearchDocument[] }>>;
   get?: (input: { id: number }) => Promise<CallResult<{ data: PaperlessSearchDocument }>>;
 }
@@ -69,18 +69,40 @@ function stubHandle(impls: StubImpls): PillarHandle<DocumentsRouter> {
 }
 
 describe('createDocumentsClient.getPaperlessStatus', () => {
-  it('returns the documents pillar data on success', async () => {
+  it('returns the documents pillar data, upload limits included, on success', async () => {
     const status = {
       configured: true,
       available: true,
       baseUrl: 'https://paperless.example',
       documentCount: 123,
+      maxUploadBytes: 104857600,
+      allowedMimeTypes: ['application/pdf', 'image/*', 'text/*'],
     };
     const client = createDocumentsClient(() =>
       stubHandle({ status: async () => ok({ data: status }) })
     );
 
     await expect(client.getPaperlessStatus()).resolves.toEqual(status);
+  });
+
+  it('reports null limits when documents does not publish them', async () => {
+    const client = createDocumentsClient(() =>
+      stubHandle({
+        status: async () =>
+          ok({
+            data: { configured: true, available: true, baseUrl: null, documentCount: 0 },
+          }),
+      })
+    );
+
+    await expect(client.getPaperlessStatus()).resolves.toEqual({
+      configured: true,
+      available: true,
+      baseUrl: null,
+      documentCount: 0,
+      maxUploadBytes: null,
+      allowedMimeTypes: null,
+    });
   });
 
   it('degrades to a conservative "not configured" shape when documents is unavailable', async () => {
@@ -92,6 +114,8 @@ describe('createDocumentsClient.getPaperlessStatus', () => {
       available: false,
       baseUrl: null,
       documentCount: null,
+      maxUploadBytes: null,
+      allowedMimeTypes: null,
     });
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('degraded'));
     warn.mockRestore();
