@@ -526,6 +526,8 @@ describe('item rows on the wire', () => {
           available: false,
           baseUrl: null,
           documentCount: null,
+          maxUploadBytes: null,
+          allowedMimeTypes: null,
         });
       },
     };

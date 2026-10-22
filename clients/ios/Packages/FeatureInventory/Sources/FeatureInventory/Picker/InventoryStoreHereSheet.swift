@@ -123,13 +123,14 @@ private struct InventoryStoreHereRoot: View {
     }
 }
 
-/// Existing items, searched and picked, stored from the nav bar.
-internal struct InventoryStoreExistingPicker: View {
-    @State private var model: InventoryStoreHereModel
+/// Existing items, searched and picked, committed from the nav bar: stored
+/// here, or added as parts, depending on the model.
+internal struct InventoryStoreExistingPicker<Model: InventoryExistingItemPicking>: View {
+    @State private var model: Model
     @State private var searching: Bool
     @Environment(\.dismiss) private var dismiss
 
-    internal init(model: InventoryStoreHereModel) {
+    internal init(model: Model) {
         _model = State(initialValue: model)
         _searching = State(initialValue: !model.query.isEmpty)
     }
@@ -158,7 +159,7 @@ internal struct InventoryStoreExistingPicker: View {
         .popsMotion(value: model.candidates)
         .inventorySearchable(text: $model.query, isPresented: $searching, prompt: "Search items")
         .task(id: model.query) { await model.observe() }
-        .navigationTitle("Store in \(model.target.name)")
+        .navigationTitle(model.title)
         .popsTitleDisplay(large: false)
         .inventoryLeadingBarItem {
             Button("Cancel") { dismiss() }
@@ -202,10 +203,10 @@ internal struct InventoryStoreExistingPicker: View {
     private var storeButton: some View {
         Button {
             Task {
-                if await model.store() { dismiss() }
+                if await model.commit() { dismiss() }
             }
         } label: {
-            Text(model.selected.isEmpty ? "Store" : "Store \(model.selected.count)")
+            Text(model.commitTitle(count: model.selected.count))
                 .contentTransition(.numericText(value: Double(model.selected.count)))
         }
         .popsMotion(value: model.selected)
@@ -215,6 +216,6 @@ internal struct InventoryStoreExistingPicker: View {
     }
 
     private func thumbnail(_ sha256: String) async -> Data? {
-        try? await model.runner.store.photo(sha256, variant: .thumb)
+        await model.thumbnail(sha256)
     }
 }

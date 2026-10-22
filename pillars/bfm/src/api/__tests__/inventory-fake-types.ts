@@ -1,6 +1,7 @@
 import type { CallResult } from '@pops/pillar-sdk/server';
 
 import type { MobileInventoryItemsQuery } from '../../contract/mobile-inventory-list-schemas.js';
+import type { InventoryPartsResult } from './inventory-parts-fake.js';
 
 /** Records the id supplied to the fake targeted-item procedure. */
 export interface InventoryItemCall {
@@ -35,4 +36,6 @@ export interface InventoryFakeOptions {
   ledgerResult?: CallResult<unknown>;
   /** What `codes.suggest` answers. */
   suggestResult?: CallResult<unknown>;
+  /** What `items.getParts/addPart/removePart` answer; an empty assembly by default. */
+  partsResult?: InventoryPartsResult;
 }

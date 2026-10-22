@@ -6315,6 +6315,13 @@
                     "data": {
                       "additionalProperties": false,
                       "properties": {
+                        "allowedMimeTypes": {
+                          "items": {
+                            "type": "string"
+                          },
+                          "nullable": true,
+                          "type": "array"
+                        },
                         "available": {
                           "type": "boolean"
                         },
@@ -6330,9 +6337,23 @@
                           "minimum": 0,
                           "nullable": true,
                           "type": "integer"
+                        },
+                        "maxUploadBytes": {
+                          "exclusiveMinimum": true,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "nullable": true,
+                          "type": "integer"
                         }
                       },
-                      "required": ["configured", "available", "baseUrl", "documentCount"],
+                      "required": [
+                        "configured",
+                        "available",
+                        "baseUrl",
+                        "documentCount",
+                        "maxUploadBytes",
+                        "allowedMimeTypes"
+                      ],
                       "type": "object"
                     }
                   },
@@ -6344,7 +6365,7 @@
             "description": "200"
           }
         },
-        "summary": "Whether Paperless-ngx is configured and reachable",
+        "summary": "Whether Paperless-ngx is configured and reachable, and the upload limits documents enforces",
         "tags": ["paperless"]
       }
     },
