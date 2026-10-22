@@ -176,6 +176,11 @@ async function route(
   });
   if (fake.failWith !== null) return json(res, fake.failWith, { detail: 'fake failure' });
   if (req.method === 'POST' && url.pathname === '/api/documents/post_document/') {
+    // Paperless runs under a WSGI server that reads a request body only up to
+    // its declared Content-Length, so a chunked upload reaches Django empty.
+    if (req.headers['content-length'] === undefined) {
+      return json(res, 400, { document: ['No file was submitted.'] });
+    }
     return json(res, 200, await recordUpload(fake, req, body));
   }
   if (req.method === 'GET' && url.pathname === '/api/tasks/') {
