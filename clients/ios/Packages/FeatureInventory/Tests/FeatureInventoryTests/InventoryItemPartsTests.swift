@@ -124,7 +124,8 @@ internal struct InventoryItemPartsTests {
         let parts = InventoryItemPartsModel(itemId: "kit", service: service)
         await parts.load()
         let picker = InventoryAddPartsModel(
-            parts: parts, store: InMemoryInventoryStore(items: [Fixture.item("lid", "Lid", at: .hand)]))
+            parts: parts,
+            store: InMemoryInventoryStore(items: [Fixture.item("lid", "Lid", at: .hand)]))
         picker.toggle("lid")
 
         let closed = await picker.commit()
@@ -136,8 +137,12 @@ internal struct InventoryItemPartsTests {
     @Test("placement wording covers every shape, falling back when a name is missing")
     func placementWording() {
         #expect(InventoryPartPlacementLabel.text(for: .hand) == "In hand")
-        #expect(InventoryPartPlacementLabel.text(for: .location(id: "l", name: "Lounge")) == "Lounge")
-        #expect(InventoryPartPlacementLabel.text(for: .location(id: "l", name: nil)) == "At a place")
-        #expect(InventoryPartPlacementLabel.text(for: .container(id: "b", name: nil)) == "In a container")
+        #expect(
+            InventoryPartPlacementLabel.text(for: .location(id: "l", name: "Lounge")) == "Lounge")
+        #expect(
+            InventoryPartPlacementLabel.text(for: .location(id: "l", name: nil)) == "At a place")
+        #expect(
+            InventoryPartPlacementLabel.text(for: .container(id: "b", name: nil))
+                == "In a container")
     }
 }

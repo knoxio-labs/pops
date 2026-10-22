@@ -41,7 +41,8 @@ public actor InMemoryInventoryPartsService: InventoryPartsService {
             throw InventoryPartsError.refused("\(assembly.name) cannot have parts")
         }
         if let current = links[partId], current != assemblyId {
-            throw InventoryPartsError.refused("Already a part of \(items[current]?.name ?? current)")
+            throw InventoryPartsError.refused(
+                "Already a part of \(items[current]?.name ?? current)")
         }
         guard !isAncestor(partId, of: assemblyId) else {
             throw InventoryPartsError.refused("An item cannot be a part of itself")

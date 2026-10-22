@@ -36,7 +36,9 @@ internal struct InventoryPartsTransportTests {
         let parts = try await BFMInventoryTransport.stubbed(stub).parts(of: "kit")
 
         #expect(parts.canHaveParts)
-        #expect(parts.assembly == InventoryItemReference(id: "kitchen-set", name: "Kitchen set", code: nil))
+        #expect(
+            parts.assembly
+                == InventoryItemReference(id: "kitchen-set", name: "Kitchen set", code: nil))
         #expect(parts.parts.map(\.id) == ["cup", "base", "lid"])
         #expect(parts.parts[0].reference.code == "CUP-1")
         #expect(parts.parts[0].placement == .container(id: "box", name: "Ninja blender"))
@@ -123,7 +125,8 @@ internal struct InventoryPartsTransportTests {
         await #expect(throws: RepositoryError.featureUnavailable) {
             _ = try await BFMInventoryTransport.stubbed(
                 StubTransport(
-                    status: .forbidden, json: InventoryWire.forbidden(capability: "inventory.write"))
+                    status: .forbidden, json: InventoryWire.forbidden(capability: "inventory.write")
+                )
             ).addPart("cup", to: "kit")
         }
     }
