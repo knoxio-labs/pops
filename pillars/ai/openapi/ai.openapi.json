@@ -2791,9 +2791,9 @@
         "tags": ["aiUsage"]
       }
     },
-    "/codes/rank": {
+    "/codes/suggest": {
       "post": {
-        "operationId": "codes.rank",
+        "operationId": "codes.suggest",
         "parameters": [],
         "requestBody": {
           "content": {
@@ -2801,24 +2801,107 @@
               "schema": {
                 "additionalProperties": false,
                 "properties": {
-                  "candidates": {
-                    "items": {
-                      "minLength": 1,
-                      "type": "string"
+                  "count": {
+                    "maximum": 5,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "destination": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "container": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "code": {
+                            "maxLength": 64,
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "name": {
+                            "maxLength": 200,
+                            "minLength": 1,
+                            "type": "string"
+                          }
+                        },
+                        "required": ["name"],
+                        "type": "object"
+                      },
+                      "path": {
+                        "items": {
+                          "maxLength": 100,
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "maxItems": 12,
+                        "type": "array"
+                      }
                     },
-                    "minItems": 1,
+                    "required": ["path"],
+                    "type": "object"
+                  },
+                  "existing": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "code": {
+                          "maxLength": 64,
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "name": {
+                          "maxLength": 200,
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "place": {
+                          "maxLength": 300,
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "typeKey": {
+                          "maxLength": 64,
+                          "minLength": 1,
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code", "name"],
+                      "type": "object"
+                    },
+                    "maxItems": 500,
                     "type": "array"
                   },
-                  "name": {
-                    "minLength": 1,
-                    "type": "string"
+                  "item": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "isContainer": {
+                        "type": "boolean"
+                      },
+                      "name": {
+                        "maxLength": 200,
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "typeKey": {
+                        "maxLength": 64,
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "typeLabel": {
+                        "maxLength": 100,
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
+                    "required": ["name"],
+                    "type": "object"
                   },
-                  "typeKey": {
+                  "stem": {
+                    "maxLength": 16,
                     "minLength": 1,
                     "type": "string"
                   }
                 },
-                "required": ["name", "candidates"],
+                "required": ["item", "existing", "count"],
                 "type": "object"
               }
             }
@@ -2832,15 +2915,27 @@
                 "schema": {
                   "additionalProperties": false,
                   "properties": {
-                    "ranked": {
+                    "suggestions": {
                       "items": {
-                        "minLength": 1,
-                        "type": "string"
+                        "additionalProperties": false,
+                        "properties": {
+                          "code": {
+                            "maxLength": 64,
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "reason": {
+                            "maxLength": 200,
+                            "type": "string"
+                          }
+                        },
+                        "required": ["code", "reason"],
+                        "type": "object"
                       },
                       "type": "array"
                     }
                   },
-                  "required": ["ranked"],
+                  "required": ["suggestions"],
                   "type": "object"
                 }
               }
@@ -2873,9 +2968,19 @@
               }
             },
             "description": "403"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "503"
           }
         },
-        "summary": "Rank candidate inventory codes most-likely-first (deterministic, no model call)",
+        "summary": "Suggest sticker codes for a new inventory item from the codes already in use",
         "tags": ["codes"]
       }
     },

@@ -21,7 +21,7 @@
  * A caller that DOES present an
  * `X-API-Key` is a machine, and is held to the service account behind that
  * key: today that is only inventory's `codes/suggest`, calling
- * `POST /codes/rank` with the `ai.codes.rank` scope.
+ * `POST /codes/suggest` with the `ai.codes.suggest` scope.
  *
  * The required scope is derived from the WHOLE contract, not just the new
  * route, so a future route added to `aiContract` is gated the moment it
@@ -42,7 +42,7 @@ import type { ContractScopeMap, ServiceAccountVerifier } from '@pops/pillar-sdk/
 
 /**
  * Root of ai's scope vocabulary. A grant of `ai.codes` authorises
- * `ai.codes.rank` and nothing under `ai.aiUsage`.
+ * `ai.codes.suggest` and nothing under `ai.aiUsage`.
  */
 const AI_SCOPE_ROOT = 'ai';
 
@@ -56,7 +56,7 @@ const gate = createServiceAccountScopeGate({
 /**
  * Every contract route projected onto the scope it requires. Built once at
  * module load; exported so a test can assert it actually covers the contract
- * and names `ai.codes.rank` specifically, since an empty table would gate
+ * and names `ai.codes.suggest` specifically, since an empty table would gate
  * nothing and still pass every other test.
  */
 export const aiScopeMap: ContractScopeMap = gate.scopeMap;

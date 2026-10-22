@@ -1,4 +1,4 @@
-import { isNotNull, sql } from 'drizzle-orm';
+import { inArray, isNotNull, sql } from 'drizzle-orm';
 
 import { resolvePublishedType } from '../../catalogue/index.js';
 import { DEFAULT_CODE_PATTERN } from '../../contract/settings/code-pattern.js';
@@ -10,6 +10,7 @@ import type { CodePattern } from './code-pattern.js';
 
 /** How many codes one suggestion request offers. */
 export const SUGGESTION_COUNT = 3;
+/** Padding for a stem nobody has numbered yet; a numbered stem keeps its own width. */
 const EXPLICIT_STEM_MIN_WIDTH = 3;
 const TRAILING_NUMBER = /^(.*?)(\d+)$/;
 
@@ -44,7 +45,7 @@ function suggestionsFromStem(db: CommandDb, stem: string): string[] {
     const number = Number.parseInt(digits, 10);
     if (number >= highest) {
       highest = number;
-      width = Math.max(EXPLICIT_STEM_MIN_WIDTH, digits.length);
+      width = digits.length;
     }
   }
 
@@ -87,9 +88,10 @@ function suggestionsFromPattern(db: CommandDb, pattern: CodePattern, typeLetter:
 }
 
 /**
- * Deterministic code suggestions. Explicit stems retain the legacy collision
- * repair behavior; otherwise the persisted inventory pattern controls the
- * prefix, suffix, width, and type/name-letter fallback.
+ * Deterministic code suggestions, used when no model answer is available.
+ * An explicit stem continues that stem's highest number at its own width;
+ * otherwise the persisted inventory pattern controls the prefix, suffix,
+ * width, and type/name-letter fallback.
  */
 export function suggestCodes(db: CommandDb, request: SuggestRequest): string[] {
   const settings = readCodeSettings(db);
@@ -99,4 +101,43 @@ export function suggestCodes(db: CommandDb, request: SuggestRequest): string[] {
   const pattern = parseCodePattern(settings.pattern) ?? parseCodePattern(DEFAULT_CODE_PATTERN);
   if (pattern === null) throw new Error('default inventory code pattern is invalid');
   return suggestionsFromPattern(db, pattern, typeLetterFor(db, request.typeKey, request.name));
+}
+
+/** Longest code `item.setCode` accepts. */
+const MAX_CODE_LENGTH = 64;
+
+/**
+ * Keep the candidates that could be offered as-is: trimmed, 1–64 characters,
+ * starting with `stem` when one is given, not repeated, and not carried by any
+ * item (tombstones included, matched case-insensitively like the unique
+ * index). Order is preserved and the result is capped at
+ * {@link SUGGESTION_COUNT}.
+ */
+export function keepFreeCodes(
+  db: CommandDb,
+  candidates: readonly string[],
+  stem?: string
+): string[] {
+  const prefix = stem?.toLowerCase();
+  const seen = new Set<string>();
+  const shaped: string[] = [];
+  for (const raw of candidates) {
+    const code = raw.trim();
+    const key = code.toLowerCase();
+    if (code.length === 0 || code.length > MAX_CODE_LENGTH || seen.has(key)) continue;
+    if (prefix !== undefined && !key.startsWith(prefix)) continue;
+    seen.add(key);
+    shaped.push(code);
+  }
+  if (shaped.length === 0) return [];
+
+  const held = new Set(
+    db
+      .select({ code: items.code })
+      .from(items)
+      .where(inArray(sql`lower(${items.code})`, [...seen]))
+      .all()
+      .map((row) => row.code?.toLowerCase())
+  );
+  return shaped.filter((code) => !held.has(code.toLowerCase())).slice(0, SUGGESTION_COUNT);
 }

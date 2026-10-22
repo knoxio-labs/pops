@@ -224,9 +224,12 @@ export const inventoryCodesContract = c.router({
         .trim()
         .regex(/^[A-Za-z0-9-]{0,15}[A-Za-z-]$/)
         .optional(),
+      locationId: z.string().min(1).optional(),
+      containerId: z.string().min(1).optional(),
     }),
     responses: { 200: z.object({ suggestions: z.array(z.string()) }), ...SYNC_ERRORS },
-    summary: 'Free codes for a new item: a stem followed by the next unused numbers',
+    summary:
+      'Free codes for a new item, suggested from the codes already in use and where it is going',
   },
 });
 

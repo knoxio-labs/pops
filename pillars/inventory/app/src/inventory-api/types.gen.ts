@@ -145,6 +145,8 @@ export type CodesSuggestData = {
    * Body
    */
   body?: {
+    containerId?: string;
+    locationId?: string;
     name: string;
     stem?: string;
     typeKey?: string;

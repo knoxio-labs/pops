@@ -1043,21 +1043,39 @@ export type AiUsageGetStatsResponses = {
 
 export type AiUsageGetStatsResponse = AiUsageGetStatsResponses[keyof AiUsageGetStatsResponses];
 
-export type CodesRankData = {
+export type CodesSuggestData = {
   /**
    * Body
    */
   body?: {
-    candidates: Array<string>;
-    name: string;
-    typeKey?: string;
+    count: number;
+    destination?: {
+      container?: {
+        code?: string;
+        name: string;
+      };
+      path: Array<string>;
+    };
+    existing: Array<{
+      code: string;
+      name: string;
+      place?: string;
+      typeKey?: string;
+    }>;
+    item: {
+      isContainer?: boolean;
+      name: string;
+      typeKey?: string;
+      typeLabel?: string;
+    };
+    stem?: string;
   };
   path?: never;
   query?: never;
-  url: '/codes/rank';
+  url: '/codes/suggest';
 };
 
-export type CodesRankErrors = {
+export type CodesSuggestErrors = {
   /**
    * 400
    */
@@ -1068,20 +1086,27 @@ export type CodesRankErrors = {
   403: {
     message: string;
   };
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
-export type CodesRankError = CodesRankErrors[keyof CodesRankErrors];
+export type CodesSuggestError = CodesSuggestErrors[keyof CodesSuggestErrors];
 
-export type CodesRankResponses = {
+export type CodesSuggestResponses = {
   /**
    * 200
    */
   200: {
-    ranked: Array<string>;
+    suggestions: Array<{
+      code: string;
+      reason: string;
+    }>;
   };
 };
 
-export type CodesRankResponse = CodesRankResponses[keyof CodesRankResponses];
+export type CodesSuggestResponse = CodesSuggestResponses[keyof CodesSuggestResponses];
 
 export type JobsListData = {
   body?: never;

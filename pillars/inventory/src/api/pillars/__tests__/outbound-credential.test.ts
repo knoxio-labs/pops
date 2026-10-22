@@ -1,6 +1,6 @@
 /**
  * The assertion this seam exists for: inventory's one outbound cross-pillar
- * call — `codes/suggest`'s ranking leg into `ai` — carries its
+ * call — `codes/suggest`'s model leg into `ai` — carries its
  * service-account key (POPS-2021).
  *
  * `@pops/pillar-sdk` exports two `pillar()` functions with the same name and
@@ -34,8 +34,8 @@ import { SERVICE_ACCOUNT_KEY_ENV, SERVICE_ACCOUNT_KEY_FILE_ENV } from '../servic
 
 const SERVICE_ACCOUNT_KEY = 'pops_sa_TESTTEST.testsecret_not_a_real_key_000000';
 
-const CANDIDATES = ['LAMP-01', 'LAMP-02', 'LAMP-03'];
-const CONTEXT = { name: 'Desk lamp' };
+const SUGGESTED = ['LAMP-1', 'DESK-LAMP-1'];
+const CONTEXT = { item: { name: 'Desk lamp' }, existing: [] };
 
 /**
  * The narrowest document that still lets the SDK resolve the one operation
@@ -48,9 +48,9 @@ const OPENAPI = {
   openapi: '3.0.3',
   info: { title: 'callee', version: '0.1.0' },
   paths: {
-    '/codes/rank': {
+    '/codes/suggest': {
       post: {
-        operationId: 'codes.rank',
+        operationId: 'codes.suggest',
         responses: { '200': { description: 'ok' } },
       },
     },
@@ -112,7 +112,7 @@ function routes(req: IncomingMessage, res: ServerResponse): void {
   res.end(
     JSON.stringify(
       status === 200
-        ? { data: { ranked: [...CANDIDATES].reverse() } }
+        ? { data: { suggestions: SUGGESTED.map((code) => ({ code, reason: 'r' })) } }
         : { message: 'missing scope' }
     )
   );
@@ -167,16 +167,16 @@ function configure(): void {
   expect(configureInventoryServerSdk({ POPS_INTERNAL_API_KEY: SERVICE_ACCOUNT_KEY })).toBe(true);
 }
 
-describe('the ai ranking leg', () => {
-  it('sends the service-account key when ranking candidates', async () => {
+describe('the ai suggestion leg', () => {
+  it('sends the service-account key when asking for codes', async () => {
     configure();
 
-    const ranked = await createAiClient().rankCodeCandidates(CANDIDATES, CONTEXT);
+    const suggested = await createAiClient().suggestCodes(CONTEXT, 3);
 
     expect(received).toHaveLength(1);
-    expect(received[0]?.path).toBe('/codes/rank');
+    expect(received[0]?.path).toBe('/codes/suggest');
     expect(received[0]?.apiKey).toBe(SERVICE_ACCOUNT_KEY);
-    expect(ranked).toEqual([...CANDIDATES].reverse());
+    expect(suggested).toEqual(SUGGESTED);
   });
 
   it('reads the key from a mounted secret file in preference to the environment', async () => {
@@ -191,7 +191,7 @@ describe('the ai ranking leg', () => {
     process.env[SERVICE_ACCOUNT_KEY_ENV] = 'pops_sa_ENVENVEN.env_key_that_must_not_win_000000';
 
     expect(configureInventoryServerSdk()).toBe(true);
-    await createAiClient().rankCodeCandidates(CANDIDATES, CONTEXT);
+    await createAiClient().suggestCodes(CONTEXT, 3);
 
     expect(received[0]?.apiKey).toBe(SERVICE_ACCOUNT_KEY);
   });
@@ -211,7 +211,7 @@ describe('the same call built from the /client surface', () => {
       registry: { registryUrl: baseUrl },
       cacheTtlMs: 0,
     });
-    await handle.codes.rank({ name: CONTEXT.name, candidates: [...CANDIDATES] });
+    await handle.codes.suggest({ ...CONTEXT, count: 3 });
 
     expect(received).toHaveLength(1);
     expect(received[0]?.apiKey).toBeUndefined();
@@ -221,9 +221,9 @@ describe('the same call built from the /client surface', () => {
 /**
  * The half the ticket is really about. A callee that adopts
  * `requireCredential` answers 403, and the leg is written to carry on
- * regardless — falling back to the deterministic order — so unless the
+ * regardless — falling back to deterministic numbering — so unless the
  * refusal is named, a revoked grant looks identical to `ai` simply agreeing
- * with the deterministic order every time.
+ * with a model that never answers.
  */
 describe('a callee that rejects the credential', () => {
   beforeEach(() => {
@@ -232,9 +232,9 @@ describe('a callee that rejects the credential', () => {
   });
 
   it('falls back to undefined and logs the refusal, not a bare failure', async () => {
-    const ranked = await createAiClient().rankCodeCandidates(CANDIDATES, CONTEXT);
+    const suggested = await createAiClient().suggestCodes(CONTEXT, 3);
 
-    expect(ranked).toBeUndefined();
+    expect(suggested).toBeUndefined();
     expect(errorLog).toHaveBeenCalledWith(
       expect.stringContaining("ai rejected this pillar's service-account credential")
     );
@@ -243,7 +243,7 @@ describe('a callee that rejects the credential', () => {
 
 /**
  * The deployment that has not been given a key yet. The leg must fall back
- * silently to the deterministic order rather than attempting an anonymous
+ * silently to deterministic numbering rather than attempting an anonymous
  * call — which `ai` may or may not still admit — and without per-request
  * noise: the absence is reported once at boot, not on every suggestion.
  */
@@ -257,18 +257,18 @@ describe('a process with no service-account key', () => {
   });
 
   it('issues no request at all and returns undefined', async () => {
-    const ranked = await createAiClient().rankCodeCandidates(CANDIDATES, CONTEXT);
+    const suggested = await createAiClient().suggestCodes(CONTEXT, 3);
 
     expect(received).toEqual([]);
-    expect(ranked).toBeUndefined();
+    expect(suggested).toBeUndefined();
   });
 
   it('reports the missing key once per pillar id, not on every suggestion', async () => {
-    await createAiClient().rankCodeCandidates(CANDIDATES, CONTEXT);
+    await createAiClient().suggestCodes(CONTEXT, 3);
     const callsAfterFirst = errorLog.mock.calls.length;
 
-    await createAiClient().rankCodeCandidates(CANDIDATES, CONTEXT);
-    await createAiClient().rankCodeCandidates(CANDIDATES, CONTEXT);
+    await createAiClient().suggestCodes(CONTEXT, 3);
+    await createAiClient().suggestCodes(CONTEXT, 3);
 
     expect(errorLog.mock.calls.length).toBe(callsAfterFirst);
   });

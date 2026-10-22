@@ -1085,14 +1085,13 @@ export const EXPECTATIONS = [
   {
     consumer: 'inventory',
     producer: 'ai',
-    operationId: 'codes.rank',
-    path: '/codes/rank',
+    operationId: 'codes.suggest',
+    path: '/codes/suggest',
     method: 'post',
-    // The whole payload is a body (`name`, optional `typeKey`, and the
-    // deterministic candidates to reorder) — this guard does not model
-    // bodies. What it can pin is that the operation still exists as a POST,
-    // so a rename or drop breaks loudly here rather than as a silent
-    // permanent fallback to the deterministic order in production.
+    // The whole payload is a body (the item, its destination and the codes
+    // in use) — this guard does not model bodies. What it can pin is that the
+    // operation still exists as a POST, so a rename or drop breaks loudly here
+    // rather than as a silent permanent fallback to deterministic numbering.
     query: [],
     usedBy: 'pillars/inventory/src/api/ai/client.ts',
   },

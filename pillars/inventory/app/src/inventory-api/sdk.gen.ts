@@ -301,7 +301,7 @@ export type Options<
 };
 
 /**
- * Free codes for a new item: a stem followed by the next unused numbers
+ * Free codes for a new item, suggested from the codes already in use and where it is going
  */
 export const codesSuggest = <ThrowOnError extends boolean = false>(
   options?: Options<CodesSuggestData, ThrowOnError>

@@ -10,7 +10,7 @@ file as `/run/secrets/pops_inventory_api_key` and sets
 Grant the operations declared in
 [`pillars/inventory/src/api/pillars/service-account.ts`](../../../pillars/inventory/src/api/pillars/service-account.ts):
 `finance.transactions.get` for purchase-transaction URI reconciliation and
-`ai.codes.rank` for code suggestions. Do not add the registry `users.get`
+`ai.codes.suggest` for code suggestions. Do not add the registry `users.get`
 scope while inventory's owner-URI leg is dormant; it has no writer or outbound
 call today.
 

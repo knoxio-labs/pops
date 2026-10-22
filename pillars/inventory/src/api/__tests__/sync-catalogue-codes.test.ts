@@ -93,6 +93,16 @@ describe('POST /codes/suggest', () => {
     expect(await suggest({ name: 'Kettle', stem: 'K' })).toEqual(['K008', 'K009', 'K010']);
   });
 
+  it('keeps an unpadded family unpadded', async () => {
+    await itemWithCode('BOX-OFFICE-1');
+    await itemWithCode('BOX-OFFICE-4');
+    expect(await suggest({ name: 'Box', stem: 'BOX-OFFICE-' })).toEqual([
+      'BOX-OFFICE-5',
+      'BOX-OFFICE-6',
+      'BOX-OFFICE-7',
+    ]);
+  });
+
   it('starts at 001 for a stem nobody uses', async () => {
     expect(await suggest({ name: 'Anything', stem: 'Q' })).toEqual(['Q001', 'Q002', 'Q003']);
   });

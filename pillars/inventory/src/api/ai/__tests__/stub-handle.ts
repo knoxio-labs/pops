@@ -39,15 +39,14 @@ const callDynamic: CallDynamicFn = () => {
   throw new Error('callDynamic is not used by the ai client');
 };
 
+type SuggestInput = Parameters<AiRouter['codes']['suggest']>[0];
+type SuggestOutput = Awaited<ReturnType<AiRouter['codes']['suggest']>>;
+
 export function stubAiHandle(
-  rank: (input: {
-    name: string;
-    typeKey?: string;
-    candidates: string[];
-  }) => Promise<CallResult<{ data: { ranked: string[] } }>>
+  suggest: (input: SuggestInput) => Promise<CallResult<SuggestOutput>>
 ): PillarHandle<AiRouter> {
   return {
-    codes: { rank: proc(rank) },
+    codes: { suggest: proc(suggest) },
     callDynamic,
   };
 }

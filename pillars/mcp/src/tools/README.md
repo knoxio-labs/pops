@@ -136,6 +136,9 @@ though nothing enforces it mechanically.
   These are separate commands: a later edit failure does not roll back the code.
   Retry the unchanged arguments with the same `mutationId` to replay both outcomes
   safely. Code collisions return an error including the holder's name and ID.
+  `inventory.codes.suggest` returns free codes for a new item from the same
+  `POST /codes/suggest` the item forms use, through the sync handle because the
+  route needs the protocol header. It needs `inventory.codes.suggest`.
   `provenance` on create and update is the shape `items.get` returns, written
   through the producer's legacy purchase columns (`inventory-item-provenance.ts`).
   `transactionUri` accepts only `pops://finance/transaction/<id>`, the one URI

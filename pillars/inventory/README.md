@@ -593,19 +593,16 @@ above authenticates against a real file secret for the first time, not just
 whatever happened to be in the process environment.
 
 `src/api/ai/client.ts` is the one leg this account exists for today:
-`POST /codes/suggest` (`src/api/rest/sync-handlers.ts`) ranks its
-deterministic candidates through the `ai` pillar when a key is configured,
-and always falls back to the deterministic order otherwise — no key, a
-rejected credential, a timeout, a non-2xx response, or a response that is
-not a same-set permutation of the candidates it was given (never a smaller,
-larger, or substituted set, which could otherwise surface a held code). The
-`ai` pillar does not publish the `codes.rank` route this client calls yet;
-see `scripts/ci/check-cross-pillar-expectations.mjs`'s `KNOWN_BROKEN_OPERATIONS`
-entry for `inventory -> ai (codes.rank)` and this slice's PR description for
-what an operator needs to provision before that call can succeed.
+`POST /codes/suggest` (`src/api/rest/sync-handlers.ts`) sends the `ai` pillar
+the new item, its destination (`locationId` or `containerId`) and up to 500
+codes in use with their item, type and place (`src/api/sync/code-context.ts`),
+and offers the codes the model proposes after dropping any that are held,
+repeated, over 64 characters or off the requested stem. With no usable answer —
+no key, a rejected credential, a timeout, a non-2xx, or every code filtered out
+— deterministic numbering (`src/api/sync/codes.ts`) answers instead.
 
 `src/api/pillars/service-account.ts`'s `INVENTORY_SERVICE_ACCOUNT_SCOPES`
-grants `ai.codes.rank` for code suggestions and `finance.transactions.get`
+grants `ai.codes.suggest` for code suggestions and `finance.transactions.get`
 for the purchase-transaction URI reconciliation worker. The owner URI leg is
 dormant: no current write path populates it, so the account is not granted a
 registry users scope until that leg has an operation to call.

@@ -15,7 +15,7 @@ import {
   shutdownPillar,
   type PillarBootstrapHandle,
 } from '@pops/pillar-sdk/bootstrap';
-import { resolveSelfBaseUrl } from '@pops/pillar-sdk/pillar-env';
+import { assertSecretFilesReadable, resolveSelfBaseUrl } from '@pops/pillar-sdk/pillar-env';
 
 import { openAiDb } from '../db/index.js';
 import { resolveAiSqlitePath } from './ai-sqlite-path.js';
@@ -33,6 +33,10 @@ function resolvePort(): number {
   }
   return parsed;
 }
+
+// A set `ANTHROPIC_API_KEY_FILE` naming an unreadable path would otherwise read
+// as "no key" at the first code suggestion; refuse to boot instead (POPS-3315).
+assertSecretFilesReadable();
 
 const port = resolvePort();
 const version = process.env['BUILD_VERSION'] ?? 'dev';

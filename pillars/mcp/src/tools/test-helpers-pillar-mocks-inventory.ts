@@ -182,5 +182,8 @@ export const mockPillarInventory = {
         })
       ),
     },
+    codes: {
+      suggest: vi.fn().mockResolvedValue(callOk({ suggestions: ['BOX-OFFICE-5'] })),
+    },
   },
 };

@@ -27,7 +27,7 @@ function throwMissingKey(): PillarHandle<AiRouter> {
 
 describe('credentialled', () => {
   it('returns the connected handle when connect() succeeds', () => {
-    const handle = stubAiHandle(() => Promise.resolve(ok({ data: { ranked: [] } })));
+    const handle = stubAiHandle(() => Promise.resolve(ok({ data: { suggestions: [] } })));
 
     expect(credentialled('ai', () => handle)).toBe(handle);
   });
@@ -88,10 +88,10 @@ describe('credentialled', () => {
 
 describe('credentialRejectedMessage', () => {
   it('names the pillar, the operation and the account', () => {
-    const message = credentialRejectedMessage('ai', 'codes.rank');
+    const message = credentialRejectedMessage('ai', 'codes.suggest');
 
     expect(message).toContain('ai');
-    expect(message).toContain('codes.rank');
+    expect(message).toContain('codes.suggest');
     expect(message).toContain('inventory');
   });
 });

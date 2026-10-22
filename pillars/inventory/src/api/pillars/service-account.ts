@@ -27,13 +27,13 @@ export const INVENTORY_SERVICE_ACCOUNT_NAME = 'inventory';
  * stays a readable record of what inventory reaches rather than a wildcard
  * nobody can audit. Scopes match by dot prefix.
  *
- * - `ai.codes.rank` — ranking `codes/suggest`'s deterministic candidates
+ * - `ai.codes.suggest` — model-backed `codes/suggest` suggestions
  *   through `../ai/client.ts` (#4926).
  * - `finance.transactions.get` — checking populated purchase transaction
  *   URIs in `../cron/reconcile-cross-pillar.ts`.
  */
 export const INVENTORY_SERVICE_ACCOUNT_SCOPES: readonly string[] = [
-  'ai.codes.rank',
+  'ai.codes.suggest',
   'finance.transactions.get',
 ];
 

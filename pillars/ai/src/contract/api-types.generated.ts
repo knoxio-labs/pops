@@ -348,7 +348,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/codes/rank': {
+  '/codes/suggest': {
     parameters: {
       query?: never;
       header?: never;
@@ -357,8 +357,8 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Rank candidate inventory codes most-likely-first (deterministic, no model call) */
-    post: operations['codes.rank'];
+    /** Suggest sticker codes for a new inventory item from the codes already in use */
+    post: operations['codes.suggest'];
     delete?: never;
     options?: never;
     head?: never;
@@ -1890,7 +1890,7 @@ export interface operations {
       };
     };
   };
-  'codes.rank': {
+  'codes.suggest': {
     parameters: {
       query?: never;
       header?: never;
@@ -1901,9 +1901,27 @@ export interface operations {
     requestBody?: {
       content: {
         'application/json': {
-          candidates: string[];
-          name: string;
-          typeKey?: string;
+          count: number;
+          destination?: {
+            container?: {
+              code?: string;
+              name: string;
+            };
+            path: string[];
+          };
+          existing: {
+            code: string;
+            name: string;
+            place?: string;
+            typeKey?: string;
+          }[];
+          item: {
+            isContainer?: boolean;
+            name: string;
+            typeKey?: string;
+            typeLabel?: string;
+          };
+          stem?: string;
         };
       };
     };
@@ -1915,7 +1933,10 @@ export interface operations {
         };
         content: {
           'application/json': {
-            ranked: string[];
+            suggestions: {
+              code: string;
+              reason: string;
+            }[];
           };
         };
       };
@@ -1937,6 +1958,15 @@ export interface operations {
           'application/json': {
             message: string;
           };
+        };
+      };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
         };
       };
     };
