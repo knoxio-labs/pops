@@ -122,7 +122,14 @@ export function appWith(inventoryDb: OpenedInventoryDb, uploads: DocumentUploads
     selfBaseUrl: 'http://localhost:3002',
     documents: {
       getPaperlessStatus: () =>
-        Promise.resolve({ configured: true, available: true, baseUrl: null, documentCount: null }),
+        Promise.resolve({
+          configured: true,
+          available: true,
+          baseUrl: null,
+          documentCount: null,
+          maxUploadBytes: null,
+          allowedMimeTypes: null,
+        }),
       searchPaperlessDocuments: () => Promise.resolve([]),
       paperlessDocumentMissing: () => Promise.resolve(false),
     },

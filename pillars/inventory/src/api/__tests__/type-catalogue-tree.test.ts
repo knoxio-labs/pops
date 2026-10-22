@@ -144,6 +144,8 @@ function apiFor(mode: 'web' | 'service' | 'none', scopes: readonly string[] = []
           available: false,
           baseUrl: null,
           documentCount: null,
+          maxUploadBytes: null,
+          allowedMimeTypes: null,
         }),
       searchPaperlessDocuments: () => Promise.resolve([]),
       paperlessDocumentMissing: () => Promise.resolve(null),

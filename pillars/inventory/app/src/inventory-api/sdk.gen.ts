@@ -944,7 +944,7 @@ export const paperlessSearch = <ThrowOnError extends boolean = false>(
   });
 
 /**
- * Whether Paperless-ngx is configured and reachable
+ * Whether Paperless-ngx is configured and reachable, and the upload limits documents enforces
  */
 export const paperlessStatus = <ThrowOnError extends boolean = false>(
   options?: Options<PaperlessStatusData, ThrowOnError>

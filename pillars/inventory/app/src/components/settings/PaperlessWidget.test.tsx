@@ -148,7 +148,14 @@ describe('PaperlessWidget', () => {
     const checkedAt = new Date('2026-09-28T05:00:00.000Z');
     expect(
       paperlessWidgetState(
-        { configured: false, available: false, baseUrl: null, documentCount: null },
+        {
+          configured: false,
+          available: false,
+          baseUrl: null,
+          documentCount: null,
+          maxUploadBytes: null,
+          allowedMimeTypes: null,
+        },
         true,
         checkedAt
       )
