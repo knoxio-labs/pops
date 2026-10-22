@@ -17,7 +17,6 @@ export const savedSettings: Readonly<Record<string, string>> = {
   [KEYS.density]: 'compact',
   [KEYS.defaultLimit]: '50',
   [KEYS.searchDefaultLimit]: '20',
-  [KEYS.maxFileSizeBytes]: '10485760',
 };
 
 /** Paperless answering. */

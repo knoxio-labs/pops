@@ -395,27 +395,6 @@
   },
   {
     "type": "cycle",
-    "from": "pillars/inventory/app/src/components/document-upload/PendingDocumentRow.tsx",
-    "to": "pillars/inventory/app/src/components/DocumentUpload.tsx",
-    "unresolvedTo": "../DocumentUpload",
-    "dependencyTypes": ["local", "type-only", "import"],
-    "rule": {
-      "severity": "error",
-      "name": "no-circular"
-    },
-    "cycle": [
-      {
-        "name": "pillars/inventory/app/src/components/DocumentUpload.tsx",
-        "dependencyTypes": ["local", "type-only", "import"]
-      },
-      {
-        "name": "pillars/inventory/app/src/components/document-upload/PendingDocumentRow.tsx",
-        "dependencyTypes": ["local", "import"]
-      }
-    ]
-  },
-  {
-    "type": "cycle",
     "from": "pillars/inventory/app/src/components/inventory-card/HorizontalCard.tsx",
     "to": "pillars/inventory/app/src/components/InventoryCard.tsx",
     "unresolvedTo": "../InventoryCard",

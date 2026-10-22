@@ -72,9 +72,34 @@ internal struct InventoryProvenance: Equatable {
 /// item, which is why an item can have documents and still show this as
 /// unavailable, POPS knows they exist and cannot fetch them right now.
 internal enum InventoryDocuments: Equatable {
-    case linked([String])
+    case linked([InventoryDocumentLine])
     case none
     case paperlessUnavailable
+}
+
+/// One row of the Documents section: a linked file that opens in QuickLook,
+/// one Paperless no longer has, an upload still processing, or one Paperless
+/// refused.
+internal struct InventoryDocumentLine: Equatable, Identifiable {
+    internal enum Status: Equatable {
+        case linked
+        case missing
+        case processing
+        case failed(reason: String)
+    }
+
+    internal let title: String
+    /// The document kind's glyph: receipt, warranty, manual, invoice, other.
+    internal let symbol: String
+    internal let status: Status
+
+    internal var id: String { title }
+
+    internal init(_ title: String, symbol: String = "doc", status: Status = .linked) {
+        self.title = title
+        self.symbol = symbol
+        self.status = status
+    }
 }
 
 /// What a container-capable item's contents look like from its own page.

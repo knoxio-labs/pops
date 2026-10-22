@@ -4,8 +4,8 @@
  *
  * Wraps `@pops/ui`'s catalog-backed `validateFiles`, translating each refusal
  * through `describeFileValidationError` and joining them into one line, the
- * shape both `PhotoUpload` and `DocumentUpload` rendered from their own
- * private, English-only `validateFiles` before POPS-2115.
+ * shape `PhotoUpload` rendered from its own private, English-only
+ * `validateFiles` before POPS-2115.
  */
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';

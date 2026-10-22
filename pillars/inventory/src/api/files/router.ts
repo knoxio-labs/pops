@@ -1,7 +1,6 @@
 /**
  * Raw (non-ts-rest) byte-serving routes for the inventory pillar:
  * - `GET /api/inventory/photos/items/:itemId/:filename` — uploaded item photos
- * - `GET /api/inventory/documents/items/:itemId/:filename` — direct-upload docs
  * - `GET /inventory/documents/:id/thumbnail` — Paperless-ngx thumbnail proxy
  *
  * GET-only and validated by filename pattern, so they need no DB handle. They
@@ -27,7 +26,6 @@ import {
 import { lookupPillar as defaultLookupPillar } from '@pops/pillar-sdk/discovery';
 
 import { inventoryError, sendInventoryError } from '../errors.js';
-import { getInventoryDocumentsDir } from '../modules/document-files/paths.js';
 import { getInventoryImagesDir } from '../modules/photos/paths.js';
 import { tryServeFile } from './serve-file.js';
 import { createThumbnailProxyHandler } from './thumbnail-proxy.js';
@@ -39,13 +37,9 @@ const UPLOAD_CACHE_CONTROL = 'private, max-age=3600';
 const ITEM_ID_RE = /^[a-z0-9-]+$/i;
 /** Photo filenames: `photo_NNN.jpg` (written by the photos service). */
 const PHOTO_FILENAME_RE = /^photo_\d+\.jpg$/;
-/** Direct-upload doc filenames: `file_NNN.{ext}` (PDFs, images, text). */
-const DOC_FILENAME_RE = /^file_\d+\.[a-z0-9]+$/i;
 
 /** Uploaded item photo bytes. Exported so the service-account gate scopes this exact path. */
 export const ITEM_PHOTO_FILE_ROUTE_PATH = '/api/inventory/photos/items/:itemId/:filename';
-/** Direct-upload item document bytes. Exported so the service-account gate scopes this exact path. */
-export const ITEM_DOCUMENT_FILE_ROUTE_PATH = '/api/inventory/documents/items/:itemId/:filename';
 /** The Paperless thumbnail proxy. Exported so the service-account gate scopes this exact path. */
 export const DOCUMENT_THUMBNAIL_ROUTE_PATH = '/inventory/documents/:id/thumbnail';
 
@@ -138,14 +132,6 @@ export function createInventoryFilesRouter(
       baseDir: getInventoryImagesDir(),
       filenameRe: PHOTO_FILENAME_RE,
       notFound: 'Photo not found',
-    });
-  });
-
-  router.get(ITEM_DOCUMENT_FILE_ROUTE_PATH, async (req, res): Promise<void> => {
-    await serveItemFile(req, res, {
-      baseDir: getInventoryDocumentsDir(),
-      filenameRe: DOC_FILENAME_RE,
-      notFound: 'Document not found',
     });
   });
 

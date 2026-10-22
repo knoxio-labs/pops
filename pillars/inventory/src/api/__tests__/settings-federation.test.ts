@@ -57,7 +57,7 @@ describe('inventory federated /settings', () => {
     expect(byKey.get('inventory.density')).toBe('compact');
     expect(byKey.get('inventory.defaultLimit')).toBe('50');
     expect(byKey.get('inventory.searchDefaultLimit')).toBe('20');
-    expect(byKey.get('inventory.maxFileSizeBytes')).toBe('10485760');
+    expect(byKey.has('inventory.maxFileSizeBytes')).toBe(false);
   });
 
   it('round-trips an update through inventory.db and resets to the default', async () => {

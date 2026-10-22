@@ -423,24 +423,6 @@ export interface paths {
     patch: operations['photos.reorder'];
     trace?: never;
   };
-  '/items/{itemId}/uploads': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** List uploaded files for an item */
-    get: operations['documentFiles.listForItem'];
-    put?: never;
-    /** Upload a document file (base64 JSON body); validated + stored server-side */
-    post: operations['documentFiles.upload'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   '/locations': {
     parameters: {
       query?: never;
@@ -1156,23 +1138,6 @@ export interface paths {
     put?: never;
     post?: never;
     delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/uploads/{id}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    post?: never;
-    /** Remove an uploaded file (db row + file) */
-    delete: operations['documentFiles.removeUpload'];
     options?: never;
     head?: never;
     patch?: never;
@@ -3889,118 +3854,6 @@ export interface operations {
       };
     };
   };
-  'documentFiles.listForItem': {
-    parameters: {
-      query?: {
-        limit?: number;
-        offset?: number;
-      };
-      header?: never;
-      path: {
-        itemId: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description 200 */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            data: {
-              createdAt: string;
-              fileName: string;
-              filePath: string;
-              fileSize: number;
-              id: number;
-              itemId: string;
-              mimeType: string;
-              uploadedAt: string;
-            }[];
-            pagination: {
-              hasMore: boolean;
-              limit: number;
-              offset: number;
-              total: number;
-            };
-          };
-        };
-      };
-    };
-  };
-  'documentFiles.upload': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        itemId: string;
-      };
-      cookie?: never;
-    };
-    /** @description Body */
-    requestBody?: {
-      content: {
-        'application/json': {
-          fileBase64: string;
-          fileName: string;
-          mimeType: string;
-        };
-      };
-    };
-    responses: {
-      /** @description 201 */
-      201: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            data: {
-              createdAt: string;
-              fileName: string;
-              filePath: string;
-              fileSize: number;
-              id: number;
-              itemId: string;
-              mimeType: string;
-              uploadedAt: string;
-            };
-            message: string;
-          };
-        };
-      };
-      /** @description 400 */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description 404 */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description 409 */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-    };
-  };
   'locations.list': {
     parameters: {
       query?: never;
@@ -5140,8 +4993,7 @@ export interface operations {
           | 'inventory.defaultLimit'
           | 'inventory.searchDefaultLimit'
           | 'inventory.suggestCodes'
-          | 'inventory.codePattern'
-          | 'inventory.maxFileSizeBytes';
+          | 'inventory.codePattern';
       };
       cookie?: never;
     };
@@ -5202,8 +5054,7 @@ export interface operations {
           | 'inventory.defaultLimit'
           | 'inventory.searchDefaultLimit'
           | 'inventory.suggestCodes'
-          | 'inventory.codePattern'
-          | 'inventory.maxFileSizeBytes';
+          | 'inventory.codePattern';
       };
       cookie?: never;
     };
@@ -5272,8 +5123,7 @@ export interface operations {
           | 'inventory.defaultLimit'
           | 'inventory.searchDefaultLimit'
           | 'inventory.suggestCodes'
-          | 'inventory.codePattern'
-          | 'inventory.maxFileSizeBytes';
+          | 'inventory.codePattern';
       };
       cookie?: never;
     };
@@ -5341,8 +5191,7 @@ export interface operations {
           | 'inventory.defaultLimit'
           | 'inventory.searchDefaultLimit'
           | 'inventory.suggestCodes'
-          | 'inventory.codePattern'
-          | 'inventory.maxFileSizeBytes';
+          | 'inventory.codePattern';
       };
       cookie?: never;
     };
@@ -9037,62 +8886,6 @@ export interface operations {
       };
       /** @description 426 */
       426: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-    };
-  };
-  'documentFiles.removeUpload': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: number;
-      };
-      cookie?: never;
-    };
-    /** @description Body */
-    requestBody?: {
-      content: {
-        'application/json': Record<string, never>;
-      };
-    };
-    responses: {
-      /** @description 200 */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': {
-            message: string;
-          };
-        };
-      };
-      /** @description 400 */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description 404 */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ErrorBody'];
-        };
-      };
-      /** @description 409 */
-      409: {
         headers: {
           [name: string]: unknown;
         };

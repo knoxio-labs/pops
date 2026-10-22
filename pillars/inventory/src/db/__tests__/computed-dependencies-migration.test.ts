@@ -107,6 +107,7 @@ function rewindToBeforeMigration(): void {
     DROP TABLE device_sync_ledgers;
     DROP TABLE item_parts;
     DROP TABLE item_document_ingestions;
+    CREATE TABLE item_uploaded_files (id integer PRIMARY KEY);
     ALTER TABLE item_types DROP COLUMN replaced_by;
     ALTER TABLE item_types DROP COLUMN parent_type_id;
     ALTER TABLE item_type_fields DROP COLUMN replaced_by;
@@ -115,7 +116,7 @@ function rewindToBeforeMigration(): void {
   const removed = opened.raw
     .prepare('DELETE FROM __drizzle_migrations WHERE created_at >= ?')
     .run(MIGRATION_WHEN);
-  expect(removed.changes).toBe(8);
+  expect(removed.changes).toBe(9);
   opened.raw.close();
 }
 

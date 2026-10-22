@@ -396,10 +396,9 @@ including the sync surface `rest-sync.ts` adds — is gated the moment it
 exists. `/health`, `/pillars` and `/openapi` are outside the contract and
 stay ungated. The raw byte-serving routes in `files/router.ts` and
 `media/router.ts` are not contract routes either, but they are declared to
-the gate explicitly (`photos.file`, `documentFiles.file`,
-`documents.thumbnail`, `documents.upload`, `documents.file`,
-`inventory.media.upload`, `inventory.media.read`) and held to the same scope
-semantics as the contract surface.
+the gate explicitly (`photos.file`, `documents.thumbnail`, `documents.upload`,
+`documents.file`, `inventory.media.upload`, `inventory.media.read`) and held
+to the same scope semantics as the contract surface.
 
 A caller presenting an `X-API-Key` is held to the service account behind it:
 an unknown or revoked key is `401`, a live key whose grant misses the
@@ -535,7 +534,7 @@ minimumProtocol }`. The expected value makes concurrent operator actions a
   `placement` and `previousPlacement`, each in the item row's placement
   shape (`{ kind: 'location', locationId }`, `{ kind: 'container', itemId }`,
   `{ kind: 'hand' }`, and `null` for no previous placement).
-- Connections, fixtures and uploaded files are not on the snapshot or the
+- Connections and fixtures are not on the snapshot or the
   feed: Inventory ADR-002 keeps them on their current tables and routes.
   Whether the phone needs connections at all is POPS-4110.
 

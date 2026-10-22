@@ -69,12 +69,9 @@ describe('inventoryManifest', () => {
     }
   });
 
-  it('keeps the document-file limit in the settings section', () => {
-    expect(inventoryManifest.groups.find((group) => group.id === 'documentFiles')).toEqual(
-      expect.objectContaining({
-        title: 'Document files',
-        fields: [expect.objectContaining({ key: 'inventory.maxFileSizeBytes' })],
-      })
-    );
+  it('declares no upload limit, which documents owns', () => {
+    const keys = inventoryManifest.groups.flatMap((group) => group.fields.map((f) => f.key));
+    expect(inventoryManifest.groups.map((group) => group.id)).not.toContain('documentFiles');
+    expect(keys).not.toContain('inventory.maxFileSizeBytes');
   });
 });

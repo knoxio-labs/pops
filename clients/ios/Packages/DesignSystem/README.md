@@ -14,6 +14,8 @@ The **structural** primitives under `Sources/DesignSystem/Primitives/` are a dif
 
 `PopsSearchBar` owns the shared Mail-style search, filter, scan, dictation and add controls while its caller supplies the feature tint and filter contents. `PopsGlassGroup`, `popsGlass(in:)` and `popsProminentGlassButton()` contain the platform glass differences. `PopsDashedActionButton` is the empty-screen action, and the `popsGroundedSwipe*` modifiers keep swipe rows above their surrounding surface while actions are open.
 
+`PopsDocumentPicker` (the system file picker, handing back copies the app owns) and `PopsDocumentCamera` (VisionKit's document camera, handing back page images) let Purchases and Inventory share the controllers while each decides what a file or a scan becomes. The camera is presented from a `.fullScreenCover`, never inside a navigation stack; its doc comment says why.
+
 `popsTrailingBarItem` places a screen action at the trailing edge of its navigation bar. `popsBottomBar` groups secondary controls in the platform bottom toolbar. Their iOS placements and host-toolchain fallbacks live together in `PopsBarItemsPlatform.swift`.
 
 `PopsZoomablePhoto` adds pinch, pan and double-tap inspection around `PopsPhoto`. `PopsPagedPhotoViewer` pages through encoded images with a native position indicator while keeping zoom state local to each image, and can report page changes when a feature loads imagery on demand. Both take image bytes directly and carry no receipt or purchases model, so capture and detail features can share them without importing one another. `popsStage(item:content:)` presents a full-screen feature stage on iOS and a host-compatible sheet during package tests.

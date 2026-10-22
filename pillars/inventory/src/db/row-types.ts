@@ -17,7 +17,6 @@ import type {
   itemFixtureConnections,
   itemPhotos,
   items,
-  itemUploadedFiles,
   locations,
   media,
   mutations,
@@ -44,8 +43,6 @@ export type ItemFixtureConnectionRow = typeof itemFixtureConnections.$inferSelec
 export type ItemFixtureConnectionInsert = typeof itemFixtureConnections.$inferInsert;
 export type ItemPhotoRow = typeof itemPhotos.$inferSelect;
 export type ItemPhotoInsert = typeof itemPhotos.$inferInsert;
-export type ItemUploadedFileRow = typeof itemUploadedFiles.$inferSelect;
-export type ItemUploadedFileInsert = typeof itemUploadedFiles.$inferInsert;
 export type LocationRow = typeof locations.$inferSelect;
 export type LocationInsert = typeof locations.$inferInsert;
 export type MediaRow = typeof media.$inferSelect;

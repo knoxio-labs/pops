@@ -59,6 +59,8 @@ Numbers never pass through a binary float. Decimals are an `Int128` coefficient 
 
 `AppDependencies.merchants` binds the merchant directory alongside purchases. The unbound container fails merchant reads with `dependencyNotBound`; a paired device receives the BFM implementation.
 
+`InventoryDocumentsService` is an item's Paperless documents, online only: the list with its upload limits, edits that send only the changed keys, unlink (Paperless keeps the file), dismissing a refused upload, a streamed upload, and the file. `InventoryDocumentCache` keeps downloaded files and each item's last list under Caches; `InventoryDocumentOpener` opens the cached copy when its size matches the server's or the server cannot be reached, downloads otherwise, and answers `needsConnection` offline with no copy.
+
 `InventoryBarcodeLookupService` is the facts-only seam for scanned product codes. Its product value retains editable catalogue facts while excluding wire provenance, lookup codes, timestamps and images. An unbound dependency returns `unavailable`, and `AppCoreFakes` supplies a scripted lookup that records every code.
 
 ## The shell

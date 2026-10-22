@@ -79,10 +79,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf 
 # Docker seeds an empty named volume from the image's contents at the mount
 # point, ownership included — so a directory missing here arrives root-owned on
 # the volume's FIRST EVER mount, `mkdirSync` no-ops on it, and the pillar dies
-# on SQLITE_CANTOPEN. Same reasoning as pillars/contacts/Dockerfile. The two
-# upload roots are here for the same reason, one step later: they fail at the
-# first photo or document rather than at boot.
-RUN mkdir -p /data/sqlite /data/inventory/images /data/inventory/documents \
+# on SQLITE_CANTOPEN. Same reasoning as pillars/contacts/Dockerfile. The photo
+# upload root is here for the same reason, one step later: it fails at the
+# first photo rather than at boot.
+RUN mkdir -p /data/sqlite /data/inventory/images \
   && chown -R node:node /data
 
 # The image's own database default, so it boots with no environment at all.
@@ -92,13 +92,12 @@ RUN mkdir -p /data/sqlite /data/inventory/images /data/inventory/documents \
 # /data/sqlite/inventory.db.
 ENV SQLITE_PATH=/data/sqlite/pops.db
 
-# The upload roots, for the same reason the database has one: both code
-# defaults (`./data/inventory/images`, `./data/inventory/documents`) are
-# relative to the working directory, /app is root-owned, and the process runs
-# as `node` — so an unset variable makes the first `mkdirSync` EACCES on
-# `mkdir 'data'` and every photo and document upload fails.
+# The photo upload root, for the same reason the database has one: the code
+# default (`./data/inventory/images`) is relative to the working directory,
+# /app is root-owned, and the process runs as `node` — so an unset variable
+# makes the first `mkdirSync` EACCES on `mkdir 'data'` and every photo upload
+# fails.
 ENV INVENTORY_IMAGES_DIR=/data/inventory/images
-ENV INVENTORY_DOCUMENTS_DIR=/data/inventory/documents
 
 COPY --from=builder --chown=node:node /app/deploy ./
 COPY --from=builder --chown=node:node /app/pillars/inventory/dist ./dist
