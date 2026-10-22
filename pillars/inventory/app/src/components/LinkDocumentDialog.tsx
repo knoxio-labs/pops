@@ -7,15 +7,15 @@ import { Button, SearchPickerDialog, Select, toastError } from '@pops/ui';
 
 import { unwrap } from '../inventory-api-helpers.js';
 import { documentsLink } from '../inventory-api/index.js';
+import { DOCUMENT_KIND_OPTIONS, isDocumentKind } from './document-kinds';
 import { linkDocumentError } from './link-document-error';
 import { PaperlessDocumentResultRow } from './PaperlessDocumentResultRow';
 import { usePaperlessSearch } from './use-paperless-search';
 
 import type { ComponentPropsWithoutRef, ReactElement } from 'react';
 
+import type { DocumentKind } from './document-kinds';
 import type { PaperlessDocResult } from './PaperlessDocumentResultRow';
-
-const DOCUMENT_TYPES = ['receipt', 'warranty', 'manual', 'invoice', 'other'] as const;
 
 interface LinkDocumentDialogProps {
   itemId: string;
@@ -25,32 +25,21 @@ interface LinkDocumentDialogProps {
   disabledReason?: string;
 }
 
-type DocType = (typeof DOCUMENT_TYPES)[number];
-
-function isDocType(value: string): value is DocType {
-  return DOCUMENT_TYPES.some((documentType) => documentType === value);
-}
-
-const DOC_TYPE_OPTIONS = DOCUMENT_TYPES.map((t) => ({
-  value: t,
-  label: t.charAt(0).toUpperCase() + t.slice(1),
-}));
-
 function DocTypeSelect({
   docType,
   setDocType,
 }: {
-  docType: DocType;
-  setDocType: (v: DocType) => void;
+  docType: DocumentKind;
+  setDocType: (v: DocumentKind) => void;
 }) {
   return (
     <Select
       value={docType}
       onChange={(e) => {
-        if (isDocType(e.target.value)) setDocType(e.target.value);
+        if (isDocumentKind(e.target.value)) setDocType(e.target.value);
       }}
       size="sm"
-      options={DOC_TYPE_OPTIONS}
+      options={DOCUMENT_KIND_OPTIONS}
     />
   );
 }
@@ -58,7 +47,7 @@ function DocTypeSelect({
 type LinkDocumentInput = {
   itemId: string;
   paperlessDocumentId: number;
-  documentType: DocType;
+  documentType: DocumentKind;
   title: string;
 };
 
@@ -121,7 +110,7 @@ export function LinkDocumentDialog({
 }: LinkDocumentDialogProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const [docType, setDocType] = useState<DocType>('receipt');
+  const [docType, setDocType] = useState<DocumentKind>('receipt');
   const [linkingId, setLinkingId] = useState<number | null>(null);
 
   const { data, isFetching, isError, refetch } = usePaperlessSearch(open, search);

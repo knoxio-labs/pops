@@ -133,6 +133,8 @@ describe('the granted scopes', () => {
       'inventory.types.read',
       'inventory.codes',
       'inventory.media',
+      'inventory.documents',
+      'inventory.paperless.status',
       'inventory.items.getParts',
       'inventory.items.addPart',
       'inventory.items.removePart',

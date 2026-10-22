@@ -14,10 +14,12 @@ import {
   connectionsFor,
   displayItem,
   documentsFor,
+  ingestionsFor,
   itemDetailBannerState,
   paperlessFor,
   retryReads,
   statusFor,
+  uploadLimitsFor,
 } from './use-item-detail-state';
 
 import type { ItemRowModel } from '../../foundation/model/model';
@@ -117,8 +119,9 @@ export function useItemDetailModel(id: string): ItemDetailModelState {
     relatedWorld: sources.relatedWorld,
     aggregate,
     documents,
+    ...ingestionsFor(auxiliary.documentsQuery),
     paperless,
-    paperlessBaseUrl: auxiliary.paperlessQuery.data?.data.baseUrl ?? null,
+    uploadLimits: uploadLimitsFor(auxiliary.paperlessQuery),
     connections,
     events: eventModels,
     eventCount: events.total,

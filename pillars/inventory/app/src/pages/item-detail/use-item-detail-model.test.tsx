@@ -219,7 +219,16 @@ beforeEach(() => {
   mocks.fixturesList.mockResolvedValue(success({ data: [], total: 0 }));
   mocks.fixturesListForItem.mockResolvedValue(success({ data: [], total: 0 }));
   mocks.paperlessStatus.mockResolvedValue(
-    success({ data: { available: false, baseUrl: null, configured: false } })
+    success({
+      data: {
+        available: false,
+        baseUrl: null,
+        configured: false,
+        documentCount: null,
+        maxUploadBytes: null,
+        allowedMimeTypes: null,
+      },
+    })
   );
 });
 

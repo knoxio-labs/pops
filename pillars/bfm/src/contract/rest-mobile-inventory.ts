@@ -14,6 +14,9 @@
  * inventory's sync protocol: see `api/inventory/media-client.ts` for why it
  * cannot be.
  *
+ * The `*Document*` routes relay an item's Paperless documents; see
+ * `rest-mobile-inventory-documents.ts`.
+ *
  * `409` and `426` are declared on every READ route, because the producer can
  * answer either on any of them:
  *
@@ -55,6 +58,7 @@ import {
   MobileInventorySnapshotSchema,
   MobileResyncRequiredErrorSchema,
 } from './mobile-inventory-schemas.js';
+import { mobileInventoryDocumentRoutes } from './rest-mobile-inventory-documents.js';
 import { mobileInventoryListRoutes } from './rest-mobile-inventory-list.js';
 import { mobileInventoryMediaRoutes } from './rest-mobile-inventory-media.js';
 import { mobileInventoryPartsRoutes } from './rest-mobile-inventory-parts.js';
@@ -229,6 +233,7 @@ export const mobileInventoryContract = c.router({
     metadata: requires('inventory.write'),
   },
   ...mobileInventoryMediaRoutes,
+  ...mobileInventoryDocumentRoutes,
   ...mobileInventoryPartsRoutes,
 });
 

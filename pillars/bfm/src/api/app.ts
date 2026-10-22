@@ -12,8 +12,9 @@
  *
  * The first exception to "the contract describes everything" is the `/mobile`
  * perimeter below, which is Express middleware because it must answer paths
- * the contract does not declare. The second is the Ego event stream: ts-rest
- * cannot describe its server-sent-event response. See `auth/README.md`.
+ * the contract does not declare. The others are the Ego event stream, whose
+ * server-sent-event response ts-rest cannot describe, and the raw
+ * item-document upload and file, whose bodies are bytes. See `auth/README.md`.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -60,6 +61,10 @@ import { type BfmRestHandlerDeps, makeBfmRestHandlers } from './rest/handlers.js
 import { createInventoryProtocolErrorHandler } from './rest/inventory-protocol-error.js';
 import { createJsonBodyErrorHandler } from './rest/json-body-error.js';
 import { makeMobileEgoStreamRouter } from './rest/mobile-ego-stream.js';
+import {
+  makeMobileInventoryDocumentBytesRouter,
+  type MobileInventoryDocumentBytesDeps,
+} from './rest/mobile-inventory-document-bytes.js';
 import { createPayloadTooLargeErrorHandler } from './rest/payload-too-large.js';
 import { createRequestValidationErrorHandler } from './rest/request-validation.js';
 
@@ -91,7 +96,7 @@ const openapiDocument: unknown = JSON.parse(
 /** Re-exported so existing callers keep one import; defined in `paths.ts`. */
 export { CHALLENGE_PATH, MOBILE_PATH_PREFIX, PAIRING_PATH, REFRESH_PATH } from './paths.js';
 
-export interface BfmApiDeps extends BfmRestHandlerDeps {
+export interface BfmApiDeps extends BfmRestHandlerDeps, MobileInventoryDocumentBytesDeps {
   /**
    * Overrides for the perimeter's request budget. Optional because *whether*
    * the limiter runs is not a choice — it is mounted unconditionally below —
@@ -201,6 +206,11 @@ export function createBfmApiApp(deps: BfmApiDeps, options: CreateBfmApiAppOption
   // reason the guard is: a mobile route added later is covered the moment it
   // exists, and one that declares no capability is refused rather than served.
   app.use(MOBILE_PATH_PREFIX, createRequireCapability());
+
+  // The raw item-document upload and file, behind both guards and ahead of
+  // every body parser: the upload's body is the file, streamed to inventory
+  // unread, and a parser matching its declared type would consume it first.
+  app.use(makeMobileInventoryDocumentBytesRouter(deps));
 
   // The upload route's own ceiling, mounted ahead of the default parser so it
   // is the one that runs there — body-parser marks a request it has read, and

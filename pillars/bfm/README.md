@@ -52,6 +52,12 @@ It also holds a service-account credential and one way to spend it — see
 | `GET /mobile/finance/transactions/:id/history`      | Who created or changed a transaction, and what it said either side.                                                                              |
 | `GET /mobile/finance/accounts/:id/history`          | One cursor-paginated page of the changes to an account's transactions.                                                                           |
 | `GET /mobile/inventory/items`                       | One cursor-paginated Items browser page, using Inventory's `/web/items` filters and ordering.                                                    |
+| `GET /mobile/inventory/items/:id/documents`         | An item's linked Paperless documents and its pending and failed uploads.                                                                         |
+| `POST /mobile/inventory/items/:id/documents`        | Raw upload: the body is the file, streamed to Inventory; see [Item documents](#item-documents).                                                  |
+| `GET /mobile/inventory/documents/:id/file`          | Raw file of a linked document; `Range` forwarded, `206` and content headers passed back.                                                         |
+| `PATCH /mobile/inventory/documents/:id`             | Changes a document's kind or title; `412` when Paperless is not connected.                                                                       |
+| `DELETE /mobile/inventory/documents/:id`            | Unlinks a document; the Paperless document is kept.                                                                                              |
+| `DELETE /mobile/inventory/document-ingestions/:id`  | Dismisses a pending or failed upload.                                                                                                            |
 | `GET /mobile/barcode/lookup/:code`                  | Book metadata for a scanned barcode; `found`, `not_found` and `unavailable` are all 200 outcomes, with optional ADR-054 detail on `unavailable`. |
 | `GET /mobile/purchases`                             | One cursor-paginated page of purchase list rows — see [The mobile shape](#the-mobile-shape).                                                     |
 | `GET /mobile/purchases/search`                      | One bounded cursor page of purchase and line matches after text and structured filters.                                                          |
@@ -368,6 +374,25 @@ happens before the registry is even read, because a check-in is true
 regardless of how the rest of the call goes. Every other `/mobile/*` route
 moves the same column through the guard instead, coalesced — see
 [`src/api/auth/README.md`](src/api/auth/README.md).
+
+## Item documents
+
+An item's Paperless documents relay Inventory's `documents.*` routes under bfm's
+`inventory.documents` scope. Reads need the device capability `inventory.read`
+and writes `inventory.write`.
+
+The upload and the file carry raw bytes, which the ts-rest contract cannot
+describe, so they are Express routes outside the OpenAPI document and the
+generated Swift client, declared in `UNCONTRACTED_MOBILE_ROUTES` like the Ego
+stream. The upload takes the file as the body, its MIME type as
+`Content-Type`, and `documentType`, `fileName` and optional `title` in the
+query; it answers `202` with the recorded ingestion. A producer refusal keeps
+its status (400, 404, 412, 413, 415, 422, 502, 503) and its ADR-054 envelope,
+with `details.upstream` added. `412` means Paperless is not connected. The
+upload limits are the documents pillar's; bfm does not restate them. The
+list reports them (`maxUploadBytes`, `allowedMimeTypes`) from Inventory's
+`paperless.status`, under the `inventory.paperless.status` scope, and reports
+`null` for both when that status cannot be read.
 
 ## The mobile shape
 
@@ -699,7 +724,7 @@ and send it in that header, against the registry's admin surface reachable
 externally through the shell proxy:
 
 ```bash
-curl -sS -X POST https://pops.local/registry-api/service-accounts -H 'Content-Type: application/json' -H "cf-access-jwt-assertion: $ACCESS_JWT" -d '{"name":"bfm","scopes":["finance.transactions","finance.transactionHistory","finance.transactionAttachments","finance.accounts","finance.checkpoints","finance.delegatedSubject","purchases.purchase","purchases.search","purchases.receipt","inventory.sync","inventory.types.catalogue","inventory.types.read","inventory.codes","inventory.media","inventory.items.getParts","inventory.items.addPart","inventory.items.removePart","barcode.lookup","cerebrum.ego"]}'
+curl -sS -X POST https://pops.local/registry-api/service-accounts -H 'Content-Type: application/json' -H "cf-access-jwt-assertion: $ACCESS_JWT" -d '{"name":"bfm","scopes":["finance.transactions","finance.transactionHistory","finance.transactionAttachments","finance.accounts","finance.checkpoints","finance.delegatedSubject","purchases.purchase","purchases.search","purchases.receipt","inventory.sync","inventory.types.catalogue","inventory.types.read","inventory.codes","inventory.media","inventory.documents","inventory.paperless.status","inventory.items.getParts","inventory.items.addPart","inventory.items.removePart","barcode.lookup","cerebrum.ego"]}'
 ```
 
 Two deployment shapes let a bare `curl` through, which is why this can work on

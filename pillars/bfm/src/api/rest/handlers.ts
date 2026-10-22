@@ -29,6 +29,7 @@ import {
   makeMobileFinanceHandlers,
   type MobileFinanceHandlerDeps,
 } from './mobile-finance-handlers.js';
+import { makeMobileInventoryDocumentHandlers } from './mobile-inventory-document-handlers.js';
 import {
   makeMobileInventoryHandlers,
   type MobileInventoryHandlerDeps,
@@ -46,6 +47,7 @@ import type { Response } from 'express';
 import type { BfmDb } from '../../db/index.js';
 import type { RefreshChallengeStore } from '../auth/refresh-challenge.js';
 import type { MobileBootstrapDeps } from '../mobile/bootstrap.js';
+import type { MobileInventoryDocumentHandlerDeps } from './mobile-inventory-document-handlers.js';
 
 const server: ReturnType<typeof initServer> = initServer();
 
@@ -56,6 +58,7 @@ export interface BfmRestHandlerDeps
     MobileEgoHandlerDeps,
     MobileFinanceHandlerDeps,
     MobileInventoryHandlerDeps,
+    MobileInventoryDocumentHandlerDeps,
     MobilePurchasesHandlerDeps {
   /** Build version, surfaced on the health response. */
   version: string;
@@ -167,7 +170,10 @@ export function makeBfmRestHandlers(
     mobileEgo: makeMobileEgoHandlers(deps),
     mobileBarcode: makeMobileBarcodeHandlers(deps),
     mobileFinance: makeMobileFinanceHandlers(deps),
-    mobileInventory: makeMobileInventoryHandlers(deps),
+    mobileInventory: {
+      ...makeMobileInventoryHandlers(deps),
+      ...makeMobileInventoryDocumentHandlers(deps),
+    },
     mobilePurchases: makeMobilePurchasesHandlers(deps),
   });
 }

@@ -17,10 +17,18 @@ import { bfmContract } from '../contract/rest.js';
  */
 export const MOBILE_PATH_PREFIX = '/mobile';
 
-/**
- * The one mobile route outside the ts-rest contract: Ego's event stream.
- */
+/** A mobile route outside the ts-rest contract: Ego's event stream. */
 export const MOBILE_EGO_CHAT_STREAM_PATH = '/mobile/ego/chat/stream';
+
+/**
+ * The raw item-document upload, outside the contract because its body is the
+ * file. `POST` on the path whose `GET` lists the item's documents.
+ */
+export const MOBILE_INVENTORY_DOCUMENT_UPLOAD_PATH =
+  bfmContract.mobileInventory.listItemDocuments.path;
+
+/** The raw file of a linked document, outside the contract because it answers bytes. */
+export const MOBILE_INVENTORY_DOCUMENT_FILE_PATH = '/mobile/inventory/documents/:id/file';
 
 /**
  * The one mobile route that carries a payload measured in megabytes, and

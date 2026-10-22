@@ -3,8 +3,10 @@ import {
   toDetailConnections,
   toDetailDocuments,
   toDetailFacts,
+  toDetailIngestions,
   toDetailPhotos,
   toDetailProvenance,
+  uploadLimitsOf,
 } from './detail-model';
 
 import type { CatalogueType } from '../../catalogue-editor/types';
@@ -74,6 +76,19 @@ export function documentsFor(query: AuxiliaryQueries['documentsQuery']) {
   return toDetailDocuments(query.data?.data ?? []);
 }
 
+/** Maps the item's pending and failed uploads; both are empty until the read answers. */
+export function ingestionsFor(query: AuxiliaryQueries['documentsQuery']) {
+  return {
+    pendingDocuments: toDetailIngestions(query.data?.pending ?? []),
+    failedDocuments: toDetailIngestions(query.data?.failed ?? []),
+  };
+}
+
+/** Reads documents' upload limits from the Paperless status, when it carries them. */
+export function uploadLimitsFor(query: AuxiliaryQueries['paperlessQuery']) {
+  return uploadLimitsOf(query.data?.data);
+}
+
 /** Maps Paperless availability data while keeping the section loading state explicit. */
 export function paperlessFor(query: AuxiliaryQueries['paperlessQuery']) {
   if (query.isPending) return null;
@@ -109,8 +124,10 @@ interface BuildModelInput {
   relatedWorld: ItemDetailModel['relatedWorld'];
   aggregate: ItemDetailModel['aggregate'];
   documents: ItemDetailModel['documents'];
+  pendingDocuments: ItemDetailModel['pendingDocuments'];
+  failedDocuments: ItemDetailModel['failedDocuments'];
   paperless: ItemDetailModel['paperless'];
-  paperlessBaseUrl: string | null;
+  uploadLimits: ItemDetailModel['uploadLimits'];
   connections: ItemDetailModel['connections'];
   events: ItemDetailModel['events'];
   eventCount: number | null;
@@ -125,8 +142,10 @@ export function buildModel(input: BuildModelInput): ItemDetailModel | null {
     relatedWorld: input.relatedWorld,
     aggregate: input.aggregate,
     documents: input.documents,
+    pendingDocuments: input.pendingDocuments,
+    failedDocuments: input.failedDocuments,
     paperless: input.paperless,
-    paperlessBaseUrl: input.paperlessBaseUrl,
+    uploadLimits: input.uploadLimits,
     connections: input.connections,
     events: input.events,
     eventCount: input.eventCount,

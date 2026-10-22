@@ -99,6 +99,9 @@ import type {
   MobileInventoryChangesData,
   MobileInventoryChangesErrors,
   MobileInventoryChangesResponses,
+  MobileInventoryDismissDocumentIngestionData,
+  MobileInventoryDismissDocumentIngestionErrors,
+  MobileInventoryDismissDocumentIngestionResponses,
   MobileInventoryGetMediaData,
   MobileInventoryGetMediaErrors,
   MobileInventoryGetMediaResponses,
@@ -111,6 +114,9 @@ import type {
   MobileInventoryItemPartsErrors,
   MobileInventoryItemPartsResponses,
   MobileInventoryItemResponses,
+  MobileInventoryListItemDocumentsData,
+  MobileInventoryListItemDocumentsErrors,
+  MobileInventoryListItemDocumentsResponses,
   MobileInventoryListItemsData,
   MobileInventoryListItemsErrors,
   MobileInventoryListItemsResponses,
@@ -132,6 +138,12 @@ import type {
   MobileInventorySuggestCodesData,
   MobileInventorySuggestCodesErrors,
   MobileInventorySuggestCodesResponses,
+  MobileInventoryUnlinkItemDocumentData,
+  MobileInventoryUnlinkItemDocumentErrors,
+  MobileInventoryUnlinkItemDocumentResponses,
+  MobileInventoryUpdateItemDocumentData,
+  MobileInventoryUpdateItemDocumentErrors,
+  MobileInventoryUpdateItemDocumentResponses,
   MobilePurchasesCreateManualPurchaseData,
   MobilePurchasesCreateManualPurchaseErrors,
   MobilePurchasesCreateManualPurchaseResponses,
@@ -688,6 +700,61 @@ export const mobileInventorySuggestCodes = <ThrowOnError extends boolean = false
   });
 
 /**
+ * Dismiss an upload that is pending or failed
+ */
+export const mobileInventoryDismissDocumentIngestion = <ThrowOnError extends boolean = false>(
+  options: Options<MobileInventoryDismissDocumentIngestionData, ThrowOnError>
+): RequestResult<
+  MobileInventoryDismissDocumentIngestionResponses,
+  MobileInventoryDismissDocumentIngestionErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).delete<
+    MobileInventoryDismissDocumentIngestionResponses,
+    MobileInventoryDismissDocumentIngestionErrors,
+    ThrowOnError
+  >({ url: '/mobile/inventory/document-ingestions/{id}', ...options });
+
+/**
+ * Unlink a document from its item; the Paperless document is kept
+ */
+export const mobileInventoryUnlinkItemDocument = <ThrowOnError extends boolean = false>(
+  options: Options<MobileInventoryUnlinkItemDocumentData, ThrowOnError>
+): RequestResult<
+  MobileInventoryUnlinkItemDocumentResponses,
+  MobileInventoryUnlinkItemDocumentErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).delete<
+    MobileInventoryUnlinkItemDocumentResponses,
+    MobileInventoryUnlinkItemDocumentErrors,
+    ThrowOnError
+  >({ url: '/mobile/inventory/documents/{id}', ...options });
+
+/**
+ * Change a linked document's kind or title; a title change is made in Paperless first
+ */
+export const mobileInventoryUpdateItemDocument = <ThrowOnError extends boolean = false>(
+  options: Options<MobileInventoryUpdateItemDocumentData, ThrowOnError>
+): RequestResult<
+  MobileInventoryUpdateItemDocumentResponses,
+  MobileInventoryUpdateItemDocumentErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).patch<
+    MobileInventoryUpdateItemDocumentResponses,
+    MobileInventoryUpdateItemDocumentErrors,
+    ThrowOnError
+  >({
+    url: '/mobile/inventory/documents/{id}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
  * One bounded, filtered page of live inventory items
  */
 export const mobileInventoryListItems = <ThrowOnError extends boolean = false>(
@@ -698,6 +765,22 @@ export const mobileInventoryListItems = <ThrowOnError extends boolean = false>(
     MobileInventoryListItemsErrors,
     ThrowOnError
   >({ url: '/mobile/inventory/items', ...options });
+
+/**
+ * An item's linked documents, and its uploads still pending or failed
+ */
+export const mobileInventoryListItemDocuments = <ThrowOnError extends boolean = false>(
+  options: Options<MobileInventoryListItemDocumentsData, ThrowOnError>
+): RequestResult<
+  MobileInventoryListItemDocumentsResponses,
+  MobileInventoryListItemDocumentsErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    MobileInventoryListItemDocumentsResponses,
+    MobileInventoryListItemDocumentsErrors,
+    ThrowOnError
+  >({ url: '/mobile/inventory/items/{id}/documents', ...options });
 
 /**
  * One item's history, newest first
