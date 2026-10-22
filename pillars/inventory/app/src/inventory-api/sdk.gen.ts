@@ -62,6 +62,9 @@ import type {
   FixturesUpdateData,
   FixturesUpdateErrors,
   FixturesUpdateResponses,
+  ItemsAddPartData,
+  ItemsAddPartErrors,
+  ItemsAddPartResponses,
   ItemsCountByAssetPrefixData,
   ItemsCountByAssetPrefixResponses,
   ItemsCreateData,
@@ -74,9 +77,15 @@ import type {
   ItemsDistinctTypesResponses,
   ItemsGetData,
   ItemsGetErrors,
+  ItemsGetPartsData,
+  ItemsGetPartsErrors,
+  ItemsGetPartsResponses,
   ItemsGetResponses,
   ItemsListData,
   ItemsListResponses,
+  ItemsRemovePartData,
+  ItemsRemovePartErrors,
+  ItemsRemovePartResponses,
   ItemsSearchByAssetIdData,
   ItemsSearchByAssetIdResponses,
   ItemsUpdateData,
@@ -633,6 +642,47 @@ export const fixturesConnect = <ThrowOnError extends boolean = false>(
 ): RequestResult<FixturesConnectResponses, FixturesConnectErrors, ThrowOnError> =>
   (options.client ?? client).post<FixturesConnectResponses, FixturesConnectErrors, ThrowOnError>({
     url: '/items/{itemId}/fixtures/{fixtureId}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Read the assembly an item is a part of, and its own parts with where each one is
+ */
+export const itemsGetParts = <ThrowOnError extends boolean = false>(
+  options: Options<ItemsGetPartsData, ThrowOnError>
+): RequestResult<ItemsGetPartsResponses, ItemsGetPartsErrors, ThrowOnError> =>
+  (options.client ?? client).get<ItemsGetPartsResponses, ItemsGetPartsErrors, ThrowOnError>({
+    url: '/items/{itemId}/parts',
+    ...options,
+  });
+
+/**
+ * Make an existing item a part of this assembly; the assembly type must grant the parts capability
+ */
+export const itemsAddPart = <ThrowOnError extends boolean = false>(
+  options: Options<ItemsAddPartData, ThrowOnError>
+): RequestResult<ItemsAddPartResponses, ItemsAddPartErrors, ThrowOnError> =>
+  (options.client ?? client).post<ItemsAddPartResponses, ItemsAddPartErrors, ThrowOnError>({
+    url: '/items/{itemId}/parts',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Stop an item being a part of this assembly; the item itself is kept
+ */
+export const itemsRemovePart = <ThrowOnError extends boolean = false>(
+  options: Options<ItemsRemovePartData, ThrowOnError>
+): RequestResult<ItemsRemovePartResponses, ItemsRemovePartErrors, ThrowOnError> =>
+  (options.client ?? client).delete<ItemsRemovePartResponses, ItemsRemovePartErrors, ThrowOnError>({
+    url: '/items/{itemId}/parts/{partItemId}',
     ...options,
     headers: {
       'Content-Type': 'application/json',

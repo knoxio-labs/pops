@@ -35,6 +35,8 @@ const expectedWrites = [
   'inventory.locations.create',
   'inventory.locations.update',
   'inventory.locations.delete',
+  'inventory.parts.add',
+  'inventory.parts.remove',
   'media.watchlist.add',
   'purchases.inventoryProposals.accept',
   'tags.assignments.attach',

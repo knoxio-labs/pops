@@ -345,6 +345,94 @@
           }
         ]
       },
+      "ItemParts": {
+        "additionalProperties": false,
+        "properties": {
+          "assembly": {
+            "additionalProperties": false,
+            "nullable": true,
+            "properties": {
+              "code": {
+                "nullable": true,
+                "type": "string"
+              },
+              "itemId": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": ["itemId", "name", "code"],
+            "type": "object"
+          },
+          "canHaveParts": {
+            "type": "boolean"
+          },
+          "parts": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "code": {
+                  "nullable": true,
+                  "type": "string"
+                },
+                "itemId": {
+                  "type": "string"
+                },
+                "lifecycle": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "placement": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "containingItemId": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "containingItemName": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "kind": {
+                      "enum": ["location", "container", "hand"],
+                      "type": "string"
+                    },
+                    "locationId": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "locationName": {
+                      "nullable": true,
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "locationId",
+                    "locationName",
+                    "containingItemId",
+                    "containingItemName"
+                  ],
+                  "type": "object"
+                },
+                "typeId": {
+                  "nullable": true,
+                  "type": "string"
+                }
+              },
+              "required": ["itemId", "name", "code", "typeId", "lifecycle", "placement"],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": ["canHaveParts", "assembly", "parts"],
+        "type": "object"
+      },
       "LocationTreeNode": {
         "additionalProperties": false,
         "properties": {
@@ -4126,6 +4214,244 @@
         },
         "summary": "Connect an item to a fixture",
         "tags": ["fixtures"]
+      }
+    },
+    "/items/{itemId}/parts": {
+      "get": {
+        "operationId": "items.getParts",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "itemId",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ItemParts"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "409"
+          }
+        },
+        "summary": "Read the assembly an item is a part of, and its own parts with where each one is",
+        "tags": ["items"]
+      },
+      "post": {
+        "operationId": "items.addPart",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "itemId",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "partItemId": {
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": ["partItemId"],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ItemParts"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "409"
+          }
+        },
+        "summary": "Make an existing item a part of this assembly; the assembly type must grant the parts capability",
+        "tags": ["items"]
+      }
+    },
+    "/items/{itemId}/parts/{partItemId}": {
+      "delete": {
+        "operationId": "items.removePart",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "itemId",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "partItemId",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {},
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ItemParts"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "409"
+          }
+        },
+        "summary": "Stop an item being a part of this assembly; the item itself is kept",
+        "tags": ["items"]
       }
     },
     "/items/{itemId}/photos": {

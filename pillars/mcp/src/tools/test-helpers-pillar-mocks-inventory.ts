@@ -41,6 +41,7 @@ const ITEM = {
 };
 const ITEM2 = { ...ITEM, id: 'item_2', itemName: 'Dell Monitor', assetId: 'MON01' };
 const CONN = { id: 1, itemAId: 'item_1', itemBId: 'item_2', createdAt: '2025-01-01' };
+const PARTS = { canHaveParts: true, assembly: null, parts: [] };
 
 export const MOCK_FIXTURE = {
   id: 'fixture_1',
@@ -135,6 +136,9 @@ export const mockPillarInventory = {
       create: vi.fn().mockResolvedValue(callOk({ data: ITEM, message: 'Inventory item created' })),
       update: vi.fn().mockResolvedValue(callOk({ data: ITEM, message: 'Inventory item updated' })),
       delete: vi.fn().mockResolvedValue(callOk({ message: 'Inventory item deleted' })),
+      getParts: vi.fn().mockResolvedValue(callOk({ data: PARTS })),
+      addPart: vi.fn().mockResolvedValue(callOk({ data: PARTS })),
+      removePart: vi.fn().mockResolvedValue(callOk({ data: PARTS })),
     },
     connections: {
       listForItem: vi.fn().mockResolvedValue(callOk({ data: [CONN], ...PAGED1 })),

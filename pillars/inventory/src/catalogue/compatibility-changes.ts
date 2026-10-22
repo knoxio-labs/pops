@@ -1,3 +1,4 @@
+import { PARTS_CAPABILITY } from './capabilities.js';
 import {
   compareAddedFields,
   compareNewTypeFields,
@@ -26,6 +27,26 @@ function addChange(
   changes.push({ classification, definitionId, code });
 }
 
+function symmetricDifference(left: readonly string[], right: readonly string[]): string[] {
+  return [
+    ...left.filter((entry) => !right.includes(entry)),
+    ...right.filter((entry) => !left.includes(entry)),
+  ];
+}
+
+function compareCapabilities(
+  base: PersistedItemType,
+  candidate: PersistedItemType,
+  changes: CatalogueCompatibilityChange[]
+): void {
+  const changed = symmetricDifference(base.capabilities, candidate.capabilities);
+  if (changed.some((capability) => capability !== PARTS_CAPABILITY)) {
+    addChange(changes, 'migration_required', base.id, 'type_capabilities_changed');
+  } else if (changed.length > 0) {
+    addChange(changes, 'compatible', base.id, 'type_parts_capability_changed');
+  }
+}
+
 function compareType(
   base: PersistedItemType,
   candidate: PersistedItemType,
@@ -41,12 +62,7 @@ function compareType(
   if (base.parentTypeId !== candidate.parentTypeId) {
     addChange(changes, 'migration_required', base.id, 'published_type_parent_changed');
   }
-  const capabilitiesChanged =
-    base.capabilities.length !== candidate.capabilities.length ||
-    base.capabilities.some((capability) => !candidate.capabilities.includes(capability));
-  if (capabilitiesChanged) {
-    addChange(changes, 'migration_required', base.id, 'type_capabilities_changed');
-  }
+  compareCapabilities(base, candidate, changes);
   if (base.archivedAt === null && candidate.archivedAt !== null) {
     addChange(changes, 'compatible', base.id, 'type_archived');
   }

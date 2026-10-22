@@ -4,13 +4,14 @@ import { PaneLabel } from '../../foundation/item-page/section-parts';
 import { ConnectionsSection } from './connections-section';
 import { DocumentsSection } from './documents-section';
 import { HistoryPreviewSection } from './history-preview-section';
+import { PartsSection } from './parts-section';
 import { ProvenanceSection } from './provenance-section';
 
 import type { ReactElement } from 'react';
 
 import type { ItemDetailModel } from './detail-model';
 
-/** Renders the Overview tab's purchase, documents, and history sections. */
+/** Renders the Overview tab's purchase, documents and history sections, then the parts capability section. */
 export function OverviewSections({
   itemId,
   model,
@@ -40,6 +41,7 @@ export function OverviewSections({
         onLinksChanged={onLinksChanged}
       />
       <HistoryPreviewSection itemId={itemId} eventCount={model.eventCount} events={model.events} />
+      <PartsSection itemId={itemId} readOnly={readOnly} />
     </div>
   );
 }

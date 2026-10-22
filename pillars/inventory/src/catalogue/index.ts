@@ -1,4 +1,5 @@
 /** Persisted type-catalogue reads, canonical values and protocol-1 compatibility. */
+export { PARTS_CAPABILITY } from './capabilities.js';
 export {
   loadCatalogue,
   loadPublishedCatalogue,
