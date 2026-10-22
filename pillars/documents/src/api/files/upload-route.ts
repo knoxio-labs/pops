@@ -1,15 +1,26 @@
-import { z } from 'zod';
-
 /**
- * `POST /paperless/documents` — the request body is the file, streamed
- * straight through to Paperless's `post_document`; nothing is buffered
- * beyond the chunk in flight. Metadata travels in the query (`fileName`,
- * optional `title`) and the MIME type in `Content-Type`.
+ * `POST /paperless/documents` — the request body is the file. Metadata
+ * travels in the query (`fileName`, optional `title`) and the MIME type in
+ * `Content-Type`.
+ *
+ * Paperless needs an exact `Content-Length` (see `multipart.ts`). A body that
+ * declares one is streamed straight through, nothing buffered beyond the
+ * chunk in flight. A chunked body is spooled to a temporary file first,
+ * counted as it is written, and sent once its length is known.
  *
  * The cap is enforced twice: a declared `Content-Length` over it is refused
- * before a byte is read, and a body without one (chunked) is counted while it
- * streams and abandoned the moment it passes the cap.
+ * before a byte is read, and every body is counted while it streams and
+ * abandoned the moment it passes the cap.
  */
+import { createReadStream, createWriteStream } from 'node:fs';
+import { mkdtemp, rm, stat } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
+
+import { z } from 'zod';
+
 import { defineErrors } from '@pops/pillar-express';
 
 import { PaperlessApiError } from '../modules/paperless/types.js';
@@ -100,6 +111,7 @@ interface ValidUpload {
   readonly query: z.infer<typeof UploadQuerySchema>;
   readonly mimeType: string;
   readonly limit: number;
+  readonly length: number | null;
 }
 
 function validated(req: Request, res: Response): ValidUpload {
@@ -112,21 +124,52 @@ function validated(req: Request, res: Response): ValidUpload {
   const limit = resolveMaxUploadBytes();
   const length = declaredLength(req);
   if (length !== null && length > limit) return refuseTooLarge(res, limit);
-  return { query: query.data, mimeType, limit };
+  return { query: query.data, mimeType, limit, length };
+}
+
+interface SizedBody {
+  readonly bytes: AsyncIterable<Uint8Array>;
+  readonly length: number;
+  release(): Promise<void>;
+}
+
+async function spooled(body: CappedBody): Promise<SizedBody> {
+  const dir = await mkdtemp(join(tmpdir(), 'documents-upload-'));
+  const release = (): Promise<void> => rm(dir, { recursive: true, force: true });
+  try {
+    const path = join(dir, 'body');
+    await pipeline(Readable.from(body), createWriteStream(path));
+    const { size } = await stat(path);
+    return { bytes: createReadStream(path), length: size, release };
+  } catch (err) {
+    await release();
+    throw err;
+  }
+}
+
+async function sized(body: CappedBody, declared: number | null): Promise<SizedBody> {
+  if (declared !== null) {
+    return { bytes: body, length: declared, release: () => Promise.resolve() };
+  }
+  return spooled(body);
 }
 
 /** Handle one upload request, answering `202 { data: { taskId } }`. */
 export async function handleUpload(req: Request, res: Response): Promise<void> {
-  const { query, mimeType, limit } = validated(req, res);
+  const { query, mimeType, limit, length } = validated(req, res);
   const client = requirePaperlessClient();
   const body = new CappedBody(req, limit);
   let taskId: string;
+  let upload: SizedBody | null = null;
   try {
-    taskId = await client.postDocument(body, { ...query, mimeType });
+    upload = await sized(body, length);
+    taskId = await client.postDocument(upload, { ...query, mimeType });
   } catch (err) {
     if (body.exceeded) return refuseTooLarge(res, limit);
     if (err instanceof PaperlessApiError && err.status === 400) return uploadErrors.rejected();
     return throwPaperlessFailure(err);
+  } finally {
+    await upload?.release();
   }
   res.status(202).json({ data: { taskId } });
 }
