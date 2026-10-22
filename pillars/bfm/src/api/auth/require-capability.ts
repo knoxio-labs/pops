@@ -12,9 +12,10 @@
  *
  * The route table combines `bfmContract` with
  * `UNCONTRACTED_MOBILE_ROUTES`, the explicit list for routes ts-rest cannot
- * model. The Ego event stream is the one such route: declaring its method,
- * path and capability here makes the exception visible while every other
- * unmatched mobile path retains its existing fall-through behavior.
+ * model: the Ego event stream and the raw item-document upload and file.
+ * Declaring their method, path and capability here makes the exceptions
+ * visible while every other unmatched mobile path retains its existing
+ * fall-through behavior.
  *
  * ## When the grant is resolved
  *
@@ -57,7 +58,12 @@ import {
   type MobileCapability,
 } from '../../contract/capabilities.js';
 import { bfmContract } from '../../contract/rest.js';
-import { MOBILE_EGO_CHAT_STREAM_PATH, MOBILE_PATH_PREFIX } from '../paths.js';
+import {
+  MOBILE_EGO_CHAT_STREAM_PATH,
+  MOBILE_INVENTORY_DOCUMENT_FILE_PATH,
+  MOBILE_INVENTORY_DOCUMENT_UPLOAD_PATH,
+  MOBILE_PATH_PREFIX,
+} from '../paths.js';
 import { readDevice } from './require-device.js';
 
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
@@ -81,6 +87,16 @@ export const UNCONTRACTED_MOBILE_ROUTES: readonly UncontractedMobileRoute[] = [
     method: 'POST',
     path: MOBILE_EGO_CHAT_STREAM_PATH,
     capability: 'ego.chat',
+  },
+  {
+    method: 'POST',
+    path: MOBILE_INVENTORY_DOCUMENT_UPLOAD_PATH,
+    capability: 'inventory.write',
+  },
+  {
+    method: 'GET',
+    path: MOBILE_INVENTORY_DOCUMENT_FILE_PATH,
+    capability: 'inventory.read',
   },
 ];
 

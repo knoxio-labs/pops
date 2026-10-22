@@ -87,6 +87,9 @@ import type {
   MobileFinanceUpdateTransactionData,
   MobileFinanceUpdateTransactionErrors,
   MobileFinanceUpdateTransactionResponses,
+  MobileInventoryAddItemPartData,
+  MobileInventoryAddItemPartErrors,
+  MobileInventoryAddItemPartResponses,
   MobileInventoryCatalogueData,
   MobileInventoryCatalogueErrors,
   MobileInventoryCatalogueResponses,
@@ -96,6 +99,9 @@ import type {
   MobileInventoryChangesData,
   MobileInventoryChangesErrors,
   MobileInventoryChangesResponses,
+  MobileInventoryDismissDocumentIngestionData,
+  MobileInventoryDismissDocumentIngestionErrors,
+  MobileInventoryDismissDocumentIngestionResponses,
   MobileInventoryGetMediaData,
   MobileInventoryGetMediaErrors,
   MobileInventoryGetMediaResponses,
@@ -104,7 +110,13 @@ import type {
   MobileInventoryItemHistoryData,
   MobileInventoryItemHistoryErrors,
   MobileInventoryItemHistoryResponses,
+  MobileInventoryItemPartsData,
+  MobileInventoryItemPartsErrors,
+  MobileInventoryItemPartsResponses,
   MobileInventoryItemResponses,
+  MobileInventoryListItemDocumentsData,
+  MobileInventoryListItemDocumentsErrors,
+  MobileInventoryListItemDocumentsResponses,
   MobileInventoryListItemsData,
   MobileInventoryListItemsErrors,
   MobileInventoryListItemsResponses,
@@ -114,6 +126,9 @@ import type {
   MobileInventoryPutMediaData,
   MobileInventoryPutMediaErrors,
   MobileInventoryPutMediaResponses,
+  MobileInventoryRemoveItemPartData,
+  MobileInventoryRemoveItemPartErrors,
+  MobileInventoryRemoveItemPartResponses,
   MobileInventoryReportLedgerData,
   MobileInventoryReportLedgerErrors,
   MobileInventoryReportLedgerResponses,
@@ -123,6 +138,12 @@ import type {
   MobileInventorySuggestCodesData,
   MobileInventorySuggestCodesErrors,
   MobileInventorySuggestCodesResponses,
+  MobileInventoryUnlinkItemDocumentData,
+  MobileInventoryUnlinkItemDocumentErrors,
+  MobileInventoryUnlinkItemDocumentResponses,
+  MobileInventoryUpdateItemDocumentData,
+  MobileInventoryUpdateItemDocumentErrors,
+  MobileInventoryUpdateItemDocumentResponses,
   MobilePurchasesCreateManualPurchaseData,
   MobilePurchasesCreateManualPurchaseErrors,
   MobilePurchasesCreateManualPurchaseResponses,
@@ -679,6 +700,61 @@ export const mobileInventorySuggestCodes = <ThrowOnError extends boolean = false
   });
 
 /**
+ * Dismiss an upload that is pending or failed
+ */
+export const mobileInventoryDismissDocumentIngestion = <ThrowOnError extends boolean = false>(
+  options: Options<MobileInventoryDismissDocumentIngestionData, ThrowOnError>
+): RequestResult<
+  MobileInventoryDismissDocumentIngestionResponses,
+  MobileInventoryDismissDocumentIngestionErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).delete<
+    MobileInventoryDismissDocumentIngestionResponses,
+    MobileInventoryDismissDocumentIngestionErrors,
+    ThrowOnError
+  >({ url: '/mobile/inventory/document-ingestions/{id}', ...options });
+
+/**
+ * Unlink a document from its item; the Paperless document is kept
+ */
+export const mobileInventoryUnlinkItemDocument = <ThrowOnError extends boolean = false>(
+  options: Options<MobileInventoryUnlinkItemDocumentData, ThrowOnError>
+): RequestResult<
+  MobileInventoryUnlinkItemDocumentResponses,
+  MobileInventoryUnlinkItemDocumentErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).delete<
+    MobileInventoryUnlinkItemDocumentResponses,
+    MobileInventoryUnlinkItemDocumentErrors,
+    ThrowOnError
+  >({ url: '/mobile/inventory/documents/{id}', ...options });
+
+/**
+ * Change a linked document's kind or title; a title change is made in Paperless first
+ */
+export const mobileInventoryUpdateItemDocument = <ThrowOnError extends boolean = false>(
+  options: Options<MobileInventoryUpdateItemDocumentData, ThrowOnError>
+): RequestResult<
+  MobileInventoryUpdateItemDocumentResponses,
+  MobileInventoryUpdateItemDocumentErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).patch<
+    MobileInventoryUpdateItemDocumentResponses,
+    MobileInventoryUpdateItemDocumentErrors,
+    ThrowOnError
+  >({
+    url: '/mobile/inventory/documents/{id}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
  * One bounded, filtered page of live inventory items
  */
 export const mobileInventoryListItems = <ThrowOnError extends boolean = false>(
@@ -689,6 +765,22 @@ export const mobileInventoryListItems = <ThrowOnError extends boolean = false>(
     MobileInventoryListItemsErrors,
     ThrowOnError
   >({ url: '/mobile/inventory/items', ...options });
+
+/**
+ * An item's linked documents, and its uploads still pending or failed
+ */
+export const mobileInventoryListItemDocuments = <ThrowOnError extends boolean = false>(
+  options: Options<MobileInventoryListItemDocumentsData, ThrowOnError>
+): RequestResult<
+  MobileInventoryListItemDocumentsResponses,
+  MobileInventoryListItemDocumentsErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    MobileInventoryListItemDocumentsResponses,
+    MobileInventoryListItemDocumentsErrors,
+    ThrowOnError
+  >({ url: '/mobile/inventory/items/{id}/documents', ...options });
 
 /**
  * One item's history, newest first
@@ -705,6 +797,64 @@ export const mobileInventoryItemHistory = <ThrowOnError extends boolean = false>
     MobileInventoryItemHistoryErrors,
     ThrowOnError
   >({ url: '/mobile/inventory/items/{id}/history', ...options });
+
+/**
+ * The assembly an item is a part of, and its own parts with where each one is
+ */
+export const mobileInventoryItemParts = <ThrowOnError extends boolean = false>(
+  options: Options<MobileInventoryItemPartsData, ThrowOnError>
+): RequestResult<MobileInventoryItemPartsResponses, MobileInventoryItemPartsErrors, ThrowOnError> =>
+  (options.client ?? client).get<
+    MobileInventoryItemPartsResponses,
+    MobileInventoryItemPartsErrors,
+    ThrowOnError
+  >({ url: '/mobile/inventory/items/{id}/parts', ...options });
+
+/**
+ * Make an existing item a part of this assembly
+ */
+export const mobileInventoryAddItemPart = <ThrowOnError extends boolean = false>(
+  options: Options<MobileInventoryAddItemPartData, ThrowOnError>
+): RequestResult<
+  MobileInventoryAddItemPartResponses,
+  MobileInventoryAddItemPartErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).post<
+    MobileInventoryAddItemPartResponses,
+    MobileInventoryAddItemPartErrors,
+    ThrowOnError
+  >({
+    url: '/mobile/inventory/items/{id}/parts',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Stop an item being a part of this assembly; the item itself is kept
+ */
+export const mobileInventoryRemoveItemPart = <ThrowOnError extends boolean = false>(
+  options: Options<MobileInventoryRemoveItemPartData, ThrowOnError>
+): RequestResult<
+  MobileInventoryRemoveItemPartResponses,
+  MobileInventoryRemoveItemPartErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).delete<
+    MobileInventoryRemoveItemPartResponses,
+    MobileInventoryRemoveItemPartErrors,
+    ThrowOnError
+  >({
+    url: '/mobile/inventory/items/{id}/parts/{partItemId}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
 
 /**
  * A photo's bytes, base64, for a detail screen or a thumbnail row

@@ -24,7 +24,12 @@ import { deviceRow } from '../../../db/__tests__/helpers.js';
 import { devices } from '../../../db/index.js';
 import { createTestApp, type TestApp } from '../../__tests__/harness.js';
 import { requestOn } from '../../__tests__/test-http.js';
-import { MOBILE_EGO_CHAT_STREAM_PATH, MOBILE_PATH_PREFIX } from '../../paths.js';
+import {
+  MOBILE_EGO_CHAT_STREAM_PATH,
+  MOBILE_INVENTORY_DOCUMENT_FILE_PATH,
+  MOBILE_INVENTORY_DOCUMENT_UPLOAD_PATH,
+  MOBILE_PATH_PREFIX,
+} from '../../paths.js';
 import { mintAccessToken } from '../access-token.js';
 import {
   buildMobileRouteGates,
@@ -306,6 +311,12 @@ describe('the route table it derives', () => {
 
     expect(UNCONTRACTED_MOBILE_ROUTES).toEqual([
       { method: 'POST', path: MOBILE_EGO_CHAT_STREAM_PATH, capability: 'ego.chat' },
+      {
+        method: 'POST',
+        path: MOBILE_INVENTORY_DOCUMENT_UPLOAD_PATH,
+        capability: 'inventory.write',
+      },
+      { method: 'GET', path: MOBILE_INVENTORY_DOCUMENT_FILE_PATH, capability: 'inventory.read' },
     ]);
 
     for (const route of UNCONTRACTED_MOBILE_ROUTES) {

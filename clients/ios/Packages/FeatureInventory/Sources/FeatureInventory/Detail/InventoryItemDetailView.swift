@@ -25,6 +25,7 @@ internal struct InventoryItemDetailView<Capability: View>: View {
     @State private var storing = false
     @State private var retakingPhoto: (sha256: String, source: InventoryPhotoSource)?
     @Environment(\.inventoryItemForm) private var itemForm
+    @Environment(\.inventoryParts) private var partsService
 
     internal init(
         detail: InventoryItemDetail,
@@ -124,6 +125,10 @@ internal struct InventoryItemDetailView<Capability: View>: View {
                 retry: refresh)
             InventoryItemDetailContentsSection(
                 itemId: detail.record.id, summary: detail.containerSummary)
+            if let partsService {
+                InventoryItemDetailPartsSection(
+                    itemId: detail.record.id, service: partsService, store: model.store)
+            }
             capability
             InventoryItemDetailFieldsSection(fields: detail.otherFields)
             InventoryItemDetailProvenanceSection(provenance: detail.provenance)

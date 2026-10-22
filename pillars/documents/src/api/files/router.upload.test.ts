@@ -1,9 +1,11 @@
+import { readdirSync } from 'node:fs';
 /**
  * `POST /paperless/documents` end to end: the documents app in front of a
  * fake Paperless on a real port, so the streamed multipart body is parsed by
  * a real multipart parser and the cap is exercised over a real socket.
  */
 import http from 'node:http';
+import { tmpdir } from 'node:os';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -18,6 +20,10 @@ let fake: FakePaperless;
 
 function app() {
   return createDocumentsApiApp({ version: '0.0.1-test', selfBaseUrl: 'http://localhost:3012' });
+}
+
+function spoolDirs(): string[] {
+  return readdirSync(tmpdir()).filter((name) => name.startsWith('documents-upload-'));
 }
 
 function upload(query: string, bytes: Buffer, contentType = 'application/pdf') {
@@ -153,6 +159,43 @@ describe('POST /paperless/documents', () => {
 
     expect(res.status).toBe(202);
     expect(fake.uploads[0]?.bytes.toString()).toBe('abcd');
+  });
+
+  it('declares the exact multipart length to Paperless, counting a non-ASCII title in bytes', async () => {
+    const res = await upload(
+      '?fileName=gu%C3%ADa.pdf&title=Gu%C3%ADa%20%C3%B1',
+      Buffer.from('hello')
+    );
+
+    expect(res.status).toBe(202);
+    const sent = fake.requests.find((r) => r.url === '/api/documents/post_document/');
+    expect(sent?.headers['transfer-encoding']).toBeUndefined();
+    expect(Number(sent?.headers['content-length'])).toBe(
+      Buffer.byteLength(sent?.body ?? '', 'utf8')
+    );
+    expect(fake.uploads[0]?.fields['title']).toBe('Guía ñ');
+    expect(fake.uploads[0]?.fileName).toBe('guía.pdf');
+  });
+
+  it('spools a chunked body to a sized request and removes the temporary file', async () => {
+    const before = spoolDirs();
+
+    const res = await chunkedUpload([Buffer.from('ab'), Buffer.from('cd')]);
+
+    expect(res.status).toBe(202);
+    const sent = fake.requests.find((r) => r.url === '/api/documents/post_document/');
+    expect(sent?.headers['content-length']).toBeDefined();
+    expect(spoolDirs()).toEqual(before);
+  });
+
+  it('removes the temporary file when a chunked body passes the cap', async () => {
+    vi.stubEnv('DOCUMENTS_MAX_UPLOAD_BYTES', '3');
+    const before = spoolDirs();
+
+    const res = await chunkedUpload([Buffer.from('ab'), Buffer.from('cd')]);
+
+    expect(res.status).toBe(413);
+    expect(spoolDirs()).toEqual(before);
   });
 
   it.each([['application/zip'], ['application/octet-stream'], ['image'], ['']])(

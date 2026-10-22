@@ -40,13 +40,23 @@ internal struct InventoryStoreCandidate: Identifiable, Hashable, Sendable {
     internal static func query(
         for target: InventoryStoreTarget, query: String, page: InventoryPageRequest
     ) -> InventoryQuery<InventoryPage<InventoryStoreCandidate>> {
-        let text = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        Self.query(text: query, page: page) { source in
+            InventoryItemPageFilter(
+                excludingIDs: refusedIds(for: target, source: source),
+                excludingPlacement: target.placement)
+        }
+    }
+
+    /// Reads one bounded page of items matching `text`, filtered by what
+    /// `filter` builds from the replica it is read against.
+    internal static func query(
+        text: String, page: InventoryPageRequest,
+        filter: @escaping @Sendable (any InventoryQuerySource) -> InventoryItemPageFilter
+    ) -> InventoryQuery<InventoryPage<InventoryStoreCandidate>> {
+        let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
         return InventoryQuery { source in
-            let excluded = refusedIds(for: target, source: source)
             let query = InventoryItemPageQuery(
-                text: text,
-                filter: InventoryItemPageFilter(
-                    excludingIDs: excluded, excludingPlacement: target.placement),
+                text: text, filter: filter(source),
                 order: text.isEmpty ? .updatedAtNewest : .searchRelevance,
                 page: page)
             let result = source.inventoryItemPage(query)
@@ -75,26 +85,13 @@ internal struct InventoryStoreCandidate: Identifiable, Hashable, Sendable {
     }
 }
 
-/// Store here's existing-item list: what is typed, what is picked, and the
+/// Store here's existing-item list: the shared search and pages, and the
 /// store itself, which is one `item.move` with the store verb per item.
 @MainActor @Observable
-internal final class InventoryStoreHereModel {
+internal final class InventoryStoreHereModel: InventoryExistingItemPicking {
     internal let target: InventoryStoreTarget
     internal let runner: InventoryCommandRunner
-    internal var query: String
-    internal var selected: Set<InventoryItem.ID>
-    internal private(set) var candidates: InventoryLoadPhase<[InventoryStoreCandidate]> = .loading
-    internal private(set) var isLoadingNextPage = false
-    internal private(set) var nextPageFailed = false
-
-    private let store: any InventoryStore
-    private var activeQuery: String?
-    private var firstPage: [InventoryStoreCandidate] = []
-    private var appendedCandidates: [InventoryStoreCandidate] = []
-    private var loadedIDs: Set<InventoryItem.ID> = []
-    private var nextCursor: InventoryPageCursor?
-    private var pageEpoch = UUID()
-    private var activePageRequestID: UUID?
+    internal let pages: InventoryCandidatePages
 
     internal init(
         target: InventoryStoreTarget, runner: InventoryCommandRunner, query: String = "",
@@ -102,89 +99,24 @@ internal final class InventoryStoreHereModel {
     ) {
         self.target = target
         self.runner = runner
-        store = runner.store
-        self.query = query
-        self.selected = selected
+        pages = InventoryCandidatePages(
+            store: runner.store, query: query, selected: selected,
+            pageQuery: Self.pageQuery(for: target))
     }
 
-    /// Follows the candidates for the current query; the view restarts this
-    /// whenever the query changes.
-    internal func observe() async {
-        let text = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        if activeQuery != text {
-            activeQuery = text
-            resetPages()
-        }
-        candidates = .loading
-        var answered = false
-        var firstEmission = true
-        for await page in store.observe(Self.query(target: target, text: text, cursor: nil)) {
-            guard !Task.isCancelled, activeQuery == text else { break }
-            answered = true
-            if !firstEmission {
-                pageEpoch = UUID()
-                appendedCandidates = []
-                loadedIDs = []
-                isLoadingNextPage = false
-                nextPageFailed = false
-                activePageRequestID = nil
-            }
-            firstEmission = false
-            firstPage = page.rows
-            appendedCandidates = []
-            loadedIDs = Set(page.rows.map(\.id))
-            nextCursor = page.nextCursor
-            candidates = .loaded(page.rows)
-        }
-        if !answered && activeQuery == text && !Task.isCancelled { candidates = .unavailable }
-    }
-
-    internal func toggle(_ id: InventoryItem.ID) {
-        if selected.remove(id) == nil { selected.insert(id) }
-    }
-
-    internal var shownCandidates: [InventoryStoreCandidate] {
-        firstPage + appendedCandidates
-    }
-
-    internal var canLoadMore: Bool { nextCursor != nil }
-
-    /// Loads another eligible candidate page while preserving the cursor after a failed read.
-    internal func loadNextPage() async {
-        guard !isLoadingNextPage, let text = activeQuery,
-            text == query.trimmingCharacters(in: .whitespacesAndNewlines),
-            let cursor = nextCursor
-        else { return }
-        let epoch = pageEpoch
-        let requestID = UUID()
-        activePageRequestID = requestID
-        isLoadingNextPage = true
-        nextPageFailed = false
-        var answered = false
-        for await page in store.observe(Self.query(target: target, text: text, cursor: cursor)) {
-            guard !Task.isCancelled, activeQuery == text, pageEpoch == epoch,
-                activePageRequestID == requestID
-            else { break }
-            answered = true
-            for candidate in page.rows where loadedIDs.insert(candidate.id).inserted {
-                appendedCandidates.append(candidate)
-            }
-            nextCursor = page.nextCursor
-            break
-        }
-        if !answered && activeQuery == text && pageEpoch == epoch
-            && activePageRequestID == requestID
-        {
-            nextPageFailed = true
-        }
-        if activePageRequestID == requestID {
-            activePageRequestID = nil
-            isLoadingNextPage = false
+    private static func pageQuery(for target: InventoryStoreTarget)
+        -> InventoryCandidatePages.PageQuery
+    {
+        { text, cursor in
+            InventoryStoreCandidate.query(
+                for: target, query: text, page: InventoryPageRequest(cursor: cursor))
         }
     }
 
-    internal func retryNextPage() async {
-        await loadNextPage()
+    internal var title: String { "Store in \(target.name)" }
+
+    internal func commitTitle(count: Int) -> String {
+        count == 0 ? "Store" : "Store \(count)"
     }
 
     /// Stores every picked item in the target and offers Undo. Returns
@@ -195,26 +127,13 @@ internal final class InventoryStoreHereModel {
         let landed = await runner.perform(
             ids.map { .moveItem(id: $0, to: target.placement, verb: .store) },
             announcing: target.storedMessage(count: ids.count), symbol: .storeHere)
-        if landed { selected = [] }
+        if landed { pages.selected = [] }
         return landed
     }
 
-    private static func query(
-        target: InventoryStoreTarget, text: String, cursor: InventoryPageCursor?
-    ) -> InventoryQuery<InventoryPage<InventoryStoreCandidate>> {
-        InventoryStoreCandidate.query(
-            for: target, query: text,
-            page: InventoryPageRequest(cursor: cursor))
-    }
+    internal func commit() async -> Bool { await store() }
 
-    private func resetPages() {
-        firstPage = []
-        appendedCandidates = []
-        loadedIDs = []
-        nextCursor = nil
-        pageEpoch = UUID()
-        activePageRequestID = nil
-        isLoadingNextPage = false
-        nextPageFailed = false
+    internal func thumbnail(_ sha256: String) async -> Data? {
+        try? await runner.store.photo(sha256, variant: .thumb)
     }
 }

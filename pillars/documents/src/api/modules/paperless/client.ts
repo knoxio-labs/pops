@@ -7,7 +7,7 @@
  * Paperless-ngx API docs: https://docs.paperless-ngx.com/api/
  */
 import { ensureOk, paperlessFetch, type PaperlessConnection } from './http.js';
-import { multipartUpload, type PaperlessUploadMeta } from './multipart.js';
+import { multipartUpload, type PaperlessUploadMeta, type SizedFile } from './multipart.js';
 import { mapPaperlessTask, RawTaskPageSchema, type PaperlessTaskStatus } from './task-state.js';
 import {
   PaperlessApiError,
@@ -122,11 +122,11 @@ export class PaperlessClient {
    * Stream `file` to `post_document` and return the consumption task id.
    * Consumption is asynchronous: the id resolves through {@link getTask}.
    */
-  async postDocument(file: AsyncIterable<Uint8Array>, meta: PaperlessUploadMeta): Promise<string> {
-    const { body, contentType } = multipartUpload(file, meta);
+  async postDocument(file: SizedFile, meta: PaperlessUploadMeta): Promise<string> {
+    const { body, headers } = multipartUpload(file, meta);
     const response = await paperlessFetch(this.connection, '/api/documents/post_document/', {
       method: 'POST',
-      headers: { 'Content-Type': contentType, Accept: 'application/json' },
+      headers: { ...headers, Accept: 'application/json' },
       body,
       duplex: 'half',
       timeoutMs: TRANSFER_TIMEOUT_MS,

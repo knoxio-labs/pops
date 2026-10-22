@@ -8,7 +8,7 @@ import type { GatewayFailure } from '../pillars/gateway.js';
 /** The statuses mobile resource routes declare for an upstream failure. */
 export type UpstreamErrorStatus = 404 | 502 | 503;
 
-type ClassifiedStatus = UpstreamErrorStatus | 415;
+type ClassifiedStatus = UpstreamErrorStatus | 412 | 415;
 
 export interface UpstreamErrorResponse {
   readonly status: UpstreamErrorStatus;
@@ -36,6 +36,8 @@ function classify(failure: GatewayFailure): Classification {
       return { status: 404, fallback: 'contract_mismatch' };
     case 'unsupported-media':
       return { status: 415, fallback: 'contract_mismatch' };
+    case 'precondition-failed':
+      return { status: 412, fallback: 'contract_mismatch' };
     case 'contract-mismatch':
     case 'invalid-request':
     case 'conflict':
@@ -44,11 +46,21 @@ function classify(failure: GatewayFailure): Classification {
   }
 }
 
+/**
+ * The fields a relayed error body is built from. A {@link GatewayFailure} is
+ * one; a raw byte relay, whose producer statuses the gateway vocabulary does
+ * not name (413, 422), builds one from the response it read.
+ */
+export type RelaySource = Pick<
+  GatewayFailure,
+  'pillar' | 'code' | 'message' | 'details' | 'requestId' | 'retryable' | 'upstreamStatus'
+> & { readonly status: number };
+
 type UpstreamDetails = Readonly<Record<string, unknown>> & {
   readonly upstream: { readonly pillar: string; readonly status: number };
 };
 
-function upstreamDetails(failure: GatewayFailure): UpstreamDetails {
+function upstreamDetails(failure: RelaySource): UpstreamDetails {
   return {
     ...failure.details,
     upstream: {
@@ -60,7 +72,7 @@ function upstreamDetails(failure: GatewayFailure): UpstreamDetails {
 
 function fallbackBody(
   fallback: Classification['fallback'],
-  failure: GatewayFailure
+  failure: RelaySource
 ): MobileUpstreamError {
   const details = upstreamDetails(failure);
   if (fallback === 'unavailable') {
@@ -81,7 +93,7 @@ function fallbackBody(
 
 /** The producer's own envelope when it sent one, bfm's fallback for the failure otherwise. */
 export function relayBody(
-  failure: GatewayFailure,
+  failure: RelaySource,
   fallback: Classification['fallback']
 ): MobileUpstreamError {
   if (failure.code === undefined) return fallbackBody(fallback, failure);
@@ -105,7 +117,7 @@ function contractFault(failure: GatewayFailure): UpstreamErrorResponse {
 /** Map a gateway failure for a mobile route that addresses one resource. */
 export function toUpstreamErrorResponse(failure: GatewayFailure): UpstreamErrorResponse {
   const classified = classify(failure);
-  if (classified.status === 415) return contractFault(failure);
+  if (classified.status === 415 || classified.status === 412) return contractFault(failure);
   return {
     status: classified.status,
     body: relayBody(failure, classified.fallback),
@@ -138,17 +150,31 @@ export interface PurchaseUpdateErrorResponse {
   readonly body: MobileUpstreamError;
 }
 
+/** The statuses a single-resource write that relays its producer's conflict can answer. */
+export type ConflictRelayErrorStatus = UpstreamErrorStatus | 409;
+
+export interface ConflictRelayErrorResponse {
+  readonly status: ConflictRelayErrorStatus;
+  readonly body: MobileUpstreamError;
+}
+
+/**
+ * Map a failure for a write whose producer conflict is meaningful to the
+ * phone: a `409` keeps the producer's own envelope and message, everything
+ * else maps as {@link toUpstreamErrorResponse} does.
+ */
+export function toConflictRelayErrorResponse(failure: GatewayFailure): ConflictRelayErrorResponse {
+  if (failure.kind === 'conflict') {
+    return { status: 409, body: relayBody(failure, 'contract_mismatch') };
+  }
+  return toUpstreamErrorResponse(failure);
+}
+
 /** Preserve a producer conflict on the purchase update route. */
 export function toPurchaseUpdateErrorResponse(
   failure: GatewayFailure
 ): PurchaseUpdateErrorResponse {
-  if (failure.kind === 'conflict') {
-    return {
-      status: 409,
-      body: relayBody(failure, 'contract_mismatch'),
-    };
-  }
-  return toUpstreamErrorResponse(failure);
+  return toConflictRelayErrorResponse(failure);
 }
 
 /** The statuses `POST /mobile/ego/action-batches/:batchId/decide` can answer. */
@@ -161,10 +187,7 @@ export interface EgoDecisionErrorResponse {
 
 /** Preserve a producer conflict for a mobile Ego batch decision. */
 export function toEgoDecisionErrorResponse(failure: GatewayFailure): EgoDecisionErrorResponse {
-  if (failure.kind === 'conflict') {
-    return { status: 409, body: relayBody(failure, 'contract_mismatch') };
-  }
-  return toUpstreamErrorResponse(failure);
+  return toConflictRelayErrorResponse(failure);
 }
 
 /** The subset a collection route can answer; a collection has no resource-level 404. */
@@ -188,4 +211,20 @@ export function toCollectionUpstreamErrorResponse(
   }
   if (mapped.status === 502) return { status: 502, body: mapped.body };
   return { status: 503, body: mapped.body };
+}
+
+/** The statuses an item-document route answers for an upstream failure. */
+export type DocumentErrorStatus = UpstreamErrorStatus | 412;
+
+export interface DocumentErrorResponse {
+  readonly status: DocumentErrorStatus;
+  readonly body: MobileUpstreamError;
+}
+
+/** Preserve Paperless not being connected (412) on the item-document routes. */
+export function toDocumentErrorResponse(failure: GatewayFailure): DocumentErrorResponse {
+  if (failure.kind === 'precondition-failed') {
+    return { status: 412, body: relayBody(failure, 'contract_mismatch') };
+  }
+  return toUpstreamErrorResponse(failure);
 }

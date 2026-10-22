@@ -31,8 +31,11 @@ on boot, using `bootstrapPillar` from `@pops/pillar-sdk/bootstrap`.
 ## Uploads
 
 `POST /paperless/documents?fileName=<name>[&title=<title>]`, with the file's
-MIME type as `Content-Type` and the bytes as the body. The body streams
-through to Paperless and is never buffered. A declared `Content-Length` over
+MIME type as `Content-Type` and the bytes as the body. Paperless reads a
+request body only up to its declared `Content-Length` (a chunked one arrives
+empty), so every request to it carries an exact length. A body that declares
+its length streams straight through; a chunked body is spooled to a temporary
+file and sent once its size is known. A declared `Content-Length` over
 `DOCUMENTS_MAX_UPLOAD_BYTES` is refused with 413 before any byte is read; a
 chunked body is counted and refused with 413 the moment it passes the cap.
 Only `application/pdf`, `image/*` and `text/*` are accepted (415 otherwise).
