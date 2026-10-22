@@ -187,6 +187,28 @@ public struct UnboundInventoryCodeSuggestionService: InventoryCodeSuggestionServ
     }
 }
 
+/// The parts service used until a composition root binds one. Answers
+/// `unavailable`, which the detail page draws as no Parts section at all.
+public struct UnboundInventoryPartsService: InventoryPartsService {
+    public init() {}
+
+    public func parts(of itemId: InventoryItem.ID) async throws -> InventoryItemParts {
+        throw InventoryPartsError.unavailable
+    }
+
+    public func addPart(_ partId: InventoryItem.ID, to assemblyId: InventoryItem.ID) async throws
+        -> InventoryItemParts
+    {
+        throw InventoryPartsError.unavailable
+    }
+
+    public func removePart(_ partId: InventoryItem.ID, from assemblyId: InventoryItem.ID)
+        async throws -> InventoryItemParts
+    {
+        throw InventoryPartsError.unavailable
+    }
+}
+
 /// The unavailable barcode lookup used until a composition root binds one.
 public struct UnboundInventoryBarcodeLookupService: InventoryBarcodeLookupService {
     /// Creates an unbound lookup that always answers unavailable.

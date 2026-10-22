@@ -10,6 +10,7 @@ import { makeInventoryCatalogueFake } from './inventory-catalogue-fake.js';
 import { emptyInventoryChanges, emptyInventorySnapshot } from './inventory-fake-pages.js';
 import { makeItemProcedure, readItemId } from './inventory-item-fake.js';
 import { makeLedgerProcedure, type InventoryLedgerCall } from './inventory-ledger-fake.js';
+import { makePartsProcedures, type InventoryPartsCall } from './inventory-parts-fake.js';
 import { makeInventoryWebItemsFake } from './inventory-web-fake.js';
 
 import type { CallResult } from '@pops/pillar-sdk/server';
@@ -58,6 +59,7 @@ export interface InventoryFake {
   mutationsCalls: InventoryMutationsCall[];
   ledgerCalls: InventoryLedgerCall[];
   suggestCalls: InventorySuggestCall[];
+  partsCalls: InventoryPartsCall[];
   catalogueCalls: number;
 }
 
@@ -156,6 +158,7 @@ export function createInventoryFake(options: InventoryFakeOptions = {}): Invento
   const mutationsCalls: InventoryMutationsCall[] = [];
   const ledgerCalls: InventoryLedgerCall[] = [];
   const suggestCalls: InventorySuggestCall[] = [];
+  const partsCalls: InventoryPartsCall[] = [];
   const catalogue = makeInventoryCatalogueFake(options);
   const mutations = makeMutationsProcedure(options, mutationsCalls);
 
@@ -179,6 +182,7 @@ export function createInventoryFake(options: InventoryFakeOptions = {}): Invento
           read: { catalogue: catalogue.catalogueRevision },
         },
         codes: { suggest },
+        items: makePartsProcedures(options.partsResult, partsCalls),
       }),
     webItemsCalls,
     snapshotCalls,
@@ -188,6 +192,7 @@ export function createInventoryFake(options: InventoryFakeOptions = {}): Invento
     mutationsCalls,
     ledgerCalls,
     suggestCalls,
+    partsCalls,
     get catalogueCalls() {
       return catalogue.calls;
     },

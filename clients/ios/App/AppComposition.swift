@@ -225,6 +225,7 @@ internal final class AppComposition {
                 for: device, transport: inventoryTransport, storageFull: &storageFull),
             codeSuggestions: inventoryTransport,
             barcodeLookup: inventoryTransport,
+            parts: inventoryTransport,
             ego: BFMEgoRepository(
                 client: authenticated(device),
                 baseURL: device.baseURL,

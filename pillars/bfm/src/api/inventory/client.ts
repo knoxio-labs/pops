@@ -31,6 +31,7 @@ import { parseOrMismatch } from '../pillars/parse-response.js';
 import { createMobileInventoryCatalogueClient } from './catalogue-client.js';
 import { callSuggestCodes } from './client-codes.js';
 import { callItem } from './client-item.js';
+import { callAddItemPart, callItemParts, callRemoveItemPart } from './client-parts.js';
 import { withInventoryActor } from './handle-factory.js';
 import { fetchMobileInventoryItems } from './list-client.js';
 
@@ -49,16 +50,17 @@ import type {
   MobileInventoryItemResult,
   MobileInventorySnapshot,
 } from '../../contract/mobile-inventory-schemas.js';
+import type { MobileInventoryItemParts } from '../../contract/rest-mobile-inventory-parts.js';
 import type { GatewayOutcome, PillarGateway } from '../pillars/gateway.js';
 import type {
   InventoryCatalogueRouter,
   MobileInventoryCatalogueClient,
 } from './catalogue-client.js';
-import type { ItemRequest, SuggestCodesRequest } from './client-types.js';
+import type { ItemPartRequest, ItemRequest, SuggestCodesRequest } from './client-types.js';
 
 export const INVENTORY_PILLAR_ID = 'inventory';
 
-export type { ItemRequest, SuggestCodesRequest } from './client-types.js';
+export type { ItemPartRequest, ItemRequest, SuggestCodesRequest } from './client-types.js';
 
 /** The subset of inventory's router bfm calls. See `client.ts` header. */
 export type InventorySyncRouter = InventoryCatalogueRouter & {
@@ -121,6 +123,9 @@ export interface MobileInventoryClient extends MobileInventoryCatalogueClient {
     request: LedgerReportRequest
   ): Promise<GatewayOutcome<MobileInventoryLedgerReportResponse>>;
   suggestCodes(request: SuggestCodesRequest): Promise<GatewayOutcome<MobileCodeSuggestResponse>>;
+  itemParts(request: ItemRequest): Promise<GatewayOutcome<MobileInventoryItemParts>>;
+  addItemPart(request: ItemPartRequest): Promise<GatewayOutcome<MobileInventoryItemParts>>;
+  removeItemPart(request: ItemPartRequest): Promise<GatewayOutcome<MobileInventoryItemParts>>;
 }
 
 async function callSnapshot(
@@ -223,5 +228,8 @@ export function createMobileInventoryClient(gateway: PillarGateway): MobileInven
     mutations: (request) => callMutations(gateway, request),
     reportLedger: (request) => callReportLedger(gateway, request),
     suggestCodes: (request) => callSuggestCodes(gateway, request),
+    itemParts: (request) => callItemParts(gateway, request),
+    addItemPart: (request) => callAddItemPart(gateway, request),
+    removeItemPart: (request) => callRemoveItemPart(gateway, request),
   };
 }

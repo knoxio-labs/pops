@@ -16,6 +16,7 @@ extension AppDependencies {
             UnboundInventoryCodeSuggestionService(),
         barcodeLookup: any InventoryBarcodeLookupService =
             FakeInventoryBarcodeLookupService(),
+        parts: any InventoryPartsService = InMemoryInventoryPartsService(),
         ego: any EgoRepository = ScriptedEgoRepository()
     ) -> AppDependencies {
         AppDependencies(
@@ -25,6 +26,7 @@ extension AppDependencies {
             inventory: inventory,
             codeSuggestions: codeSuggestions,
             barcodeLookup: barcodeLookup,
+            parts: parts,
             ego: ego)
     }
 }
