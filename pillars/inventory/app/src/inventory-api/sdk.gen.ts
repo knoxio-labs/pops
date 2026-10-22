@@ -37,6 +37,9 @@ import type {
   DocumentsLinkResponses,
   DocumentsListForItemData,
   DocumentsListForItemResponses,
+  DocumentsListForPaperlessDocumentData,
+  DocumentsListForPaperlessDocumentErrors,
+  DocumentsListForPaperlessDocumentResponses,
   DocumentsUnlinkData,
   DocumentsUnlinkErrors,
   DocumentsUnlinkResponses,
@@ -381,6 +384,22 @@ export const documentsDismissIngestion = <ThrowOnError extends boolean = false>(
       ...options.headers,
     },
   });
+
+/**
+ * List every item link to one Paperless document (empty when none)
+ */
+export const documentsListForPaperlessDocument = <ThrowOnError extends boolean = false>(
+  options: Options<DocumentsListForPaperlessDocumentData, ThrowOnError>
+): RequestResult<
+  DocumentsListForPaperlessDocumentResponses,
+  DocumentsListForPaperlessDocumentErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    DocumentsListForPaperlessDocumentResponses,
+    DocumentsListForPaperlessDocumentErrors,
+    ThrowOnError
+  >({ url: '/documents', ...options });
 
 /**
  * Unlink a document by link id (the Paperless document is kept)

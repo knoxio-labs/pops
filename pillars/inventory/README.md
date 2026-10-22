@@ -548,6 +548,7 @@ while Paperless consumes an upload, a row in `item_document_ingestions`.
 | --------------------------------------- | ------------------------------------------------------------------------------------------------ |
 | `POST /items/:itemId/documents/upload`  | Raw: body is the file, `Content-Type` its MIME, query `documentType`, `fileName`, `title?`. 202. |
 | `GET /items/:itemId/documents`          | Resolves the item's pending uploads, then `{ data, pending, failed, pagination }`.               |
+| `GET /documents?paperlessDocumentId=`   | Every item's link to that Paperless id, `{ data }`; empty when none, 400 for a non-positive id.  |
 | `PATCH /documents/:id`                  | `{ documentType?, title? }`; a title change is made in Paperless first.                          |
 | `DELETE /documents/:id`                 | Unlink. The Paperless document is kept.                                                          |
 | `DELETE /document-ingestions/:id`       | Dismiss a pending or failed upload.                                                              |

@@ -1,12 +1,13 @@
+import { deleteDocumentTool } from './documents-delete.js';
 import {
   coerceDocumentType,
-  documentsPillar,
   documentTypeProperty,
   inventoryDocuments,
+  paperlessIdProperty,
   reqPositiveInt,
   titleProperty,
 } from './inventory-documents-shared.js';
-import { mapCallResult, ok, optBool, optStr, reqStr, toolError } from './utils.js';
+import { mapCallResult, optStr, reqStr, toolError } from './utils.js';
 
 import type { DocumentType } from '../uploads/upload-tokens.js';
 import type { ToolDef } from './tool-def.js';
@@ -17,18 +18,10 @@ const linkIdProperty = {
   description: "The document link's id (`data[].id` from inventory.documents.list)",
 } as const;
 
-const paperlessIdProperty = {
-  type: 'integer',
-  minimum: 1,
-  description:
-    'The Paperless document id (from documents.search, or `paperlessDocumentId` in a list)',
-} as const;
-
 const LINK_SCOPE = 'inventory.documents.link';
 const UPDATE_SCOPE = 'inventory.documents.update';
 const UNLINK_SCOPE = 'inventory.documents.unlink';
 const DISMISS_SCOPE = 'inventory.documents.dismissIngestion';
-const DELETE_SCOPE = 'documents.write.delete';
 
 const link: ToolDef = {
   name: 'inventory.documents.link',
@@ -159,52 +152,11 @@ const dismissFailed = idTool(
   (id) => inventoryDocuments().documents.dismissIngestion({ id })
 );
 
-const deleteDocument: ToolDef = {
-  name: 'documents.delete',
-  readOnly: false,
-  scope: DELETE_SCOPE,
-  description:
-    'Delete a document from Paperless (Paperless moves it to its trash). This removes the file for EVERY item ' +
-    'linked to it, and those links then show it as missing. Inventory cannot list the links to a Paperless ' +
-    'document, so this tool cannot check for them and refuses unless force is true: first unlink it from each ' +
-    'item with inventory.documents.unlink, then call again with force: true.',
-  inputSchema: {
-    type: 'object',
-    additionalProperties: false,
-    properties: {
-      paperlessDocumentId: paperlessIdProperty,
-      force: {
-        type: 'boolean',
-        description: 'Required to be true: confirms no inventory item still links this document',
-      },
-    },
-    required: ['paperlessDocumentId', 'force'],
-  },
-  handler: async (args) => {
-    const id = reqPositiveInt(args, 'paperlessDocumentId');
-    if (id === null) {
-      return toolError(
-        'Missing or invalid required field: paperlessDocumentId (a positive integer)'
-      );
-    }
-    if (optBool(args, 'force') !== true) {
-      return toolError(
-        `Refusing to delete Paperless document ${String(id)}: inventory has no lookup of the items linking it, so ` +
-          'their links cannot be checked. Unlink it from every item with inventory.documents.unlink, then call ' +
-          'documents.delete again with force: true.'
-      );
-    }
-    const result = await documentsPillar().write.delete({ id });
-    if (result.kind !== 'ok') return mapCallResult(result, DELETE_SCOPE);
-    return ok({ deleted: true, paperlessDocumentId: id });
-  },
-};
-
 /** Document link writes over inventory, plus deletion from Paperless through documents. */
 export const documentWriteTools: readonly ToolDef[] = [
   link,
   update,
   unlink,
   dismissFailed,
-  deleteDocument,
+  deleteDocumentTool,
 ];
