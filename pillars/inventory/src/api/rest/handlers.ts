@@ -12,7 +12,6 @@ import { type OpenedInventoryDb } from '../../db/index.js';
 import { createAiClient, type AiClient } from '../ai/client.js';
 import { createDocumentsClient, type DocumentsClient } from '../documents/client.js';
 import { makeConnectionsHandlers } from './connections-handlers.js';
-import { makeDocumentFilesHandlers } from './document-files-handlers.js';
 import { makeDocumentsHandlers } from './documents-handlers.js';
 import { makeFixturesHandlers } from './fixtures-handlers.js';
 import { makeItemsHandlers } from './items-handlers.js';
@@ -77,7 +76,6 @@ export function makeInventoryRestHandlers(deps: {
     fixtures: makeFixturesHandlers(db, documents),
     photos: makePhotosHandlers(db),
     documents: makeDocumentsHandlers(db, documents, deps.documentUploads),
-    documentFiles: makeDocumentFilesHandlers(db),
     reports: makeReportsHandlers(db),
     paperless: makePaperlessHandlers(documents),
     search: makeSearchHandlers(db),

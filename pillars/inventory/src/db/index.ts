@@ -3,7 +3,7 @@
  *
  * Hosts inventory pillar tables (items, events, mutations, media, sync_meta,
  * locations, fixtures, item_connections, item_documents, item_photos,
- * item_document_ingestions, item_uploaded_files, item_fixture_connections) per
+ * item_document_ingestions, item_fixture_connections) per
  * ADR-026.
  */
 export * from './errors.js';

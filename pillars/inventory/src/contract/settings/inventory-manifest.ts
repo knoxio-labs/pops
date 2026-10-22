@@ -106,20 +106,5 @@ export const inventoryManifest: SettingsManifest = {
         },
       ],
     },
-    {
-      id: 'documentFiles',
-      title: 'Document files',
-      description: 'Upload limits for documents attached to items.',
-      fields: [
-        {
-          key: 'inventory.maxFileSizeBytes',
-          label: 'Largest upload, in bytes',
-          type: 'number',
-          default: '10485760',
-          description: '10485760 is 10 MB.',
-          validation: { min: 1048576 },
-        },
-      ],
-    },
   ],
 };

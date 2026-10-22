@@ -1930,100 +1930,6 @@ export type PhotosReorderResponses = {
 
 export type PhotosReorderResponse = PhotosReorderResponses[keyof PhotosReorderResponses];
 
-export type DocumentFilesListForItemData = {
-  body?: never;
-  path: {
-    itemId: string;
-  };
-  query?: {
-    limit?: number;
-    offset?: number;
-  };
-  url: '/items/{itemId}/uploads';
-};
-
-export type DocumentFilesListForItemResponses = {
-  /**
-   * 200
-   */
-  200: {
-    data: Array<{
-      createdAt: string;
-      fileName: string;
-      filePath: string;
-      fileSize: number;
-      id: number;
-      itemId: string;
-      mimeType: string;
-      uploadedAt: string;
-    }>;
-    pagination: {
-      hasMore: boolean;
-      limit: number;
-      offset: number;
-      total: number;
-    };
-  };
-};
-
-export type DocumentFilesListForItemResponse =
-  DocumentFilesListForItemResponses[keyof DocumentFilesListForItemResponses];
-
-export type DocumentFilesUploadData = {
-  /**
-   * Body
-   */
-  body?: {
-    fileBase64: string;
-    fileName: string;
-    mimeType: string;
-  };
-  path: {
-    itemId: string;
-  };
-  query?: never;
-  url: '/items/{itemId}/uploads';
-};
-
-export type DocumentFilesUploadErrors = {
-  /**
-   * 400
-   */
-  400: ErrorBody;
-  /**
-   * 404
-   */
-  404: ErrorBody;
-  /**
-   * 409
-   */
-  409: ErrorBody;
-};
-
-export type DocumentFilesUploadError = DocumentFilesUploadErrors[keyof DocumentFilesUploadErrors];
-
-export type DocumentFilesUploadResponses = {
-  /**
-   * 201
-   */
-  201: {
-    data: {
-      createdAt: string;
-      fileName: string;
-      filePath: string;
-      fileSize: number;
-      id: number;
-      itemId: string;
-      mimeType: string;
-      uploadedAt: string;
-    };
-    message: string;
-  };
-};
-
-export type DocumentFilesUploadResponse =
-  DocumentFilesUploadResponses[keyof DocumentFilesUploadResponses];
-
 export type LocationsListData = {
   body?: never;
   path?: never;
@@ -2937,8 +2843,7 @@ export type SettingsGetData = {
       | 'inventory.defaultLimit'
       | 'inventory.searchDefaultLimit'
       | 'inventory.suggestCodes'
-      | 'inventory.codePattern'
-      | 'inventory.maxFileSizeBytes';
+      | 'inventory.codePattern';
   };
   query?: never;
   url: '/settings/{key}';
@@ -2990,8 +2895,7 @@ export type SettingsSetData = {
       | 'inventory.defaultLimit'
       | 'inventory.searchDefaultLimit'
       | 'inventory.suggestCodes'
-      | 'inventory.codePattern'
-      | 'inventory.maxFileSizeBytes';
+      | 'inventory.codePattern';
   };
   query?: never;
   url: '/settings/{key}';
@@ -3044,8 +2948,7 @@ export type SettingsEnsureData = {
       | 'inventory.defaultLimit'
       | 'inventory.searchDefaultLimit'
       | 'inventory.suggestCodes'
-      | 'inventory.codePattern'
-      | 'inventory.maxFileSizeBytes';
+      | 'inventory.codePattern';
   };
   query?: never;
   url: '/settings/{key}/ensure';
@@ -3097,8 +3000,7 @@ export type SettingsResetKeyData = {
       | 'inventory.defaultLimit'
       | 'inventory.searchDefaultLimit'
       | 'inventory.suggestCodes'
-      | 'inventory.codePattern'
-      | 'inventory.maxFileSizeBytes';
+      | 'inventory.codePattern';
   };
   query?: never;
   url: '/settings/{key}/reset';
@@ -6104,50 +6006,6 @@ export type TypesCatalogueResponses = {
 };
 
 export type TypesCatalogueResponse = TypesCatalogueResponses[keyof TypesCatalogueResponses];
-
-export type DocumentFilesRemoveUploadData = {
-  /**
-   * Body
-   */
-  body?: {
-    [key: string]: never;
-  };
-  path: {
-    id: number;
-  };
-  query?: never;
-  url: '/uploads/{id}';
-};
-
-export type DocumentFilesRemoveUploadErrors = {
-  /**
-   * 400
-   */
-  400: ErrorBody;
-  /**
-   * 404
-   */
-  404: ErrorBody;
-  /**
-   * 409
-   */
-  409: ErrorBody;
-};
-
-export type DocumentFilesRemoveUploadError =
-  DocumentFilesRemoveUploadErrors[keyof DocumentFilesRemoveUploadErrors];
-
-export type DocumentFilesRemoveUploadResponses = {
-  /**
-   * 200
-   */
-  200: {
-    message: string;
-  };
-};
-
-export type DocumentFilesRemoveUploadResponse =
-  DocumentFilesRemoveUploadResponses[keyof DocumentFilesRemoveUploadResponses];
 
 export type WebChangesHeadData = {
   body?: never;

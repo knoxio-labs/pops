@@ -2,7 +2,7 @@
  * REST contract for the inventory pillar — ts-rest single source of truth.
  *
  * Composes the module sub-routers (items, locations, connections,
- * fixtures, photos, documents, documentFiles, reports, paperless, search,
+ * fixtures, photos, documents, reports, paperless, search,
  * web search, web batch, web connections, settings, and the sync protocol's sync, types and codes) into the public
  * wire surface.
  * `generateOpenApi(inventoryContract, …)`
@@ -15,7 +15,6 @@
 import { initContract } from '@ts-rest/core';
 
 import { inventoryConnectionsContract } from './rest-connections.js';
-import { inventoryDocumentFilesContract } from './rest-document-files.js';
 import { inventoryDocumentsContract } from './rest-documents.js';
 import { inventoryFixturesContract } from './rest-fixtures.js';
 import { inventoryItemsContract } from './rest-items.js';
@@ -52,7 +51,6 @@ export const inventoryContract = c.router(
     fixtures: inventoryFixturesContract,
     photos: inventoryPhotosContract,
     documents: inventoryDocumentsContract,
-    documentFiles: inventoryDocumentFilesContract,
     reports: inventoryReportsContract,
     paperless: inventoryPaperlessContract,
     search: inventorySearchContract,

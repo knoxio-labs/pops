@@ -1020,12 +1020,6 @@ export const INVENTORY_ROUTES = [
   },
   {
     method: 'get',
-    path: '/items/{itemId}/uploads',
-    handlerFile: 'pillars/inventory/src/api/rest/document-files-handlers.ts',
-    handlerKey: 'listForItem',
-  },
-  {
-    method: 'get',
     path: '/items/search/by-asset-id',
     handlerFile: 'pillars/inventory/src/api/rest/items-handlers.ts',
     handlerKey: 'searchByAssetId',

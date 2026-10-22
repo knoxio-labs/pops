@@ -96,7 +96,6 @@ describe('the raw route scope map', () => {
       'PUT inventory.media.upload',
       'GET inventory.media.read',
       'GET inventory.photos.file',
-      'GET inventory.documentFiles.file',
       'GET inventory.documents.thumbnail',
       'POST inventory.documents.upload',
       'GET inventory.documents.file',
@@ -191,10 +190,9 @@ describe('media with no credential', () => {
 
 describe('the item file routes', () => {
   const PHOTO = '/api/inventory/photos/items/inv-001/photo_001.jpg';
-  const DOCUMENT = '/api/inventory/documents/items/inv-001/file_001.pdf';
   const THUMBNAIL = '/inventory/documents/42/thumbnail';
 
-  it.each([PHOTO, DOCUMENT, THUMBNAIL])('403s %s for an items-only key', async (path) => {
+  it.each([PHOTO, THUMBNAIL])('403s %s for an items-only key', async (path) => {
     const response = await requestOn(appGranting(['inventory.items']))
       .get(path)
       .set('x-api-key', KEY);
@@ -202,12 +200,9 @@ describe('the item file routes', () => {
     expect(response.status).toBe(403);
   });
 
-  it.each([
-    [PHOTO, 'inventory.photos'],
-    [DOCUMENT, 'inventory.documentFiles'],
-  ])('lets %s through to its handler under %s', async (path, scope) => {
-    const response = await requestOn(appGranting([scope]))
-      .get(path)
+  it('lets a photo through to its handler under inventory.photos', async () => {
+    const response = await requestOn(appGranting(['inventory.photos']))
+      .get(PHOTO)
       .set('x-api-key', KEY);
 
     expect(response.status).toBe(404);

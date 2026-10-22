@@ -21,14 +21,6 @@ import type {
   ConnectionsTraceData,
   ConnectionsTraceErrors,
   ConnectionsTraceResponses,
-  DocumentFilesListForItemData,
-  DocumentFilesListForItemResponses,
-  DocumentFilesRemoveUploadData,
-  DocumentFilesRemoveUploadErrors,
-  DocumentFilesRemoveUploadResponses,
-  DocumentFilesUploadData,
-  DocumentFilesUploadErrors,
-  DocumentFilesUploadResponses,
   DocumentsDismissIngestionData,
   DocumentsDismissIngestionErrors,
   DocumentsDismissIngestionResponses,
@@ -791,36 +783,6 @@ export const photosReorder = <ThrowOnError extends boolean = false>(
   });
 
 /**
- * List uploaded files for an item
- */
-export const documentFilesListForItem = <ThrowOnError extends boolean = false>(
-  options: Options<DocumentFilesListForItemData, ThrowOnError>
-): RequestResult<DocumentFilesListForItemResponses, unknown, ThrowOnError> =>
-  (options.client ?? client).get<DocumentFilesListForItemResponses, unknown, ThrowOnError>({
-    url: '/items/{itemId}/uploads',
-    ...options,
-  });
-
-/**
- * Upload a document file (base64 JSON body); validated + stored server-side
- */
-export const documentFilesUpload = <ThrowOnError extends boolean = false>(
-  options: Options<DocumentFilesUploadData, ThrowOnError>
-): RequestResult<DocumentFilesUploadResponses, DocumentFilesUploadErrors, ThrowOnError> =>
-  (options.client ?? client).post<
-    DocumentFilesUploadResponses,
-    DocumentFilesUploadErrors,
-    ThrowOnError
-  >({
-    url: '/items/{itemId}/uploads',
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
-  });
-
-/**
  * List all locations (flat)
  */
 export const locationsList = <ThrowOnError extends boolean = false>(
@@ -1496,29 +1458,6 @@ export const typesCatalogue = <ThrowOnError extends boolean = false>(
   (options?.client ?? client).get<TypesCatalogueResponses, TypesCatalogueErrors, ThrowOnError>({
     url: '/types',
     ...options,
-  });
-
-/**
- * Remove an uploaded file (db row + file)
- */
-export const documentFilesRemoveUpload = <ThrowOnError extends boolean = false>(
-  options: Options<DocumentFilesRemoveUploadData, ThrowOnError>
-): RequestResult<
-  DocumentFilesRemoveUploadResponses,
-  DocumentFilesRemoveUploadErrors,
-  ThrowOnError
-> =>
-  (options.client ?? client).delete<
-    DocumentFilesRemoveUploadResponses,
-    DocumentFilesRemoveUploadErrors,
-    ThrowOnError
-  >({
-    url: '/uploads/{id}',
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
   });
 
 /**

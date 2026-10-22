@@ -296,9 +296,7 @@ describe('0012_items_single_identity on a populated database', () => {
         position: 0,
       },
     ]);
-    expect(all(`SELECT id, item_id, file_name FROM item_uploaded_files`)).toEqual([
-      { id: 21, item_id: 'i-drill', file_name: 'manual.pdf' },
-    ]);
+    expect(all(`SELECT name FROM sqlite_master WHERE name = 'item_uploaded_files'`)).toEqual([]);
     expect(
       all(`SELECT id, item_id, paperless_document_id FROM item_documents ORDER BY id`)
     ).toEqual([
@@ -319,7 +317,6 @@ describe('0012_items_single_identity on a populated database', () => {
   it('points every rebuilt leaf table at items, cascading on delete', () => {
     for (const table of [
       'item_photos',
-      'item_uploaded_files',
       'item_documents',
       'item_connections',
       'item_fixture_connections',
@@ -904,7 +901,6 @@ describe('0012_items_single_identity on rows pointing at records that do not exi
 
   it('copies every row whose references exist', () => {
     expect(all(`SELECT id FROM item_photos`)).toEqual([{ id: 11 }]);
-    expect(all(`SELECT id FROM item_uploaded_files`)).toEqual([{ id: 21 }]);
     expect(all(`SELECT id FROM item_documents`)).toEqual([{ id: 31 }]);
     expect(all(`SELECT id FROM item_connections`)).toEqual([{ id: 41 }]);
     expect(all(`SELECT id FROM item_fixture_connections`)).toEqual([{ id: 51 }]);

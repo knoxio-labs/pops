@@ -5265,250 +5265,6 @@
         "tags": ["photos"]
       }
     },
-    "/items/{itemId}/uploads": {
-      "get": {
-        "operationId": "documentFiles.listForItem",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "itemId",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "limit",
-            "schema": {
-              "exclusiveMinimum": true,
-              "maximum": 500,
-              "minimum": 0,
-              "type": "number"
-            }
-          },
-          {
-            "in": "query",
-            "name": "offset",
-            "schema": {
-              "minimum": 0,
-              "type": "number"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "data": {
-                      "items": {
-                        "additionalProperties": false,
-                        "properties": {
-                          "createdAt": {
-                            "type": "string"
-                          },
-                          "fileName": {
-                            "type": "string"
-                          },
-                          "filePath": {
-                            "type": "string"
-                          },
-                          "fileSize": {
-                            "type": "number"
-                          },
-                          "id": {
-                            "type": "number"
-                          },
-                          "itemId": {
-                            "type": "string"
-                          },
-                          "mimeType": {
-                            "type": "string"
-                          },
-                          "uploadedAt": {
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "id",
-                          "itemId",
-                          "fileName",
-                          "filePath",
-                          "mimeType",
-                          "fileSize",
-                          "uploadedAt",
-                          "createdAt"
-                        ],
-                        "type": "object"
-                      },
-                      "type": "array"
-                    },
-                    "pagination": {
-                      "additionalProperties": false,
-                      "properties": {
-                        "hasMore": {
-                          "type": "boolean"
-                        },
-                        "limit": {
-                          "type": "number"
-                        },
-                        "offset": {
-                          "type": "number"
-                        },
-                        "total": {
-                          "type": "number"
-                        }
-                      },
-                      "required": ["total", "limit", "offset", "hasMore"],
-                      "type": "object"
-                    }
-                  },
-                  "required": ["data", "pagination"],
-                  "type": "object"
-                }
-              }
-            },
-            "description": "200"
-          }
-        },
-        "summary": "List uploaded files for an item",
-        "tags": ["documentFiles"]
-      },
-      "post": {
-        "operationId": "documentFiles.upload",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "itemId",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "additionalProperties": false,
-                "properties": {
-                  "fileBase64": {
-                    "minLength": 1,
-                    "type": "string"
-                  },
-                  "fileName": {
-                    "maxLength": 255,
-                    "minLength": 1,
-                    "type": "string"
-                  },
-                  "mimeType": {
-                    "minLength": 1,
-                    "type": "string"
-                  }
-                },
-                "required": ["fileName", "mimeType", "fileBase64"],
-                "type": "object"
-              }
-            }
-          },
-          "description": "Body"
-        },
-        "responses": {
-          "201": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "data": {
-                      "additionalProperties": false,
-                      "properties": {
-                        "createdAt": {
-                          "type": "string"
-                        },
-                        "fileName": {
-                          "type": "string"
-                        },
-                        "filePath": {
-                          "type": "string"
-                        },
-                        "fileSize": {
-                          "type": "number"
-                        },
-                        "id": {
-                          "type": "number"
-                        },
-                        "itemId": {
-                          "type": "string"
-                        },
-                        "mimeType": {
-                          "type": "string"
-                        },
-                        "uploadedAt": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "id",
-                        "itemId",
-                        "fileName",
-                        "filePath",
-                        "mimeType",
-                        "fileSize",
-                        "uploadedAt",
-                        "createdAt"
-                      ],
-                      "type": "object"
-                    },
-                    "message": {
-                      "type": "string"
-                    }
-                  },
-                  "required": ["data", "message"],
-                  "type": "object"
-                }
-              }
-            },
-            "description": "201"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            },
-            "description": "400"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            },
-            "description": "404"
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            },
-            "description": "409"
-          }
-        },
-        "summary": "Upload a document file (base64 JSON body); validated + stored server-side",
-        "tags": ["documentFiles"]
-      }
-    },
     "/locations": {
       "get": {
         "operationId": "locations.list",
@@ -7533,8 +7289,7 @@
                 "inventory.defaultLimit",
                 "inventory.searchDefaultLimit",
                 "inventory.suggestCodes",
-                "inventory.codePattern",
-                "inventory.maxFileSizeBytes"
+                "inventory.codePattern"
               ],
               "type": "string"
             }
@@ -7618,8 +7373,7 @@
                 "inventory.defaultLimit",
                 "inventory.searchDefaultLimit",
                 "inventory.suggestCodes",
-                "inventory.codePattern",
-                "inventory.maxFileSizeBytes"
+                "inventory.codePattern"
               ],
               "type": "string"
             }
@@ -7724,8 +7478,7 @@
                 "inventory.defaultLimit",
                 "inventory.searchDefaultLimit",
                 "inventory.suggestCodes",
-                "inventory.codePattern",
-                "inventory.maxFileSizeBytes"
+                "inventory.codePattern"
               ],
               "type": "string"
             }
@@ -7827,8 +7580,7 @@
                 "inventory.defaultLimit",
                 "inventory.searchDefaultLimit",
                 "inventory.suggestCodes",
-                "inventory.codePattern",
-                "inventory.maxFileSizeBytes"
+                "inventory.codePattern"
               ],
               "type": "string"
             }
@@ -18512,87 +18264,6 @@
         },
         "summary": "The type catalogue; `ETag` is its version, and a matching `If-None-Match` is 304",
         "tags": ["types"]
-      }
-    },
-    "/uploads/{id}": {
-      "delete": {
-        "operationId": "documentFiles.removeUpload",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "exclusiveMinimum": true,
-              "maximum": 9007199254740991,
-              "minimum": 0,
-              "type": "integer"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "additionalProperties": false,
-                "properties": {},
-                "type": "object"
-              }
-            }
-          },
-          "description": "Body"
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "message": {
-                      "type": "string"
-                    }
-                  },
-                  "required": ["message"],
-                  "type": "object"
-                }
-              }
-            },
-            "description": "200"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            },
-            "description": "400"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            },
-            "description": "404"
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            },
-            "description": "409"
-          }
-        },
-        "summary": "Remove an uploaded file (db row + file)",
-        "tags": ["documentFiles"]
       }
     },
     "/web/changes/head": {

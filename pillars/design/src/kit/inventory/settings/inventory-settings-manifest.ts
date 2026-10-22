@@ -32,7 +32,6 @@ export const INVENTORY_SETTING_KEYS = {
   density: 'inventory.density',
   defaultLimit: 'inventory.defaultLimit',
   searchDefaultLimit: 'inventory.searchDefaultLimit',
-  maxFileSizeBytes: 'inventory.maxFileSizeBytes',
 } as const;
 
 const KEYS = INVENTORY_SETTING_KEYS;
@@ -139,21 +138,6 @@ export const inventorySettingsSection: SettingsManifestDescriptor = {
           type: 'number',
           default: '20',
           validation: { min: 1, max: 100 },
-        },
-      ],
-    },
-    {
-      id: 'documentFiles',
-      title: 'Document files',
-      description: 'Upload limits for documents attached to items.',
-      fields: [
-        {
-          key: KEYS.maxFileSizeBytes,
-          label: 'Largest upload, in bytes',
-          type: 'number',
-          default: '10485760',
-          description: '10485760 is 10 MB.',
-          validation: { min: 1048576 },
         },
       ],
     },
