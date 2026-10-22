@@ -1,18 +1,15 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link2 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
-import { AssetIdBadge, Button, SearchPickerDialog, toastError, TypeBadge } from '@pops/ui';
+import { Button, SearchPickerDialog, toastError } from '@pops/ui';
 
 import { InventoryApiError, unwrap } from '../inventory-api-helpers.js';
-import { connectionsConnect, itemsList } from '../inventory-api/index.js';
+import { connectionsConnect } from '../inventory-api/index.js';
+import { ItemSearchResultRow, useItemSearch, type SearchableItem } from './ItemSearchResult.js';
 
 import type { ReactElement } from 'react';
-
-import type { ItemsListResponse } from '../inventory-api/index.js';
-
-type InventoryItem = ItemsListResponse['data'][number];
 
 type ConnectInput = { itemAId: string; itemBId: string };
 
@@ -44,42 +41,6 @@ interface ConnectDialogProps {
   trigger?: ReactElement;
   /** Explains why connecting is unavailable and disables the trigger. */
   disabledReason?: string;
-}
-
-interface ConnectResultRowProps {
-  item: InventoryItem;
-  disabled: boolean;
-  onConnect: (itemId: string) => void;
-}
-
-function ConnectResultRow({ item, disabled, onConnect }: ConnectResultRowProps) {
-  const hasMeta = ((item.brand ?? item.model) || item.assetId) ?? item.type;
-  return (
-    <Button
-      variant="ghost"
-      className="w-full flex items-center justify-between p-2.5 h-auto text-left"
-      onClick={() => onConnect(item.id)}
-      disabled={disabled}
-    >
-      <div className="flex-1 min-w-0">
-        <div className="font-medium text-sm">{item.itemName}</div>
-        {hasMeta ? (
-          <div className="flex flex-wrap items-center gap-1 mt-0.5">
-            {(item.brand ?? item.model) && (
-              <span className="text-xs text-muted-foreground">
-                {[item.brand, item.model].filter(Boolean).join(' · ')}
-              </span>
-            )}
-            {item.assetId && <AssetIdBadge assetId={item.assetId} />}
-            {item.type && <TypeBadge type={item.type} />}
-          </div>
-        ) : (
-          <span className="text-xs text-muted-foreground mt-0.5">No details</span>
-        )}
-      </div>
-      <Link2 className="h-4 w-4 text-muted-foreground shrink-0 ml-2" />
-    </Button>
-  );
 }
 
 function useConnectMutation(onSuccess: () => void) {
@@ -121,12 +82,7 @@ export function ConnectDialog({
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
 
-  const listInput = { search, limit: 10 };
-  const { data, isLoading } = useQuery({
-    queryKey: ['inventory', 'items', 'list', listInput],
-    queryFn: async () => unwrap(await itemsList({ query: listInput })),
-    enabled: open && search.length >= 2,
-  });
+  const { isLoading, results } = useItemSearch(open, search, currentItemId);
 
   const connectMutation = useConnectMutation(() => {
     toast.success('Items connected');
@@ -134,8 +90,6 @@ export function ConnectDialog({
     setOpen(false);
     setSearch('');
   });
-
-  const results = data?.data.filter((item: InventoryItem) => item.id !== currentItemId) ?? [];
 
   return (
     <SearchPickerDialog
@@ -149,16 +103,17 @@ export function ConnectDialog({
       description="Search for an item to connect by name or asset ID."
       searchPlaceholder="Search items..."
       emptyMessage="No items found"
-      getResultKey={(item: InventoryItem) => item.id}
+      getResultKey={(item: SearchableItem) => item.id}
       search={search}
       onSearchChange={setSearch}
       isLoading={isLoading}
       results={results}
-      renderResult={(item: InventoryItem) => (
-        <ConnectResultRow
+      renderResult={(item: SearchableItem) => (
+        <ItemSearchResultRow
           item={item}
+          icon={Link2}
           disabled={connectMutation.isPending}
-          onConnect={(itemBId) => connectMutation.mutate({ itemAId: currentItemId, itemBId })}
+          onPick={(itemBId) => connectMutation.mutate({ itemAId: currentItemId, itemBId })}
         />
       )}
     />

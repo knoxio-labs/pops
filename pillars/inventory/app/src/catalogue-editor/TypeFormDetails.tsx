@@ -9,6 +9,7 @@ import type { CatalogueIssueSources, CatalogueOperation, CatalogueType } from '.
 
 interface TypeFormDetailsProps {
   readonly containment: boolean;
+  readonly parts: boolean;
   readonly description: string;
   readonly keyValue: string;
   readonly label: string;
@@ -20,6 +21,7 @@ interface TypeFormDetailsProps {
   readonly types: readonly CatalogueType[];
   readonly validationIssues: readonly InventoryApiIssue[];
   readonly onContainmentChange: (value: boolean) => void;
+  readonly onPartsChange: (value: boolean) => void;
   readonly onDescriptionChange: (value: string) => void;
   readonly onKeyChange: (value: string) => void;
   readonly onLabelChange: (value: string) => void;
@@ -28,7 +30,7 @@ interface TypeFormDetailsProps {
 
 /** Renders catalogue type identity, description, and capability inputs. */
 export function TypeFormDetails(props: TypeFormDetailsProps) {
-  const { containment, description, keyValue, label, type } = props;
+  const { containment, description, keyValue, label, parts, type } = props;
   return (
     <>
       <div>
@@ -63,7 +65,12 @@ export function TypeFormDetails(props: TypeFormDetailsProps) {
           types={props.types}
           value={props.parentTypeId}
         />
-        <TypeCapability checked={containment} onChange={props.onContainmentChange} />
+        <TypeCapabilities
+          containment={containment}
+          parts={parts}
+          onContainmentChange={props.onContainmentChange}
+          onPartsChange={props.onPartsChange}
+        />
       </div>
       {type?.archivedAt !== null && type?.archivedAt !== undefined && (
         <Alert>
@@ -115,25 +122,56 @@ function TypeIdentity({
   );
 }
 
+function TypeCapabilities({
+  containment,
+  onContainmentChange,
+  onPartsChange,
+  parts,
+}: Pick<TypeFormDetailsProps, 'containment' | 'onContainmentChange' | 'onPartsChange' | 'parts'>) {
+  return (
+    <>
+      <TypeCapability
+        id="catalogue-containment"
+        title="Containment capability"
+        hint="Items of this type can contain other items."
+        checked={containment}
+        onChange={onContainmentChange}
+      />
+      <TypeCapability
+        id="catalogue-parts"
+        title="Parts capability"
+        hint="Items of this type are assemblies: they can list other items as their parts."
+        checked={parts}
+        onChange={onPartsChange}
+      />
+    </>
+  );
+}
+
 function TypeCapability({
   checked,
+  hint,
+  id,
   onChange,
+  title,
 }: {
   readonly checked: boolean;
+  readonly hint: string;
+  readonly id: string;
   readonly onChange: (value: boolean) => void;
+  readonly title: string;
 }) {
   return (
     <div className="flex min-h-11 items-start justify-between gap-4 rounded-lg border p-3 sm:col-span-2">
       <div>
-        <Label htmlFor="catalogue-containment" className="text-sm font-medium">
-          Containment capability
+        <Label htmlFor={id} className="text-sm font-medium">
+          {title}
         </Label>
         <p className="mt-1 text-xs text-muted-foreground">
-          Items of this type can contain other items. Changing a published capability may require a
-          migration.
+          {hint} Changing a published capability may require a migration.
         </p>
       </div>
-      <Switch id="catalogue-containment" checked={checked} onCheckedChange={onChange} />
+      <Switch id={id} checked={checked} onCheckedChange={onChange} />
     </div>
   );
 }

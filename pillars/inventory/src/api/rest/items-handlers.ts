@@ -4,6 +4,7 @@ import { toInventoryItem } from '../modules/items/types.js';
 import { paginationMeta } from '../shared/pagination.js';
 import { runHttp } from './error-mapping.js';
 import { makeItemsWriteHandlers } from './items-write-handlers.js';
+import { makePartsHandlers } from './parts-handlers.js';
 
 import type { ServerInferRequest } from '@ts-rest/core';
 
@@ -83,5 +84,6 @@ export function makeItemsHandlers(db: InventoryDb) {
       })),
 
     ...makeItemsWriteHandlers(db),
+    ...makePartsHandlers(db),
   };
 }

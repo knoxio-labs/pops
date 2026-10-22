@@ -127,6 +127,30 @@ describe('classifyCatalogueCompatibility', () => {
     });
   });
 
+  it('treats granting or removing only the parts capability as compatible', () => {
+    const base = catalogue(1, [type([])]);
+    const granted = catalogue(2, [{ ...type([]), capabilities: ['parts'] }]);
+
+    expect(classifyCatalogueCompatibility(base, granted)).toMatchObject({
+      classification: 'compatible',
+      changes: [{ code: 'type_parts_capability_changed', definitionId: 'type-a' }],
+    });
+    const withParts = catalogue(1, [{ ...type([]), capabilities: ['parts'] }]);
+    expect(classifyCatalogueCompatibility(withParts, catalogue(2, [type([])])).classification).toBe(
+      'compatible'
+    );
+  });
+
+  it('still requires a migration when parts changes alongside containment', () => {
+    const base = catalogue(1, [type([])]);
+    const candidate = catalogue(2, [{ ...type([]), capabilities: ['parts', 'containment'] }]);
+
+    expect(classifyCatalogueCompatibility(base, candidate)).toMatchObject({
+      classification: 'migration_required',
+      changes: [{ code: 'type_capabilities_changed' }],
+    });
+  });
+
   it('protocol-gates a newly used primitive kind', () => {
     const baseField = field();
     const base = catalogue(1, [type([baseField])]);

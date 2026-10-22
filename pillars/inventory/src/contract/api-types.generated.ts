@@ -301,6 +301,41 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/items/{itemId}/parts': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Read the assembly an item is a part of, and its own parts with where each one is */
+    get: operations['items.getParts'];
+    put?: never;
+    /** Make an existing item a part of this assembly; the assembly type must grant the parts capability */
+    post: operations['items.addPart'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/items/{itemId}/parts/{partItemId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Stop an item being a part of this assembly; the item itself is kept */
+    delete: operations['items.removePart'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/items/{itemId}/photos': {
     parameters: {
       query?: never;
@@ -1490,6 +1525,29 @@ export interface components {
           op: 'coalesce';
           values: components['schemas']['ExpressionV1'][];
         };
+    ItemParts: {
+      assembly: {
+        code: string | null;
+        itemId: string;
+        name: string;
+      } | null;
+      canHaveParts: boolean;
+      parts: {
+        code: string | null;
+        itemId: string;
+        lifecycle: string;
+        name: string;
+        placement: {
+          containingItemId: string | null;
+          containingItemName: string | null;
+          /** @enum {string} */
+          kind: 'location' | 'container' | 'hand';
+          locationId: string | null;
+          locationName: string | null;
+        };
+        typeId: string | null;
+      }[];
+    };
     LocationTreeNode: {
       children: components['schemas']['LocationTreeNode'][];
       id: string;
@@ -3137,6 +3195,172 @@ export interface operations {
         content: {
           'application/json': {
             message: string;
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+    };
+  };
+  'items.getParts': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        itemId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: components['schemas']['ItemParts'];
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+    };
+  };
+  'items.addPart': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        itemId: string;
+      };
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': {
+          partItemId: string;
+        };
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: components['schemas']['ItemParts'];
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 404 */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+      /** @description 409 */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+    };
+  };
+  'items.removePart': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        itemId: string;
+        partItemId: string;
+      };
+      cookie?: never;
+    };
+    /** @description Body */
+    requestBody?: {
+      content: {
+        'application/json': Record<string, never>;
+      };
+    };
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: components['schemas']['ItemParts'];
           };
         };
       };

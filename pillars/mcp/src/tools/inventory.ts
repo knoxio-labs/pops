@@ -4,6 +4,7 @@ import { itemValidationTool } from './inventory-item-validation.js';
 import { itemTools } from './inventory-items.js';
 import { lifecycleTools } from './inventory-lifecycle.js';
 import { locationTools } from './inventory-locations.js';
+import { partTools } from './inventory-parts.js';
 import { photoTools } from './inventory-photos.js';
 import { placementTools } from './inventory-placement.js';
 
@@ -15,6 +16,7 @@ export const inventoryTools: readonly ToolDef[] = [
   ...locationTools,
   ...itemTools,
   ...connectionTools,
+  ...partTools,
   ...placementTools,
   ...lifecycleTools,
   ...photoTools,

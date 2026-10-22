@@ -10,6 +10,7 @@
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 
+import { itemPartsRoutes } from './rest-parts.js';
 import {
   ERR_RESPONSES,
   MessageSchema,
@@ -194,4 +195,5 @@ export const inventoryItemsContract = c.router({
     responses: { 200: MessageSchema, ...ERR_RESPONSES },
     summary: 'Delete an inventory item',
   },
+  ...itemPartsRoutes,
 });
