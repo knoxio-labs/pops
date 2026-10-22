@@ -54,6 +54,7 @@ internal struct AppSearchTab: View {
             .purchasesDestinations(dependencies: dependencies)
             .errorDiagnosticsMenu()
         }
+        .inventoryParts(dependencies.parts)
         .task {
             await model.loadInventoryTypes()
         }

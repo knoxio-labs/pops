@@ -87,6 +87,9 @@ import type {
   MobileFinanceUpdateTransactionData,
   MobileFinanceUpdateTransactionErrors,
   MobileFinanceUpdateTransactionResponses,
+  MobileInventoryAddItemPartData,
+  MobileInventoryAddItemPartErrors,
+  MobileInventoryAddItemPartResponses,
   MobileInventoryCatalogueData,
   MobileInventoryCatalogueErrors,
   MobileInventoryCatalogueResponses,
@@ -104,6 +107,9 @@ import type {
   MobileInventoryItemHistoryData,
   MobileInventoryItemHistoryErrors,
   MobileInventoryItemHistoryResponses,
+  MobileInventoryItemPartsData,
+  MobileInventoryItemPartsErrors,
+  MobileInventoryItemPartsResponses,
   MobileInventoryItemResponses,
   MobileInventoryListItemsData,
   MobileInventoryListItemsErrors,
@@ -114,6 +120,9 @@ import type {
   MobileInventoryPutMediaData,
   MobileInventoryPutMediaErrors,
   MobileInventoryPutMediaResponses,
+  MobileInventoryRemoveItemPartData,
+  MobileInventoryRemoveItemPartErrors,
+  MobileInventoryRemoveItemPartResponses,
   MobileInventoryReportLedgerData,
   MobileInventoryReportLedgerErrors,
   MobileInventoryReportLedgerResponses,
@@ -705,6 +714,64 @@ export const mobileInventoryItemHistory = <ThrowOnError extends boolean = false>
     MobileInventoryItemHistoryErrors,
     ThrowOnError
   >({ url: '/mobile/inventory/items/{id}/history', ...options });
+
+/**
+ * The assembly an item is a part of, and its own parts with where each one is
+ */
+export const mobileInventoryItemParts = <ThrowOnError extends boolean = false>(
+  options: Options<MobileInventoryItemPartsData, ThrowOnError>
+): RequestResult<MobileInventoryItemPartsResponses, MobileInventoryItemPartsErrors, ThrowOnError> =>
+  (options.client ?? client).get<
+    MobileInventoryItemPartsResponses,
+    MobileInventoryItemPartsErrors,
+    ThrowOnError
+  >({ url: '/mobile/inventory/items/{id}/parts', ...options });
+
+/**
+ * Make an existing item a part of this assembly
+ */
+export const mobileInventoryAddItemPart = <ThrowOnError extends boolean = false>(
+  options: Options<MobileInventoryAddItemPartData, ThrowOnError>
+): RequestResult<
+  MobileInventoryAddItemPartResponses,
+  MobileInventoryAddItemPartErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).post<
+    MobileInventoryAddItemPartResponses,
+    MobileInventoryAddItemPartErrors,
+    ThrowOnError
+  >({
+    url: '/mobile/inventory/items/{id}/parts',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Stop an item being a part of this assembly; the item itself is kept
+ */
+export const mobileInventoryRemoveItemPart = <ThrowOnError extends boolean = false>(
+  options: Options<MobileInventoryRemoveItemPartData, ThrowOnError>
+): RequestResult<
+  MobileInventoryRemoveItemPartResponses,
+  MobileInventoryRemoveItemPartErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).delete<
+    MobileInventoryRemoveItemPartResponses,
+    MobileInventoryRemoveItemPartErrors,
+    ThrowOnError
+  >({
+    url: '/mobile/inventory/items/{id}/parts/{partItemId}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
 
 /**
  * A photo's bytes, base64, for a detail screen or a thumbnail row

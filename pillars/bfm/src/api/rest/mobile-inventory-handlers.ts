@@ -36,7 +36,11 @@ import { InventoryProtocolTooOldError } from '../inventory/protocol-error.js';
 import { isGatewayOk } from '../pillars/gateway.js';
 import { makeMobileInventoryMediaHandlers } from './mobile-inventory-media-handlers.js';
 import { invalidMobileCursorResponse } from './mobile-request-error.js';
-import { toCollectionUpstreamErrorResponse, toUpstreamErrorResponse } from './upstream-error.js';
+import {
+  toCollectionUpstreamErrorResponse,
+  toConflictRelayErrorResponse,
+  toUpstreamErrorResponse,
+} from './upstream-error.js';
 
 import type { ServerInferRequest } from '@ts-rest/core';
 import type { Response } from 'express';
@@ -225,6 +229,30 @@ export function makeMobileInventoryHandlers(deps: MobileInventoryHandlerDeps) {
         return toUpstreamErrorResponse(outcome);
       }
 
+      return { status: 200 as const, body: outcome.value };
+    },
+
+    itemParts: async ({ params }: Req['itemParts']) => {
+      const outcome = await deps.inventory.itemParts({ itemId: params.id });
+      if (!isGatewayOk(outcome)) return toUpstreamErrorResponse(outcome);
+      return { status: 200 as const, body: outcome.value };
+    },
+
+    addItemPart: async ({ params, body }: Req['addItemPart']) => {
+      const outcome = await deps.inventory.addItemPart({
+        itemId: params.id,
+        partItemId: body.partItemId,
+      });
+      if (!isGatewayOk(outcome)) return toConflictRelayErrorResponse(outcome);
+      return { status: 200 as const, body: outcome.value };
+    },
+
+    removeItemPart: async ({ params }: Req['removeItemPart']) => {
+      const outcome = await deps.inventory.removeItemPart({
+        itemId: params.id,
+        partItemId: params.partItemId,
+      });
+      if (!isGatewayOk(outcome)) return toUpstreamErrorResponse(outcome);
       return { status: 200 as const, body: outcome.value };
     },
 

@@ -16,6 +16,8 @@ public struct AppDependencies: Sendable {
     public let codeSuggestions: any InventoryCodeSuggestionService
     /// Product-fact lookup used by Inventory's barcode scan flow.
     public let barcodeLookup: any InventoryBarcodeLookupService
+    /// Online reads and edits of assemblies and their parts.
+    public let parts: any InventoryPartsService
     public let ego: any EgoRepository
 
     public init(
@@ -43,6 +45,9 @@ public struct AppDependencies: Sendable {
         // their composition root binds the BFM transport.
         barcodeLookup: any InventoryBarcodeLookupService =
             UnboundInventoryBarcodeLookupService(),
+        // Defaulted like the other Inventory assists: a caller with no BFM
+        // shows no Parts section rather than failing to compile.
+        parts: any InventoryPartsService = UnboundInventoryPartsService(),
         // Ego is the newest seam; existing composition roots receive the
         // failure-first implementation until the phone transport is wired.
         ego: any EgoRepository = UnboundEgoRepository()
@@ -57,6 +62,7 @@ public struct AppDependencies: Sendable {
         self.inventory = inventory
         self.codeSuggestions = codeSuggestions
         self.barcodeLookup = barcodeLookup
+        self.parts = parts
         self.ego = ego
     }
 
@@ -76,6 +82,7 @@ public struct AppDependencies: Sendable {
         inventory: UnboundInventoryStore(),
         codeSuggestions: UnboundInventoryCodeSuggestionService(),
         barcodeLookup: UnboundInventoryBarcodeLookupService(),
+        parts: UnboundInventoryPartsService(),
         ego: UnboundEgoRepository()
     )
 }
