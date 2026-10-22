@@ -1,7 +1,7 @@
 /**
  * `documents.*` sub-router — link, edit and unlink Paperless-ngx documents on
- * items, list them with the item's uploads still being consumed, and dismiss
- * an upload.
+ * items, list them with the item's uploads still being consumed, list the
+ * links to one Paperless document, and dismiss an upload.
  *
  * The upload itself (`POST /items/:itemId/documents/upload`) and the file
  * download (`GET /api/inventory/documents/:id/file`) carry raw bytes, so they
@@ -124,5 +124,15 @@ export const inventoryDocumentsContract = c.router({
     },
     summary:
       "List an item's linked documents (paginated) and its uploads still pending or failed, after resolving the pending ones",
+  },
+  listForPaperlessDocument: {
+    method: 'GET',
+    path: '/documents',
+    query: z.object({ paperlessDocumentId: PathPositiveInt }),
+    responses: {
+      200: z.object({ data: z.array(ItemDocumentSchema) }),
+      400: ErrorBodySchema,
+    },
+    summary: 'List every item link to one Paperless document (empty when none)',
   },
 });

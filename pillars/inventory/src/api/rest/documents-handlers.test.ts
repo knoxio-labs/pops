@@ -131,3 +131,60 @@ describe('documents.listForItem', () => {
     expect(response.body.data).toHaveLength(17);
   });
 });
+
+describe('documents.listForPaperlessDocument', () => {
+  const unusedMissing = () => Promise.resolve(false);
+
+  it('returns an empty list when no item links the document', async () => {
+    const api = app(documentsClient(unusedMissing));
+    const item = await makeClient(api).items.create({ itemName: 'Other document' });
+    addDocument(item.data.id, 7, 'Unrelated');
+
+    const response = await requestOn(api).get('/documents?paperlessDocumentId=8');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ data: [] });
+  });
+
+  it('returns every item link to the document and none to other documents', async () => {
+    const api = app(documentsClient(unusedMissing));
+    const client = makeClient(api);
+    const first = await client.items.create({ itemName: 'Dishwasher' });
+    const second = await client.items.create({ itemName: 'Dryer' });
+    addDocument(first.data.id, 42, 'Shared receipt');
+    addDocument(first.data.id, 43, 'Unrelated manual');
+    addDocument(second.data.id, 42, 'Shared receipt copy');
+
+    const response = await requestOn(api).get('/documents?paperlessDocumentId=42');
+
+    expect(response.status).toBe(200);
+    expect(response.body.data).toEqual([
+      expect.objectContaining({
+        itemId: first.data.id,
+        paperlessDocumentId: 42,
+        documentType: 'manual',
+        title: 'Shared receipt',
+      }),
+      expect.objectContaining({
+        itemId: second.data.id,
+        paperlessDocumentId: 42,
+        title: 'Shared receipt copy',
+      }),
+    ]);
+    expect(response.body.data[0].id).toEqual(expect.any(Number));
+  });
+
+  it.each([
+    '',
+    '?paperlessDocumentId=0',
+    '?paperlessDocumentId=-3',
+    '?paperlessDocumentId=1.5',
+    '?paperlessDocumentId=abc',
+  ])('refuses %s with 400', async (query) => {
+    const api = app(documentsClient(unusedMissing));
+
+    const response = await requestOn(api).get(`/documents${query}`);
+
+    expect(response.status).toBe(400);
+  });
+});

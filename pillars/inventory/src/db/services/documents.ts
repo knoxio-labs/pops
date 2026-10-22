@@ -168,3 +168,19 @@ export function listForItem(
 
   return { rows, total: countResult?.total ?? 0 };
 }
+
+/**
+ * Every link to one Paperless document, across all items, ordered by link id.
+ * Unpaginated: a document is linked to a handful of items at most.
+ */
+export function listForPaperlessDocument(
+  db: InventoryDb,
+  paperlessDocumentId: number
+): ItemDocumentRow[] {
+  return db
+    .select()
+    .from(itemDocuments)
+    .where(eq(itemDocuments.paperlessDocumentId, paperlessDocumentId))
+    .orderBy(asc(itemDocuments.id))
+    .all();
+}

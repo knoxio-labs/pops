@@ -106,5 +106,11 @@ export function makeDocumentsHandlers(
           },
         };
       }),
+
+    listForPaperlessDocument: ({ query }: Req['listForPaperlessDocument']) =>
+      runHttp(() => {
+        const rows = service.listDocumentsForPaperlessDocument(db, query.paperlessDocumentId);
+        return { status: 200 as const, body: { data: rows.map(toItemDocument) } };
+      }),
   };
 }

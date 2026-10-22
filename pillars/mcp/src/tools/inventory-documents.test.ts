@@ -15,6 +15,7 @@ const inventory = {
     update: vi.fn(),
     unlink: vi.fn(),
     dismissIngestion: vi.fn(),
+    listForPaperlessDocument: vi.fn(),
   },
   paperless: { search: vi.fn(), status: vi.fn() },
 };
@@ -71,6 +72,7 @@ beforeEach(() => {
     })
   );
   inventory.paperless.status.mockResolvedValue(callOk(LIMITS));
+  inventory.documents.listForPaperlessDocument.mockResolvedValue(callOk({ data: [] }));
   documents.write.delete.mockResolvedValue(callOk(undefined));
 });
 
@@ -362,31 +364,79 @@ describe.each([
 });
 
 describe('documents.delete', () => {
-  it('refuses without force, explaining that links cannot be checked', async () => {
+  const linkedTwice = callOk({
+    data: [
+      { id: 3, itemId: 'item_1', documentType: 'receipt', title: null },
+      { id: 8, itemId: 'item_2', documentType: 'manual', title: 'Manual' },
+    ],
+  });
+
+  it('refuses while items link the document, naming each link', async () => {
+    inventory.documents.listForPaperlessDocument.mockResolvedValue(linkedTwice);
     for (const args of [{ paperlessDocumentId: 42 }, { paperlessDocumentId: 42, force: false }]) {
       const result = await tool('documents.delete').handler(args);
       expect(result.isError).toBe(true);
-      expect(extractText(result)).toContain('inventory.documents.unlink');
+      const text = extractText(result);
+      expect(text).toContain('item item_1 (link 3)');
+      expect(text).toContain('item item_2 (link 8)');
+      expect(text).toContain('inventory.documents.unlink');
     }
+    expect(inventory.documents.listForPaperlessDocument).toHaveBeenCalledWith({
+      paperlessDocumentId: 42,
+    });
     expect(documents.write.delete).not.toHaveBeenCalled();
   });
 
-  it('deletes from Paperless through documents with force', async () => {
-    const result = await tool('documents.delete').handler({ paperlessDocumentId: 42, force: true });
+  it('deletes from Paperless through documents when no item links it', async () => {
+    const result = await tool('documents.delete').handler({ paperlessDocumentId: 42 });
+    expect(inventory.documents.listForPaperlessDocument).toHaveBeenCalledWith({
+      paperlessDocumentId: 42,
+    });
     expect(documents.write.delete).toHaveBeenCalledWith({ id: 42 });
     expect(parseResult(result)).toEqual({ deleted: true, paperlessDocumentId: 42 });
   });
 
-  it('refuses a missing or malformed id without calling documents', async () => {
-    for (const args of [{ force: true }, { paperlessDocumentId: -2, force: true }]) {
+  it('deletes with force without checking the links', async () => {
+    inventory.documents.listForPaperlessDocument.mockResolvedValue(linkedTwice);
+    const result = await tool('documents.delete').handler({ paperlessDocumentId: 42, force: true });
+    expect(inventory.documents.listForPaperlessDocument).not.toHaveBeenCalled();
+    expect(documents.write.delete).toHaveBeenCalledWith({ id: 42 });
+    expect(parseResult(result)).toEqual({ deleted: true, paperlessDocumentId: 42 });
+  });
+
+  it('returns an inventory failure through mapCallResult and does not delete', async () => {
+    inventory.documents.listForPaperlessDocument.mockResolvedValueOnce(unauthorized);
+    const result = await tool('documents.delete').handler({ paperlessDocumentId: 42 });
+    expect(result.isError).toBe(true);
+    expect(extractText(result)).toContain("'inventory.documents.listForPaperlessDocument'");
+    expect(documents.write.delete).not.toHaveBeenCalled();
+  });
+
+  it('does not delete when inventory is unreachable', async () => {
+    inventory.documents.listForPaperlessDocument.mockResolvedValueOnce(
+      callUnavailable('inventory')
+    );
+    const result = await tool('documents.delete').handler({ paperlessDocumentId: 42 });
+    expect(result.isError).toBe(true);
+    expect(extractText(result)).toContain("'inventory' is unavailable");
+    expect(documents.write.delete).not.toHaveBeenCalled();
+  });
+
+  it('refuses a missing or malformed id without calling either pillar', async () => {
+    for (const args of [
+      { force: true },
+      { paperlessDocumentId: -2 },
+      { paperlessDocumentId: 1.5 },
+    ]) {
       expect((await tool('documents.delete').handler(args)).isError).toBe(true);
     }
+    expect(inventory.documents.listForPaperlessDocument).not.toHaveBeenCalled();
     expect(documents.write.delete).not.toHaveBeenCalled();
   });
 
   it("names documents' delete scope when documents refuses the credential", async () => {
     documents.write.delete.mockResolvedValueOnce({ ...unauthorized, pillar: 'documents' });
-    const result = await tool('documents.delete').handler({ paperlessDocumentId: 42, force: true });
+    const result = await tool('documents.delete').handler({ paperlessDocumentId: 42 });
     expect(result.isError).toBe(true);
     expect(extractText(result)).toContain("'documents.write.delete'");
   });

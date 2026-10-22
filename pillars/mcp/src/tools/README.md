@@ -179,8 +179,9 @@ though nothing enforces it mechanically.
   JPEG or HEIC, naming the document tool.
 - `documents.delete` calls documents' `write.delete` directly, since inventory
   has no route that deletes from Paperless; it needs `documents.write.delete`.
-  Inventory cannot list the links to one Paperless id, so the tool cannot
-  check them and refuses unless `force: true`.
+  It first asks inventory (`documents.listForPaperlessDocument`) for the links
+  to that Paperless id and refuses, naming them, while any exist; an inventory
+  failure is returned rather than deleting blind. `force: true` skips the check.
 
 ## Not here
 

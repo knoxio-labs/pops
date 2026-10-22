@@ -86,6 +86,14 @@ export function listDocumentsForItem(
   return documentsService.listForItem(db, itemId, limit, offset);
 }
 
+/** Every item's link to one Paperless document; empty when none. */
+export function listDocumentsForPaperlessDocument(
+  db: InventoryDb,
+  paperlessDocumentId: number
+): ItemDocumentRow[] {
+  return documentsService.listForPaperlessDocument(db, paperlessDocumentId);
+}
+
 /** One link by id; 404 when absent. */
 export function getDocument(db: InventoryDb, id: number): ItemDocumentRow {
   return translate(() => documentsService.get(db, id));

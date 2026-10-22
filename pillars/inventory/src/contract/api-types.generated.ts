@@ -55,6 +55,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/documents': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List every item link to one Paperless document (empty when none) */
+    get: operations['documents.listForPaperlessDocument'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/documents/{id}': {
     parameters: {
       query?: never;
@@ -1775,6 +1792,46 @@ export interface operations {
       };
       /** @description 409 */
       409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
+    };
+  };
+  'documents.listForPaperlessDocument': {
+    parameters: {
+      query: {
+        paperlessDocumentId: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description 200 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            data: {
+              createdAt: string;
+              documentType: string;
+              id: number;
+              itemId: string;
+              paperlessDocumentId: number;
+              title: string | null;
+            }[];
+          };
+        };
+      };
+      /** @description 400 */
+      400: {
         headers: {
           [name: string]: unknown;
         };

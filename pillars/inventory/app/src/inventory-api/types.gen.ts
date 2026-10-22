@@ -320,6 +320,44 @@ export type DocumentsDismissIngestionResponses = {
 export type DocumentsDismissIngestionResponse =
   DocumentsDismissIngestionResponses[keyof DocumentsDismissIngestionResponses];
 
+export type DocumentsListForPaperlessDocumentData = {
+  body?: never;
+  path?: never;
+  query: {
+    paperlessDocumentId: number;
+  };
+  url: '/documents';
+};
+
+export type DocumentsListForPaperlessDocumentErrors = {
+  /**
+   * 400
+   */
+  400: ErrorBody;
+};
+
+export type DocumentsListForPaperlessDocumentError =
+  DocumentsListForPaperlessDocumentErrors[keyof DocumentsListForPaperlessDocumentErrors];
+
+export type DocumentsListForPaperlessDocumentResponses = {
+  /**
+   * 200
+   */
+  200: {
+    data: Array<{
+      createdAt: string;
+      documentType: string;
+      id: number;
+      itemId: string;
+      paperlessDocumentId: number;
+      title: string | null;
+    }>;
+  };
+};
+
+export type DocumentsListForPaperlessDocumentResponse =
+  DocumentsListForPaperlessDocumentResponses[keyof DocumentsListForPaperlessDocumentResponses];
+
 export type DocumentsUnlinkData = {
   /**
    * Body

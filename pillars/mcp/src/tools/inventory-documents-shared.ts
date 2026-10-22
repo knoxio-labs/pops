@@ -20,6 +20,9 @@ export type InventoryDocumentsShape = {
     update: (input: IdInput & { documentType?: DocumentType; title?: string }) => unknown;
     unlink: (input: IdInput) => unknown;
     dismissIngestion: (input: IdInput) => unknown;
+    listForPaperlessDocument: (input: {
+      paperlessDocumentId: number;
+    }) => InventoryPaperlessDocumentLinks;
   };
   paperless: {
     search: (input: { query: string }) => unknown;
@@ -30,6 +33,11 @@ export type InventoryDocumentsShape = {
 /** Inventory's `paperless.status`, which relays documents' upload limits; `null` when documents gave none. */
 export type InventoryPaperlessStatus = {
   data: { maxUploadBytes: number | null; allowedMimeTypes: string[] | null };
+};
+
+/** Inventory's `documents.listForPaperlessDocument`: every item link to one Paperless document. */
+export type InventoryPaperlessDocumentLinks = {
+  data: { id: number; itemId: string; documentType: string; title: string | null }[];
 };
 
 /** The slice of documents' contract the gateway calls directly: Paperless deletion. */
@@ -61,6 +69,14 @@ export function reqPositiveInt(args: Record<string, unknown>, key: string): numb
   const value = args[key];
   return typeof value === 'number' && Number.isInteger(value) && value > 0 ? value : null;
 }
+
+/** JSON schema of a Paperless document id argument. */
+export const paperlessIdProperty = {
+  type: 'integer',
+  minimum: 1,
+  description:
+    'The Paperless document id (from documents.search, or `paperlessDocumentId` in a list)',
+} as const;
 
 /** JSON schema of a `documentType` argument. */
 export const documentTypeProperty = {

@@ -855,6 +855,88 @@
         "tags": ["documents"]
       }
     },
+    "/documents": {
+      "get": {
+        "operationId": "documents.listForPaperlessDocument",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "paperlessDocumentId",
+            "required": true,
+            "schema": {
+              "exclusiveMinimum": true,
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "documentType": {
+                            "type": "string"
+                          },
+                          "id": {
+                            "type": "number"
+                          },
+                          "itemId": {
+                            "type": "string"
+                          },
+                          "paperlessDocumentId": {
+                            "type": "number"
+                          },
+                          "title": {
+                            "nullable": true,
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "itemId",
+                          "paperlessDocumentId",
+                          "documentType",
+                          "title",
+                          "createdAt"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
+          }
+        },
+        "summary": "List every item link to one Paperless document (empty when none)",
+        "tags": ["documents"]
+      }
+    },
     "/documents/{id}": {
       "delete": {
         "operationId": "documents.unlink",
