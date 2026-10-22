@@ -69,7 +69,9 @@ type InventorySyncShape = {
     };
   };
   web: {
-    get: (input: { id: string }) => { item: { id: string; revision: number } };
+    get: (input: { id: string }) => {
+      item: { id: string; revision: number; photos: { sha256: string }[] };
+    };
   };
 };
 
@@ -84,6 +86,13 @@ export async function fetchItemRevision(id: string): Promise<CallResult<number>>
   const result = await inventorySync().web.get({ id });
   if (result.kind !== 'ok') return result;
   return { kind: 'ok', value: result.value.item.revision };
+}
+
+/** How many photos an item has right now, so an attach without a position appends. */
+export async function fetchItemPhotoCount(id: string): Promise<CallResult<number>> {
+  const result = await inventorySync().web.get({ id });
+  if (result.kind !== 'ok') return result;
+  return { kind: 'ok', value: result.value.item.photos.length };
 }
 
 /**

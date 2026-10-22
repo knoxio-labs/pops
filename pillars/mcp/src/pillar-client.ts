@@ -24,9 +24,9 @@
  * default that can drift out of sync with the compose fleet and silently
  * outrank the registry.
  */
-import { configureServerSdk, pillar } from '@pops/pillar-sdk/server';
+import { buildRawDiscovery, configureServerSdk, pillar } from '@pops/pillar-sdk/server';
 
-import type { PillarHandle, ServerPillarOptions } from '@pops/pillar-sdk/server';
+import type { PillarHandle, RawDiscovery, ServerPillarOptions } from '@pops/pillar-sdk/server';
 
 const PILLAR_API_URL_ENV_VARS: Readonly<Record<string, string>> = {
   inventory: 'POPS_INVENTORY_API_URL',
@@ -141,10 +141,24 @@ export function getPillar<TRouter>(
   return pillar<TRouter>(pillarId, options);
 }
 
+let rawDiscovery: RawDiscovery | undefined;
+
+/**
+ * Base-URL discovery for a raw call that has no contract operation, such as
+ * inventory's `PUT /media/:sha256` byte route. Uses the same registry and
+ * overrides as {@link getPillar}; the caller attaches the credential.
+ */
+export function getRawDiscovery(): RawDiscovery {
+  ensureConfigured();
+  rawDiscovery ??= buildRawDiscovery();
+  return rawDiscovery;
+}
+
 /**
  * Test seam — drops the boot guard so a test can install a fresh config
  * and re-bootstrap.
  */
 export function __resetPillarClientForTests(): void {
   configured = false;
+  rawDiscovery = undefined;
 }

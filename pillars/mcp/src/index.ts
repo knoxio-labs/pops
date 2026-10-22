@@ -14,10 +14,11 @@ import { assertSecretFilesReadable } from '@pops/pillar-sdk/pillar-env';
 import { inboundAuth, isInboundAuthConfigured, requireInboundToken } from './auth.js';
 import { requireServiceAccountKey, resolveServiceAccountKey } from './service-account-key.js';
 import { allTools } from './tools/index.js';
+import { createUploadRouter, UPLOAD_ROUTE_PREFIX } from './uploads/upload-route.js';
 
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 
-import type { ToolDef } from './tools/tool-def.js';
+import type { ToolContext, ToolDef } from './tools/tool-def.js';
 
 /**
  * A tool's listed description, plus the scope it declares (`ToolDef.scope`)
@@ -54,7 +55,7 @@ function logToolCall(
   }
 }
 
-export function createMcpServer(): Server {
+export function createMcpServer(context: ToolContext = {}): Server {
   const server = new Server({ name: 'pops', version: '1.0.0' }, { capabilities: { tools: {} } });
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
@@ -79,7 +80,7 @@ export function createMcpServer(): Server {
     }
     const args: Record<string, unknown> = rawArgs ?? {};
     try {
-      const result: CallToolResult = await tool.handler(args);
+      const result: CallToolResult = await tool.handler(args, context);
       logToolCall(name, result.isError ? 'error' : 'ok', Date.now() - start);
       return result;
     } catch (err) {
@@ -116,15 +117,33 @@ export function attachServerCleanup(
   });
 }
 
+/**
+ * The origin a client should use to reach this gateway: `MCP_PUBLIC_URL` when
+ * set (a proxy in front changes what the client dialled), else the request's
+ * own protocol and `Host`.
+ */
+export function resolvePublicBaseUrl(
+  req: { protocol: string; get(name: 'host'): string | undefined },
+  env: NodeJS.ProcessEnv = process.env
+): string | undefined {
+  const configured = env['MCP_PUBLIC_URL']?.trim();
+  if (configured !== undefined && configured !== '') return configured.replace(/\/+$/u, '');
+  const host = req.get('host');
+  return host === undefined ? undefined : `${req.protocol}://${host}`;
+}
+
 app.post('/mcp', inboundAuth, async (req, res) => {
   const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
-  const server = createMcpServer();
+  const publicBaseUrl = resolvePublicBaseUrl(req);
+  const server = createMcpServer(publicBaseUrl === undefined ? {} : { publicBaseUrl });
 
   attachServerCleanup(res, server);
 
   await server.connect(transport);
   await transport.handleRequest(req, res, req.body);
 });
+
+app.use(UPLOAD_ROUTE_PREFIX, createUploadRouter());
 
 // Liveness vs readiness:
 //   /health  — fast, no upstream calls, used by Docker HEALTHCHECK

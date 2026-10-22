@@ -5,9 +5,10 @@ MCP (Model Context Protocol) HTTP gateway for POPS. Exposes inventory, finance, 
 - **Transport:** Streamable HTTP (`POST /mcp`), stateless — a fresh server + transport per request
 - **Port:** 3011 (configurable via `MCP_PORT`), listens on `0.0.0.0` inside the container; both compose files publish it on the host as `${MCP_BIND_ADDR:-0.0.0.0}:3011:3011`
 - **Inbound auth:** `POST /mcp` always requires `Authorization: Bearer <token>`. Configure `MCP_INBOUND_TOKEN_FILE` or `MCP_INBOUND_TOKEN`; the mounted file takes precedence and must be readable and contain one bearer token. Startup fails when the setting is missing, blank, or malformed. `/health` and `/ready` stay open; `/ready` reports degraded until both inbound auth and the outbound service-account key are configured.
+- **Photo uploads:** `PUT /uploads/:token` accepts one JPEG or HEIC (up to 8 MB) for a URL minted by `inventory.photos.createUpload`. The single-use token is the credential, so the route takes no bearer token. URLs are built from `MCP_PUBLIC_URL`, else from the `/mcp` request's `Host`; set it when a proxy changes the address clients dial. The service account needs `inventory.media.upload`.
 - **Outbound auth:** Authenticates to pillars with a service-account key (`POPS_INTERNAL_API_KEY`, legacy `POPS_API_KEY`, or the `POPS_API_KEY_FILE` Docker-secret pattern).
 
-The tool surface — 89 tools over the `inventory`, `finance`, `contacts`, `tags`, `orchestrator`, `media`, `cerebrum`, `purchases`, and `bfm` pillars — lives in [`src/tools/`](src/tools/README.md). `bfm.devicePairing.issueCode` returns only a short-lived code, pairing URL, and expiry; it never returns device credentials or exposes device listing/revocation.
+The tool surface — 92 tools over the `inventory`, `finance`, `contacts`, `tags`, `orchestrator`, `media`, `cerebrum`, `purchases`, and `bfm` pillars — lives in [`src/tools/`](src/tools/README.md). `bfm.devicePairing.issueCode` returns only a short-lived code, pairing URL, and expiry; it never returns device credentials or exposes device listing/revocation.
 
 ## Prerequisites
 
@@ -88,10 +89,10 @@ inventory:acceptance` at the repo root runs it with evidence records.
 
 ```bash
 curl http://localhost:3011/health
-# {"status":"ok","tools":89}
+# {"status":"ok","tools":92}
 
 curl http://localhost:3011/ready
-# {"status":"ready","apiKeyConfigured":true,"inboundAuthConfigured":true,"tools":89}
+# {"status":"ready","apiKeyConfigured":true,"inboundAuthConfigured":true,"tools":92}
 ```
 
 `/health` is liveness and makes no upstream calls, so it answers `ok` even with no

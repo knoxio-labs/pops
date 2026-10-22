@@ -149,6 +149,13 @@ though nothing enforces it mechanically.
   same non-mutating scope as `inventory.catalogue.get`/`getType`/`audit`, not
   `inventory.types.manage` — since it validates against a published revision
   without touching the draft.
+- Item photos are content-addressed. `inventory.photos.createUpload` mints a
+  single-use URL (10 minutes, `../uploads/`); a shell `PUT`s the image to it,
+  the gateway stores it with inventory's `PUT /media/:sha256` and answers the
+  hash. `inventory.items.attachPhoto` and `removePhoto` then send
+  `item.attachPhoto`/`item.removePhoto`, which take no base revision. An image
+  never travels through tool arguments: a model cannot emit megabytes of
+  base64.
 
 ## Not here
 

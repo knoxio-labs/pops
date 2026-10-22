@@ -4,7 +4,7 @@ const { allTools } = await import('./index.js');
 
 describe('allTools', () => {
   it('exports exactly 89 tools', () => {
-    expect(allTools).toHaveLength(89);
+    expect(allTools).toHaveLength(92);
   });
 
   it('registers purchases inventory proposal tools', () => {

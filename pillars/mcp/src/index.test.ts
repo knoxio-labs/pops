@@ -42,6 +42,11 @@ vi.mock('express', () => {
   return { default: express };
 });
 
+vi.mock('./uploads/upload-route.js', () => ({
+  UPLOAD_ROUTE_PREFIX: '/uploads',
+  createUploadRouter: vi.fn(() => vi.fn()),
+}));
+
 const mockToolHandler = vi.fn().mockResolvedValue({
   content: [{ type: 'text', text: '{"ok":true}' }],
 });
@@ -74,7 +79,8 @@ vi.mock('./tools/index.js', () => ({
 // Import schemas and server after mocks are set up
 const { ListToolsRequestSchema, CallToolRequestSchema } =
   await import('@modelcontextprotocol/sdk/types.js');
-const { createMcpServer, resolvePort, DEFAULT_MCP_PORT } = await import('./index.js');
+const { createMcpServer, resolvePort, resolvePublicBaseUrl, DEFAULT_MCP_PORT } =
+  await import('./index.js');
 
 type ReadyResponse = {
   status: (status: number) => ReadyResponse;
@@ -202,7 +208,7 @@ describe('createMcpServer — CallTool handler', () => {
       params: { name: 'test.echo', arguments: { key: 'value' } },
     })) as { content: { text: string }[]; isError?: boolean };
 
-    expect(mockToolHandler).toHaveBeenCalledWith({ key: 'value' });
+    expect(mockToolHandler).toHaveBeenCalledWith({ key: 'value' }, {});
     expect(response.isError).toBeUndefined();
     expect(response.content[0]?.text).toBe('{"ok":true}');
   });
@@ -231,7 +237,49 @@ describe('createMcpServer — CallTool handler', () => {
   it('passes empty object when arguments is undefined', async () => {
     const handler = capturedHandlers.get(CallToolRequestSchema)!;
     await handler({ params: { name: 'test.echo' } });
-    expect(mockToolHandler).toHaveBeenCalledWith({});
+    expect(mockToolHandler).toHaveBeenCalledWith({}, {});
+  });
+});
+
+describe('createMcpServer — tool context', () => {
+  it('hands the request context to the tool handler', async () => {
+    capturedHandlers.clear();
+    mockToolHandler.mockClear();
+    createMcpServer({ publicBaseUrl: 'http://pops.local:3011' });
+    const handler = capturedHandlers.get(CallToolRequestSchema)!;
+    await handler({ params: { name: 'test.echo', arguments: { a: 1 } } });
+    expect(mockToolHandler).toHaveBeenCalledWith(
+      { a: 1 },
+      { publicBaseUrl: 'http://pops.local:3011' }
+    );
+  });
+});
+
+describe('resolvePublicBaseUrl', () => {
+  const request = (host: string | undefined, protocol = 'http') => ({
+    protocol,
+    get: () => host,
+  });
+
+  it('derives the origin from the request protocol and Host header', () => {
+    expect(resolvePublicBaseUrl(request('pops.local:3011'), {})).toBe('http://pops.local:3011');
+    expect(resolvePublicBaseUrl(request('mcp.example', 'https'), {})).toBe('https://mcp.example');
+  });
+
+  it('prefers MCP_PUBLIC_URL and strips trailing slashes', () => {
+    expect(
+      resolvePublicBaseUrl(request('internal:3011'), { MCP_PUBLIC_URL: ' https://mcp.example// ' })
+    ).toBe('https://mcp.example');
+  });
+
+  it('ignores a blank MCP_PUBLIC_URL', () => {
+    expect(resolvePublicBaseUrl(request('pops.local:3011'), { MCP_PUBLIC_URL: '  ' })).toBe(
+      'http://pops.local:3011'
+    );
+  });
+
+  it('returns undefined with no Host header and no override', () => {
+    expect(resolvePublicBaseUrl(request(undefined), {})).toBeUndefined();
   });
 });
 
