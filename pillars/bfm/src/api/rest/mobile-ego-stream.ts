@@ -28,7 +28,7 @@ export interface MobileEgoStreamDeps {
 }
 
 /**
- * Build the one `/mobile` route outside the ts-rest contract. Its capability
+ * Build the Ego event-stream route, outside the ts-rest contract. Its capability
  * is declared beside the gate in `UNCONTRACTED_MOBILE_ROUTES`.
  */
 export function makeMobileEgoStreamRouter(deps: MobileEgoStreamDeps): Router {

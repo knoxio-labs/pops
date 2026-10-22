@@ -11,7 +11,7 @@ import { devices } from '../../db/index.js';
 import { mintAccessToken } from '../auth/access-token.js';
 import { createMobileInventoryClient } from '../inventory/client.js';
 import { createPillarGateway } from '../pillars/gateway.js';
-import { createTestApp, type TestApp } from './harness.js';
+import { createTestApp, type TestApp, type TestAppOptions } from './harness.js';
 import { requestOn } from './test-http.js';
 
 import type { Express } from 'express';
@@ -32,10 +32,18 @@ export function openWith(
   capabilities: readonly MobileCapability[] = DEFAULT_DEVICE_CAPABILITIES,
   inventoryMedia?: MobileInventoryMediaClient
 ): { app: Express; token: string } {
-  const created = createTestApp({
-    inventory: createMobileInventoryClient(createPillarGateway(factory)),
-    inventoryMedia,
-  });
+  return openWithOptions(
+    { inventory: createMobileInventoryClient(createPillarGateway(factory)), inventoryMedia },
+    capabilities
+  );
+}
+
+/** {@link openWith} over any test-app options, for suites that fake a client it does not take. */
+export function openWithOptions(
+  options: TestAppOptions,
+  capabilities: readonly MobileCapability[] = DEFAULT_DEVICE_CAPABILITIES
+): { app: Express; token: string } {
+  const created = createTestApp(options);
   apps.push(created);
 
   const row = deviceRow({

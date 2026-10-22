@@ -23,6 +23,10 @@ import { createMobileInventoryMediaClient } from '../inventory/media-client.js';
 import { createPillarGateway } from '../pillars/gateway.js';
 import { createMobilePurchasesClient } from '../purchases/client.js';
 import { createRateLimiter, type RateLimiter } from '../rate-limit.js';
+import {
+  inventoryDocumentDeps,
+  type InventoryDocumentTestOptions,
+} from './inventory-documents-deps.js';
 
 import type { Express } from 'express';
 
@@ -85,7 +89,7 @@ export interface TestApp {
   cleanup: () => void;
 }
 
-export interface TestAppOptions {
+export interface TestAppOptions extends InventoryDocumentTestOptions {
   version?: string;
   /** Drives the operator identity middleware. See {@link PRODUCTION_ENV}. */
   env?: NodeJS.ProcessEnv;
@@ -277,6 +281,7 @@ export function createTestApp(options: TestAppOptions = {}): TestApp {
   const deps: BfmApiDeps = {
     version: options.version ?? '0.0.1-test',
     ...clientDeps(options),
+    ...inventoryDocumentDeps(options),
     db: opened.db,
     accessTokenSigningKey,
     publicBaseUrl: options.publicBaseUrl ?? TEST_PUBLIC_BASE_URL,

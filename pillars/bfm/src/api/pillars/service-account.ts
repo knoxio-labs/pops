@@ -39,7 +39,9 @@ export const BFM_SERVICE_ACCOUNT_NAME = 'bfm';
  * `inventory.codes` is the
  * code-suggestion route's own sub-router grant (A12), and `inventory.media`
  * is inventory's raw content-addressed media store's own scope, reached by
- * the media relay's `PUT`/`GET` (A13). Every later mobile
+ * the media relay's `PUT`/`GET` (A13). `inventory.documents` covers an item's
+ * Paperless documents: the list, edit, unlink and dismiss contract routes
+ * and the raw upload and file routes. Every later mobile
  * surface—including barcode lookup—widens this list in its own ticket,
  * so it stays a readable record of what bfm calls rather than a wildcard
  * nobody can audit. Scopes match by dot prefix, so `finance.transactions`
@@ -85,6 +87,7 @@ export const BFM_SERVICE_ACCOUNT_SCOPES: readonly string[] = [
   'inventory.types.read',
   'inventory.codes',
   'inventory.media',
+  'inventory.documents',
   'barcode.lookup',
   'cerebrum.ego',
 ];

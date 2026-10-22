@@ -218,7 +218,8 @@ export const MOBILE_CAPABILITY_SCOPES: Readonly<Record<MobileCapability, readonl
    * immutable catalogue reads use the read scope too. `inventory.sync` covers
    * the snapshot/changes/history routes. See
    * `pillars/inventory/src/contract/rest-sync.ts`. `inventory.media` is the raw
-   * media store's own scope (A13), which `getMedia` reaches. `inventory.codes`
+   * media store's own scope (A13), which `getMedia` reaches. `inventory.documents`
+   * lists an item's documents and reads a document's file. `inventory.codes`
    * is not here: nothing this capability calls suggests a code.
    */
   'inventory.read': [
@@ -226,18 +227,24 @@ export const MOBILE_CAPABILITY_SCOPES: Readonly<Record<MobileCapability, readonl
     'inventory.types.catalogue',
     'inventory.types.read',
     'inventory.media',
+    'inventory.documents',
   ],
   /**
-   * Three prefixes for the same reason `inventory.read`'s are widened: the
+   * Several prefixes for the same reason `inventory.read`'s are widened: the
    * sync contract's own scope gate derives one grant per sub-router, and
    * `inventory.media` is the raw media store's own scope — `inventory.sync`
    * for `POST /sync/mutations`, `inventory.codes` for `POST /codes/suggest`
    * (`pillars/inventory/src/contract/rest-sync.ts`), `inventory.media` for
-   * `putMedia` (A13). `inventory.sync` and `inventory.media` are already
-   * granted for `inventory.read`, so only `inventory.codes` widens the
-   * account beyond what reading already needed.
+   * `putMedia` (A13), `inventory.documents` for uploading, editing,
+   * unlinking and dismissing an item's documents. Only `inventory.codes` is
+   * not already needed by `inventory.read`.
    */
-  'inventory.write': ['inventory.sync', 'inventory.codes', 'inventory.media'],
+  'inventory.write': [
+    'inventory.sync',
+    'inventory.codes',
+    'inventory.media',
+    'inventory.documents',
+  ],
   /** The barcode lookup route is the only downstream operation this grants. */
   'barcode.read': ['barcode.lookup'],
   /**

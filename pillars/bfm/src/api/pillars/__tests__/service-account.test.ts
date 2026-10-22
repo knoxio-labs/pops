@@ -133,6 +133,7 @@ describe('the granted scopes', () => {
       'inventory.types.read',
       'inventory.codes',
       'inventory.media',
+      'inventory.documents',
       'barcode.lookup',
       'cerebrum.ego',
     ]);

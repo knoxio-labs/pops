@@ -151,6 +151,16 @@ function mapRefused(
       ...producerEnvelopeFields(failure),
     };
   }
+  if (failure.status === 412) {
+    return {
+      kind: 'precondition-failed',
+      pillar: target,
+      status: 412,
+      upstreamStatus: failure.status,
+      detail: withUpstreamStatus(failure.status, failure.message),
+      ...producerEnvelopeFields(failure),
+    };
+  }
   if (failure.status === 426) {
     return {
       kind: 'protocol-too-old',

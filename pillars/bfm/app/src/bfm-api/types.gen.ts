@@ -3455,6 +3455,389 @@ export type MobileInventorySuggestCodesResponses = {
 export type MobileInventorySuggestCodesResponse =
   MobileInventorySuggestCodesResponses[keyof MobileInventorySuggestCodesResponses];
 
+export type MobileInventoryDismissDocumentIngestionData = {
+  body?: never;
+  path: {
+    id: number;
+  };
+  query?: never;
+  url: '/mobile/inventory/document-ingestions/{id}';
+};
+
+export type MobileInventoryDismissDocumentIngestionErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code: 'invalid_cursor' | 'bfm.request.invalid';
+    details?: unknown;
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 403
+   */
+  403:
+    | {
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
+        message: string;
+        requestId: string;
+        retryable: boolean;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      };
+  /**
+   * 404
+   */
+  404: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+  /**
+   * 502
+   */
+  502: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+};
+
+export type MobileInventoryDismissDocumentIngestionError =
+  MobileInventoryDismissDocumentIngestionErrors[keyof MobileInventoryDismissDocumentIngestionErrors];
+
+export type MobileInventoryDismissDocumentIngestionResponses = {
+  /**
+   * 200
+   */
+  200: {
+    id: number;
+  };
+};
+
+export type MobileInventoryDismissDocumentIngestionResponse =
+  MobileInventoryDismissDocumentIngestionResponses[keyof MobileInventoryDismissDocumentIngestionResponses];
+
+export type MobileInventoryUnlinkItemDocumentData = {
+  body?: never;
+  path: {
+    id: number;
+  };
+  query?: never;
+  url: '/mobile/inventory/documents/{id}';
+};
+
+export type MobileInventoryUnlinkItemDocumentErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code: 'invalid_cursor' | 'bfm.request.invalid';
+    details?: unknown;
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 403
+   */
+  403:
+    | {
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
+        message: string;
+        requestId: string;
+        retryable: boolean;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      };
+  /**
+   * 404
+   */
+  404: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+  /**
+   * 502
+   */
+  502: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+};
+
+export type MobileInventoryUnlinkItemDocumentError =
+  MobileInventoryUnlinkItemDocumentErrors[keyof MobileInventoryUnlinkItemDocumentErrors];
+
+export type MobileInventoryUnlinkItemDocumentResponses = {
+  /**
+   * 200
+   */
+  200: {
+    id: number;
+  };
+};
+
+export type MobileInventoryUnlinkItemDocumentResponse =
+  MobileInventoryUnlinkItemDocumentResponses[keyof MobileInventoryUnlinkItemDocumentResponses];
+
+export type MobileInventoryUpdateItemDocumentData = {
+  /**
+   * Body
+   */
+  body?: {
+    documentType?: 'receipt' | 'warranty' | 'manual' | 'invoice' | 'other';
+    title?: string;
+  };
+  path: {
+    id: number;
+  };
+  query?: never;
+  url: '/mobile/inventory/documents/{id}';
+};
+
+export type MobileInventoryUpdateItemDocumentErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code: 'invalid_cursor' | 'bfm.request.invalid';
+    details?: unknown;
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 403
+   */
+  403:
+    | {
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
+        message: string;
+        requestId: string;
+        retryable: boolean;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      };
+  /**
+   * 404
+   */
+  404: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 412
+   */
+  412: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+  /**
+   * 502
+   */
+  502: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+};
+
+export type MobileInventoryUpdateItemDocumentError =
+  MobileInventoryUpdateItemDocumentErrors[keyof MobileInventoryUpdateItemDocumentErrors];
+
+export type MobileInventoryUpdateItemDocumentResponses = {
+  /**
+   * 200
+   */
+  200: {
+    createdAt: string;
+    documentType: string;
+    id: number;
+    paperlessDocumentId: number;
+    title: string | null;
+  };
+};
+
+export type MobileInventoryUpdateItemDocumentResponse =
+  MobileInventoryUpdateItemDocumentResponses[keyof MobileInventoryUpdateItemDocumentResponses];
+
 export type MobileInventoryListItemsData = {
   body?: never;
   path?: never;
@@ -3702,6 +4085,134 @@ export type MobileInventoryListItemsResponses = {
 
 export type MobileInventoryListItemsResponse =
   MobileInventoryListItemsResponses[keyof MobileInventoryListItemsResponses];
+
+export type MobileInventoryListItemDocumentsData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/mobile/inventory/items/{id}/documents';
+};
+
+export type MobileInventoryListItemDocumentsErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code: 'invalid_cursor' | 'bfm.request.invalid';
+    details?: unknown;
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 403
+   */
+  403:
+    | {
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
+        message: string;
+        requestId: string;
+        retryable: boolean;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+  /**
+   * 502
+   */
+  502: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+};
+
+export type MobileInventoryListItemDocumentsError =
+  MobileInventoryListItemDocumentsErrors[keyof MobileInventoryListItemDocumentsErrors];
+
+export type MobileInventoryListItemDocumentsResponses = {
+  /**
+   * 200
+   */
+  200: {
+    failed: Array<{
+      createdAt: string;
+      documentType: string;
+      fileName: string;
+      id: number;
+      reason: string | null;
+      state: 'pending' | 'failed';
+      title: string | null;
+    }>;
+    linked: Array<{
+      createdAt: string;
+      documentType: string;
+      id: number;
+      missing: boolean | null;
+      paperlessDocumentId: number;
+      title: string | null;
+    }>;
+    pending: Array<{
+      createdAt: string;
+      documentType: string;
+      fileName: string;
+      id: number;
+      reason: string | null;
+      state: 'pending' | 'failed';
+      title: string | null;
+    }>;
+  };
+};
+
+export type MobileInventoryListItemDocumentsResponse =
+  MobileInventoryListItemDocumentsResponses[keyof MobileInventoryListItemDocumentsResponses];
 
 export type MobileInventoryItemHistoryData = {
   body?: never;
