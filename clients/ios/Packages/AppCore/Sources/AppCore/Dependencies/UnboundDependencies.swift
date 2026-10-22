@@ -209,6 +209,48 @@ public struct UnboundInventoryPartsService: InventoryPartsService {
     }
 }
 
+/// The documents service used until a composition root binds one. Answers
+/// `unavailable`, which the item page draws from the replica alone.
+public struct UnboundInventoryDocumentsService: InventoryDocumentsService {
+    public init() {}
+
+    public func documents(of itemId: InventoryItem.ID) async throws -> InventoryItemDocuments {
+        throw InventoryDocumentsError.unavailable
+    }
+
+    public func updateDocument(_ id: InventoryLinkedDocument.ID, _ edit: InventoryDocumentEdit)
+        async throws
+    {
+        throw InventoryDocumentsError.unavailable
+    }
+
+    public func unlinkDocument(_ id: InventoryLinkedDocument.ID) async throws {
+        throw InventoryDocumentsError.unavailable
+    }
+
+    public func dismissIngestion(_ id: InventoryDocumentIngestion.ID) async throws {
+        throw InventoryDocumentsError.unavailable
+    }
+
+    public func upload(_ upload: InventoryDocumentUpload, to itemId: InventoryItem.ID)
+        async throws -> InventoryDocumentIngestion
+    {
+        throw InventoryDocumentsError.unavailable
+    }
+
+    public func fileVersion(of id: InventoryLinkedDocument.ID) async throws
+        -> InventoryDocumentFileVersion
+    {
+        throw InventoryDocumentsError.unavailable
+    }
+
+    public func downloadFile(of id: InventoryLinkedDocument.ID) async throws -> (
+        temporaryURL: URL, version: InventoryDocumentFileVersion
+    ) {
+        throw InventoryDocumentsError.unavailable
+    }
+}
+
 /// The unavailable barcode lookup used until a composition root binds one.
 public struct UnboundInventoryBarcodeLookupService: InventoryBarcodeLookupService {
     /// Creates an unbound lookup that always answers unavailable.

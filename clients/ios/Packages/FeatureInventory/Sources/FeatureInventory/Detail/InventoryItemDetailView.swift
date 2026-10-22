@@ -1,3 +1,4 @@
+import AppCore
 import DesignSystem
 import SwiftUI
 
@@ -26,6 +27,7 @@ internal struct InventoryItemDetailView<Capability: View>: View {
     @State private var retakingPhoto: (sha256: String, source: InventoryPhotoSource)?
     @Environment(\.inventoryItemForm) private var itemForm
     @Environment(\.inventoryParts) private var partsService
+    @Environment(\.inventoryDocuments) private var documentsService
 
     internal init(
         detail: InventoryItemDetail,
@@ -132,7 +134,12 @@ internal struct InventoryItemDetailView<Capability: View>: View {
             capability
             InventoryItemDetailFieldsSection(fields: detail.otherFields)
             InventoryItemDetailProvenanceSection(provenance: detail.provenance)
-            InventoryItemDetailDocumentsSection(documents: detail.documents, retry: refresh)
+            if let documentsService {
+                InventoryItemDocumentsSection(
+                    itemId: detail.record.id, replica: detail.documents, service: documentsService)
+            } else {
+                InventoryItemDetailDocumentsSection(documents: detail.documents, retry: refresh)
+            }
             InventoryItemDetailIdentifiersSection(identifiers: detail.externalIdentifiers)
             InventoryItemDetailNoteSection(note: detail.note)
             InventoryItemDetailHistorySection(

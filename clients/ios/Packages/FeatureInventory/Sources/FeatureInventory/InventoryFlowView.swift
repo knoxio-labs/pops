@@ -17,6 +17,7 @@ public struct InventoryFlowView: View {
     private let store: any InventoryStore
     private let suggester: InventoryCodeSuggester
     private let parts: any InventoryPartsService
+    private let documents: any InventoryDocumentsService
     private let scan: InventoryScanPrefill
     private let entityRouter: any EntityRouter
     private let scanDiameter: CGFloat = 60
@@ -35,6 +36,7 @@ public struct InventoryFlowView: View {
         self.entityRouter = entityRouter
         scan = .system(lookup: dependencies.barcodeLookup)
         parts = dependencies.parts
+        documents = dependencies.documents
         _model = State(wrappedValue: InventoryDashboardViewModel(store: dependencies.inventory))
     }
 
@@ -55,6 +57,7 @@ public struct InventoryFlowView: View {
         }
         .inventoryItemFormPresentation(store: store, suggester: suggester, scan: scan)
         .inventoryParts(parts)
+        .inventoryDocuments(documents)
         .inventorySyncInterruptions(store: store)
         .inventoryAnnouncesStorageFullOnEntry()
     }

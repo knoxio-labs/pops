@@ -62,6 +62,10 @@ Two things it reaches for belong to other screens, and it asks for them rather t
 - **Where it goes.** The destination row opens the same `inventoryPlacementPicker` the containers and locations screens install (POPS-4064).
 - **A suggested code.** Suggestions are the server's alone (`POST /codes/suggest`), and `InventoryStore` carries no call for them, so the form takes an `InventoryCodeSuggester`. Failures show a persistent, dismissible toast with a readable reason, a selectable error identifier, Share error, and Retry. Identifiers describe the error category available to the form; raw transport diagnostics and credentials are never displayed. Empty responses are failures too; cancellation is not. A typed code is always checked against the replica, online or not.
 
+## Documents
+
+Item detail's Documents section reads the item's Paperless documents online through `inventoryDocuments` (bound beside `inventoryParts`) and never blocks the page: until the list answers, and whenever it cannot, it draws the list the item last showed (`InventoryDocumentCache`) or the replica's titles. Paperless not connected or down (`412`/`503`) shows a notice. Pending uploads show as Processing and the list is re-read every 5 seconds while one is on screen. A tap opens the file in QuickLook from the cache when it is current or the phone is offline; offline with no copy, the row says it needs a connection.
+
 ## Search, the items browser and In hand
 
 `Search/`, `Browse/` and `InHand/` are the three ways to end up looking at one item outside its own page, each over one query built the same way the dashboard's is:

@@ -226,6 +226,9 @@ internal final class AppComposition {
             codeSuggestions: inventoryTransport,
             barcodeLookup: inventoryTransport,
             parts: inventoryTransport,
+            documents: BFMInventoryDocumentsRepository(
+                client: authenticated(device), baseURL: device.baseURL,
+                authorizer: streamAuthorizer),
             ego: BFMEgoRepository(
                 client: authenticated(device),
                 baseURL: device.baseURL,
