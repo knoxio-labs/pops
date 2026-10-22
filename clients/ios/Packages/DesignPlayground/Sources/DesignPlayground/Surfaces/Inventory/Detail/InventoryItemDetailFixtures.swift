@@ -57,7 +57,10 @@ internal enum InventoryItemDetailFixtures {
         provenance: InventoryProvenance(
             merchant: "Bean & Barrel", price: "$612.00", purchasedOn: "14 Feb 2025",
             hasReceipt: true, warranty: "2 years, to 14 Feb 2027"),
-        documents: .linked(["Instruction manual", "Descaling schedule"]),
+        documents: .linked([
+            InventoryDocumentLine("Instruction manual", symbol: "book.closed"),
+            InventoryDocumentLine("Descaling schedule"),
+        ]),
         activity: [
             InventoryActivityEntry(
                 id: "packed", verb: "Packed into", subject: "Moving crate 3",
@@ -137,7 +140,7 @@ internal enum InventoryItemDetailFixtures {
         provenance: InventoryProvenance(
             merchant: "Homewares Co", price: "$49.00", purchasedOn: "3 Mar 2022",
             hasReceipt: true, warranty: nil),
-        documents: .linked(["Receipt"]),
+        documents: .linked([InventoryDocumentLine("Receipt", symbol: "receipt")]),
         activity: [
             InventoryLifecycleFixtures.lifecycle(
                 "kettle-discarded", "Discarded", .discard, when: "3 Sep",
@@ -168,7 +171,7 @@ internal enum InventoryItemDetailFixtures {
                 caption: "On the desk", isBroken: false,
                 imageData: SamplePhoto.data("reading-lamp"))
         ],
-        documents: .linked(["Receipt"]),
+        documents: .linked([InventoryDocumentLine("Receipt", symbol: "receipt")]),
         activity: [
             InventoryLifecycleFixtures.lifecycle(
                 "lamp-destroyed", "Destroyed", .destroyed, when: "12 Aug", month: "August 2026")

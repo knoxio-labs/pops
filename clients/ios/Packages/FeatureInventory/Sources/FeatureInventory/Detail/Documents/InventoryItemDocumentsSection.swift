@@ -21,7 +21,7 @@ internal struct InventoryItemDocumentsSection: View {
 
     internal var body: some View {
         InventoryItemDocumentsContent(model: model)
-            .task(id: model.itemId) { await model.watch() }
+            .task(id: "\(model.itemId)#\(model.watchGeneration)") { await model.watch() }
     }
 }
 
@@ -29,11 +29,12 @@ internal struct InventoryItemDocumentsSection: View {
 /// hand it a model directly.
 internal struct InventoryItemDocumentsContent: View {
     @Bindable internal var model: InventoryItemDocumentsModel
+    @State private var source: InventoryDocumentSource?
 
     internal var body: some View {
         let state = model.state
         Group {
-            if !state.rows.isEmpty || state.notice != nil {
+            if !state.isHidden {
                 InventoryItemDetailGroup(InventoryDocumentCopy.sectionTitle) {
                     if state.notice == .paperlessUnavailable {
                         PopsNotice(tone: .warning, text: InventoryDocumentCopy.paperlessUnavailable)
@@ -48,6 +49,10 @@ internal struct InventoryItemDocumentsContent: View {
                         ) {
                             Task { await model.open(row) }
                         }
+                        .contextMenu { InventoryDocumentRowActions(row: row, model: model) }
+                    }
+                    if state.canAdd {
+                        InventoryDocumentAddMenu(source: $source)
                     }
                 }
                 .transition(.opacity)
@@ -55,6 +60,27 @@ internal struct InventoryItemDocumentsContent: View {
         }
         .popsMotion(value: state)
         .quickLookPreview($model.preview)
+        .inventoryDocumentSources($source) { picked in model.stage(picked) }
+        .sheet(item: $model.staged, onDismiss: model.cancelStaged) { picked in
+            InventoryDocumentDetailsSheet(
+                mode: .attach(fileName: picked.fileName), onCommit: model.commitStaged)
+        }
+        .sheet(item: $model.editing) { document in
+            InventoryDocumentDetailsSheet(mode: .edit(document)) { kind, title in
+                Task { await model.edit(document, kind: kind, title: title) }
+            }
+        }
+        .confirmationDialog(
+            "Unlink document?",
+            isPresented: Binding(
+                get: { model.unlinking != nil }, set: { if !$0 { model.cancelUnlink() } }),
+            titleVisibility: .visible
+        ) {
+            Button("Unlink", role: .destructive) { Task { await model.confirmUnlink() } }
+            Button("Cancel", role: .cancel) { model.cancelUnlink() }
+        } message: {
+            Text("Paperless keeps the file.")
+        }
         .alert(
             InventoryDocumentCopy.notChanged,
             isPresented: Binding(

@@ -64,7 +64,9 @@ Two things it reaches for belong to other screens, and it asks for them rather t
 
 ## Documents
 
-Item detail's Documents section reads the item's Paperless documents online through `inventoryDocuments` (bound beside `inventoryParts`) and never blocks the page: until the list answers, and whenever it cannot, it draws the list the item last showed (`InventoryDocumentCache`) or the replica's titles. Paperless not connected or down (`412`/`503`) shows a notice. Pending uploads show as Processing and the list is re-read every 5 seconds while one is on screen. A tap opens the file in QuickLook from the cache when it is current or the phone is offline; offline with no copy, the row says it needs a connection.
+Item detail's Documents section reads the item's Paperless documents online through `inventoryDocuments` (bound beside `inventoryParts`) and never blocks the page: until the list answers, and whenever it cannot, it draws the list the item last showed (`InventoryDocumentCache`) or the replica's titles. Paperless not connected or down (`412`/`503`) shows a notice and takes Add away. Pending uploads show as Processing and the list is re-read every 5 seconds while one is on screen. A tap opens the file in QuickLook from the cache when it is current or the phone is offline; offline with no copy, the row says it needs a connection.
+
+Add document offers a file (`PopsDocumentPicker`), a scan (`PopsDocumentCamera`, rendered to one PDF) and a photo; each is staged as a file this app owns, checked against the limits the list reported, then given a kind and an optional title in a sheet. The upload streams that file and is refused offline rather than queued. Rename, Kind and Unlink (confirmed) are a row's context menu; a refused upload can be dismissed.
 
 ## Search, the items browser and In hand
 
