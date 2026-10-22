@@ -57,6 +57,7 @@ import {
 } from './mobile-inventory-schemas.js';
 import { mobileInventoryListRoutes } from './rest-mobile-inventory-list.js';
 import { mobileInventoryMediaRoutes } from './rest-mobile-inventory-media.js';
+import { mobileInventoryPartsRoutes } from './rest-mobile-inventory-parts.js';
 import {
   MOBILE_PERIMETER_RESPONSES,
   MOBILE_REQUEST_RESPONSES,
@@ -228,6 +229,7 @@ export const mobileInventoryContract = c.router({
     metadata: requires('inventory.write'),
   },
   ...mobileInventoryMediaRoutes,
+  ...mobileInventoryPartsRoutes,
 });
 
 export type MobileInventoryContract = typeof mobileInventoryContract;

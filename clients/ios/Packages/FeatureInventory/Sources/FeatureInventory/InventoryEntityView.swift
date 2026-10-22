@@ -13,6 +13,7 @@ public struct InventoryEntityView: View {
     private let entity: InventoryEntity
     private let store: any InventoryStore
     private let suggester: InventoryCodeSuggester
+    private let parts: any InventoryPartsService
     private let scan: InventoryScanPrefill
     private let entityRouter: any EntityRouter
 
@@ -32,6 +33,7 @@ public struct InventoryEntityView: View {
         }
         self.entityRouter = entityRouter
         scan = .system(lookup: dependencies.barcodeLookup)
+        parts = dependencies.parts
     }
 
     public var body: some View {
@@ -42,6 +44,7 @@ public struct InventoryEntityView: View {
                 }
         }
         .inventoryItemFormPresentation(store: store, suggester: suggester, scan: scan)
+        .inventoryParts(parts)
         .inventorySyncInterruptions(store: store)
     }
 }

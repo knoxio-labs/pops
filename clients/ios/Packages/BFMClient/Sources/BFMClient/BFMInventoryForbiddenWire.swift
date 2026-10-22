@@ -241,3 +241,26 @@ extension Operations.MobileBarcode_lookup.Output.Forbidden.Body.JsonPayload: Wir
         if case .case2(let denied) = self { denied.capability } else { nil }
     }
 }
+
+extension Operations.MobileInventory_itemParts.Output.Forbidden.Body.JsonPayload: WireForbiddenBody
+{
+    internal var capabilityNotGranted: String? {
+        if case .case2(let denied) = self { denied.capability } else { nil }
+    }
+}
+
+extension Operations.MobileInventory_addItemPart.Output.Forbidden.Body.JsonPayload:
+    WireForbiddenBody
+{
+    internal var capabilityNotGranted: String? {
+        if case .case2(let denied) = self { denied.capability } else { nil }
+    }
+}
+
+extension Operations.MobileInventory_removeItemPart.Output.Forbidden.Body.JsonPayload:
+    WireForbiddenBody
+{
+    internal var capabilityNotGranted: String? {
+        if case .case2(let denied) = self { denied.capability } else { nil }
+    }
+}
