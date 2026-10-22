@@ -43,6 +43,10 @@ import { afterAll, beforeAll } from 'vitest';
 
 import type { RequestListener } from 'node:http';
 
+/** supertest's request and response types, for suites that type their helpers. */
+export type TestRequest = supertest.Test;
+export type TestResponse = supertest.Response;
+
 const APP_HEADER = 'x-pops-test-app';
 
 const keepAliveAgent = new http.Agent({ keepAlive: true });
