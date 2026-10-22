@@ -586,11 +586,11 @@ export const MODULES = [
                 key: 'finance.aiCategorizer.model',
                 label: 'Categorizer Model',
                 type: 'select',
-                default: 'claude-haiku-4-5-20251001',
+                default: 'claude-haiku-5-5',
                 options: [
                   {
-                    value: 'claude-haiku-4-5-20251001',
-                    label: 'Claude Haiku 4.5',
+                    value: 'claude-haiku-5-5',
+                    label: 'Claude Haiku 5.5',
                   },
                   {
                     value: 'claude-sonnet-5-5',
@@ -602,7 +602,7 @@ export const MODULES = [
                   },
                 ],
                 description:
-                  'Anthropic model used for categorisation. Sonnet 5.5 and Opus 5.5 are sent no sampling parameters and a low effort setting, with a 2000 token floor so thinking cannot use up the reply. Categorisation is a short lookup-shaped task, so the cheapest current model is the sensible default; a larger model costs more per imported row without matching entities much better.',
+                  'Anthropic model used for categorisation. Every option is sent no sampling parameters and a low effort setting, with a 2000 token floor so thinking cannot use up the reply. Categorisation is a short lookup-shaped task, so the cheapest current model is the sensible default; a larger model costs more per imported row without matching entities much better.',
               },
               {
                 key: 'finance.aiCategorizer.maxTokens',
@@ -635,11 +635,11 @@ export const MODULES = [
                 key: 'finance.ruleGen.model',
                 label: 'Rule Generation Model',
                 type: 'select',
-                default: 'claude-haiku-4-5-20251001',
+                default: 'claude-haiku-5-5',
                 options: [
                   {
-                    value: 'claude-haiku-4-5-20251001',
-                    label: 'Claude Haiku 4.5',
+                    value: 'claude-haiku-5-5',
+                    label: 'Claude Haiku 5.5',
                   },
                   {
                     value: 'claude-sonnet-5-5',
@@ -659,7 +659,7 @@ export const MODULES = [
                 type: 'number',
                 default: '200',
                 description:
-                  'Ceiling on the reply for the two short corrections calls: analysing a correction into a rule (200 tokens) and interpreting rejection feedback (250). Revising a change set and generating rules keep their own fixed 2000 and ignore this setting. Under 50 the reply is truncated and discarded; above 250 has no effect. Sonnet 5.5 and Opus 5.5 are always given at least 2000 so thinking cannot use up the reply.',
+                  'Ceiling on the reply for the two short corrections calls: analysing a correction into a rule (200 tokens) and interpreting rejection feedback (250). Revising a change set and generating rules keep their own fixed 2000 and ignore this setting. Under 50 the reply is truncated and discarded; above 250 has no effect. Every option is always given at least 2000 so thinking cannot use up the reply.',
                 validation: {
                   min: 50,
                   max: 250,

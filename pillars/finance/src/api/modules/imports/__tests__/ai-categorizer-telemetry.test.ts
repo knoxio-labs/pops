@@ -110,12 +110,12 @@ describe('categorizeWithAi — telemetry', () => {
     const record = await captured.nextReport();
 
     expect(out.result?.entityName).toBe('Woolworths');
-    expect(out.usage).toEqual({ inputTokens: 100, outputTokens: 20, costUsd: 0.0002 });
+    expect(out.usage).toEqual({ inputTokens: 100, outputTokens: 20, costUsd: 0.00002 });
 
     expect(record.operation).toBe('imports.categorize');
     expect(record.domain).toBe('finance');
     expect(record.provider).toBe('anthropic');
-    expect(record.model).toBe('claude-haiku-4-5-20251001');
+    expect(record.model).toBe('claude-haiku-5-5');
     expect(record.status).toBe('success');
     expect(record.inputTokens).toBe(100);
     expect(record.outputTokens).toBe(20);

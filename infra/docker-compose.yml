@@ -797,10 +797,10 @@ services:
       FOOD_INGEST_DIR: /data/food/ingest
       INSTAGRAM_COOKIES_PATH: /run/secrets/instagram_cookies
       # Per-handler model overrides (PRDs 128 / 130 / 131 / 132).
-      FOOD_WEB_LLM_MODEL: ${FOOD_WEB_LLM_MODEL:-claude-haiku-4-5-20251001}
-      FOOD_IG_VISION_MODEL: ${FOOD_IG_VISION_MODEL:-claude-haiku-4-5-20251001}
-      FOOD_SCREENSHOT_VISION_MODEL: ${FOOD_SCREENSHOT_VISION_MODEL:-claude-haiku-4-5-20251001}
-      FOOD_TEXT_LLM_MODEL: ${FOOD_TEXT_LLM_MODEL:-claude-haiku-4-5-20251001}
+      FOOD_WEB_LLM_MODEL: ${FOOD_WEB_LLM_MODEL:-claude-haiku-5-5}
+      FOOD_IG_VISION_MODEL: ${FOOD_IG_VISION_MODEL:-claude-haiku-5-5}
+      FOOD_SCREENSHOT_VISION_MODEL: ${FOOD_SCREENSHOT_VISION_MODEL:-claude-haiku-5-5}
+      FOOD_TEXT_LLM_MODEL: ${FOOD_TEXT_LLM_MODEL:-claude-haiku-5-5}
       # Cost observability — PRD-133's logger warns when a job exceeds this.
       FOOD_INGEST_COST_CAP_PER_JOB_USD: ${FOOD_INGEST_COST_CAP_PER_JOB_USD:-0.05}
     expose:

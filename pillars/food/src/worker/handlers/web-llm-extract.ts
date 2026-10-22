@@ -8,9 +8,10 @@
  */
 import { ZodError } from 'zod';
 
-import { callWithLogging } from '@pops/ai-telemetry';
+import { callWithLogging, thinkingBudgetParams } from '@pops/ai-telemetry';
 
 import { ANTHROPIC_PROVIDER, FOOD_DOMAIN, foodTelemetryDeps } from '../ai/ai-telemetry-deps.js';
+import { computeCostUsd } from '../ai/anthropic-client.js';
 import { extractTextFromMessage, getAnthropicClient } from '../ai/web-llm-anthropic.js';
 import {
   PROMPT_VERSION_WEB_LLM,
@@ -24,20 +25,6 @@ import type { AnthropicLike, AnthropicMessage } from '../ai/web-llm-anthropic.js
 import type { ExtractedRecipe } from './web-llm-recipe.js';
 
 export const WEB_LLM_OPERATION = 'recipe-extract-web-llm';
-
-const HAIKU_INPUT_USD_PER_MTOK = 0.25;
-const HAIKU_OUTPUT_USD_PER_MTOK = 1.25;
-
-/**
- * Local Haiku 4.5 cost estimate persisted on the recipe meta (`total_cost_usd`,
- * `cost_usd`). Independent of the cross-pillar telemetry cost, which is priced
- * against the ai pillar's `ai_model_pricing` table inside `callWithLogging`.
- */
-function localCostUsd(inputTokens: number, outputTokens: number): number {
-  return (
-    (inputTokens * HAIKU_INPUT_USD_PER_MTOK + outputTokens * HAIKU_OUTPUT_USD_PER_MTOK) / 1_000_000
-  );
-}
 
 export interface WebLlmExtractInputs {
   title: string;
@@ -121,7 +108,7 @@ function callWebLlm(
         const client = inputs.client ?? getAnthropicClient();
         const created = await client.messages.create({
           model,
-          max_tokens: WEB_LLM_MAX_OUTPUT_TOKENS,
+          ...thinkingBudgetParams(model, WEB_LLM_MAX_OUTPUT_TOKENS),
           messages: [{ role: 'user', content: prompt }],
         });
         return {
@@ -182,7 +169,7 @@ export async function extractWithClaudeWebLlm(
       model,
       inputTokens: message.usage.input_tokens,
       outputTokens: message.usage.output_tokens,
-      costUsd: localCostUsd(message.usage.input_tokens, message.usage.output_tokens),
+      costUsd: computeCostUsd(model, message.usage.input_tokens, message.usage.output_tokens),
       latencyMs,
     };
   } catch (err) {

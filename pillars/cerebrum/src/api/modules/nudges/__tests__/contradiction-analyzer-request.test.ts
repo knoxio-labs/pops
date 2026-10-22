@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   CURRENT_MODEL,
+  HAIKU_5_5_MODEL,
   HAIKU_MODEL,
   restoreTelemetry,
   silenceTelemetry,
@@ -48,7 +49,21 @@ afterEach(() => {
 });
 
 describe('AnthropicContradictionAnalyzer request shape', () => {
-  it('keeps the Haiku default at temperature 0 with no effort', async () => {
+  it('defaults to Haiku 5.5 at low effort with the cap raised to the thinking floor', async () => {
+    createMock.mockResolvedValue(textMessage(VERDICT));
+    await analyze();
+
+    const params = createMock.mock.calls[0]?.[0];
+    expect(params).toMatchObject({
+      model: HAIKU_5_5_MODEL,
+      max_tokens: 2000,
+      output_config: { effort: 'low' },
+    });
+    expect(params).not.toHaveProperty('temperature');
+  });
+
+  it('keeps a Haiku 4.5 override at temperature 0 with its own cap and no effort', async () => {
+    process.env[MODEL_ENV] = HAIKU_MODEL;
     createMock.mockResolvedValue(textMessage(VERDICT));
     await analyze();
 

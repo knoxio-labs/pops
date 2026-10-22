@@ -242,7 +242,7 @@ describe('processWithLlm', () => {
     expect(result.meta.stages['readability']).toMatchObject({ ok: true });
     expect(result.meta.stages['llm_extract']).toMatchObject({
       ok: true,
-      model: 'claude-haiku-4-5-20251001',
+      model: 'claude-haiku-5-5',
       prompt_version: 'web-llm-v1.0',
     });
     expect(result.meta.stages['dsl_build']).toMatchObject({ ok: true });

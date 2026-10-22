@@ -13,10 +13,14 @@
  * `ai-categorizer-batch-api.ts` and reuses the prompt-rule constants and
  * `callRawApi`/`entryFromParsed` exported here rather than duplicating them.
  */
-import { callWithLogging, messageText, samplingParams } from '@pops/ai-telemetry';
+import {
+  callWithLogging,
+  messageText,
+  samplingParams,
+  thinkingBudgetParams,
+} from '@pops/ai-telemetry';
 
 import { extractJsonFromReply } from '../ai-json.js';
-import { thinkingBudgetParams } from '../ai-model-request.js';
 import { withRateLimitRetry } from '../ai-retry.js';
 import { ANTHROPIC_PROVIDER, FINANCE_DOMAIN, financeTelemetryDeps } from '../ai-telemetry-deps.js';
 import {

@@ -200,11 +200,11 @@ describe('categorizeBatchWithAi — live call (mocked SDK)', () => {
   });
 
   it('honours the FINANCE_AI_CATEGORIZER_BATCH_MAX_TOKENS override', async () => {
-    process.env['FINANCE_AI_CATEGORIZER_BATCH_MAX_TOKENS'] = '999';
+    process.env['FINANCE_AI_CATEGORIZER_BATCH_MAX_TOKENS'] = '2500';
     createMock.mockResolvedValue(textResponse('[{"n":1,"entityName":"A"}]'));
     await categorizeBatchWithAi([{ description: 'X' }], undefined, VOCAB, { db });
     const req = createMock.mock.calls[0]?.[0] as { max_tokens: number };
-    expect(req.max_tokens).toBe(999);
+    expect(req.max_tokens).toBe(2500);
   });
 });
 

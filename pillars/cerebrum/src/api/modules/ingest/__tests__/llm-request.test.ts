@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   CURRENT_MODEL,
+  HAIKU_5_5_MODEL,
   HAIKU_MODEL,
   restoreTelemetry,
   silenceTelemetry,
@@ -38,8 +39,20 @@ afterEach(() => {
 });
 
 describe('AnthropicIngestLlm.complete request shape', () => {
-  it('keeps the Haiku default at temperature 0 with no effort', async () => {
-    expect(DEFAULT_CLASSIFIER_MODEL).toBe(HAIKU_MODEL);
+  it('defaults to Haiku 5.5 at low effort with the cap raised to the thinking floor', async () => {
+    expect(DEFAULT_CLASSIFIER_MODEL).toBe(HAIKU_5_5_MODEL);
+    createMock.mockResolvedValue(textMessage('note'));
+    await new AnthropicIngestLlm().complete(request(HAIKU_5_5_MODEL));
+
+    expect(createMock.mock.calls[0]?.[0]).toEqual({
+      model: HAIKU_5_5_MODEL,
+      max_tokens: 2000,
+      output_config: { effort: 'low' },
+      messages: [{ role: 'user', content: 'classify this' }],
+    });
+  });
+
+  it('keeps a Haiku 4.5 override at temperature 0, its own cap and no effort', async () => {
     createMock.mockResolvedValue(textMessage('note'));
     await new AnthropicIngestLlm().complete(request(HAIKU_MODEL));
 
@@ -56,7 +69,7 @@ describe('AnthropicIngestLlm.complete request shape', () => {
     await new AnthropicIngestLlm().complete(request(CURRENT_MODEL));
 
     const params = createMock.mock.calls[0]?.[0];
-    expect(params).toMatchObject({ model: CURRENT_MODEL, max_tokens: 64 });
+    expect(params).toMatchObject({ model: CURRENT_MODEL, max_tokens: 2000 });
     expect(params).not.toHaveProperty('temperature');
   });
 

@@ -7,6 +7,7 @@ import { __setCerebrumTelemetryDepsForTests } from '../ai-telemetry-deps.js';
 
 export const CURRENT_MODEL = 'claude-sonnet-5-5';
 export const HAIKU_MODEL = 'claude-haiku-4-5-20251001';
+export const HAIKU_5_5_MODEL = 'claude-haiku-5-5';
 export const LEGACY_SONNET_MODEL = 'claude-sonnet-4-6';
 
 const USAGE = { input_tokens: 20, output_tokens: 9 };

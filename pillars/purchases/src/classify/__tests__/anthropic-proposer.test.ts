@@ -109,7 +109,7 @@ describe('itemKindModel', () => {
     // Spelled out rather than compared to the constant: `itemKindModel() ===
     // DEFAULT_ITEM_KIND_MODEL` holds for any string, including one no
     // provider serves, and nothing else in this pillar ever calls the API.
-    expect(DEFAULT_ITEM_KIND_MODEL).toBe('claude-haiku-4-5');
+    expect(DEFAULT_ITEM_KIND_MODEL).toBe('claude-haiku-5-5');
     expect(itemKindModel()).toBe(DEFAULT_ITEM_KIND_MODEL);
   });
 
