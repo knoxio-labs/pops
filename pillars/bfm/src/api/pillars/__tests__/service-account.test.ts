@@ -135,6 +135,9 @@ describe('the granted scopes', () => {
       'inventory.media',
       'inventory.documents',
       'inventory.paperless.status',
+      'inventory.items.getParts',
+      'inventory.items.addPart',
+      'inventory.items.removePart',
       'barcode.lookup',
       'cerebrum.ego',
     ]);
@@ -151,6 +154,14 @@ describe('the granted scopes', () => {
     expect(hasScopeFor(BFM_SERVICE_ACCOUNT_SCOPES, 'inventory.types.catalogue')).toBe(true);
     expect(hasScopeFor(BFM_SERVICE_ACCOUNT_SCOPES, 'inventory.types.read')).toBe(true);
     expect(hasScopeFor(BFM_SERVICE_ACCOUNT_SCOPES, 'inventory.types.manage')).toBe(false);
+  });
+
+  it('reaches the parts routes without the rest of inventory.items', () => {
+    expect(hasScopeFor(BFM_SERVICE_ACCOUNT_SCOPES, 'inventory.items.getParts')).toBe(true);
+    expect(hasScopeFor(BFM_SERVICE_ACCOUNT_SCOPES, 'inventory.items.addPart')).toBe(true);
+    expect(hasScopeFor(BFM_SERVICE_ACCOUNT_SCOPES, 'inventory.items.removePart')).toBe(true);
+    expect(hasScopeFor(BFM_SERVICE_ACCOUNT_SCOPES, 'inventory.items.list')).toBe(false);
+    expect(hasScopeFor(BFM_SERVICE_ACCOUNT_SCOPES, 'inventory.items.delete')).toBe(false);
   });
 
   it('keeps the provisioning command in sync with the source of truth', () => {

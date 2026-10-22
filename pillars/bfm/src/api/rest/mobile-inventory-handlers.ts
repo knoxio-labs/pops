@@ -34,10 +34,13 @@ import { readDevice } from '../auth/require-device.js';
 import { buildInventoryActorHeader } from '../inventory/actor-header.js';
 import { InventoryProtocolTooOldError } from '../inventory/protocol-error.js';
 import { isGatewayOk } from '../pillars/gateway.js';
-import { makeMobileInventoryDocumentHandlers } from './mobile-inventory-document-handlers.js';
 import { makeMobileInventoryMediaHandlers } from './mobile-inventory-media-handlers.js';
 import { invalidMobileCursorResponse } from './mobile-request-error.js';
-import { toCollectionUpstreamErrorResponse, toUpstreamErrorResponse } from './upstream-error.js';
+import {
+  toCollectionUpstreamErrorResponse,
+  toConflictRelayErrorResponse,
+  toUpstreamErrorResponse,
+} from './upstream-error.js';
 
 import type { ServerInferRequest } from '@ts-rest/core';
 import type { Response } from 'express';
@@ -45,7 +48,6 @@ import type { Response } from 'express';
 import type { bfmContract } from '../../contract/rest.js';
 import type { MobileInventoryClient } from '../inventory/client.js';
 import type { GatewayOutcome } from '../pillars/gateway.js';
-import type { MobileInventoryDocumentHandlerDeps } from './mobile-inventory-document-handlers.js';
 import type { MobileInventoryMediaHandlerDeps } from './mobile-inventory-media-handlers.js';
 
 type Req = ServerInferRequest<typeof bfmContract>['mobileInventory'];
@@ -59,8 +61,7 @@ const RESYNC_REQUIRED_MESSAGE =
 
 const INVALID_CURSOR_MESSAGE = 'The cursor is not one this server issued. Start the list again.';
 
-export interface MobileInventoryHandlerDeps
-  extends MobileInventoryMediaHandlerDeps, MobileInventoryDocumentHandlerDeps {
+export interface MobileInventoryHandlerDeps extends MobileInventoryMediaHandlerDeps {
   inventory: MobileInventoryClient;
 }
 
@@ -79,7 +80,6 @@ export function makeMobileInventoryHandlers(deps: MobileInventoryHandlerDeps) {
     // `putMedia`/`getMedia` (A13) live in their own module — see
     // `mobile-inventory-media-handlers.ts`'s header for why.
     ...makeMobileInventoryMediaHandlers(deps),
-    ...makeMobileInventoryDocumentHandlers(deps),
     catalogue: async () => {
       const outcome = orThrowIfTooOld(await deps.inventory.catalogue());
       if (!isGatewayOk(outcome)) return toCollectionUpstreamErrorResponse(outcome);
@@ -229,6 +229,30 @@ export function makeMobileInventoryHandlers(deps: MobileInventoryHandlerDeps) {
         return toUpstreamErrorResponse(outcome);
       }
 
+      return { status: 200 as const, body: outcome.value };
+    },
+
+    itemParts: async ({ params }: Req['itemParts']) => {
+      const outcome = await deps.inventory.itemParts({ itemId: params.id });
+      if (!isGatewayOk(outcome)) return toUpstreamErrorResponse(outcome);
+      return { status: 200 as const, body: outcome.value };
+    },
+
+    addItemPart: async ({ params, body }: Req['addItemPart']) => {
+      const outcome = await deps.inventory.addItemPart({
+        itemId: params.id,
+        partItemId: body.partItemId,
+      });
+      if (!isGatewayOk(outcome)) return toConflictRelayErrorResponse(outcome);
+      return { status: 200 as const, body: outcome.value };
+    },
+
+    removeItemPart: async ({ params }: Req['removeItemPart']) => {
+      const outcome = await deps.inventory.removeItemPart({
+        itemId: params.id,
+        partItemId: params.partItemId,
+      });
+      if (!isGatewayOk(outcome)) return toUpstreamErrorResponse(outcome);
       return { status: 200 as const, body: outcome.value };
     },
 

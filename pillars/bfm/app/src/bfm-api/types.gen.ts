@@ -4411,6 +4411,447 @@ export type MobileInventoryItemHistoryResponses = {
 export type MobileInventoryItemHistoryResponse =
   MobileInventoryItemHistoryResponses[keyof MobileInventoryItemHistoryResponses];
 
+export type MobileInventoryItemPartsData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/mobile/inventory/items/{id}/parts';
+};
+
+export type MobileInventoryItemPartsErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code: 'invalid_cursor' | 'bfm.request.invalid';
+    details?: unknown;
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 403
+   */
+  403:
+    | {
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
+        message: string;
+        requestId: string;
+        retryable: boolean;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      };
+  /**
+   * 404
+   */
+  404: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+  /**
+   * 502
+   */
+  502: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+};
+
+export type MobileInventoryItemPartsError =
+  MobileInventoryItemPartsErrors[keyof MobileInventoryItemPartsErrors];
+
+export type MobileInventoryItemPartsResponses = {
+  /**
+   * 200
+   */
+  200: {
+    assembly: {
+      code: string | null;
+      itemId: string;
+      name: string;
+    } | null;
+    canHaveParts: boolean;
+    parts: Array<{
+      code: string | null;
+      itemId: string;
+      lifecycle: string;
+      name: string;
+      placement: {
+        containingItemId: string | null;
+        containingItemName: string | null;
+        kind: 'location' | 'container' | 'hand';
+        locationId: string | null;
+        locationName: string | null;
+      };
+      typeId: string | null;
+    }>;
+  };
+};
+
+export type MobileInventoryItemPartsResponse =
+  MobileInventoryItemPartsResponses[keyof MobileInventoryItemPartsResponses];
+
+export type MobileInventoryAddItemPartData = {
+  /**
+   * Body
+   */
+  body?: {
+    partItemId: string;
+  };
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/mobile/inventory/items/{id}/parts';
+};
+
+export type MobileInventoryAddItemPartErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code: 'invalid_cursor' | 'bfm.request.invalid';
+    details?: unknown;
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 403
+   */
+  403:
+    | {
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
+        message: string;
+        requestId: string;
+        retryable: boolean;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      };
+  /**
+   * 404
+   */
+  404: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 409
+   */
+  409: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+  /**
+   * 502
+   */
+  502: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+};
+
+export type MobileInventoryAddItemPartError =
+  MobileInventoryAddItemPartErrors[keyof MobileInventoryAddItemPartErrors];
+
+export type MobileInventoryAddItemPartResponses = {
+  /**
+   * 200
+   */
+  200: {
+    assembly: {
+      code: string | null;
+      itemId: string;
+      name: string;
+    } | null;
+    canHaveParts: boolean;
+    parts: Array<{
+      code: string | null;
+      itemId: string;
+      lifecycle: string;
+      name: string;
+      placement: {
+        containingItemId: string | null;
+        containingItemName: string | null;
+        kind: 'location' | 'container' | 'hand';
+        locationId: string | null;
+        locationName: string | null;
+      };
+      typeId: string | null;
+    }>;
+  };
+};
+
+export type MobileInventoryAddItemPartResponse =
+  MobileInventoryAddItemPartResponses[keyof MobileInventoryAddItemPartResponses];
+
+export type MobileInventoryRemoveItemPartData = {
+  /**
+   * Body
+   */
+  body?: {
+    [key: string]: never;
+  };
+  path: {
+    id: string;
+    partItemId: string;
+  };
+  query?: never;
+  url: '/mobile/inventory/items/{id}/parts/{partItemId}';
+};
+
+export type MobileInventoryRemoveItemPartErrors = {
+  /**
+   * 400
+   */
+  400: {
+    code: 'invalid_cursor' | 'bfm.request.invalid';
+    details?: unknown;
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 401
+   */
+  401: {
+    code: 'bfm.auth.invalid_token';
+    details?: unknown;
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 403
+   */
+  403:
+    | {
+        code: 'bfm.auth.device_revoked';
+        details?: unknown;
+        message: string;
+        requestId: string;
+        retryable: boolean;
+      }
+    | {
+        capability: string;
+        code: 'capability_not_granted';
+        message: string;
+      };
+  /**
+   * 404
+   */
+  404: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 429
+   */
+  429: {
+    code: 'rate_limited';
+    message: string;
+    retryAfterSeconds: number;
+  };
+  /**
+   * 502
+   */
+  502: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+  /**
+   * 503
+   */
+  503: {
+    code: string;
+    details: {
+      upstream: {
+        pillar: string;
+        status: number;
+      };
+      [key: string]: unknown;
+    };
+    message: string;
+    requestId: string;
+    retryable: boolean;
+  };
+};
+
+export type MobileInventoryRemoveItemPartError =
+  MobileInventoryRemoveItemPartErrors[keyof MobileInventoryRemoveItemPartErrors];
+
+export type MobileInventoryRemoveItemPartResponses = {
+  /**
+   * 200
+   */
+  200: {
+    assembly: {
+      code: string | null;
+      itemId: string;
+      name: string;
+    } | null;
+    canHaveParts: boolean;
+    parts: Array<{
+      code: string | null;
+      itemId: string;
+      lifecycle: string;
+      name: string;
+      placement: {
+        containingItemId: string | null;
+        containingItemName: string | null;
+        kind: 'location' | 'container' | 'hand';
+        locationId: string | null;
+        locationName: string | null;
+      };
+      typeId: string | null;
+    }>;
+  };
+};
+
+export type MobileInventoryRemoveItemPartResponse =
+  MobileInventoryRemoveItemPartResponses[keyof MobileInventoryRemoveItemPartResponses];
+
 export type MobileInventoryGetMediaData = {
   body?: never;
   path: {

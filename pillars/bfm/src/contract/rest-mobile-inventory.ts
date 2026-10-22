@@ -61,6 +61,7 @@ import {
 import { mobileInventoryDocumentRoutes } from './rest-mobile-inventory-documents.js';
 import { mobileInventoryListRoutes } from './rest-mobile-inventory-list.js';
 import { mobileInventoryMediaRoutes } from './rest-mobile-inventory-media.js';
+import { mobileInventoryPartsRoutes } from './rest-mobile-inventory-parts.js';
 import {
   MOBILE_PERIMETER_RESPONSES,
   MOBILE_REQUEST_RESPONSES,
@@ -233,6 +234,7 @@ export const mobileInventoryContract = c.router({
   },
   ...mobileInventoryMediaRoutes,
   ...mobileInventoryDocumentRoutes,
+  ...mobileInventoryPartsRoutes,
 });
 
 export type MobileInventoryContract = typeof mobileInventoryContract;
