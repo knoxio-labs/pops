@@ -51,6 +51,8 @@ function apiFor(): BoundAgent {
           available: false,
           baseUrl: null,
           documentCount: null,
+          maxUploadBytes: null,
+          allowedMimeTypes: null,
         }),
       searchPaperlessDocuments: () => Promise.resolve([]),
       paperlessDocumentMissing: () => Promise.resolve(null),

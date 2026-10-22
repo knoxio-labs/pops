@@ -29,10 +29,13 @@ export const inventoryPaperlessContract = c.router({
           available: z.boolean(),
           baseUrl: z.string().nullable(),
           documentCount: z.number().int().nonnegative().nullable(),
+          maxUploadBytes: z.number().int().positive().nullable(),
+          allowedMimeTypes: z.array(z.string()).nullable(),
         }),
       }),
     },
-    summary: 'Whether Paperless-ngx is configured and reachable',
+    summary:
+      'Whether Paperless-ngx is configured and reachable, and the upload limits documents enforces',
   },
   search: {
     method: 'GET',

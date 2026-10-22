@@ -21,6 +21,8 @@ function stubClient(overrides: Partial<DocumentsClient> = {}): DocumentsClient {
       available: false,
       baseUrl: null,
       documentCount: null,
+      maxUploadBytes: null,
+      allowedMimeTypes: null,
     })),
     searchPaperlessDocuments: vi.fn(async () => null),
     paperlessDocumentMissing: vi.fn(async () => null),
@@ -35,6 +37,8 @@ describe('paperless.status', () => {
       available: true,
       baseUrl: 'https://paperless.example',
       documentCount: 123,
+      maxUploadBytes: 104857600,
+      allowedMimeTypes: ['application/pdf', 'image/*', 'text/*'],
     };
     const handlers = makePaperlessHandlers(
       stubClient({ getPaperlessStatus: vi.fn(async () => status) })
@@ -53,7 +57,14 @@ describe('paperless.status', () => {
     expect(result).toEqual({
       status: 200,
       body: {
-        data: { configured: false, available: false, baseUrl: null, documentCount: null },
+        data: {
+          configured: false,
+          available: false,
+          baseUrl: null,
+          documentCount: null,
+          maxUploadBytes: null,
+          allowedMimeTypes: null,
+        },
       },
     });
   });

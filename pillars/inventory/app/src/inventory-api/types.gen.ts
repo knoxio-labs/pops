@@ -2420,10 +2420,12 @@ export type PaperlessStatusResponses = {
    */
   200: {
     data: {
+      allowedMimeTypes: Array<string> | null;
       available: boolean;
       baseUrl: string | null;
       configured: boolean;
       documentCount: number | null;
+      maxUploadBytes: number | null;
     };
   };
 };

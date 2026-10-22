@@ -5,11 +5,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { startFakePaperless, type FakePaperless } from '../__tests__/fake-paperless.js';
-import { createTestTransport } from '../__tests__/test-http.js';
+import {
+  createTestTransport,
+  type TestRequest,
+  type TestResponse,
+} from '../__tests__/test-http.js';
 import { unreachablePaperlessUrl } from '../__tests__/unreachable-url.js';
 import { createDocumentsApiApp } from '../app.js';
-
-import type supertest from 'supertest';
 
 const { requestOn } = createTestTransport();
 
@@ -17,7 +19,7 @@ const BYTES = Buffer.from('0123456789');
 
 let fake: FakePaperless;
 
-function download(path = '/paperless/documents/7/download'): supertest.Test {
+function download(path = '/paperless/documents/7/download'): TestRequest {
   return requestOn(
     createDocumentsApiApp({ version: '0.0.1-test', selfBaseUrl: 'http://localhost:3012' })
   )
@@ -49,7 +51,7 @@ afterEach(async () => {
   await fake.close();
 });
 
-function bodyOf(res: supertest.Response): string {
+function bodyOf(res: TestResponse): string {
   const body: unknown = res.body;
   return Buffer.isBuffer(body) ? body.toString() : '';
 }
