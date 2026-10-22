@@ -30,6 +30,17 @@ export function unwrap<T>(result: ApiResult<T>): T {
   });
 }
 
+/** Keeps an API error as the server phrased it, or wraps any other failure under `fallback`. */
+export function inventoryApiErrorOf(error: Error, fallback: string): ApiError {
+  if (error instanceof ApiError) return error;
+  return new ApiError({
+    code: 'web.client.unknown',
+    kind: 'client',
+    message: fallback,
+    retryable: false,
+  });
+}
+
 /** True when the failure was a 404 (entity missing). */
 export function isNotFoundError(error: unknown): boolean {
   return error instanceof ApiError && error.status === 404;

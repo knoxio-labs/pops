@@ -1,5 +1,6 @@
-import { InventoryApiError } from '../../inventory-api-helpers.js';
+import { inventoryApiErrorOf } from '../../inventory-api-helpers.js';
 
+import type { InventoryApiError } from '../../inventory-api-helpers.js';
 import type { ItemParts } from '../../inventory-api/index.js';
 
 type Part = ItemParts['parts'][number];
@@ -22,13 +23,7 @@ export function partWhere(placement: Part['placement']): string {
 
 /** The API error to toast, keeping the server's message (a 409 explains why). */
 export function partError(error: Error, fallback: string): InventoryApiError {
-  if (error instanceof InventoryApiError) return error;
-  return new InventoryApiError({
-    code: 'web.client.unknown',
-    kind: 'client',
-    message: fallback,
-    retryable: false,
-  });
+  return inventoryApiErrorOf(error, fallback);
 }
 
 /** Why the remove and add verbs are unavailable, if they are. */

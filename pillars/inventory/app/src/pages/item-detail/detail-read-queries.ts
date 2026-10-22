@@ -14,7 +14,20 @@ import { usePlacementSources } from '../../inventory-web/usePlacementSources.js'
 import { relatedItemIds } from './detail-model';
 
 import type { PickerSubject } from '../../foundation/model/contracts';
-import type { WebGetResponse } from '../../inventory-api/types.gen.js';
+import type {
+  DocumentsListForItemResponse,
+  WebGetResponse,
+} from '../../inventory-api/types.gen.js';
+
+/** How often the documents read repeats while an upload is still processing in Paperless. */
+export const PENDING_DOCUMENTS_REFETCH_MS = 5000;
+
+/** Polls the item's documents while any upload is pending, and stops once none are. */
+export function pendingDocumentsRefetchInterval(
+  data: DocumentsListForItemResponse | undefined
+): number | false {
+  return data !== undefined && data.pending.length > 0 ? PENDING_DOCUMENTS_REFETCH_MS : false;
+}
 
 function primarySubject(id: string): PickerSubject {
   return { kind: 'items', ids: id.length === 0 ? [] : [id] };
@@ -66,6 +79,7 @@ export function useAuxiliaryQueries(id: string) {
     queryFn: async () =>
       unwrap(await documentsListForItem({ path: { itemId: id }, query: { limit: 500 } })),
     enabled: id.length > 0,
+    refetchInterval: (query) => pendingDocumentsRefetchInterval(query.state.data),
   });
   const paperlessQuery = useQuery({
     queryKey: ['inventory', 'paperless', 'status'],

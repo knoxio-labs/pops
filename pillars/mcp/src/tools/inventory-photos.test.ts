@@ -66,8 +66,8 @@ describe('inventory.photos.createUpload', () => {
     expect(body.command).toBe(`curl --fail-with-body -sS -T <path-to-image> '${body.uploadUrl}'`);
     expect(body.maxBytes).toBe(8 * 1024 * 1024);
     const token = match?.[1] ?? '';
-    expect(uploadTokens.consume(token)).toBe(true);
-    expect(uploadTokens.consume(token)).toBe(false);
+    expect(uploadTokens.consume(token)).toEqual({ kind: 'photo' });
+    expect(uploadTokens.consume(token)).toBeUndefined();
   });
 
   it('refuses without a known public address and mints nothing', async () => {

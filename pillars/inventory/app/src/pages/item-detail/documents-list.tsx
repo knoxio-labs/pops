@@ -1,16 +1,19 @@
-import { ExternalLink, FileText, Unlink } from 'lucide-react';
+import { ExternalLink, FileText, Pencil, Unlink } from 'lucide-react';
 
 import { Button } from '@pops/ui';
 
-import { EmptyLine } from '../../foundation/item-page/section-parts';
 import { VerbButton } from '../../foundation/item-page/verb-button';
 
 import type { ReactElement } from 'react';
 
 import type { DetailDocument } from './detail-model';
 
-function documentHref(baseUrl: string, documentId: number): string {
-  return `${baseUrl}/documents/${documentId}/details`;
+/** Why every write on a read-only item is refused. */
+export const READ_ONLY_REASON = 'Nothing can change on this item.';
+
+/** The inventory proxy that streams a linked document's file from Paperless. */
+export function documentFileHref(linkId: number): string {
+  return `/api/inventory/documents/${linkId}/file`;
 }
 
 function documentKind(kind: string): string {
@@ -18,26 +21,22 @@ function documentKind(kind: string): string {
 }
 
 function DocumentOpenAction({
-  baseUrl,
+  document,
   actionReason,
-  documentId,
-  missing,
 }: {
-  baseUrl: string | null;
+  document: DetailDocument;
   actionReason: string | undefined;
-  documentId: number;
-  missing: boolean;
 }): ReactElement | null {
-  if (missing) return null;
-  if (baseUrl !== null && actionReason === undefined) {
+  if (document.missing) return null;
+  if (actionReason === undefined) {
     return (
       <a
-        href={documentHref(baseUrl, documentId)}
+        href={documentFileHref(document.id)}
         target="_blank"
         rel="noopener noreferrer"
-        className="relative inline-flex size-11 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
-        title="Open in Paperless"
-        aria-label="Open in Paperless"
+        className="relative inline-flex size-11 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        title={`Open ${document.title}`}
+        aria-label={`Open ${document.title}`}
       >
         <ExternalLink className="size-4" aria-hidden />
       </a>
@@ -48,115 +47,97 @@ function DocumentOpenAction({
       variant="ghost"
       size="icon"
       disabled
-      title={actionReason ?? 'Paperless is not available'}
-      aria-label="Open in Paperless"
+      title={actionReason}
+      aria-label={`Open ${document.title}`}
     >
       <ExternalLink className="size-4" aria-hidden />
     </Button>
   );
 }
 
-function unlinkReason(
+/** Why a linked-row write is refused, if it is: Paperless first, then read-only, then a write in flight. */
+export function documentWriteReason(
   actionReason: string | undefined,
   readOnly: boolean,
-  isUnlinking: boolean
+  busy: boolean
 ): string | undefined {
   if (actionReason !== undefined) return actionReason;
-  if (readOnly) return 'Nothing can change on this item.';
-  if (isUnlinking) return 'Unlinking document.';
+  if (readOnly) return READ_ONLY_REASON;
+  if (busy) return 'Saving document changes.';
   return undefined;
 }
 
-function DocumentRow({
-  document,
-  baseUrl,
-  actionReason,
-  readOnly,
-  isUnlinking,
-  onUnlink,
-}: {
-  document: DetailDocument;
-  baseUrl: string | null;
+/** Props shared by every linked-document row. */
+export interface DocumentRowActions {
   actionReason: string | undefined;
   readOnly: boolean;
-  isUnlinking: boolean;
-  onUnlink: (id: number) => void;
-}): ReactElement {
-  const disabledReason = unlinkReason(
-    document.missing ? undefined : actionReason,
-    readOnly,
-    isUnlinking
-  );
+  busy: boolean;
+  onEdit: (document: DetailDocument) => void;
+  onUnlink: (document: DetailDocument) => void;
+}
+
+function DocumentRowText({ document }: { document: DetailDocument }): ReactElement {
   return (
-    <li className="flex min-h-11 items-center gap-3 border-b border-border/60 px-2 py-1.5 last:border-b-0">
-      <FileText className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-      <span className="flex min-w-0 flex-1 flex-col">
-        <span
-          className={
-            document.missing
-              ? 'truncate text-sm text-muted-foreground line-through'
-              : 'truncate text-sm font-medium'
-          }
-        >
-          {document.title}
-        </span>
-        <span className="text-xs text-muted-foreground">
-          {document.missing
-            ? 'Deleted in Paperless. Unlink it to tidy up.'
-            : `${documentKind(document.kind)} · ${document.added}`}
-        </span>
+    <span className="flex min-w-0 flex-1 flex-col">
+      <span
+        className={
+          document.missing
+            ? 'truncate text-sm text-muted-foreground line-through'
+            : 'truncate text-sm font-medium'
+        }
+      >
+        {document.title}
       </span>
-      <DocumentOpenAction
-        baseUrl={baseUrl}
-        actionReason={actionReason}
-        documentId={document.paperlessDocumentId}
-        missing={document.missing}
-      />
-      <VerbButton
-        label="Unlink document"
-        icon={Unlink}
-        variant="ghost"
-        iconOnly
-        disabledReason={disabledReason}
-        onClick={() => onUnlink(document.id)}
-        className="text-destructive hover:text-destructive"
-      />
-    </li>
+      <span className="text-xs text-muted-foreground">
+        {document.missing
+          ? 'Deleted in Paperless. Unlink it to tidy up.'
+          : `${documentKind(document.kind)} · ${document.added}`}
+      </span>
+    </span>
   );
 }
 
-/** Renders the linked-document rows while preserving their action contracts. */
-export function DocumentsList({
-  documents,
-  baseUrl,
+/** One linked document: open, edit and unlink. */
+export function DocumentRow({
+  document,
   actionReason,
   readOnly,
-  isUnlinking,
+  busy,
+  onEdit,
   onUnlink,
-}: {
-  documents: readonly DetailDocument[];
-  baseUrl: string | null;
-  actionReason: string | undefined;
-  readOnly: boolean;
-  isUnlinking: boolean;
-  onUnlink: (id: number) => void;
-}): ReactElement {
-  if (documents.length === 0) {
-    return <EmptyLine icon={FileText} text="No documents linked." />;
-  }
+}: DocumentRowActions & { document: DetailDocument }): ReactElement {
+  const writeReason = documentWriteReason(actionReason, readOnly, busy);
+  const unlinkReason = documentWriteReason(
+    document.missing ? undefined : actionReason,
+    readOnly,
+    busy
+  );
   return (
-    <ul aria-label="Documents" className="divide-y divide-border/60">
-      {documents.map((document) => (
-        <DocumentRow
-          key={document.id}
-          document={document}
-          baseUrl={baseUrl}
-          actionReason={actionReason}
-          readOnly={readOnly}
-          isUnlinking={isUnlinking}
-          onUnlink={onUnlink}
+    <li className="flex min-h-11 items-center gap-1 px-2 py-1.5">
+      <FileText className="mr-2 size-4 shrink-0 text-muted-foreground" aria-hidden />
+      <DocumentRowText document={document} />
+      <DocumentOpenAction document={document} actionReason={actionReason} />
+      {document.missing ? null : (
+        <VerbButton
+          label={`Edit ${document.title}`}
+          icon={Pencil}
+          variant="ghost"
+          size="default"
+          iconOnly
+          disabledReason={writeReason}
+          onClick={() => onEdit(document)}
         />
-      ))}
-    </ul>
+      )}
+      <VerbButton
+        label={`Unlink ${document.title}`}
+        icon={Unlink}
+        variant="ghost"
+        size="default"
+        iconOnly
+        disabledReason={unlinkReason}
+        onClick={() => onUnlink(document)}
+        className="text-destructive hover:text-destructive"
+      />
+    </li>
   );
 }
