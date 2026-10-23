@@ -554,6 +554,26 @@ run = "node scripts/worktree.mjs create --install-deps \"$BRANCH\""
 description = "Remove a git worktree (usage: BRANCH=feat/my-feature mise worktree:remove)"
 run = "node scripts/worktree.mjs remove \"$BRANCH\""
 
+[tasks."worktree:acquire"]
+description = "Lease a warm worktree slot for a branch and print its path (usage: BRANCH=feat/my-feature mise worktree:acquire)"
+run = "node scripts/worktree.mjs acquire \"$BRANCH\""
+
+[tasks."worktree:acquire:deps"]
+description = "Acquire a worktree slot and run pnpm install in it"
+run = "node scripts/worktree.mjs acquire --install-deps \"$BRANCH\""
+
+[tasks."worktree:release"]
+description = "Release a worktree slot (usage: SLOT=pops-slot-1 mise worktree:release; a branch name also works)"
+run = "node scripts/worktree.mjs release \"$SLOT\""
+
+[tasks."worktree:status"]
+description = "List worktree slots with branch, busy/free, dirty and target/ size"
+run = "node scripts/worktree.mjs status"
+
+[tasks."worktree:gc"]
+description = "Report prunable worktrees and merged/gone branches; dry-run unless GC_ARGS=--apply (optionally --include-gone)"
+run = "node scripts/worktree.mjs gc $GC_ARGS"
+
 # ============================================================================
 # Utility Tasks
 # ============================================================================

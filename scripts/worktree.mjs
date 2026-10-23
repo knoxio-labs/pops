@@ -1,5 +1,8 @@
 import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
+
+import { runSlotCommand } from './worktree-slots.mjs';
 
 /**
  * @param {string} command
@@ -22,6 +25,9 @@ function output(command, args, options = {}) {
 
 function usage() {
   console.error('Usage: node scripts/worktree.mjs <create|remove> [--install-deps] <branch>');
+  console.error(
+    '       node scripts/worktree.mjs <acquire <branch>|release <slot|branch>|status|gc [--apply] [--include-gone]>'
+  );
   process.exit(1);
 }
 
@@ -40,6 +46,21 @@ function validBranch(branch) {
 }
 
 const [operation, ...arguments_] = process.argv.slice(2);
+const SLOT_OPERATIONS = ['acquire', 'release', 'status', 'gc', 'hook'];
+
+if (operation !== undefined && SLOT_OPERATIONS.includes(operation)) {
+  try {
+    const stdin = operation === 'hook' ? readFileSync(0, 'utf8') : '';
+    console.log(
+      runSlotCommand(operation, arguments_, { cwd: process.cwd(), env: process.env }, stdin)
+    );
+  } catch (error) {
+    console.error(`Error: ${error instanceof Error ? error.message : String(error)}`);
+    process.exit(1);
+  }
+  process.exit(0);
+}
+
 const installDependencies = arguments_[0] === '--install-deps';
 const branch = arguments_[installDependencies ? 1 : 0];
 
