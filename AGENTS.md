@@ -183,6 +183,10 @@ docker compose -f infra/docker-compose.yml config    # validate compose
 
 Pin a release with `POPS_IMAGE_TAG=sha-abc1234` (or `v1`, `main`, …) in `.env`. Watchtower only rolls out tags that move; pinning to a fixed sha disables auto-updates for that container.
 
+### Merges
+
+`.gitattributes` sends TS/JS/JSON/YAML/TOML/Rust merges through mergiraf, a syntax-aware driver pinned in `mise.toml`, so parallel additions to the same import list or object literal merge cleanly. `pnpm install` and the pre-commit hook install its per-clone git config; without mergiraf it degrades to git's line merge. See [scripts/git/README.md](scripts/git/README.md).
+
 ### Git worktrees
 
 ```bash

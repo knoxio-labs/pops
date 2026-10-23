@@ -1,0 +1,21 @@
+# Syntax-aware merges via mergiraf for every language it parses that this repo
+# uses (`mergiraf languages`; it has no Swift grammar). The driver command is
+# per-clone git config written by scripts/git/install-merge-drivers.mjs on
+# `pnpm install`; without it git merges these paths as ordinary text.
+*.ts merge=mergiraf
+*.mts merge=mergiraf
+*.cts merge=mergiraf
+*.tsx merge=mergiraf
+*.js merge=mergiraf
+*.jsx merge=mergiraf
+*.mjs merge=mergiraf
+*.cjs merge=mergiraf
+*.json merge=mergiraf
+*.yml merge=mergiraf
+*.yaml merge=mergiraf
+*.toml merge=mergiraf
+*.rs merge=mergiraf
+
+# A lockfile conflict is resolved by re-running the package manager, not by
+# merging its output.
+pnpm-lock.yaml merge=text

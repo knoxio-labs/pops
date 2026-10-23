@@ -1,1 +1,2 @@
+node scripts/git/install-merge-drivers.mjs
 npx lint-staged
