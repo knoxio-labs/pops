@@ -542,6 +542,10 @@ run = "docker exec -it pops-redis redis-cli"
 # Git Worktree Helpers
 # ============================================================================
 
+[tasks.review]
+description = "Run the PR Review bot's prompt locally over origin/main...HEAD with the claude CLI; exits 1 on a blocking finding (options: mise review -- --base <ref> --model <name>)"
+run = 'node scripts/review.mjs "$@"'
+
 [tasks."worktree:create"]
 description = "Create a new git worktree (usage: BRANCH=feat/my-feature mise worktree:create)"
 run = "node scripts/worktree.mjs create \"$BRANCH\""
