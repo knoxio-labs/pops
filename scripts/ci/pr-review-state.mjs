@@ -402,30 +402,251 @@ export function parseState(commentBody) {
 }
 
 /**
- * Decide what range to review.
+ * A full object name: SHA-1 (40 hex) or SHA-256 (64 hex).
  *
- * The incremental range is the point of the whole design — re-reading the full
- * PR diff on every push is where both the cost and the repetition come from.
- *
- * It is only valid while the last reviewed commit is still reachable from head.
- * A rebase or force-push rewrites history and leaves the recorded sha dangling,
- * at which point `last..head` is either meaningless or enormous, so this falls
- * back to the full diff.
- *
- * @param {string} baseSha
- * @param {string} headSha
- * @param {string | null} lastReviewedSha
- * @param {(a: string, b: string) => boolean} isAncestor
- * @returns {{ range: string, mode: 'full' | 'incremental' | 'empty' }}
+ * The recorded sha is handed to `git` as a revision argument, so anything that
+ * is not exactly an object name — an abbreviation, a ref name, a string
+ * starting with `-` — is treated as no sha at all rather than passed through.
  */
-export function computeDiffRange(baseSha, headSha, lastReviewedSha, isAncestor) {
-  if (lastReviewedSha && isAncestor(lastReviewedSha, headSha)) {
+const FULL_SHA_RE = /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/u;
+
+/**
+ * @param {unknown} value
+ * @returns {value is string}
+ */
+export function isFullSha(value) {
+  return typeof value === 'string' && FULL_SHA_RE.test(value);
+}
+
+/**
+ * The git questions {@link computeDiffRange} needs answered, injected so the
+ * decision is testable without a repository.
+ *
+ * @typedef {object} DiffGit
+ * @property {(ancestor: string, descendant: string) => boolean} isAncestor
+ * @property {(a: string, b: string) => string | null} mergeBase
+ * @property {(ours: string, theirs: string) => string | null} mergeTree tree id
+ *   of a conflict-free merge of the two commits, or null when it conflicts
+ */
+
+/**
+ * @typedef {object} DiffPlan
+ * @property {'full' | 'incremental' | 'empty'} mode
+ * @property {string[]} revisions the revision arguments for `git diff`
+ * @property {string} reason one line, for the run log
+ */
+
+/**
+ * Decide what to review.
+ *
+ * Incremental review is the point of the design: re-reading the full PR diff
+ * on every push hands a nondeterministic reviewer code it already reviewed,
+ * and it reports something new there on every run, so the fix loop never
+ * converges. An incremental run sees only what changed since the last reviewed
+ * commit.
+ *
+ * "What changed" has to exclude the base branch. When main is merged into the
+ * branch, `last..head` contains every commit main gained since — none of it PR
+ * content. So when the PR's merge base has moved past the last reviewed
+ * commit, the comparison point is a synthetic tree: the last reviewed commit
+ * merged with the new merge base. Diffing that against head leaves exactly the
+ * changes the base branch does not explain. If that synthetic merge conflicts,
+ * the branch resolved the conflict itself, and the resolution is PR content
+ * this cannot separate from main's; the run falls back to a full review.
+ *
+ * A full review also runs when there is no trusted reviewed sha, when that sha
+ * is no longer in head's history (a rebase or force-push rewrote what was
+ * reviewed), and whenever `forceFull` is set (the `full-review` label).
+ *
+ * @param {object} input
+ * @param {string} input.baseSha
+ * @param {string} input.headSha
+ * @param {string | null} input.lastReviewedSha
+ * @param {boolean} [input.forceFull]
+ * @param {DiffGit} input.git
+ * @returns {DiffPlan}
+ */
+export function computeDiffRange({ baseSha, headSha, lastReviewedSha, forceFull = false, git }) {
+  /** @param {string} reason @returns {DiffPlan} */
+  const full = (reason) => ({ mode: 'full', revisions: [`${baseSha}...${headSha}`], reason });
+
+  if (forceFull) return full('the full-review label is set');
+  if (!isFullSha(lastReviewedSha)) return full('no reviewed commit is recorded');
+  if (!git.isAncestor(lastReviewedSha, headSha)) {
+    return full('the last reviewed commit is no longer in the branch history');
+  }
+  if (lastReviewedSha === headSha) {
+    return { mode: 'empty', revisions: [], reason: 'head has not moved since the last review' };
+  }
+
+  const mergeBase = git.mergeBase(baseSha, headSha);
+  if (mergeBase === null) return full('the branch has no merge base with its base');
+  if (git.isAncestor(mergeBase, lastReviewedSha)) {
     return {
-      range: `${lastReviewedSha}..${headSha}`,
-      mode: lastReviewedSha === headSha ? 'empty' : 'incremental',
+      mode: 'incremental',
+      revisions: [lastReviewedSha, headSha],
+      reason: 'commits pushed since the last review',
     };
   }
-  return { range: `${baseSha}...${headSha}`, mode: 'full' };
+
+  const replayed = git.mergeTree(lastReviewedSha, mergeBase);
+  if (replayed === null) {
+    return full('the base branch merged in since the last review conflicts with it');
+  }
+  return {
+    mode: 'incremental',
+    revisions: [replayed, headSha],
+    reason: 'commits pushed since the last review, excluding the base branch merged in',
+  };
+}
+
+/**
+ * What an incremental run's diff actually changed, per file.
+ *
+ * @typedef {object} ReviewScope
+ * @property {string[]} touched every path the diff names
+ * @property {Record<string, string[]>} added normalized added lines per path
+ */
+
+/**
+ * Collect the added lines of a `git diff --unified=0` per destination path.
+ *
+ * A line is only read as a file header between `diff --git` and the first
+ * hunk, so added content that itself begins with `+++` is still content.
+ *
+ * @param {string} diffText
+ * @returns {Record<string, string[]>}
+ */
+export function addedLinesByFile(diffText) {
+  /** @type {Map<string, string[]>} */
+  const added = new Map();
+  /** @type {string | null} */
+  let file = null;
+  let inHeader = false;
+  for (const line of diffText.split('\n')) {
+    if (line.startsWith('diff --git ')) {
+      inHeader = true;
+      file = null;
+      continue;
+    }
+    if (inHeader) {
+      if (line.startsWith('+++ ')) {
+        const target = line.slice(4);
+        file = target.startsWith('b/') ? target.slice(2) : null;
+      } else if (line.startsWith('@@')) {
+        inHeader = false;
+      }
+      continue;
+    }
+    if (file === null || !line.startsWith('+')) continue;
+    const content = normalize(line.slice(1));
+    if (content === '') continue;
+    const lines = added.get(file);
+    if (lines === undefined) added.set(file, [content]);
+    else lines.push(content);
+  }
+  return Object.fromEntries(added);
+}
+
+/**
+ * Whether a snippet line carries enough to locate anything: a bare `}` or `);`
+ * occurs on every other added line and would admit any finding at all.
+ *
+ * @param {string} line
+ * @returns {boolean}
+ */
+function isLocatingLine(line) {
+  return /[\p{L}\p{N}]/u.test(line);
+}
+
+/**
+ * Keep only the new findings an incremental run was allowed to raise.
+ *
+ * An incremental run reviews only what changed since the last review, so a
+ * NEW finding must point at that change: its snippet must overlap a line the
+ * diff added, or — for a finding about something absent — its file must be
+ * one the diff touched. A finding on code unchanged since the last review is
+ * exactly the churn incremental review exists to stop: that code was already
+ * reviewed, and a nondeterministic reviewer reading it again finds something
+ * new every time.
+ *
+ * A re-report of a finding already carried is always kept; it is not new, and
+ * {@link merge} needs it to refresh the prose or reopen the finding.
+ *
+ * @param {Finding[]} incoming
+ * @param {Finding[]} prior
+ * @param {ReviewScope} scope
+ * @returns {{ admitted: Finding[], dropped: Finding[] }}
+ */
+export function admitToScope(incoming, prior, scope) {
+  const known = new Set(prior.map((f) => f.id));
+  const touched = new Set(scope.touched);
+  /** @type {Finding[]} */
+  const admitted = [];
+  /** @type {Finding[]} */
+  const dropped = [];
+  for (const finding of incoming) {
+    (known.has(finding.id) || touchesChange(finding, touched, scope.added)
+      ? admitted
+      : dropped
+    ).push(finding);
+  }
+  return { admitted, dropped };
+}
+
+/**
+ * @param {Finding} finding
+ * @param {Set<string>} touched
+ * @param {Record<string, string[]>} added
+ * @returns {boolean}
+ */
+function touchesChange(finding, touched, added) {
+  if (!touched.has(finding.file)) return false;
+  if (finding.snippet === null) return true;
+  const addedHere = Object.hasOwn(added, finding.file) ? added[finding.file] : undefined;
+  return finding.snippet
+    .split('\n')
+    .map(normalize)
+    .filter(isLocatingLine)
+    .some((line) => (addedHere ?? []).some((addedLine) => addedLine.includes(line)));
+}
+
+/**
+ * @param {unknown} value
+ * @returns {value is string}
+ */
+function isStringValue(value) {
+  return typeof value === 'string';
+}
+
+/**
+ * Read a {@link ReviewScope} back from the file `plan` wrote.
+ *
+ * Unreadable yields null, and the caller then admits every finding: losing the
+ * scope must never be able to hide a finding from the merge gate.
+ *
+ * @param {string | null} raw
+ * @returns {ReviewScope | null}
+ */
+export function parseScope(raw) {
+  if (raw === null) return null;
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  if (typeof parsed !== 'object' || parsed === null) return null;
+  const record = /** @type {Record<string, unknown>} */ (parsed);
+  if (!Array.isArray(record.touched) || typeof record.added !== 'object' || record.added === null) {
+    return null;
+  }
+  const added = Object.fromEntries(
+    Object.entries(record.added)
+      .filter(([, lines]) => Array.isArray(lines))
+      .map(([path, lines]) => [path, lines.filter(isStringValue)])
+  );
+  return { touched: record.touched.filter(isStringValue), added };
 }
 
 /**

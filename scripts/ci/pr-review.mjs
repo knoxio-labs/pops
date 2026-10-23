@@ -8,7 +8,8 @@
  * since the last run, carries open findings forward, and marks a finding
  * resolved when the code it pointed at is gone — or, when the fix belongs in a
  * different file than the one the finding is anchored to, when that file has
- * it.
+ * it. An incremental run may not raise a new finding on code unchanged since
+ * the last review; see {@link computeDiffRange} and {@link admitToScope}.
  *
  * Two subcommands, either side of the model call:
  *
@@ -30,9 +31,11 @@
  *
  * Usage:
  *   node scripts/ci/pr-review.mjs plan --base <sha> --head <sha> --out-dir <d> \
- *     --findings-path <f> [--comment-file <f>] [--max-diff-bytes <n>]
+ *     --findings-path <f> [--comment-file <f>] [--max-diff-bytes <n>] \
+ *     [--full-review true]
  *   node scripts/ci/pr-review.mjs publish --head <sha> --mode <m> \
- *     --findings <f> --out <f> [--comment-file <f>] [--repo-root <d>]
+ *     --findings <f> --out <f> [--comment-file <f>] [--repo-root <d>] \
+ *     [--rejudge <f>] [--scope <f>]
  *   node scripts/ci/pr-review.mjs --self-test
  *
  * Exit 0 = done. Exit 1 = self-test failure. Exit 2 = usage error.
@@ -43,10 +46,13 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import {
+  addedLinesByFile,
+  admitToScope,
   applyRejudgement,
   computeDiffRange,
   findingFromModel,
   merge,
+  parseScope,
   parseState,
   rejudgeable,
   render,
@@ -213,8 +219,12 @@ const SCOPE = {
   full: 'Review the complete diff of this pull request against its base branch.',
   incremental:
     'Earlier commits on this branch were already reviewed. The diff below ' +
-    'contains ONLY the commits pushed since. Review just these changes, though ' +
-    'you may read any file in the repository for context.',
+    'contains ONLY what changed since the last reviewed commit; changes merged ' +
+    'in from the base branch are excluded. Review just these changes, though ' +
+    'you may read any file in the repository for context. Report a new finding ' +
+    'only on a line this diff adds or changes, or, for something absent, in a ' +
+    'file this diff touches: code unchanged since the last review was already ' +
+    'reviewed, and a new finding on it is discarded unread.',
 };
 
 /**
@@ -307,6 +317,113 @@ function readIfPresent(path) {
   return readFileSync(path, 'utf8');
 }
 
+/**
+ * @param {string} repoRoot
+ * @returns {import('./pr-review-state.mjs').DiffGit}
+ */
+function repoGit(repoRoot) {
+  return {
+    isAncestor: ancestorCheck(repoRoot),
+    mergeBase: (a, b) => {
+      const result = spawnSync('git', ['-C', repoRoot, 'merge-base', a, b], { encoding: 'utf8' });
+      return result.status === 0 ? result.stdout.trim() || null : null;
+    },
+    mergeTree: (ours, theirs) => {
+      const result = spawnSync(
+        'git',
+        ['-C', repoRoot, 'merge-tree', '--write-tree', '--no-messages', ours, theirs],
+        { encoding: 'utf8' }
+      );
+      return result.status === 0 ? (result.stdout.split('\n')[0] ?? '').trim() || null : null;
+    },
+  };
+}
+
+const DIFF_EXCLUDES = [
+  '--',
+  '.',
+  ':(exclude)**/pnpm-lock.yaml',
+  ':(exclude)**/node_modules/**',
+  ':(exclude)**/dist/**',
+];
+
+/**
+ * Everything the reviewer is handed for one run, built from one diff.
+ *
+ * @typedef {object} ReviewInput
+ * @property {string} prompt
+ * @property {string[]} offered ids up for re-judgement
+ * @property {import('./pr-review-state.mjs').ReviewScope} scope
+ */
+
+/**
+ * Build the reviewer's prompt for a diff between `revisions`.
+ *
+ * The single source of truth for what the reviewer is asked, shared by the CI
+ * `plan` subcommand and the local `mise review` runner, so the two cannot ask
+ * different questions of the same diff.
+ *
+ * @param {object} input
+ * @param {string} input.repoRoot
+ * @param {string[]} input.revisions `git diff` revision arguments
+ * @param {'full' | 'incremental'} input.mode
+ * @param {import('./pr-review-state.mjs').Finding[]} input.priorFindings
+ * @param {string} input.findingsPath where the reviewer must write its JSON
+ * @param {number} [input.maxDiffBytes]
+ * @returns {ReviewInput}
+ */
+export function buildReviewInput({
+  repoRoot,
+  revisions,
+  mode,
+  priorFindings,
+  findingsPath,
+  maxDiffBytes = 180_000,
+}) {
+  // Excluding lockfiles and generated trees here rather than in the workflow
+  // keeps the exclusion visible next to the prompt that consumes the diff.
+  let diff = git(['diff', '--unified=8', ...revisions, ...DIFF_EXCLUDES], repoRoot);
+  if (diff.length > maxDiffBytes) diff = `${diff.slice(0, maxDiffBytes)}\n\n[diff truncated]\n`;
+
+  const touched = git(['diff', '--name-only', ...revisions], repoRoot)
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line !== '');
+  const added = addedLinesByFile(
+    git(
+      [
+        '-c',
+        'core.quotePath=false',
+        'diff',
+        '--unified=0',
+        '--no-color',
+        ...revisions,
+        ...DIFF_EXCLUDES,
+      ],
+      repoRoot
+    )
+  );
+  const upForRejudgement = rejudgeable(priorFindings, touched);
+  const offered = new Set(upForRejudgement.map((f) => f.id));
+
+  // A finding up for re-judgement is deliberately kept OUT of the do-not-report
+  // list: the reviewer is being asked about it, and telling it not to mention
+  // the thing it is being asked about is how a prompt talks itself in circles.
+  const carried = priorFindings
+    .filter((f) => f.status === 'open' && !offered.has(f.id))
+    .map((f) => `${f.file}: ${f.title}`);
+
+  const prompt = fill(PROMPT_TEMPLATE, {
+    scope: SCOPE[mode],
+    rubric: RUBRIC.join('\n- '),
+    carried: carriedBlock(carried),
+    rejudge: rejudgeBlock(upForRejudgement),
+    out: findingsPath,
+    diff: diff || '(no textual changes)',
+  });
+  return { prompt, offered: [...offered], scope: { touched, added } };
+}
+
 /** @param {Record<string, string>} opts */
 function cmdPlan(opts) {
   const repoRoot = opts['repo-root'] ?? '.';
@@ -318,59 +435,28 @@ function cmdPlan(opts) {
   mkdirSync(outDir, { recursive: true });
 
   const prior = parseState(readIfPresent(opts['comment-file']));
-  const { range, mode } = computeDiffRange(
-    opts.base,
-    opts.head,
-    prior.last_reviewed_sha,
-    ancestorCheck(repoRoot)
-  );
+  const { revisions, mode, reason } = computeDiffRange({
+    baseSha: opts.base,
+    headSha: opts.head,
+    lastReviewedSha: prior.last_reviewed_sha,
+    forceFull: opts['full-review'] === 'true',
+    git: repoGit(repoRoot),
+  });
   writeFileSync(join(outDir, 'mode'), mode);
+  console.log(`Review mode: ${mode} (${reason})`);
   if (mode === 'empty') return;
 
-  // Excluding lockfiles and generated trees here rather than in the workflow
-  // keeps the exclusion visible next to the prompt that consumes the diff.
-  let diff = git(
-    [
-      'diff',
-      '--unified=8',
-      range,
-      '--',
-      '.',
-      ':(exclude)**/pnpm-lock.yaml',
-      ':(exclude)**/node_modules/**',
-      ':(exclude)**/dist/**',
-    ],
-    repoRoot
-  );
-  const maxBytes = Number(opts['max-diff-bytes'] ?? 180_000);
-  if (diff.length > maxBytes) diff = `${diff.slice(0, maxBytes)}\n\n[diff truncated]\n`;
-
-  const touched = git(['diff', '--name-only', range], repoRoot)
-    .split('\n')
-    .map((line) => line.trim())
-    .filter((line) => line !== '');
-  const upForRejudgement = rejudgeable(prior.findings, touched);
-  const offered = new Set(upForRejudgement.map((f) => f.id));
-  writeFileSync(join(outDir, 'rejudge.json'), JSON.stringify({ offered: [...offered] }));
-
-  // A finding up for re-judgement is deliberately kept OUT of the do-not-report
-  // list: the reviewer is being asked about it, and telling it not to mention
-  // the thing it is being asked about is how a prompt talks itself in circles.
-  const carried = prior.findings
-    .filter((f) => f.status === 'open' && !offered.has(f.id))
-    .map((f) => `${f.file}: ${f.title}`);
-
-  writeFileSync(
-    join(outDir, 'prompt.txt'),
-    fill(PROMPT_TEMPLATE, {
-      scope: SCOPE[mode],
-      rubric: RUBRIC.join('\n- '),
-      carried: carriedBlock(carried),
-      rejudge: rejudgeBlock(upForRejudgement),
-      out: findingsPath,
-      diff: diff || '(no textual changes)',
-    })
-  );
+  const input = buildReviewInput({
+    repoRoot,
+    revisions,
+    mode,
+    priorFindings: prior.findings,
+    findingsPath,
+    maxDiffBytes: Number(opts['max-diff-bytes'] ?? 180_000),
+  });
+  writeFileSync(join(outDir, 'rejudge.json'), JSON.stringify({ offered: input.offered }));
+  writeFileSync(join(outDir, 'scope.json'), JSON.stringify(input.scope));
+  writeFileSync(join(outDir, 'prompt.txt'), input.prompt);
 }
 
 /**
@@ -433,6 +519,34 @@ function modelResolvedIds(rawFindings) {
   }
 }
 
+/**
+ * Drop the new findings an incremental run raised on unchanged code.
+ *
+ * Only an incremental run is filtered, and only with a readable scope: a
+ * missing or corrupt scope file admits everything, so losing it can never hide
+ * a finding from the merge gate.
+ *
+ * @param {import('./pr-review-state.mjs').Finding[]} incoming
+ * @param {import('./pr-review-state.mjs').Finding[]} prior
+ * @param {Record<string, string>} opts
+ * @returns {import('./pr-review-state.mjs').Finding[]}
+ */
+function inScope(incoming, prior, opts) {
+  if (opts.mode !== 'incremental') return incoming;
+  const scope = parseScope(readIfPresent(opts.scope));
+  if (scope === null) {
+    console.error('::warning::no readable review scope; every new finding is admitted');
+    return incoming;
+  }
+  const { admitted, dropped } = admitToScope(incoming, prior, scope);
+  for (const finding of dropped) {
+    console.log(
+      `Out of scope (code unchanged since the last review): ${finding.file}: ${finding.title}`
+    );
+  }
+  return admitted;
+}
+
 /** @param {Record<string, string>} opts */
 function cmdPublish(opts) {
   const repoRoot = opts['repo-root'] ?? '.';
@@ -471,7 +585,7 @@ function cmdPublish(opts) {
 
   const verified = verifyStatus(
     applyRejudgement(
-      merge(prior.findings, incoming),
+      merge(prior.findings, inScope(incoming, prior.findings, opts)),
       offeredForRejudgement(opts.rejudge),
       modelResolvedIds(rawFindings),
       opts.head
@@ -657,14 +771,48 @@ function selfTest() {
   );
   check('an unlanded remedy leaves the finding open', notLanded[0]?.status === 'open');
 
-  // A dangling last-reviewed sha (rebase, force-push) must fall back to full.
+  // A dangling last-reviewed sha (rebase, force-push) must fall back to full,
+  // and a base-branch merge must never be read as PR content.
+  const last = 'a'.repeat(40);
+  const head = 'b'.repeat(40);
+  /** @param {Partial<import('./pr-review-state.mjs').DiffGit>} over */
+  const gitStub = (over) => ({
+    isAncestor: () => true,
+    mergeBase: () => 'c'.repeat(40),
+    mergeTree: () => 'd'.repeat(40),
+    ...over,
+  });
+  const plan = (/** @type {object} */ over) =>
+    computeDiffRange({
+      baseSha: 'base',
+      headSha: head,
+      lastReviewedSha: last,
+      git: gitStub({}),
+      ...over,
+    });
   check(
     'a dangling sha falls back to a full review',
-    computeDiffRange('base', 'head', 'dangling', () => false).mode === 'full'
+    plan({ git: gitStub({ isAncestor: () => false }) }).mode === 'full'
+  );
+  check('an unchanged head is empty', plan({ headSha: last }).mode === 'empty');
+  check('the full-review label forces a full review', plan({ forceFull: true }).mode === 'full');
+  check(
+    'a non-sha recorded value is not trusted',
+    plan({ lastReviewedSha: '--output=/tmp/x' }).mode === 'full'
+  );
+  const merged = plan({
+    git: gitStub({ isAncestor: (/** @type {string} */ a) => a !== 'c'.repeat(40) }),
+  });
+  check(
+    'a base merge diffs from the replayed tree, not the last commit',
+    merged.mode === 'incremental' && merged.revisions[0] === 'd'.repeat(40)
   );
   check(
-    'an unchanged head is empty',
-    computeDiffRange('base', 'head', 'head', () => true).mode === 'empty'
+    'new findings on unchanged code are dropped',
+    admitToScope([finding({ id: 'new', snippet: 'const x = 1;' })], [], {
+      touched: ['a.ts'],
+      added: addedLinesByFile('diff --git a/a.ts b/a.ts\n+++ b/a.ts\n@@ -1 +1 @@\n+const y = 2;\n'),
+    }).dropped.length === 1
   );
 
   // Corrupt bookkeeping degrades, never throws.
@@ -698,7 +846,9 @@ function usage(message) {
   console.error(
     'Usage:\n' +
       '  node scripts/ci/pr-review.mjs plan --base <sha> --head <sha> --out-dir <d> --findings-path <f>\n' +
+      '    [--full-review true] review the whole PR diff whatever was reviewed before\n' +
       '  node scripts/ci/pr-review.mjs publish --head <sha> --mode <m> --findings <f> --out <f>\n' +
+      '    [--scope <f>] what `plan` saw change; drops new findings on unchanged code\n' +
       '    [--rejudge <f>] ids `plan` offered for re-judgement; without it nothing is re-judged\n' +
       '  node scripts/ci/pr-review.mjs --self-test'
   );
