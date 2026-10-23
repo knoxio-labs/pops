@@ -30,7 +30,10 @@ internal struct InventoryItemPartsContent: View {
     @State private var adding = false
 
     internal var body: some View {
-        Group {
+        // A stack rather than a `Group`: while the read is in flight there is
+        // nothing to draw, and an empty `Group` contributes no view inside the
+        // page's `LazyVStack`, so the section's `.task` would never start.
+        VStack(alignment: .leading, spacing: PopsSpacing.zero) {
             if let parts = model.parts {
                 VStack(alignment: .leading, spacing: PopsSpacing.xl) {
                     if let assembly = parts.assembly {
