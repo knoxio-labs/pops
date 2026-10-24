@@ -76,6 +76,9 @@ impl CredentialCipher {
         file.take(130)
             .read_to_end(&mut bytes)
             .map_err(|_| CredentialError::KeyUnavailable)?;
+        if bytes.len() == 130 {
+            return Err(CredentialError::InvalidKey);
+        }
         Self::from_hex(&bytes)
     }
 
@@ -264,6 +267,25 @@ mod tests {
         );
         assert!(cipher.encrypt("", "account-1", &largest).is_err());
         assert!(cipher.encrypt("icloud", "", &largest).is_err());
+    }
+
+    #[test]
+    fn secret_file_reads_are_bounded_and_reject_unread_trailing_data() {
+        let directory = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tmp");
+        std::fs::create_dir_all(&directory).unwrap();
+        let path = directory.join(format!("provider-key-test-{}", uuid::Uuid::new_v4()));
+        let mut bytes = vec![b'1'; 64];
+        bytes.push(b'\n');
+        std::fs::write(&path, &bytes).unwrap();
+        assert!(CredentialCipher::from_secret_file(&path).is_ok());
+        bytes.extend_from_slice(&[b' '; 130]);
+        bytes.push(b'z');
+        std::fs::write(&path, &bytes).unwrap();
+        assert!(matches!(
+            CredentialCipher::from_secret_file(&path),
+            Err(CredentialError::InvalidKey)
+        ));
+        std::fs::remove_file(path).unwrap();
     }
 
     #[test]
