@@ -46,6 +46,13 @@ pub struct HumanIdentity {
 }
 
 impl HumanIdentity {
+    #[cfg(test)]
+    pub(super) fn for_test(subject: &str) -> Self {
+        Self {
+            subject: subject.to_string(),
+        }
+    }
+
     /// Stable Access subject used to bind one-use authorization state.
     pub fn subject(&self) -> &str {
         &self.subject

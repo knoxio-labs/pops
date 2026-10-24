@@ -68,6 +68,11 @@ pub struct CredentialCipher {
 }
 
 impl CredentialCipher {
+    #[cfg(test)]
+    pub(super) fn for_test() -> Self {
+        Self::from_hex(&[b'1'; 64]).expect("synthetic key")
+    }
+
     /// Read a Docker-secret style file containing a 32-byte key encoded as 64 hex
     /// characters, with optional surrounding ASCII whitespace. Reads are bounded.
     pub fn from_secret_file(path: &Path) -> Result<Self, CredentialError> {
