@@ -117,7 +117,7 @@ describe('createDocumentsClient.getPaperlessStatus', () => {
       maxUploadBytes: null,
       allowedMimeTypes: null,
     });
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining('degraded'));
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('failed (kind=unavailable)'));
     warn.mockRestore();
   });
 });
@@ -137,14 +137,20 @@ describe('createDocumentsClient.searchPaperlessDocuments', () => {
       stubHandle({ search: async () => ok({ data: docs }) })
     );
 
-    await expect(client.searchPaperlessDocuments('bill')).resolves.toEqual(docs);
+    await expect(client.searchPaperlessDocuments('bill')).resolves.toEqual({
+      ok: true,
+      documents: docs,
+    });
   });
 
-  it('returns null (not thrown) when documents reports the integration is unconfigured', async () => {
+  it('returns the failure, reason intact, instead of throwing', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const client = createDocumentsClient(() => stubHandle({ search: async () => unavailable() }));
 
-    await expect(client.searchPaperlessDocuments('bill')).resolves.toBeNull();
+    await expect(client.searchPaperlessDocuments('bill')).resolves.toEqual({
+      ok: false,
+      failure: { kind: 'unavailable', pillar: 'documents' },
+    });
     warn.mockRestore();
   });
 

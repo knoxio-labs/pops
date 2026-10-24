@@ -50,7 +50,10 @@ const MESSAGE_FALLBACK: Record<
 function formatFailureReason(failure: Exclude<CallResult<unknown>, { kind: 'ok' }>): string {
   switch (failure.kind) {
     case 'unavailable':
-      return `Pillar '${failure.pillar}' is unavailable. Try again shortly.`;
+      return appendProducerDiagnostics(
+        failure.message ?? `Pillar '${failure.pillar}' is unavailable. Try again shortly.`,
+        failure
+      );
     case 'degraded':
       return `Pillar '${failure.pillar}' is reconciling (${failure.reason}). Try again shortly.`;
     case 'contract-mismatch':

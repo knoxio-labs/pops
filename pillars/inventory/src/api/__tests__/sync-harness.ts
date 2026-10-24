@@ -49,7 +49,7 @@ export function paperless(status: Partial<PaperlessStatus> = {}): DocumentsClien
         allowedMimeTypes: null,
         ...status,
       }),
-    searchPaperlessDocuments: () => Promise.resolve([]),
+    searchPaperlessDocuments: () => Promise.resolve({ ok: true, documents: [] }),
     paperlessDocumentMissing: () => Promise.resolve(null),
   };
 }
