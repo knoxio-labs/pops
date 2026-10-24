@@ -14,6 +14,7 @@ import type { PendingChangeSet, PendingEntity } from '../store/importStore';
 export interface PickableEntity {
   id: string;
   name: string;
+  type: string;
   aliases: readonly string[];
 }
 
@@ -45,8 +46,9 @@ export function computeMergedRules(
 
 /**
  * Merge the pending entities into the DB entities. When a pending entity's
- * name matches a DB entity's name (case-insensitive), the pending version
- * replaces the DB entry.
+ * name matches a non-person DB entity's name (case-insensitive), the pending
+ * merchant replaces that entry. People remain separate identities even when
+ * they share a name with another person or merchant.
  * The merged list is sorted alphabetically by name (case-insensitive) so
  * newly-added pending entities appear in their natural position rather than
  * appended at the end.
@@ -65,15 +67,22 @@ export function computeMergedEntities(
   const byName = (a: PickableEntity, b: PickableEntity) =>
     a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
 
-  const pendingNameSet = new Set(pendingEntities.map((pe) => pe.name.toLowerCase()));
+  const pendingNameSet = new Set(
+    pendingEntities
+      .filter((entity) => entity.type !== 'person')
+      .map((entity) => entity.name.toLowerCase())
+  );
 
   const adaptedPending: PickableEntity[] = pendingEntities.map((pe) => ({
     id: pe.tempId,
     name: pe.name,
+    type: pe.type,
     aliases: [],
   }));
 
-  const filteredDb = dbEntities.filter((e) => !pendingNameSet.has(e.name.toLowerCase()));
+  const filteredDb = dbEntities.filter(
+    (e) => e.type === 'person' || !pendingNameSet.has(e.name.toLowerCase())
+  );
 
   return [...filteredDb, ...adaptedPending].toSorted(byName);
 }

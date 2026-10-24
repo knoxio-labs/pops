@@ -1,150 +1,123 @@
-import { Cloud, RefreshCw } from 'lucide-react';
+import { ArrowUpRight, Check, Cloud, ContactRound, Plus } from 'lucide-react';
 import { useState } from 'react';
 
-import { Badge, Button, Card, CardContent, PageHeader, TextInput } from '@pops/ui';
+import { Button, PageHeader } from '@pops/ui';
+
+import { ConnectionDialog } from './connection-dialog';
+import { connectionCopy, type ConnectionState, type ContactProvider } from './connection-model';
 
 import type { ScreenStates } from '@/contract';
 
-type ConnectionState = 'connected' | 'disconnected' | 'loading' | 'error' | 'expired';
-const copy = {
-  connected: {
-    title: 'Connected',
-    message: 'Read only. Review before applying changes.',
-    action: 'Prepare import',
-  },
-  disconnected: {
-    title: 'Not connected',
-    message: 'Connect to preview contacts.',
-    action: 'Connect',
-  },
-  loading: { title: 'Connecting', message: 'Checking connection…', action: 'Connecting' },
-  error: {
-    title: 'Connection failed',
-    message: 'No contacts changed. Check access and retry.',
-    action: 'Retry connection',
-  },
-  expired: {
-    title: 'Reconnect required',
-    message: 'Access expired. Existing contacts remain available.',
-    action: 'Reconnect',
-  },
-};
-
-function IcloudForm({ notify }: { notify: (message: string) => void }) {
-  return (
-    <form
-      className="space-y-4"
-      onSubmit={(event) => {
-        event.preventDefault();
-        notify('iCloud connection submitted. Checking access…');
-      }}
-    >
-      <TextInput label="Apple account email" type="email" required />
-      <TextInput label="App-specific password" type="password" autoComplete="off" required />
-      <p className="text-xs text-muted-foreground">
-        Use an app-specific password from your Apple account. Your regular account password is not
-        accepted.
-      </p>
-      <Button type="submit">Connect iCloud</Button>
-    </form>
-  );
-}
-
-function ConnectedActions({
-  provider,
-  notify,
-}: {
-  provider: string;
+interface ProviderCardProps {
+  provider: ContactProvider;
+  condition: ConnectionState;
+  onConnected: () => void;
+  onDisconnected: () => void;
   notify: (message: string) => void;
-}) {
-  return (
-    <>
-      <p>owner@example.test</p>
-      <p className="text-sm text-muted-foreground">
-        Last import 24 October · 6 contacts. No changes are sent to {provider}.
-      </p>
-      <Button
-        onClick={() => notify(`${provider} preview ready. Review identities before importing.`)}
-      >
-        <RefreshCw className="size-4" />
-        Prepare import
-      </Button>
-      <Button
-        variant="ghost"
-        onClick={() => notify(`${provider} disconnected. Imported people are retained.`)}
-      >
-        Disconnect
-      </Button>
-    </>
-  );
 }
 
 function ProviderCard({
   provider,
   condition,
+  onConnected,
+  onDisconnected,
   notify,
-}: {
-  provider: string;
-  condition: ConnectionState;
-  notify: (message: string) => void;
-}) {
-  const [showForm, setShowForm] = useState(false);
-  function connect() {
-    if (provider === 'iCloud') setShowForm(true);
-    else notify('Continue with Google to grant read-only contacts access.');
-  }
+}: ProviderCardProps) {
+  const connected = condition === 'connected';
+  const Icon = provider === 'Google' ? ContactRound : Cloud;
   return (
-    <Card>
-      <CardContent className="space-y-4 pt-6">
-        <div className="flex items-center justify-between">
-          <h2 className="flex items-center gap-2 text-lg font-semibold">
-            <Cloud className="size-5" />
-            {provider}
-          </h2>
-          <Badge variant="outline">{copy[condition].title}</Badge>
-        </div>
-        <p className="text-sm text-muted-foreground">{copy[condition].message}</p>
-        {condition === 'connected' ? (
-          <ConnectedActions provider={provider} notify={notify} />
-        ) : (
-          <Button disabled={condition === 'loading'} onClick={connect}>
-            {copy[condition].action}
-          </Button>
-        )}
-        {showForm && <IcloudForm notify={notify} />}
-      </CardContent>
-    </Card>
+    <ConnectionDialog
+      provider={provider}
+      condition={condition}
+      onConnected={onConnected}
+      onDisconnected={onDisconnected}
+      notify={notify}
+    >
+      <Button
+        variant="ghost"
+        aria-label={`${provider}: ${connectionCopy[condition].title}. ${connectionCopy[condition].action}`}
+        className={`group h-auto min-h-48 w-full flex-col items-stretch justify-between gap-4 whitespace-normal rounded-xl border-2 bg-card p-5 text-left text-foreground shadow-sm transition-colors hover:border-app-accent hover:bg-accent/40 ${connected ? 'border-solid border-app-accent/60' : 'border-dashed border-border'}`}
+      >
+        <span className="flex w-full items-start justify-between gap-4">
+          <span className="flex items-center gap-3">
+            <span className="flex size-9 items-center justify-center rounded-lg bg-muted text-foreground">
+              <Icon className="size-5" />
+            </span>
+            <span className="text-xl font-semibold tracking-tight">{provider}</span>
+          </span>
+          {connected ? (
+            <span className="flex size-6 items-center justify-center rounded-full bg-app-accent text-app-accent-foreground">
+              <Check className="size-4" />
+            </span>
+          ) : (
+            <Plus className="mt-1 size-5 text-foreground/70" />
+          )}
+        </span>
+        <span className="block min-h-14 space-y-1">
+          <span className="block text-base leading-7 text-foreground/85">
+            {connected ? 'owner@example.test' : connectionCopy[condition].message}
+          </span>
+          {connected && (
+            <span className="block text-sm leading-6 text-foreground/80">
+              Last synced today · 6 contacts
+            </span>
+          )}
+        </span>
+        <span className="flex w-full items-center justify-between gap-3 border-t border-border/70 pt-3 text-sm font-medium">
+          <span>{connectionCopy[condition].title}</span>
+          <ArrowUpRight className="size-5 text-foreground/70" />
+        </span>
+      </Button>
+    </ConnectionDialog>
   );
 }
 
-/** Provider connection states remain local and send no requests. */
-export function Connections({ condition = 'connected' }: { condition?: ConnectionState }) {
+/** Clickable provider cards open connection dialogs; fixtures never send requests. */
+export function Connections({ condition = 'mixed' }: { condition?: ConnectionState | 'mixed' }) {
   const [message, setMessage] = useState('');
+  const [states, setStates] = useState<Record<ContactProvider, ConnectionState>>(() => ({
+    Google: condition === 'mixed' ? 'connected' : condition,
+    iCloud: condition === 'mixed' ? 'disconnected' : condition,
+  }));
+  const providers: ContactProvider[] = ['Google', 'iCloud'];
   return (
-    <div className="mx-auto max-w-4xl space-y-6 p-6">
+    <div className="mx-auto max-w-3xl space-y-6 p-6">
       <PageHeader
         title="Contact connections"
-        description="Bring contacts into POPS. Review each import before applying changes."
+        description="Connect your accounts, then review the people you bring into POPS."
       />
-      {message && <p role="status">{message}</p>}
-      <div className="grid gap-6 md:grid-cols-2">
-        {['Google', 'iCloud'].map((provider) => (
+      {message && (
+        <p role="status" className="text-base">
+          {message}
+        </p>
+      )}
+      <div className="grid gap-4 md:grid-cols-2">
+        {providers.map((provider) => (
           <ProviderCard
             key={provider}
             provider={provider}
-            condition={condition}
+            condition={states[provider]}
+            onConnected={() => setStates((previous) => ({ ...previous, [provider]: 'connected' }))}
+            onDisconnected={() =>
+              setStates((previous) => ({ ...previous, [provider]: 'disconnected' }))
+            }
             notify={setMessage}
           />
         ))}
       </div>
+      <p className="text-base leading-7 text-foreground/85">
+        Connections are read only. Review new matches before applying an import.
+      </p>
     </div>
   );
 }
-/** Provider boundaries include fresh setup, outage and expired access. */
+
+/** Connection boundaries include fresh setup, outage, expired access and mixed accounts. */
 export const connectionStates: ScreenStates = {
   empty: () => <Connections condition="disconnected" />,
   loading: () => <Connections condition="loading" />,
   error: () => <Connections condition="error" />,
   expired: () => <Connections condition="expired" />,
-  success: () => <Connections />,
+  success: () => <Connections condition="connected" />,
+  mixed: () => <Connections />,
 };

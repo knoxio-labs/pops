@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { toast } from 'sonner';
 
-import { entityAnswersTo } from '../../entity-existence';
+import { resolveSuggestedMerchant } from '../../entity-existence';
 import { type LocalTxState, moveToMatched, pluralize, type UseBulkAssignmentArgs } from './types';
 
 import type { Dispatch, SetStateAction } from 'react';
@@ -24,8 +24,7 @@ function resolveEntityId(
   addPendingEntity: AcceptAllArgs['addPendingEntity'],
   dbEntities: AcceptAllArgs['dbEntities']
 ): string {
-  const target = entityName.toLowerCase();
-  const existing = entities?.find((e) => entityAnswersTo(e, target))?.id;
+  const existing = entities ? resolveSuggestedMerchant(entities, entityName)?.id : undefined;
   if (existing) return existing;
   const pending = addPendingEntity({ name: entityName, type: 'company' }, dbEntities);
   return pending.tempId;
@@ -56,7 +55,9 @@ export function useAcceptAll(args: AcceptAllArgs) {
         return;
       }
       try {
-        const entityId = resolveEntityId(entityName, entities, addPendingEntity, dbEntities);
+        const entityId =
+          firstTx.entity?.entityId ??
+          resolveEntityId(entityName, entities, addPendingEntity, dbEntities);
         setLocalTransactions((prev) => moveToMatched(prev, transactions, { entityId, entityName }));
         void recomputeForEntity(transactions, entityId);
         toast.success(`Accepted ${pluralize(transactions.length)} as "${entityName}"`);
@@ -96,8 +97,13 @@ export function useAcceptAiSuggestion(args: {
       if (!transaction.entity?.entityName) return;
       let entityId = transaction.entity.entityId;
       if (!entityId && entities) {
-        const target = transaction.entity.entityName.toLowerCase();
-        const matching = entities.find((e) => entityAnswersTo(e, target));
+        let matching;
+        try {
+          matching = resolveSuggestedMerchant(entities, transaction.entity.entityName);
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : 'Ambiguous merchant name');
+          return;
+        }
         if (matching) entityId = matching.id;
       }
       if (!entityId) {

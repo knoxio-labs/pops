@@ -7,11 +7,14 @@
 //! frontend uses) targets **3.0**. A 3.1 document breaks client generation.
 //! The TS pillars solve this with `z.toJSONSchema({ target: 'openapi-3.0' })`;
 //! the Rust side mirrors that intent with a deterministic post-process pass
-//! that rewrites the serialized document to a 3.0.3 shape. The two 3.1→3.0
+//! that rewrites the serialized document to a 3.0.3 shape. The three 3.1→3.0
 //! shape differences utoipa can emit are handled:
 //!
 //!   - `type: ["string", "null"]` (3.1 nullable union) → `type: "string"` +
 //!     `nullable: true` (3.0 keyword).
+//!   - A null-only union branch becomes a nullable object constrained to the
+//!     single enum value `null`, preserving nullable references without admitting
+//!     arbitrary objects.
 //!   - `examples` (3.1 array) → `example` (3.0 singular) on schema objects.
 //!
 //! The `openapi` version field is forced to `3.0.3`. `emit-openapi` writes
@@ -29,8 +32,18 @@ use crate::entities::routes::{
     EntityListResponse, EntityMutation, EntityResponse, LookupBody, LookupResponse, MessageResponse,
 };
 use crate::health::HealthResponse;
+use crate::persons::model::{
+    ContactPoint, ContactPointInput, ContactPointKind, NameCompleteness, PersonName, PersonProfile,
+};
+use crate::persons::routes::{
+    ContactPointListResponse, ContactPointResponse, PersonProfileResponse,
+};
 use crate::search::routes::{
     MatchType, SearchHit, SearchHitData, SearchQuery, SearchRequest, SearchResponse,
+};
+use crate::sources::model::{SourceAccount, SourceAccountInput, SourceRecord};
+use crate::sources::routes::{
+    SourceAccountListResponse, SourceAccountResponse, SourceRecordListResponse,
 };
 
 /// The contacts OpenAPI surface. Documents `/openapi`, `/health`, the stub
@@ -47,6 +60,12 @@ use crate::search::routes::{
         description = "Contacts pillar — authoritative entities store (first Rust pillar)."
     ),
     paths(
+        crate::merges::routes::resolve,
+        crate::merges::routes::group,
+        crate::merges::routes::merge,
+        crate::merges::routes::undo,
+        crate::merges::routes::separate_list,
+        crate::merges::routes::separate,
         crate::app::openapi_document,
         crate::health::health,
         crate::health::root,
@@ -66,8 +85,48 @@ use crate::search::routes::{
         crate::entities::addresses_routes::list_addresses,
         crate::entities::addresses_routes::create_address,
         crate::search::routes::search,
+        crate::persons::routes::get_profile,
+        crate::persons::routes::put_profile,
+        crate::persons::routes::list_points,
+        crate::persons::routes::create_point,
+        crate::persons::routes::prefer_point,
+        crate::sources::routes::list_accounts,
+        crate::sources::routes::register_account,
+        crate::sources::routes::list_records,
     ),
     components(schemas(
+        crate::merges::model::ResolveBody,
+        crate::merges::model::ResolvedIdentity,
+        crate::merges::model::ResolveResponse,
+        crate::merges::model::MergeBody,
+        crate::merges::model::MergeField,
+        crate::merges::model::FieldSelection,
+        crate::merges::model::SourceMergeField,
+        crate::merges::model::AppliedSelection,
+        crate::merges::model::UndoBody,
+        crate::merges::model::SeparateBody,
+        crate::merges::model::IdentityGroup,
+        crate::merges::model::GroupMember,
+        crate::merges::model::MergeResult,
+        crate::merges::model::UndoResult,
+        crate::merges::model::SeparateResult,
+        crate::merges::model::SeparatePair,
+        crate::merges::model::SeparateList,
+        PersonName,
+        NameCompleteness,
+        PersonProfile,
+        ContactPointKind,
+        ContactPointInput,
+        ContactPoint,
+        PersonProfileResponse,
+        ContactPointListResponse,
+        ContactPointResponse,
+        SourceAccount,
+        SourceAccountInput,
+        SourceRecord,
+        SourceAccountListResponse,
+        SourceAccountResponse,
+        SourceRecordListResponse,
         HealthResponse,
         Entity,
         EntityLookup,
@@ -133,6 +192,7 @@ fn downgrade_to_30(doc: &mut Value) {
 fn rewrite_schema_node(node: &mut Value) {
     match node {
         Value::Object(map) => {
+            rewrite_null_only_schema(map);
             rewrite_nullable_type_union(map);
             rewrite_examples_to_example(map);
             for value in map.values_mut() {
@@ -145,6 +205,17 @@ fn rewrite_schema_node(node: &mut Value) {
             }
         }
         _ => {}
+    }
+}
+
+// OpenAPI 3.0 requires an explicit type for nullable to take effect. The enum
+// keeps this branch null-only rather than accepting arbitrary objects alongside
+// the referenced schema: https://spec.openapis.org/oas/v3.0.3#schema-object
+fn rewrite_null_only_schema(map: &mut Map<String, Value>) {
+    if map.len() == 1 && map.get("type").and_then(Value::as_str) == Some("null") {
+        map.insert("type".to_string(), Value::String("object".to_string()));
+        map.insert("nullable".to_string(), Value::Bool(true));
+        map.insert("enum".to_string(), Value::Array(vec![Value::Null]));
     }
 }
 
@@ -312,5 +383,26 @@ mod tests {
         rewrite_schema_node(&mut node);
         assert_eq!(node["type"], serde_json::json!("string"));
         assert_eq!(node["nullable"], serde_json::json!(true));
+    }
+    #[test]
+    fn nullable_reference_keeps_a_null_only_branch_in_30() {
+        let reference = serde_json::json!({"$ref":"#/components/schemas/PersonProfile"});
+        let mut schema = serde_json::json!({"oneOf":[reference.clone(),{"type":"null"}]});
+        rewrite_schema_node(&mut schema);
+        assert_eq!(schema["oneOf"][0], reference);
+        let null_branch = &schema["oneOf"][1];
+        assert_eq!(null_branch["type"], "object");
+        assert_eq!(null_branch["nullable"], true);
+        assert_eq!(null_branch["enum"], serde_json::json!([null]));
+    }
+
+    #[test]
+    fn person_profile_response_documents_an_optional_profile_without_31_types() {
+        let doc = openapi_30_value();
+        let branch = &doc["components"]["schemas"]["PersonProfileResponse"]["properties"]["data"]
+            ["oneOf"][1];
+        assert_eq!(branch["enum"], serde_json::json!([null]));
+        assert_eq!(branch["nullable"], true);
+        assert_eq!(branch["type"], "object");
     }
 }
