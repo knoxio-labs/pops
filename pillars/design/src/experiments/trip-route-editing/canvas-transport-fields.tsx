@@ -28,7 +28,7 @@ export function CanvasVisitEndpoint({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline" className="min-h-11" aria-label={label}>
+        <Button variant="ghost" className="min-h-11 px-2 text-sm font-normal" aria-label={label}>
           {visit ? canvasName(state, visit) : label}
         </Button>
       </PopoverTrigger>
@@ -97,6 +97,8 @@ export function TransportName({ record }: { record: TripRecord }) {
       aria-label="Transport name"
       variant="ghost"
       defaultValue={title}
+      containerClassName="bg-transparent px-0 hover:bg-accent/40 focus-within:bg-accent/40"
+      className="font-semibold"
       onBlur={(event) =>
         change({
           ...state,

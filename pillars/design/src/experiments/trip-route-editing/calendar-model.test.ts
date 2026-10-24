@@ -33,6 +33,13 @@ const rule = {
 } satisfies (typeof calendarRules)[number];
 
 describe('calendar timing', () => {
+  it('does not repeat a route title for the connection between its own flight legs', () => {
+    const finding = timingFindings(calendarBookings, calendarRules).find(
+      (item) => item.id === 'dfw-connection'
+    );
+    expect(finding?.message).toBe('Connection: 45 min available · 90 min configured');
+  });
+
   it('derives connection and airport buffers across zones and midnight', () => {
     expect(timingFindings(calendarBookings, calendarRules)).toEqual([
       expect.objectContaining({

@@ -13,14 +13,23 @@ import { routeIssues } from './canvas-issues';
 import { ActivityCard, activityIssues } from './canvas-items';
 import { canvasName } from './canvas-model';
 import { removeCanvasVisit } from './canvas-remove';
+import { RentalSections } from './canvas-rentals';
 import { TransitCard } from './canvas-transit';
 import { accommodationPeriods } from './lodging-periods';
 
 import type { TripRecord } from '@/fixtures/trip-overview-model';
 
 /** Every visit, transport and alternative group participates in the same movable route graph. */
-export function CanvasNode({ record, index = 0 }: { record: TripRecord; index?: number }) {
-  if (record.kind === 'transport') return <TransitCard record={record} />;
+export function CanvasNode({
+  record,
+  index = 0,
+  datesInRail = false,
+}: {
+  record: TripRecord;
+  index?: number;
+  datesInRail?: boolean;
+}) {
+  if (record.kind === 'transport') return <TransitCard record={record} datesInRail={datesInRail} />;
   if (record.kind === 'gap')
     return (
       <AlternativeGroups
@@ -29,13 +38,21 @@ export function CanvasNode({ record, index = 0 }: { record: TripRecord; index?: 
       />
     );
   return record.kind === 'city' ? (
-    <CityCard record={record} index={index} />
+    <CityCard record={record} index={index} datesInRail={datesInRail} />
   ) : (
     <ActivityCard item={record} />
   );
 }
 
-function CityCard({ record, index }: { record: TripRecord; index: number }) {
+function CityCard({
+  record,
+  index,
+  datesInRail,
+}: {
+  record: TripRecord;
+  index: number;
+  datesInRail: boolean;
+}) {
   const canvas = useCanvas();
   const { state, preview } = canvas;
   const name = canvasName(state, record);
@@ -50,7 +67,7 @@ function CityCard({ record, index }: { record: TripRecord; index: number }) {
       data-canvas-id={record.id}
       aria-label={name}
       className={cn(
-        'group/visit space-y-3 rounded-xl border border-dashed bg-card p-4',
+        'group/visit space-y-2 rounded-xl border border-dashed bg-card p-3',
         issues.length > 0 && 'border-destructive bg-destructive/10'
       )}
       onDragOver={(e) => {
@@ -69,7 +86,8 @@ function CityCard({ record, index }: { record: TripRecord; index: number }) {
         }
       }}
     >
-      <CityHeader record={record} index={index} />
+      <CityHeader record={record} index={index} datesInRail={datesInRail} />
+      <RentalSections visitId={record.id} />
       {issues.map((issue) => (
         <p key={issue} className="text-sm font-medium text-foreground">
           {issue}
@@ -82,17 +100,19 @@ function CityCard({ record, index }: { record: TripRecord; index: number }) {
         <CityAccommodationSummary visit={record} />
       )}
       <NestedVisits parentId={record.id} />
-      <CanvasInsert
-        line={false}
-        defaultKind="idea"
-        label={`Add inside ${name}`}
-        target={{ visitId: record.id }}
-      />
     </article>
   );
 }
 
-function CityHeader({ record, index }: { record: TripRecord; index: number }) {
+function CityHeader({
+  record,
+  index,
+  datesInRail,
+}: {
+  record: TripRecord;
+  index: number;
+  datesInRail: boolean;
+}) {
   const canvas = useCanvas();
   const { state } = canvas;
   const name = canvasName(state, record);
@@ -105,7 +125,13 @@ function CityHeader({ record, index }: { record: TripRecord; index: number }) {
       >
         <GripVertical className="pointer-events-none size-4" aria-hidden />
       </span>
-      <CanvasFields record={record} />
+      <CanvasFields record={record} showTiming={!datesInRail} />
+      <CanvasInsert
+        line={false}
+        defaultKind="idea"
+        label={`Add inside ${name}`}
+        target={{ visitId: record.id }}
+      />
       <Button
         variant="ghost"
         aria-label={`Remove ${name}`}

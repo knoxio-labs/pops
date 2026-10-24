@@ -26,7 +26,7 @@ export function BookingFindings({ recordId }: { recordId: string }) {
     <p
       key={finding.id}
       role="status"
-      className="rounded-lg border border-destructive bg-destructive/10 p-3 text-sm text-foreground"
+      className="rounded-lg border border-destructive bg-destructive/10 px-3 py-2 text-xs text-foreground"
     >
       {finding.message}
     </p>
@@ -117,7 +117,13 @@ function BookingTimeInput({
  * Edits IANA wall clocks, rejecting invalid/ambiguous instants. Outer leg edits also
  * synchronize source schedule bounds; internal connection edits retain independent overrides.
  */
-export function BookingTimes({ recordId }: { recordId: string }) {
+export function BookingTimes({
+  recordId,
+  expanded = false,
+}: {
+  recordId: string;
+  expanded?: boolean;
+}) {
   const { state } = useCanvas();
   const bookings = useMemo(
     () =>
@@ -126,7 +132,7 @@ export function BookingTimes({ recordId }: { recordId: string }) {
   );
   if (!bookings.length) return null;
   return (
-    <details>
+    <details open={expanded}>
       <summary className="min-h-11 cursor-pointer py-3 text-sm">Times</summary>
       <div className="space-y-4">
         {bookings.map((booking) => (

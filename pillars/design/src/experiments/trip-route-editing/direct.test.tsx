@@ -59,7 +59,10 @@ describe('direct route editing', () => {
   });
   it('applies date edits immediately and restores them with undo', () => {
     render(<DirectPlanner />);
-    const visit = within(screen.getAllByRole('article', { name: 'Curitiba' })[0]!);
+    const card = screen.getAllByRole('article', { name: 'Curitiba' })[0]!;
+    const row = card.closest('[data-timeline-record]');
+    if (!(row instanceof HTMLElement)) throw new Error('Missing timeline row');
+    const visit = within(row);
     fireEvent.click(visit.getByRole('button', { name: 'Edit timing' }));
     fireEvent.input(screen.getByLabelText('Arrival'), { target: { value: '2027-12-14' } });
     expect(visit.getByRole('button', { name: 'Edit timing' }).textContent).toContain('14 Dec');
@@ -82,7 +85,12 @@ describe('direct route editing', () => {
     expect(recife.getByText('5 Jan → 6 Jan')).toBeDefined();
     expect(recife.getByText('Accommodation needed')).toBeDefined();
     expect(recife.queryByText('POA → REC')).toBeNull();
-    expect(screen.getByLabelText('Pickup')).toBeDefined();
+    expect(screen.queryByLabelText('Pickup')).toBeNull();
+    expect(
+      within(screen.getAllByRole('article', { name: 'Curitiba' })[0]!).getByLabelText(
+        'Rental provider'
+      )
+    ).toBeDefined();
   });
   it('opens the days around the outbound flight without changing the route', () => {
     render(<DirectPlanner />);
@@ -101,6 +109,56 @@ describe('direct route editing', () => {
     fireEvent.change(screen.getByPlaceholderText('Name'), { target: { value: 'Meet Alex' } });
     fireEvent.click(screen.getByRole('button', { name: /^Add$/ }));
     expect(screen.getByLabelText('Drag Meet Alex')).toBeDefined();
+  });
+  it('keeps main dates in the left rail and rental details subordinate to their city', () => {
+    const { container } = render(<DirectPlanner />);
+    const city = screen.getAllByRole('article', { name: 'Curitiba' })[0]!;
+    const row = city.closest('[data-timeline-record]');
+    if (!(row instanceof HTMLElement)) throw new Error('Missing timeline row');
+    expect(within(city).queryByRole('button', { name: 'Edit timing' })).toBeNull();
+    expect(
+      within(row).getByRole('button', { name: 'Edit timing' }).closest('aside')
+    ).not.toBeNull();
+    expect(within(city).getByRole('region', { name: 'Car rental' })).toBeDefined();
+    expect(
+      container.querySelector<HTMLElement>(
+        '[data-timeline-record="family"] [aria-label="Car rental return"]'
+      )
+    ).not.toBeNull();
+    expect(screen.queryByLabelText('Pickup')).toBeNull();
+  });
+  it('adds transport directly from one dotted slot without a separate warning or separator', () => {
+    render(<DirectPlanner />);
+    const row = screen
+      .getByRole('article', { name: 'São Paulo' })
+      .closest('[data-timeline-record]');
+    if (!(row instanceof HTMLElement)) throw new Error('Missing timeline row');
+    const slot = within(row).getByRole('button', { name: 'Add transport' });
+    expect(slot.textContent).toBe('Transport');
+    expect(within(row).queryByText(/Transport needed/)).toBeNull();
+    fireEvent.click(slot);
+    fireEvent.change(screen.getByPlaceholderText('Name'), { target: { value: 'Bus to Curitiba' } });
+    fireEvent.click(screen.getByRole('button', { name: /^Add$/ }));
+    expect(screen.getByRole('region', { name: 'Bus to Curitiba' })).toBeDefined();
+    expect(within(row).queryByRole('button', { name: 'Add transport' })).toBeNull();
+  });
+  it('accepts an existing transport through the gap while retaining its purchased source facts', () => {
+    const { container } = render(<DirectPlanner />);
+    const source = container.querySelector<HTMLElement>('[data-sortable-key="flight"]');
+    const destination = container.querySelector<HTMLElement>('[data-timeline-record="arrival"]');
+    if (!source || !destination) throw new Error('Missing route endpoints');
+    const dataTransfer = transfer();
+    fireEvent.dragStart(source, { dataTransfer });
+    fireEvent.drop(within(destination).getByRole('button', { name: 'Add transport' }), {
+      dataTransfer,
+    });
+    const order = [...container.querySelectorAll('[data-timeline-record]')].map((node) =>
+      node.getAttribute('data-timeline-record')
+    );
+    expect(order.slice(0, 4)).toEqual(['sydney-out', 'arrival', 'flight', 'curitiba']);
+    expect(
+      within(screen.getByRole('region', { name: 'SYD → DFW → GRU' })).getByText('Purchased')
+    ).toBeDefined();
   });
 });
 

@@ -25,7 +25,7 @@ function ruleFinding(
   return {
     id: rule.id,
     recordIds,
-    message: `${from.title} → ${to.title}: ${availableMinutes} min available · ${rule.minimumMinutes} min configured`,
+    message: `${from.recordId === to.recordId ? 'Connection' : `${from.title} → ${to.title}`}: ${availableMinutes} min available · ${rule.minimumMinutes} min configured`,
     availableMinutes,
     requiredMinutes: rule.minimumMinutes,
   };
