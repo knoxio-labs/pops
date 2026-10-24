@@ -66,7 +66,7 @@ function apiFor(mode: 'web' | 'service' | 'none', scopes: readonly string[] = []
           maxUploadBytes: null,
           allowedMimeTypes: null,
         }),
-      searchPaperlessDocuments: () => Promise.resolve([]),
+      searchPaperlessDocuments: () => Promise.resolve({ ok: true, documents: [] }),
       paperlessDocumentMissing: () => Promise.resolve(null),
     },
   });
