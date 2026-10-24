@@ -176,6 +176,15 @@ async fn local_profiles_and_points_reject_wrong_types_and_cross_person_preferenc
         .0,
         StatusCode::BAD_REQUEST
     );
+    let (status, untouched) = send(
+        &app,
+        "GET",
+        &format!("/entities/{person}/person"),
+        Value::Null,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(untouched["data"].is_null());
     let profile = json!({"givenName":"Alex","familyName":"Smith","completeness":"complete"});
     assert_eq!(
         send(
@@ -243,6 +252,19 @@ async fn local_profiles_and_points_reject_wrong_types_and_cross_person_preferenc
         StatusCode::NO_CONTENT
     );
     assert!(persons::list_points(&pool, &person).await.unwrap()[0].preferred);
+    let (status, listed) = send(
+        &app,
+        "GET",
+        &format!("/entities/{person}/contact-points"),
+        Value::Null,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(listed["data"].as_array().unwrap().len(), 1);
+    assert_eq!(listed["data"][0]["id"], point_id);
+    assert_eq!(listed["data"][0]["preferred"], true);
+    assert!(listed["data"][0]["sourceRecordId"].is_null());
+
     assert_eq!(
         send(
             &app,
@@ -601,6 +623,140 @@ async fn national_phones_need_explicit_known_country_context() {
         .iter()
         .any(|point| point.country_code.as_deref() == Some("AU")
             && point.normalized_value.as_deref() == Some("+61412345678")));
+}
+
+#[tokio::test]
+async fn source_http_routes_preserve_account_labels_and_show_inactive_person_links() {
+    let (app, pool) = app().await;
+    let person = create(&app, "Alex", "person").await;
+    let company = create(&app, "Business", "company").await;
+    let input = json!({"provider":"google","accountKey":"stable-subject","label":"Personal"});
+    let (status, registered) = send(&app, "POST", "/sources/accounts", input).await;
+    assert_eq!(status, StatusCode::OK);
+    let account_id = registered["data"]["id"].as_str().unwrap().to_string();
+    assert_eq!(registered["data"]["provider"], "google");
+    let (status, reused) = send(
+        &app,
+        "POST",
+        "/sources/accounts",
+        json!({"provider":"google","accountKey":"stable-subject"}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(reused["data"]["id"], account_id);
+    assert_eq!(reused["data"]["label"], "Personal");
+    let (status, accounts) = send(&app, "GET", "/sources/accounts", Value::Null).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(accounts["data"].as_array().unwrap().len(), 1);
+    assert_eq!(accounts["data"][0]["accountKey"], "stable-subject");
+    assert_eq!(accounts["data"][0]["label"], "Personal");
+    let path = format!("/entities/{person}/sources");
+    assert_eq!(
+        send(&app, "GET", &path, Value::Null).await.1["data"],
+        json!([])
+    );
+    let mut tx = pool.begin().await.unwrap();
+    let record = sources::apply_record(
+        &mut tx,
+        &SourceRecordInput {
+            account_id,
+            collection_key: "contacts".to_string(),
+            record_key: "record-1".to_string(),
+            entity_id: person.clone(),
+            display_name: Some("Source Alex".to_string()),
+            name: PersonName::default(),
+            points: vec![point("alex@example.test")],
+        },
+    )
+    .await
+    .unwrap();
+    sources::deactivate_record(&mut tx, &record.id)
+        .await
+        .unwrap();
+    tx.commit().await.unwrap();
+    let (status, records) = send(&app, "GET", &path, Value::Null).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(records["data"].as_array().unwrap().len(), 1);
+    assert_eq!(records["data"][0]["id"], record.id);
+    assert_eq!(records["data"][0]["entityId"], person);
+    assert_eq!(records["data"][0]["active"], false);
+    assert_eq!(records["data"][0]["revision"], 2);
+    assert_eq!(
+        send(
+            &app,
+            "GET",
+            &format!("/entities/{company}/sources"),
+            Value::Null
+        )
+        .await
+        .0,
+        StatusCode::BAD_REQUEST
+    );
+    assert_eq!(
+        send(&app, "GET", "/entities/missing/sources", Value::Null)
+            .await
+            .0,
+        StatusCode::NOT_FOUND
+    );
+    assert_eq!(
+        send(&app, "DELETE", &format!("/entities/{person}"), Value::Null)
+            .await
+            .0,
+        StatusCode::OK
+    );
+    assert!(sources::list_records(&pool, &person)
+        .await
+        .unwrap()
+        .is_empty());
+    assert!(persons::list_points(&pool, &person)
+        .await
+        .unwrap()
+        .is_empty());
+    let retained_history: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM source_record_history WHERE source_record_id=?1")
+            .bind(record.id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert_eq!(retained_history, 0);
+    assert_eq!(sources::list_accounts(&pool).await.unwrap().len(), 1);
+}
+
+#[test]
+fn observation_validation_checks_byte_and_collection_boundaries() {
+    let mut value = point(&"x".repeat(4096));
+    assert!(persons::validate_point(&value).is_ok());
+    value.value.push('x');
+    assert!(persons::validate_point(&value).is_err());
+    value.value = "valid".to_string();
+    value.label = Some("x".repeat(256));
+    assert!(persons::validate_point(&value).is_ok());
+    value.label = Some("x".repeat(257));
+    assert!(persons::validate_point(&value).is_err());
+    let mut name = PersonName {
+        given_name: Some("x".repeat(1024)),
+        ..Default::default()
+    };
+    assert!(persons::validate_name(&name).is_ok());
+    name.given_name = Some("x".repeat(1025));
+    assert!(persons::validate_name(&name).is_err());
+    let mut record = SourceRecordInput {
+        account_id: "account".to_string(),
+        collection_key: "x".repeat(1024),
+        record_key: "record".to_string(),
+        entity_id: "person".to_string(),
+        display_name: None,
+        name: PersonName::default(),
+        points: vec![point("a@example.test"); 200],
+    };
+    assert!(sources::validate_record(&record).is_ok());
+    record.points.push(point("a@example.test"));
+    assert!(sources::validate_record(&record).is_err());
+    record.points.clear();
+    record.collection_key.push('x');
+    assert!(sources::validate_record(&record).is_err());
+    record.collection_key = " ".to_string();
+    assert!(sources::validate_record(&record).is_err());
 }
 
 #[tokio::test]

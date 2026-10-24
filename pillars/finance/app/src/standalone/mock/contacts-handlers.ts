@@ -1,13 +1,18 @@
 import { CONTACT_ENTITIES } from '../fixtures/entities';
+import {
+  contactPoint,
+  importBatch,
+  importReceipt,
+  importReviewReceipt,
+  personProfile,
+  sourceAccount,
+} from './contacts-fixtures';
 import { created, noContent, notFound, ok, page } from './respond';
 
 import type { MockHandler, MockHandlers } from '@pops/pillar-sdk/testing/api-mock';
 
 import type {
   AddressMutation,
-  ContactPointResponse,
-  PersonProfileResponse,
-  SourceAccountResponse,
   EntitiesLookupResponses,
   EntityResponse,
   HealthResponse,
@@ -56,33 +61,6 @@ const addressCreated: MockHandler = ({ params }) => {
     message: 'ok',
   };
   return { status: 201, body };
-};
-
-const contactPoint: ContactPointResponse = {
-  data: {
-    id: '00000000-0000-4000-8000-000000000001',
-    entityId: firstEntity?.id ?? '',
-    active: true,
-    preferred: true,
-    kind: 'email',
-    value: 'morgan@example.invalid',
-    createdAt: '2026-09-05T08:00:00.000Z',
-  },
-};
-const personProfile: PersonProfileResponse = {
-  data: {
-    entityId: firstEntity?.id ?? '',
-    name: { givenName: 'Morgan', familyName: 'Vale' },
-    updatedAt: '2026-09-05T08:00:00.000Z',
-  },
-};
-const sourceAccount: SourceAccountResponse = {
-  data: {
-    id: '00000000-0000-4000-8000-000000000002',
-    accountKey: 'standalone',
-    provider: 'file',
-    createdAt: '2026-09-05T08:00:00.000Z',
-  },
 };
 
 const resolveIdentities: MockHandler = ({ body }) => {
@@ -170,6 +148,10 @@ export const contactsHandlers: MockHandlers = {
   'PUT /entities/{id}/poster': ok(mutation),
   'DELETE /entities/{id}/poster': ok(mutation),
   'POST /search': ok({ hits: [] }),
+  'POST /imports/files': created(importBatch),
+  'GET /imports/{id}': ok(importBatch),
+  'POST /imports/{id}/commit': ok(importReceipt),
+  'POST /imports/{id}/review-decisions': ok(importReviewReceipt),
 };
 
 /**

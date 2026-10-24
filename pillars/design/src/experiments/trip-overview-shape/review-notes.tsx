@@ -55,14 +55,9 @@ function ProposalQuestions({ layout }: { layout: TripOverviewLayout }) {
         <p className="text-muted-foreground">Trade-off: {proposal?.tradeoff}</p>
         <ol className="list-decimal space-y-2 pl-5">
           <li>{proposal?.question}</li>
-          <li>
-            Can you distinguish a city you intend to visit from transport or accommodation you have
-            booked?
-          </li>
-          <li>
-            Should a new event stay a possibility until you explicitly put it into the working plan?
-          </li>
-          <li>Do you want open decisions on the overview, or only when you enter a city?</li>
+          <li>Do solid purchased arrangements stand apart from every planned or wanted item?</li>
+          <li>Does the birthday anchor Curitiba without setting arrival or departure dates?</li>
+          <li>Does the January segment show competing paths rather than consecutive stops?</li>
         </ol>
         <p className="text-muted-foreground">
           Try selecting an item, adding a possibility to the working plan, and capturing an undated

@@ -25,6 +25,12 @@ pub enum ErrorCode {
     NotFound,
     #[serde(rename = "contacts.entity.name_conflict")]
     NameConflict,
+    /// A stale import preview or a retry key reused with different decisions.
+    #[serde(rename = "contacts.import.conflict")]
+    ImportConflict,
+    /// Import persistence failed without exposing the underlying observations.
+    #[serde(rename = "contacts.import.storage")]
+    ImportStorage,
     /// Stale, retired or incompatible identity decisions.
     #[serde(rename = "contacts.entity.identity_conflict")]
     IdentityConflict,
@@ -64,6 +70,30 @@ pub struct ApiError {
 }
 
 impl ApiError {
+    /// Build an import conflict response without echoing imported data.
+    pub fn import_conflict(message: &'static str) -> Self {
+        Self {
+            status: StatusCode::CONFLICT,
+            message: message.to_string(),
+            code: ErrorCode::ImportConflict,
+            retryable: false,
+            details: None,
+        }
+    }
+
+    /// Report an import storage failure using only a safe classification and request id.
+    pub fn import_storage() -> Self {
+        let request_id = current_request_id();
+        tracing::error!(%request_id, classification = "import_storage", "contacts import persistence failed");
+        Self {
+            status: StatusCode::INTERNAL_SERVER_ERROR,
+            message: "Import could not be saved; retry the request".to_string(),
+            code: ErrorCode::ImportStorage,
+            retryable: true,
+            details: None,
+        }
+    }
+
     /// Build a safe identity-decision conflict with optional structured context.
     pub fn identity_conflict(message: impl Into<String>) -> Self {
         Self {

@@ -67,14 +67,74 @@ and social/URL points remain raw observations without an eligible match key.
 
 Sources use an opaque UUID account plus stable `provider`/`accountKey` identity,
 then `collectionKey`/`recordKey` within that account. Account labels may change
-without changing identity. Observation apply/deactivate functions accept the
+without changing identity; registering without a label preserves an existing one.
+Observation apply/deactivate functions accept the
 caller's SQLite transaction and never commit it themselves. Refresh replaces only
 that source record's active observations; an identical active observation performs
-no writes. Prior values remain inactive for audit,
+no writes. Surviving points retain their IDs and preferred status. Removed values
+remain inactive for audit,
 local values and local profiles survive, and preferred selections remain attached
 even when their source disappears. Each source record carries a monotonic revision
 for optimistic staging checks, with previous observation snapshots retained in
 `source_record_history`. These DTOs contain no authentication material.
+
+`POST /imports/files` accepts raw Google Contacts CSV or vCard 3.0/4.0 bytes,
+with `accountId`, `collectionKey`, `format` (`google_csv` or `vcard`) and an
+explicit `encoding` (`utf8`, `utf16_le`, `utf16_be`, `windows1252`; default
+`utf8`). Optional `phoneCountryCode` supplies explicit ISO country context for
+national phone values. Uploads and serialized previews are bounded to 5 MiB and
+10,000 rows. Malformed records remain in a durable preview with safe issue codes;
+staging never changes people or their observations.
+
+`GET /imports/{id}` returns the saved preview. `POST /imports/{id}/commit` accepts
+`revision`, `idempotencyKey`, and selected `decisions`, each shaped as
+`{ rowId, decision: { action, entityId? } }`. Actions are `create_person`,
+`link_person`, `update_source`, `deactivate_source` and `skip`. Every selected row
+must be valid for its action; the whole selection either commits or rolls back.
+Unselected rows remain pending for a later decision. Skipping processes an import
+row; it does not declare two people different. A target link is always explicit:
+similar display names, first names, email addresses or phone numbers do not choose
+an owner. Recognized source updates are distinct from choosing a person to link.
+
+`POST /imports/{id}/review-decisions` applies one reviewed row with its exact
+`batchRevision`, `directoryRevision`, opaque `proposalRevision` and retry key.
+Explicit `mergeEntityIds` are the only identities combined with the incoming
+person; `differentEntityIds` persist pair decisions independently, and omitted or
+`laterEntityIds` stay pending. All ingestion, negative pairs, preferred-value
+selections, subset merge and retry receipt share one SQLite transaction. A failed
+selection rolls everything back. Empty candidate lists explicitly ingest an
+incoming row so other staged rows can be reviewed against a real person. A pure
+later decision saves the pending choices without creating a person. Selections
+and point preferences use the same provenance contracts as identity merges.
+Each request permits at most 499 merged or different identities, 10,000 deferred
+identities, nine field selections, four point preferences and 1,000 expanded
+negative-group operations or 10,000 stable member pairs; bodies are bounded to
+128 KiB.
+
+Batch revision, source-record revision and provider-account epoch protect stale
+previews with `409`. Identical key/body retries return their persisted receipt
+before checking revision; reusing a key with different decisions returns `409`.
+File UIDs identify records within the selected account/collection. Without a UID,
+the key includes SHA-256 of the exact file bytes and the record ordinal, so replay
+identity is guaranteed only for the same file. Reordered or changed exports make
+new proposals. Providers use the same staging transaction after gathering a full
+scan, and explicit removals deactivate only the source's contributions.
+
+Provider scans stage pages under one durable account run. A partial or failed
+scan changes no cached observations, checkpoint, or directory data. Only complete
+collection discovery and complete pages for every collection can atomically
+reconcile the cache and produce shared import previews. Full enumeration proves
+absence before proposing removals; incremental tombstones affect only their
+source keys. Cached active ETags avoid redundant CardDAV downloads. Every preview
+contains the complete current cached collection, including unchanged contacts
+that still need a person decision. A later successful scan invalidates earlier
+provider previews, including proposals without a linked person.
+
+Provider modules expose backend authorization, transport and scan primitives.
+Credential installation requires an explicitly verified human operator; encrypted
+credentials bind to the provider account, and disconnect/reconnect fences older
+callbacks, jobs and previews. Runtime routes and job scheduling must use these
+primitives together before offering an account connection flow.
 
 Registration is outbound: on boot (when opted in) contacts POSTs its manifest to
 the registry, then heartbeats every 10s and deregisters on `SIGTERM`/`SIGINT`.
@@ -84,8 +144,9 @@ Every route error uses the ADR-054 envelope: `code`, `message`, `requestId`,
 under `contacts.*` and are enumerated in OpenAPI. The request-id layer echoes
 an incoming `X-Request-Id` or mints one, then returns it in both the response
 header and error body. Database diagnostics are logged with that id; clients
-receive only `contacts.internal` and a generic message, never SQLite or `sqlx`
-error text.
+receive a stable error code and generic message, never SQLite or `sqlx` error
+text. Import persistence logs contain only a safe classification and request id,
+with `contacts.import.storage` returned to the caller.
 
 ## Canonical person identity and guarded undo
 
