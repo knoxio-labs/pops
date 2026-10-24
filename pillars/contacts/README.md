@@ -62,7 +62,8 @@ and social/URL points remain raw observations without an eligible match key.
 
 Sources use an opaque UUID account plus stable `provider`/`accountKey` identity,
 then `collectionKey`/`recordKey` within that account. Account labels may change
-without changing identity. Observation apply/deactivate functions accept the
+without changing identity; registering without a label preserves an existing one.
+Observation apply/deactivate functions accept the
 caller's SQLite transaction and never commit it themselves. Refresh replaces only
 that source record's active observations; an identical active observation performs
 no writes. Prior values remain inactive for audit,
