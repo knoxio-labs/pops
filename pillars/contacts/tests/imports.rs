@@ -819,6 +819,6 @@ fn retired_person_error_becomes_a_safe_import_conflict() {
 
     assert!(matches!(
         ImportError::from(PersonError::Retired("fictional-canonical-id".to_string())),
-        ImportError::Conflict("Identity changed; stage a new preview")
+        ImportError::Conflict("Person was merged; select the canonical person")
     ));
 }

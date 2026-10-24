@@ -119,6 +119,7 @@ impl ApiError {
             details: None,
         }
     }
+
     /// Build a safe identity-decision conflict with optional structured context.
     pub fn identity_conflict(message: impl Into<String>) -> Self {
         Self {
