@@ -112,10 +112,10 @@ async fn identical_reimport_preserves_undo_but_changed_observation_fences_it() {
         Err(repo::MergeError::Conflict { .. })
     ));
     assert_eq!(repo::group(&pool, &b).await.expect("group").canonical_id, a);
-    let refreshed = persons::list_points(&pool, &a).await.expect("points");
-    assert_eq!(refreshed.len(), 1);
-    assert_eq!(refreshed[0].id, points[0].id);
-    assert_eq!(refreshed[0].entity_id, b);
+    let retained = persons::list_points(&pool, &a).await.expect("points");
+    assert_eq!(retained.len(), 1);
+    assert_eq!(retained[0].id, points[0].id);
+    assert_eq!(retained[0].entity_id, b);
 }
 
 #[tokio::test]

@@ -2,7 +2,9 @@ import { CONTACT_ENTITIES } from '../fixtures/entities';
 import {
   contactPoint,
   importBatch,
+  importReview,
   importReceipt,
+  importReviewReceipt,
   personProfile,
   sourceAccount,
 } from './contacts-fixtures';
@@ -160,6 +162,8 @@ export const contactsHandlers: MockHandlers = {
   'PUT /entities/{id}/poster': ok(mutation),
   'DELETE /entities/{id}/poster': ok(mutation),
   'POST /search': ok({ hits: [] }),
+  'GET /imports/{id}/review-proposals': ok(importReview),
+  'POST /imports/{id}/review-decisions': ok(importReviewReceipt),
 };
 
 /**
