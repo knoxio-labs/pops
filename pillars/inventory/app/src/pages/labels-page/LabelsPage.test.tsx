@@ -498,6 +498,26 @@ describe('fragile labels', () => {
 });
 
 describe('existing Fragile metadata', () => {
+  it.each([true, false])(
+    'allows an explicit warning for untyped legacy Fragile=%s',
+    async (fragile) => {
+      items.set(
+        BOX,
+        item(BOX, 'Kitchen glasses', 'B412', { isContainer: true, fields: { Fragile: fragile } })
+      );
+      renderPage(`?ids=${BOX}&sheet=L7169`);
+      const toggle = await screen.findByRole('switch', {
+        name: 'Fragile label for Kitchen glasses',
+      });
+      expect(toggle).not.toBeChecked();
+      expect(screen.queryByRole('img', { name: 'Fragile: cracked glass' })).not.toBeInTheDocument();
+      fireEvent.click(toggle);
+      expect(screen.getAllByRole('img', { name: 'Fragile: cracked glass' })).toHaveLength(2);
+      fireEvent.click(toggle);
+      expect(screen.queryByRole('img', { name: 'Fragile: cracked glass' })).not.toBeInTheDocument();
+    }
+  );
+
   it('uses the real field as the warning and removes the duplicate manual control and text', async () => {
     items.set(
       BOX,

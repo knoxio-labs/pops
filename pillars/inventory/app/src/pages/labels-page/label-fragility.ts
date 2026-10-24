@@ -7,7 +7,7 @@ import type { WebItem } from './label-item';
 /** Existing item metadata that controls the printed handling warning and manual fallback. */
 export interface LabelFragility {
   fragile: boolean;
-  /** Whether the selected item already owns a Fragile field instead of needing a manual switch. */
+  /** Whether the selected item has a selectable Fragile field instead of needing a manual switch. */
   recorded: boolean;
   /** Printable field ids represented by the handling symbol on the selected item. */
   fields: ReadonlySet<string>;
@@ -27,7 +27,7 @@ function legacyFragility(item: WebItem): LabelFragility {
   for (const [key, value] of Object.entries(item.fields)) {
     if (key.toLowerCase() !== 'fragile' || typeof value !== 'boolean') continue;
     if (item.typeKey !== null) fields.add(`${item.typeKey}.${key}`);
-    return { fragile: value, recorded: true, fields, error: null };
+    return { fragile: value, recorded: fields.size > 0, fields, error: null };
   }
   return { fragile: false, recorded: false, fields, error: null };
 }

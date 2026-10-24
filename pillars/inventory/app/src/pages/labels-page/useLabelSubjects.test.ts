@@ -310,7 +310,7 @@ describe('configured item fragility', () => {
     ).toBeNull();
   });
 
-  it('retains the manual fallback only when no Fragile field already exists', () => {
+  it('retains the manual fallback when no selectable Fragile field exists', () => {
     expect(treeFragility(item, [], new Map()).recorded).toBe(false);
     expect(
       treeFragility({ ...item, typeId: null, fields: { Fragile: true } }, [], new Map()).fragile
@@ -318,6 +318,17 @@ describe('configured item fragility', () => {
     expect(
       treeFragility({ ...item, typeId: null, fields: { Fragile: 'Yes' } }, [], new Map()).recorded
     ).toBe(false);
+  });
+
+  it.each([true, false])('allows a manual warning for untyped legacy Fragile=%s', (fragile) => {
+    const result = treeFragility(
+      { ...item, typeId: null, typeKey: null, fields: { Fragile: fragile } },
+      [],
+      new Map()
+    );
+    expect(result.fragile).toBe(fragile);
+    expect(result.recorded).toBe(false);
+    expect(result.fields.size).toBe(0);
   });
 });
 

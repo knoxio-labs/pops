@@ -121,8 +121,9 @@ selected item or any contained descendant adds the cracked-glass symbol only
 when its Fragile field is selected in Label shows; the same field is omitted
 from printed text so the warning appears once. Overrides
 and computed values share the label field-value reader. The manual print-job
-switch appears when the selected item has no Fragile field, including when its
-contents are fragile; it never edits inventory records.
+switch appears when the selected item has no selectable Fragile field, including
+untyped legacy items and containers whose contents are fragile; it never edits
+inventory records.
 
 QR, text and the handling symbol share one row; both symbols have the same size,
 up to 24 mm. Printing is blocked while the selected items, full paginated tree
