@@ -96,6 +96,24 @@ row; it does not declare two people different. A target link is always explicit:
 similar display names, first names, email addresses or phone numbers do not choose
 an owner. Recognized source updates are distinct from choosing a person to link.
 
+`GET /imports/{id}/review-proposals` classifies the complete batch against every
+eligible canonical person before returning bounded evidence. Incoming rows use
+`offset`/`limit` (default 50, maximum 50); candidates use `candidateOffset` and
+`candidateLimit` (default 50, maximum 200). `candidateRowId` requests one row's
+candidate page. Subsequent pages carry the top-level `proposalRevision`; changed
+directory, source or row-decision state returns `409`. Each row has its own
+proposal proof for an atomic review decision. Counts cover the full batch and
+candidate totals include omitted pages. Mutation authorization uses the complete
+candidate set, including candidates selected on earlier pages.
+
+Candidate IDs are current canonical people or persisted import row IDs. A
+collision between two new rows requires importing one row first, then refreshing
+to review the resulting person; an import row ID never pretends to be a person.
+Matching uses validated exact email/phone keys or proven complete structured
+names. Shared identifiers, conflicting signals, homonyms, incomplete names and
+stored keep-separate decisions require review. Original member/source ownership
+and explicit preferred values remain visible after canonical grouping.
+
 `POST /imports/{id}/review-decisions` applies one reviewed row with its exact
 `batchRevision`, `directoryRevision`, opaque `proposalRevision` and retry key.
 Explicit `mergeEntityIds` are the only identities combined with the incoming
@@ -120,22 +138,6 @@ identity is guaranteed only for the same file. Reordered or changed exports make
 new proposals. Providers use the same staging transaction after gathering a full
 scan, and explicit removals deactivate only the source's contributions.
 
-Provider scans stage pages under one durable account run. A partial or failed
-scan changes no cached observations, checkpoint, or directory data. Only complete
-collection discovery and complete pages for every collection can atomically
-reconcile the cache and produce shared import previews. Full enumeration proves
-absence before proposing removals; incremental tombstones affect only their
-source keys. Cached active ETags avoid redundant CardDAV downloads. Every preview
-contains the complete current cached collection, including unchanged contacts
-that still need a person decision. A later successful scan invalidates earlier
-provider previews, including proposals without a linked person.
-
-Provider modules expose backend authorization, transport and scan primitives.
-Credential installation requires an explicitly verified human operator; encrypted
-credentials bind to the provider account, and disconnect/reconnect fences older
-callbacks, jobs and previews. Runtime routes and job scheduling must use these
-primitives together before offering an account connection flow.
-
 Registration is outbound: on boot (when opted in) contacts POSTs its manifest to
 the registry, then heartbeats every 10s and deregisters on `SIGTERM`/`SIGINT`.
 
@@ -147,6 +149,46 @@ header and error body. Database diagnostics are logged with that id; clients
 receive a stable error code and generic message, never SQLite or `sqlx` error
 text. Import persistence logs contain only a safe classification and request id,
 with `contacts.import.storage` returned to the caller.
+
+## Canonical person identity and guarded undo
+
+A merge changes canonical membership, preserving every original entity, source,
+address and blob. The request names only the roots to merge; another plausible
+candidate is never included implicitly. The selected canonical root supplies
+scalar defaults. Explicit field references select a retained member's original
+value, and preferred point references select one group observation per kind.
+References outside the selected groups, missing points/profiles and repeated
+field selections reject the complete operation before it changes membership.
+
+Historical IDs resolve to the current canonical entity on reads. Lists, lookup
+and search expose canonical identities once; addresses, source records and
+contact points project the whole group while retaining their original owner IDs.
+Ordinary writes through retired IDs and deletion of active merged members return 409. Recognized source refreshes retain their original member ownership and
+remain permitted. A new local edit or source link must target the canonical ID.
+
+`POST /entities/resolve` accepts at most 500 IDs and returns
+`{ data: [{ id, canonicalId }], revision }` in request order. Null means missing;
+a request failure means resolution is unavailable. Consumers resolve historical
+IDs before equality comparisons or aggregation. Multiple batches may be combined
+only when their revisions agree; on a change, discard the sweep and retry it.
+Legacy lookup returns one row per resolved canonical identity and is not a
+replacement for this mapping.
+
+Merge, undo and separation mutations carry an expected revision and idempotency
+key. Repeating a successful request returns its original receipt, including after
+later edits; reusing a key with another request conflicts. Audit records cannot be
+updated or deleted. A keep-separate decision expands both current groups into
+stable member pairs, so rejecting candidate C after merging A+B preserves both
+A-C and B-C. Other candidates remain unchanged. Revocation is an explicit new
+decision; source replay cannot clear a rejection.
+
+Undo is deliberately conservative: **any subsequent directory mutation**, even
+outside the group, blocks it. SQLite triggers fence entity, profile, point,
+source/history, address, asset, selection and separation changes. Identical source
+replay does not write or advance that revision. Undo restores previous membership
+and selections only at the exact untouched post-merge revision. References written
+in another pillar after a merge still name the chosen canonical UUID after undo;
+contacts cannot reconstruct an external writer's intended former member.
 
 ## Canonical person identity and guarded undo
 

@@ -85,6 +85,26 @@ fn incomplete_and_display_names_always_require_review() {
 }
 
 #[test]
+fn first_names_do_not_disqualify_valid_email_or_phone_evidence() {
+    for (email, phone, reason) in [
+        ("a@example.com", "", MatchReason::Email),
+        ("", "+61412345678", MatchReason::Phone),
+    ] {
+        let mut incoming = record("incoming", "", "", email, phone);
+        incoming.name.display_name = Some("Jane".into());
+        let mut existing = record("existing", "", "", email, phone);
+        existing.name.display_name = Some("Janet".into());
+        assert_eq!(
+            classify(&incoming, &[candidate("person", existing)], &[]),
+            IdentityOutcome::AutoMatch {
+                entity_id: "person".into(),
+                reason
+            }
+        );
+    }
+}
+
+#[test]
 fn unique_complete_names_require_complete_evidence_on_both_sides() {
     let incoming = record("incoming", "José", "Silva", "", "");
     assert_eq!(
@@ -417,5 +437,23 @@ fn ingested_observations_exclude_own_group_but_preserve_its_historical_rejection
             }]
         ),
         expected_review(ReviewReason::KeepSeparate, &["other"])
+    );
+}
+
+#[test]
+fn display_only_names_can_review_a_different_display_with_matching_structured_name() {
+    let incoming = record("incoming", "", "", "", "");
+    let incoming = IdentityRecord {
+        name: NameEvidence {
+            display_name: Some("Jane Doe".into()),
+            complete_name: None,
+        },
+        ..incoming
+    };
+    let mut existing = record("existing", "Jane", "Doe", "", "");
+    existing.name.display_name = Some("Different preferred label".into());
+    assert_eq!(
+        classify(&incoming, &[candidate("target", existing)], &[]),
+        expected_review(ReviewReason::IncompleteName, &["target"])
     );
 }
