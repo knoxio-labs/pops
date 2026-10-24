@@ -1,0 +1,8 @@
+name: Contact import review
+question: Is identity review clearer as a batch table or a focused comparison
+  with a persistent queue?
+status: active
+screen: contacts/import-review
+variants:
+  table: Batch table + stacked editor
+  compare: Focused comparison + compact editor
