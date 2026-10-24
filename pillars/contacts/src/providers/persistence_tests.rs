@@ -247,7 +247,7 @@ async fn disconnect_preserves_canonical_person_local_points_and_other_sources() 
         .await
         .unwrap();
     let points = list_points(&pool, &person).await.unwrap();
-    assert_eq!(points.len(), 3);
+    assert_eq!(points.len(), 2);
     assert!(
         points
             .iter()
@@ -262,13 +262,17 @@ async fn disconnect_preserves_canonical_person_local_points_and_other_sources() 
             .unwrap()
             .active
     );
-    assert!(
-        !points
-            .iter()
-            .find(|point| point.value == "google@example.test")
-            .unwrap()
-            .active
-    );
+    assert!(points
+        .iter()
+        .all(|point| point.value != "google@example.test"));
+    let retained_google: (bool, bool, bool) = sqlx::query_as("SELECT r.active,p.active,EXISTS(SELECT 1 FROM source_record_history h WHERE h.source_record_id=r.id) FROM source_records r JOIN contact_points p ON p.source_record_id=r.id WHERE r.account_id=?1 AND r.entity_id=?2 AND p.value=?3")
+        .bind(&account.id)
+        .bind(&person)
+        .bind("google@example.test")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(retained_google, (false, false, true));
     let people: i64 = sqlx::query_scalar("SELECT count(*) FROM entities WHERE id=?1")
         .bind(&person)
         .fetch_one(&pool)

@@ -658,3 +658,14 @@ async fn previews_and_receipts_survive_reopening_and_concurrent_exact_retries() 
     pool.close().await;
     std::fs::remove_file(path).unwrap();
 }
+
+#[test]
+fn retired_person_error_becomes_a_safe_import_conflict() {
+    use contacts::imports::service::ImportError;
+    use contacts::persons::repo::PersonError;
+
+    assert!(matches!(
+        ImportError::from(PersonError::Retired("fictional-canonical-id".to_string())),
+        ImportError::Conflict("Identity changed; stage a new preview")
+    ));
+}

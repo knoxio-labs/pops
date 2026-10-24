@@ -60,6 +60,7 @@ impl From<PersonError> for ImportError {
     fn from(error: PersonError) -> Self {
         match error {
             PersonError::NotFound => Self::NotFound,
+            PersonError::Retired(_) => Self::Conflict("Identity changed; stage a new preview"),
             PersonError::Invalid(_) => Self::Invalid("Invalid person decision"),
             PersonError::Db(_) => Self::Storage,
         }

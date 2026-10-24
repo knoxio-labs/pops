@@ -15,6 +15,12 @@ import type {
   EntitiesLookupResponses,
   EntityResponse,
   HealthResponse,
+  IdentityGroup,
+  MergeResult,
+  ResolveResponse,
+  SeparateList,
+  SeparateResult,
+  UndoResult,
 } from '../../contacts-api/types.gen';
 
 /**
@@ -56,6 +62,34 @@ const addressCreated: MockHandler = ({ params }) => {
   return { status: 201, body };
 };
 
+const resolveIdentities: MockHandler = ({ body }) => {
+  const ids =
+    typeof body === 'object' && body !== null && 'ids' in body && Array.isArray(body.ids)
+      ? body.ids.filter((id): id is string => typeof id === 'string')
+      : [];
+  const response: ResolveResponse = {
+    data: ids.map((id) => ({
+      id,
+      canonicalId: CONTACT_ENTITIES.some((entity) => entity.id === id) ? id : null,
+    })),
+    revision: 1,
+  };
+  return { body: response };
+};
+
+const identityGroup: MockHandler = ({ params }) => {
+  const entity = CONTACT_ENTITIES.find((entity) => entity.id === params['id']);
+  if (entity === undefined) return notFound('entity', 'contacts.resource.not_found');
+  const body: IdentityGroup = {
+    canonicalId: entity.id,
+    memberIds: [entity.id],
+    revision: 1,
+    selections: [],
+    members: [{ entity }],
+  };
+  return { body };
+};
+
 export const contactsHandlers: MockHandlers = {
   'GET /': ok('contacts'),
   'GET /openapi': ok({}),
@@ -68,6 +102,26 @@ export const contactsHandlers: MockHandlers = {
   }),
   'GET /entities': listEntities,
   'POST /entities': created(mutation),
+  'POST /entities/resolve': resolveIdentities,
+  'GET /merges/groups/{id}': identityGroup,
+  'POST /merges': ok<MergeResult>({
+    canonicalId: firstEntity?.id ?? '',
+    memberIds: [firstEntity?.id ?? ''],
+    operationId: 'merge-standalone',
+    revision: 2,
+  }),
+  'POST /merges/{id}/undo': ok<UndoResult>({
+    operationId: 'undo-standalone',
+    restoredIds: [firstEntity?.id ?? ''],
+    revision: 3,
+  }),
+  'GET /merges/keep-separate': ok<SeparateList>({ data: [], revision: 1 }),
+  'POST /merges/keep-separate': ok<SeparateResult>({
+    keepSeparate: true,
+    leftId: firstEntity?.id ?? '',
+    rightId: 'other-standalone',
+    revision: 2,
+  }),
   'POST /entities/lookup': ok<EntitiesLookupResponses[200]>({
     entities: CONTACT_ENTITIES.map(({ id, name, aliases, type }) => ({ id, name, aliases, type })),
     fetchedAt: '2026-09-05T08:00:00.000Z',

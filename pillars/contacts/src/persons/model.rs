@@ -44,6 +44,8 @@ pub struct PersonProfile {
     pub entity_id: String,
     pub name: PersonName,
     pub updated_at: String,
+    pub source_record_id: Option<String>,
+    pub source_observation_id: Option<String>,
 }
 
 /// A contact point's semantic kind; shared values never identify one person by themselves.
