@@ -183,6 +183,24 @@ fn vcard_preserves_trailing_spaces_fold_spaces_and_uri_colons() {
 }
 
 #[test]
+fn vcard_ignores_large_folded_photo_without_discarding_contact() {
+    let photo = format!(
+        "PHOTO;ENCODING=b:{}\n",
+        format!("{}\n ", "A".repeat(75)).repeat(1000)
+    );
+    let result = vcard(&format!(
+        "BEGIN:VCARD\nVERSION:3.0\nFN:Photo Example\n{photo}EMAIL:photo@example.test\nEND:VCARD\n"
+    ));
+    assert!(result.errors.is_empty(), "{:?}", result.errors);
+    assert_eq!(result.contacts.len(), 1);
+    assert_eq!(
+        result.contacts[0].display_name.as_deref(),
+        Some("Photo Example")
+    );
+    assert_eq!(result.contacts[0].emails[0].value, "photo@example.test");
+}
+
+#[test]
 fn field_limits_accept_boundary_and_reject_above_for_both_formats() {
     let accepted = "x".repeat(MAX_FIELD_BYTES);
     let rejected = "x".repeat(MAX_FIELD_BYTES + 1);
