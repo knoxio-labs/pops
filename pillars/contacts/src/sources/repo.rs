@@ -56,7 +56,7 @@ pub async fn create_or_get_account(
             "Account label must be at most 256 bytes".to_string(),
         ));
     }
-    sqlx::query("INSERT INTO source_accounts(id,provider,account_key,label,created_at) VALUES(?1,?2,?3,?4,?5) ON CONFLICT(provider,account_key) DO UPDATE SET label=excluded.label")
+    sqlx::query("INSERT INTO source_accounts(id,provider,account_key,label,created_at) VALUES(?1,?2,?3,?4,?5) ON CONFLICT(provider,account_key) DO UPDATE SET label=excluded.label WHERE source_accounts.label IS NOT excluded.label")
         .bind(uuid::Uuid::new_v4().to_string()).bind(&input.provider).bind(&input.account_key).bind(&input.label).bind(now_rfc3339()).execute(pool).await?;
     Ok(sqlx::query_as("SELECT id,provider,account_key,label,created_at FROM source_accounts WHERE provider=?1 AND account_key=?2")
         .bind(&input.provider).bind(&input.account_key).fetch_one(pool).await?)
@@ -104,6 +104,7 @@ pub fn validate_record(input: &SourceRecordInput) -> Result<(), SourceError> {
 /// Local points/profile and existing preferred selections survive. Unchanged points retain their IDs;
 /// removed source values remain inactive.
 /// Reusing a namespace for a different canonical person is an explicit conflict.
+/// Reapplying an identical active observation performs no writes and keeps its revision.
 pub async fn apply_record(
     conn: &mut SqliteConnection,
     input: &SourceRecordInput,
@@ -118,10 +119,26 @@ pub async fn apply_record(
     if !account_exists {
         return Err(SourceError::NotFound);
     }
-    let existing: Option<(String,String)> = sqlx::query_as("SELECT id,entity_id FROM source_records WHERE account_id=?1 AND collection_key=?2 AND record_key=?3")
-        .bind(&input.account_id).bind(&input.collection_key).bind(&input.record_key).fetch_optional(&mut *conn).await?;
+    let snapshot = serde_json::to_string(input)
+        .map_err(|error| SourceError::Db(sqlx::Error::Encode(Box::new(error))))?;
+    let existing = find_record(
+        conn,
+        &input.account_id,
+        &input.collection_key,
+        &input.record_key,
+    )
+    .await?;
     let id = match existing {
-        Some((id, owner)) if owner == input.entity_id => id,
+        Some(record) if record.entity_id == input.entity_id => {
+            if record.active {
+                let prior: Option<String> = sqlx::query_scalar("SELECT observation FROM source_record_history WHERE source_record_id=?1 ORDER BY rowid DESC LIMIT 1")
+                    .bind(&record.id).fetch_optional(&mut *conn).await?;
+                if prior.as_deref() == Some(snapshot.as_str()) {
+                    return Ok(record);
+                }
+            }
+            record.id
+        }
         Some(_) => return Err(SourceError::Conflict),
         None => {
             crate::persons::repo::require_writable_person(conn, &input.entity_id).await?;
@@ -180,15 +197,25 @@ async fn refresh_points(
 /// Deactivate one source and its observations without deleting people or clearing preferred/local values.
 /// This method participates in the caller's transaction and never commits independently.
 pub async fn deactivate_record(conn: &mut SqliteConnection, id: &str) -> Result<bool, SourceError> {
-    let result = sqlx::query("UPDATE source_records SET active=0,revision=revision+1 WHERE id=?1")
+    let active: Option<bool> = sqlx::query_scalar("SELECT active FROM source_records WHERE id=?1")
+        .bind(id)
+        .fetch_optional(&mut *conn)
+        .await?;
+    let Some(active) = active else {
+        return Ok(false);
+    };
+    if !active {
+        return Ok(true);
+    }
+    sqlx::query("UPDATE source_records SET active=0,revision=revision+1 WHERE id=?1")
         .bind(id)
         .execute(&mut *conn)
         .await?;
-    sqlx::query("UPDATE contact_points SET active=0 WHERE source_record_id=?1")
+    sqlx::query("UPDATE contact_points SET active=0 WHERE source_record_id=?1 AND active=1")
         .bind(id)
         .execute(conn)
         .await?;
-    Ok(result.rows_affected() > 0)
+    Ok(true)
 }
 
 /// Read one source namespace inside a caller transaction for optimistic revision checks.
