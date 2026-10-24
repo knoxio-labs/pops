@@ -9,6 +9,21 @@ import { moveOneToMatched, useReviewActions, type LocalTxState } from './useRevi
 
 import type { ProcessedTransaction } from '../../../store/importStore';
 
+const identities = new Map([
+  ['ent-a', 'ent-a'],
+  ['ent-apple', 'ent-apple'],
+  ['ent-b', 'ent-b'],
+  ['ent-bunnings', 'ent-bunnings'],
+  ['ent-dupe', 'ent-dupe'],
+  ['ent-gym', 'ent-gym'],
+  ['ent-joao', 'ent-joao'],
+  ['ent-mcd', 'ent-mcd'],
+  ['ent-sauna', 'ent-sauna'],
+  ['ent-x', 'ent-x'],
+  ['ent-y', 'ent-y'],
+  ['ent-z', 'ent-z'],
+]);
+
 const toastMock = vi.hoisted(() => ({ success: vi.fn(), info: vi.fn(), error: vi.fn() }));
 vi.mock('sonner', () => ({ toast: toastMock }));
 
@@ -226,7 +241,13 @@ function setupActions(similar: ProcessedTransaction[] = []) {
   const findSimilar = vi.fn().mockReturnValue(similar);
   const recomputeForEntity = vi.fn().mockResolvedValue(undefined);
   const { result } = renderHook(() =>
-    useReviewActions({ setLocalTransactions, findSimilar, generateProposal, recomputeForEntity })
+    useReviewActions({
+      identities,
+      setLocalTransactions,
+      findSimilar,
+      generateProposal,
+      recomputeForEntity,
+    })
   );
   return { result, setLocalTransactions, generateProposal, findSimilar, recomputeForEntity };
 }
@@ -427,6 +448,7 @@ function renderReviewWithRecompute(initial: LocalTxState) {
         setLocalTransactions,
       });
       const actions = useReviewActions({
+        identities,
         setLocalTransactions,
         findSimilar: () => [],
         generateProposal: vi.fn().mockResolvedValue(undefined),
@@ -591,5 +613,27 @@ describe('useReviewActions — a hand-assigned entity re-derives its tags (POPS-
     await waitFor(() => {
       expect(result.current.isRecomputingTags).toBe(false);
     });
+  });
+});
+
+describe('canonical identity availability', () => {
+  it('does not mutate or learn an assignment before identity resolution succeeds', () => {
+    const setLocalTransactions = vi.fn();
+    const generateProposal = vi.fn();
+    const { result } = renderHook(() =>
+      useReviewActions({
+        identities: undefined,
+        setLocalTransactions,
+        generateProposal,
+        recomputeForEntity: vi.fn(),
+        findSimilar: () => [],
+      })
+    );
+    act(() => result.current.handleEntitySelect(makeProcessed('unavailable'), 'ent-a', 'Alex'));
+    expect(setLocalTransactions).not.toHaveBeenCalled();
+    expect(generateProposal).not.toHaveBeenCalled();
+    expect(toastMock.error).toHaveBeenCalledWith(
+      expect.stringContaining('identities are unavailable')
+    );
   });
 });

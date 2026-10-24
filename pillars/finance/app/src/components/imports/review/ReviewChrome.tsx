@@ -50,6 +50,7 @@ export function ReviewFooter({
   onBack,
   onContinue,
   isRecomputingTags = false,
+  canContinue = true,
 }: {
   unresolvedCount: number;
   committedCount: number;
@@ -61,6 +62,7 @@ export function ReviewFooter({
    * stale suggestions the recompute exists to replace (POPS-2595).
    */
   isRecomputingTags?: boolean;
+  canContinue?: boolean;
 }) {
   return (
     <div className="flex justify-between gap-3 items-center">
@@ -73,7 +75,10 @@ export function ReviewFooter({
             Resolve all uncertain/failed transactions to continue
           </p>
         )}
-        <Button onClick={onContinue} disabled={unresolvedCount > 0 || isRecomputingTags}>
+        <Button
+          onClick={onContinue}
+          disabled={unresolvedCount > 0 || isRecomputingTags || !canContinue}
+        >
           {isRecomputingTags && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" aria-hidden />}
           {`Continue to Tag Review (${committedCount})`}
         </Button>

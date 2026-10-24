@@ -1,5 +1,6 @@
 import { AlertTriangle, Sparkles } from 'lucide-react';
 
+import { entityIdentity, type EntityIdentities } from '@pops/finance';
 import { Badge } from '@pops/ui';
 
 import { AcceptEntityButton } from '../AcceptEntityButton';
@@ -90,6 +91,7 @@ function UnresolvedEntityNotice({
 interface EntitySectionProps {
   transaction: ProcessedTransaction;
   entities?: Array<{ id: string; name: string }>;
+  identities?: EntityIdentities;
   entityVerification?: EntityVerification;
   onEntitySelect?: (
     transaction: ProcessedTransaction,
@@ -140,6 +142,7 @@ export function EntitySection(props: EntitySectionProps) {
   const {
     transaction,
     entities,
+    identities,
     entityVerification = 'checking',
     onEntitySelect,
     onCreateEntityWithName,
@@ -148,7 +151,7 @@ export function EntitySection(props: EntitySectionProps) {
   } = props;
   const suggestedName =
     transaction.entity?.matchType === 'ai' ? transaction.entity.entityName : undefined;
-  const assigned = classifyAssignedEntity(transaction, entities);
+  const assigned = classifyAssignedEntity(transaction, entities, identities);
 
   return (
     <div className="mb-3">
@@ -166,6 +169,9 @@ export function EntitySection(props: EntitySectionProps) {
       {isLeftUnassigned(transaction) && <UnassignedNotice />}
       <TypedEntityPicker
         transaction={transaction}
+        selectedEntityId={
+          entityIdentity(transaction.entity.entityId ?? null, identities) ?? undefined
+        }
         entities={entities}
         onEntitySelect={onEntitySelect}
         onCreateEntityWithName={onCreateEntityWithName}

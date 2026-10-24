@@ -1,3 +1,8 @@
+import { and, count, desc, eq, gte, isNull, sql } from 'drizzle-orm';
+
+import { TagsOnlyCorrectionError, TransactionCorrectionNotFoundError } from '../errors.js';
+import { transactionCorrections } from '../schema.js';
+import { mergeTagsWithinFacetLimits, parseStoredTags } from '../tag-facets.js';
 /**
  * Transaction-corrections CRUD for the finance domain.
  *
@@ -15,11 +20,7 @@
  * here. All three surface through the `transactionCorrectionsService`
  * namespace on the package barrel.
  */
-import { and, count, desc, eq, gte, isNull, sql } from 'drizzle-orm';
-
-import { TagsOnlyCorrectionError, TransactionCorrectionNotFoundError } from '../errors.js';
-import { transactionCorrections } from '../schema.js';
-import { mergeTagsWithinFacetLimits, parseStoredTags } from '../tag-facets.js';
+import { preservedEntityId, type EntityIdentities } from './entity-identity.js';
 import { assertEntityIdNotPlaceholder } from './tag-rule-write-guards.js';
 import {
   buildCorrectionUpdates,
@@ -206,7 +207,8 @@ function insertNewCorrection(
  */
 export function createOrUpdateTransactionCorrection(
   db: FinanceDb,
-  input: CreateTransactionCorrectionInput
+  input: CreateTransactionCorrectionInput,
+  identities?: EntityIdentities
 ): TransactionCorrectionRow {
   assertEntityIdNotPlaceholder(input.entityId);
   const normalized = storablePattern(input.descriptionPattern, input.matchType);
@@ -227,7 +229,11 @@ export function createOrUpdateTransactionCorrection(
     )
     .get();
 
-  if (existing) return reinforceExistingCorrection(db, existing, input);
+  if (existing)
+    return reinforceExistingCorrection(db, existing, {
+      ...input,
+      entityId: preservedEntityId(existing.entityId, input.entityId, identities),
+    });
   return insertNewCorrection(db, input, normalized);
 }
 
@@ -244,11 +250,15 @@ export function createOrUpdateTransactionCorrection(
 export function updateTransactionCorrection(
   db: FinanceDb,
   id: string,
-  input: UpdateTransactionCorrectionInput
+  input: UpdateTransactionCorrectionInput,
+  identities?: EntityIdentities
 ): TransactionCorrectionRow {
   assertEntityIdNotPlaceholder(input.entityId);
   const existing = getTransactionCorrection(db, id);
-  const updates = buildCorrectionUpdates(input, existing);
+  const updates = buildCorrectionUpdates(
+    { ...input, entityId: preservedEntityId(existing.entityId, input.entityId, identities) },
+    existing
+  );
 
   if (Object.keys(updates).length === 0) return existing;
 

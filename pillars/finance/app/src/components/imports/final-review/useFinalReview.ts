@@ -12,9 +12,8 @@ import { toRestCorrectionChangeSet } from '../../../lib/rest-changeset';
 import { reconcilePendingTagRule } from '../../../lib/tag-rule-reconcile';
 import { useImportStore } from '../../../store/importStore';
 import { IMPORT_DRAFTS_LIST_KEY } from '../hooks/useDraftWriteThrough';
-import { rulesStepHasProposals } from '../rule-creation/utils';
-import { TAG_REVIEW_STEP } from '../step-labels';
 import { useTagFacets } from '../tag-review/useTagTaxonomy';
+import { useRulesBackNavigation } from './useRulesBackNavigation';
 import { useTagRuleAddCollisions } from './useTagRuleAddCollisions';
 
 import type { PendingTagRuleChangeSet } from '../../../store/importStore';
@@ -172,15 +171,7 @@ export function useFinalReview() {
   };
   const cancelConfirm = () => setConfirmOpen(false);
   const confirmCommit = () => commitMutation.mutate(commitBodyFor(slice, commitKey));
-  const goBack = () => {
-    if (
-      rulesStepHasProposals(slice.confirmedTransactions, slice.pendingTagRuleChangeSets, facets)
-    ) {
-      slice.prevStep();
-    } else {
-      slice.goToStep(TAG_REVIEW_STEP);
-    }
-  };
+  const goBack = useRulesBackNavigation(slice, facets);
   return {
     pendingEntities: slice.pendingEntities,
     pendingChangeSets: slice.pendingChangeSets,

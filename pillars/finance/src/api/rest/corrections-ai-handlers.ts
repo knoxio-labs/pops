@@ -7,6 +7,8 @@
  * record is stamped with a service principal rather than a request user.
  */
 import { type FinanceDb } from '../../db/index.js';
+import { runEntityHttp } from '../contacts/identity-snapshot.js';
+import { type ContactsClient } from '../contacts/types.js';
 import {
   analyzeCorrection,
   generateRules,
@@ -24,7 +26,7 @@ type Req = ServerInferRequest<typeof financeCorrectionsContract>;
 
 const REJECTION_PRINCIPAL = 'finance-pillar';
 
-export function makeCorrectionsAiHandlers(db: FinanceDb) {
+export function makeCorrectionsAiHandlers(db: FinanceDb, contacts: ContactsClient) {
   return {
     analyzeCorrection: ({ body }: Req['analyzeCorrection']) =>
       runHttp(async () => ({
@@ -39,9 +41,10 @@ export function makeCorrectionsAiHandlers(db: FinanceDb) {
       })),
 
     proposeChangeSet: ({ body }: Req['proposeChangeSet']) =>
-      runHttp(async () => ({
+      runEntityHttp(db, contacts, body, async (identities) => ({
         status: 200 as const,
         body: await proposeChangeSetFromCorrectionSignal(db, {
+          identities,
           signal: body.signal,
           maxPreviewItems: body.maxPreviewItems,
         }),

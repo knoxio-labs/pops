@@ -27,6 +27,7 @@
  * print a plan before it writes.
  */
 import { transactionCorrections, transactions, transactionTagRules } from '../schema.js';
+import { entityIdentity, type EntityIdentities } from './entity-identity.js';
 import {
   isPendingContactId,
   reassignEntityId,
@@ -129,7 +130,8 @@ export interface EntityRepairPlan {
  */
 export function planEntityRepair(
   db: FinanceDb,
-  liveEntities: readonly LiveEntityRef[]
+  liveEntities: readonly LiveEntityRef[],
+  identities?: EntityIdentities
 ): EntityRepairPlan {
   const liveIds = new Set(liveEntities.map((e) => e.id));
 
@@ -146,7 +148,7 @@ export function planEntityRepair(
   const ambiguous: DistinctEntityRef[] = [];
 
   for (const ref of listDistinctEntityRefs(db)) {
-    if (liveIds.has(ref.entityId)) continue; // still resolves — not an orphan
+    if (liveIds.has(entityIdentity(ref.entityId, identities))) continue; // still resolves — not an orphan
 
     if (ref.names.length === 0) {
       unmatched.push(ref);

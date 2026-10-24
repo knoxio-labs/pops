@@ -55,6 +55,7 @@ import { identifyMerchant } from './merchant-identity.js';
 import { tupleKey } from './tuple-key.js';
 
 import type { SkuScheme } from '../../contract/constants.js';
+import type { CanonicalMerchants } from './canonical-merchants.js';
 
 /** What identifying a line needs to know about it. */
 export interface ProductLine {
@@ -214,9 +215,9 @@ export function normalisedName(name: string): string {
  * where not narrowing costs a merge that is not: one row, one summed cost,
  * and nothing in it saying two shops were added together.
  */
-export function productScopeKey(line: ProductLine): string {
+export function productScopeKey(line: ProductLine, identities?: CanonicalMerchants): string {
   if (sourceNamesOneMerchant(line.source)) return tupleKey(line.source);
-  const merchant = identifyMerchant(line.merchantEntityId, line.merchantEntityName);
+  const merchant = identifyMerchant(line.merchantEntityId, line.merchantEntityName, identities);
   return tupleKey(line.source, merchant.key);
 }
 
@@ -250,9 +251,10 @@ function skuKey(scheme: SkuScheme, scope: string, sku: string): string {
  */
 export function identifyProduct(
   line: ProductLine,
-  dictionary?: ProductDictionary
+  dictionary?: ProductDictionary,
+  identities?: CanonicalMerchants
 ): { key: string; identity: ProductIdentity } {
-  const scope = productScopeKey(line);
+  const scope = productScopeKey(line, identities);
   const sku = line.sku?.trim() ?? '';
   const scheme = line.skuScheme;
   // Both halves or neither. An identifier whose namespace is absent is the

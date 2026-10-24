@@ -21,6 +21,7 @@
  */
 import { type FinanceDb, transactionTagRulesService } from '../../../db/index.js';
 import { transactions } from '../../../db/schema.js';
+import { type EntityIdentities } from '../../../db/services/entity-identity.js';
 import { exceedsFacetCardinality } from '../../../db/tag-facets.js';
 import { matchTagRules } from '../tag-suggester/tag-rule-matching.js';
 import { type TagRule, toTagRule } from './service.js';
@@ -35,14 +36,18 @@ export interface TagRuleOverlap {
   kind: TagRuleOverlapKind;
 }
 
-function firingRows(db: FinanceDb, activeRules: readonly TagRule[]): Map<string, Set<number>> {
+function firingRows(
+  db: FinanceDb,
+  activeRules: readonly TagRule[],
+  identities?: EntityIdentities
+): Map<string, Set<number>> {
   const ledger = db
     .select({ description: transactions.description, entityId: transactions.entityId })
     .from(transactions)
     .all();
   const byRule = new Map(activeRules.map((rule) => [rule.id, new Set<number>()]));
   ledger.forEach((row, index) => {
-    for (const rule of matchTagRules(activeRules, row.description, row.entityId)) {
+    for (const rule of matchTagRules(activeRules, row.description, row.entityId, identities)) {
       byRule.get(rule.id)?.add(index);
     }
   });
@@ -79,13 +84,14 @@ function overlapKind(
  */
 export function findTagRuleOverlaps(
   db: FinanceDb,
-  rules: readonly TagRule[]
+  rules: readonly TagRule[],
+  identities?: EntityIdentities
 ): Map<string, TagRuleOverlap[]> {
   const active = transactionTagRulesService
     .listTransactionTagRules(db)
     .map(toTagRule)
     .filter((rule) => rule.isActive);
-  const rowsByRule = firingRows(db, active);
+  const rowsByRule = firingRows(db, active, identities);
   const noRows = new Set<number>();
   const result = new Map<string, TagRuleOverlap[]>();
   for (const rule of rules) {

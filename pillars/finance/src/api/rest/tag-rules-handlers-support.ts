@@ -14,7 +14,9 @@ import {
   TransactionTagRuleNotFoundError,
   UnmatchablePatternError,
 } from '../../db/index.js';
+import { type EntityIdentities } from '../../db/services/entity-identity.js';
 import { findTagRuleOverlaps } from '../modules/tag-rules/overlap.js';
+import { toTagRule } from '../modules/tag-rules/service.js';
 import { NotFoundError, ValidationError } from '../shared/errors.js';
 
 import type { TagRuleLedgerMatchStatus } from '../../db/index.js';
@@ -37,24 +39,37 @@ export type TagRuleWithLedgerStatus = TagRule & {
  */
 export function withLedgerMatchStatus(
   db: FinanceDb,
-  rules: readonly TagRule[]
+  rules: readonly TagRule[],
+  identities?: EntityIdentities
 ): TagRuleWithLedgerStatus[] {
   const snapshot = transactionTagRulesService.loadTagRuleLedgerSnapshot(db);
-  const overlaps = findTagRuleOverlaps(db, rules);
+  const overlaps = findTagRuleOverlaps(db, rules, identities);
   return rules.map((rule) => ({
     ...rule,
-    ledgerMatchStatus: transactionTagRulesService.tagRuleLedgerMatchStatus(rule, snapshot),
+    ledgerMatchStatus: transactionTagRulesService.tagRuleLedgerMatchStatus(
+      rule,
+      snapshot,
+      identities
+    ),
     overlaps: overlaps.get(rule.id) ?? [],
   }));
 }
 
 /** {@link withLedgerMatchStatus} for the single-rule `get` response. */
-export function withLedgerMatchStatusOne(db: FinanceDb, rule: TagRule): TagRuleWithLedgerStatus {
+export function withLedgerMatchStatusOne(
+  db: FinanceDb,
+  rule: TagRule,
+  identities?: EntityIdentities
+): TagRuleWithLedgerStatus {
   const snapshot = transactionTagRulesService.loadTagRuleLedgerSnapshot(db);
   return {
     ...rule,
-    ledgerMatchStatus: transactionTagRulesService.tagRuleLedgerMatchStatus(rule, snapshot),
-    overlaps: findTagRuleOverlaps(db, [rule]).get(rule.id) ?? [],
+    ledgerMatchStatus: transactionTagRulesService.tagRuleLedgerMatchStatus(
+      rule,
+      snapshot,
+      identities
+    ),
+    overlaps: findTagRuleOverlaps(db, [rule], identities).get(rule.id) ?? [],
   };
 }
 
@@ -75,4 +90,19 @@ export function translateTagRuleError(err: unknown, id?: string): never {
     throw new ValidationError(err.message, { entityId: err.entityId });
   }
   throw err;
+}
+
+/** Patch a rule while retaining an equivalent historical scope and translating persistence failures. */
+export function updateTagRuleWithIdentity(
+  db: FinanceDb,
+  id: string,
+  input: transactionTagRulesService.UpdateTransactionTagRuleInput,
+  identities: EntityIdentities
+): TagRule {
+  try {
+    const row = transactionTagRulesService.updateTransactionTagRule(db, id, input, identities);
+    return toTagRule(row);
+  } catch (error) {
+    translateTagRuleError(error, id);
+  }
 }

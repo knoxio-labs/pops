@@ -23,6 +23,7 @@ function makeTxn(checksum: string): ProcessedTransaction {
 
 function makeGroup(overrides: Partial<TransactionGroupType> = {}): TransactionGroupType {
   return {
+    identityKey: 'woolworths',
     entityName: 'Bunnings Warehouse',
     transactions: [makeTxn('a'), makeTxn('b')],
     aiSuggestion: false,

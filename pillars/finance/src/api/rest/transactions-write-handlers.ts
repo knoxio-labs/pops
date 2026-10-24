@@ -36,6 +36,7 @@ import {
   type TransactionRow,
   transactionsService,
 } from '../../db/index.js';
+import { type ContactsClient } from '../contacts/types.js';
 import {
   fromTransactionSnapshot,
   toCreateTransactionInput,
@@ -55,6 +56,7 @@ import {
   forViewer,
   requireAccountRole,
 } from './guest-access.js';
+import { updateCanonicalTransaction } from './transactions-update.js';
 
 import type { ServerInferRequest } from '@ts-rest/core';
 import type { Response } from 'express';
@@ -171,7 +173,11 @@ function deletedRowFromLog(db: FinanceDb, access: AccountAccess, id: string): Tr
   return transactionEventsService.parseTransactionSnapshot(deletion.before);
 }
 
-export function makeTransactionWriteHandlers(db: FinanceDb, purchases: PurchasesReceiptsClient) {
+export function makeTransactionWriteHandlers(
+  db: FinanceDb,
+  purchases: PurchasesReceiptsClient,
+  contacts: ContactsClient
+) {
   return {
     create: ({ body, res }: Req['create'] & { res: Response }) =>
       runHttp(() => {
@@ -193,7 +199,7 @@ export function makeTransactionWriteHandlers(db: FinanceDb, purchases: Purchases
       }),
 
     update: ({ params, body, res }: Req['update'] & { res: Response }) =>
-      runHttp(() => {
+      runHttp(async () => {
         try {
           const access = accountAccess(res, db);
           if (access !== 'all') {
@@ -202,15 +208,10 @@ export function makeTransactionWriteHandlers(db: FinanceDb, purchases: Purchases
             if (body.accountId !== undefined) requireAccountRole(access, body.accountId, 'edit');
             refuseOperatorOnlyFields(access, body, false);
           }
-          const row = pairSavedTransfer(
-            db,
-            transactionsService.updateTransaction(
-              db,
-              params.id,
-              toUpdateTransactionInput(body),
-              actorOf(res)
-            )
-          );
+          const row = await updateCanonicalTransaction(db, contacts, params.id, {
+            input: toUpdateTransactionInput(body),
+            actor: actorOf(res),
+          });
           return {
             status: 200 as const,
             body: { data: toTransaction(forViewer(access, row)), message: 'Transaction updated' },

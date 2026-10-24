@@ -1,8 +1,10 @@
 import { useMemo } from 'react';
 
+import { entityIdentity, type EntityIdentities } from '@pops/finance';
 import { Badge, formatCurrency, formatDate } from '@pops/ui';
 
 import { isUnavailableError } from '../../../../finance-api-helpers.js';
+import { useCanonicalContacts } from '../../../../lib/useCanonicalContacts';
 import { useImportStore } from '../../../../store/importStore';
 import { useRuleMatchPreview, type RuleMatchPreviewRow } from './useRuleMatchPreview';
 
@@ -17,8 +19,18 @@ function CurrentEntity({ entityName }: { entityName: string | null }) {
   return <span className="italic text-muted-foreground/70">no entity</span>;
 }
 
-function MatchRow({ row, rule }: { row: RuleMatchPreviewRow; rule: CorrectionRule }) {
-  const wouldChange = (row.entityId ?? null) !== (rule.entityId ?? null);
+function MatchRow({
+  row,
+  rule,
+  identities,
+}: {
+  row: RuleMatchPreviewRow;
+  rule: CorrectionRule;
+  identities: EntityIdentities;
+}) {
+  const wouldChange =
+    entityIdentity(row.entityId ?? null, identities) !==
+    entityIdentity(rule.entityId ?? null, identities);
   return (
     <div
       className="text-xs rounded border-l-2 border-muted pl-2 py-0.5"
@@ -89,8 +101,19 @@ export function RuleMatchList({ rule }: { rule: CorrectionRule }) {
     matchType: rule.matchType,
   });
   const sessionMatchCount = useSessionMatchCount(rule.id);
+  const identity = useCanonicalContacts(
+    [rule.entityId, ...(query.data?.matches.map((row) => row.entityId) ?? [])].filter(
+      (id): id is string => typeof id === 'string'
+    )
+  );
 
-  if (query.isPending) {
+  if (identity.status === 'unavailable')
+    return (
+      <p role="alert">Contact identities unavailable — cannot compare matched transactions.</p>
+    );
+
+  const identities = identity.identities;
+  if (query.isPending || !identities) {
     return (
       <div className="text-xs text-muted-foreground" data-testid="rule-match-loading">
         Scanning your library…
@@ -129,7 +152,7 @@ export function RuleMatchList({ rule }: { rule: CorrectionRule }) {
       <ListHeader shown={matches.length} total={totalCount} />
       <div className="space-y-1 max-h-64 overflow-auto pr-1">
         {matches.map((row) => (
-          <MatchRow key={row.id} row={row} rule={rule} />
+          <MatchRow key={row.id} row={row} rule={rule} identities={identities} />
         ))}
       </div>
     </section>

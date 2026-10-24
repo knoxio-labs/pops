@@ -350,6 +350,16 @@
               }
             },
             "description": "400"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "503"
           }
         },
         "summary": "Spend per merchant and currency over a period, with the explained/unexplained split",
@@ -627,6 +637,16 @@
               }
             },
             "description": "400"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "503"
           }
         },
         "summary": "The home screen figures for one calendar month, in the owner’s timezone",
@@ -1179,6 +1199,16 @@
               }
             },
             "description": "400"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "503"
           }
         },
         "summary": "Repeat purchases per product — cadence, unit-price history, and the identity basis each group was formed on",
@@ -1877,6 +1907,16 @@
               }
             },
             "description": "400"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "503"
           }
         },
         "summary": "Mint a dictionary entry per printed wording and retire unconfirmed entries nothing prints",
@@ -2432,6 +2472,16 @@
               }
             },
             "description": "400"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "503"
           }
         },
         "summary": "List orders, newest first",
@@ -6991,6 +7041,16 @@
               }
             },
             "description": "502"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "503"
           }
         },
         "summary": "Edit a saved purchase",

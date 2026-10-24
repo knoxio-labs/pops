@@ -31,6 +31,7 @@
 import { eq } from 'drizzle-orm';
 
 import { purchaseProductAliases, purchaseProducts } from '../schema.js';
+import { canonicalProductScope, type CanonicalMerchants } from './canonical-merchants.js';
 import { productLookupKey, type ProductDictionary } from './product-identity.js';
 
 import type { PurchaseProductAliasRow, PurchaseProductRow } from '../schema.js';
@@ -45,7 +46,10 @@ import type { ProductDictionaryEntry } from './product-identity.js';
  * and the table is bounded by distinct printed wordings — hundreds, not the
  * hundreds of thousands a line-grained table would be.
  */
-export function loadProductDictionary(db: PurchasesDb): ProductDictionary {
+export function loadProductDictionary(
+  db: PurchasesDb,
+  identities?: CanonicalMerchants
+): ProductDictionary {
   const rows = db
     .select({
       scopeKey: purchaseProductAliases.scopeKey,
@@ -60,11 +64,27 @@ export function loadProductDictionary(db: PurchasesDb): ProductDictionary {
 
   const dictionary = new Map<string, ProductDictionaryEntry>();
   for (const row of rows) {
-    dictionary.set(productLookupKey(row.scopeKey, row.normalisedName), {
+    const key = productLookupKey(
+      canonicalProductScope(row.scopeKey, identities),
+      row.normalisedName
+    );
+    const candidate = {
       productId: row.productId,
       label: row.label,
       confirmed: row.confirmedAt !== null,
-    });
+    };
+    const held = dictionary.get(key);
+    if (held?.confirmed && candidate.confirmed && held.productId !== candidate.productId) {
+      throw new Error(
+        'Conflicting confirmed product assertions after merchant identity resolution'
+      );
+    }
+    if (
+      held === undefined ||
+      (!held.confirmed && (candidate.confirmed || candidate.productId < held.productId))
+    ) {
+      dictionary.set(key, candidate);
+    }
   }
   return dictionary;
 }

@@ -19,6 +19,7 @@ import {
   feeTagsOnNonFeeType,
   withoutFeeTagsOnNonFeeType,
 } from '../../../contract/transaction-classification.js';
+import { entityIdentity, type EntityIdentities } from '../../../db/services/entity-identity.js';
 import {
   type CorrectionRow,
   normalizeEntityId,
@@ -49,10 +50,15 @@ export interface BatchTxn {
  */
 function providedEntityChange(
   txn: BatchTxn,
-  rule: CorrectionRow
+  rule: CorrectionRow,
+  identities?: EntityIdentities
 ): { entityId: string; entityName: string | null } | null {
   const ruleEntityId = normalizeEntityId(rule.entityId);
-  if (ruleEntityId === null || ruleEntityId === (txn.entityId ?? null)) return null;
+  if (
+    ruleEntityId === null ||
+    entityIdentity(ruleEntityId, identities) === entityIdentity(txn.entityId ?? null, identities)
+  )
+    return null;
   return { entityId: ruleEntityId, entityName: rule.entityName ?? null };
 }
 
@@ -113,10 +119,14 @@ function mergedTags(txn: BatchTxn, rule: CorrectionRow, type: string): string[] 
 }
 
 /** Entity/type/location changes a rule makes, shared by every retroactive builder. */
-function buildCoreFieldUpdates(txn: BatchTxn, rule: CorrectionRow): Record<string, unknown> {
+function buildCoreFieldUpdates(
+  txn: BatchTxn,
+  rule: CorrectionRow,
+  identities?: EntityIdentities
+): Record<string, unknown> {
   const updates: Record<string, unknown> = {};
 
-  const entity = providedEntityChange(txn, rule);
+  const entity = providedEntityChange(txn, rule, identities);
   if (entity) {
     updates.entityId = entity.entityId;
     updates.entityName = entity.entityName;
@@ -141,9 +151,10 @@ function buildCoreFieldUpdates(txn: BatchTxn, rule: CorrectionRow): Record<strin
  */
 export function buildRetroactiveApplyUpdates(
   txn: BatchTxn,
-  rule: CorrectionRow
+  rule: CorrectionRow,
+  identities?: EntityIdentities
 ): Record<string, unknown> | null {
-  const updates = buildCoreFieldUpdates(txn, rule);
+  const updates = buildCoreFieldUpdates(txn, rule, identities);
 
   const newTags = mergedTags(txn, rule, typeof updates.type === 'string' ? updates.type : txn.type);
   if (newTags !== null) updates.tags = JSON.stringify(newTags);

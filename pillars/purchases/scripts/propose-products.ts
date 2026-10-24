@@ -5,8 +5,8 @@
  *   pnpm propose:products -- --write   # the same pass, committed
  *
  * Like `propose:kinds` this goes at the database rather than over HTTP, so it
- * needs no base URL and no service-account key. Unlike it, this pass calls no
- * model, so a preview costs nothing but a scan.
+ * needs no Purchases base URL. Identity resolution still calls Contacts with the
+ * configured service-account key before any transaction. This pass calls no model.
  *
  * **The preview is the default, and it leaves the dictionary as it found it.**
  * It runs the real pass inside a transaction it then rolls back, so its counts
@@ -30,6 +30,7 @@
  */
 import { isCliEntrypoint } from '@pops/pillar-sdk/node';
 
+import { resolveStoredMerchants } from '../src/api/contacts/canonical.js';
 import { resolvePurchasesSqlitePath } from '../src/api/purchases-sqlite-path.js';
 import {
   openPurchasesDb,
@@ -40,6 +41,8 @@ import {
   type PurchasesDb,
 } from '../src/db/index.js';
 import { runCli } from './backfill.js';
+
+import type { CanonicalMerchants } from '../src/db/services/canonical-merchants.js';
 
 /** How many minted and retired wordings are named before the rest are counted. */
 const SAMPLE_LIMIT = 10;
@@ -72,6 +75,8 @@ class PreviewRollback extends Error {
 export interface PassOptions {
   /** False runs the pass and rolls it back; true commits it. */
   readonly write: boolean;
+  /** Contacts snapshot resolved before the preview or write transaction begins. */
+  readonly canonicalMerchants?: CanonicalMerchants;
 }
 
 /**
@@ -147,11 +152,12 @@ function difference<T>(from: ReadonlyMap<string, T>, to: ReadonlyMap<string, T>)
  */
 function runAndCapture(
   db: PurchasesDb,
-  onBatch?: (done: number, total: number) => void
+  onBatch?: (done: number, total: number) => void,
+  canonicalMerchants?: CanonicalMerchants
 ): PassReport {
   const entriesBefore = snapshotEntries(db);
   const productsBefore = snapshotProducts(db);
-  const outcome = proposeProducts(db, { onBatch });
+  const outcome = proposeProducts(db, { onBatch, canonicalMerchants });
   const entriesAfter = snapshotEntries(db);
   const productsAfter = snapshotProducts(db);
   return {
@@ -183,7 +189,7 @@ export function runProposalPass(
   let report: PassReport | undefined;
   try {
     db.transaction((tx) => {
-      report = runAndCapture(tx, onBatch);
+      report = runAndCapture(tx, onBatch, options.canonicalMerchants);
       if (!options.write) throw new PreviewRollback();
     });
   } catch (error) {
@@ -249,14 +255,15 @@ export function describePassReport(report: PassReport, context: ReportContext): 
   ].join('\n');
 }
 
-export function main(argv: readonly string[] = process.argv.slice(2)): void {
+export async function main(argv: readonly string[] = process.argv.slice(2)): Promise<void> {
   const options = parseArgs(argv);
   const path = resolvePurchasesSqlitePath();
   const context = { ...options, path };
   console.warn(describePassTarget(context));
   const opened = openPurchasesDb(path);
   try {
-    const report = runProposalPass(opened.db, options, (done, total) => {
+    const canonicalMerchants = await resolveStoredMerchants(opened.db);
+    const report = runProposalPass(opened.db, { ...options, canonicalMerchants }, (done, total) => {
       console.warn(`batch ${String(done)}/${String(total)}`);
     });
     console.warn(describePassReport(report, context));

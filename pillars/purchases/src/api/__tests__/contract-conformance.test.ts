@@ -81,6 +81,7 @@ beforeEach(() => {
   receiptDir = join(dataDir, 'receipts');
   mkdirSync(receiptDir, { recursive: true });
   app = createPurchasesApiApp({
+    canonicalMerchants: async (ids) => new Map(ids.map((id) => [id, id])),
     vision: null,
     purchasesDb: opened,
     version: '1.2.3',

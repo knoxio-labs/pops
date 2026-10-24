@@ -16,6 +16,7 @@
  * POPS-2696 was filed for. This runs one indexed lookup per `add` op instead.
  */
 import { transactionCorrectionsService, transactionTagRulesService } from '../../../db/index.js';
+import { type EntityIdentities } from '../../../db/services/entity-identity.js';
 import { parseStoredTags } from '../../../db/tag-facets.js';
 
 import type { TagRuleChangeSet } from '../../../contract/rest-tag-rules.js';
@@ -40,7 +41,8 @@ export interface TagRuleAddCollision {
  */
 export function resolveTagRuleAddCollisions(
   db: FinanceDb,
-  changeSet: TagRuleChangeSet
+  changeSet: TagRuleChangeSet,
+  identities?: EntityIdentities
 ): (TagRuleAddCollision | null)[] {
   return changeSet.ops.map((op) => {
     if (op.op !== 'add') return null;
@@ -50,7 +52,7 @@ export function resolveTagRuleAddCollisions(
       db,
       op.data.matchType,
       normalized,
-      op.data.entityId ?? null
+      { entityId: op.data.entityId ?? null, identities }
     );
     if (!existing) return null;
 

@@ -5,6 +5,7 @@ import { ContactsApiError, unwrap } from '../../../contacts-api-helpers.js';
 import { entitiesList, entitiesLookup } from '../../../contacts-api/index.js';
 import { computeMergedEntities } from '../../../lib/merged-state';
 import { useImportStore } from '../../../store/importStore';
+import { useImportIdentities } from './useImportIdentities';
 
 import type { EntityVerification } from '../entity-existence';
 
@@ -58,7 +59,7 @@ function classifyVerification(lookup: unknown, isError: boolean): EntityVerifica
  * missing from these pickers until that window lapsed, reading as "does not
  * exist". With no stale window, regaining focus or remounting refetches.
  */
-export function useEntities() {
+export function useEntities(extraIds: readonly string[] = []) {
   const entityQuery = useQuery({
     queryKey: ['contacts', 'entities', 'lookup'],
     queryFn: fetchEntities,
@@ -67,17 +68,25 @@ export function useEntities() {
   const { data: lookup } = entityQuery;
   const pendingEntities = useImportStore((s) => s.pendingEntities);
   const addPendingEntity = useImportStore((s) => s.addPendingEntity);
-  const dbEntities = lookup;
+  const identity = useImportIdentities([
+    ...(lookup?.map((entity) => entity.id) ?? []),
+    ...extraIds,
+  ]);
+  const dbEntities = !entityQuery.isError && identity.identities ? lookup : undefined;
   const entities = useMemo(
     () => (dbEntities ? computeMergedEntities(dbEntities, pendingEntities) : undefined),
     [dbEntities, pendingEntities]
   );
-  const entityVerification = classifyVerification(lookup, entityQuery.isError);
+  const entityVerification = classifyVerification(
+    dbEntities,
+    entityQuery.isError || identity.status === 'unavailable'
+  );
   return {
     entities,
+    identities: identity.identities,
     dbEntities,
     addPendingEntity,
     entityVerification,
-    retryEntityLookup: entityQuery.refetch,
+    retryEntityLookup: () => Promise.all([entityQuery.refetch(), identity.retry()]),
   };
 }

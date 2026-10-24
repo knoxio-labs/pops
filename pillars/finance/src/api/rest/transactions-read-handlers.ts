@@ -7,6 +7,8 @@
  * grant on answers as a missing one does.
  */
 import { type FinanceDb, TransactionNotFoundError, transactionsService } from '../../db/index.js';
+import { loadEntityIdentities } from '../contacts/identity-snapshot.js';
+import { type ContactsClient } from '../contacts/types.js';
 import { toTransaction } from '../modules/transactions-types.js';
 import { NotFoundError, ValidationError } from '../shared/errors.js';
 import { paginationMeta } from '../shared/pagination.js';
@@ -29,10 +31,13 @@ type Req = ServerInferRequest<typeof financeTransactionsContract>;
 const DEFAULT_LIMIT = 50;
 const DEFAULT_OFFSET = 0;
 
-export function makeTransactionReadHandlers(db: FinanceDb) {
+export function makeTransactionReadHandlers(db: FinanceDb, contacts: ContactsClient) {
   return {
     list: ({ query, res }: Req['list'] & { res: Response }) =>
-      runHttp(() => {
+      runHttp(async () => {
+        const identities = query.entityId
+          ? await loadEntityIdentities(db, contacts, [query.entityId])
+          : undefined;
         const access = accountAccess(res, db);
         if (query.accountId !== undefined) requireAccountRole(access, query.accountId, 'view');
         const limit = query.limit ?? DEFAULT_LIMIT;
@@ -66,6 +71,7 @@ export function makeTransactionReadHandlers(db: FinanceDb) {
             endDate: query.endDate,
             tag: query.tag,
             entityId: query.entityId,
+            identities,
             type: query.type,
             ids: query.ids,
             beforeDate: query.beforeDate,

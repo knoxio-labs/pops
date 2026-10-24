@@ -24,7 +24,7 @@ function render(localTags: Record<string, string[]>, suggested: Record<string, S
   const transactions = Object.keys(localTags).map(makeTransaction);
   const { result } = renderHook(() =>
     useEntityGroupState({
-      group: { entityName: 'Palms', transactions },
+      group: { identityKey: 'palms', entityName: 'Palms', transactions },
       localTags,
       suggestedTagMeta: suggested,
       onUpdateTag,

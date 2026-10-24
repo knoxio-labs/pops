@@ -59,6 +59,9 @@ vi.mock('../../finance-api/index.js', () => ({
 }));
 
 vi.mock('../../contacts-api/index.js', () => ({
+  entitiesResolve: async ({ body }: { body: { ids: string[] } }) => ({
+    data: { data: body.ids.map((id) => ({ id, canonicalId: id })), revision: 1 },
+  }),
   entitiesLookup: () =>
     Promise.resolve({
       data: {
