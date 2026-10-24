@@ -1816,6 +1816,431 @@
           "vcard"
         ],
         "type": "string"
+      },
+      "CandidateDecision": {
+        "description": "The last explicit decision about a stable candidate identity for an import row.",
+        "enum": [
+          "merged",
+          "different",
+          "later"
+        ],
+        "type": "string"
+      },
+      "ImportReview": {
+        "description": "One coherent read of a durable import batch and the complete eligible directory.",
+        "properties": {
+          "batchId": {
+            "type": "string"
+          },
+          "batchRevision": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/ReviewCounts"
+          },
+          "directoryRevision": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "limit": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "offset": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "proposalRevision": {
+            "type": "string"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewRow"
+            },
+            "type": "array"
+          },
+          "source": {
+            "$ref": "#/components/schemas/ReviewSource"
+          },
+          "totalRows": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "batchId",
+          "batchRevision",
+          "directoryRevision",
+          "proposalRevision",
+          "source",
+          "totalRows",
+          "offset",
+          "limit",
+          "counts",
+          "rows"
+        ],
+        "type": "object"
+      },
+      "ProposalReason": {
+        "description": "Stable machine-readable explanations; display-only names never supply complete-name evidence.",
+        "enum": [
+          "source_identity",
+          "email",
+          "phone",
+          "complete_name",
+          "new_person",
+          "conflicting_source_bindings",
+          "shared_identifier",
+          "conflicting_signals",
+          "ambiguous_name",
+          "incomplete_name",
+          "keep_separate",
+          "batch_collision",
+          "batch_match",
+          "invalid_record",
+          "stale_source",
+          "source_removal"
+        ],
+        "type": "string"
+      },
+      "ReviewCandidate": {
+        "description": "A real canonical person or persisted incoming row, never a fabricated person identity.\nExactly one of `entityId` and `rowId` is populated; row targets cannot be merged yet.",
+        "properties": {
+          "entityId": {
+            "nullable": true,
+            "type": "string"
+          },
+          "keepSeparate": {
+            "type": "boolean"
+          },
+          "localName": {
+            "type": "string"
+          },
+          "localPersonProfile": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PersonProfile"
+              },
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true,
+                "type": "object"
+              }
+            ]
+          },
+          "memberIds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "name": {
+            "type": "string"
+          },
+          "personProfile": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PersonProfile"
+              },
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true,
+                "type": "object"
+              }
+            ]
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewPoint"
+            },
+            "type": "array"
+          },
+          "reasons": {
+            "items": {
+              "$ref": "#/components/schemas/ProposalReason"
+            },
+            "type": "array"
+          },
+          "rowId": {
+            "nullable": true,
+            "type": "string"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewSource"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "entityId",
+          "rowId",
+          "memberIds",
+          "name",
+          "localName",
+          "personProfile",
+          "localPersonProfile",
+          "points",
+          "sources",
+          "reasons",
+          "keepSeparate"
+        ],
+        "type": "object"
+      },
+      "ReviewClassification": {
+        "description": "Whether evidence permits an automatic match, requires a decision, or identifies a new person.",
+        "enum": [
+          "automatic",
+          "review",
+          "new"
+        ],
+        "type": "string"
+      },
+      "ReviewCounts": {
+        "description": "Complete-batch classification totals, independent of either evidence page.",
+        "properties": {
+          "automatic": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "invalid": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "new": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "review": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "automatic",
+          "review",
+          "new",
+          "invalid"
+        ],
+        "type": "object"
+      },
+      "ReviewPoint": {
+        "description": "A retained original point or unmaterialized import observation; original values stay intact.",
+        "properties": {
+          "active": {
+            "type": "boolean"
+          },
+          "countryCode": {
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "nullable": true,
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "label": {
+            "nullable": true,
+            "type": "string"
+          },
+          "normalizedValue": {
+            "nullable": true,
+            "type": "string"
+          },
+          "ownerEntityId": {
+            "nullable": true,
+            "type": "string"
+          },
+          "preferred": {
+            "type": "boolean"
+          },
+          "sourceRecordId": {
+            "nullable": true,
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ownerEntityId",
+          "kind",
+          "value",
+          "normalizedValue",
+          "label",
+          "countryCode",
+          "sourceRecordId",
+          "active",
+          "preferred"
+        ],
+        "type": "object"
+      },
+      "ReviewRow": {
+        "description": "A staged observation with real evidence and an opaque revision for this exact proposal.",
+        "properties": {
+          "candidateLimit": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "candidateOffset": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "candidateTotal": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewCandidate"
+            },
+            "type": "array"
+          },
+          "candidatesTruncated": {
+            "type": "boolean"
+          },
+          "classification": {
+            "$ref": "#/components/schemas/ReviewClassification"
+          },
+          "decisions": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/CandidateDecision"
+            },
+            "propertyNames": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "entityId": {
+            "nullable": true,
+            "type": "string"
+          },
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/RowIssue"
+            },
+            "type": "array"
+          },
+          "incoming": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ImportPayload"
+              },
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true,
+                "type": "object"
+              }
+            ]
+          },
+          "ownerEntityId": {
+            "nullable": true,
+            "type": "string"
+          },
+          "processed": {
+            "type": "boolean"
+          },
+          "proposal": {
+            "$ref": "#/components/schemas/RowProposal"
+          },
+          "proposalRevision": {
+            "type": "string"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/ProposalReason"
+          },
+          "rowId": {
+            "type": "string"
+          },
+          "sourceRecordId": {
+            "nullable": true,
+            "type": "string"
+          },
+          "staleSource": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "rowId",
+          "incoming",
+          "processed",
+          "entityId",
+          "ownerEntityId",
+          "sourceRecordId",
+          "proposal",
+          "errors",
+          "classification",
+          "reason",
+          "proposalRevision",
+          "staleSource",
+          "decisions",
+          "candidateTotal",
+          "candidateOffset",
+          "candidateLimit",
+          "candidatesTruncated",
+          "candidates"
+        ],
+        "type": "object"
+      },
+      "ReviewSource": {
+        "description": "Credential-free source provenance, retaining the original owner of merged observations.",
+        "properties": {
+          "accountId": {
+            "type": "string"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "displayName": {
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "nullable": true,
+            "type": "string"
+          },
+          "label": {
+            "nullable": true,
+            "type": "string"
+          },
+          "name": {
+            "$ref": "#/components/schemas/PersonName"
+          },
+          "ownerEntityId": {
+            "nullable": true,
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "revision": {
+            "format": "int64",
+            "nullable": true,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "accountId",
+          "ownerEntityId",
+          "provider",
+          "label",
+          "displayName",
+          "name",
+          "active",
+          "revision"
+        ],
+        "type": "object"
       }
     }
   },
@@ -3514,6 +3939,120 @@
         },
         "tags": [
           "crate::search::routes"
+        ]
+      }
+    },
+    "/imports/{id}/review-proposals": {
+      "get": {
+        "operationId": "imports.review.proposals",
+        "parameters": [
+          {
+            "description": "Import batch id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "candidateRowId",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "candidateOffset",
+            "required": false,
+            "schema": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "candidateLimit",
+            "required": false,
+            "schema": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "proposalRevision",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportReview"
+                }
+              }
+            },
+            "description": "Coherent import review page"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid review pagination"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unknown import or row"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Review snapshot changed"
+          }
+        },
+        "summary": "Read bounded evidence pages from complete-batch classification, rejecting stale page proofs.",
+        "tags": [
+          "crate::imports::review_routes"
         ]
       }
     },

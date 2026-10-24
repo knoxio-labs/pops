@@ -2,6 +2,7 @@ import { CONTACT_ENTITIES } from '../fixtures/entities';
 import {
   contactPoint,
   importBatch,
+  importReview,
   importReceipt,
   importReviewReceipt,
   personProfile,
@@ -150,6 +151,7 @@ export const contactsHandlers: MockHandlers = {
   'POST /search': ok({ hits: [] }),
   'POST /imports/files': created(importBatch),
   'GET /imports/{id}': ok(importBatch),
+  'GET /imports/{id}/review-proposals': ok(importReview),
   'POST /imports/{id}/commit': ok(importReceipt),
   'POST /imports/{id}/review-decisions': ok(importReviewReceipt),
 };

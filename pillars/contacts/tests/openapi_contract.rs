@@ -276,3 +276,42 @@ fn selector_enum_schemas_match_every_serialized_wire_field() {
     )
     .is_err());
 }
+#[test]
+fn import_review_publishes_proven_paging_and_required_nullable_evidence_ids() {
+    let doc = openapi_30_value();
+    assert_eq!(
+        doc["paths"]["/imports/{id}/review-proposals"]["get"]["operationId"],
+        "imports.review.proposals"
+    );
+    let parameters = doc["paths"]["/imports/{id}/review-proposals"]["get"]["parameters"]
+        .as_array()
+        .unwrap();
+    for name in [
+        "offset",
+        "limit",
+        "candidateRowId",
+        "candidateOffset",
+        "candidateLimit",
+        "proposalRevision",
+    ] {
+        assert!(parameters.iter().any(|parameter| parameter["name"] == name));
+    }
+    for (schema, fields) in [
+        (
+            "ReviewRow",
+            vec!["entityId", "ownerEntityId", "sourceRecordId", "incoming"],
+        ),
+        ("ReviewCandidate", vec!["entityId", "rowId"]),
+        ("ReviewPoint", vec!["id", "ownerEntityId"]),
+    ] {
+        let required = doc["components"]["schemas"][schema]["required"]
+            .as_array()
+            .unwrap();
+        for field in fields {
+            assert!(
+                required.iter().any(|value| value == field),
+                "{schema}.{field} is always serialized"
+            );
+        }
+    }
+}
