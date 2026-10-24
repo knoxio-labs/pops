@@ -13,7 +13,9 @@ import {
   importsService,
   transactionCorrectionsService,
 } from '../../../db/index.js';
+import { referencedEntityIds } from '../../../db/services/entity-identity.js';
 import { type ContactsClient } from '../../contacts/client.js';
+import { loadEntityIdentities } from '../../contacts/identity-snapshot.js';
 import { applyChangeSetToRules } from '../corrections/index.js';
 import {
   processRemainingItem,
@@ -72,10 +74,15 @@ export async function reevaluateImportSessionResult(args: {
 
   const contactSet = await args.contacts.fetchAllEntities();
   const { entityLookup, aliasMap: aliases } = importsService.buildEntityMaps(contactSet);
+  const identities = await loadEntityIdentities(args.db, args.contacts, [
+    ...contactSet.map((entity) => entity.id),
+    ...referencedEntityIds(args.result),
+  ]);
   return runReevaluate(
     args.result,
     {
       db: args.db,
+      identities,
       rules,
       isPreview: false,
       knownTags: loadKnownTags(args.db),
@@ -108,10 +115,16 @@ export async function reevaluateImportSessionWithRules(args: {
 
   const contactSet = await args.contacts.fetchAllEntities();
   const { entityLookup, aliasMap: aliases } = importsService.buildEntityMaps(contactSet);
+  const identities = await loadEntityIdentities(args.db, args.contacts, [
+    ...contactSet.map((entity) => entity.id),
+    ...referencedEntityIds(args.result),
+    ...referencedEntityIds(args.pendingChangeSets),
+  ]);
   return runReevaluate(
     args.result,
     {
       db: args.db,
+      identities,
       rules: mergedRules,
       isPreview: true,
       knownTags: loadKnownTags(args.db),

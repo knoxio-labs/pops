@@ -22,6 +22,7 @@
  * the cost is one table scan per page load, not one per rule per render.
  */
 import { transactions } from '../schema.js';
+import { entityIdentity, type EntityIdentities } from './entity-identity.js';
 import { describeForMatching, patternMatchesDescription } from './transaction-corrections-types.js';
 
 import type { FinanceDb } from './internal.js';
@@ -83,7 +84,8 @@ export interface TagRuleForLedgerMatch {
 /** Classify `rule` against `snapshot` — see {@link TagRuleLedgerMatchStatus}. */
 export function tagRuleLedgerMatchStatus(
   rule: TagRuleForLedgerMatch,
-  snapshot: TagRuleLedgerSnapshot
+  snapshot: TagRuleLedgerSnapshot,
+  identities?: EntityIdentities
 ): TagRuleLedgerMatchStatus {
   const matches = snapshot.rows.some((row) =>
     patternMatchesDescription(rule.descriptionPattern, rule.matchType, row.description)
@@ -92,7 +94,9 @@ export function tagRuleLedgerMatchStatus(
 
   if (rule.entityId === null) return 'unused';
 
-  const entityHasLedgerTransactions = snapshot.rows.some((row) => row.entityId === rule.entityId);
+  const entityHasLedgerTransactions = snapshot.rows.some(
+    (row) => entityIdentity(row.entityId, identities) === entityIdentity(rule.entityId, identities)
+  );
 
   return entityHasLedgerTransactions ? 'broken' : 'unused';
 }

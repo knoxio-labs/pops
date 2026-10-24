@@ -7,6 +7,8 @@ import { MatchedTab } from './MatchedTab';
 import { SkippedTab } from './SkippedTab';
 import { UncertainTab } from './UncertainTab';
 
+import type { EntityIdentities } from '@pops/finance';
+
 import type { TransactionType } from '../../../lib/transaction-type';
 import type { groupTransactionsByEntity } from '../../../lib/transaction-utils';
 import type { ProcessedTransaction } from '../../../store/importStore';
@@ -57,6 +59,7 @@ export interface ReviewTabsProps {
     transactionType?: TransactionType
   ) => void;
   entities?: Array<{ id: string; name: string }>;
+  identities?: EntityIdentities;
   entityVerification: EntityVerification;
   /** Matched tab only: restrict it to the rows that will not commit. */
   blockedOnly: boolean;
@@ -79,6 +82,7 @@ function buildTabSharedProps(props: ReviewTabsProps) {
     onSaveEdit: props.handleSaveEdit,
     onCancelEdit: props.handleCancelEdit,
     entities: props.entities,
+    identities: props.identities,
     entityVerification: props.entityVerification,
   };
 }

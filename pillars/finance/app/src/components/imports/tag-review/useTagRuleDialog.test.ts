@@ -45,6 +45,7 @@ describe('useTagRuleDialog marker-facet tags', () => {
 
     act(() => {
       result.current.handleOpenTagRuleDialog({
+        identityKey: 'github',
         entityName: 'GitHub',
         transactions: [row('a'), row('b')],
       });
@@ -59,6 +60,7 @@ describe('useTagRuleDialog marker-facet tags', () => {
 
     act(() => {
       result.current.handleOpenTagRuleDialog({
+        identityKey: 'github',
         entityName: 'GitHub',
         transactions: [row('a'), row('b')],
       });

@@ -51,6 +51,28 @@ fn credential_accepts_documented_bounds_and_rejects_overflow() {
 }
 
 #[test]
+fn credential_bounds_count_utf8_bytes_and_preserve_unicode() {
+    let credential = CardDavCredential::new(
+        "é".repeat(512),
+        SecretBytes::new("é".repeat(128).into_bytes()).unwrap(),
+    )
+    .unwrap();
+    let decoded = CardDavCredential::decode(&credential.encode()).unwrap();
+    assert!(decoded.authorization().expose() == credential.authorization().expose());
+    assert!(matches!(
+        CardDavCredential::new("é".repeat(513), password()),
+        Err(CredentialError::InvalidCredential)
+    ));
+    assert!(matches!(
+        CardDavCredential::new(
+            "fictional".to_owned(),
+            SecretBytes::new("é".repeat(129).into_bytes()).unwrap()
+        ),
+        Err(CredentialError::InvalidCredential)
+    ));
+}
+
+#[test]
 fn credential_refuses_basic_delimiter_controls_whitespace_and_invalid_utf8() {
     for username in [
         "fictional:injected",

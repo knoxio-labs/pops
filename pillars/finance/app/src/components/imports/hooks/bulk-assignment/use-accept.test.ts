@@ -52,6 +52,11 @@ describe('useAcceptAll (CF014)', () => {
     const { result } = renderHook(() => {
       const [state, setState] = useState<LocalTxState>(emptyState({ uncertain: [tx] }));
       const acceptAll = useAcceptAll({
+        identities: new Map([
+          ['one', 'one'],
+          ['two', 'two'],
+          ['ent-bunnings', 'ent-bunnings'],
+        ]),
         entities: people,
         dbEntities: people,
         addPendingEntity: useImportStore.getState().addPendingEntity,
@@ -86,6 +91,11 @@ describe('useAcceptAll (CF014)', () => {
     const { result } = renderHook(() => {
       const [state, setState] = useState<LocalTxState>(emptyState({ matched: [alreadyMatched] }));
       const acceptAll = useAcceptAll({
+        identities: new Map([
+          ['one', 'one'],
+          ['two', 'two'],
+          ['ent-bunnings', 'ent-bunnings'],
+        ]),
         entities: dbEntities,
         addPendingEntity: useImportStore.getState().addPendingEntity,
         dbEntities,

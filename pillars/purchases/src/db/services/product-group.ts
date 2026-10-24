@@ -33,6 +33,7 @@ import {
 } from './merchant-identity.js';
 import { isNewer, isOlder, orderRank, type OrderRank } from './order-rank.js';
 
+import type { CanonicalMerchants } from './canonical-merchants.js';
 import type { ProductIdentity } from './product-identity.js';
 import type { ScopedLine } from './product-leaderboard-lines.js';
 
@@ -272,8 +273,16 @@ function foldConfirmation(bucket: ProductBucket, identity: ProductIdentity): voi
   bucket.identity = { ...bucket.identity, confirmed: false };
 }
 
-export function noteMerchant(bucket: ProductBucket, line: ScopedLine): void {
-  const { key, identity } = identifyMerchant(line.merchantEntityId, line.merchantEntityName);
+export function noteMerchant(
+  bucket: ProductBucket,
+  line: ScopedLine,
+  identities?: CanonicalMerchants
+): void {
+  const { key, identity } = identifyMerchant(
+    line.merchantEntityId,
+    line.merchantEntityName,
+    identities
+  );
   const candidate: LabelledMerchant = {
     identity,
     labelRank: merchantLabelRank(line.orderedAt, line.purchaseId),

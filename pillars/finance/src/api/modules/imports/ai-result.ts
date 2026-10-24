@@ -71,6 +71,7 @@ export function finalizeAiResult(
           confidence: aiEntry.confidence,
           knownTags: context.knownTags,
           entityDefaultTags: context.entityDefaultTags,
+          identities: context.identities,
         })
       : buildUncertainFromAi(db, {
           transaction,

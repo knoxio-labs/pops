@@ -60,7 +60,7 @@ export const financeTransactionsContract = c.router({
     // re-runs this after a manual entity assignment and has to render the
     // same 🏪/📋 provenance badges Tag Review shows for a matcher-resolved
     // row, which needs `source`/`pattern`/`isNew`.
-    responses: { 200: z.object({ tags: z.array(SuggestedTagSchema) }) },
+    responses: { 200: z.object({ tags: z.array(SuggestedTagSchema) }), 503: ERR_RESPONSES[503] },
     summary: 'Rule-based tag suggestions for a description/entity (no LLM call)',
   },
   descriptionsForPreview: {

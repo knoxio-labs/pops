@@ -1,4 +1,4 @@
-import { Button, DialogFooter, TextInput } from '@pops/ui';
+import { Button, CheckboxInput, DialogFooter, TextInput } from '@pops/ui';
 
 import { connectionCopy, type ConnectionState, type ContactProvider } from './connection-model';
 
@@ -46,9 +46,7 @@ export function ConnectionForm({ provider, condition, onSubmit, onCancel }: Conn
           </p>
         </>
       ) : (
-        <p className="rounded-xl border border-border bg-muted/30 p-5 text-base leading-7">
-          Choose your Google account in the next step and allow read-only access to its contacts.
-        </p>
+        <GoogleConsent disabled={condition === 'loading'} />
       )}
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onCancel}>
@@ -59,5 +57,21 @@ export function ConnectionForm({ provider, condition, onSubmit, onCancel }: Conn
         </Button>
       </DialogFooter>
     </form>
+  );
+}
+
+function GoogleConsent({ disabled }: { disabled: boolean }) {
+  return (
+    <div className="space-y-5">
+      <p className="rounded-xl border border-border bg-muted/30 p-5 text-base leading-7">
+        Choose your Google account in the next step and allow read-only access to its contacts.
+      </p>
+      <CheckboxInput
+        label="Also include Other contacts"
+        description="People Google saved from your interactions. This asks for an additional read-only permission."
+        defaultChecked={false}
+        disabled={disabled}
+      />
+    </div>
   );
 }

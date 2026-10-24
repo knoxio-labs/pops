@@ -14,10 +14,15 @@ import {
   listItemsByTag,
   listPurchaseRows,
 } from '../../db/index.js';
+import {
+  resolveMerchantIdentities,
+  type CanonicalMerchantResolver,
+} from '../contacts/canonical.js';
 import { createMerchantResolver, type MerchantResolver } from '../contacts/merchant.js';
 import { purchaseErrorBody } from '../errors.js';
 import { paginationMeta } from '../shared/pagination.js';
 import { isBusyError } from '../shared/sqlite-errors.js';
+import { canonicalMerchantScope } from './canonical-merchant-scope.js';
 import { tryMapServiceError } from './error-mapping.js';
 import { makePurchaseInventoryHandlers } from './purchase-inventory-handlers.js';
 import { resolvePurchaseListKeyset } from './purchase-list-keyset.js';
@@ -51,10 +56,12 @@ function notFound(id: string) {
   };
 }
 
+/** Builds purchase reads and writes, resolving canonical identities for merchant filters. */
 export function makePurchaseHandlers(
   db: PurchasesDb,
   onIngest: () => void = () => undefined,
-  merchant: MerchantResolver = createMerchantResolver()
+  merchant: MerchantResolver = createMerchantResolver(),
+  resolve: CanonicalMerchantResolver = resolveMerchantIdentities
 ) {
   return {
     list: async ({ query }: { query: ListQuery }) => {
@@ -64,8 +71,14 @@ export function makePurchaseHandlers(
       const keyset = resolvePurchaseListKeyset(query);
       if (!keyset.ok) return { status: 400 as const, body: keyset.body };
 
+      let canonicalScope = scope.scope;
+      if (scope.scope.merchant?.resolution === 'entity') {
+        const canonical = await canonicalMerchantScope(db, scope.scope, resolve);
+        if (!canonical.ok) return canonical.response;
+        canonicalScope = canonical.scope;
+      }
       const rows = listPurchaseRows(db, {
-        ...scope.scope,
+        ...canonicalScope,
         limit: query.limit,
         offset: query.offset,
         beforeOrderedAt: keyset.beforeOrderedAt,
@@ -75,7 +88,7 @@ export function makePurchaseHandlers(
       // page — a COUNT(*) on every scroll tick is a wasted table scan the
       // client already has the answer to from page one (POPS-3710).
       const total =
-        keyset.beforeOrderedAt === undefined ? countPurchases(db, scope.scope) : undefined;
+        keyset.beforeOrderedAt === undefined ? countPurchases(db, canonicalScope) : undefined;
       return {
         status: 200 as const,
         body: {

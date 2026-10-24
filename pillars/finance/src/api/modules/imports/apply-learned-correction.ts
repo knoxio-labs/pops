@@ -14,6 +14,7 @@
  * descriptor rather than leaving the row untyped.
  */
 import { type FinanceDb, transactionCorrectionsService } from '../../../db/index.js';
+import { type EntityIdentities } from '../../../db/services/entity-identity.js';
 import {
   classifyCorrectionMatch,
   type CorrectionRow,
@@ -43,6 +44,7 @@ export interface ApplyLearnedCorrectionArgs {
    */
   isPreview?: boolean;
   /** `contactId → defaultTags` from the per-run contacts fetch (entity tag source). */
+  identities?: EntityIdentities;
   entityDefaultTags?: ReadonlyMap<string, string[]>;
   /**
    * Decides, from the outcome, whether this application counts as a use of the
@@ -153,6 +155,7 @@ function resolveApplyResult(
       status,
       entityId,
       knownTags: args.knownTags,
+      identities: args.identities,
       entityDefaultTags: args.entityDefaultTags ?? new Map(),
       collectTagRules: args.collectTagRules,
     }),

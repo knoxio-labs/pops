@@ -9,6 +9,7 @@ import { sql } from 'drizzle-orm';
 
 import { describeForMatching, patternMatchesDescription } from '../../../contract/pattern-match.js';
 import { type FinanceDb, transactionCorrections, transactions } from '../../../db/index.js';
+import { entityIdentity, type EntityIdentities } from '../../../db/services/entity-identity.js';
 import { applyChangeSetToRules, findMatchingCorrectionFromRules } from './pure.js';
 import { parseCorrectionTags, type CorrectionMatchResult, type CorrectionRow } from './types.js';
 
@@ -119,11 +120,12 @@ function tagsEqual(a: string[], b: string[]): boolean {
 
 function outcomeChanged(
   a: CorrectionClassificationOutcome,
-  b: CorrectionClassificationOutcome
+  b: CorrectionClassificationOutcome,
+  identities?: EntityIdentities
 ): boolean {
   return (
     a.ruleId !== b.ruleId ||
-    a.entityId !== b.entityId ||
+    entityIdentity(a.entityId, identities) !== entityIdentity(b.entityId, identities) ||
     a.entityName !== b.entityName ||
     a.location !== b.location ||
     a.transactionType !== b.transactionType ||
@@ -132,14 +134,18 @@ function outcomeChanged(
 }
 
 /** Counts over every matching candidate, not just the ones surfaced in `affected`. */
-function computeImpactCounts(items: ChangeSetImpactItem[]): ChangeSetImpactCounts {
+function computeImpactCounts(
+  items: ChangeSetImpactItem[],
+  identities?: EntityIdentities
+): ChangeSetImpactCounts {
   let entityChanges = 0;
   let locationChanges = 0;
   let tagChanges = 0;
   let typeChanges = 0;
   for (const item of items) {
     if (
-      item.before.entityId !== item.after.entityId ||
+      entityIdentity(item.before.entityId, identities) !==
+        entityIdentity(item.after.entityId, identities) ||
       item.before.entityName !== item.after.entityName
     ) {
       entityChanges += 1;
@@ -161,7 +167,8 @@ function withTagsMerged(
 function buildImpactItem(
   candidate: CandidateTransaction,
   rulesBefore: CorrectionRow[],
-  rulesAfter: CorrectionRow[]
+  rulesAfter: CorrectionRow[],
+  identities?: EntityIdentities
 ): ChangeSetImpactItem | null {
   const txTags = parseCorrectionTags(candidate.tags ?? '[]');
   const before = withTagsMerged(
@@ -176,11 +183,13 @@ function buildImpactItem(
     ),
     txTags
   );
-  if (!outcomeChanged(before, after)) return null;
+  if (!outcomeChanged(before, after, identities)) return null;
   return { transactionId: candidate.id, description: candidate.description, before, after };
 }
 
 export interface ImpactPreviewArgs {
+  /** Canonical mapping for identity-change counts, without rewriting previewed ids. */
+  identities?: EntityIdentities;
   changeSet: ChangeSet;
   matchType: 'exact' | 'contains' | 'regex';
   normalizedPattern: string;
@@ -206,12 +215,12 @@ export function computeChangeSetImpact(
 
   const changed: ChangeSetImpactItem[] = [];
   for (const c of candidates) {
-    const item = buildImpactItem(c, rulesBefore, rulesAfter);
+    const item = buildImpactItem(c, rulesBefore, rulesAfter, args.identities);
     if (item) changed.push(item);
   }
   return {
     affected: changed.slice(0, args.maxPreviewItems),
-    counts: computeImpactCounts(changed),
+    counts: computeImpactCounts(changed, args.identities),
     rulesBefore,
   };
 }

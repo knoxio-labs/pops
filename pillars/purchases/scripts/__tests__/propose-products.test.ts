@@ -261,13 +261,13 @@ describe('the command', () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  it('names the file it is about to read before it opens it', () => {
+  it('names the file it is about to read before it opens it', async () => {
     const fileExistedAtEachLine: boolean[] = [];
     const printed = vi.spyOn(console, 'warn').mockImplementation(() => {
       fileExistedAtEachLine.push(existsSync(path));
     });
 
-    main([]);
+    await main([]);
 
     // Opening creates the file, so a target line printed after the open is a
     // line the operator reads once the run is already under way.
@@ -277,22 +277,22 @@ describe('the command', () => {
     printed.mockRestore();
   });
 
-  it('refuses a mistyped flag before it touches the database', () => {
-    expect(() => main(['--wirte'])).toThrow(/--wirte/);
+  it('refuses a mistyped flag before it touches the database', async () => {
+    await expect(main(['--wirte'])).rejects.toThrow(/--wirte/);
 
     // openPurchasesDb creates the file and its parent, so an argument checked
     // after the open would leave one behind for a run that never happened.
     expect(existsSync(path)).toBe(false);
   });
 
-  it('commits through -- --write, which is how pnpm passes the flag', () => {
+  it('commits through -- --write, which is how pnpm passes the flag', async () => {
     const seeded = openPurchasesDb(path);
     seedSource(seeded.db);
     createPurchase(seeded.db, order('shop', ['CHK BRST 1KG']));
     seeded.raw.close();
     const printed = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 
-    main(['--', '--write']);
+    await main(['--', '--write']);
 
     printed.mockRestore();
     const reopened = openPurchasesDb(path);

@@ -457,3 +457,63 @@ fn display_only_names_can_review_a_different_display_with_matching_structured_na
         expected_review(ReviewReason::IncompleteName, &["target"])
     );
 }
+
+#[test]
+fn blank_display_names_fall_back_to_complete_names_in_both_directions() {
+    for blank in ["", " ", " \t\n "] {
+        let mut complete = record("complete-record", "Jane", "Doe", "", "");
+        complete.name.display_name = Some(blank.into());
+        let mut display = record("display-record", "", "", "", "");
+        display.name.display_name = Some("Jane Doe".into());
+        assert_eq!(
+            classify(&display, &[candidate("person", complete.clone())], &[]),
+            expected_review(ReviewReason::IncompleteName, &["person"]),
+            "existing blank display {blank:?} must retain its structured name"
+        );
+        assert_eq!(
+            classify(&complete, &[candidate("person", display)], &[]),
+            expected_review(ReviewReason::IncompleteName, &["person"]),
+            "incoming blank display {blank:?} must retain its structured name"
+        );
+    }
+}
+
+#[test]
+fn blank_display_names_cannot_hide_a_homonym_from_complete_name_matching() {
+    for blank in ["", " ", " \t\n "] {
+        let mut incoming = record("incoming", "Jane", "Doe", "", "");
+        incoming.name.display_name = Some(blank.into());
+        let mut display = record("display-record", "", "", "", "");
+        display.name.display_name = Some("Jane Doe".into());
+        assert_eq!(
+            classify(
+                &incoming,
+                &[
+                    candidate("complete", record("complete-record", "Jane", "Doe", "", "")),
+                    candidate("display", display),
+                ],
+                &[],
+            ),
+            expected_review(ReviewReason::AmbiguousName, &["complete", "display"]),
+            "blank display {blank:?} must not hide the display-only homonym"
+        );
+    }
+}
+
+#[test]
+fn preferred_display_names_do_not_hide_complete_name_review_evidence() {
+    let mut complete = record("complete-record", "Jane", "Doe", "", "");
+    complete.name.display_name = Some("Janey".into());
+    let mut display = record("display-record", "", "", "", "");
+    display.name.display_name = Some("Jane Doe".into());
+    assert_eq!(
+        classify(&display, &[candidate("person", complete.clone())], &[]),
+        expected_review(ReviewReason::IncompleteName, &["person"]),
+        "an existing preferred display must not hide its complete structured name"
+    );
+    assert_eq!(
+        classify(&complete, &[candidate("person", display)], &[]),
+        expected_review(ReviewReason::IncompleteName, &["person"]),
+        "an incoming preferred display must not hide its complete structured name"
+    );
+}

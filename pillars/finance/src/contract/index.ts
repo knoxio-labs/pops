@@ -133,3 +133,13 @@ export {
   type MatchedRule,
 } from './rest-imports-schemas.js';
 export { type TagRuleChangeSet, type TagRuleImpactItem } from './rest-tag-rules.js';
+
+export {
+  EntityIdentityConflictError,
+  EntityIdentitySnapshotError,
+  entityIdentity,
+  equivalentEntityIds,
+  preservedEntityId,
+  referencedEntityIds,
+  type EntityIdentities,
+} from './entity-identity.js';

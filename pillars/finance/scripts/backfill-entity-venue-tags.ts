@@ -41,6 +41,7 @@ import { readFileSync } from 'node:fs';
 
 import { createContactsClient, type ContactsClient } from '../src/api/contacts/client.js';
 import { unknownDefaultTags } from '../src/api/contacts/default-tags.js';
+import { loadEntityIdentities } from '../src/api/contacts/identity-snapshot.js';
 import { resolveFinanceSqlitePath } from '../src/api/finance-sqlite-path.js';
 import {
   entityVenueDefaultsService,
@@ -142,12 +143,9 @@ async function applyPlan(
   return applied;
 }
 
-async function main(): Promise<void> {
-  const apply = process.argv.includes('--apply');
-  const asJson = process.argv.includes('--json');
-  const venuesArg = process.argv.find((arg) => arg.startsWith('--venues='));
-
-  const contacts = createContactsClient();
+async function fetchLiveDefaults(
+  contacts: ReturnType<typeof createContactsClient>
+): Promise<LiveEntityDefaults[]> {
   const live: LiveEntityDefaults[] = (await contacts.fetchAllEntities()).map((e) => ({
     id: e.id,
     name: e.name,
@@ -160,6 +158,17 @@ async function main(): Promise<void> {
     );
   }
 
+  return live;
+}
+
+async function main(): Promise<void> {
+  const apply = process.argv.includes('--apply');
+  const asJson = process.argv.includes('--json');
+  const venuesArg = process.argv.find((arg) => arg.startsWith('--venues='));
+
+  const contacts = createContactsClient();
+  const live = await fetchLiveDefaults(contacts);
+
   const overrides = venuesArg
     ? readOverrides(venuesArg.slice('--venues='.length), live)
     : undefined;
@@ -167,7 +176,17 @@ async function main(): Promise<void> {
   const opened = openFinanceDb(resolveFinanceSqlitePath());
   try {
     const before = entityVenueDefaultsService.measureVenueCoverage(opened.db);
-    const plan = entityVenueDefaultsService.planEntityVenueDefaults(opened.db, live, overrides);
+    const identities = await loadEntityIdentities(
+      opened.db,
+      contacts,
+      live.map((entity) => entity.id)
+    );
+    const plan = entityVenueDefaultsService.planEntityVenueDefaults(
+      opened.db,
+      live,
+      overrides,
+      identities
+    );
 
     if (asJson) {
       process.stdout.write(`${JSON.stringify({ coverage: before, plan }, null, 2)}\n`);

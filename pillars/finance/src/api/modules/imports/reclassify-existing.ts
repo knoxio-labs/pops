@@ -43,6 +43,7 @@ import {
   transactionCorrectionsService,
   transactions,
 } from '../../../db/index.js';
+import { type EntityIdentities } from '../../../db/services/entity-identity.js';
 import {
   type CorrectionRow,
   findMatchingCorrectionFromRules,
@@ -104,7 +105,11 @@ function loadActiveCorrectionRules(db: FinanceDb): CorrectionRow[] {
  * changed, a second pass with nothing left to change writes nothing and
  * bumps no rule's usage.
  */
-export function reclassifyExistingTransactions(db: FinanceDb, importedChecksums: string[]): number {
+export function reclassifyExistingTransactions(
+  db: FinanceDb,
+  importedChecksums: string[],
+  identities?: EntityIdentities
+): number {
   const allRules = loadActiveCorrectionRules(db);
   if (allRules.length === 0) return 0;
 
@@ -121,7 +126,7 @@ export function reclassifyExistingTransactions(db: FinanceDb, importedChecksums:
       const match = findMatchingCorrectionFromRules(txn.description, allRules, txn.accountId);
       if (!match) continue;
       if (resolveCorrectionApplyStatus(match.correction) !== 'matched') continue;
-      const updates = buildRetroactiveApplyUpdates(txn, match.correction);
+      const updates = buildRetroactiveApplyUpdates(txn, match.correction, identities);
       if (!updates) continue;
       const tagDelta = tagUsageDeltaFor(txn, updates);
       db.transaction((tx) => {
@@ -158,6 +163,7 @@ export interface CorrectionRuleRetroactiveResult {
 }
 
 interface SingleRuleApplyArgs {
+  identities?: EntityIdentities;
   db: FinanceDb;
   ruleId: string;
   dryRun: boolean;
@@ -183,7 +189,7 @@ function applySingleRuleToTxn(args: SingleRuleApplyArgs, txn: BatchTxn): void {
     return;
   }
 
-  const updates = buildRetroactiveApplyUpdates(txn, match.correction);
+  const updates = buildRetroactiveApplyUpdates(txn, match.correction, args.identities);
   if (!updates) return;
 
   result.updated++;
@@ -213,7 +219,7 @@ function applySingleRuleToTxn(args: SingleRuleApplyArgs, txn: BatchTxn): void {
 export function applyCorrectionRuleToExistingTransactions(
   db: FinanceDb,
   ruleId: string,
-  options: { dryRun?: boolean } = {}
+  options: { dryRun?: boolean; identities?: EntityIdentities } = {}
 ): CorrectionRuleRetroactiveResult {
   const dryRun = options.dryRun ?? false;
   const result: CorrectionRuleRetroactiveResult = {
@@ -228,7 +234,14 @@ export function applyCorrectionRuleToExistingTransactions(
   if (!targetRule.isActive) return result;
 
   const allRules = loadActiveCorrectionRules(db);
-  const applyArgs: SingleRuleApplyArgs = { db, ruleId, dryRun, allRules, result };
+  const applyArgs: SingleRuleApplyArgs = {
+    db,
+    ruleId,
+    dryRun,
+    allRules,
+    result,
+    identities: options.identities,
+  };
 
   let offset = 0;
   while (true) {

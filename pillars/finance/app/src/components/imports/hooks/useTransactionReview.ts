@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { referencedEntityIds } from '@pops/finance';
+
 import { groupTransactionsByEntity } from '../../../lib/transaction-utils';
 import { useImportStore } from '../../../store/importStore';
 import { collectChangedChecksums, mergeReevaluatedResult } from './local-tx-reconcile';
+import { useImportIdentities } from './useImportIdentities';
 import { reevaluateVia, type ReevaluateVia, useReevaluatePending } from './useReevaluatePending';
 
 import type { Dispatch, SetStateAction } from 'react';
@@ -146,6 +149,9 @@ export function useTransactionReview() {
   const via = useImportStore(reevaluateVia);
   const { localTransactions, setLocalTransactions, applyReevaluatedResult } =
     useSyncedLocalTransactions(processedTransactions);
+  const { identities, status: identityStatus } = useImportIdentities(
+    referencedEntityIds(localTransactions)
+  );
   const [viewMode, setViewMode] = useState<ViewMode>('grouped');
   const [blockedOnly, setBlockedOnly] = useState(false);
   const initialTab = localTransactions.uncertain.length > 0 ? 'uncertain' : 'matched';
@@ -169,19 +175,25 @@ export function useTransactionReview() {
     [localTransactions]
   );
   const matchedGroups = useMemo(
-    () => groupTransactionsByEntity(localTransactions.matched, 'name'),
-    [localTransactions.matched]
+    () =>
+      identities ? groupTransactionsByEntity(localTransactions.matched, 'name', identities) : [],
+    [localTransactions.matched, identities]
   );
   const uncertainGroups = useMemo(
-    () => groupTransactionsByEntity(localTransactions.uncertain),
-    [localTransactions.uncertain]
+    () =>
+      identities
+        ? groupTransactionsByEntity(localTransactions.uncertain, 'ai-first', identities)
+        : [],
+    [localTransactions.uncertain, identities]
   );
   const failedGroups = useMemo(
-    () => groupTransactionsByEntity(localTransactions.failed),
-    [localTransactions.failed]
+    () =>
+      identities ? groupTransactionsByEntity(localTransactions.failed, 'ai-first', identities) : [],
+    [localTransactions.failed, identities]
   );
 
   return {
+    identityStatus,
     localTransactions,
     setLocalTransactions,
     applyReevaluatedResult,

@@ -61,9 +61,7 @@ impl From<PersonError> for ImportError {
         match error {
             PersonError::NotFound => Self::NotFound,
             PersonError::Invalid(_) => Self::Invalid("Invalid person decision"),
-            PersonError::Retired(_) => {
-                Self::Conflict("Person identity changed; resolve the current canonical ID")
-            }
+            PersonError::Retired(_) => Self::Conflict("Identity changed; stage a new preview"),
             PersonError::Db(_) => Self::Storage,
         }
     }
@@ -487,7 +485,7 @@ mod identity_tests {
         let error = ImportError::from(PersonError::Retired("fictional-retired-id".into()));
         assert!(matches!(
             error,
-            ImportError::Conflict("Person identity changed; resolve the current canonical ID")
+            ImportError::Conflict("Identity changed; stage a new preview")
         ));
     }
 }

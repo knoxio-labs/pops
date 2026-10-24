@@ -7,6 +7,7 @@
  */
 import { eq, sql } from 'drizzle-orm';
 
+import { canonicalMerchantId, type CanonicalMerchants } from './canonical-merchants.js';
 import { isNewer, orderRank, type OrderRank } from './order-rank.js';
 import { tupleKey } from './tuple-key.js';
 
@@ -155,8 +156,10 @@ export interface LabelledMerchant {
  */
 export function identifyMerchant(
   entityId: string | null,
-  rawName: string | null
+  rawName: string | null,
+  identities?: CanonicalMerchants
 ): { key: string; identity: MerchantIdentity } {
+  entityId = canonicalMerchantId(entityId, identities);
   const name = normalizeMerchantLabel(rawName);
   if (entityId !== null) {
     return {

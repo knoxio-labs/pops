@@ -35,6 +35,7 @@
 import { isSpendType } from '../../../contract/corrections-constants.js';
 import { normalizeDescription } from '../../../contract/index.js';
 import { tagVocabularyService, type FinanceDb } from '../../../db/index.js';
+import { entityIdentity, type EntityIdentities } from '../../../db/services/entity-identity.js';
 import { buildAiSuggestedTags } from '../tag-suggester/index.js';
 import { AiCategorizationError } from './ai-categorizer-error.js';
 import {
@@ -99,14 +100,16 @@ function isTagPoorSpendMatch(row: ProcessedTransaction): boolean {
  */
 function groupTagPoorRows(
   results: (TransactionProcessResult | undefined)[],
-  priorTagSetsOf: (entityId: string) => string[][]
+  priorTagSetsOf: (entityId: string) => string[][],
+  identities?: EntityIdentities
 ): TagGroup[] {
   const groups = new Map<string, TagGroup>();
   for (const result of results) {
     const row = classifiedRow(result);
     if (!row || !isTagPoorSpendMatch(row)) continue;
     const entityId = row.entity.entityId ?? '';
-    const key = `${entityId}\t${normalizeDescription(row.description)}`;
+    const canonicalId = entityIdentity(entityId, identities);
+    const key = `${canonicalId}\t${normalizeDescription(row.description)}`;
     const existing = groups.get(key);
     if (existing) {
       existing.rows.push(row);
@@ -193,7 +196,11 @@ async function resolveChunk(args: ChunkArgs): Promise<void> {
 export async function resolveTagsForMatched(args: ResolveTagsForMatchedArgs): Promise<void> {
   if (!isTagsForMatchedEnabled() || !isAiCategorizerEnabled()) return;
 
-  const groups = groupTagPoorRows(args.results, createPriorTagSetLoader(args.db));
+  const groups = groupTagPoorRows(
+    args.results,
+    createPriorTagSetLoader(args.db, args.context.identities),
+    args.context.identities
+  );
   if (groups.length === 0) return;
 
   const breaker = args.breaker ?? new AiCircuitBreaker();

@@ -556,3 +556,9 @@ describe('useTransactionReview — a live draft re-evaluates its own rows, with 
     expect(result.current.localTransactions.matched).toEqual([]);
   });
 });
+
+vi.mock('../../../contacts-api/index.js', () => ({
+  entitiesResolve: async ({ body }: { body: { ids: string[] } }) => ({
+    data: { data: body.ids.map((id) => ({ id, canonicalId: id })), revision: 1 },
+  }),
+}));

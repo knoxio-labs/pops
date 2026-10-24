@@ -811,3 +811,14 @@ async fn row_binding_preserves_independent_deferred_candidate_decisions() {
     assert_eq!(all.len(), 1);
     assert_eq!(all[row_id].entity_id, bound.entity_id);
 }
+
+#[test]
+fn retired_person_error_becomes_a_safe_import_conflict() {
+    use contacts::imports::service::ImportError;
+    use contacts::persons::repo::PersonError;
+
+    assert!(matches!(
+        ImportError::from(PersonError::Retired("fictional-canonical-id".to_string())),
+        ImportError::Conflict("Identity changed; stage a new preview")
+    ));
+}

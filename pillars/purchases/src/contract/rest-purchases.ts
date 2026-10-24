@@ -50,6 +50,7 @@ export const purchasesPurchaseContract = c.router({
       // Two merchant parameters at once. Declared, because the alternative a
       // caller cannot detect is a 200 computed from whichever one won.
       400: ErrorBodySchema,
+      503: ErrorBodySchema,
     },
     summary: 'List orders, newest first',
   },
@@ -134,6 +135,7 @@ export const purchasesPurchaseContract = c.router({
     responses: {
       200: PurchaseDetailSchema,
       400: ErrorBodySchema,
+      503: ErrorBodySchema,
       404: ErrorBodySchema,
       409: ErrorBodySchema,
       502: ErrorBodySchema,

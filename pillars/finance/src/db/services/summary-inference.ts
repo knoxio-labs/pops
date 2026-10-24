@@ -11,6 +11,7 @@
 import { desc, sql } from 'drizzle-orm';
 
 import { accounts, transactions } from '../schema.js';
+import { entityIdentitySql, type EntityIdentities } from './entity-identity.js';
 import {
   EMPTY_MEASURE,
   ROW_COUNT,
@@ -112,13 +113,14 @@ export function largestCharge(db: FinanceDb, range: SummaryRange): LargestCharge
 export function concentration(
   db: FinanceDb,
   range: SummaryRange,
-  totalCents: number
+  totalCents: number,
+  identities?: EntityIdentities
 ): Concentration {
   const rows = db.all<{ cents: number | null }>(sql`
     SELECT ${SPEND_CENTS} AS cents
     FROM ${transactions}
     WHERE ${spendWithinRange(range)} AND ${transactions.entityId} IS NOT NULL
-    GROUP BY ${transactions.entityId}
+    GROUP BY ${entityIdentitySql(transactions.entityId, identities)}
     ORDER BY ${desc(SPEND_CENTS)}
     LIMIT ${CONCENTRATION_ENTITY_COUNT}
   `);
@@ -127,14 +129,18 @@ export function concentration(
   return { entityCount: rows.length, cents, shareOfTotal: shareOfTotal(cents, totalCents) };
 }
 
-export function recurringSubscriptions(db: FinanceDb, range: SummaryRange): RecurringSubscriptions {
+export function recurringSubscriptions(
+  db: FinanceDb,
+  range: SummaryRange,
+  identities?: EntityIdentities
+): RecurringSubscriptions {
   const rows = db.all<{
     entityId: string | null;
     entityName: string | null;
     cents: number | null;
     transactionCount: number | null;
   }>(sql`
-    SELECT ${transactions.entityId} AS entityId,
+    SELECT ${entityIdentitySql(transactions.entityId, identities)} AS entityId,
            MAX(${transactions.entityName}) AS entityName,
            ${SPEND_CENTS} AS cents,
            ${ROW_COUNT} AS transactionCount
@@ -143,8 +149,8 @@ export function recurringSubscriptions(db: FinanceDb, range: SummaryRange): Recu
       AND EXISTS (
         SELECT 1 FROM json_each(${transactions.tags}) AS je WHERE je.value = ${SUBSCRIPTION_TAG}
       )
-    GROUP BY ${transactions.entityId}
-    ORDER BY ${desc(SPEND_CENTS)}, ${transactions.entityId}
+    GROUP BY ${entityIdentitySql(transactions.entityId, identities)}
+    ORDER BY ${desc(SPEND_CENTS)}, ${entityIdentitySql(transactions.entityId, identities)}
   `);
 
   const byEntity = rows.map((row) => ({

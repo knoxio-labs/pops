@@ -7,6 +7,7 @@
  * opening transactions of their own.
  */
 import { reconcilePendingCorrectionChangeSets } from '../../../contract/corrections-reconcile.js';
+import { type EntityIdentities } from '../../../db/services/entity-identity.js';
 import {
   applyChangeSet,
   dropUnusableAddOps,
@@ -45,7 +46,8 @@ export interface CorrectionChangeSetPhaseResult {
 export function applyChangeSetsPhase(
   tx: FinanceDb,
   payload: CommitPayload,
-  tempIdMap: Map<string, string>
+  tempIdMap: Map<string, string>,
+  identities?: EntityIdentities
 ): CorrectionChangeSetPhaseResult {
   const counts: RuleApplyCounts = { add: 0, edit: 0, disable: 0, remove: 0 };
   const writes: CorrectionRuleWriteCounts = { inserted: 0, reinforced: 0 };
@@ -54,7 +56,7 @@ export function applyChangeSetsPhase(
     const resolved = resolveChangeSetTempIds(cs, tempIdMap);
     const sanitized = dropUnusableAddOps(resolved);
     if (sanitized.ops.length === 0) continue;
-    const applied = applyChangeSet(tx, sanitized);
+    const applied = applyChangeSet(tx, sanitized, identities);
     for (const op of sanitized.ops) counts[op.op]++;
     writes.inserted += applied.writes.inserted;
     writes.reinforced += applied.writes.reinforced;
@@ -81,12 +83,13 @@ export interface TagRulePhaseResult {
 export function applyTagRuleChangeSetsPhase(
   tx: FinanceDb,
   tagRuleChangeSets: CommitPayload['tagRuleChangeSets'],
-  tempIdMap: Map<string, string>
+  tempIdMap: Map<string, string>,
+  identities?: EntityIdentities
 ): TagRulePhaseResult {
   const result: TagRulePhaseResult = { applied: 0, writes: { inserted: 0, reinforced: 0 } };
   for (const entry of tagRuleChangeSets) {
     const resolved = resolveTagRuleChangeSetTempIds(entry.changeSet, tempIdMap);
-    const { writes } = applyTagRuleChangeSet(tx, resolved);
+    const { writes } = applyTagRuleChangeSet(tx, resolved, identities);
     result.applied += resolved.ops.length;
     result.writes.inserted += writes.inserted;
     result.writes.reinforced += writes.reinforced;
