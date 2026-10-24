@@ -6,6 +6,13 @@ finds the current principal and address-book home, then lists address books.
 Every discovered URL passes the transport's fixed iCloud host policy before
 credentials accompany another request. Redirects are refused.
 
+`CardDavCredential` holds the account name and app password in zeroizing buffers
+without `Debug` or general serialization. It builds Basic authorization only at
+the transport boundary. Its versioned binary bundle is plaintext and must be
+stored through the shared authenticated credential cipher. Account names are
+limited to 1024 UTF-8 bytes and app passwords to 256; empty values, whitespace,
+controls and username colons are rejected without normalizing either value.
+
 An address book's absolute URL is its collection key. Each resource's absolute
 URL is its record key within that collection; names, email addresses, phone
 numbers and vCard ordinals never establish identity. A vCard UID is required and

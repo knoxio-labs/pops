@@ -1,9 +1,12 @@
 //! Read-only iCloud CardDAV discovery and fenced-page source observations.
 
+pub mod credential;
 mod discovery;
 mod sync;
 mod xml;
 
+#[cfg(test)]
+mod credential_tests;
 #[cfg(test)]
 mod sync_tests;
 #[cfg(test)]
