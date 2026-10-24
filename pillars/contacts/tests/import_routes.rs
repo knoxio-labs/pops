@@ -298,6 +298,13 @@ fn upload_contract_uses_binary_bytes_and_camel_case_query_parameters() {
         "binary"
     );
     let params = operation["parameters"].as_array().unwrap();
+    assert!(params.iter().all(|param| param["in"] == "query"));
+    for name in ["encoding", "phoneCountryCode"] {
+        assert_eq!(
+            params.iter().find(|param| param["name"] == name).unwrap()["required"],
+            false
+        );
+    }
     assert!(params.iter().any(|param| param["name"] == "accountId"));
     assert!(params.iter().any(|param| param["name"] == "collectionKey"));
     assert!(params

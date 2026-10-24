@@ -499,6 +499,39 @@ async fn invalid_selection_and_empty_limits_leave_all_rows_pending() {
     assert_eq!(service::get(&pool, &batch.id).await.unwrap().revision, 1);
 }
 
+#[tokio::test]
+async fn invalid_unselected_rows_do_not_block_an_explicit_valid_subset() {
+    let (pool, account) = setup().await;
+    let invalid = StageRowInput {
+        record_key: "malformed".into(),
+        payload: None,
+        removed: false,
+        errors: vec![RowIssue::MalformedRecord],
+    };
+    let batch = service::stage(
+        &pool,
+        &input(&account, vec![row("valid", "Person"), invalid]),
+    )
+    .await
+    .unwrap();
+    service::commit(
+        &pool,
+        &batch.id,
+        &commit(
+            1,
+            "valid-only",
+            vec![(&batch.rows[0].id, RowAction::CreatePerson)],
+        ),
+    )
+    .await
+    .unwrap();
+    let preview = service::get(&pool, &batch.id).await.unwrap();
+    assert!(preview.rows[0].processed);
+    assert!(!preview.rows[1].processed);
+    assert!(preview.rows[1].errors.contains(&RowIssue::MalformedRecord));
+    assert_eq!(counts(&pool).await, (1, 1));
+}
+
 #[test]
 fn commit_wire_schema_accepts_explicit_actions_and_rejects_extra_fields() {
     let body = serde_json::json!({"revision":1,"idempotencyKey":"safe","decisions":[{"rowId":"row","decision":{"action":"link_person","entityId":"person"}}]});

@@ -68,6 +68,15 @@ import type {
   EntitiesUploadPosterResponses,
   HealthGetData,
   HealthGetResponses,
+  ImportsCommitData,
+  ImportsCommitErrors,
+  ImportsCommitResponses,
+  ImportsFilesStageData,
+  ImportsFilesStageErrors,
+  ImportsFilesStageResponses,
+  ImportsGetData,
+  ImportsGetErrors,
+  ImportsGetResponses,
   OpenapiGetData,
   OpenapiGetResponses,
   RootGetData,
@@ -388,6 +397,52 @@ export const healthGet = <ThrowOnError extends boolean = false>(
   (options?.client ?? client).get<HealthGetResponses, unknown, ThrowOnError>({
     url: '/health',
     ...options,
+  });
+
+/**
+ * Stage a raw export file; malformed records remain inspectable without directory writes.
+ */
+export const importsFilesStage = <ThrowOnError extends boolean = false>(
+  options: Options<ImportsFilesStageData, ThrowOnError>
+): RequestResult<ImportsFilesStageResponses, ImportsFilesStageErrors, ThrowOnError> =>
+  (options.client ?? client).post<
+    ImportsFilesStageResponses,
+    ImportsFilesStageErrors,
+    ThrowOnError
+  >({
+    bodySerializer: null,
+    url: '/imports/files',
+    ...options,
+    headers: {
+      'Content-Type': 'application/octet-stream',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Read a durable preview after a partial commit or a process restart.
+ */
+export const importsGet = <ThrowOnError extends boolean = false>(
+  options: Options<ImportsGetData, ThrowOnError>
+): RequestResult<ImportsGetResponses, ImportsGetErrors, ThrowOnError> =>
+  (options.client ?? client).get<ImportsGetResponses, ImportsGetErrors, ThrowOnError>({
+    url: '/imports/{id}',
+    ...options,
+  });
+
+/**
+ * Apply selected decisions atomically, preserving a receipt for identical retries.
+ */
+export const importsCommit = <ThrowOnError extends boolean = false>(
+  options: Options<ImportsCommitData, ThrowOnError>
+): RequestResult<ImportsCommitResponses, ImportsCommitErrors, ThrowOnError> =>
+  (options.client ?? client).post<ImportsCommitResponses, ImportsCommitErrors, ThrowOnError>({
+    url: '/imports/{id}/commit',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
   });
 
 /**
