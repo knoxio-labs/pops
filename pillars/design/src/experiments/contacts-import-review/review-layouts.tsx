@@ -21,7 +21,7 @@ import type { ReviewModel } from './review-model';
 /** Batch arrangement exposes identity evidence and choices in each row. */
 export function ReviewTable({ model }: { model: ReviewModel }) {
   return (
-    <Table className="table-fixed">
+    <Table className="min-w-5xl table-fixed">
       <TableHeader>
         <TableRow>
           <TableHead className="w-1/6 text-sm font-semibold text-foreground">
