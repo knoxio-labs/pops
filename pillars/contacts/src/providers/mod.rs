@@ -1,5 +1,6 @@
 //! Provider credential protection and outbound request boundaries.
 
+pub mod carddav;
 pub mod credentials;
 pub mod human_auth;
 pub mod oauth_state;
