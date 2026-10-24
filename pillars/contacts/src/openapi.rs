@@ -29,8 +29,18 @@ use crate::entities::routes::{
     EntityListResponse, EntityMutation, EntityResponse, LookupBody, LookupResponse, MessageResponse,
 };
 use crate::health::HealthResponse;
+use crate::persons::model::{
+    ContactPoint, ContactPointInput, ContactPointKind, NameCompleteness, PersonName, PersonProfile,
+};
+use crate::persons::routes::{
+    ContactPointListResponse, ContactPointResponse, PersonProfileResponse,
+};
 use crate::search::routes::{
     MatchType, SearchHit, SearchHitData, SearchQuery, SearchRequest, SearchResponse,
+};
+use crate::sources::model::{SourceAccount, SourceAccountInput, SourceRecord};
+use crate::sources::routes::{
+    SourceAccountListResponse, SourceAccountResponse, SourceRecordListResponse,
 };
 
 /// The contacts OpenAPI surface. Documents `/openapi`, `/health`, the stub
@@ -66,8 +76,31 @@ use crate::search::routes::{
         crate::entities::addresses_routes::list_addresses,
         crate::entities::addresses_routes::create_address,
         crate::search::routes::search,
+        crate::persons::routes::get_profile,
+        crate::persons::routes::put_profile,
+        crate::persons::routes::list_points,
+        crate::persons::routes::create_point,
+        crate::persons::routes::prefer_point,
+        crate::sources::routes::list_accounts,
+        crate::sources::routes::register_account,
+        crate::sources::routes::list_records,
     ),
     components(schemas(
+        PersonName,
+        NameCompleteness,
+        PersonProfile,
+        ContactPointKind,
+        ContactPointInput,
+        ContactPoint,
+        PersonProfileResponse,
+        ContactPointListResponse,
+        ContactPointResponse,
+        SourceAccount,
+        SourceAccountInput,
+        SourceRecord,
+        SourceAccountListResponse,
+        SourceAccountResponse,
+        SourceRecordListResponse,
         HealthResponse,
         Entity,
         EntityLookup,
