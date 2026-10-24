@@ -51,41 +51,30 @@ describe('purchase constraints', () => {
     expect(birthday).toBeDefined();
     expect(city).toBeDefined();
     expect(birthday && isPurchasedArrangement(birthday)).toBe(false);
-    expect(city?.when).toBe('Arrival unset → departure unset');
+    expect(city?.when).toBe('');
     expect(city && isPurchasedArrangement(city)).toBe(false);
   });
 });
 
 describe('automatic city detail', () => {
   it.each([
-    [{}, 'Dates unset', 'Arrival unset → departure unset'],
+    [{}, 'Dates unset', ''],
     [{ month: { year: 2028, month: 1 } }, 'Approximate timing', 'Around January'],
-    [
-      { afterVisitId: 'rio', beforeVisitId: 'sydney-return' },
-      'Order only',
-      'After Rio de Janeiro · before Sydney',
-    ],
-    [{ departure: '2027-12-29' }, 'Planned dates', 'Arrival unset → 29 Dec'],
+    [{ afterVisitId: 'rio', beforeVisitId: 'sydney-return' }, 'Order only', ''],
+    [{ departure: '2027-12-29' }, 'Planned dates', ' → 29 Dec'],
     [{ arrival: '2027-12-29', departure: '2028-01-06' }, 'Planned dates', '29 Dec → 6 Jan'],
   ] as const)('derives %s without hardening the visit', (timing, tier, label) => {
     const city = item({ kind: 'city', timing });
     expect(tripItemTier(city)).toBe(tier);
-    expect(formatCityTiming(timing, tripOverviewRecords)).toBe(label);
+    expect(formatCityTiming(timing)).toBe(label);
     expect(isPurchasedArrangement(city)).toBe(false);
   });
   it('prefers supplied bounds to rough timing without inventing the missing bound', () => {
-    expect(
-      formatCityTiming(
-        { arrival: '2027-11-25', month: { year: 2027, month: 11 } },
-        tripOverviewRecords
-      )
-    ).toBe('25 Nov → Departure unset');
-    expect(formatCityTiming({ afterVisitId: 'rio' }, tripOverviewRecords)).toBe(
-      'After Rio de Janeiro'
+    expect(formatCityTiming({ arrival: '2027-11-25', month: { year: 2027, month: 11 } })).toBe(
+      '25 Nov → '
     );
-    expect(formatCityTiming({ beforeVisitId: 'sydney-return' }, tripOverviewRecords)).toBe(
-      'Before Sydney'
-    );
+    expect(formatCityTiming({ afterVisitId: 'rio' })).toBe('');
+    expect(formatCityTiming({ beforeVisitId: 'sydney-return' })).toBe('');
   });
 });
 
@@ -132,18 +121,15 @@ describe('persisted fields and generated text', () => {
     expect(presentTripRecord(record, [record])).toMatchObject({
       title: 'Curitiba',
       where: 'Curitiba',
-      when: '14 Dec → Departure unset',
+      when: '14 Dec → ',
     });
   });
   it('formats month precision and numeric duration without a prose field', () => {
     expect(
-      formatCityTiming(
-        {
-          month: { year: 2028, month: 1, part: 'early' },
-          duration: { min: 2, max: 3, unit: 'weeks' },
-        },
-        []
-      )
+      formatCityTiming({
+        month: { year: 2028, month: 1, part: 'early' },
+        duration: { min: 2, max: 3, unit: 'weeks' },
+      })
     ).toBe('early January · 2–3 weeks');
   });
   it('derives stay nights across a year boundary and respects leap years', () => {
@@ -165,7 +151,7 @@ describe('persisted fields and generated text', () => {
     expect(formatTripDate('2027-12-16')).toBe('16 Dec');
   });
   it('does not invent a location for an unresolved route reference', () => {
-    expect(formatCityTiming({ afterVisitId: 'missing' }, [])).toBe('After Location unavailable');
+    expect(formatCityTiming({ afterVisitId: 'missing' })).toBe('');
   });
 });
 
@@ -175,7 +161,7 @@ describe('generated trip identity', () => {
     expect(tripDisplayName(tripMetadata)).toBe('Brazil · 2027');
     expect(tripDisplayName({ ...tripMetadata, name: '  My trip  ' })).toBe('My trip');
     expect(tripDisplayName({ ...tripMetadata, name: '   ' })).toBe('Brazil · 2027');
-    expect(tripDateLabel(tripMetadata)).toBe('24 Nov 2027 → return date unset');
+    expect(tripDateLabel(tripMetadata)).toBe('24 Nov 2027');
     expect(tripDateLabel({ ...tripMetadata, returnDate: '2028-03-05' })).toBe(
       '24 Nov 2027 → 5 Mar'
     );

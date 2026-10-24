@@ -12,7 +12,7 @@ export function OverviewReviewNotes({ layout }: { layout: TripOverviewLayout }) 
       <div className="mx-auto max-w-7xl space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <Badge variant="outline">T02 · Review proposal</Badge>
+            <Badge variant="outline">T02 · Approved: route-first</Badge>
             <span className="text-xs text-muted-foreground">
               Fictional data · changes reset on reload
             </span>
@@ -62,8 +62,7 @@ function ProposalQuestions({ layout }: { layout: TripOverviewLayout }) {
         <p className="text-muted-foreground">
           Try selecting an item, adding a possibility to the working plan, and capturing an undated
           note. Empty, anchor-only and event-discovered states are available in the playground.
-          These proposals take provisional positions on vocabulary, density and the item sheet; none
-          is approved.
+          Route-first approved on 24 October 2026. Other variants are retained for comparison.
         </p>
         <Button asChild variant="link">
           <a

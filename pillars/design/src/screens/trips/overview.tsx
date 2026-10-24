@@ -8,21 +8,21 @@ import type { ScreenMeta } from '@/contract';
 /** Proposal index; it does not select a winning overview. */
 export const meta: ScreenMeta = { title: 'Trip overview proposals', order: 1, frame: 'web' };
 
-/** Entry point for comparing the three unapproved overview structures. */
+/** Overview decision and retained alternatives. */
 export default function TripOverviewProposals() {
   return (
     <main className="mx-auto max-w-6xl space-y-8 p-6 md:p-10">
       <div className="space-y-4">
         <Compass className="size-8 text-app-accent" aria-hidden />
-        <Badge variant="outline">T02 · Awaiting your review</Badge>
-        <h1 className="text-3xl font-semibold tracking-tight">Where should planning begin?</h1>
+        <Badge variant="outline">T02 · Approved: route-first</Badge>
+        <h1 className="text-3xl font-semibold tracking-tight">Trip overview</h1>
         <p className="max-w-2xl text-lg text-muted-foreground">
           The same open-ended trip. Three different ways to make sense of it.
         </p>
         <p className="max-w-2xl text-sm text-muted-foreground">
           Compare the route, decisions and places proposals. All use fictional bookings, people and
-          event dates. Capture a thought, open an item and try changing its intention. No proposal
-          has been chosen.
+          event dates. Capture a thought, open an item and try changing its intention. Route-first
+          was approved on 24 October 2026.
         </p>
       </div>
       <div className="grid gap-5 lg:grid-cols-3">
@@ -55,8 +55,8 @@ export default function TripOverviewProposals() {
           <li>Are intention, booking status and alternatives clear enough?</li>
         </ol>
         <p className="text-sm text-muted-foreground">
-          This is one prototype in the tracker. Your choice and explicit approval come after
-          revisions; implementation waits for the full prototype set.
+          This is one prototype in the tracker. Route-first is approved; implementation waits for
+          the full prototype set.
         </p>
       </section>
     </main>
