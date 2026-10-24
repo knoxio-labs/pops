@@ -136,6 +136,9 @@ field selections reject the complete operation before it changes membership.
 Historical IDs resolve to the current canonical entity on reads. Lists, lookup
 and search expose canonical identities once; addresses, source records and
 contact points project the whole group while retaining their original owner IDs.
+Removed upstream points disappear from the current projection unless explicitly
+preferred; chosen values remain visible with `active: false` and `preferred: true`.
+All original point rows remain stored for provenance and undo.
 Ordinary writes through retired IDs and deletion of active merged members return 409. Recognized source refreshes retain their original member ownership and
 remain permitted. A new local edit or source link must target the canonical ID.
 

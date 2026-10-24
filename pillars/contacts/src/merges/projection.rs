@@ -60,7 +60,7 @@ pub async fn profile_owner(conn: &mut SqliteConnection, id: &str) -> Result<Stri
     Ok(selected.unwrap_or(canonical))
 }
 
-/// Read the full group's retained points with one effective preference per kind.
+/// Read active group points and retained explicit preferences, with one effective preference per kind.
 /// Original per-member preference flags remain stored unchanged for undo.
 pub async fn points(pool: &SqlitePool, id: &str) -> Result<Vec<ContactPoint>, sqlx::Error> {
     let mut tx = pool.begin().await?;
@@ -89,6 +89,7 @@ pub async fn points_in_transaction(
             None => point.entity_id == canonical && point.preferred,
         };
     }
+    rows.retain(|point| point.active || point.preferred);
     Ok(rows)
 }
 
