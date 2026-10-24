@@ -181,10 +181,9 @@ export function makeTypesHandlers(db: InventoryDb) {
 /**
  * Handlers for `codes.*`. A suggestion comes from the `ai` pillar's model,
  * which sees every code in use and where the new item is going; whatever it
- * proposes is filtered here to codes that follow the typed stem, the saved
- * pattern or a code family the type already uses, and are actually free. With
- * no usable model answer, deterministic numbering (`../sync/codes.ts`)
- * answers instead.
+ * proposes is filtered here to codes that start with the typed stem, fit an
+ * item code and are actually free. With no usable model answer, deterministic
+ * numbering (`../sync/codes.ts`) answers instead.
  *
  * @param ai Defaults to the live `pillar('ai')` client; tests inject a stub
  *   to exercise the model and fallback paths without a network round-trip.
@@ -193,7 +192,7 @@ export function makeCodesHandlers(db: InventoryDb, ai: AiClient = createAiClient
   async function modelCodes(body: CodesReq['suggest']['body']): Promise<string[]> {
     try {
       const proposed = await ai.suggestCodes(buildCodeContext(db, body), SUGGESTION_COUNT);
-      return proposed === undefined ? [] : keepFreeCodes(db, proposed, body);
+      return proposed === undefined ? [] : keepFreeCodes(db, proposed, body.stem);
     } catch (error) {
       console.error('[inventory-api] ai.suggestCodes threw; using deterministic codes', error);
       return [];
