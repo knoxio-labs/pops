@@ -584,7 +584,11 @@
                 "$ref": "#/components/schemas/PersonProfile"
               },
               {
-                "type": "null"
+                "enum": [
+                  null
+                ],
+                "nullable": true,
+                "type": "object"
               }
             ]
           }
