@@ -60,7 +60,8 @@ retain their own display and structured names with an explicit completeness
 marker. File and provider adapters qualify names as complete only with explicit
 nonblank given and family parts; additional names, prefixes and suffixes are
 retained. CSV `Name`, vCard `FN` and Google display text never supply structured
-parts; display-only and first-name-only observations remain unknown. Contact
+parts; display-only and first-name-only observations remain unknown. Declared
+incomplete metadata stays incomplete. Contact
 points retain the original value and label. Conservative email and validated
 international phone keys are derived separately for matching. National phone
 values require an explicit known ISO `countryCode`; no country is inferred from
