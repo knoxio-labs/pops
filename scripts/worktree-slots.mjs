@@ -408,6 +408,33 @@ function readSlots(context, config) {
 }
 
 /**
+ * @param {string} file
+ * @returns {number} pid, or 0 when the file is missing or unreadable
+ */
+function readLockHolder(file) {
+  try {
+    const pid = Number(readFileSync(file, 'utf8'));
+    return Number.isInteger(pid) && pid > 0 ? pid : 0;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * @param {string} lock
+ * @param {number} holder pid read from the lock, or 0 when none was written
+ * @returns {boolean}
+ */
+function lockAbandoned(lock, holder) {
+  if (holder > 0) return !isPidAlive(holder);
+  try {
+    return Date.now() - statSync(lock).mtimeMs > LOCK_ORPHAN_MS;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * @param {string} root
  * @param {() => void} action
  */
@@ -421,9 +448,8 @@ function withPoolLock(root, action) {
     } catch (error) {
       if (!(error instanceof Error && 'code' in error && error.code === 'EEXIST')) throw error;
       const holderFile = join(lock, 'pid');
-      const holder = existsSync(holderFile) ? Number(readFileSync(holderFile, 'utf8')) : 0;
-      const abandoned =
-        holder > 0 ? !isPidAlive(holder) : Date.now() - statSync(lock).mtimeMs > LOCK_ORPHAN_MS;
+      const holder = readLockHolder(holderFile);
+      const abandoned = lockAbandoned(lock, holder);
       if (abandoned) {
         rmSync(lock, { recursive: true, force: true });
         continue;
