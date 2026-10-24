@@ -30,6 +30,51 @@ export type AddressMutation = {
 };
 
 /**
+ * A local or imported point. `sourceRecordId: null` identifies an explicit local value.
+ * Preferred observations survive source refresh/deactivation, including their original value.
+ */
+export type ContactPoint = {
+  active: boolean;
+  createdAt: string;
+  entityId: string;
+  id: string;
+  kind: string;
+  label?: string | null;
+  normalizedValue?: string | null;
+  preferred: boolean;
+  sourceRecordId?: string | null;
+  value: string;
+};
+
+/**
+ * A point observation. Normalized match keys are computed by the server, never accepted as input.
+ */
+export type ContactPointInput = {
+  kind: ContactPointKind;
+  label?: string | null;
+  value: string;
+};
+
+/**
+ * A contact point's semantic kind; shared values never identify one person by themselves.
+ */
+export type ContactPointKind = 'email' | 'phone' | 'social' | 'url';
+
+/**
+ * Contact point observations, including inactive audit values and preferred selections.
+ */
+export type ContactPointListResponse = {
+  data: Array<ContactPoint>;
+};
+
+/**
+ * A newly added explicit local point.
+ */
+export type ContactPointResponse = {
+  data: ContactPoint;
+};
+
+/**
  * Body accepted by `POST /entities/:id/addresses`.
  */
 export type CreateAddressBody = {
@@ -91,6 +136,7 @@ export type EntityLookup = {
   aliases: Array<string>;
   id: string;
   name: string;
+  type: string;
 };
 
 /**
@@ -152,6 +198,10 @@ export type HealthResponse = {
  * keeps the original "answer everything" behaviour existing callers rely on.
  */
 export type LookupBody = {
+  /**
+   * Exclude persons only for explicitly merchant-scoped consumers.
+   */
+  excludePersons?: boolean;
   fields?: Array<string> | null;
   ids?: Array<string> | null;
 };
@@ -175,6 +225,11 @@ export type MessageResponse = {
 };
 
 /**
+ * Whether the source explicitly knows a name to be complete, incomplete, or unknown.
+ */
+export type NameCompleteness = 'unknown' | 'complete' | 'incomplete';
+
+/**
  * Pagination envelope returned by every list endpoint.
  */
 export type PaginationMeta = {
@@ -182,6 +237,34 @@ export type PaginationMeta = {
   limit: number;
   offset: number;
   total: number;
+};
+
+/**
+ * A structured name; completeness is explicit and is never inferred from display text.
+ */
+export type PersonName = {
+  additionalNames?: string | null;
+  completeness?: NameCompleteness;
+  familyName?: string | null;
+  givenName?: string | null;
+  namePrefix?: string | null;
+  nameSuffix?: string | null;
+};
+
+/**
+ * Local name override, independent of imported source names and entity display names.
+ */
+export type PersonProfile = {
+  entityId: string;
+  name: PersonName;
+  updatedAt: string;
+};
+
+/**
+ * Local profile response; `null` means no local name override exists.
+ */
+export type PersonProfileResponse = {
+  data?: PersonProfile | unknown;
 };
 
 /**
@@ -219,6 +302,68 @@ export type SearchRequest = {
  */
 export type SearchResponse = {
   hits: Array<SearchHit>;
+};
+
+/**
+ * A provider account identity; `accountKey` is a stable provider subject, never a credential.
+ */
+export type SourceAccount = {
+  accountKey: string;
+  createdAt: string;
+  id: string;
+  label?: string | null;
+  provider: string;
+};
+
+/**
+ * Register a stable account namespace. Changing a display label does not change account identity.
+ */
+export type SourceAccountInput = {
+  accountKey: string;
+  label?: string | null;
+  provider: string;
+};
+
+/**
+ * Registered provider-account namespaces, without credentials.
+ */
+export type SourceAccountListResponse = {
+  data: Array<SourceAccount>;
+};
+
+/**
+ * Stable account namespace resulting from create-or-fetch registration.
+ */
+export type SourceAccountResponse = {
+  data: SourceAccount;
+};
+
+/**
+ * One namespaced external contact record attached to a canonical person entity.
+ */
+export type SourceRecord = {
+  accountId: string;
+  active: boolean;
+  additionalNames?: string | null;
+  collectionKey: string;
+  displayName?: string | null;
+  entityId: string;
+  familyName?: string | null;
+  givenName?: string | null;
+  id: string;
+  lastSeenAt: string;
+  nameCompleteness: string;
+  namePrefix?: string | null;
+  nameSuffix?: string | null;
+  recordKey: string;
+  revision: number;
+};
+
+/**
+ * Active and inactive external records linked to a person.
+ */
+export type SourceRecordListResponse = {
+  data: Array<SourceRecord>;
 };
 
 /**
@@ -265,6 +410,7 @@ export type EntitiesListData = {
   body?: never;
   path?: never;
   query?: {
+    excludePersons?: boolean | null;
     search?: string | null;
     type?: string | null;
     limit?: number | null;
@@ -632,6 +778,127 @@ export type EntitiesRerollColourResponses = {
 export type EntitiesRerollColourResponse =
   EntitiesRerollColourResponses[keyof EntitiesRerollColourResponses];
 
+export type EntitiesPointsListData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/entities/{id}/contact-points';
+};
+
+export type EntitiesPointsListErrors = {
+  400: ErrorBody;
+  404: ErrorBody;
+};
+
+export type EntitiesPointsListError = EntitiesPointsListErrors[keyof EntitiesPointsListErrors];
+
+export type EntitiesPointsListResponses = {
+  200: ContactPointListResponse;
+};
+
+export type EntitiesPointsListResponse =
+  EntitiesPointsListResponses[keyof EntitiesPointsListResponses];
+
+export type EntitiesPointsCreateData = {
+  body: ContactPointInput;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/entities/{id}/contact-points';
+};
+
+export type EntitiesPointsCreateErrors = {
+  400: ErrorBody;
+  404: ErrorBody;
+};
+
+export type EntitiesPointsCreateError =
+  EntitiesPointsCreateErrors[keyof EntitiesPointsCreateErrors];
+
+export type EntitiesPointsCreateResponses = {
+  201: ContactPointResponse;
+};
+
+export type EntitiesPointsCreateResponse =
+  EntitiesPointsCreateResponses[keyof EntitiesPointsCreateResponses];
+
+export type EntitiesPointsPreferData = {
+  body?: never;
+  path: {
+    id: string;
+    point_id: string;
+  };
+  query?: never;
+  url: '/entities/{id}/contact-points/{point_id}/preferred';
+};
+
+export type EntitiesPointsPreferErrors = {
+  400: ErrorBody;
+  404: ErrorBody;
+};
+
+export type EntitiesPointsPreferError =
+  EntitiesPointsPreferErrors[keyof EntitiesPointsPreferErrors];
+
+export type EntitiesPointsPreferResponses = {
+  /**
+   * Preference selected
+   */
+  204: void;
+};
+
+export type EntitiesPointsPreferResponse =
+  EntitiesPointsPreferResponses[keyof EntitiesPointsPreferResponses];
+
+export type EntitiesPersonGetData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/entities/{id}/person';
+};
+
+export type EntitiesPersonGetErrors = {
+  400: ErrorBody;
+  404: ErrorBody;
+};
+
+export type EntitiesPersonGetError = EntitiesPersonGetErrors[keyof EntitiesPersonGetErrors];
+
+export type EntitiesPersonGetResponses = {
+  200: PersonProfileResponse;
+};
+
+export type EntitiesPersonGetResponse =
+  EntitiesPersonGetResponses[keyof EntitiesPersonGetResponses];
+
+export type EntitiesPersonPutData = {
+  body: PersonName;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/entities/{id}/person';
+};
+
+export type EntitiesPersonPutErrors = {
+  400: ErrorBody;
+  404: ErrorBody;
+};
+
+export type EntitiesPersonPutError = EntitiesPersonPutErrors[keyof EntitiesPersonPutErrors];
+
+export type EntitiesPersonPutResponses = {
+  200: PersonProfileResponse;
+};
+
+export type EntitiesPersonPutResponse =
+  EntitiesPersonPutResponses[keyof EntitiesPersonPutResponses];
+
 export type EntitiesRemovePosterData = {
   body?: never;
   path: {
@@ -734,6 +1001,29 @@ export type EntitiesUploadPosterResponses = {
 export type EntitiesUploadPosterResponse =
   EntitiesUploadPosterResponses[keyof EntitiesUploadPosterResponses];
 
+export type EntitiesSourcesListData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/entities/{id}/sources';
+};
+
+export type EntitiesSourcesListErrors = {
+  400: ErrorBody;
+  404: ErrorBody;
+};
+
+export type EntitiesSourcesListError = EntitiesSourcesListErrors[keyof EntitiesSourcesListErrors];
+
+export type EntitiesSourcesListResponses = {
+  200: SourceRecordListResponse;
+};
+
+export type EntitiesSourcesListResponse =
+  EntitiesSourcesListResponses[keyof EntitiesSourcesListResponses];
+
 export type HealthGetData = {
   body?: never;
   path?: never;
@@ -779,3 +1069,38 @@ export type SearchSearchResponses = {
 };
 
 export type SearchSearchResponse = SearchSearchResponses[keyof SearchSearchResponses];
+
+export type SourcesAccountsListData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/sources/accounts';
+};
+
+export type SourcesAccountsListResponses = {
+  200: SourceAccountListResponse;
+};
+
+export type SourcesAccountsListResponse =
+  SourcesAccountsListResponses[keyof SourcesAccountsListResponses];
+
+export type SourcesAccountsRegisterData = {
+  body: SourceAccountInput;
+  path?: never;
+  query?: never;
+  url: '/sources/accounts';
+};
+
+export type SourcesAccountsRegisterErrors = {
+  400: ErrorBody;
+};
+
+export type SourcesAccountsRegisterError =
+  SourcesAccountsRegisterErrors[keyof SourcesAccountsRegisterErrors];
+
+export type SourcesAccountsRegisterResponses = {
+  200: SourceAccountResponse;
+};
+
+export type SourcesAccountsRegisterResponse =
+  SourcesAccountsRegisterResponses[keyof SourcesAccountsRegisterResponses];
