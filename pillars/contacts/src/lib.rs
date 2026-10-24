@@ -12,6 +12,7 @@ pub mod db;
 pub mod entities;
 pub mod health;
 pub mod imports;
+pub mod identity;
 pub mod manifest;
 pub mod openapi;
 pub mod registry;
