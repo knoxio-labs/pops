@@ -1,4 +1,4 @@
-import { tripOverviewItems, tripOverviewProposals } from '@/fixtures/trip-overview';
+import { tripOverviewItems } from '@/fixtures/trip-overview';
 import { ArrowDown, Compass, Inbox, Plus } from 'lucide-react';
 import { useState } from 'react';
 
@@ -23,44 +23,32 @@ function scenarioItems(scenario: OverviewScenario) {
         ? {
             ...item,
             notes:
-              'Just discovered: this weekend could pull January inland. The coast option and the existing bookings remain intact until you decide.',
+              'New event: 16–18 January. Compare Belo Horizonte with the existing Olinda extension option.',
           }
         : item
     );
   return tripOverviewItems;
 }
 
-function OverviewHeading({
-  layout,
-  onCapture,
-}: {
-  layout: TripOverviewLayout;
-  onCapture: () => void;
-}) {
-  const proposal = tripOverviewProposals.find((item) => item.id === layout);
+function OverviewHeading({ onCapture }: { onCapture: () => void }) {
   return (
     <header className="space-y-5">
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <Compass className="size-4" aria-hidden />
         Trips<span>/</span>
-        <span>Sample Brazil trip</span>
+        <span>Brazil · sample</span>
       </div>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-3">
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-              A summer in Brazil
-            </h1>
-            <Badge variant="outline">Taking shape</Badge>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Brazil 2027–28</h1>
+            <Badge variant="outline">Planning</Badge>
           </div>
-          <p className="text-muted-foreground">
-            November 2027 onwards · return open · travelling between bases
-          </p>
-          <p className="text-sm font-medium text-app-accent">{proposal?.lead}</p>
+          <p className="text-muted-foreground">18 Nov 2027 → return date not set</p>
         </div>
         <Button onClick={onCapture}>
           <Plus className="size-4" aria-hidden />
-          Save something
+          Add
         </Button>
       </div>
     </header>
@@ -84,9 +72,7 @@ function OverviewInbox({ notes }: { notes: { id: string; title: string }[] }) {
           ))}
         </ul>
       ) : (
-        <p className="text-sm text-muted-foreground">
-          Save first, organise later. Nothing needs a date or city to belong here.
-        </p>
+        <p className="text-sm text-muted-foreground">No unsorted items.</p>
       )}
     </section>
   );
@@ -117,8 +103,8 @@ export function TripOverviewPrototype({
   return (
     <div className="min-h-screen bg-background text-foreground">
       <OverviewReviewNotes layout={layout} />
-      <main className="mx-auto max-w-7xl space-y-8 p-5 md:p-8">
-        <OverviewHeading layout={layout} onCapture={() => setCapture(true)} />
+      <main className="mx-auto max-w-7xl space-y-6 p-5 md:p-6">
+        <OverviewHeading onCapture={() => setCapture(true)} />
         <OverviewSummary items={items} noteCount={notes.length} />
         <TextInput
           label="Find within this trip"
@@ -135,7 +121,6 @@ export function TripOverviewPrototype({
         <OverviewInbox notes={notes} />
         <p role="status" className="text-xs text-muted-foreground">
           {items.filter((item) => item.intention === 'In plan').length} items in the working plan.
-          Bookings change only when you arrange them.
         </p>
       </main>
       <OverviewItemSheet

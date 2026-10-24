@@ -31,7 +31,7 @@ function ItemDetails({
       </dl>
       <p className="text-sm leading-relaxed">{item.notes}</p>
       <div className="space-y-3 rounded-xl border bg-muted/30 p-4">
-        <h3 className="font-medium">Its place in the working plan</h3>
+        <h3 className="font-medium">Plan status</h3>
         <p className="text-sm text-muted-foreground">
           Putting this in the plan does not book it or change other dates. You can keep alternatives
           alongside it.
@@ -64,7 +64,7 @@ export function OverviewItemSheet({
         if (!open) onClose();
       }}
       title={item?.title ?? 'Item'}
-      description="A closer look at this part of the trip"
+      description="Trip item"
       footer={
         <Button onClick={onClose} variant="outline">
           Close
@@ -100,8 +100,8 @@ export function OverviewCaptureSheet({
       onOpenChange={(next) => {
         if (!next) onClose();
       }}
-      title="Save a thought"
-      description="A place, an invitation, a person or something to figure out. Details can wait."
+      title="Add to inbox"
+      description="Add a note or link. City and dates are optional."
       footer={
         <>
           <Button variant="outline" onClick={onClose}>
@@ -115,8 +115,8 @@ export function OverviewCaptureSheet({
     >
       <div className="space-y-5">
         <TextInput
-          label="What do you want to remember?"
-          placeholder="A neighbourhood to spend a few weeks in…"
+          label="Note or link"
+          placeholder="Paste a link or enter a note"
           value={title}
           onChange={(event) => setTitle(event.target.value)}
           onKeyDown={(event) => {

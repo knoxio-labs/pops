@@ -1,6 +1,6 @@
 import {
   ArrowUpRight,
-  CalendarDays,
+  Check,
   Lightbulb,
   MapPin,
   Plane,
@@ -22,15 +22,13 @@ const icons = {
   idea: Lightbulb,
 };
 
-/** One selectable item, preserving separate intention and arrangement labels. */
+/** A selectable planning item; extended notes stay in its detail sheet. */
 export function OverviewItemCard({
   item,
   onSelect,
-  compact = false,
 }: {
   item: TripOverviewItem;
   onSelect: (item: TripOverviewItem) => void;
-  compact?: boolean;
 }) {
   const Icon = icons[item.kind];
   return (
@@ -38,115 +36,73 @@ export function OverviewItemCard({
       type="button"
       onClick={() => onSelect(item)}
       className={cn(
-        'group flex min-h-11 w-full gap-3 rounded-xl border bg-card p-4 text-left transition-colors hover:border-app-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        'flex min-h-11 w-full gap-3 rounded-lg border bg-card p-4 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         item.intention === 'Alternative' && 'border-dashed'
       )}
     >
-      <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-        <Icon className="size-5" aria-hidden />
-      </span>
+      <Icon className="mt-1 size-5 shrink-0 text-app-accent" aria-hidden />
       <span className="min-w-0 flex-1 space-y-2">
-        <span className="flex items-start justify-between gap-2">
-          <span className="font-medium">{item.title}</span>
-          <ArrowUpRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+        <span className="flex items-start justify-between gap-3">
+          <span className="text-base font-semibold leading-snug">{item.title}</span>
+          <ArrowUpRight className="mt-1 size-4 shrink-0" aria-hidden />
         </span>
-        <span className="block text-xs text-muted-foreground">
-          {item.where} · {item.when}
-        </span>
-        {!compact && <span className="block text-sm text-muted-foreground">{item.notes}</span>}
-        <span className="flex flex-wrap gap-1.5">
-          <Badge variant={item.intention === 'In plan' ? 'secondary' : 'outline'}>
-            {item.intention}
-          </Badge>
-          <Badge variant={item.arrangement === 'Booked' ? 'default' : 'outline'}>
-            {item.arrangement}
-          </Badge>
+        <span className="block text-sm font-medium leading-relaxed">{item.when}</span>
+        <span className="flex flex-wrap items-center gap-2">
+          <span className="text-sm text-foreground/80">{item.where}</span>
+          <OverviewItemStatus item={item} />
         </span>
       </span>
     </button>
   );
 }
 
-/** Named group of items using the same control in all proposals. */
+/** Booking and intention remain separate; irrelevant booking badges are omitted. */
+export function OverviewItemStatus({ item }: { item: TripOverviewItem }) {
+  if (item.arrangement === 'Booked')
+    return (
+      <Badge>
+        <Check className="size-3" aria-hidden />
+        Booked
+      </Badge>
+    );
+  if (item.arrangement === 'Agreed') return <Badge variant="secondary">Agreed</Badge>;
+  return (
+    <Badge variant="outline">
+      {item.intention === 'In plan' ? 'Chosen · to arrange' : item.intention}
+    </Badge>
+  );
+}
+
+/** Named collection with short rows and a distinct section heading. */
 export function OverviewItemList({
   title,
   description,
   items,
   onSelect,
-  compact = true,
 }: {
   title: string;
   description: string;
   items: TripOverviewItem[];
   onSelect: (item: TripOverviewItem) => void;
-  compact?: boolean;
 }) {
   return (
-    <section className="space-y-3">
-      <div>
-        <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
-        <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+    <section className="space-y-4">
+      <div className="space-y-2 border-b pb-3">
+        <h2 className="text-xl font-bold tracking-tight">{title}</h2>
+        <p className="text-sm leading-relaxed text-foreground/80">{description}</p>
       </div>
       {items.length ? (
-        items.map((item) => (
-          <OverviewItemCard key={item.id} item={item} onSelect={onSelect} compact={compact} />
-        ))
+        items.map((item) => <OverviewItemCard key={item.id} item={item} onSelect={onSelect} />)
       ) : (
-        <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
+        <p className="rounded-lg border border-dashed p-5 text-sm">
           Nothing here yet. Add something without choosing dates.
-        </div>
+        </p>
       )}
     </section>
   );
 }
 
-/** Route block with a visible distinction between a chosen visit and an option. */
-export function OverviewRoute({
-  items,
-  onSelect,
-}: {
-  items: TripOverviewItem[];
-  onSelect: (item: TripOverviewItem) => void;
-}) {
-  const stops = items.filter((item) => item.kind === 'city');
-  return (
-    <section className="space-y-5">
-      <div className="flex items-center gap-2">
-        <CalendarDays className="size-5 text-app-accent" aria-hidden />
-        <h2 className="text-lg font-semibold">The shape of the trip</h2>
-      </div>
-      <p className="text-sm text-muted-foreground">
-        A working route, with room to change. Return date open.
-      </p>
-      {stops.length ? (
-        stops.map((item, index) => (
-          <div key={item.id} className="flex gap-4">
-            <div className="flex w-6 shrink-0 flex-col items-center gap-2">
-              <span className="flex size-6 items-center justify-center rounded-full border bg-background text-xs text-muted-foreground">
-                {index + 1}
-              </span>
-              <span className="w-px flex-1 bg-border" />
-            </div>
-            <div className="min-w-0 flex-1 space-y-2 pb-3">
-              <OverviewItemCard item={item} onSelect={onSelect} />
-              <p className="text-xs text-muted-foreground">
-                {index === stops.length - 1
-                  ? 'After this: open'
-                  : 'Connection and dates still flexible'}
-              </p>
-            </div>
-          </div>
-        ))
-      ) : (
-        <div className="rounded-xl border border-dashed p-8 text-muted-foreground">
-          No route yet. Start with a city, a person or an idea.
-        </div>
-      )}
-    </section>
-  );
-}
-
-/** Open question with options that lead to item inspection rather than implicit booking. */
+/** Open decision with options visually subordinate to its question. */
 export function OverviewDecision({
   title,
   description,
@@ -159,18 +115,23 @@ export function OverviewDecision({
   onSelect: (item: TripOverviewItem) => void;
 }) {
   return (
-    <article className="space-y-3 rounded-xl border bg-card p-5">
-      <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-app-accent">
-        <Lightbulb className="size-4" aria-hidden />
-        Open decision
+    <article className="space-y-4 border-l-4 border-l-app-accent bg-muted p-5">
+      <div className="flex items-center gap-2 text-sm font-semibold">
+        <Lightbulb className="size-4 text-app-accent" aria-hidden />
+        Decision
       </div>
-      <h3 className="text-lg font-semibold">{title}</h3>
-      <p className="text-sm text-muted-foreground">{description}</p>
-      <div className="flex flex-wrap gap-2">
+      <h3 className="text-xl font-bold leading-snug">{title}</h3>
+      <p className="text-sm leading-relaxed text-foreground/90">{description}</p>
+      <div className="flex flex-col gap-2">
         {options.map((item) => (
-          <Button key={item.id} variant="outline" onClick={() => onSelect(item)}>
-            {item.title}
-            <ArrowUpRight className="size-4" aria-hidden />
+          <Button
+            key={item.id}
+            variant="outline"
+            className="h-auto min-h-11 justify-between whitespace-normal py-3 text-left"
+            onClick={() => onSelect(item)}
+          >
+            <span>{item.title}</span>
+            <ArrowUpRight className="size-4 shrink-0" aria-hidden />
           </Button>
         ))}
       </div>

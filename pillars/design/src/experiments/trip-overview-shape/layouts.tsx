@@ -1,8 +1,9 @@
 import { MapPin } from 'lucide-react';
 
-import { Badge } from '@pops/ui';
+import { Badge, Button } from '@pops/ui';
 
-import { OverviewDecision, OverviewItemCard, OverviewItemList, OverviewRoute } from './item-card';
+import { OverviewDecision, OverviewItemCard, OverviewItemList } from './item-card';
+import { OverviewRoute } from './route';
 
 import type { TripOverviewItem, TripOverviewLayout } from '@/fixtures/trip-overview';
 
@@ -20,31 +21,31 @@ export function OverviewDecisions({ items, onSelect }: OverviewLayoutProps) {
   return (
     <section className="space-y-3">
       <div>
-        <h2 className="text-lg font-semibold tracking-tight">What could move the plan forward?</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Questions to explore, not a list of overdue tasks.
+        <h2 className="text-xl font-bold tracking-tight">Open decisions</h2>
+        <p className="mt-1 text-sm leading-relaxed text-foreground/80">
+          Unresolved transport, dates and destinations.
         </p>
       </div>
       {onward.length > 0 && (
         <OverviewDecision
-          title="How will I get to the coast?"
-          description="The stay is booked. Compare arrival days before choosing transport."
+          title="Porto Alegre → Recife"
+          description="Arrive 28 or 29 Dec. Hotel starts 29 Dec."
           options={onward}
           onSelect={onSelect}
         />
       )}
       {january.length > 0 && (
         <OverviewDecision
-          title="Coast or inland for January?"
-          description="A music weekend and meeting new people could pull the route inland."
+          title="January route"
+          description="Extend Olinda or move to Belo Horizonte. Festival: 16–18 Jan."
           options={january}
           onSelect={onSelect}
         />
       )}
       {carnival.length > 0 && (
         <OverviewDecision
-          title="Does Rio fit with the people?"
-          description="Keep Carnival open while a friend's dates become clearer."
+          title="Rio dates"
+          description="Confirm Rafael’s availability before choosing dates."
           options={carnival}
           onSelect={onSelect}
         />
@@ -61,9 +62,9 @@ export function OverviewDecisions({ items, onSelect }: OverviewLayoutProps) {
 function Anchors(props: OverviewLayoutProps) {
   return (
     <OverviewItemList
-      title="In the working plan"
-      description="Bookings and intentions are different kinds of commitment."
-      items={props.items.filter((item) => item.intention === 'In plan')}
+      title="Bookings & commitments"
+      description="Travel, stays and other arrangements. Details open on selection."
+      items={props.items.filter((item) => item.intention === 'In plan' && item.kind !== 'city')}
       onSelect={props.onSelect}
     />
   );
@@ -72,8 +73,8 @@ function Anchors(props: OverviewLayoutProps) {
 function Possibilities(props: OverviewLayoutProps) {
   return (
     <OverviewItemList
-      title="Still possible"
-      description="Ideas, invitations and people can reshape the route."
+      title="Options"
+      description="Unscheduled places, events and contacts."
       items={props.items.filter((item) => item.intention !== 'In plan' && item.kind !== 'city')}
       onSelect={props.onSelect}
     />
@@ -114,21 +115,34 @@ function PlaceGroup({ city, items, onSelect }: OverviewLayoutProps & { city: str
   const rows = items.filter((item) => item.where === city);
   const cityItem = rows.find((item) => item.kind === 'city');
   return (
-    <section className="flex flex-col gap-4 rounded-2xl border bg-muted/20 p-4">
+    <section className="flex flex-col gap-4 rounded-xl border bg-muted p-5">
       <div className="space-y-2">
         <MapPin className="size-5 text-app-accent" aria-hidden />
-        <h2 className="text-xl font-semibold tracking-tight">{city}</h2>
-        <p className="text-sm text-muted-foreground">
-          {cityItem?.when ?? 'Dates shaped by the stay'}
+        <h2>
+          <Button
+            variant="ghost"
+            className="h-auto min-h-11 justify-start px-0 text-2xl font-bold tracking-tight"
+            disabled={!cityItem}
+            onClick={() => {
+              if (cityItem) onSelect(cityItem);
+            }}
+          >
+            {city}
+          </Button>
+        </h2>
+        <p className="text-sm leading-relaxed text-foreground/80">
+          {cityItem?.when ?? 'Dates not set'}
         </p>
         <Badge variant="outline">
           {rows.filter((item) => item.intention === 'In plan').length} in plan ·{' '}
           {rows.filter((item) => item.intention !== 'In plan').length} possibilities
         </Badge>
       </div>
-      {rows.map((item) => (
-        <OverviewItemCard key={item.id} item={item} onSelect={onSelect} compact />
-      ))}
+      {rows
+        .filter((item) => item.kind !== 'city')
+        .map((item) => (
+          <OverviewItemCard key={item.id} item={item} onSelect={onSelect} />
+        ))}
     </section>
   );
 }
@@ -138,9 +152,9 @@ function PlacesFirst(props: OverviewLayoutProps) {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="text-lg font-semibold">Places the trip could take shape around</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          People, events and arrangements together. No city needs a complete plan.
+        <h2 className="text-xl font-bold">Cities</h2>
+        <p className="mt-1 text-sm leading-relaxed text-foreground/80">
+          Dates, contacts, events and arrangements by city.
         </p>
       </div>
       <div className="grid items-start gap-5 md:grid-cols-2 2xl:grid-cols-3">
