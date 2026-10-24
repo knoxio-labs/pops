@@ -222,6 +222,81 @@ async fn storage_errors_use_safe_classification_with_no_database_context() {
     assert_eq!(count, 0);
 }
 
+#[tokio::test]
+async fn upload_phone_country_context_reaches_every_phone_and_rejects_unknown_codes() {
+    let (router, pool, account) = setup().await;
+    let uri = format!("/imports/files?accountId={account}&collectionKey=personal&format=vcard&phoneCountryCode=AU");
+    let bytes = b"BEGIN:VCARD\nVERSION:4.0\nFN:Person\nTEL;TYPE=CELL:0412345678\nTEL;TYPE=HOME:+61498765432\nEMAIL:person@example.test\nEND:VCARD\n".to_vec();
+    let (status, batch) = send(
+        &router,
+        "POST",
+        &uri,
+        "application/octet-stream",
+        bytes.clone(),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED, "{batch}");
+    let points = batch["rows"][0]["payload"]["points"].as_array().unwrap();
+    assert_eq!(
+        points
+            .iter()
+            .filter(|point| point["kind"] == "phone")
+            .count(),
+        2
+    );
+    for point in points {
+        if point["kind"] == "phone" {
+            assert_eq!(point["countryCode"], "AU");
+        } else {
+            assert!(point["countryCode"].is_null());
+        }
+    }
+    let body = json!({"revision":1,"idempotencyKey":"country-context","decisions":[{"rowId":batch["rows"][0]["id"],"decision":{"action":"create_person"}}]});
+    let (status, receipt) = send(
+        &router,
+        "POST",
+        &format!("/imports/{}/commit", batch["id"].as_str().unwrap()),
+        "application/json",
+        body.to_string().into_bytes(),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{receipt}");
+    let entity = receipt["rows"][0]["entityId"].as_str().unwrap();
+    let stored: Vec<(String, String, String)> = sqlx::query_as("SELECT value,country_code,normalized_value FROM contact_points WHERE entity_id=?1 AND kind='phone' ORDER BY normalized_value")
+        .bind(entity).fetch_all(&pool).await.unwrap();
+    assert_eq!(
+        stored,
+        vec![
+            (
+                "0412345678".to_string(),
+                "AU".to_string(),
+                "+61412345678".to_string()
+            ),
+            (
+                "+61498765432".to_string(),
+                "AU".to_string(),
+                "+61498765432".to_string()
+            )
+        ]
+    );
+    for country in ["ZZ", "AUS"] {
+        let invalid = format!("/imports/files?accountId={account}&collectionKey=personal&format=vcard&phoneCountryCode={country}");
+        let (status, error) = send(
+            &router,
+            "POST",
+            &invalid,
+            "application/octet-stream",
+            bytes.clone(),
+            None,
+        )
+        .await;
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        assert_eq!(error["code"], "contacts.request.invalid");
+    }
+}
+
 async fn registry_account(State(()): State<()>, headers: HeaderMap) -> axum::Json<Value> {
     let imports = headers
         .get("x-api-key")
