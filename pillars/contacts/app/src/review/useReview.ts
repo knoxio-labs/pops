@@ -58,7 +58,7 @@ function useSubmission(gateway: ReviewGateway, refresh: () => Promise<unknown>) 
   async function reload() {
     if (state.saving) return;
     request.current = null;
-    setState((value) => ({ ...initialSubmission, generation: value.generation + 1 }));
+    setState((value) => ({ ...initialSubmission, saving: true, generation: value.generation + 1 }));
     try {
       await refresh();
     } catch (failure) {
@@ -67,6 +67,8 @@ function useSubmission(gateway: ReviewGateway, refresh: () => Promise<unknown>) 
           ? failure
           : new ContactError('network', 'contacts.review.reload_failed');
       setState((value) => ({ ...value, error, stale: error instanceof StaleReviewError }));
+    } finally {
+      setState((value) => ({ ...value, saving: false }));
     }
   }
   return {

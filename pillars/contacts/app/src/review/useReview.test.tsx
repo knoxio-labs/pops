@@ -98,6 +98,30 @@ describe('review persistence', () => {
     expect(result.current.error?.message).toBe('Reload unavailable');
     expect(gateway.save).not.toHaveBeenCalled();
   });
+  it('blocks writes while an explicit reload is still fetching replacement evidence', async () => {
+    let finish: ((value: ReviewSnapshot) => void) | undefined;
+    const pending = new Promise<ReviewSnapshot>((resolve) => {
+      finish = resolve;
+    });
+    const gateway: ReviewGateway = {
+      load: vi.fn().mockResolvedValueOnce(snapshot).mockReturnValue(pending),
+      save: vi.fn(),
+    };
+    const { result } = renderHook(() => useReview('batch', gateway), { wrapper });
+    await waitFor(() => expect(result.current.data).toMatchObject(snapshot));
+    let reload: Promise<void> | undefined;
+    act(() => {
+      reload = result.current.reload();
+    });
+    expect(result.current.saving).toBe(true);
+    await act(() => result.current.save(item, emptyChoices()));
+    expect(gateway.save).not.toHaveBeenCalled();
+    await act(async () => {
+      finish?.(snapshot);
+      await reload;
+    });
+    expect(result.current.saving).toBe(false);
+  });
   it('starts a fresh snapshot on the first page after saving from a later page', async () => {
     const gateway: ReviewGateway = {
       load: vi.fn().mockResolvedValue(snapshot),
