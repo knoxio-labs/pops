@@ -69,6 +69,14 @@ pub struct CardDavCollection {
     pub display_name: Option<String>,
 }
 
+/// Authenticated server identity and its address books. Reconnect fencing uses
+/// the vetted principal URL, independently of the submitted username or labels.
+#[derive(Clone, PartialEq, Eq)]
+pub struct CardDavAccount {
+    pub principal_key: String,
+    pub collections: Vec<CardDavCollection>,
+}
+
 /// Stateless read adapter. Durable leases, account fencing and checkpoint writes
 /// belong to the shared provider coordinator, after all returned rows are staged.
 pub struct CardDavAdapter<T> {

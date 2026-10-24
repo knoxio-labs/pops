@@ -156,6 +156,29 @@ async fn discovery_revalidates_all_hrefs_and_accepts_namespace_aliases() {
 }
 
 #[tokio::test]
+async fn account_discovery_uses_authenticated_principal_instead_of_labels() {
+    let mut accounts = Vec::new();
+    for name in ["first", "second"] {
+        let principal = format!("https://contacts.icloud.com/{name}/principal/");
+        let home = "https://p01-contacts.icloud.com/fictional/carddav/";
+        let fake = Fake::new(vec![
+            Step::xml("PROPFIND", "https://contacts.icloud.com/", 207, &multi(&properties("/", &format!("<d:current-user-principal><d:href>/{name}/principal/</d:href></d:current-user-principal>")), None)),
+            Step::xml("PROPFIND", &principal, 207, &multi(&properties(&principal, &format!("<c:addressbook-home-set><d:href>{home}</d:href></c:addressbook-home-set>")), None)),
+            Step::xml("PROPFIND", home, 207, &multi(&properties(BOOK, "<d:resourcetype><d:collection/><c:addressbook/></d:resourcetype><d:displayname>Same fictional label</d:displayname>"), None)),
+        ]);
+        let account = CardDavAdapter::new(fake.clone())
+            .discover_account(&authorization())
+            .await
+            .unwrap();
+        assert!(account.principal_key == principal);
+        accounts.push(account);
+        fake.done();
+    }
+    assert!(accounts[0].principal_key != accounts[1].principal_key);
+    assert!(accounts[0].collections == accounts[1].collections);
+}
+
+#[tokio::test]
 async fn discovery_refuses_unapproved_authentication_targets_before_requesting() {
     for href in [
         "https://example.test/steal",
