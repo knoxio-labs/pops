@@ -71,7 +71,7 @@ pub struct GoogleOAuthConfig {
 pub struct AuthorizationLocation(Zeroizing<String>);
 
 impl AuthorizationLocation {
-    /// Borrow only when constructing the browser redirect response.
+    /// Borrow only when constructing the browser authorization response.
     pub fn expose(&self) -> &str {
         &self.0
     }

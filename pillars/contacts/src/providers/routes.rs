@@ -222,7 +222,7 @@ pub async fn list_accounts(
 }
 
 /// Start one-use Google authorization under the verified operator identity.
-#[utoipa::path(post,path="/providers/google/authorize",operation_id="providers.google.authorize",request_body=GoogleAuthorizeRequest,responses((status=303,description="Google consent redirect"),(status=401,description="Human session required",body=crate::api::ErrorBody),(status=503,description="Connections unavailable",body=crate::api::ErrorBody)))]
+#[utoipa::path(post,path="/providers/google/authorize",operation_id="providers.google.authorize",request_body=GoogleAuthorizeRequest,responses((status=201,description="Authorization created; open the Location header URL",headers(("Location"=String,description="One-use Google browser authorization URL"))),(status=401,description="Human session required",body=crate::api::ErrorBody),(status=503,description="Connections unavailable",body=crate::api::ErrorBody)))]
 pub async fn authorize_google(
     State(state): State<AppState>,
     Extension(extension): Extension<ProviderExtension>,
@@ -243,10 +243,17 @@ pub async fn authorize_google(
         )
         .await
         .map_err(api)?;
-    let header =
+    authorization_response(&location)
+}
+
+fn authorization_response(
+    location: &super::google::oauth::AuthorizationLocation,
+) -> Result<Response, ApiError> {
+    let mut header =
         HeaderValue::from_str(location.expose()).map_err(|_| api(ProviderError::Invalid))?;
+    header.set_sensitive(true);
     Ok(private(
-        (StatusCode::SEE_OTHER, [("location", header)]).into_response(),
+        (StatusCode::CREATED, [("location", header)]).into_response(),
     ))
 }
 

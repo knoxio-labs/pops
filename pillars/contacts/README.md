@@ -113,7 +113,10 @@ provider previews, including proposals without a linked person.
 Provider management verifies an explicit human Cloudflare Access operator session;
 LAN requests, absent API keys and service tokens do not authorize credential
 administration. `GET /providers/accounts` returns connection state,
-`POST /providers/google/authorize` redirects to read-only Google consent, and
+`POST /providers/google/authorize` creates a one-use read-only Google consent
+attempt and returns its browser URL in the `201` response `Location` header; the
+caller opens that URL after the request completes. A fetch never follows an
+authorization redirect across origins.
 `GET /providers/google/callback` consumes one-use operator-bound state before code
 exchange. Ordinary consent requests only `contacts.readonly`. Setting
 `includeOtherContacts: true` on the authorization request explicitly adds

@@ -126,7 +126,7 @@ export const contactsHandlers: MockHandlers = {
     version: 'standalone',
   }),
   'GET /providers/accounts': ok(providerAccounts),
-  'POST /providers/google/authorize': () => ({ status: 303 }),
+  'POST /providers/google/authorize': () => ({ status: 201 }),
   'GET /providers/google/callback': ok<ProviderOperation>({
     accountId: providerOperation.accountId,
   }),

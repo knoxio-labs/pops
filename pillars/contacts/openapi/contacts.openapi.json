@@ -2825,8 +2825,16 @@
           "required": true
         },
         "responses": {
-          "303": {
-            "description": "Google consent redirect"
+          "201": {
+            "description": "Authorization created; open the Location header URL",
+            "headers": {
+              "Location": {
+                "description": "One-use Google browser authorization URL",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
           },
           "401": {
             "content": {

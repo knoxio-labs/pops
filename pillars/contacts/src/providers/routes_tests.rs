@@ -200,3 +200,24 @@ async fn callback_errors_are_not_cached_and_send_no_referrer() {
     assert_eq!(response.headers()["referrer-policy"], "no-referrer");
     server.abort();
 }
+
+#[test]
+fn authorization_creation_preserves_location_without_triggering_a_fetch_redirect() {
+    let config = crate::providers::google::oauth::GoogleOAuthConfig::new(
+        "fictional".into(),
+        SecretBytes::new(vec![b'x'; 20]).unwrap(),
+        "https://contacts.example.test/providers/google/callback",
+    )
+    .unwrap();
+    let location = config
+        .authorization_location(&SecretBytes::new(vec![b's'; 43]).unwrap(), &"c".repeat(43))
+        .unwrap();
+    let response = authorization_response(&location).unwrap();
+    assert_eq!(response.status(), StatusCode::CREATED);
+    assert!(response.headers()["location"].is_sensitive());
+    assert!(response.headers()["location"]
+        .to_str()
+        .unwrap()
+        .starts_with("https://accounts.google.com/o/oauth2/v2/auth?"));
+    assert_eq!(response.headers()["cache-control"], "no-store");
+}
