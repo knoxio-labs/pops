@@ -201,6 +201,20 @@ fn vcard_ignores_large_folded_photo_without_discarding_contact() {
 }
 
 #[test]
+fn vcard_retains_all_repeated_and_list_type_labels_in_source_order() {
+    let result = vcard("BEGIN:VCARD\nVERSION:3.0\nFN:Labels Example\nEMAIL;type=INTERNET;type=HOME;type=pref:labels@example.test\nTEL;TYPE=CELL,VOICE;TYPE=PREF:+61400000001\nEND:VCARD\n");
+    assert!(result.errors.is_empty(), "{:?}", result.errors);
+    assert_eq!(
+        result.contacts[0].emails[0].label.as_deref(),
+        Some("INTERNET,HOME,pref")
+    );
+    assert_eq!(
+        result.contacts[0].phones[0].label.as_deref(),
+        Some("CELL,VOICE,PREF")
+    );
+}
+
+#[test]
 fn field_limits_accept_boundary_and_reject_above_for_both_formats() {
     let accepted = "x".repeat(MAX_FIELD_BYTES);
     let rejected = "x".repeat(MAX_FIELD_BYTES + 1);
