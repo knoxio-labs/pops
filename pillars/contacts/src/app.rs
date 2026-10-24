@@ -37,6 +37,7 @@ pub(crate) async fn openapi_document() -> impl IntoResponse {
 /// Build the contacts router with service-account scopes derived from OpenAPI
 /// operation IDs and registry verification applied to credentialled requests.
 pub fn build_router(state: AppState) -> Router {
+    let write_guard_state = state.clone();
     let scope_gate = ServiceAccountScopeGate::from_openapi(
         state.service_account_scope_verifier.clone(),
         &openapi_30_json(),
@@ -50,7 +51,14 @@ pub fn build_router(state: AppState) -> Router {
         .merge(crate::entities::router())
         .merge(crate::entities::addresses_routes::router())
         .merge(crate::search::router())
+        .merge(crate::persons::routes::router())
+        .merge(crate::sources::routes::router())
+        .merge(crate::merges::routes::router())
         .with_state(state)
+        .layer(middleware::from_fn_with_state(
+            write_guard_state,
+            crate::merges::routes::guard_writes,
+        ))
         .layer(middleware::from_fn_with_state(
             scope_gate,
             enforce_service_account_scope,

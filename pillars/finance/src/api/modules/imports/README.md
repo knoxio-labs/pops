@@ -56,7 +56,7 @@ Each carries a file-header comment explaining its own mechanics. Read the header
 
 ## Rules that span files
 
-- **Reference data is fetched once per run, never per row.** Entity names, aliases and default tags come live from the `contacts` pillar — finance keeps no entity mirror. The correction rule set is loaded once and threaded through `ProcessContext`. Entity-key normalization is cached against the lookup map's identity, so **building a map and then mutating it mid-run yields stale keys** — build a fresh one.
+- **Reference data is fetched once per run, never per row.** Entity names, aliases and default tags come live from the `contacts` pillar — finance keeps no entity mirror. Name and alias maps omit ambiguous identities while retaining uniquely named person counterparties. Merchant pre-creation excludes people; person pre-creation resolves only people and rejects homonyms rather than picking an id. The correction rule set is loaded once and threaded through `ProcessContext`. Entity-key normalization is cached against the lookup map's identity, so **building a map and then mutating it mid-run yields stale keys** — build a fresh one.
 - **Processing defers rule telemetry.** The matched rule IDs travel with each row, and commit credits them only after that row is inserted successfully. Re-running the same batch on resume or dead-session recovery does not change `timesApplied`; previews and failed inserts do not count either.
 - **Tag suggestion runs after matching**, in `../tag-suggester/` — its header documents the source priority and dedup.
 

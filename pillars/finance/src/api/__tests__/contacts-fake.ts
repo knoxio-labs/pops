@@ -87,6 +87,19 @@ function filterEntities(
   });
 }
 
+function findExisting(
+  entities: ContactEntity[],
+  name: string,
+  type: string
+): ContactEntity | undefined {
+  const matching = entities.filter(
+    (e) =>
+      (e.type === 'person') === (type === 'person') && e.name.toLowerCase() === name.toLowerCase()
+  );
+  if (matching.length > 1) throw new ContactsPermanentError('ambiguous contact name');
+  return matching[0];
+}
+
 export function makeContactsFake(options: ContactsFakeOptions = {}): ContactsFake {
   const entities = (options.seed ?? []).map(toEntity);
   const created: { name: string; type: string }[] = [];
@@ -125,7 +138,7 @@ export function makeContactsFake(options: ContactsFakeOptions = {}): ContactsFak
     async createOrFetchByName(name: string, type: string): Promise<CreateOrFetchResult> {
       created.push({ name, type });
       if (unavailable) throw new ContactsUnavailableError(unavailableDetail);
-      const existing = entities.find((e) => e.name.toLowerCase() === name.toLowerCase());
+      const existing = findExisting(entities, name, type);
       if (existing) return { id: existing.id, name: existing.name, created: false };
       const fresh = toEntity({ name, type });
       entities.push(fresh);
