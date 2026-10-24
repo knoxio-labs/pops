@@ -189,6 +189,7 @@ impl ApiError {
                 "retired entity is not writable"
                     | "merged entity cannot be deleted"
                     | "merged entity type is immutable"
+                    | "identity decisions must be cleared before deletion"
             )
         }) {
             return Self::identity_conflict(

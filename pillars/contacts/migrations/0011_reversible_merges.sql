@@ -12,12 +12,13 @@ CREATE TABLE entity_redirects (
 CREATE INDEX idx_entity_redirects_canonical ON entity_redirects(canonical_id);
 
 CREATE TABLE merge_selections (
-    canonical_id TEXT NOT NULL REFERENCES entities(id),
+    canonical_id TEXT NOT NULL REFERENCES entities(id) ON DELETE CASCADE,
     field TEXT NOT NULL,
     owner_entity_id TEXT REFERENCES entities(id),
-    point_id TEXT REFERENCES contact_points(id),
+    point_id TEXT REFERENCES contact_points(id) ON DELETE CASCADE,
+    source_history_id TEXT REFERENCES source_record_history(id),
     PRIMARY KEY(canonical_id, field),
-    CHECK((owner_entity_id IS NULL) <> (point_id IS NULL))
+    CHECK((owner_entity_id IS NOT NULL) + (point_id IS NOT NULL) + (source_history_id IS NOT NULL) = 1)
 );
 CREATE TABLE keep_separate (
     left_id TEXT NOT NULL REFERENCES entities(id),
@@ -188,3 +189,6 @@ CREATE TRIGGER profile_clear_selection_insert AFTER INSERT ON person_profiles
 BEGIN DELETE FROM merge_selections WHERE canonical_id=NEW.entity_id AND field='personProfile'; END;
 CREATE TRIGGER profile_clear_selection_update AFTER UPDATE ON person_profiles
 BEGIN DELETE FROM merge_selections WHERE canonical_id=NEW.entity_id AND field='personProfile'; END;
+CREATE TRIGGER entities_decision_delete BEFORE DELETE ON entities
+WHEN EXISTS(SELECT 1 FROM keep_separate WHERE left_id=OLD.id OR right_id=OLD.id)
+BEGIN SELECT RAISE(ABORT, 'identity decisions must be cleared before deletion'); END;

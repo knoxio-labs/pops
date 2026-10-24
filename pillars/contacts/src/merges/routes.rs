@@ -82,7 +82,7 @@ pub async fn undo(
 }
 
 /// List stable member-pair decisions for conservative matching.
-#[utoipa::path(get,path="/merges/keep-separate",operation_id="merges.separate_list",responses((status=200,body=SeparateList)))]
+#[utoipa::path(get,path="/merges/keep-separate",operation_id="merges.separations",responses((status=200,body=SeparateList)))]
 pub async fn separate_list(State(state): State<AppState>) -> Result<Json<SeparateList>, ApiError> {
     Ok(Json(
         repo::separate_pairs(&state.pool).await.map_err(error)?,
@@ -152,7 +152,7 @@ pub async fn guard_writes(State(state): State<AppState>, request: Request, next:
     }
     if request.method() == Method::DELETE && parts.len() == 3 {
         let merged: Result<bool, _> = sqlx::query_scalar(
-            "SELECT EXISTS(SELECT 1 FROM entity_redirects WHERE canonical_id=?1)",
+            "SELECT EXISTS(SELECT 1 FROM entity_redirects WHERE canonical_id=?1) OR EXISTS(SELECT 1 FROM keep_separate WHERE left_id=?1 OR right_id=?1)",
         )
         .bind(*id)
         .fetch_one(&mut *conn)
@@ -160,7 +160,7 @@ pub async fn guard_writes(State(state): State<AppState>, request: Request, next:
         match merged {
             Ok(true) => {
                 return ApiError::identity_conflict(
-                    "Undo the active merge before deleting its members",
+                    "Resolve identity decisions before deleting this person",
                 )
                 .into_response()
             }
