@@ -300,3 +300,39 @@ async fn abandoned_expired_states_and_fenced_attempts_are_purged() {
         .unwrap();
     assert_eq!(count, 0);
 }
+
+#[tokio::test]
+async fn refresh_preserves_epoch_and_rejects_concurrent_stale_and_disconnected_values() {
+    let (pool, cipher, operator, account, epoch) = setup("google").await;
+    let old = secret();
+    let next = SecretBytes::new(vec![43; 25]).unwrap();
+    let later = SecretBytes::new(vec![44; 25]).unwrap();
+    let epoch = install_credential(&pool, &cipher, &operator, &account.id, epoch, &old)
+        .await
+        .unwrap();
+    refresh_credential(&pool, &cipher, &account.id, epoch, &old, &next)
+        .await
+        .unwrap();
+    let current = load_credential(&pool, &cipher, &account.id).await.unwrap();
+    assert_eq!(current.epoch, epoch);
+    assert_eq!(current.secret.expose(), next.expose());
+    assert_eq!(
+        refresh_credential(&pool, &cipher, &account.id, epoch, &old, &later).await,
+        Err(ProviderStoreError::StaleAccount)
+    );
+    assert_eq!(
+        load_credential(&pool, &cipher, &account.id)
+            .await
+            .unwrap()
+            .secret
+            .expose(),
+        next.expose()
+    );
+    disconnect_account(&pool, &operator, &account.id)
+        .await
+        .unwrap();
+    assert_eq!(
+        refresh_credential(&pool, &cipher, &account.id, epoch, &next, &later).await,
+        Err(ProviderStoreError::StaleAccount)
+    );
+}

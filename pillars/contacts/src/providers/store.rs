@@ -186,3 +186,41 @@ pub async fn disconnect_account(
     transaction.commit().await?;
     Ok(())
 }
+
+/// Replace a rotated worker credential only while the connection and previously
+/// read encrypted value still match. Refresh does not invalidate scan epochs.
+/// Concurrent refreshes must reload after a rejected compare-and-swap.
+pub async fn refresh_credential(
+    pool: &SqlitePool,
+    cipher: &CredentialCipher,
+    account_id: &str,
+    expected: AccountEpoch,
+    previous: &SecretBytes,
+    replacement: &SecretBytes,
+) -> Result<(), ProviderStoreError> {
+    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+    fence_account(&mut tx, account_id, expected).await?;
+    let (provider, encrypted): (String, Vec<u8>) =
+        sqlx::query_as("SELECT provider,credential FROM provider_accounts WHERE account_id=?1")
+            .bind(account_id)
+            .fetch_one(&mut *tx)
+            .await?;
+    let current = cipher
+        .decrypt(&provider, account_id, &encrypted)
+        .map_err(|_| ProviderStoreError::CredentialUnavailable)?;
+    if current.expose() != previous.expose() {
+        return Err(ProviderStoreError::StaleAccount);
+    }
+    if current.expose() != replacement.expose() {
+        let encrypted = cipher
+            .encrypt(&provider, account_id, replacement)
+            .map_err(|_| ProviderStoreError::CredentialUnavailable)?;
+        sqlx::query("UPDATE provider_accounts SET credential=?1 WHERE account_id=?2")
+            .bind(encrypted)
+            .bind(account_id)
+            .execute(&mut *tx)
+            .await?;
+    }
+    tx.commit().await?;
+    Ok(())
+}
