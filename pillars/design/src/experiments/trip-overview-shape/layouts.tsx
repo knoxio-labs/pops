@@ -1,8 +1,9 @@
+import { isPurchasedArrangement } from '@/fixtures/trip-overview-model';
 import { MapPin } from 'lucide-react';
 
 import { Badge, Button } from '@pops/ui';
 
-import { OverviewDecision, OverviewItemCard, OverviewItemList } from './item-card';
+import { OverviewItemCard, OverviewItemList } from './item-card';
 import { OverviewRoute } from './route';
 
 import type { TripOverviewItem, TripOverviewLayout } from '@/fixtures/trip-overview';
@@ -13,58 +14,20 @@ export interface OverviewLayoutProps {
   onSelect: (item: TripOverviewItem) => void;
 }
 
-/** Open choices derived from the shared fixture, with no commitments inferred. */
+/** Derive unresolved entries from missing purchases and open route segments. */
 export function OverviewDecisions({ items, onSelect }: OverviewLayoutProps) {
-  const onward = items.filter((item) => item.id === 'connection' || item.id === 'hotel');
-  const january = items.filter((item) => ['festival', 'coast', 'minas'].includes(item.id));
-  const carnival = items.filter((item) => item.where === 'Rio de Janeiro');
-  return (
-    <section className="space-y-3">
-      <div>
-        <h2 className="text-xl font-bold tracking-tight">Open decisions</h2>
-        <p className="mt-1 text-sm leading-relaxed text-foreground/80">
-          Unresolved transport, dates and destinations.
-        </p>
-      </div>
-      {onward.length > 0 && (
-        <OverviewDecision
-          title="Porto Alegre → Recife"
-          description="Arrive 28 or 29 Dec. Hotel starts 29 Dec."
-          options={onward}
-          onSelect={onSelect}
-        />
-      )}
-      {january.length > 0 && (
-        <OverviewDecision
-          title="January route"
-          description="Extend Olinda or move to Belo Horizonte. Festival: 16–18 Jan."
-          options={january}
-          onSelect={onSelect}
-        />
-      )}
-      {carnival.length > 0 && (
-        <OverviewDecision
-          title="Rio dates"
-          description="Confirm Rafael’s availability before choosing dates."
-          options={carnival}
-          onSelect={onSelect}
-        />
-      )}
-      {!items.length && (
-        <p className="rounded-xl border border-dashed p-6 text-muted-foreground">
-          Decisions will emerge as you collect possibilities.
-        </p>
-      )}
-    </section>
+  const unresolved = items.filter(
+    (item) => item.kind === 'gap' || (item.kind === 'transport' && !isPurchasedArrangement(item))
   );
+  return <OverviewItemList title="Unresolved" items={unresolved} onSelect={onSelect} />;
 }
 
 function Anchors(props: OverviewLayoutProps) {
   return (
     <OverviewItemList
-      title="Bookings & commitments"
-      description="Travel, stays and other arrangements. Details open on selection."
-      items={props.items.filter((item) => item.intention === 'In plan' && item.kind !== 'city')}
+      title="Purchased"
+      description="Flights, stays and tickets with purchase evidence."
+      items={props.items.filter(isPurchasedArrangement)}
       onSelect={props.onSelect}
     />
   );
@@ -75,7 +38,9 @@ function Possibilities(props: OverviewLayoutProps) {
     <OverviewItemList
       title="Options"
       description="Unscheduled places, events and contacts."
-      items={props.items.filter((item) => item.intention !== 'In plan' && item.kind !== 'city')}
+      items={props.items.filter(
+        (item) => item.sequence === undefined && item.intention !== 'In plan' && item.kind !== 'gap'
+      )}
       onSelect={props.onSelect}
     />
   );
@@ -86,10 +51,8 @@ function RouteFirst(props: OverviewLayoutProps) {
     <div className="grid gap-8 xl:grid-cols-3">
       <div className="space-y-8 xl:col-span-2">
         <OverviewRoute {...props} />
-        <Possibilities {...props} />
       </div>
       <aside className="space-y-8">
-        <Anchors {...props} />
         <OverviewDecisions {...props} />
       </aside>
     </div>
