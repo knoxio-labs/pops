@@ -201,3 +201,76 @@ fn search_hit_uri_is_contacts_namespaced() {
         "the search route must be present so the orchestrator can federate it"
     );
 }
+
+#[test]
+fn selector_enum_schemas_match_every_serialized_wire_field() {
+    use contacts::merges::model::{AppliedSelection, FieldSelection, MergeField, SourceMergeField};
+    use contacts::persons::model::ContactPointKind;
+    let document = openapi_30_value();
+    let field_values = [
+        serde_json::to_value(FieldSelection::Entity {
+            field: MergeField::Name,
+            entity_id: "member".into(),
+        })
+        .unwrap(),
+        serde_json::to_value(FieldSelection::SourceRecord {
+            field: SourceMergeField::PersonProfile,
+            source_record_id: "record".into(),
+        })
+        .unwrap(),
+    ];
+    let applied_values = [
+        serde_json::to_value(AppliedSelection::Entity {
+            field: MergeField::Name,
+            entity_id: "member".into(),
+        })
+        .unwrap(),
+        serde_json::to_value(AppliedSelection::SourceRecord {
+            field: SourceMergeField::Name,
+            source_record_id: "record".into(),
+            source_observation_id: "observation".into(),
+        })
+        .unwrap(),
+        serde_json::to_value(AppliedSelection::Point {
+            point_kind: ContactPointKind::Email,
+            point_id: "point".into(),
+        })
+        .unwrap(),
+    ];
+    for (name, values) in [
+        ("FieldSelection", field_values.as_slice()),
+        ("AppliedSelection", applied_values.as_slice()),
+    ] {
+        let variants = document["components"]["schemas"][name]["oneOf"]
+            .as_array()
+            .expect("tagged union");
+        assert_eq!(variants.len(), values.len());
+        for value in values {
+            let variant = variants
+                .iter()
+                .find(|variant| variant["properties"]["kind"]["enum"][0] == value["kind"])
+                .expect("matching discriminator");
+            let schema_fields: BTreeSet<_> = variant["properties"]
+                .as_object()
+                .expect("properties")
+                .keys()
+                .collect();
+            let wire_fields: BTreeSet<_> = value.as_object().expect("wire object").keys().collect();
+            assert_eq!(schema_fields, wire_fields, "{name} {}", value["kind"]);
+            assert!(wire_fields.iter().all(|field| !field.contains('_')));
+            let required = variant["required"].as_array().expect("required fields");
+            assert!(wire_fields
+                .iter()
+                .all(|field| required.iter().any(|value| value.as_str() == Some(field))));
+        }
+    }
+    for value in field_values {
+        let parsed: FieldSelection =
+            serde_json::from_value(value.clone()).expect("camelCase request");
+        assert_eq!(serde_json::to_value(parsed).unwrap(), value);
+    }
+    assert!(serde_json::from_value::<FieldSelection>(
+        serde_json::json!({"kind":"entity","field":"name","entity_id":"member"})
+    )
+    .is_err());
+}

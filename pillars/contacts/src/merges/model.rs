@@ -88,10 +88,12 @@ impl SourceMergeField {
 pub enum FieldSelection {
     Entity {
         field: MergeField,
+        #[serde(rename = "entityId")]
         entity_id: String,
     },
     SourceRecord {
         field: SourceMergeField,
+        #[serde(rename = "sourceRecordId")]
         source_record_id: String,
     },
 }
@@ -116,15 +118,20 @@ impl FieldSelection {
 pub enum AppliedSelection {
     Entity {
         field: MergeField,
+        #[serde(rename = "entityId")]
         entity_id: String,
     },
     SourceRecord {
         field: SourceMergeField,
+        #[serde(rename = "sourceRecordId")]
         source_record_id: String,
+        #[serde(rename = "sourceObservationId")]
         source_observation_id: String,
     },
     Point {
+        #[serde(rename = "pointKind")]
         point_kind: crate::persons::model::ContactPointKind,
+        #[serde(rename = "pointId")]
         point_id: String,
     },
 }
