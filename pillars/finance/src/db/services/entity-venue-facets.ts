@@ -11,6 +11,7 @@
  */
 import { transactions } from '../schema.js';
 import { parseStoredTags } from '../tag-facets.js';
+import { entityIdentity, type EntityIdentities } from './entity-identity.js';
 
 import type { FinanceDb } from './internal.js';
 
@@ -46,7 +47,10 @@ export interface EntityVenueEvidence {
  * and whether any of them is `enrich:`-marked. Rows with no entity are ignored:
  * there is no contact to write a default onto.
  */
-export function collectEntityVenueEvidence(db: FinanceDb): Map<string, EntityVenueEvidence> {
+export function collectEntityVenueEvidence(
+  db: FinanceDb,
+  identities?: EntityIdentities
+): Map<string, EntityVenueEvidence> {
   const byEntity = new Map<
     string,
     { transactionCount: number; venueCounts: Map<string, number>; enrichCount: number }
@@ -56,7 +60,7 @@ export function collectEntityVenueEvidence(db: FinanceDb): Map<string, EntityVen
     .select({ entityId: transactions.entityId, tags: transactions.tags })
     .from(transactions)
     .all()) {
-    const { entityId } = row;
+    const entityId = entityIdentity(row.entityId, identities);
     if (entityId == null || entityId === '') continue;
     let evidence = byEntity.get(entityId);
     if (!evidence) {

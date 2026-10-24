@@ -15,7 +15,12 @@ import {
   renameProduct,
   updateAlias,
 } from '../../db/index.js';
+import {
+  resolveMerchantIdentities,
+  type CanonicalMerchantResolver,
+} from '../contacts/canonical.js';
 import { purchaseErrorBody } from '../errors.js';
+import { canonicalMerchantScope } from './canonical-merchant-scope.js';
 import { tryMapServiceError } from './error-mapping.js';
 
 import type { z } from 'zod';
@@ -50,7 +55,11 @@ function serialize(entry: ProductWithAliases) {
   return { ...entry.product, aliases: entry.aliases.map((alias) => ({ ...alias })) };
 }
 
-export function makeProductHandlers(db: PurchasesDb) {
+/** Builds dictionary handlers; proposal writes require resolved merchant identities. */
+export function makeProductHandlers(
+  db: PurchasesDb,
+  resolve: CanonicalMerchantResolver = resolveMerchantIdentities
+) {
   return {
     list: async ({ query }: { query: ListQuery }) => ({
       status: 200 as const,
@@ -62,7 +71,14 @@ export function makeProductHandlers(db: PurchasesDb) {
       },
     }),
 
-    propose: async () => ({ status: 200 as const, body: proposeProducts(db) }),
+    propose: async () => {
+      const canonical = await canonicalMerchantScope(db, {}, resolve);
+      if (!canonical.ok) return canonical.response;
+      return {
+        status: 200 as const,
+        body: proposeProducts(db, { canonicalMerchants: canonical.scope.canonicalMerchants }),
+      };
+    },
 
     rename: async ({ params, body }: { params: { productId: string }; body: RenameBody }) => {
       try {

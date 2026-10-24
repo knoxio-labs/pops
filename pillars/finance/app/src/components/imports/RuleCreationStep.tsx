@@ -1,5 +1,6 @@
 import { Button } from '@pops/ui';
 
+import { CanonicalIdentityNotice } from './CanonicalIdentityNotice';
 import { ProposalsList } from './rule-creation/ProposalsList';
 import { stageable } from './rule-creation/refused-proposals';
 import { useRuleProposals } from './rule-creation/useRuleProposals';
@@ -10,12 +11,14 @@ function StepFooter({
   onCreate,
   selectedCount,
   hasProposals,
+  identityReady,
 }: {
   onBack: () => void;
   onSkip: () => void;
   onCreate: () => void;
   selectedCount: number;
   hasProposals: boolean;
+  identityReady: boolean;
 }) {
   const label = `Create ${selectedCount > 0 ? `${selectedCount} ` : ''}${selectedCount === 1 ? 'rule' : 'rules'} →`;
   return (
@@ -24,11 +27,11 @@ function StepFooter({
         Back
       </Button>
       <div className="flex gap-2">
-        <Button variant="outline" onClick={onSkip}>
+        <Button variant="outline" onClick={onSkip} disabled={!identityReady}>
           Skip
         </Button>
         {hasProposals && (
-          <Button onClick={onCreate} disabled={selectedCount === 0}>
+          <Button onClick={onCreate} disabled={selectedCount === 0 || !identityReady}>
             {label}
           </Button>
         )}
@@ -38,8 +41,17 @@ function StepFooter({
 }
 
 export function RuleCreationStep() {
-  const { proposals, refusedById, collisions, checked, toggle, leaveStaging, prevStep } =
-    useRuleProposals();
+  const {
+    proposals,
+    refusedById,
+    collisions,
+    checked,
+    toggle,
+    leaveStaging,
+    prevStep,
+    identityStatus,
+    retryIdentities,
+  } = useRuleProposals();
   const chosen = stageable(proposals, checked, refusedById);
   return (
     <div className="space-y-6">
@@ -50,19 +62,23 @@ export function RuleCreationStep() {
           ones worth a rule; saved rules apply automatically on future imports.
         </p>
       </div>
-      <ProposalsList
-        proposals={proposals}
-        checked={checked}
-        onToggle={toggle}
-        refusedById={refusedById}
-        collisions={collisions}
-      />
+      <CanonicalIdentityNotice status={identityStatus} retry={retryIdentities} />
+      {identityStatus === 'ready' && (
+        <ProposalsList
+          proposals={proposals}
+          checked={checked}
+          onToggle={toggle}
+          refusedById={refusedById}
+          collisions={collisions}
+        />
+      )}
       <StepFooter
         onBack={prevStep}
         onSkip={() => leaveStaging([])}
         onCreate={() => leaveStaging(chosen)}
         selectedCount={chosen.length}
         hasProposals={proposals.length > 0}
+        identityReady={identityStatus === 'ready'}
       />
     </div>
   );

@@ -1,3 +1,5 @@
+import { type EntityIdentities } from '../../../db/services/entity-identity.js';
+
 import type {
   ParsedTransaction,
   ProcessedTransaction,
@@ -67,6 +69,8 @@ export interface AiCounters {
 }
 
 export interface ProcessContext {
+  /** Revision-consistent contact identity mapping for this import run. */
+  identities?: EntityIdentities;
   entityLookup: EntityMaps['entityLookup'];
   aliases: EntityMaps['aliasMap'];
   knownTags: string[];

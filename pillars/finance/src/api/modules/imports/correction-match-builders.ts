@@ -12,6 +12,7 @@ import {
   FEE_TAG_PREFIX,
 } from '../../../contract/transaction-classification.js';
 import { type FinanceDb } from '../../../db/index.js';
+import { type EntityIdentities } from '../../../db/services/entity-identity.js';
 import { type CorrectionRow, parseCorrectionTags } from '../corrections/index.js';
 import { resolveCorrectionLocation } from './correction-location.js';
 import { buildSuggestedTags } from './tag-management.js';
@@ -129,6 +130,7 @@ export interface EntityMatchArgs {
   status: 'matched' | 'uncertain';
   entityId: string;
   knownTags: string[];
+  identities?: EntityIdentities;
   entityDefaultTags: ReadonlyMap<string, string[]>;
   collectTagRules: (ruleIds: readonly string[]) => void;
 }
@@ -164,6 +166,7 @@ export function buildEntityMatch(args: EntityMatchArgs): ProcessedTransaction {
         aiCategory: null,
         knownTags,
         correctionPattern: correction.descriptionPattern,
+        identities: args.identities,
         entityDefaultTags: args.entityDefaultTags,
         recordTagRuleUsage: false,
         onTagRulesMatched: args.collectTagRules,

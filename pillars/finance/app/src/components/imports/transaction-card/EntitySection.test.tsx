@@ -312,3 +312,19 @@ describe('EntitySection — forcing a type on an untyped credit', () => {
     );
   });
 });
+
+it('shows the current picker option for a retired historical assignment', () => {
+  const transaction: ProcessedTransaction = {
+    ...aiMatched('Historical Person'),
+    entity: { entityId: 'old-person', entityName: 'Historical Person', matchType: 'learned' },
+    status: 'matched',
+  };
+  renderSection({
+    transaction,
+    entities: [{ id: 'current-person', name: 'Current Person' }],
+    identities: new Map([['old-person', 'current-person']]),
+  });
+  expect(screen.getByRole('combobox')).toHaveTextContent('Current Person');
+  expect(screen.queryByText(/contact.*gone|no longer exists/i)).not.toBeInTheDocument();
+  expect(transaction.entity.entityId).toBe('old-person');
+});

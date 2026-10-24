@@ -8,6 +8,7 @@
  * are already matched.
  */
 import { type FinanceDb } from '../../../db/index.js';
+import { type EntityIdentities } from '../../../db/services/entity-identity.js';
 import {
   findAllMatchingCorrectionFromRules,
   normalizeEntityId,
@@ -22,6 +23,7 @@ import type { EntityMaps } from '../../../db/index.js';
 import type { ProcessedTransaction } from './types.js';
 
 export interface ReevaluateContext {
+  identities?: EntityIdentities;
   db: FinanceDb;
   /** The correction rule set, fetched once per run (CF040/#3664) — never re-queried per transaction. */
   rules: CorrectionRow[];
@@ -60,6 +62,7 @@ function tryApplyCorrectionStage(
     rules: ctx.rules,
     isPreview: ctx.isPreview,
     entityDefaultTags: ctx.entityDefaultTags,
+    identities: ctx.identities,
     recordUsage: false,
   });
   if (!correctionApplied) return { handled: false, changed: false };
@@ -69,7 +72,13 @@ function tryApplyCorrectionStage(
   if (nextBucket === 'matched') buckets.matched.push(nextTx);
   else buckets.uncertain.push(nextTx);
 
-  return { handled: true, changed: transactionChanged(item.tx, nextTx, item.bucket, nextBucket) };
+  return {
+    handled: true,
+    changed: transactionChanged(item.tx, nextTx, item.bucket, {
+      nextBucket,
+      identities: ctx.identities,
+    }),
+  };
 }
 
 function tryEntityMatchStage(
@@ -95,6 +104,7 @@ function tryEntityMatchStage(
     aiCategory: null,
     knownTags: ctx.knownTags,
     entityDefaultTags: ctx.entityDefaultTags,
+    identities: ctx.identities,
   });
   const nextTx: ProcessedTransaction = {
     ...item.tx,
@@ -106,7 +116,12 @@ function tryEntityMatchStage(
   };
 
   buckets.matched.push(nextTx);
-  return { handled: true, changed: alwaysAffected || transactionChanged(item.tx, nextTx) };
+  return {
+    handled: true,
+    changed:
+      alwaysAffected ||
+      transactionChanged(item.tx, nextTx, undefined, { identities: ctx.identities }),
+  };
 }
 
 /** The full ladder, for a row that is not currently matched. */
@@ -197,6 +212,7 @@ export function reapplyCorrectionToMatched(
     rules: ctx.rules,
     isPreview: ctx.isPreview,
     entityDefaultTags: ctx.entityDefaultTags,
+    identities: ctx.identities,
     recordUsage: false,
   });
   if (!correctionApplied) {
@@ -205,5 +221,5 @@ export function reapplyCorrectionToMatched(
   }
   const next = keepMatched(tx, correctionApplied.processed, winner);
   buckets.matched.push(next);
-  return transactionChanged(tx, next);
+  return transactionChanged(tx, next, undefined, { identities: ctx.identities });
 }

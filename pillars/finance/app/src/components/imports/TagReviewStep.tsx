@@ -1,5 +1,6 @@
 import { Button } from '@pops/ui';
 
+import { CanonicalIdentityNotice } from './CanonicalIdentityNotice';
 import { EntityGroup } from './tag-review/EntityGroup';
 import { useTagReviewState } from './tag-review/useTagReviewState';
 import { TagRuleProposalDialog } from './TagRuleProposalDialog';
@@ -29,6 +30,7 @@ export function TagReviewStep() {
   return (
     <div className="space-y-6">
       <TagReviewHeader />
+      <CanonicalIdentityNotice status={state.identityStatus} retry={state.retryIdentities} />
       {confirmedCount > 0 && (
         <Button
           variant="outline"
@@ -42,6 +44,7 @@ export function TagReviewStep() {
       <EntityGroups state={state} />
       <TagReviewFooter
         confirmedCount={confirmedCount}
+        disabled={state.identityStatus !== 'ready'}
         onBack={prevStep}
         onContinue={handleContinue}
       />
@@ -63,7 +66,7 @@ function EntityGroups({ state }: { state: ReturnType<typeof useTagReviewState> }
     <div className="space-y-4">
       {state.groups.map((group) => (
         <EntityGroup
-          key={group.entityName}
+          key={group.identityKey}
           group={group}
           localTags={state.localTags}
           suggestedTagMeta={state.suggestedTagMeta}
@@ -97,11 +100,12 @@ function TagReviewHeader() {
 
 interface TagReviewFooterProps {
   confirmedCount: number;
+  disabled: boolean;
   onBack: () => void;
   onContinue: () => void;
 }
 
-function TagReviewFooter({ confirmedCount, onBack, onContinue }: TagReviewFooterProps) {
+function TagReviewFooter({ confirmedCount, disabled, onBack, onContinue }: TagReviewFooterProps) {
   const label =
     confirmedCount === 0
       ? 'Continue to final review'
@@ -113,7 +117,7 @@ function TagReviewFooter({ confirmedCount, onBack, onContinue }: TagReviewFooter
       </Button>
       <Button
         onClick={onContinue}
-        disabled={confirmedCount === 0}
+        disabled={confirmedCount === 0 || disabled}
         aria-label="Continue to final review"
       >
         {label}

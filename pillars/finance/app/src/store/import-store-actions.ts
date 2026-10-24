@@ -18,6 +18,8 @@ import {
   type ProcessedTransaction,
 } from './import-store-types';
 
+import type { EntityIdentities } from '@pops/finance';
+
 type StoreSet = (
   partial: Partial<ImportStore> | ((state: ImportStore) => Partial<ImportStore>)
 ) => void;
@@ -150,7 +152,8 @@ export function buildPendingTagRuleActions(set: StoreSet, get: StoreGet) {
      * rules that will actually be written.
      */
     addPendingTagRuleChangeSet: (
-      input: AddPendingTagRuleChangeSetInput
+      input: AddPendingTagRuleChangeSetInput,
+      identities?: EntityIdentities
     ): PendingTagRuleChangeSet => {
       const entry: PendingTagRuleChangeSet = {
         tempId: `temp:tagrules:${crypto.randomUUID()}`,
@@ -160,12 +163,14 @@ export function buildPendingTagRuleActions(set: StoreSet, get: StoreGet) {
         sourceChecksums: input.sourceChecksums,
         ...(input.acceptedNewTags ? { acceptedNewTags: input.acceptedNewTags } : {}),
       };
-      const key = pendingTagRuleKey(entry);
+      const key = pendingTagRuleKey(entry, identities);
       set((prev) => {
         const existing =
           key === null
             ? -1
-            : prev.pendingTagRuleChangeSets.findIndex((c) => pendingTagRuleKey(c) === key);
+            : prev.pendingTagRuleChangeSets.findIndex(
+                (c) => pendingTagRuleKey(c, identities) === key
+              );
         if (existing === -1) {
           return { pendingTagRuleChangeSets: [...prev.pendingTagRuleChangeSets, entry] };
         }

@@ -58,162 +58,27 @@
  * instead of surfacing the constraint error.
  */
 import { CommitResultSchema } from '../../../contract/rest-imports-schemas.js';
+import { importCommitsService, type FinanceDb } from '../../../db/index.js';
 import {
-  type FinanceDb,
-  importCommitsService,
-  importDraftsService,
-  importsService,
-  tagVocabularyService,
-} from '../../../db/index.js';
-import { type ContactsClient } from '../../contacts/client.js';
-import { recordAiSuggestionOutcome } from './commit-ai-outcomes.js';
-import { recordImportBatchesPhase, type InsertedTransaction } from './commit-batches.js';
-import { applyChangeSetsPhase, applyTagRuleChangeSetsPhase } from './commit-changesets.js';
-import { mintImportCheckpointsPhase } from './commit-checkpoint.js';
-import { transactionColumns } from './commit-columns.js';
-import {
-  enqueueOutboxCandidatesPhase,
-  preCreatePendingContacts,
-} from './commit-contacts-precreate.js';
-import { resolveCommitEntityId } from './commit-entity-resolution.js';
-import {
-  batchSourceFor,
-  commitLiveDraftPhase,
-  type LiveDraftContext,
-  liveDraftOf,
-} from './commit-live-draft.js';
-import { expandLoanRepaymentRow } from './commit-loan-split.js';
-import { pairTransfersPhase } from './commit-pair-transfers.js';
-import { recordMatchedRuleUsage } from './commit-rule-usage.js';
-import { applyCommitTagVocabulary, planCommitTagVocabulary } from './commit-tag-vocabulary.js';
+  EntityIdentityConflictError,
+  referencedEntityIds,
+} from '../../../db/services/entity-identity.js';
+import { loadEntityIdentities } from '../../contacts/identity-snapshot.js';
+import { ConflictError } from '../../shared/errors.js';
+import { preCreatePendingContacts } from './commit-contacts-precreate.js';
+import { liveDraftOf } from './commit-live-draft.js';
+import { applyCommitPhases } from './commit-phases.js';
+import { planCommitTagVocabulary } from './commit-tag-vocabulary.js';
 import { validateCommitPayload } from './commit-validation.js';
-import { reclassifyExistingTransactions } from './reclassify-existing.js';
 
-import type {
-  CommitBatch,
-  CommitPayload,
-  CommitResult,
-  FailedTransactionDetail,
-  ImportWarning,
-} from './types.js';
+import type { ContactsClient } from '../../contacts/types.js';
+import type { CommitPayload, CommitResult } from './types.js';
 
 /** The previously recorded result for `commitKey`, re-validated against the
  * wire contract, or `undefined` if this key has never been committed. */
 function readCommittedResult(db: FinanceDb, commitKey: string): CommitResult | undefined {
   const json = importCommitsService.findCommittedResultJson(db, commitKey);
   return json === undefined ? undefined : CommitResultSchema.parse(json);
-}
-
-interface WriteTxnsResult {
-  imported: number;
-  failed: number;
-  failedDetails: FailedTransactionDetail[];
-  /** The rows successfully inserted this commit, for the pairing and batch phases. */
-  inserted: InsertedTransaction[];
-}
-
-function writeTransactionsPhase(
-  tx: FinanceDb,
-  payload: CommitPayload,
-  tempIdMap: Map<string, string>
-): WriteTxnsResult {
-  let imported = 0;
-  let failed = 0;
-  const failedDetails: FailedTransactionDetail[] = [];
-  const inserted: InsertedTransaction[] = [];
-
-  // The loan split (`expandLoanRepaymentRow`) computes each repayment's
-  // interest leg from `balanceAsOf` the day before it, which only sees rows
-  // already inserted earlier in this loop. A batch is not guaranteed to arrive in
-  // date order — a bank statement exported newest-first is a common CSV
-  // layout — so an out-of-order batch would let a later-processed-but-
-  // earlier-dated repayment be missing from an earlier-processed-but-later-
-  // dated repayment's balance lookup, understating the balance the interest
-  // is computed against. Sorting the whole batch chronologically before the
-  // insert loop fixes that for every account at once; nothing downstream of
-  // this loop (dedup-checksum collection, transfer pairing) depends on the
-  // original payload order.
-  const orderedTransactions = payload.transactions.toSorted((a, b) => a.date.localeCompare(b.date));
-
-  for (const txn of orderedTransactions) {
-    const entityId = resolveCommitEntityId(txn.entityId, tempIdMap);
-    try {
-      // A loan repayment expands to its interest + principal legs here
-      // (POPS-2830); every other row is its own single-element array, so the
-      // insert loop below doesn't need to know the split happened at all.
-      const columns = transactionColumns(txn, entityId);
-      const rows = expandLoanRepaymentRow(tx, columns);
-      const firstLeg = inserted.length;
-      for (const columns of rows) {
-        const row = importsService.insertImportTransaction(tx, columns);
-        imported++;
-        inserted.push({
-          id: row.id,
-          accountId: row.accountId,
-          date: row.date,
-          carriesBalance: txn.balanceCents !== undefined,
-        });
-      }
-      recordMatchedRuleUsage(tx, txn);
-      // A split loan repayment is one suggestion across its legs; count it once.
-      const firstLegId = inserted[firstLeg]?.id;
-      if (firstLegId !== undefined) recordAiSuggestionOutcome(tx, txn, firstLegId);
-      tagVocabularyService.incrementVocabularyUsage(tx, columns.tags);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error(`[CommitImport] Transaction write failed: ${errorMessage}`);
-      failed++;
-      failedDetails.push({ checksum: txn.checksum ?? null, error: errorMessage });
-    }
-  }
-
-  return { imported, failed, failedDetails, inserted };
-}
-
-/**
- * The phases that read back what the write phase did: pair the rows just
- * written, mint checkpoints from any closing balance the file carried, and
- * record one batch per account. All three run after every row has landed and
- * before `recordCommit`, so a replayed key returns them rather than redoing
- * them.
- */
-function recordOutcomePhases(
-  tx: FinanceDb,
-  payload: CommitPayload,
-  writeResult: WriteTxnsResult,
-  liveDraft: LiveDraftContext | undefined
-): { checkpoints: CommitResult['checkpoints']; warnings: ImportWarning[]; batches: CommitBatch[] } {
-  pairTransfersPhase(
-    tx,
-    writeResult.inserted.map((row) => row.id)
-  );
-
-  const failedChecksums = new Set(
-    writeResult.failedDetails.map((d) => d.checksum).filter((c): c is string => c !== null)
-  );
-  const { checkpoints, warnings } = mintImportCheckpointsPhase(
-    tx,
-    payload.transactions,
-    failedChecksums,
-    payload.commitKey
-  );
-
-  commitLiveDraftPhase(tx, {
-    liveDraft,
-    inserted: writeResult.inserted,
-    commitKey: payload.commitKey,
-    checkpoints,
-    warnings,
-  });
-
-  const batches = recordImportBatchesPhase(tx, {
-    inserted: writeResult.inserted,
-    sourceFor: batchSourceFor(liveDraft, payload.source),
-    checkpoints,
-    commitKey: payload.commitKey,
-  });
-
-  return { checkpoints, warnings, batches };
 }
 
 /**
@@ -244,51 +109,19 @@ export async function commitImport(
   const tagPlan = planCommitTagVocabulary(db, payload);
   const liveDraft = liveDraftOf(db, payload.draftId);
 
-  const { tempIdMap, entitiesCreated, outboxCandidates } = await preCreatePendingContacts(
-    contacts,
-    payload
-  );
+  const preparedContacts = await preCreatePendingContacts(contacts, payload);
+
+  const identities = await loadEntityIdentities(db, contacts, [
+    ...referencedEntityIds(payload),
+    ...preparedContacts.tempIdMap.values(),
+  ]);
 
   try {
-    return db.transaction((tx) => {
-      enqueueOutboxCandidatesPhase(tx, outboxCandidates);
-      applyCommitTagVocabulary(tx, tagPlan);
-      const correctionPhase = applyChangeSetsPhase(tx, payload, tempIdMap);
-      const tagRulePhase = applyTagRuleChangeSetsPhase(tx, tagPlan.tagRuleChangeSets, tempIdMap);
-      const writeResult = writeTransactionsPhase(tx, payload, tempIdMap);
-
-      const retroactiveReclassifications = reclassifyExistingTransactions(
-        tx,
-        payload.transactions.map((t) => t.checksum).filter((c): c is string => c != null)
-      );
-
-      const { checkpoints, warnings, batches } = recordOutcomePhases(
-        tx,
-        payload,
-        writeResult,
-        liveDraft
-      );
-
-      const result: CommitResult = {
-        entitiesCreated,
-        rulesApplied: correctionPhase.counts,
-        correctionRuleWrites: correctionPhase.writes,
-        tagRulesApplied: tagRulePhase.applied,
-        tagRuleWrites: tagRulePhase.writes,
-        transactionsImported: writeResult.imported,
-        transactionsFailed: writeResult.failed,
-        failedDetails: writeResult.failedDetails,
-        retroactiveReclassifications,
-        ...(warnings.length > 0 ? { warnings } : {}),
-        checkpoints,
-        batches,
-      };
-
-      if (commitKey) importCommitsService.recordCommit(tx, commitKey, result);
-      if (payload.draftId) importDraftsService.discardImportDraft(tx, payload.draftId);
-      return result;
-    });
+    return db.transaction((tx) =>
+      applyCommitPhases(tx, payload, { contacts: preparedContacts, tagPlan, liveDraft, identities })
+    );
   } catch (error) {
+    if (error instanceof EntityIdentityConflictError) throw new ConflictError(error.message);
     if (commitKey && importCommitsService.isImportCommitUniqueViolation(error)) {
       const raced = readCommittedResult(db, commitKey);
       if (raced) return raced;

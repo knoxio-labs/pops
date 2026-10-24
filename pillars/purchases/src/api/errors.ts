@@ -79,6 +79,12 @@ const ERROR_DEFINITIONS = {
     message: 'The request contains a value purchases cannot accept.',
     retryable: false,
   },
+  contacts_unavailable: {
+    area: 'contacts',
+    status: 503,
+    message: 'Merchant identities are unavailable. Try again later.',
+    retryable: true,
+  },
   database_busy: {
     area: 'storage',
     status: 503,

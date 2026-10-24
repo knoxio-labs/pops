@@ -1,9 +1,12 @@
+import { entityIdentity, type EntityIdentities } from '@pops/finance';
+
 import type { ProcessedTransaction } from '@pops/finance';
 
 /**
  * Transaction group for displaying similar transactions together
  */
 export interface TransactionGroup {
+  identityKey: string;
   entityName: string;
   category?: string;
   transactions: ProcessedTransaction[];
@@ -56,19 +59,28 @@ export type GroupOrder = 'ai-first' | 'name';
 
 const byEntityName = new Intl.Collator(undefined, { sensitivity: 'base', numeric: true });
 
+function transactionEntityKey(transaction: ProcessedTransaction, identities?: EntityIdentities) {
+  return (
+    entityIdentity(transaction.entity?.entityId ?? null, identities) ??
+    `unassigned:${transaction.entity?.entityName ?? 'unknown'}`
+  );
+}
+
 /**
- * Group transactions by AI-suggested entity name
+ * Group known counterparties by canonical identity; unresolved suggestions group by their display name.
  */
 export function groupTransactionsByEntity(
   transactions: ProcessedTransaction[],
-  order: GroupOrder = 'ai-first'
+  order: GroupOrder = 'ai-first',
+  identities?: EntityIdentities
 ): TransactionGroup[] {
   const groups = new Map<string, TransactionGroup>();
 
   for (const transaction of transactions) {
-    const key = transaction.entity?.entityName ?? 'unknown';
+    const key = transactionEntityKey(transaction, identities);
     if (!groups.has(key)) {
       groups.set(key, {
+        identityKey: key,
         entityName: transaction.entity?.entityName ?? 'Unknown',
         category: undefined, // Category will be fetched from entities list if needed
         transactions: [],

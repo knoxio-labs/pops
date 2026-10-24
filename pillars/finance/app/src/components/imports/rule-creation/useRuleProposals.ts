@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
+import { toast } from 'sonner';
 
 import { useImportStore } from '../../../store/importStore';
 import { useTagRuleAddCollisions } from '../final-review/useTagRuleAddCollisions';
+import { useImportIdentities } from '../hooks/useImportIdentities';
 import { useTagFacets } from '../tag-review/useTagTaxonomy';
 import { useRefusedProposals } from './refused-proposals';
 import {
@@ -13,27 +15,17 @@ import {
   type RuleProposal,
 } from './utils';
 
-/**
- * The Rules step's state: what is proposed once what already applies is
- * subtracted, which proposals are ticked, and the one exit, used by both
- * Create and Skip, that replaces whatever an earlier visit staged (POPS-3676).
- */
-export function useRuleProposals() {
-  const confirmedTransactions = useImportStore((s) => s.confirmedTransactions);
-  const staged = useImportStore((s) => s.pendingTagRuleChangeSets);
-  const addPendingTagRuleChangeSet = useImportStore((s) => s.addPendingTagRuleChangeSet);
-  const removePendingTagRuleChangeSet = useImportStore((s) => s.removePendingTagRuleChangeSet);
-  const nextStep = useImportStore((s) => s.nextStep);
-  const prevStep = useImportStore((s) => s.prevStep);
-  const facets = useTagFacets();
-  const proposals = useMemo(
-    () => computeProposals(confirmedTransactions, staged, facets),
-    [confirmedTransactions, staged, facets]
-  );
-  const refusedById = useRefusedProposals(proposals);
-  const collisions = useTagRuleAddCollisions(proposals.map((proposal) => buildChangeSet(proposal)));
+import type { EntityIdentities } from '@pops/finance';
+
+import type { PendingTagRuleChangeSet } from '../../../store/import-store-types';
+
+function useProposalSelection(
+  proposals: RuleProposal[],
+  staged: readonly PendingTagRuleChangeSet[],
+  identities?: EntityIdentities
+) {
   const [checked, setChecked] = useState<Set<string>>(
-    () => new Set(previouslyStagedProposalIds(proposals, staged))
+    () => new Set(previouslyStagedProposalIds(proposals, staged, identities))
   );
   // Keyed on content, not identity: the taxonomy query resolving rebuilds the
   // array without changing what is proposed, and must not untick a choice.
@@ -42,9 +34,9 @@ export function useRuleProposals() {
     [proposals]
   );
   const [prevProposalsKey, setPrevProposalsKey] = useState(proposalsKey);
-  if (proposalsKey !== prevProposalsKey) {
+  if (identities && proposalsKey !== prevProposalsKey) {
     setPrevProposalsKey(proposalsKey);
-    setChecked(new Set(previouslyStagedProposalIds(proposals, staged)));
+    setChecked(new Set(previouslyStagedProposalIds(proposals, staged, identities)));
   }
 
   function toggle(id: string) {
@@ -56,20 +48,55 @@ export function useRuleProposals() {
     });
   }
 
+  return { checked, toggle };
+}
+
+/**
+ * The Rules step's state: what is proposed once what already applies is
+ * subtracted, which proposals are ticked, and the one exit, used by both
+ * Create and Skip, that replaces whatever an earlier visit staged (POPS-3676).
+ */
+export function useRuleProposals() {
+  const identity = useImportIdentities();
+  const { identities } = identity;
+  const confirmedTransactions = useImportStore((s) => s.confirmedTransactions);
+  const staged = useImportStore((s) => s.pendingTagRuleChangeSets);
+  const addPendingTagRuleChangeSet = useImportStore((s) => s.addPendingTagRuleChangeSet);
+  const removePendingTagRuleChangeSet = useImportStore((s) => s.removePendingTagRuleChangeSet);
+  const nextStep = useImportStore((s) => s.nextStep);
+  const prevStep = useImportStore((s) => s.prevStep);
+  const facets = useTagFacets();
+  const proposals = useMemo(
+    () => (identities ? computeProposals(confirmedTransactions, staged, facets, identities) : []),
+    [confirmedTransactions, staged, facets, identities]
+  );
+  const refusedById = useRefusedProposals(proposals);
+  const collisions = useTagRuleAddCollisions(proposals.map((proposal) => buildChangeSet(proposal)));
+  const { checked, toggle } = useProposalSelection(proposals, staged, identities);
+
   function leaveStaging(chosen: RuleProposal[]) {
+    if (!identities) {
+      toast.error('Contact identities are unavailable; retry before continuing.');
+      return;
+    }
     for (const tempId of batchRuleTempIds(staged)) removePendingTagRuleChangeSet(tempId);
     for (const proposal of chosen) {
-      addPendingTagRuleChangeSet({
-        changeSet: buildChangeSet(proposal),
-        source: IMPORT_BATCH_SOURCE,
-        acceptedNewTags: proposal.tags,
-        sourceChecksums: proposal.sourceChecksums,
-      });
+      addPendingTagRuleChangeSet(
+        {
+          changeSet: buildChangeSet(proposal),
+          source: IMPORT_BATCH_SOURCE,
+          acceptedNewTags: proposal.tags,
+          sourceChecksums: proposal.sourceChecksums,
+        },
+        identities
+      );
     }
     nextStep();
   }
 
   return {
+    identityStatus: identity.status,
+    retryIdentities: identity.retry,
     proposals,
     refusedById,
     collisions: collisions.data,

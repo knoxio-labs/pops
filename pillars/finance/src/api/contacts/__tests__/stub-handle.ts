@@ -50,6 +50,11 @@ export interface StubImpls {
     limit?: number;
     offset?: number;
   }) => Promise<CallResult<ListResponse>>;
+  resolve?: (input: {
+    ids: string[];
+  }) => Promise<
+    CallResult<{ data: { id: string; canonicalId: string | null }[]; revision: number }>
+  >;
   get?: (input: { id: string }) => Promise<CallResult<{ data: ContactEntity }>>;
   create?: (input: {
     name: string;
@@ -69,6 +74,7 @@ export function stubHandle(impls: StubImpls): PillarHandle<ContactsRouter> {
   return {
     entities: {
       list: proc(impls.list),
+      resolve: proc(impls.resolve ?? (() => unexpected('entities.resolve'))),
       get: proc(impls.get ?? (() => unexpected('entities.get'))),
       create: proc(impls.create ?? (() => unexpected('entities.create'))),
       update: proc(impls.update ?? (() => unexpected('entities.update'))),

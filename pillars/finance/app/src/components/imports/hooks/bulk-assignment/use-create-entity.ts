@@ -44,6 +44,10 @@ export function useCreateEntity(args: UseCreateEntityArgs) {
    */
   const createPendingEntity = useCallback(
     (name: string): CreatedEntity | null => {
+      if (dbEntities === undefined) {
+        toast.error('Contact identities are unavailable; retry before creating.');
+        return null;
+      }
       const trimmed = name.trim();
       if (!trimmed) return null;
       try {

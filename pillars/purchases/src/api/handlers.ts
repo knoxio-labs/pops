@@ -11,6 +11,7 @@ import type { PillarRegistryEntry } from '@pops/types';
 
 import type { OpenedPurchasesDb } from '../db/index.js';
 import type { ReceiptVision } from '../ingest/receipt/vision.js';
+import type { CanonicalMerchantResolver } from './contacts/canonical.js';
 import type { MerchantResolver } from './contacts/merchant.js';
 import type { SharedTagCacheRefreshOutcome } from './cron/refresh-shared-tags.js';
 import type { FinanceTransactionLookup, FinanceTransactionSearch } from './finance/client.js';
@@ -50,6 +51,8 @@ export interface PurchasesApiDeps {
   vision: ReceiptVision | null;
   /** Names the merchant against contacts. Injectable so tests stay offline. */
   merchant?: MerchantResolver;
+  /** Resolves historical merchant ids against Contacts before identity comparisons. */
+  canonicalMerchants?: CanonicalMerchantResolver;
   /**
    * Creates the inventory asset an accepted proposal names — the pillar's
    * only write into another pillar's data. Injectable so tests stay

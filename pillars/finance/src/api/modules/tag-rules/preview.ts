@@ -4,6 +4,7 @@ import {
   transactionsService,
   type FinanceDb,
 } from '../../../db/index.js';
+import { type EntityIdentities } from '../../../db/services/entity-identity.js';
 /**
  * Suggestion-impact preview for a tag-rule ChangeSet — the panel that answers
  * "what will this rule do?" before the user commits to it.
@@ -64,6 +65,7 @@ import type {
 } from './types.js';
 
 interface SuggestArgs {
+  identities?: EntityIdentities;
   db: FinanceDb;
   transaction: PreviewInputTransaction;
   rules: readonly InMemoryTagRule[];
@@ -77,10 +79,12 @@ function suggestOver({
   rules,
   corrections,
   knownTags,
+  identities,
 }: SuggestArgs): TagSuggestion[] {
   return suggestTags(db, {
     description: transaction.description,
     entityId: transaction.entityId ?? null,
+    identities,
     recordTagRuleUsage: false,
     tagRules: rules,
     corrections,
@@ -155,11 +159,15 @@ export interface TagRuleChangeSetDiff {
  */
 export function diffTagRuleChangeSet(
   db: FinanceDb,
-  args: { changeSet: TagRuleChangeSet; transactions: PreviewInputTransaction[] }
+  args: {
+    changeSet: TagRuleChangeSet;
+    transactions: PreviewInputTransaction[];
+    identities?: EntityIdentities;
+  }
 ): TagRuleChangeSetDiff {
   const knownTags = tagVocabularyService.loadKnownTagSet(db);
   const persisted = loadPersistedTagRules(db);
-  const merged = mergeChangeSetOverRules(persisted, args.changeSet);
+  const merged = mergeChangeSetOverRules(persisted, args.changeSet, args.identities);
   const corrections = transactionCorrectionsService.listActiveTransactionCorrectionsForMatching(db);
 
   const acc: Accumulator = {
@@ -174,8 +182,9 @@ export function diffTagRuleChangeSet(
   for (const transaction of args.transactions) {
     if (transaction.userTags !== undefined) continue;
 
-    const before = suggestOver({ db, transaction, rules: persisted, corrections, knownTags });
-    const after = suggestOver({ db, transaction, rules: merged, corrections, knownTags });
+    const input = { db, transaction, corrections, knownTags, identities: args.identities };
+    const before = suggestOver({ ...input, rules: persisted });
+    const after = suggestOver({ ...input, rules: merged });
     const diff = diffTags(before, after);
     if (diff.added.length === 0 && diff.removed.length === 0) continue;
 
@@ -206,6 +215,7 @@ export function diffTagRuleChangeSet(
 export function previewTagRuleChangeSet(
   db: FinanceDb,
   args: {
+    identities?: EntityIdentities;
     changeSet: TagRuleChangeSet;
     transactions: PreviewInputTransaction[];
     maxPreviewItems: number;
@@ -228,7 +238,12 @@ export function previewTagRuleChangeSet(
  */
 export function previewTagRuleChangeSetFullHistory(
   db: FinanceDb,
-  args: { changeSet: TagRuleChangeSet; limit: number; offset: number }
+  args: {
+    changeSet: TagRuleChangeSet;
+    limit: number;
+    offset: number;
+    identities?: EntityIdentities;
+  }
 ): TagRulePreviewPage {
   const rows = transactionsService.listAllTransactionsForChangeSetPreview(db);
   const transactions: PreviewInputTransaction[] = rows.map((row) => ({
@@ -238,6 +253,7 @@ export function previewTagRuleChangeSetFullHistory(
   }));
 
   const { counts, affectedAll, newTags } = diffTagRuleChangeSet(db, {
+    identities: args.identities,
     changeSet: args.changeSet,
     transactions,
   });

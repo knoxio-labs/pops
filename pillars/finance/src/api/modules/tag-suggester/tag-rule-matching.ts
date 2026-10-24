@@ -29,13 +29,18 @@
  * tag, `addTagRuleTags`'s dedup keeps whichever rule's attribution came
  * first in this order.
  */
-import { and, asc, eq, isNull, or } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, or } from 'drizzle-orm';
 
 import {
   type FinanceDb,
   transactionCorrectionsService,
   transactionTagRules,
 } from '../../../db/index.js';
+import {
+  entityIdentity,
+  equivalentEntityIds,
+  type EntityIdentities,
+} from '../../../db/services/entity-identity.js';
 
 import type { MatchableDescription } from '../../../contract/pattern-match.js';
 
@@ -76,10 +81,15 @@ export interface InMemoryTagRule extends TagRuleMatchable {
 function ruleFires(
   rule: TagRuleMatchable,
   entityId: string | null,
-  description: MatchableDescription
+  description: MatchableDescription,
+  identities?: EntityIdentities
 ): boolean {
   if (!rule.isActive) return false;
-  if (rule.entityId !== null && rule.entityId !== entityId) return false;
+  if (
+    rule.entityId !== null &&
+    entityIdentity(rule.entityId, identities) !== entityIdentity(entityId, identities)
+  )
+    return false;
   return patternMatchesDescription(rule.descriptionPattern, rule.matchType, description);
 }
 
@@ -91,11 +101,12 @@ function ruleFires(
 export function matchTagRules<T extends TagRuleMatchable>(
   rules: readonly T[],
   description: string,
-  entityId: string | null
+  entityId: string | null,
+  identities?: EntityIdentities
 ): T[] {
   const matchable = describeForMatching(description);
   const matched = rules
-    .filter((rule) => ruleFires(rule, entityId, matchable))
+    .filter((rule) => ruleFires(rule, entityId, matchable, identities))
     .toSorted((a, b) => a.priority - b.priority || a.id.localeCompare(b.id));
 
   return MATCH_TYPE_GROUP_ORDER.flatMap((matchType) =>
@@ -103,16 +114,23 @@ export function matchTagRules<T extends TagRuleMatchable>(
   );
 }
 
-function buildEntityFilter(entityId: string | null): ReturnType<typeof or> {
+function buildEntityFilter(
+  entityId: string | null,
+  identities?: EntityIdentities
+): ReturnType<typeof or> {
   return entityId !== null
-    ? or(isNull(transactionTagRules.entityId), eq(transactionTagRules.entityId, entityId))
+    ? or(
+        isNull(transactionTagRules.entityId),
+        inArray(transactionTagRules.entityId, equivalentEntityIds(entityId, identities))
+      )
     : isNull(transactionTagRules.entityId);
 }
 
 export function findMatchingTagRules(
   db: FinanceDb,
   description: string,
-  entityId: string | null
+  entityId: string | null,
+  identities?: EntityIdentities
 ): TagRuleRow[] {
   const candidates = db
     .select({
@@ -125,11 +143,11 @@ export function findMatchingTagRules(
       priority: transactionTagRules.priority,
     })
     .from(transactionTagRules)
-    .where(and(eq(transactionTagRules.isActive, true), buildEntityFilter(entityId)))
+    .where(and(eq(transactionTagRules.isActive, true), buildEntityFilter(entityId, identities)))
     .orderBy(asc(transactionTagRules.priority), asc(transactionTagRules.id))
     .all();
 
-  return matchTagRules(candidates, description, entityId).map(
+  return matchTagRules(candidates, description, entityId, identities).map(
     ({ id, tags, descriptionPattern, entityId: ruleEntityId }) => ({
       id,
       tags,

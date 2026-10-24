@@ -22,6 +22,15 @@ const mockToastError = vi.fn();
 
 vi.mock('../../../../contacts-api/index.js', () => ({
   entitiesLookup: () => mockEntitiesLookup(),
+  entitiesResolve: async ({ body }: { body: { ids: string[] } }) => ({
+    data: {
+      data: body.ids.map((id) => ({
+        id,
+        canonicalId: ['ent-woolies', 'ent-netflix'].includes(id) ? id : null,
+      })),
+      revision: 1,
+    },
+  }),
 }));
 
 vi.mock('sonner', () => ({

@@ -11,6 +11,12 @@ import { and, eq, isNull } from 'drizzle-orm';
 import { InvalidPatternError, UnmatchablePatternError } from '../errors.js';
 import { transactionTagRules } from '../schema.js';
 import { mergeTagsWithinFacetLimits, parseStoredTags } from '../tag-facets.js';
+import {
+  EntityIdentityConflictError,
+  entityIdentity,
+  entityIdentitySql,
+  type EntityIdentities,
+} from './entity-identity.js';
 import { assertTagRuleWritable } from './tag-rule-write-guards.js';
 import {
   isValidRegexPattern,
@@ -36,9 +42,13 @@ export function findExistingTagRule(
   db: FinanceDb,
   matchType: TagRuleMatchType,
   normalizedPattern: string,
-  entityId: string | null
+  scope: string | null | { entityId: string | null; identities?: EntityIdentities }
 ): TransactionTagRuleRow | undefined {
-  return db
+  const { entityId, identities } =
+    typeof scope === 'object' && scope !== null
+      ? scope
+      : { entityId: scope, identities: undefined };
+  const rows = db
     .select()
     .from(transactionTagRules)
     .where(
@@ -47,10 +57,18 @@ export function findExistingTagRule(
         eq(transactionTagRules.descriptionPattern, normalizedPattern),
         entityId === null
           ? isNull(transactionTagRules.entityId)
-          : eq(transactionTagRules.entityId, entityId)
+          : eq(
+              entityIdentitySql(transactionTagRules.entityId, identities),
+              entityIdentity(entityId, identities)
+            )
       )
     )
-    .get();
+    .all();
+  if (identities !== undefined && rows.length > 1)
+    throw new EntityIdentityConflictError(
+      'Multiple tag rules share a canonical identity; resolve their scopes before reinforcing'
+    );
+  return rows[0];
 }
 
 /**
@@ -148,9 +166,10 @@ export interface TagRuleWriteResult {
  */
 export function createTransactionTagRule(
   db: FinanceDb,
-  input: CreateTransactionTagRuleInput
+  input: CreateTransactionTagRuleInput,
+  identities?: EntityIdentities
 ): TransactionTagRuleRow {
-  return createOrReinforceTransactionTagRule(db, input).row;
+  return createOrReinforceTransactionTagRule(db, input, identities).row;
 }
 
 /**
@@ -164,7 +183,8 @@ export function createTransactionTagRule(
  */
 export function createOrReinforceTransactionTagRule(
   db: FinanceDb,
-  input: CreateTransactionTagRuleInput
+  input: CreateTransactionTagRuleInput,
+  identities?: EntityIdentities
 ): TagRuleWriteResult {
   assertTagRuleWritable(input);
   if (input.matchType === 'regex' && !isValidRegexPattern(input.descriptionPattern)) {
@@ -176,7 +196,7 @@ export function createOrReinforceTransactionTagRule(
   }
   const entityId = input.entityId ?? null;
 
-  const existing = findExistingTagRule(db, input.matchType, normalized, entityId);
+  const existing = findExistingTagRule(db, input.matchType, normalized, { entityId, identities });
   if (existing) {
     return {
       outcome: 'reinforced',

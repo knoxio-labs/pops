@@ -23,6 +23,7 @@
  * so deploy automation can halt.
  */
 import { createContactsClient } from '../src/api/contacts/client.js';
+import { loadEntityIdentities } from '../src/api/contacts/identity-snapshot.js';
 import { resolveFinanceSqlitePath } from '../src/api/finance-sqlite-path.js';
 import { entityOrphansService, openFinanceDb } from '../src/db/index.js';
 
@@ -40,7 +41,12 @@ async function main(): Promise<void> {
 
   const opened = openFinanceDb(resolveFinanceSqlitePath());
   try {
-    const plan = entityOrphansService.planEntityRepair(opened.db, live);
+    const identities = await loadEntityIdentities(
+      opened.db,
+      contacts,
+      live.map((entity) => entity.id)
+    );
+    const plan = entityOrphansService.planEntityRepair(opened.db, live, identities);
 
     console.warn(
       `[repair-entity-ids] live contacts=${live.length} repairable=${plan.remap.size} ` +

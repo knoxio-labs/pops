@@ -6,6 +6,8 @@ import { EditableTransactionCard } from '../EditableTransactionCard';
 import { TransactionCard } from '../TransactionCard';
 import { TransactionGroup } from '../TransactionGroup';
 
+import type { EntityIdentities } from '@pops/finance';
+
 import type { TransactionType } from '../../../lib/transaction-type';
 import type { groupTransactionsByEntity } from '../../../lib/transaction-utils';
 import type { ProcessedTransaction } from '../../../store/importStore';
@@ -49,6 +51,7 @@ export interface ReviewTabBaseProps {
   onSaveEdit: (t: ProcessedTransaction, edited: Partial<ProcessedTransaction>) => void;
   onCancelEdit: () => void;
   entities?: Array<{ id: string; name: string }>;
+  identities?: EntityIdentities;
   entityVerification: EntityVerification;
 }
 
@@ -92,9 +95,10 @@ export function GroupedView({
 }) {
   return (
     <div className="space-y-3">
-      {props.groups.map((group, idx) => (
+      {props.groups.map((group) => (
         <TransactionGroup
-          key={idx}
+          identities={props.identities}
+          key={group.identityKey}
           group={group}
           onAcceptAll={props.onAcceptAll}
           onCreateAndAssignAll={props.onCreateAndAssignAll}
@@ -128,6 +132,7 @@ export function ListView({
       {props.transactions.map((t) =>
         props.editingTransaction === t ? (
           <EditableTransactionCard
+            identities={props.identities}
             key={t.checksum}
             transaction={t}
             onSave={props.onSaveEdit}
@@ -136,6 +141,7 @@ export function ListView({
           />
         ) : (
           <TransactionCard
+            identities={props.identities}
             key={t.checksum}
             transaction={t}
             onEntitySelect={props.onEntitySelect}
