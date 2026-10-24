@@ -93,10 +93,12 @@ fn parse_card(text: &str, record_id: String) -> Result<SourceContact, &'static s
                 "Legacy property encoding is unsupported; export vCard 3.0 or 4.0 as Unicode",
             );
         }
-        let label = params
+        let labels: Vec<&str> = params
             .iter()
-            .find(|(key, _)| key == "TYPE")
-            .map(|(_, values)| values.join(","));
+            .filter(|(key, _)| key == "TYPE")
+            .flat_map(|(_, values)| values.iter().map(String::as_str))
+            .collect();
+        let label = (!labels.is_empty()).then(|| labels.join(","));
         match name {
             "VERSION" => {
                 if version.replace(value).is_some() {
