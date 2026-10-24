@@ -596,3 +596,31 @@ async fn a_busy_refresh_releases_job_ownership_without_consuming_retry_budget() 
         "completed"
     );
 }
+
+#[tokio::test]
+async fn fresh_human_consent_can_replace_a_credential_that_the_current_root_key_cannot_read() {
+    let (pool, runtime, fake, id, epoch) = setup("google", "people/one").await;
+    sqlx::query("UPDATE provider_accounts SET credential=?1 WHERE account_id=?2")
+        .bind(vec![0u8])
+        .bind(&id)
+        .execute(&pool)
+        .await
+        .unwrap();
+    let human = HumanIdentity::for_test("operator");
+    let attempt = begin_authorization(&pool, &runtime.cipher, &human, &id, epoch, 100)
+        .await
+        .unwrap();
+    fake.replies.lock().unwrap().extend([(200,json!({"access_token":"fictional-access","refresh_token":"fictional-reconnected-refresh","token_type":"Bearer","expires_in":3600,"scope":crate::providers::google::oauth::CONTACTS_READ_ONLY}).to_string()),(200,json!({"resourceName":"people/one"}).to_string())]);
+    assert_eq!(
+        runtime
+            .finish_google(&pool, &human, &attempt.state, &secret(), 101)
+            .await
+            .unwrap(),
+        id
+    );
+    let current = store::load_credential(&pool, &runtime.cipher, &id)
+        .await
+        .unwrap();
+    assert!(current.epoch.0 > epoch.0);
+    assert_eq!(current.secret.expose(), b"fictional-reconnected-refresh");
+}

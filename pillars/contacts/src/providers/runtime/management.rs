@@ -73,7 +73,10 @@ impl ProviderRuntime {
         let previous = match store::load_credential(pool, &self.cipher, &consumed.account_id).await
         {
             Ok(credential) => Some(credential),
-            Err(store::ProviderStoreError::StaleAccount) => None,
+            Err(
+                store::ProviderStoreError::StaleAccount
+                | store::ProviderStoreError::CredentialUnavailable,
+            ) => None,
             Err(error) => return Err(error.into()),
         };
         let tokens = retry(&self.delay, || {
