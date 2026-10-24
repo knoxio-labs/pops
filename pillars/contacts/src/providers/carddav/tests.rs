@@ -143,7 +143,7 @@ async fn discovery_revalidates_all_hrefs_and_accepts_namespace_aliases() {
     let fake = Fake::new(vec![
         Step::xml("PROPFIND", "https://contacts.icloud.com/", 207, &multi(&properties("/", &format!("<d:current-user-principal><d:href>{principal}</d:href></d:current-user-principal>")), None)).containing("current-user-principal"),
         Step::xml("PROPFIND", principal, 207, &multi(&properties(principal, "<c:addressbook-home-set><d:href>/fictional/carddav/</d:href></c:addressbook-home-set>"), None)),
-        Step::xml("PROPFIND", home, 207, &multi(&properties(BOOK, "<d:resourcetype><d:collection/><c:addressbook/></d:resourcetype><d:displayname>Fictional &amp; Book</d:displayname>"), None)),
+        Step::xml("PROPFIND", home, 207, &multi(&(properties(home, "<d:resourcetype><d:collection/></d:resourcetype>") + &properties(BOOK, "<d:resourcetype><d:collection/><c:addressbook/></d:resourcetype><d:displayname>Fictional &amp; Book</d:displayname>")), None)),
     ]);
     let books = CardDavAdapter::new(fake.clone())
         .discover(&authorization())
@@ -164,7 +164,7 @@ async fn account_discovery_uses_authenticated_principal_instead_of_labels() {
         let fake = Fake::new(vec![
             Step::xml("PROPFIND", "https://contacts.icloud.com/", 207, &multi(&properties("/", &format!("<d:current-user-principal><d:href>/{name}/principal/</d:href></d:current-user-principal>")), None)),
             Step::xml("PROPFIND", &principal, 207, &multi(&properties(&principal, &format!("<c:addressbook-home-set><d:href>{home}</d:href></c:addressbook-home-set>")), None)),
-            Step::xml("PROPFIND", home, 207, &multi(&properties(BOOK, "<d:resourcetype><d:collection/><c:addressbook/></d:resourcetype><d:displayname>Same fictional label</d:displayname>"), None)),
+            Step::xml("PROPFIND", home, 207, &multi(&(properties(home, "<d:resourcetype><d:collection/></d:resourcetype>") + &properties(BOOK, "<d:resourcetype><d:collection/><c:addressbook/></d:resourcetype><d:displayname>Same fictional label</d:displayname>")), None)),
         ]);
         let account = CardDavAdapter::new(fake.clone())
             .discover_account(&authorization())
@@ -211,7 +211,7 @@ async fn discovery_refuses_unapproved_authentication_targets_before_requesting()
 }
 
 #[tokio::test]
-async fn discovery_ignores_failed_propstats_and_rejects_redirects() {
+async fn discovery_rejects_failed_propstats_and_redirects() {
     for (code, body, expected) in [
         (302, "", CardDavError::Transport),
         (401, "", CardDavError::Unauthorized),
@@ -249,7 +249,95 @@ async fn discovery_ignores_failed_propstats_and_rejects_redirects() {
         CardDavAdapter::new(fake.clone())
             .discover(&authorization())
             .await,
-        Err(CardDavError::MalformedResponse)
+        Err(CardDavError::Unavailable)
+    ));
+    fake.done();
+}
+
+#[tokio::test]
+async fn discovery_requires_complete_successful_home_evidence() {
+    let home = "https://p01-contacts.icloud.com/fictional/carddav/";
+    let self_response = properties(home, "<d:resourcetype><d:collection/></d:resourcetype>");
+    let book_response = properties(
+        BOOK,
+        "<d:resourcetype><d:collection/><c:addressbook/></d:resourcetype>",
+    );
+    let missing_type = properties(BOOK, "<d:displayname>Fictional</d:displayname>");
+    let failed_type = book_response.replace("200 OK", "403 Forbidden");
+    let failed_optional = format!("<d:response><d:href>{BOOK}</d:href><d:propstat><d:prop><d:resourcetype><d:collection/><c:addressbook/></d:resourcetype></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat><d:propstat><d:prop><d:displayname/></d:prop><d:status>HTTP/1.1 404 Missing</d:status></d:propstat></d:response>");
+    for (listing, expected) in [
+        (multi("", None), None),
+        (multi(&book_response, None), None),
+        (multi(&properties(home, "<d:resourcetype/>"), None), None),
+        (
+            multi(&self_response.replace("200 OK", "403 Forbidden"), None),
+            None,
+        ),
+        (multi(&(self_response.clone() + &missing_type), None), None),
+        (multi(&(self_response.clone() + &failed_type), None), None),
+        (
+            multi(&(self_response.clone() + &status(BOOK, 403)), None),
+            None,
+        ),
+        (
+            multi(
+                &(self_response.clone() + &book_response + &book_response),
+                None,
+            ),
+            None,
+        ),
+        (
+            multi(
+                &(self_response.clone()
+                    + &properties(BOOK, "<d:resourcetype><c:addressbook/></d:resourcetype>")),
+                None,
+            ),
+            None,
+        ),
+        (
+            format!("<d:multistatus xmlns:d=\"DAV:\">{self_response}"),
+            None,
+        ),
+        (multi(&self_response, None), Some(0)),
+        (multi(&(self_response + &failed_optional), None), Some(1)),
+    ] {
+        let principal = "https://p01-contacts.icloud.com/fictional/principal/";
+        let fake = Fake::new(vec![
+            Step::xml("PROPFIND", "https://contacts.icloud.com/", 207, &multi(&properties("/", &format!("<d:current-user-principal><d:href>{principal}</d:href></d:current-user-principal>")), None)),
+            Step::xml("PROPFIND", principal, 207, &multi(&properties(principal, &format!("<c:addressbook-home-set><d:href>{home}</d:href></c:addressbook-home-set>")), None)),
+            Step::xml("PROPFIND", home, 207, &listing),
+        ]);
+        let result = CardDavAdapter::new(fake.clone())
+            .discover(&authorization())
+            .await;
+        match expected {
+            Some(count) => assert_eq!(result.unwrap().len(), count),
+            None => assert!(result.is_err()),
+        }
+        fake.done();
+    }
+}
+
+#[tokio::test]
+async fn discovery_rejects_partial_home_set_evidence_before_listing() {
+    let principal = "https://p01-contacts.icloud.com/fictional/principal/";
+    let homes = properties(
+        principal,
+        "<c:addressbook-home-set><d:href>/fictional/carddav/</d:href></c:addressbook-home-set>",
+    ) + &properties(
+        principal,
+        "<c:addressbook-home-set><d:href>/fictional/other/</d:href></c:addressbook-home-set>",
+    )
+    .replace("200 OK", "403 Forbidden");
+    let fake = Fake::new(vec![
+        Step::xml("PROPFIND", "https://contacts.icloud.com/", 207, &multi(&properties("/", &format!("<d:current-user-principal><d:href>{principal}</d:href></d:current-user-principal>")), None)),
+        Step::xml("PROPFIND", principal, 207, &multi(&homes, None)),
+    ]);
+    assert!(matches!(
+        CardDavAdapter::new(fake.clone())
+            .discover(&authorization())
+            .await,
+        Err(CardDavError::Unavailable)
     ));
     fake.done();
 }

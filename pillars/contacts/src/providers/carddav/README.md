@@ -4,7 +4,9 @@
 shared provider transport. Discovery starts at `https://contacts.icloud.com/`,
 finds the current principal and address-book home, then lists address books.
 Every discovered URL passes the transport's fixed iCloud host policy before
-credentials accompany another request. Redirects are refused.
+credentials accompany another request. Redirects are refused. Collection discovery
+requires successful home self-collection proof and an explicit successful resource
+type for every returned member; optional display-name failures are tolerated.
 
 `discover_account` also returns the canonical authenticated principal URL.
 Management uses this server-derived identity to reject a reconnect to a different

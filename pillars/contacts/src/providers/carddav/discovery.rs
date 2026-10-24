@@ -1,7 +1,7 @@
 use super::{joined, xml, CardDavAccount, CardDavAdapter, CardDavCollection, CardDavError};
 use crate::providers::credentials::SecretBytes;
 use crate::providers::transport::ProviderTransport;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 const DISCOVERY: &str = "https://contacts.icloud.com/";
 
@@ -28,15 +28,19 @@ impl<T: ProviderTransport> CardDavAdapter<T> {
             .await?;
         let mut principal = None;
         for response in principals.responses {
+            if response.status.is_some_and(|status| status != 200) {
+                return Err(CardDavError::Unavailable);
+            }
             for (status, properties) in response.properties {
-                if status == 200 {
-                    if let Some(href) = properties.principal {
-                        let href = joined(DISCOVERY, &href)?;
-                        if principal.as_ref().is_some_and(|current| current != &href) {
-                            return Err(CardDavError::MalformedResponse);
-                        }
-                        principal = Some(href);
+                if status != 200 {
+                    return Err(CardDavError::Unavailable);
+                }
+                if let Some(href) = properties.principal {
+                    let href = joined(DISCOVERY, &href)?;
+                    if principal.as_ref().is_some_and(|current| current != &href) {
+                        return Err(CardDavError::MalformedResponse);
                     }
+                    principal = Some(href);
                 }
             }
         }
@@ -46,9 +50,12 @@ impl<T: ProviderTransport> CardDavAdapter<T> {
             .await?;
         let mut home_urls = Vec::new();
         for response in homes.responses {
+            if response.status.is_some_and(|status| status != 200) {
+                return Err(CardDavError::Unavailable);
+            }
             for (status, properties) in response.properties {
                 if status != 200 {
-                    continue;
+                    return Err(CardDavError::Unavailable);
                 }
                 for href in properties.homes {
                     let home = joined(&principal, &href)?;
@@ -71,23 +78,49 @@ impl<T: ProviderTransport> CardDavAdapter<T> {
                     "<d:resourcetype/><d:displayname/>",
                 )
                 .await?;
+            let mut seen = BTreeSet::new();
+            let mut home_proven = false;
             for response in listing.responses {
                 if response.status.is_some_and(|status| status != 200) {
                     return Err(CardDavError::Unavailable);
                 }
                 let key = joined(&home, &response.href)?;
-                let mut addressbook = false;
+                if !seen.insert(key.clone()) {
+                    return Err(CardDavError::MalformedResponse);
+                }
+                let mut resource_type = None;
                 let mut display_name = None;
                 for (status, properties) in response.properties {
+                    if properties.resource_type_present {
+                        if status != 200 {
+                            return Err(CardDavError::Unavailable);
+                        }
+                        if resource_type
+                            .replace((properties.collection, properties.addressbook))
+                            .is_some()
+                        {
+                            return Err(CardDavError::MalformedResponse);
+                        }
+                    }
                     if status != 200 {
                         continue;
                     }
-                    addressbook |= properties.addressbook;
                     if properties.display_name.is_some() {
                         display_name = properties.display_name;
                     }
                 }
+                let (collection, addressbook) =
+                    resource_type.ok_or(CardDavError::MalformedResponse)?;
+                if key == home {
+                    if !collection {
+                        return Err(CardDavError::MalformedResponse);
+                    }
+                    home_proven = true;
+                }
                 if addressbook {
+                    if !collection {
+                        return Err(CardDavError::MalformedResponse);
+                    }
                     if !key.ends_with('/') {
                         return Err(CardDavError::MalformedResponse);
                     }
@@ -96,6 +129,9 @@ impl<T: ProviderTransport> CardDavAdapter<T> {
                 if books.len() > 256 {
                     return Err(CardDavError::ResponseLimit);
                 }
+            }
+            if !home_proven {
+                return Err(CardDavError::MalformedResponse);
             }
         }
         Ok(CardDavAccount {
