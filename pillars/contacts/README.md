@@ -57,7 +57,10 @@ unique person identifier, so consumers must reject ambiguous matches.
 
 Person profiles are explicit local structured-name overrides. Imported records
 retain their own display and structured names with an explicit completeness
-marker; display text alone does not establish complete-name evidence. Contact
+marker. File adapters qualify explicit nonblank given and family fields as
+complete while retaining additional names, prefixes and suffixes. CSV `Name` and
+vCard `FN` display text are never split into parts; given-only names do not
+qualify. Declared incomplete metadata remains incomplete. Contact
 points retain the original value and label. Conservative email and validated
 international phone keys are derived separately for matching. National phone
 values require an explicit known ISO `countryCode`; no country is inferred from
