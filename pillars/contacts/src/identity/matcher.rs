@@ -166,6 +166,7 @@ fn display_key(record: &IdentityRecord) -> Option<String> {
         .display_name
         .as_ref()
         .map(|name| normalize_name(name))
+        .filter(|name| !name.is_empty())
         .or_else(|| {
             record
                 .name
@@ -173,7 +174,6 @@ fn display_key(record: &IdentityRecord) -> Option<String> {
                 .as_ref()
                 .map(|name| name.as_str().to_owned())
         })
-        .filter(|name| !name.is_empty())
 }
 
 fn same_display_name(left: &IdentityRecord, right: &IdentityRecord) -> bool {
