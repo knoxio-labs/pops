@@ -2,6 +2,7 @@
   "ai": {
     "tools": []
   },
+  "assetsBaseUrl": "/contacts-api/ui/contacts.js",
   "consumedSettings": {
     "keys": []
   },
@@ -13,11 +14,42 @@
   "healthcheck": {
     "path": "/health"
   },
+  "nav": {
+    "basePath": "/contacts",
+    "color": "violet",
+    "icon": "contact-round",
+    "id": "contacts",
+    "items": [
+      {
+        "icon": "contact-round",
+        "label": "Import review",
+        "labelKey": "contacts:nav.importReview",
+        "path": ""
+      },
+      {
+        "icon": "plug",
+        "label": "Connections",
+        "labelKey": "contacts:nav.connections",
+        "path": "connections"
+      }
+    ],
+    "label": "Contacts",
+    "labelKey": "contacts:nav.title",
+    "order": 55
+  },
   "pages": [
     {
-      "bundleSlot": "contacts-list",
+      "bundleSlot": "contacts-import-review",
       "index": true,
       "path": ""
+    },
+    {
+      "bundleSlot": "contacts-import-review",
+      "path": "imports/:batchId"
+    },
+    {
+      "bundleSlot": "contacts-connections",
+      "path": "connections"
     }
   ],
   "pillar": "contacts",
@@ -59,6 +91,7 @@
   "settings": {
     "manifests": []
   },
+  "stylesheetUrl": "/contacts-api/ui/contacts.css",
   "uri": {
     "types": ["contacts/contact"]
   },

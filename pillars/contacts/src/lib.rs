@@ -24,3 +24,5 @@ pub mod search;
 pub mod service_account_scope;
 pub mod sources;
 pub mod time;
+
+pub mod ui;

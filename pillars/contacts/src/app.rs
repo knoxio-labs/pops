@@ -62,8 +62,8 @@ pub fn build_router_with_providers(
         .merge(crate::imports::routes::router())
         .merge(crate::imports::review_decision_routes::router())
         .merge(crate::imports::review_routes::router())
-        .merge(crate::imports::ready_routes::router())
         .merge(crate::providers::routes::router())
+        .merge(crate::imports::ready_routes::router())
         .merge(crate::persons::routes::router())
         .merge(crate::sources::routes::router())
         .merge(crate::merges::routes::router())
@@ -73,6 +73,7 @@ pub fn build_router_with_providers(
             write_guard_state,
             crate::merges::routes::guard_writes,
         ))
+        .merge(crate::ui::router(crate::config::ui_assets_path()))
         .layer(middleware::from_fn_with_state(
             scope_gate,
             enforce_service_account_scope,

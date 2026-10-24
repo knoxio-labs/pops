@@ -1,8 +1,11 @@
+import { readFileSync } from 'node:fs';
+
 import { describe, expect, it } from 'vitest';
 
 import {
   advertisesLoaderMountedUi,
   evaluateReachability,
+  locatePillarManifest,
   popsImageNamesFromCompose,
   uiImageForAssetsBaseUrl,
 } from '../check-pillar-ui-reachability.mjs';
@@ -144,6 +147,97 @@ describe('evaluateReachability', () => {
     const result = evaluateReachability(apps, noWireUi);
     expect(result.missing).toEqual(['@pops/app-alpha', '@pops/app-beta']);
     expect(result.covered).toEqual([]);
+  });
+});
+
+describe('Rust wire manifest reachability', () => {
+  const fixture = readFileSync(
+    new URL('../../pillars/contacts/tests/fixtures/manifest.json', import.meta.url),
+    'utf8'
+  );
+  const complete = {
+    assetsBaseUrl: '/beta-api/ui/beta.js',
+    pages: [{ path: '', bundleSlot: 'beta-home' }],
+    nav: { basePath: '/beta', items: [{ path: '', label: 'Home' }] },
+  };
+  const files = (paths: string[]): NonNullable<Parameters<typeof locatePillarManifest>[1]> => ({
+    existsSync: (path) => paths.some((suffix) => path.endsWith(suffix)),
+    readdirSync: () => [],
+    readFileSync: () => '',
+  });
+
+  it('discovers the runtime-pinned contacts JSON fixture', () => {
+    expect(locatePillarManifest('contacts')).toMatch(
+      /pillars\/contacts\/tests\/fixtures\/manifest\.json$/
+    );
+  });
+
+  it('checks the real Rust fixture through the same Compose image requirement', () => {
+    const wire = advertisesLoaderMountedUi(fixture, 'json');
+    expect(wire).toEqual({
+      assetsBaseUrl: true,
+      assetsBaseUrlPath: '/contacts-api/ui/contacts.js',
+      pages: true,
+      nav: true,
+    });
+    expect(
+      evaluateReachability([app('@pops/app-contacts')], () => wire, new Set(['pops-contacts']))
+        .covered
+    ).toEqual(['@pops/app-contacts']);
+    expect(
+      evaluateReachability([app('@pops/app-contacts')], () => wire, new Set(['pops-contacts-ui']))
+        .missing
+    ).toEqual(['@pops/app-contacts']);
+  });
+
+  it('discovers a generic Rust pillar without requiring a contacts-specific name', () => {
+    expect(
+      locatePillarManifest(
+        'beta',
+        files(['/beta/Cargo.toml', '/beta/src/manifest.rs', '/beta/tests/fixtures/manifest.json'])
+      )
+    ).toMatch(/beta\/tests\/fixtures\/manifest\.json$/);
+  });
+
+  it.each([
+    ['/beta/Cargo.toml', '/beta/src/manifest.rs'],
+    ['/beta/Cargo.toml', '/beta/tests/fixtures/manifest.json'],
+    ['/beta/tests/fixtures/manifest.json'],
+  ])('does not treat an incomplete Rust manifest layout as a wire source: %j', (...paths) => {
+    expect(locatePillarManifest('beta', files(paths))).toBeUndefined();
+  });
+
+  it('fails on malformed JSON rather than treating it as manifest source', () => {
+    expect(() => advertisesLoaderMountedUi('{"assetsBaseUrl":', 'json')).toThrow();
+  });
+
+  it.each([
+    { ...complete, assetsBaseUrl: undefined },
+    { ...complete, assetsBaseUrl: '' },
+    { ...complete, assetsBaseUrl: 42 },
+  ])('rejects missing, empty or malformed bundle metadata: %j', (manifest) => {
+    expect(advertisesLoaderMountedUi(JSON.stringify(manifest), 'json').assetsBaseUrl).toBe(false);
+  });
+
+  it.each([
+    { ...complete, pages: undefined },
+    { ...complete, pages: [] },
+    { ...complete, pages: 'pages' },
+    { ...complete, pages: [null] },
+    { ...complete, pages: [{ path: '', bundleSlot: '' }] },
+  ])('rejects missing, empty or malformed page metadata: %j', (manifest) => {
+    expect(advertisesLoaderMountedUi(JSON.stringify(manifest), 'json').pages).toBe(false);
+  });
+
+  it.each([
+    { ...complete, nav: undefined },
+    { ...complete, nav: {} },
+    { ...complete, nav: { ...complete.nav, items: [] } },
+    { ...complete, nav: { ...complete.nav, items: 'items' } },
+    { ...complete, nav: { ...complete.nav, items: [null] } },
+    { ...complete, nav: { ...complete.nav, basePath: '' } },
+  ])('rejects missing, empty or malformed navigation metadata: %j', (manifest) => {
+    expect(advertisesLoaderMountedUi(JSON.stringify(manifest), 'json').nav).toBe(false);
   });
 });
 
@@ -294,6 +388,10 @@ describe('advertisesLoaderMountedUi', () => {
 describe('uiImageForAssetsBaseUrl', () => {
   it('maps a bundle route to its production UI image', () => {
     expect(uiImageForAssetsBaseUrl('/finance-ui/finance.js')).toBe('pops-finance-ui');
+  });
+
+  it('maps an API-served bundle to the combined pillar image', () => {
+    expect(uiImageForAssetsBaseUrl('/beta-api/ui/beta.js')).toBe('pops-beta');
   });
 
   it.each(['/finance/finance.js', '/finance-ui/', 'https://example.com/finance-ui/finance.js'])(

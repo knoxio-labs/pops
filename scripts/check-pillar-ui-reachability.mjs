@@ -28,7 +28,7 @@
  *      and reading its `name` (expected `@pops/app-<pillar>`). Discovered from
  *      disk — never a hardcoded pillar list, which is the exact static-rot this
  *      whole phase kills.
- *   2. Read each pillar's wire manifest (`pillars/<x>/src/api/manifest.ts`) and
+ *   2. Read each pillar's wire manifest (TS source or a Rust runtime-pinned JSON fixture) and
  *      check it declares `assetsBaseUrl`, a non-empty `pages`, and a `nav`
  *      with non-empty `items`. Comments are stripped first, so a mention in
  *      prose does not count.
@@ -114,10 +114,12 @@ function discoverPillarApps() {
  * for `items: []` on `nav`: the shell builds the app rail from `nav.items`
  * ALONE, so a `nav` with no items is a rail entry with nothing to click.
  *
- * @param {string} src Manifest source.
+ * @param {string} src Manifest source or serialized Rust wire fixture.
+ * @param {'typescript' | 'json'} [format] JSON fixtures are pinned to the Rust builder by its tests.
  * @returns {{ assetsBaseUrl: boolean, assetsBaseUrlPath?: string, pages: boolean, nav: boolean }}
  */
-export function advertisesLoaderMountedUi(src) {
+export function advertisesLoaderMountedUi(src, format = 'typescript') {
+  if (format === 'json') return serializedLoaderUi(src);
   const code = stripComments(src);
   // Anchored to the start of a line, not merely to a word boundary. These
   // files discuss `pages`, `assetsBaseUrl` and `nav` at length in prose and in
@@ -154,14 +156,59 @@ export function advertisesLoaderMountedUi(src) {
   };
 }
 
+/** @param {unknown} value @returns {value is Record<string, unknown>} */
+function isRecord(value) {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/** @param {unknown} value */
+function nonemptyString(value) {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
+/** @param {unknown} value @param {(item: unknown) => boolean} valid */
+function nonemptyEntries(value, valid) {
+  return Array.isArray(value) && value.length > 0 && value.every(valid);
+}
+
+/** @param {string} source */
+function serializedLoaderUi(source) {
+  /** @type {unknown} */
+  const manifest = JSON.parse(source);
+  if (!isRecord(manifest)) throw new Error('Wire manifest must be a JSON object');
+  const assetsBaseUrlPath =
+    typeof manifest.assetsBaseUrl === 'string' && nonemptyString(manifest.assetsBaseUrl)
+      ? manifest.assetsBaseUrl
+      : undefined;
+  const pages = nonemptyEntries(
+    manifest.pages,
+    (page) => isRecord(page) && typeof page.path === 'string' && nonemptyString(page.bundleSlot)
+  );
+  const nav =
+    isRecord(manifest.nav) &&
+    nonemptyString(manifest.nav.basePath) &&
+    nonemptyEntries(
+      manifest.nav.items,
+      (item) => isRecord(item) && typeof item.path === 'string' && nonemptyString(item.label)
+    );
+  return {
+    assetsBaseUrl: assetsBaseUrlPath !== undefined,
+    ...(assetsBaseUrlPath === undefined ? {} : { assetsBaseUrlPath }),
+    pages,
+    nav,
+  };
+}
+
 /**
- * Map an `assetsBaseUrl` served by a POPS UI bundle to its production image.
+ * Map an `assetsBaseUrl` to its dedicated UI image or the pillar image serving `/ui` itself.
  * @param {string} assetsBaseUrlPath Root-relative loader bundle path.
  * @returns {string | undefined} Image name or undefined for a non-UI path.
  */
 export function uiImageForAssetsBaseUrl(assetsBaseUrlPath) {
   const match = /^\/([a-z0-9-]+-ui)\/[a-z0-9._-]+$/.exec(assetsBaseUrlPath);
-  return match?.[1] === undefined ? undefined : `pops-${match[1]}`;
+  if (match?.[1] !== undefined) return `pops-${match[1]}`;
+  const combined = /^\/([a-z0-9-]+)-api\/ui\/[a-z0-9._-]+$/.exec(assetsBaseUrlPath);
+  return combined?.[1] === undefined ? undefined : `pops-${combined[1]}`;
 }
 
 /**
@@ -265,7 +312,7 @@ export function evaluateReachability(apps, loaderUiOf, composeImages) {
         `${app.pkgName} — no wire manifest could be found for pillar ` +
           `'${app.pillarId}' (looked for src/api/manifest.ts, ` +
           `src/api/${app.pillarId}-manifest.ts, and any src/api/*.ts building a ` +
-          `ManifestPayload)`
+          `ManifestPayload, or a Rust src/manifest.rs with tests/fixtures/manifest.json)`
       );
       continue;
     }
@@ -297,7 +344,11 @@ export function evaluateReachability(apps, loaderUiOf, composeImages) {
  * the convention — what this guards against is the failure mode, not the one
  * file (POPS-3220).
  *
- * The last resort scans `src/api/*.ts` for the payload type rather than
+ * Rust pillars use their committed `tests/fixtures/manifest.json`, which their
+ * manifest fixture test pins to the real Rust builder's output and the SDK wire
+ * validator checks separately. No second copy of their UI metadata is needed.
+ *
+ * The last resort for TS pillars scans `src/api/*.ts` for the payload type rather than
  * enumerating more names, so a pillar that picks its own filename is found
  * without this list having to grow. Returns `undefined` when there is
  * genuinely nothing, which the caller reports as its own failure rather than
@@ -317,7 +368,14 @@ export function locatePillarManifest(
   pillarId,
   files = /** @type {ManifestFs} */ ({ existsSync, readFileSync, readdirSync })
 ) {
-  const apiDir = join(repoRoot, 'pillars', pillarId, 'src/api');
+  const pillarRoot = join(repoRoot, 'pillars', pillarId);
+  if (files.existsSync(join(pillarRoot, 'Cargo.toml'))) {
+    const fixture = join(pillarRoot, 'tests/fixtures/manifest.json');
+    return files.existsSync(join(pillarRoot, 'src/manifest.rs')) && files.existsSync(fixture)
+      ? fixture
+      : undefined;
+  }
+  const apiDir = join(pillarRoot, 'src/api');
   for (const name of ['manifest.ts', `${pillarId}-manifest.ts`]) {
     const candidate = join(apiDir, name);
     if (files.existsSync(candidate)) return candidate;
@@ -365,7 +423,11 @@ function run() {
       if (manifestPath === undefined) {
         return { assetsBaseUrl: false, pages: false, nav: false, found: false };
       }
-      return { ...advertisesLoaderMountedUi(readFileSync(manifestPath, 'utf8')), found: true };
+      const format = manifestPath.endsWith('.json') ? 'json' : 'typescript';
+      return {
+        ...advertisesLoaderMountedUi(readFileSync(manifestPath, 'utf8'), format),
+        found: true,
+      };
     },
     composeImages
   );
