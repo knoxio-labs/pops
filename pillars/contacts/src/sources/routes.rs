@@ -1,7 +1,7 @@
 //! Source account metadata and provenance reads; write orchestration uses the transaction repository.
 
 use axum::{
-    extract::{Path, State},
+    extract::{rejection::JsonRejection, Path, State},
     http::StatusCode,
     routing::get,
     Json, Router,
@@ -59,8 +59,9 @@ pub async fn list_accounts(
 #[utoipa::path(post,path="/sources/accounts",operation_id="sources.accounts.register",request_body=SourceAccountInput,responses((status=200,body=SourceAccountResponse),(status=400,body=crate::api::ErrorBody)))]
 pub async fn register_account(
     State(state): State<AppState>,
-    Json(input): Json<SourceAccountInput>,
+    body: Result<Json<SourceAccountInput>, JsonRejection>,
 ) -> Result<(StatusCode, Json<SourceAccountResponse>), ApiError> {
+    let Json(input) = body.map_err(|_| ApiError::bad_request("Invalid source account metadata"))?;
     let data = repo::create_or_get_account(&state.pool, &input)
         .await
         .map_err(source_error)?;
