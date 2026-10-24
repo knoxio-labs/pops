@@ -42,8 +42,8 @@ description = "Install all dependencies"
 run = "pnpm install"
 
 [tasks.build]
-description = "Build the whole compiled TS graph in one ordered pass (^build replacement)"
-run = "tsc -b tsconfig.build.json"
+description = "Generate the API clients, then build the whole compiled TS graph in one ordered pass (^build replacement)"
+run = ["node scripts/codegen/generate.mjs", "tsc -b tsconfig.build.json"]
 
 [tasks."build:rust"]
 description = "Build the cargo workspace"
@@ -127,15 +127,19 @@ description = "Lint all units (oxlint is workspace-wide, no per-unit orchestrati
 # The preflight comes first because oxlint's answer in a fresh worktree is
 # worse than no answer: a tsconfig error pointing at libs/ui that reads as
 # pre-existing repo debt on main, which it is not (POPS-2400).
-run = ["node scripts/check-deps-materialised.mjs", "oxlint --type-aware"]
+run = [
+  "node scripts/check-deps-materialised.mjs",
+  "node scripts/codegen/generate.mjs",
+  "oxlint --type-aware",
+]
 
 [tasks.registry]
 description = "Regenerate the module-registry static manifest (src/generated.ts)"
 run = "tsx libs/module-registry/scripts/build.ts"
 
 [tasks."openapi:generate"]
-description = "Regenerate every pillar's OpenAPI snapshot + typed client (fans out to each pillar's build codegen)"
-run = "mise run run-all build"
+description = "Regenerate every pillar's OpenAPI snapshot (fans out to each pillar's build), then the API clients generated from them"
+run = ["mise run run-all build", "node scripts/codegen/generate.mjs"]
 
 # The iOS app's UI-level flow needs a running BFM, and neither unit may reach
 # into the other (ADR-043) — so, like the fixture tasks below, the task that

@@ -49,7 +49,7 @@ function workspace(): string {
     '.github/actions/setup-mise/action.yml': 'name: Setup mise\n',
     'scripts/ci/ci-receipts.mjs': "import './receipt-helper.mjs';\n",
     'scripts/ci/receipt-helper.mjs': 'export {};\n',
-    'scripts/ci/check-generated-clients.mjs': 'export {};\n',
+    'scripts/codegen/generate.mjs': 'export {};\n',
     'scripts/require-built-graph.mjs': "import './graph-helper.mjs';\n",
     'scripts/graph-helper.mjs': 'export {};\n',
     'scripts/unrelated.mjs': 'export {};\n',

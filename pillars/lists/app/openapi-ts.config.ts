@@ -16,9 +16,6 @@ import { defineConfig } from '@hey-api/openapi-ts';
 
 export default defineConfig({
   input: '../openapi/lists.openapi.json',
-  output: {
-    path: 'src/lists-api',
-  },
   plugins: [
     {
       name: '@hey-api/client-fetch',
