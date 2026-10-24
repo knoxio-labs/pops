@@ -200,7 +200,8 @@ export function rollUpMerchantSpend(
     );
     const { key: merchantKey, identity } = identifyMerchant(
       order.merchantEntityId,
-      order.merchantEntityName
+      order.merchantEntityName,
+      filter.canonicalMerchants
     );
     const merchant: LabelledMerchant = {
       identity,

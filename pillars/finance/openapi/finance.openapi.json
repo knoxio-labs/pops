@@ -32349,6 +32349,16 @@
               }
             },
             "description": "200"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "503"
           }
         },
         "summary": "Rule-based tag suggestions for a description/entity (no LLM call)",

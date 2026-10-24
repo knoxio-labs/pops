@@ -10,6 +10,7 @@ import type { ProcessedTransaction } from '@pops/finance';
 import type { TransactionType } from '../../../lib/transaction-type';
 
 export interface TypedEntityPickerProps {
+  selectedEntityId?: string;
   transaction: ProcessedTransaction;
   entities?: Array<{ id: string; name: string }>;
   onEntitySelect?: (
@@ -85,7 +86,11 @@ export function TypedEntityPicker(props: TypedEntityPickerProps) {
     <>
       <EntitySelect
         entities={entities ?? []}
-        value={pending?.kind === 'select' ? pending.entityId : (transaction.entity?.entityId ?? '')}
+        value={
+          pending?.kind === 'select'
+            ? pending.entityId
+            : (props.selectedEntityId ?? transaction.entity?.entityId ?? '')
+        }
         onChange={(entityId, entityName) => {
           if (forceType) {
             request({ kind: 'select', entityId, entityName });
@@ -94,7 +99,7 @@ export function TypedEntityPicker(props: TypedEntityPickerProps) {
           onEntitySelect?.(transaction, entityId, entityName);
         }}
         onCreate={
-          onCreateEntityWithName
+          entities !== undefined && onCreateEntityWithName
             ? (entityName) => {
                 if (forceType) {
                   request({ kind: 'create', entityName });

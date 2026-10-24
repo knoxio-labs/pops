@@ -58,6 +58,7 @@ import {
   pageThroughEntities,
 } from './entity-fetch.js';
 import { ContactsPermanentError, ContactsUnavailableError } from './errors.js';
+import { resolveContactIdentities } from './identity.js';
 
 import type { KnownTagSet } from '../../db/services/tag-vocabulary.js';
 import type {
@@ -99,6 +100,9 @@ export type ContactsRouter = {
       limit?: number;
       offset?: number;
     }) => Promise<ListResponse>;
+    resolve: (input: {
+      ids: string[];
+    }) => Promise<{ data: { id: string; canonicalId: string | null }[]; revision: number }>;
     get: (input: { id: string }) => Promise<{ data: ContactEntity }>;
     create: (input: {
       name: string;
@@ -142,6 +146,10 @@ export function createContactsClient(
   return {
     fetchAllEntities(query: { search?: string; type?: string } = {}): Promise<ContactEntity[]> {
       return pageThroughEntities(handleFactory(), query, maxPages);
+    },
+
+    resolveEntityIds(ids: readonly string[]) {
+      return resolveContactIdentities(handleFactory(), ids);
     },
 
     async fetchEntityDefaultTags(entityId: string): Promise<string[]> {

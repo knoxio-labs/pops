@@ -17,35 +17,21 @@ import { accounts } from '../schema.js';
 import {
   translateWriteConflict,
   validatePersonEntityInvariant,
-  validatePersonEntityInvariantOnUpdate,
 } from './account-entity-invariant.js';
 import { accountKindsMatchingSearch } from './account-search.js';
+import { prepareAccountUpdate } from './account-update-plan.js';
+import { assertCanonicalPersonAccountAvailable } from './canonical-person-account.js';
 import * as entityPrecreateOutboxService from './entity-precreate-outbox.js';
 
 import type { AccountKind } from '../../contract/account-kind.js';
+import type { CreateAccountInput, UpdateAccountInput } from './account-inputs.js';
+import type { EntityIdentities } from './entity-identity.js';
 import type { FinanceDb } from './internal.js';
 
 /** Raw drizzle row shape. */
 export type AccountRow = typeof accounts.$inferSelect;
 
-/** Fields accepted on create. */
-export interface CreateAccountInput {
-  name: string;
-  kind: AccountKind;
-  currency: string;
-  displayOrder?: number;
-  entityId?: string | null;
-}
-
-/** Same shape as create — all fields optional for PATCH semantics, plus `archivedAt`. */
-export interface UpdateAccountInput {
-  name?: string;
-  kind?: AccountKind;
-  currency?: string;
-  displayOrder?: number;
-  entityId?: string | null;
-  archivedAt?: string | null;
-}
+export type { CreateAccountInput, UpdateAccountInput } from './account-inputs.js';
 
 /** Filters + pagination accepted by `listAccounts`. */
 export interface ListAccountsOptions {
@@ -72,6 +58,8 @@ export interface AccountReorderEntry {
 
 /** Options accepted by `createAccount` beyond the row's own fields. */
 export interface CreateAccountOptions {
+  /** Canonical snapshot for the person/contact/currency uniqueness invariant. */
+  identities?: EntityIdentities;
   /**
    * Escape hatch for the one legitimate case where a `person` account is
    * inserted with `entityId = null`: the caller already tried to resolve the
@@ -174,6 +162,11 @@ export function createAccount(
   const entityId = input.entityId ?? null;
   const allowPendingEntity = options.allowPendingEntity ?? false;
   validatePersonEntityInvariant(input.kind, entityId, allowPendingEntity);
+  assertCanonicalPersonAccountAvailable(
+    db,
+    { kind: input.kind, entityId, currency: input.currency },
+    options.identities
+  );
 
   const id = crypto.randomUUID();
   try {
@@ -194,17 +187,6 @@ export function createAccount(
     translateWriteConflict(err, { name: input.name, currency: input.currency, entityId });
   }
   return getAccount(db, id);
-}
-
-function buildAccountUpdates(input: UpdateAccountInput): Partial<typeof accounts.$inferInsert> {
-  const updates: Partial<typeof accounts.$inferInsert> = {};
-  if (input.name !== undefined) updates.name = input.name;
-  if (input.kind !== undefined) updates.kind = input.kind;
-  if (input.currency !== undefined) updates.currency = input.currency;
-  if (input.displayOrder !== undefined) updates.displayOrder = input.displayOrder;
-  if (input.entityId !== undefined) updates.entityId = input.entityId ?? null;
-  if (input.archivedAt !== undefined) updates.archivedAt = input.archivedAt ?? null;
-  return updates;
 }
 
 /**
@@ -231,17 +213,17 @@ function buildAccountUpdates(input: UpdateAccountInput): Partial<typeof accounts
  * `null`) can be patched on unrelated fields without tripping
  * `PersonAccountRequiresEntityError` before the outbox resolves it.
  */
-export function updateAccount(db: FinanceDb, id: string, input: UpdateAccountInput): AccountRow {
+export function updateAccount(
+  db: FinanceDb,
+  id: string,
+  input: UpdateAccountInput,
+  identities?: EntityIdentities
+): AccountRow {
   const current = getAccount(db, id);
   if (input.kind !== undefined && input.kind !== current.kind && !isDayOneAccountKind(input.kind)) {
     throw new ReservedAccountKindError(input.kind);
   }
-  const effectiveKind = input.kind ?? current.kind;
-  const effectiveEntityId =
-    input.entityId !== undefined ? (input.entityId ?? null) : current.entityId;
-  validatePersonEntityInvariantOnUpdate(current, input, effectiveKind, effectiveEntityId);
-
-  const updates = buildAccountUpdates(input);
+  const { updates, effectiveEntityId } = prepareAccountUpdate(db, current, input, identities);
   if (Object.keys(updates).length > 0) {
     updates.updatedAt = new Date().toISOString();
     const effectiveName = input.name ?? current.name;

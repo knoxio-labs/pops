@@ -9,7 +9,7 @@ Tag rules and correction rules are separate tables doing separate jobs, and the 
 - **Tag rules drive tagging only.** They never infer entity or transaction type.
 - **Correction rules classify.** A correction carrying only tags — no `entityId`, no `transactionType` — is a tag rule in the wrong table. `../corrections/service.ts` guards against it on apply, and `../imports/commit.ts` filters it again, because inside commit's single transaction one such op would roll back an entire import.
 
-A tag rule matches globally when its `entityId` is null, or only within one entity when set.
+A tag rule matches globally when its `entityId` is null, or within its canonical contact identity when set. HTTP previews, overlaps, suggestions and retroactive application share an explicit canonical snapshot. Historical scope ids stay stored. Reinforcement returns `409` when several stored rules collapse onto the same canonical pattern scope, rather than choosing one to mutate. Identity resolution failure returns `503`.
 
 ## Suggestions, never overrides
 

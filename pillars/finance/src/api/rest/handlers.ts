@@ -65,14 +65,14 @@ export function makeFinanceRestHandlers(deps: {
     },
     transactionHistory: makeTransactionHistoryHandlers(db),
     tagged: makeTaggedHandlers(db, deps.syncSharedTagsOnce),
-    tagRules: makeTagRulesHandlers(db),
-    corrections: makeCorrectionsHandlers(db),
+    tagRules: makeTagRulesHandlers(db, deps.contacts),
+    corrections: makeCorrectionsHandlers(db, deps.contacts),
     entityUsage: makeEntityUsageHandlers(db, deps.contacts),
     imports: makeImportsHandlers(db, deps.contacts),
     importDrafts: makeImportDraftsHandlers(db),
-    search: makeSearchHandlers(db),
+    search: makeSearchHandlers(db, deps.contacts),
     settings: makeSettingsHandlers(db),
     dataQuality: makeDataQualityHandlers(db),
-    summary: makeSummaryHandlers(db),
+    summary: makeSummaryHandlers(db, deps.contacts),
   });
 }

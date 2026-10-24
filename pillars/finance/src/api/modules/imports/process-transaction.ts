@@ -72,6 +72,7 @@ function tryEntityMatch(
     matchType: match.matchType,
     knownTags: context.knownTags,
     entityDefaultTags: context.entityDefaultTags,
+    identities: context.identities,
   });
 }
 
@@ -90,6 +91,7 @@ export function classifyWithoutAi(args: ProcessTransactionArgs): ClassifyStageRe
     knownTags: context.knownTags,
     rules: context.correctionRules,
     entityDefaultTags: context.entityDefaultTags,
+    identities: context.identities,
     recordUsage: false,
   });
   if (correctionApplied) {

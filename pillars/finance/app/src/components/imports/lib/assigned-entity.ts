@@ -1,4 +1,4 @@
-import { isPendingContactId } from '@pops/finance';
+import { entityIdentity, isPendingContactId, type EntityIdentities } from '@pops/finance';
 
 import type { ProcessedTransaction } from '@pops/finance';
 
@@ -45,11 +45,14 @@ export function isUnresolvedEntity(state: AssignedEntityState): state is Unresol
  */
 export function classifyAssignedEntity(
   transaction: ProcessedTransaction,
-  entities: ReadonlyArray<{ id: string }> | undefined
+  entities: ReadonlyArray<{ id: string }> | undefined,
+  identities?: EntityIdentities
 ): AssignedEntityState {
   const entityId = transaction.entity.entityId;
   if (!entityId) return 'unassigned';
   if (isPendingContactId(entityId)) return 'never-created';
   if (entities === undefined) return 'loading';
-  return entities.some((e) => e.id === entityId) ? 'resolved' : 'missing';
+  return entities.some((e) => e.id === entityIdentity(entityId, identities))
+    ? 'resolved'
+    : 'missing';
 }

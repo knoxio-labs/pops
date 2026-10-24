@@ -38,7 +38,9 @@ import {
   ReservedAccountKindError,
   type FinanceDb,
 } from '../../db/index.js';
+import { referencedEntityIds } from '../../db/services/entity-identity.js';
 import { type ContactsClient } from '../contacts/client.js';
+import { loadEntityIdentities } from '../contacts/identity-snapshot.js';
 import {
   toAccountMergePreviewBody,
   toCreateAccountInput,
@@ -147,10 +149,15 @@ export function makeAccountsHandlers(db: FinanceDb, contacts: ContactsClient) {
         try {
           const input = toCreateAccountInput(body);
           const resolved = await resolvePersonAccountEntity(contacts, input);
+          const identities = await loadEntityIdentities(
+            db,
+            contacts,
+            resolved.entityId ? [resolved.entityId] : []
+          );
           const row = accountsService.createAccount(
             db,
             { ...input, entityId: resolved.entityId },
-            { allowPendingEntity: resolved.allowPendingEntity }
+            { allowPendingEntity: resolved.allowPendingEntity, identities }
           );
           return {
             status: 201 as const,
@@ -177,7 +184,13 @@ export function makeAccountsHandlers(db: FinanceDb, contacts: ContactsClient) {
     update: ({ params, body }: Req['update']) =>
       runHttp(async () => {
         try {
-          const row = accountsService.updateAccount(db, params.id, toUpdateAccountInput(body));
+          const identities = await loadEntityIdentities(db, contacts, referencedEntityIds(body));
+          const row = accountsService.updateAccount(
+            db,
+            params.id,
+            toUpdateAccountInput(body),
+            identities
+          );
           return {
             status: 200 as const,
             body: { data: await project.one(row, OWNER), message: 'Account updated' },

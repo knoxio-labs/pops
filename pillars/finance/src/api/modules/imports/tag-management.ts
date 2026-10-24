@@ -6,6 +6,7 @@
  * own `suggestTags` (which also takes the handle).
  */
 import { tagVocabularyService, type FinanceDb } from '../../../db/index.js';
+import { type EntityIdentities } from '../../../db/services/entity-identity.js';
 import {
   suggestTags,
   type AiSuggestionProvenance,
@@ -61,6 +62,7 @@ export interface BuildSuggestedTagsOptions {
   knownTags: string[];
   correctionPattern?: string;
   /** `contactId → defaultTags` from the per-run contacts fetch (entity source). */
+  identities?: EntityIdentities;
   entityDefaultTags?: ReadonlyMap<string, string[]>;
   /**
    * Forwarded to `suggestTags`'s `recordTagRuleUsage`. Defaults to `true` —
@@ -86,6 +88,7 @@ export function buildSuggestedTags(db: FinanceDb, opts: BuildSuggestedTagsOption
     knownTags: opts.knownTags,
     correctionTags: opts.correctionTags,
     correctionPattern: opts.correctionPattern,
+    identities: opts.identities,
     entityDefaultTags: opts.entityDefaultTags,
     recordTagRuleUsage: opts.recordTagRuleUsage,
     onTagRulesMatched: opts.onTagRulesMatched,

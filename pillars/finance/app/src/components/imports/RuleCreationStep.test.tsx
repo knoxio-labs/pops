@@ -3,12 +3,17 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { type ReactElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { referencedEntityIds } from '@pops/finance';
+
 const mockNextStep = vi.fn();
 const mockPrevStep = vi.fn();
 const mockAddPendingTagRuleChangeSet = vi.fn();
 const mockRemovePendingTagRuleChangeSet = vi.fn();
 
 let storeState: Record<string, unknown> = {};
+const identityAliases = new Map<string, string>();
+
+let identityAvailable = true;
 
 const taxonomy: { facets: Array<{ facet: string; kind: string }>; tags: string[] } = {
   facets: [],
@@ -93,6 +98,8 @@ function tickAll() {
 }
 
 beforeEach(() => {
+  identityAliases.clear();
+  identityAvailable = true;
   vi.clearAllMocks();
   taxonomy.facets = [];
   taxonomy.tags = [];
@@ -449,4 +456,56 @@ describe('RuleCreationStep — closed tag axes (POPS-3106)', () => {
     expect(mockAddPendingTagRuleChangeSet).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole('alert')).toBeNull();
   });
+});
+
+vi.mock('./hooks/useImportIdentities', () => ({
+  useImportIdentities: () => ({
+    identities: identityAvailable
+      ? new Map(referencedEntityIds(storeState).map((id) => [id, identityAliases.get(id) ?? id]))
+      : undefined,
+    status: identityAvailable ? 'ready' : 'unavailable',
+    retry: vi.fn(),
+  }),
+}));
+
+describe('canonical identity failure', () => {
+  it('keeps a selected proposal through identity revalidation', () => {
+    storeState.confirmedTransactions = twoWoolworthsRows();
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const view = () => (
+      <QueryClientProvider client={client}>
+        <RuleCreationStep />
+      </QueryClientProvider>
+    );
+    const { rerender } = render(view());
+    tickAll();
+    expect(screen.getByRole('checkbox')).toBeChecked();
+    identityAvailable = false;
+    rerender(view());
+    expect(screen.queryByRole('checkbox')).toBeNull();
+    identityAvailable = true;
+    rerender(view());
+    expect(screen.getByRole('checkbox')).toBeChecked();
+  });
+
+  it('shows unavailability and prevents navigation or rule staging', () => {
+    identityAvailable = false;
+    render(withQuery(<RuleCreationStep />));
+    expect(screen.getByText('Contact identities unavailable')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Skip' }));
+    expect(mockNextStep).not.toHaveBeenCalled();
+    expect(mockAddPendingTagRuleChangeSet).not.toHaveBeenCalled();
+  });
+});
+
+it('offers one rule for canonical aliases and a separate rule for a homonym', async () => {
+  identityAliases.set('old-a', 'current');
+  identityAliases.set('old-b', 'current');
+  storeState['confirmedTransactions'] = [
+    makeTxn({ entityId: 'old-a', checksum: 'a' }),
+    makeTxn({ entityId: 'old-b', checksum: 'b' }),
+    makeTxn({ entityId: 'homonym', checksum: 'c' }),
+  ];
+  render(withQuery(<RuleCreationStep />));
+  expect(await screen.findAllByRole('checkbox')).toHaveLength(2);
 });

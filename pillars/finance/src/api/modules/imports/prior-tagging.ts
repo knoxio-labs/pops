@@ -14,6 +14,7 @@
  * `buildKnownEntityHint`, because this is per-group input on the common path.
  */
 import { transactionsService, type FinanceDb } from '../../../db/index.js';
+import { type EntityIdentities } from '../../../db/services/entity-identity.js';
 import { isClassifiedTagFacet, parseStoredTags, parseTagFacet } from '../../../db/tag-facets.js';
 import { isHeldOut } from './eval-split.js';
 
@@ -37,8 +38,17 @@ function classifiedTags(tagsJson: string): string[] {
  * {@link MAX_PRIOR_TAG_SETS_CHARS}. Empty when the merchant has no tagged
  * history outside the held-out set.
  */
-export function loadPriorTagSets(db: FinanceDb, entityId: string): string[][] {
-  const { rows } = transactionsService.listTransactions(db, { entityId }, PRIOR_ROWS_SCANNED, 0);
+export function loadPriorTagSets(
+  db: FinanceDb,
+  entityId: string,
+  identities?: EntityIdentities
+): string[][] {
+  const { rows } = transactionsService.listTransactions(
+    db,
+    { entityId, identities },
+    PRIOR_ROWS_SCANNED,
+    0
+  );
   const seen = new Set<string>();
   const sets: string[][] = [];
   let chars = 0;
@@ -58,12 +68,15 @@ export function loadPriorTagSets(db: FinanceDb, entityId: string): string[][] {
 }
 
 /** A per-run loader that reads each merchant once, however many groups share it. */
-export function createPriorTagSetLoader(db: FinanceDb): (entityId: string) => string[][] {
+export function createPriorTagSetLoader(
+  db: FinanceDb,
+  identities?: EntityIdentities
+): (entityId: string) => string[][] {
   const cache = new Map<string, string[][]>();
   return (entityId) => {
     const cached = cache.get(entityId);
     if (cached !== undefined) return cached;
-    const sets = loadPriorTagSets(db, entityId);
+    const sets = loadPriorTagSets(db, entityId, identities);
     cache.set(entityId, sets);
     return sets;
   };

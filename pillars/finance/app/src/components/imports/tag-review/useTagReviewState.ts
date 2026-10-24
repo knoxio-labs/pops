@@ -1,6 +1,8 @@
 import { useCallback, useMemo, useState } from 'react';
+import { toast } from 'sonner';
 
 import { useImportStore } from '../../../store/importStore';
+import { useImportIdentities } from '../hooks/useImportIdentities';
 import { batchRuleTempIds, rulesStepHasProposals } from '../rule-creation/utils';
 import { COMMIT_STEP } from '../step-labels';
 import { assembleTagReviewOutput } from './assembleTagReviewOutput';
@@ -11,6 +13,7 @@ import { useTagRuleDialog } from './useTagRuleDialog';
 import { useTagRuleHandler } from './useTagRuleHandler';
 import { useAvailableTags, useTagFacets, useVocabularyTags } from './useTagTaxonomy';
 
+import type { EntityIdentities } from '@pops/finance';
 import type { ConfirmedTransaction, SuggestedTag } from '@pops/finance';
 
 import type { TagFacetOption } from '../../../lib/tags';
@@ -53,6 +56,7 @@ function useLocalTagsSync(confirmedTransactions: ConfirmedTransaction[]): LocalT
 }
 
 interface TagRuleWorkflowDeps {
+  identities?: EntityIdentities;
   localTags: Record<string, string[]>;
   suggestedTagMeta: Record<string, SuggestedTag[]>;
   setLocalTags: React.Dispatch<React.SetStateAction<Record<string, string[]>>>;
@@ -74,6 +78,7 @@ function useTagRuleWorkflow(deps: TagRuleWorkflowDeps) {
   const dialog = useTagRuleDialog(localTags, facets);
   const handleTagRuleApplied = useTagRuleHandler({
     addPendingTagRuleChangeSet,
+    identities: deps.identities,
     dialogGroupNameRef: dialog.dialogGroupNameRef,
     dialogSourceChecksumsRef: dialog.dialogSourceChecksumsRef,
     setLocalTags,
@@ -102,7 +107,8 @@ type ContinueDeps = Pick<
 function useHandleContinue(
   localTags: Record<string, string[]>,
   facets: readonly TagFacetOption[],
-  deps: ContinueDeps
+  deps: ContinueDeps,
+  identities?: EntityIdentities
 ) {
   const {
     confirmedTransactions,
@@ -113,12 +119,16 @@ function useHandleContinue(
     removePendingTagRuleChangeSet,
   } = deps;
   return useCallback(() => {
+    if (!identities) {
+      toast.error('Contact identities are unavailable; retry before continuing.');
+      return;
+    }
     for (const [checksum, tags] of Object.entries(localTags)) updateTransactionTags(checksum, tags);
     const reviewed = confirmedTransactions.map((t) => ({
       ...t,
       tags: localTags[t.checksum] ?? t.tags,
     }));
-    if (rulesStepHasProposals(reviewed, pendingTagRuleChangeSets, facets)) {
+    if (rulesStepHasProposals(reviewed, pendingTagRuleChangeSets, facets, identities)) {
       nextStep();
       return;
     }
@@ -129,6 +139,7 @@ function useHandleContinue(
   }, [
     localTags,
     facets,
+    identities,
     confirmedTransactions,
     pendingTagRuleChangeSets,
     updateTransactionTags,
@@ -140,12 +151,17 @@ function useHandleContinue(
 
 export function useTagReviewState(): UseTagReviewStateOutput {
   const store = useImportStore();
+  const identity = useImportIdentities();
+  const { identities } = identity;
   const { confirmedTransactions, prevStep, addPendingTagRuleChangeSet } = store;
 
   const { localTags, setLocalTags, suggestedTagMeta, setSuggestedTagMeta } =
     useLocalTagsSync(confirmedTransactions);
 
-  const groups = useMemo(() => groupByEntity(confirmedTransactions), [confirmedTransactions]);
+  const groups = useMemo(
+    () => (identities ? groupByEntity(confirmedTransactions, identities) : []),
+    [confirmedTransactions, identities]
+  );
   const availableTags = useAvailableTags(localTags);
   const facets = useTagFacets();
   const vocabularyTags = useVocabularyTags();
@@ -156,8 +172,9 @@ export function useTagReviewState(): UseTagReviewStateOutput {
     suggestedTagMeta,
     confirmedTransactions,
   });
-  const handleContinue = useHandleContinue(localTags, facets, store);
+  const handleContinue = useHandleContinue(localTags, facets, store, identities);
   const { dialog, handleTagRuleApplied } = useTagRuleWorkflow({
+    identities,
     localTags,
     suggestedTagMeta,
     setLocalTags,
@@ -171,19 +188,23 @@ export function useTagReviewState(): UseTagReviewStateOutput {
     suggestedTagMeta,
   });
 
-  return assembleTagReviewOutput({
-    confirmedTransactions,
-    groups,
-    availableTags,
-    facets,
-    vocabularyTags,
-    localTags,
-    suggestedTagMeta,
-    tagActions,
-    handleContinue,
-    prevStep,
-    dialog,
-    previewTransactions,
-    handleTagRuleApplied,
-  });
+  return {
+    ...assembleTagReviewOutput({
+      confirmedTransactions,
+      groups,
+      availableTags,
+      facets,
+      vocabularyTags,
+      localTags,
+      suggestedTagMeta,
+      tagActions,
+      handleContinue,
+      prevStep,
+      dialog,
+      previewTransactions,
+      handleTagRuleApplied,
+    }),
+    identityStatus: identity.status,
+    retryIdentities: identity.retry,
+  };
 }

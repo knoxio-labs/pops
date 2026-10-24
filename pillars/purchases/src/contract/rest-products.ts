@@ -151,7 +151,7 @@ export const purchasesProductContract = c.router({
     method: 'POST',
     path: '/products/proposals',
     body: z.object({}).optional(),
-    responses: { 200: ProposalOutcomeSchema, 400: ErrorBodySchema },
+    responses: { 200: ProposalOutcomeSchema, 400: ErrorBodySchema, 503: ErrorBodySchema },
     summary:
       'Mint a dictionary entry per printed wording and retire unconfirmed entries nothing prints',
   },

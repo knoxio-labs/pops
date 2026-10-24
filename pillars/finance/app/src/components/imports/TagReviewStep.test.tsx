@@ -3,12 +3,16 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { type ReactElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { referencedEntityIds } from '@pops/finance';
+
 const mockAddPendingTagRuleChangeSet = vi.fn();
 const mockUpdateTransactionTags = vi.fn();
 const mockNextStep = vi.fn();
 const mockPrevStep = vi.fn();
 const mockGoToStep = vi.fn();
 const mockRemovePendingTagRuleChangeSet = vi.fn();
+
+const identityAliases = new Map<string, string>();
 
 const mockConfirmedTransactions: unknown[] = [];
 const mockPendingTagRuleChangeSets: unknown[] = [];
@@ -258,6 +262,7 @@ function renderTagReviewStep() {
 }
 
 beforeEach(() => {
+  identityAliases.clear();
   mockConfirmedTransactions.length = 0;
   mockPendingTagRuleChangeSets.length = 0;
   mockGoToStep.mockReset();
@@ -727,7 +732,8 @@ describe('TagReviewStep — handleTagRuleApplied live re-suggestion (US-03)', ()
         changeSet,
         source: expect.stringContaining('tag-review:'),
         acceptedNewTags: ['Groceries'],
-      })
+      }),
+      expect.any(Map)
     );
   });
 
@@ -817,4 +823,29 @@ describe('TagReviewStep — group rule pattern (POPS-255)', () => {
 
     expect(mockDialogCapture.signal).toMatchObject({ descriptionPattern: 'MCLUU DARLING' });
   });
+});
+
+vi.mock('./hooks/useImportIdentities', () => ({
+  useImportIdentities: () => ({
+    identities: new Map(
+      referencedEntityIds(mockStoreState).map((id) => [id, identityAliases.get(id) ?? id])
+    ),
+    status: 'ready',
+    retry: vi.fn(),
+  }),
+}));
+
+it('groups retired aliases together while keeping a person with the same name separate', () => {
+  identityAliases.set('old-a', 'current');
+  identityAliases.set('old-b', 'current');
+  seedTransactions([
+    { ...woolworthsTx1, entityId: 'old-a' },
+    { ...woolworthsTx2, entityId: 'old-b' },
+    { ...netflixTx, entityId: 'homonym', entityName: 'Woolworths' },
+  ]);
+  renderTagReviewStep();
+  const headers = screen.getAllByRole('button', { name: /^Woolworths/ });
+  expect(headers).toHaveLength(2);
+  expect(headers[0]).toHaveTextContent('(2)');
+  expect(headers[1]).toHaveTextContent('(1)');
 });

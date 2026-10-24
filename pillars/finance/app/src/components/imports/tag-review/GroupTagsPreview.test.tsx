@@ -110,7 +110,7 @@ describe('EntityGroup header past three tags (POPS-252)', () => {
     }));
     render(
       <EntityGroup
-        group={{ entityName: 'Woolworths', transactions: [txn] }}
+        group={{ identityKey: 'woolworths', entityName: 'Woolworths', transactions: [txn] }}
         localTags={{ w1: FIVE_TAGS }}
         suggestedTagMeta={{ w1: suggested }}
         availableTags={FIVE_TAGS}
