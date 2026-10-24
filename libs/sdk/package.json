@@ -97,7 +97,7 @@
   "dependencies": {
     "@pops/types": "workspace:*",
     "jsonwebtoken": "^9.0.3",
-    "zod": "^4.6.2"
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "@tailwindcss/vite": "4.3.3",

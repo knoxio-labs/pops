@@ -27,7 +27,7 @@
     "@pops/types": "workspace:*",
     "@ts-rest/core": "3.53.0-rc.1",
     "@ts-rest/express": "3.53.0-rc.1",
-    "zod": "^4.6.2"
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "@types/express": "^5.0.4",
