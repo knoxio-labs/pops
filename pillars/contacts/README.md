@@ -141,7 +141,11 @@ Candidate IDs are current canonical people or persisted import row IDs. A
 collision between two new rows requires importing one row first, then refreshing
 to review the resulting person; an import row ID never pretends to be a person.
 Matching uses validated exact email/phone keys or proven complete structured
-names. Shared identifiers, conflicting signals, homonyms, incomplete names and
+names. File and provider adapters qualify explicit nonblank given and family
+fields as complete, retaining additional names, prefixes and suffixes. CSV `Name`
+and vCard `FN` display text are never split into parts, and first-name-only or
+legacy display-only people still require manual name review. Declared incomplete
+metadata remains incomplete. Shared identifiers, conflicting signals, homonyms, incomplete names and
 stored keep-separate decisions require review. Original member/source ownership
 and explicit preferred values remain visible after canonical grouping.
 

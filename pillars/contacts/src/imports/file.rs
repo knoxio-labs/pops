@@ -2,7 +2,9 @@
 
 use std::collections::HashMap;
 
-use super::model::{ImportPayload, RowIssue, StageBatchInput, StageRowInput};
+use super::model::{
+    qualify_structured_name, ImportPayload, RowIssue, StageBatchInput, StageRowInput,
+};
 use super::parser::{
     parse_file, FileEncoding, FileFormat, ParseResult, SourceContact, SourcePoint, MAX_FILE_BYTES,
 };
@@ -79,8 +81,8 @@ pub fn parse_stage_input(
     })
 }
 
-/// Convert parsed observations without assigning source identity or inferring name completeness.
-/// Callers choose a stable record key separately; parser ordinals are not provider identities.
+/// Convert parsed observations, qualifying only explicit nonblank given and family name parts.
+/// Display text never supplies structured parts. Callers assign stable source identity separately.
 pub fn payload_from_contact(contact: SourceContact) -> ImportPayload {
     let name = contact
         .structured_name
@@ -92,6 +94,7 @@ pub fn payload_from_contact(contact: SourceContact) -> ImportPayload {
             name_suffix: present(name.suffix),
             ..PersonName::default()
         });
+    let name = qualify_structured_name(name);
     let display_name = contact.display_name.or_else(|| {
         let components: Vec<&str> = [
             &name.name_prefix,
