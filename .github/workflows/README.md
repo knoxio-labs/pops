@@ -269,6 +269,46 @@ Two consequences worth stating, because both look like bugs from the outside:
   `github.event.pull_request.draft == false` is *true* when the payload has no
   pull request at all: GitHub coerces both sides of `null == false` to `0`.
 
+### Exact-input receipts
+
+The per-unit jobs in `unit-quality.yml` (TypeScript and Rust) and
+`app-quality.yml` reuse a result only when every input is byte-identical.
+`scripts/ci/ci-receipts.mjs` hashes the unit's files, its transitive workspace
+dependencies, files its configuration names outside them (root scripts,
+OpenAPI snapshots a generator reads, base configs), ignored generated
+TypeScript, the lockfiles and toolchain pins that apply to its language, the
+lane's own workflow, `setup-mise`, the receipt tool itself, and a hash of
+`MISE_ENV`, runner OS/architecture and `ImageOS`. Generated clients count by
+content whether or not git tracks them.
+
+After every check passes, the job uploads a small artifact named for that
+key. A later job with the same key skips its setup and checks, still concludes
+`success`, and prints a notice naming the receipt and the run that produced
+it, so the workflow conclusion, `CI Gate` and `Promotion validation` see a
+passing unit as before. Receipts are artifacts rather than cache entries
+because the Actions cache sits at its 10 GB limit, where iOS build products
+evict anything small within hours.
+Receipts carry across runs, not across a full re-run of one run: GitHub deletes
+the earlier attempt's artifacts when that re-run starts. Re-running only the
+failed jobs leaves the passing ones alone.
+
+A receipt counts only when the producing run belongs to this repository, ran
+this lane's workflow (or `promotion-quality.yml`), and was either a push or
+dispatch on `main` or `integration/**`, or an earlier run of the same pull
+request branch. Forks, other pull requests and local machines never produce a
+trusted receipt. An unreachable artifacts API means a full run, not a failure.
+
+Reuse assumes these lanes are deterministic for identical inputs, which is the
+same assumption the changed-unit selection already makes for every unit it
+skips. E2E, live-seam, iOS, Docker, registry and `rust-quality.yml` (whose
+supply-chain check reads a live advisory database) never reuse results. To force
+full runs, add the `no-ci-cache` label to a pull request before its next push,
+including a promotion PR, or dispatch either workflow with `no-ci-cache`. A
+label added later is invisible to re-runs, which replay the original event.
+
+A change to the receipt tool or a lane definition changes every key, so those
+paths select every unit and app.
+
 ## `_discover-units.yml`
 
 Reusable (`on: workflow_call`), called by `unit-quality.yml`, `quality.yml`,
@@ -280,7 +320,8 @@ with no resolvable package name fails the job. Outputs are `units` (all) and
 `changed` (units whose dir appears in the diff against the merge-base — or every
 unit when `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `tsconfig.base.json`,
 `tsconfig.build.json`, `.oxfmtrc.json`, `.oxlintrc.json`, `mise.toml`,
-`mise.ci.toml`, `Cargo.toml` or `Cargo.lock` changed). The header explains why
+`mise.ci.toml`, `Cargo.toml`, `Cargo.lock`, the unit lane's workflow files,
+`setup-mise` or the receipt tool changed). The header explains why
 the scan stops at maxdepth 1.
 
 Calls with `full-validation: true` select every unit and client directory. For affected checks,

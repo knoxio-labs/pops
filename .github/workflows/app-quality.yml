@@ -65,6 +65,21 @@ on:
       - "mise.ci.toml"
       - ".github/workflows/app-quality.yml"
       - ".github/actions/**"
+      - "scripts/ci/ci-receipts.mjs"
+      - "scripts/ci/select-affected-apps.mjs"
+      - "scripts/local-dev/fingerprint.mjs"
+      - "scripts/local-dev/repository-inputs.mjs"
+  # Manual full run; `no-ci-cache` also ignores every exact-input receipt.
+  workflow_dispatch:
+    inputs:
+      full-validation:
+        description: Select every unit instead of the changed set
+        type: boolean
+        default: true
+      no-ci-cache:
+        description: Run every check even when a receipt matches
+        type: boolean
+        default: false
   pull_request:
     types: [opened, synchronize, reopened, edited]
     paths:
@@ -83,6 +98,10 @@ on:
       - "mise.ci.toml"
       - ".github/workflows/app-quality.yml"
       - ".github/actions/**"
+      - "scripts/ci/ci-receipts.mjs"
+      - "scripts/ci/select-affected-apps.mjs"
+      - "scripts/local-dev/fingerprint.mjs"
+      - "scripts/local-dev/repository-inputs.mjs"
   # Unfiltered: `paths:` is not a legal filter on a merge group, so the queue
   # lane re-runs this for every entry.
   merge_group:
@@ -155,9 +174,26 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      - id: receipt
+        name: Look up an exact-input receipt
+        # Skips every check below when a trusted CI run already passed them on
+        # identical inputs; the job still reports success. See
+        # scripts/ci/ci-receipts.mjs for the key and the trust rule.
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          NO_CI_CACHE: ${{ inputs['no-ci-cache'] }}
+          PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        run: node scripts/ci/ci-receipts.mjs resolve --lane app --dir "${{ matrix.app.dir }}" --pkg "${{ matrix.app.pkg }}"
+
       - uses: ./.github/actions/setup-mise
+        if: steps.receipt.outputs.reuse != 'true'
 
       - name: Expose bundled node-gyp on PATH
+        if: steps.receipt.outputs.reuse != 'true'
         # `better-sqlite3` (a transitive dep of every app's pillar closure) has
         # an install script `prebuild-install || node-gyp rebuild`. The prebuilt
         # path normally wins on ubuntu-latest, but mise-installed node bundles
@@ -171,6 +207,7 @@ jobs:
           echo "$gyp_bin" >> "$GITHUB_PATH"
 
       - name: Assert --filter matches exactly one package
+        if: steps.receipt.outputs.reuse != 'true'
         # pnpm --filter exits 0 on zero matches (a warning, not an error), so a
         # dir-name != pkg-name skew would silently run nothing. Fail loud.
         run: |
@@ -179,23 +216,28 @@ jobs:
           [ "$n" = 1 ] || { echo "::error::--filter ${{ matrix.app.pkg }} matched $n packages (expected 1)"; exit 1; }
 
       - name: Install
+        if: steps.receipt.outputs.reuse != 'true'
         run: pnpm install --frozen-lockfile
 
       - name: Build dependency closure
+        if: steps.receipt.outputs.reuse != 'true'
         # Deps only (`^...`), so the compiled .d.ts the app's typecheck, test
         # and bundle build all import are materialised before any of them run.
         run: pnpm --filter "${{ matrix.app.pkg }}^..." build
 
       - name: Generated clients
+        if: steps.receipt.outputs.reuse != 'true'
         # A no-op when postinstall left them current. Every app unit owns at
         # least one Hey API client, so a package with no generator means a
         # renamed script or a stale matrix entry, and fails.
         run: node scripts/codegen/generate.mjs --pkg "${{ matrix.app.pkg }}"
 
       - name: Typecheck
+        if: steps.receipt.outputs.reuse != 'true'
         run: pnpm --filter "${{ matrix.app.pkg }}" typecheck
 
       - name: Build the remote bundle
+        if: steps.receipt.outputs.reuse != 'true'
         # The shell `import()`s this artifact at runtime; nothing else in CI
         # produces it on an app-source change (docker-build triggers on
         # Dockerfiles, not app sources). Its own build asserts the
@@ -204,6 +246,7 @@ jobs:
         run: pnpm --filter "${{ matrix.app.pkg }}" build
 
       - name: Test
+        if: steps.receipt.outputs.reuse != 'true'
         # Prefer `test:coverage` when the unit defines it.
         run: |
           set -euo pipefail
@@ -213,3 +256,12 @@ jobs:
           else
             pnpm --filter "${{ matrix.app.pkg }}" test
           fi
+
+      - name: Record the exact-input receipt
+        if: steps.receipt.outputs.reuse != 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.receipt.outputs.name }}
+          path: ${{ steps.receipt.outputs.path }}
+          retention-days: 30
+          if-no-files-found: error

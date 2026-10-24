@@ -50,9 +50,24 @@ on:
       - ".github/workflows/unit-quality.yml"
       - ".github/workflows/_discover-units.yml"
       - ".github/actions/**"
+      - "scripts/ci/ci-receipts.mjs"
+      - "scripts/ci/select-affected-apps.mjs"
+      - "scripts/local-dev/fingerprint.mjs"
+      - "scripts/local-dev/repository-inputs.mjs"
   push:
     branches: [main]
     paths: ["**"] # main rebuilds via the changed-set
+  # Manual full run; `no-ci-cache` also ignores every exact-input receipt.
+  workflow_dispatch:
+    inputs:
+      full-validation:
+        description: Select every unit instead of the changed set
+        type: boolean
+        default: true
+      no-ci-cache:
+        description: Run every check even when a receipt matches
+        type: boolean
+        default: false
   # A merge group cannot carry a `paths:` filter (the key is rejected on this
   # event), so this fires on every one. The matrix still narrows itself:
   # `_discover-units.yml` diffs against `origin/main`, and a merge group's head
@@ -86,9 +101,26 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      - id: receipt
+        name: Look up an exact-input receipt
+        # Skips every check below when a trusted CI run already passed them on
+        # identical inputs; the job still reports success. See
+        # scripts/ci/ci-receipts.mjs for the key and the trust rule.
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          NO_CI_CACHE: ${{ inputs['no-ci-cache'] }}
+          PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        run: node scripts/ci/ci-receipts.mjs resolve --lane unit-ts --dir "${{ matrix.unit.dir }}" --pkg "${{ matrix.unit.pkg }}"
+
       - uses: ./.github/actions/setup-mise
+        if: steps.receipt.outputs.reuse != 'true'
 
       - name: Expose bundled node-gyp on PATH
+        if: steps.receipt.outputs.reuse != 'true'
         # mise-installed node bundles node-gyp under npm but does not put it on
         # PATH, so native-module installs (better-sqlite3 in most pillars +
         # libs/settings) fail with `node-gyp: not found` during their pnpm
@@ -101,6 +133,7 @@ jobs:
           echo "$gyp_bin" >> "$GITHUB_PATH"
 
       - name: Assert --filter matches exactly one package
+        if: steps.receipt.outputs.reuse != 'true'
         # pnpm --filter exits 0 on zero matches (a warning, not an error), so
         # a dir-name != pkg-name skew would silently run nothing. Fail loud.
         run: |
@@ -109,12 +142,15 @@ jobs:
           [ "$n" = 1 ] || { echo "::error::--filter ${{ matrix.unit.pkg }} matched $n packages (expected 1)"; exit 1; }
 
       - name: Install (subgraph only)
+        if: steps.receipt.outputs.reuse != 'true'
         run: pnpm install --frozen-lockfile --filter "${{ matrix.unit.pkg }}..."
 
       - name: Format check
+        if: steps.receipt.outputs.reuse != 'true'
         run: pnpm exec oxfmt --check ${{ matrix.unit.dir }}/
 
       - name: Lint
+        if: steps.receipt.outputs.reuse != 'true'
         # Data-only units (e.g. libs/locales) have no src/ — nothing to lint.
         run: |
           set -euo pipefail
@@ -125,6 +161,7 @@ jobs:
           fi
 
       - name: Build dependency closure
+        if: steps.receipt.outputs.reuse != 'true'
         # Build the unit's compiled-lib deps so their dist/.d.ts exists before
         # typecheck/test resolve them. `^...` selects strictly the dependencies
         # (never the unit), and pnpm no-ops deps that lack a `build` script, so
@@ -134,6 +171,7 @@ jobs:
         run: pnpm --filter "${{ matrix.unit.pkg }}^..." build
 
       - name: Build own unit (only when it owns a build task)
+        if: steps.receipt.outputs.reuse != 'true'
         # mise merges configs UP the tree: a `build` resolved from -C <dir> for a
         # unit whose own mise.toml lacks `build` (source libs ui/navigation/
         # overlay-ego/locales) is the inherited ROOT build (`tsc -b`
@@ -160,6 +198,7 @@ jobs:
           esac
 
       - name: Typecheck
+        if: steps.receipt.outputs.reuse != 'true'
         run: |
           set -euo pipefail
           if node -e "process.exit((require('./${{ matrix.unit.dir }}/package.json').scripts||{}).typecheck?0:1)"; then
@@ -169,6 +208,7 @@ jobs:
           fi
 
       - name: Codegen drift
+        if: steps.receipt.outputs.reuse != 'true'
         # Run every `generate:*` script the unit defines, then fail on any diff.
         run: |
           set -euo pipefail
@@ -186,6 +226,7 @@ jobs:
           fi
 
       - name: Test
+        if: steps.receipt.outputs.reuse != 'true'
         # Prefer `test:coverage` when the unit defines it, mirroring
         # app-quality.yml — a coverage ratchet a unit declares in its own
         # vitest.config.ts must actually run somewhere, or it is a threshold
@@ -203,6 +244,15 @@ jobs:
             echo "no test script for ${{ matrix.unit.pkg }} — skip"
           fi
 
+      - name: Record the exact-input receipt
+        if: steps.receipt.outputs.reuse != 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.receipt.outputs.name }}
+          path: ${{ steps.receipt.outputs.path }}
+          retention-days: 30
+          if-no-files-found: error
+
   rust:
     name: ${{ matrix.unit.name }} (${{ matrix.unit.kind }}) — rust
     needs: discover
@@ -215,9 +265,26 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      - id: receipt
+        name: Look up an exact-input receipt
+        # Skips every check below when a trusted CI run already passed them on
+        # identical inputs; the job still reports success. See
+        # scripts/ci/ci-receipts.mjs for the key and the trust rule.
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          NO_CI_CACHE: ${{ inputs['no-ci-cache'] }}
+          PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        run: node scripts/ci/ci-receipts.mjs resolve --lane unit-rust --dir "${{ matrix.unit.dir }}" --pkg "${{ matrix.unit.pkg }}"
+
       - uses: ./.github/actions/setup-mise
+        if: steps.receipt.outputs.reuse != 'true'
 
       - name: Ensure rustfmt + clippy for the pinned toolchain
+        if: steps.receipt.outputs.reuse != 'true'
         # mise selects the toolchain by exporting RUSTUP_TOOLCHAIN from the root
         # `mise.toml` rust pin. rustup then auto-installs that exact version
         # with the DEFAULT profile, which does NOT include rustfmt or clippy —
@@ -227,13 +294,26 @@ jobs:
         run: rustup component add rustfmt clippy
 
       - name: Format check
+        if: steps.receipt.outputs.reuse != 'true'
         run: cargo fmt -p ${{ matrix.unit.pkg }} --check
 
       - name: Clippy
+        if: steps.receipt.outputs.reuse != 'true'
         run: cargo clippy -p ${{ matrix.unit.pkg }} --all-targets --all-features -- -D warnings
 
       - name: Build
+        if: steps.receipt.outputs.reuse != 'true'
         run: cargo build -p ${{ matrix.unit.pkg }} --all-targets
 
       - name: Test
+        if: steps.receipt.outputs.reuse != 'true'
         run: cargo test -p ${{ matrix.unit.pkg }}
+
+      - name: Record the exact-input receipt
+        if: steps.receipt.outputs.reuse != 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.receipt.outputs.name }}
+          path: ${{ steps.receipt.outputs.path }}
+          retention-days: 30
+          if-no-files-found: error

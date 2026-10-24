@@ -7,6 +7,8 @@ on:
     types: [opened, synchronize, reopened, edited]
 
 permissions:
+  # The unit and app lanes look up exact-input receipts in the artifacts API.
+  actions: read
   contents: read
   pull-requests: read
 
