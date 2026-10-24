@@ -1,4 +1,6 @@
+import { tripMetadata, tripDisplayName, tripDateLabel } from '@/fixtures/trip-metadata';
 import { tripOverviewItems } from '@/fixtures/trip-overview';
+import { filterTripItems, isPurchasedArrangement } from '@/fixtures/trip-overview-model';
 import { ArrowDown, Compass, Inbox, Plus } from 'lucide-react';
 import { useState } from 'react';
 
@@ -16,16 +18,12 @@ export type OverviewScenario = 'default' | 'empty' | 'anchors-only' | 'event-dis
 function scenarioItems(scenario: OverviewScenario) {
   if (scenario === 'empty') return [];
   if (scenario === 'anchors-only')
-    return tripOverviewItems.filter((item) => item.intention === 'In plan');
-  if (scenario === 'event-discovered')
-    return tripOverviewItems.map((item) =>
-      item.id === 'festival'
-        ? {
-            ...item,
-            notes:
-              'New event: 16–18 January. Compare Belo Horizonte with the existing Olinda extension option.',
-          }
-        : item
+    return tripOverviewItems.filter(
+      (item) =>
+        isPurchasedArrangement(item) ||
+        tripOverviewItems.some(
+          (child) => isPurchasedArrangement(child) && child.visitId === item.id
+        )
     );
   return tripOverviewItems;
 }
@@ -36,15 +34,17 @@ function OverviewHeading({ onCapture }: { onCapture: () => void }) {
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <Compass className="size-4" aria-hidden />
         Trips<span>/</span>
-        <span>Brazil · sample</span>
+        <span>{tripDisplayName(tripMetadata)}</span>
       </div>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Brazil 2027–28</h1>
-            <Badge variant="outline">Planning</Badge>
+            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+              {tripDisplayName(tripMetadata)}
+            </h1>
+            <Badge variant="outline">{tripMetadata.stage}</Badge>
           </div>
-          <p className="text-muted-foreground">18 Nov 2027 → return date not set</p>
+          <p className="text-muted-foreground">{tripDateLabel(tripMetadata)}</p>
         </div>
         <Button onClick={onCapture}>
           <Plus className="size-4" aria-hidden />
@@ -94,9 +94,7 @@ export function TripOverviewPrototype({
   const [notes, setNotes] = useState<{ id: string; title: string }[]>([]);
   const [query, setQuery] = useState('');
   const selected = items.find((item) => item.id === selectedId) ?? null;
-  const filtered = items.filter((item) =>
-    `${item.title} ${item.where} ${item.notes}`.toLowerCase().includes(query.toLowerCase().trim())
-  );
+  const filtered = filterTripItems(items, query);
   function updateIntention(id: string, intention: TripOverviewItem['intention']) {
     setItems((current) => current.map((item) => (item.id === id ? { ...item, intention } : item)));
   }
@@ -141,8 +139,8 @@ function OverviewSummary({ items, noteCount }: { items: TripOverviewItem[]; note
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-y py-3">
       <p className="text-sm text-muted-foreground">
-        {items.filter((item) => item.arrangement === 'Booked').length} booked arrangements ·{' '}
-        {items.filter((item) => item.intention !== 'In plan').length} possibilities · no return date
+        {items.filter(isPurchasedArrangement).length} purchased arrangements ·{' '}
+        {items.filter((item) => item.intention !== 'In plan').length} possibilities
       </p>
       <Button asChild variant="ghost">
         <a href="#overview-inbox">
