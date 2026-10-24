@@ -133,7 +133,7 @@ pub async fn put_profile(
     })
 }
 
-/// List all point observations, including inactive history and retained preferred selections.
+/// List current point observations plus explicit preferences retained after upstream removal.
 pub async fn list_points(pool: &SqlitePool, id: &str) -> Result<Vec<ContactPoint>, sqlx::Error> {
     crate::merges::projection::points(pool, id).await
 }

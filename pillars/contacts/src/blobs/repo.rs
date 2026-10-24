@@ -96,6 +96,47 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn referenced_avatar_and_poster_survive_cleanup_until_their_last_reference_is_removed() {
+        let pool = pool().await;
+        let entity = crate::persons::repo::create_person(
+            &mut pool.acquire().await.expect("connection"),
+            "Asset owner",
+        )
+        .await
+        .expect("person");
+        let avatar = create(&pool, "image/png", b"avatar").await.expect("avatar");
+        let poster = create(&pool, "image/png", b"poster").await.expect("poster");
+        crate::entities::repo::set_asset_ids(
+            &pool,
+            &entity,
+            crate::entities::model::AssetIdPatch {
+                avatar_asset_id: Some(Some(avatar.clone())),
+                poster_asset_id: Some(Some(poster.clone())),
+            },
+        )
+        .await
+        .expect("references");
+        for id in [&avatar, &poster] {
+            delete(&pool, id).await.expect("referenced cleanup");
+            assert!(get(&pool, id).await.expect("retained blob").is_some());
+        }
+        crate::entities::repo::set_asset_ids(
+            &pool,
+            &entity,
+            crate::entities::model::AssetIdPatch {
+                avatar_asset_id: Some(None),
+                poster_asset_id: Some(None),
+            },
+        )
+        .await
+        .expect("remove references");
+        for id in [&avatar, &poster] {
+            delete(&pool, id).await.expect("unreferenced cleanup");
+            assert!(get(&pool, id).await.expect("removed blob").is_none());
+        }
+    }
+
+    #[tokio::test]
     async fn each_created_blob_gets_a_distinct_id() {
         let pool = pool().await;
         let a = create(&pool, "image/png", b"a").await.expect("create a");
