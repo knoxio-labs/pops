@@ -106,6 +106,7 @@ const MAX_LIMIT: i64 = 200;
 #[derive(Debug, Clone, Deserialize, IntoParams)]
 #[serde(rename_all = "camelCase")]
 pub struct ListQuery {
+    pub exclude_persons: Option<bool>,
     pub search: Option<String>,
     #[param(rename = "type")]
     pub r#type: Option<String>,
@@ -150,7 +151,11 @@ const MAX_LOOKUP_IDS: usize = 500;
 /// those ids (POPS-3925) instead of the whole contact set; omitted or empty
 /// keeps the original "answer everything" behaviour existing callers rely on.
 #[derive(Debug, Clone, Default, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct LookupBody {
+    /// Exclude persons only for explicitly merchant-scoped consumers.
+    #[serde(default)]
+    pub exclude_persons: bool,
     #[serde(default)]
     pub fields: Option<Vec<String>>,
     #[serde(default)]
@@ -211,10 +216,11 @@ pub async fn list(
     let limit = query.limit.unwrap_or(DEFAULT_LIMIT).clamp(1, MAX_LIMIT);
     let offset = query.offset.unwrap_or(0).max(0);
 
-    let (rows, total) = repo::list(
+    let (rows, total) = repo::list_scoped(
         &state.pool,
         query.search.as_deref(),
         query.r#type.as_deref(),
+        query.exclude_persons.unwrap_or(false),
         limit,
         offset,
     )
@@ -641,7 +647,8 @@ pub async fn lookup(
     State(state): State<AppState>,
     body: Option<Json<LookupBody>>,
 ) -> Result<Json<LookupResponse>, ApiError> {
-    let ids = body.and_then(|Json(body)| body.ids).unwrap_or_default();
+    let body = body.map(|Json(body)| body).unwrap_or_default();
+    let ids = body.ids.unwrap_or_default();
 
     let rows = if ids.is_empty() {
         repo::lookup_bulk(&state.pool).await.map_err(db_error)?
@@ -658,7 +665,11 @@ pub async fn lookup(
     };
 
     Ok(Json(LookupResponse {
-        entities: rows.into_iter().map(EntityLookup::from).collect(),
+        entities: rows
+            .into_iter()
+            .filter(|row| !body.exclude_persons || row.r#type != "person")
+            .map(EntityLookup::from)
+            .collect(),
         fetched_at: now_rfc3339(),
     }))
 }
@@ -682,6 +693,7 @@ fn db_error(err: sqlx::Error) -> ApiError {
 
 fn repo_error(err: repo::RepoError) -> ApiError {
     match err {
+        repo::RepoError::Invalid(message) => ApiError::bad_request(message),
         repo::RepoError::Conflict(message) => ApiError::conflict(message),
         repo::RepoError::NotFound => ApiError::not_found("Entity", "unknown"),
         repo::RepoError::Db(e) => db_error(e),

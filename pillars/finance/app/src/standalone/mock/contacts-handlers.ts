@@ -1,10 +1,13 @@
 import { CONTACT_ENTITIES } from '../fixtures/entities';
-import { created, notFound, ok, page } from './respond';
+import { created, noContent, notFound, ok, page } from './respond';
 
 import type { MockHandler, MockHandlers } from '@pops/pillar-sdk/testing/api-mock';
 
 import type {
   AddressMutation,
+  ContactPointResponse,
+  PersonProfileResponse,
+  SourceAccountResponse,
   EntitiesLookupResponses,
   EntityResponse,
   HealthResponse,
@@ -49,6 +52,33 @@ const addressCreated: MockHandler = ({ params }) => {
   return { status: 201, body };
 };
 
+const contactPoint: ContactPointResponse = {
+  data: {
+    id: '00000000-0000-4000-8000-000000000001',
+    entityId: firstEntity?.id ?? '',
+    active: true,
+    preferred: true,
+    kind: 'email',
+    value: 'morgan@example.invalid',
+    createdAt: '2026-09-05T08:00:00.000Z',
+  },
+};
+const personProfile: PersonProfileResponse = {
+  data: {
+    entityId: firstEntity?.id ?? '',
+    name: { givenName: 'Morgan', familyName: 'Vale' },
+    updatedAt: '2026-09-05T08:00:00.000Z',
+  },
+};
+const sourceAccount: SourceAccountResponse = {
+  data: {
+    id: '00000000-0000-4000-8000-000000000002',
+    accountKey: 'standalone',
+    provider: 'file',
+    createdAt: '2026-09-05T08:00:00.000Z',
+  },
+};
+
 export const contactsHandlers: MockHandlers = {
   'GET /': ok('contacts'),
   'GET /openapi': ok({}),
@@ -62,12 +92,20 @@ export const contactsHandlers: MockHandlers = {
   'GET /entities': listEntities,
   'POST /entities': created(mutation),
   'POST /entities/lookup': ok<EntitiesLookupResponses[200]>({
-    entities: CONTACT_ENTITIES.map(({ id, name, aliases }) => ({ id, name, aliases })),
+    entities: CONTACT_ENTITIES.map(({ id, name, aliases, type }) => ({ id, name, aliases, type })),
     fetchedAt: '2026-09-05T08:00:00.000Z',
   }),
   'GET /entities/{id}': entityById,
   'PATCH /entities/{id}': ok(mutation),
   'DELETE /entities/{id}': ok({ message: 'deleted' }),
+  'GET /entities/{id}/contact-points': ok({ data: [contactPoint.data] }),
+  'POST /entities/{id}/contact-points': created(contactPoint),
+  'PUT /entities/{id}/contact-points/{point_id}/preferred': noContent,
+  'GET /entities/{id}/person': ok(personProfile),
+  'PUT /entities/{id}/person': ok(personProfile),
+  'GET /entities/{id}/sources': ok({ data: [] }),
+  'GET /sources/accounts': ok({ data: [sourceAccount.data] }),
+  'POST /sources/accounts': ok(sourceAccount),
   'GET /entities/{id}/addresses': ok({ data: [] }),
   'POST /entities/{id}/addresses': addressCreated,
   'GET /entities/{id}/avatar': () => notFound('avatar', 'contacts.resource.not_found'),

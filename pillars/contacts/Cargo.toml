@@ -37,6 +37,7 @@ unicode-normalization = { workspace = true }
 csv = { workspace = true }
 ical = { workspace = true }
 encoding_rs = { workspace = true }
+rlibphonenumber = { workspace = true }
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["rt-multi-thread", "macros", "signal", "test-util"] }

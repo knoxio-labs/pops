@@ -20,18 +20,58 @@ server and the `emit-openapi` bin share.
 
 The HTTP surface:
 
-| Path                       | What it serves                                                                                      |
-| -------------------------- | --------------------------------------------------------------------------------------------------- |
-| `/`                        | Stub root — a plain-text identity banner so `GET /` is not a 404.                                   |
-| `/entities`                | Contact CRUD + paginated/filtered list (`GET`/`POST`).                                              |
-| `/entities/{id}`           | Single-entity read/update/delete (`GET`/`PATCH`/`DELETE`).                                          |
-| `/entities/lookup`         | Bulk match-column lookup (`POST`) — resolve many names/ids in one call.                             |
-| `/entities/{id}/addresses` | An entity's addresses (`GET`/`POST`) — one row per branch (ADR-053).                                |
-| `/entities/{id}/avatar`    | Avatar image upload (`PUT`, raw bytes + `Content-Type`) / serve (`GET`).                            |
-| `/entities/{id}/poster`    | Poster image upload (`PUT`, raw bytes + `Content-Type`) / serve (`GET`).                            |
-| `/search`                  | The contacts slice of unified search (`POST`) — ranked name hits.                                   |
-| `/health`                  | Fleet-standard liveness envelope.                                                                   |
-| `/openapi`                 | The OpenAPI document, regenerated live from the same `src/openapi.rs` source as the committed copy. |
+| Path                                                 | What it serves                                                                                      |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `/`                                                  | Stub root — a plain-text identity banner so `GET /` is not a 404.                                   |
+| `/entities`                                          | Contact CRUD + paginated/filtered list (`GET`/`POST`).                                              |
+| `/entities/{id}`                                     | Single-entity read/update/delete (`GET`/`PATCH`/`DELETE`).                                          |
+| `/entities/lookup`                                   | Bulk match-column lookup (`POST`) — resolve many names/ids in one call.                             |
+| `/entities/{id}/addresses`                           | An entity's addresses (`GET`/`POST`) — one row per branch (ADR-053).                                |
+| `/entities/{id}/avatar`                              | Avatar image upload (`PUT`, raw bytes + `Content-Type`) / serve (`GET`).                            |
+| `/entities/{id}/poster`                              | Poster image upload (`PUT`, raw bytes + `Content-Type`) / serve (`GET`).                            |
+| `/entities/{id}/person`                              | Local structured-name override (`GET`/`PUT`), independent of imported names.                        |
+| `/entities/{id}/contact-points`                      | Labeled local and source email/phone/social/URL observations (`GET`/`POST`).                        |
+| `/entities/{id}/contact-points/{point_id}/preferred` | Choose a preferred observation (`PUT`), scoped to its person and kind.                              |
+| `/entities/{id}/sources`                             | Active and inactive namespaced source links (`GET`).                                                |
+| `/sources/accounts`                                  | Stable provider account metadata (`GET`/`POST`); credentials are never accepted here.               |
+| `/search`                                            | The contacts slice of unified search (`POST`) — ranked name hits.                                   |
+| `/health`                                            | Fleet-standard liveness envelope.                                                                   |
+| `/openapi`                                           | The OpenAPI document, regenerated live from the same `src/openapi.rs` source as the committed copy. |
+
+Person entities retain the same fleet UUID identity as other entities. Multiple
+people may share a display name, including first-name-only records, and a person
+may share a name with a merchant. The Unicode case/diacritic unique-name rule
+continues to apply across all non-person entities. Creates, renames and type
+changes use the effective resulting type. A person with profile, source or point
+data cannot change to a non-person type.
+
+`GET /entities` and `POST /entities/lookup` accept `excludePersons: true` for
+merchant-specific calls; the default continues to include people as financial
+counterparties. Lookup entries include `type`. A name or alias is no longer a
+unique person identifier, so consumers must reject ambiguous matches.
+
+Person profiles are explicit local structured-name overrides. Imported records
+retain their own display and structured names with an explicit completeness
+marker; display text alone does not establish complete-name evidence. Contact
+points retain the original value and label. Conservative email and validated
+international phone keys are derived separately for matching. National phone
+values require an explicit known ISO `countryCode`; no country is inferred from
+a machine locale or provider. The original value and country context are retained.
+Unsupported values
+and social/URL points remain raw observations without an eligible match key.
+
+Sources use an opaque UUID account plus stable `provider`/`accountKey` identity,
+then `collectionKey`/`recordKey` within that account. Account labels may change
+without changing identity; registering without a label preserves an existing one.
+Observation apply/deactivate functions accept the
+caller's SQLite transaction and never commit it themselves. Refresh replaces only
+that source record's active observations; an identical active observation performs
+no writes. Surviving points retain their IDs and preferred status. Removed values
+remain inactive for audit,
+local values and local profiles survive, and preferred selections remain attached
+even when their source disappears. Each source record carries a monotonic revision
+for optimistic staging checks, with previous observation snapshots retained in
+`source_record_history`. These DTOs contain no authentication material.
 
 Registration is outbound: on boot (when opted in) contacts POSTs its manifest to
 the registry, then heartbeats every 10s and deregisters on `SIGTERM`/`SIGINT`.
