@@ -1048,8 +1048,9 @@ jobs:
 
   cross-pillar-expectations:
     name: Backend cross-pillar expectations (ADR-040)
-    # The backend counterpart to `cross-pillar-clients` below. A pillar's
-    # SERVER calls a sibling through the pillar-SDK proxy, which is typed by
+    # The backend counterpart to the frontend's generated cross-pillar clients,
+    # which scripts/codegen/generate.mjs builds from the vendored or live
+    # producer snapshot, so they cannot drift from it. A pillar's SERVER calls a sibling through the pillar-SDK proxy, which is typed by
     # the CALLER and resolves the call at runtime against the producer's
     # OpenAPI `operationId` — so nothing checks the two agree, and a renamed
     # operation breaks the consumer silently in production rather than at
@@ -1076,119 +1077,14 @@ jobs:
       - name: Every backend cross-pillar expectation holds, and every call site has one
         run: node scripts/ci/check-cross-pillar-expectations.mjs
 
-  cross-pillar-clients:
-    name: Cross-pillar generated FE clients (ADR-040)
-    # Per-consumer generated FE clients (a consumer app's own Hey API client
-    # for a producer pillar's contract: food/app <- lists, finance/app <-
-    # contacts, finance/app <- purchases) are a sanctioned but easily-forgotten
-    # seam: nothing forces a regenerate when the producer's contract changes,
-    # so the committed client can silently outrun it (see ADR-040 and AGENTS.md
-    # "Cross-pillar generated FE clients"). This regenerates every such client
-    # and fails on any diff — `lists` from its producer's current `./openapi`
-    # export, `contacts` and `purchases` from their vendored snapshot (ADR-033).
-    # A vendored copy's own drift against its producer is covered separately by
-    # the `vendored-contracts` job above — this job only re-runs codegen against
-    # whatever is committed. The `purchases` leg was gated here from the day
-    # its client landed, before any finance page consumed it, so the client
-    # could not rot in the gap; the transaction purchase-detail panel
-    # (pillars/finance/app/src/pages/transactions/purchase-detail/) is now that
-    # consumer.
-    #
-    # Every leg is ALSO re-checked, more generally, by app-quality.yml's own
-    # per-app `Codegen drift` step (`@pops/app-food` and `@pops/app-finance`
-    # each own a matrix row that regenerates every one of their generate:*
-    # scripts, cross-pillar ones included). That duplication is deliberate,
-    # not drift to clean up: this job stays the ADR-040-scoped, explicit
-    # source of truth for "which legs are sanctioned cross-pillar consumers"
-    # — the list every doc above points at — while app-quality's gate is the
-    # general one that would still catch a regression here even if this job
-    # were ever deleted.
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
-        with:
-          node-version: "24"
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - name: Regenerate every per-consumer cross-pillar client
-        run: |
-          pnpm --filter @pops/app-food generate:lists-client
-          pnpm --filter @pops/app-finance generate:contacts-client
-          pnpm --filter @pops/app-finance generate:purchases-client
-          pnpm --filter @pops/app-inventory generate:purchases-client
-      - name: Verify generated clients are up to date
-        run: |
-          if ! git diff --exit-code -- pillars/food/app/src/lists-api pillars/finance/app/src/contacts-api pillars/finance/app/src/purchases-api pillars/inventory/app/src/purchases-api; then
-            echo ""
-            echo "::error::A cross-pillar generated FE client is out of date."
-            echo "Run the owning app's generate:*-client script locally and commit the result."
-            exit 1
-          fi
-
-  generated-clients:
-    name: Generated Hey API clients outside the app matrix
-    # app-quality.yml's per-app matrix gates every `pillars/<id>/app` unit's
-    # generated Hey API client(s). Two more exist outside that matrix — the
-    # shell's registry client and overlay-ego's ego client — and had no drift
-    # gate at all until now. Rather than hardcode those two names, this calls
-    # the same `scripts/ci/check-generated-clients.mjs` app-quality.yml uses,
-    # with `--exclude-app-matrix`: it discovers every generate:* Hey API
-    # script in the workspace and runs whichever ones are NOT already covered
-    # by an app-quality.yml matrix row, so a future non-app unit that adds a
-    # generate:* script is picked up with no edit here.
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
-        with:
-          node-version: "24"
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - name: Gate self-test (proves it catches drift, a generator error, and missing output)
-        run: node scripts/ci/check-generated-clients.mjs --self-test
-      - name: Regenerate and verify every non-app-matrix generated client
-        run: node scripts/ci/check-generated-clients.mjs --exclude-app-matrix
-
-  api-types-drift:
-    name: Generated OpenAPI type-map drift
-    # Every data pillar with a REST contract carries a
-    # `pillars/<id>/scripts/generate-api-types.ts` that projects its committed
-    # OpenAPI spec into `src/contract/api-types.generated.ts` (the
-    # `paths`/`components` types a frontend composes with `openapi-fetch`).
-    # Nothing regenerated and diffed that output before this job — each
-    # script's own header comment used to say so. This is deliberately a
-    # SEPARATE guard from `generated-clients` above: that one discovers
-    # `generate:*` scripts that invoke the `openapi-ts` CLI binary directly;
-    # these scripts instead run a project-local TS file that calls the
-    # `openapi-typescript` library function itself and writes a path baked
-    # into the script, not a `--write <dir>` CLI argument, so they need their
-    # own discovery and their own runner. See
-    # scripts/ci/check-api-types-drift.mjs.
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
-        with:
-          node-version: "24"
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - name: Gate self-test (proves it catches drift, a generator error, and missing output)
-        run: node scripts/ci/check-api-types-drift.mjs --self-test
-      - name: Regenerate and verify every generated api-types module
-        run: node scripts/ci/check-api-types-drift.mjs
-
   openapi-drift:
     name: Committed OpenAPI spec drift
     # Eleven pillars declare `generate:openapi`, projecting their ts-rest
     # contract source into a committed `pillars/<id>/openapi/<id>.openapi.json`
-    # via the shared `@pops/contract-openapi` library. Every downstream gate —
-    # `api-types-drift` above, `generated-clients`/`cross-pillar-clients`
-    # (ADR-040), `vendored-contracts` (ADR-033), and mcp's finance.search
-    # vocabulary pin — verifies agreement WITH that committed spec. None of
+    # via the shared `@pops/contract-openapi` library. Everything downstream —
+    # the API clients scripts/codegen/generate.mjs builds from it,
+    # `vendored-contracts` (ADR-033), and mcp's finance.search vocabulary pin —
+    # agrees WITH that committed spec by construction or by check. None of
     # them verify the spec itself still agrees with the contract source it
     # claims to project, so a contract change not followed by a manual
     # `generate:openapi` makes every one of those gates pass on a spec that
