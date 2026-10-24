@@ -1,5 +1,6 @@
 import { toast } from 'sonner';
 
+import { entityIdentity } from '@pops/finance';
 import { Label } from '@pops/ui';
 
 import { EntitySelect } from '../../EntitySelect';
@@ -68,8 +69,14 @@ function SelectionNote({ state, name }: { state: SelectionState; name: string | 
  * says so when the pair is already broken on a rule it inherited.
  */
 export function EntityField({ value, onChange, disabled }: EntityFieldProps) {
-  const { entities, dbEntities, addPendingEntity } = useEntities();
-  const state = describeSelection(value, entities);
+  const { entities, dbEntities, addPendingEntity, identities, entityVerification } = useEntities(
+    value.entityId ? [value.entityId] : []
+  );
+  const canonicalId = identities ? entityIdentity(value.entityId, identities) : value.entityId;
+  const state = describeSelection(
+    { ...value, entityId: canonicalId },
+    identities ? entities : undefined
+  );
 
   const handleCreate = (name: string) => {
     try {
@@ -94,14 +101,19 @@ export function EntityField({ value, onChange, disabled }: EntityFieldProps) {
       <EntitySelect
         aria-label="Entity"
         entities={entities ?? []}
-        value={value.entityId ?? undefined}
+        value={canonicalId ?? undefined}
         onChange={(entityId, entityName) => onChange({ entityId, entityName })}
         onClear={() => onChange({ entityId: null, entityName: null })}
         onCreate={canCreate ? handleCreate : undefined}
         placeholder={value.entityName ?? 'No entity'}
         emptyMessage="No matching entity."
-        disabled={disabled}
+        disabled={disabled || !identities}
       />
+      {entityVerification === 'unavailable' && (
+        <FieldWarning>
+          Contact identities unavailable — retry before changing this entity.
+        </FieldWarning>
+      )}
       <SelectionNote state={state} name={value.entityName} />
     </div>
   );

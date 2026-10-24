@@ -1,5 +1,7 @@
 import {
   derivePatternFromDescriptions,
+  entityIdentity,
+  type EntityIdentities,
   type ConfirmedTransaction,
   type TagRuleChangeSet,
 } from '@pops/finance';
@@ -26,15 +28,18 @@ export interface RuleProposal {
 
 type EntityGroup = { entityId: string | null; entityName: string; txns: ConfirmedTransaction[] };
 
-function groupKey(txn: ConfirmedTransaction): string {
-  return txn.entityId ?? `desc:${txn.description.slice(0, 30)}`;
+function groupKey(txn: ConfirmedTransaction, identities?: EntityIdentities): string {
+  return entityIdentity(txn.entityId ?? null, identities) ?? `desc:${txn.description.slice(0, 30)}`;
 }
 
-function groupByEntity(txns: ConfirmedTransaction[]): Map<string, EntityGroup> {
+function groupByEntity(
+  txns: ConfirmedTransaction[],
+  identities?: EntityIdentities
+): Map<string, EntityGroup> {
   const groups = new Map<string, EntityGroup>();
   for (const txn of txns) {
     if (!txn.tags?.length) continue;
-    const key = groupKey(txn);
+    const key = groupKey(txn, identities);
     const name = txn.entityName ?? txn.description.slice(0, 30);
     if (!groups.has(key))
       groups.set(key, { entityId: txn.entityId ?? null, entityName: name, txns: [] });
@@ -51,10 +56,13 @@ function groupByEntity(txns: ConfirmedTransaction[]): Map<string, EntityGroup> {
  * did not put in the group, which a pattern derived from the group must not
  * also match (POPS-3665).
  */
-function descriptorsByGroupKey(txns: ConfirmedTransaction[]): Map<string, ConfirmedTransaction[]> {
+function descriptorsByGroupKey(
+  txns: ConfirmedTransaction[],
+  identities?: EntityIdentities
+): Map<string, ConfirmedTransaction[]> {
   const byKey = new Map<string, ConfirmedTransaction[]>();
   for (const txn of txns) {
-    const key = groupKey(txn);
+    const key = groupKey(txn, identities);
     const existing = byKey.get(key);
     if (existing) existing.push(txn);
     else byKey.set(key, [txn]);
@@ -168,13 +176,14 @@ function tagsStagedByRow(staged: readonly PendingTagRuleChangeSet[]): Map<string
 export function computeProposals(
   confirmedTransactions: ConfirmedTransaction[],
   staged: readonly PendingTagRuleChangeSet[] = [],
-  facets: readonly TagFacetOption[] = []
+  facets: readonly TagFacetOption[] = [],
+  identities?: EntityIdentities
 ): RuleProposal[] {
   const stagedByRow = tagsStagedByRow(staged);
-  const byGroupKey = descriptorsByGroupKey(confirmedTransactions);
+  const byGroupKey = descriptorsByGroupKey(confirmedTransactions, identities);
   const proposals: RuleProposal[] = [];
   let seq = 0;
-  for (const [key, group] of groupByEntity(confirmedTransactions)) {
+  for (const [key, group] of groupByEntity(confirmedTransactions, identities)) {
     const tags = commonTagsForGroup(group, facets).filter(
       (tag) => !group.txns.every((txn) => stagedByRow.get(txn.checksum)?.has(tag) ?? false)
     );
@@ -231,14 +240,17 @@ export function batchRuleTempIds(staged: readonly PendingTagRuleChangeSet[]): st
  */
 export function previouslyStagedProposalIds(
   proposals: readonly RuleProposal[],
-  staged: readonly PendingTagRuleChangeSet[]
+  staged: readonly PendingTagRuleChangeSet[],
+  identities?: EntityIdentities
 ): string[] {
   const stagedKeys = new Set(
-    staged.filter((entry) => entry.source === IMPORT_BATCH_SOURCE).map(pendingTagRuleKey)
+    staged
+      .filter((entry) => entry.source === IMPORT_BATCH_SOURCE)
+      .map((entry) => pendingTagRuleKey(entry, identities))
   );
   return proposals
     .filter((proposal) => {
-      const key = pendingTagRuleKey({ changeSet: buildChangeSet(proposal) });
+      const key = pendingTagRuleKey({ changeSet: buildChangeSet(proposal) }, identities);
       return key !== null && stagedKeys.has(key);
     })
     .map((proposal) => proposal.id);
@@ -252,7 +264,8 @@ export function previouslyStagedProposalIds(
 export function rulesStepHasProposals(
   confirmedTransactions: ConfirmedTransaction[],
   staged: readonly PendingTagRuleChangeSet[],
-  facets: readonly TagFacetOption[]
+  facets: readonly TagFacetOption[],
+  identities?: EntityIdentities
 ): boolean {
-  return computeProposals(confirmedTransactions, staged, facets).length > 0;
+  return computeProposals(confirmedTransactions, staged, facets, identities).length > 0;
 }

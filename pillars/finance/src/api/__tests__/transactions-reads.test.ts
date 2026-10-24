@@ -114,13 +114,14 @@ describe('transactions.suggestTags', () => {
     expect(tags.map((s) => s.tag)).toEqual(expect.arrayContaining(['supplier', 'recurring']));
   });
 
-  it('contributes no entity tags when contacts is unavailable', async () => {
+  it('reports unavailable instead of treating unresolved entity scopes as absent', async () => {
     const contacts = makeContactsFake({ unavailable: true });
-    const { tags } = await client(contacts).transactions.suggestTags({
-      description: 'ACME PURCHASE',
-      entityId: 'ent-acme',
-    });
-    expect(tags).toEqual([]);
+    await expect(
+      client(contacts).transactions.suggestTags({
+        description: 'ACME PURCHASE',
+        entityId: 'ent-acme',
+      })
+    ).rejects.toMatchObject({ status: 503 });
   });
 });
 

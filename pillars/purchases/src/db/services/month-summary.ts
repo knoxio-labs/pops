@@ -11,6 +11,7 @@ import { rollUpMerchantSpend, type CurrencySpend } from './merchant-spend.js';
 import { monthBounds, previousMonthKey } from './month-window.js';
 import { countPurchases } from './purchase-count.js';
 
+import type { CanonicalMerchants } from './canonical-merchants.js';
 import type { PurchasesDb } from './internal.js';
 import type { MerchantIdentity } from './merchant-identity.js';
 
@@ -82,13 +83,17 @@ function topLeadersPerCurrency(
  * wire format before this is reached, the same way it does for every other
  * bound this pillar reads.
  */
-export function monthSummary(db: PurchasesDb, month: string): MonthSummary {
-  const bounds = monthBounds(month);
+export function monthSummary(
+  db: PurchasesDb,
+  month: string,
+  canonicalMerchants?: CanonicalMerchants
+): MonthSummary {
+  const bounds = { ...monthBounds(month), canonicalMerchants };
   const rollup = rollUpMerchantSpend(db, bounds);
   const purchaseCount = countPurchases(db, bounds);
   const unmatchedCount = countPurchases(db, { ...bounds, statuses: [...UNMATCHED_STATUSES] });
 
-  const previousBounds = monthBounds(previousMonthKey(month));
+  const previousBounds = { ...monthBounds(previousMonthKey(month)), canonicalMerchants };
   const previousRollup = rollUpMerchantSpend(db, previousBounds);
 
   return {

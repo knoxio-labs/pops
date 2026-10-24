@@ -1,6 +1,7 @@
 import { Save, X } from 'lucide-react';
 import { useState } from 'react';
 
+import { entityIdentity } from '@pops/finance';
 import { Button, EditableFormCard, Label } from '@pops/ui';
 
 import { requiresEntity, type TransactionType } from '../../lib/transaction-type';
@@ -9,6 +10,7 @@ import { RawDataDisclosure } from './editable-card/RawDataDisclosure';
 import { EntitySelect } from './EntitySelect';
 import { TransactionTypeSelect } from './transaction-card/TransactionTypeSelect';
 
+import type { EntityIdentities } from '@pops/finance';
 import type { ProcessedTransaction } from '@pops/finance';
 
 interface EditableTransactionCardProps {
@@ -20,6 +22,7 @@ interface EditableTransactionCardProps {
   ) => void;
   onCancel: () => void;
   entities?: Array<{ id: string; name: string }>;
+  identities?: EntityIdentities;
 }
 
 function parseRaw(rawRow: string): Record<string, string> {
@@ -65,11 +68,13 @@ function EntityOrTransferNotice({
   entity,
   onEntityChange,
   entities,
+  identities,
 }: {
   transactionType: TransactionType;
   entity: ProcessedTransaction['entity'] | undefined;
   onEntityChange: (entityId: string, entityName: string) => void;
   entities?: Array<{ id: string; name: string }>;
+  identities?: EntityIdentities;
 }) {
   if (requiresEntity(transactionType) && entities && entities.length > 0) {
     return (
@@ -77,7 +82,7 @@ function EntityOrTransferNotice({
         <Label htmlFor="entity">Entity (Merchant/Payee)</Label>
         <EntitySelect
           entities={entities}
-          value={entity?.entityId ?? ''}
+          value={entityIdentity(entity?.entityId ?? null, identities) ?? ''}
           onChange={onEntityChange}
           placeholder="Select entity..."
         />
@@ -105,6 +110,7 @@ export function EditableTransactionCard({
   onSave,
   onCancel,
   entities,
+  identities,
 }: EditableTransactionCardProps) {
   const [editedFields, setEditedFields] = useState<Partial<ProcessedTransaction>>({
     description: transaction.description,
@@ -139,6 +145,7 @@ export function EditableTransactionCard({
         entity={editedFields.entity}
         onEntityChange={handleEntityChange}
         entities={entities}
+        identities={identities}
       />
       <RawDataDisclosure rawData={rawData} />
     </EditableFormCard>

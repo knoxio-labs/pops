@@ -124,3 +124,7 @@ the `status >= 500` that already covers it.
 ## Unconsumed
 
 `/orchestrator` (`runFederatedSearch`, `publishEvent`) and `/ranking` (`mergeResults`) have no consumer in the tree. The `orchestrator` pillar federates search itself in `pillars/orchestrator/src/search/federation.ts` over `pillar(id).search.search`, and no pillar declares a `sinks` manifest entry or mounts a `_sinks` route, so the event dispatcher has nothing to dispatch to. `/testing/discovery` is exercised only by its own test.
+
+## Canonical identities
+
+`resolveCanonicalIds` from `/server` or `/client` accepts a typed injected operation, batches requested identifiers, and validates ordered, complete responses with explicit missing ids. Every batch must report the same producer revision; a revision change restarts the entire read with bounded retries. Transport failures and malformed or persistently changing responses fail explicitly. Historical ids remain separate map keys even when they resolve to the same canonical identity. Consumers keep transport, credentials, and missing-identity policy at their own boundary.

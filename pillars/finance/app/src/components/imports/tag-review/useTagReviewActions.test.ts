@@ -184,7 +184,7 @@ describe('useTagActions — handleAcceptAll', () => {
 
 describe('useTagActions — handleRemoveGroupTag', () => {
   function group(transactions: ConfirmedTransaction[]): ConfirmedGroup {
-    return { entityName: 'ANZ', transactions };
+    return { identityKey: 'anz', entityName: 'ANZ', transactions };
   }
 
   it('strips the tag from every transaction in the group that carries it', () => {

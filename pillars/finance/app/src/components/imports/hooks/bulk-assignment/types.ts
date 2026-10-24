@@ -3,6 +3,8 @@ import { moveOneToMatched } from '../../review/useReviewActions';
 
 import type { Dispatch, SetStateAction } from 'react';
 
+import type { EntityIdentities } from '@pops/finance';
+
 import type { TransactionType } from '../../../../lib/transaction-type';
 import type { ProcessedTransaction } from '../../../../store/importStore';
 import type { LocalTxState } from '../local-tx-reconcile';
@@ -11,6 +13,8 @@ import type { RecomputeForEntity } from '../useSuggestedTagRecompute';
 export type { LocalTxState } from '../local-tx-reconcile';
 
 export interface UseBulkAssignmentArgs {
+  /** Local review references may survive a concurrent store refresh. */
+  identityIds?: readonly string[];
   setLocalTransactions: Dispatch<SetStateAction<LocalTxState>>;
   handleEntitySelect: (
     transaction: ProcessedTransaction,
@@ -51,7 +55,7 @@ export function pluralize(count: number): string {
  * instead of replaced, producing a duplicate-checksum row that fails the
  * unique index at commit (#3620).
  *
- * A group is keyed by entity name only, so it can mix an untyped credit with
+ * A group can mix an untyped credit with
  * already-typed debits for the same merchant. `transactionType` is a type
  * chosen to satisfy whichever row(s) forced that choice — it is only applied
  * to a row that actually needs one; a row that already carries a type keeps
@@ -60,7 +64,12 @@ export function pluralize(count: number): string {
 export function moveToMatched(
   prev: LocalTxState,
   transactions: ProcessedTransaction[],
-  entity: { entityId: string; entityName: string; matchType?: 'manual' | 'ai' },
+  entity: {
+    entityId: string;
+    entityName: string;
+    matchType?: 'manual' | 'ai';
+    identities?: EntityIdentities;
+  },
   transactionType?: TransactionType
 ): LocalTxState {
   // Default to 'manual' so EntitySection (which renders the AI-suggestion
@@ -71,6 +80,7 @@ export function moveToMatched(
   for (const transaction of transactions) {
     updated = moveOneToMatched(updated, {
       transaction,
+      identities: entity.identities,
       entityId: entity.entityId,
       entityName: entity.entityName,
       matchType,

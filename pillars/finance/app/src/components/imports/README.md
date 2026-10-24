@@ -13,6 +13,12 @@ Eight steps that turn a bank CSV into committed transactions. Unlike the backend
 | 7   | Commit  | `POST /imports/commit` — writes the transactions and applies every buffered ChangeSet.                                                                                                                                                                                                                                                                                         |
 | 8   | Summary | Counts for what was committed.                                                                                                                                                                                                                                                                                                                                                 |
 
+## Contact identity across steps
+
+Review and Tag Review group transactions by canonical contact identity, so retired aliases share one group and people with the same display name remain separate. Proposal and staging keys use the same snapshot. Entity pickers resolve a retired assignment to its current option; choosing that equivalent option preserves the historical id and does not propose a correction to learn.
+
+Identity queries validate complete ordered responses and a shared directory revision across batches. While checking or unavailable, identity-dependent groups and mutations wait for verification rather than reporting contacts missing. Rows and staged rules retain their original ids; commit resolves them again before its write transaction.
+
 ## What the Rules step offers
 
 Step 6 is a subtraction, not a second proposer. `computeProposals` in `rule-creation/utils.ts` does not count a tag on a row where a stored rule or the merchant's default tags supplied it, since the next import puts that tag back regardless. It also drops a tag that a rule staged on Tag Review already covers on every row the proposal came from. That comparison is by the rows the staged rule was derived from, never by pattern: Tag Review and this step derive patterns over different row sets, and comparing patterns is how one merchant's rule used to be staged twice (POPS-3674).

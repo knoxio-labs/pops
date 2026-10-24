@@ -69,7 +69,7 @@ describe('Tag Review merges keep one value per single-valued facet (POPS-3668)',
   it('handleApplyGroupTags replaces a single-valued value and unions contains', () => {
     const txns = [makeTransaction('a', ['venue:takeaway', 'contains:food'])];
     const { result } = renderTagActions(txns);
-    const group: ConfirmedGroup = { entityName: 'Palms', transactions: txns };
+    const group: ConfirmedGroup = { identityKey: 'palms', entityName: 'Palms', transactions: txns };
 
     act(() => result.current.handleApplyGroupTags(group, ['venue:pub', 'contains:alcohol']));
     expect(result.current.localTags.a).toEqual(['contains:food', 'venue:pub', 'contains:alcohol']);

@@ -23,6 +23,7 @@ import {
   transactionCorrectionsService,
   transactionTagRulesService,
 } from '../../../db/index.js';
+import { entityIdentity, type EntityIdentities } from '../../../db/services/entity-identity.js';
 import { parseStoredTags } from '../../../db/tag-facets.js';
 import { addAiTags } from './ai-tags.js';
 import { pushSuggestion } from './seen-tags.js';
@@ -36,6 +37,8 @@ export type { AiSuggestionProvenance, SuggestedTag, TagSuggestionSource } from '
 import type { InMemoryTagRule } from './tag-rule-matching.js';
 
 export interface SuggestTagsOptions {
+  /** Canonical snapshot for entity-scoped rules and entity defaults. */
+  identities?: EntityIdentities;
   description: string;
   entityId: string | null;
   /**
@@ -102,6 +105,7 @@ export interface SuggestTagsOptions {
 }
 
 interface TagPass {
+  identities: EntityIdentities | undefined;
   accountId: string | null;
   db: FinanceDb;
   description: string;
@@ -178,12 +182,12 @@ export function creditTagRuleUsage(db: FinanceDb, ruleIds: readonly string[]): v
 function addTagRuleTags(pass: TagPass): void {
   const { db, description, entityId, recordTagRuleUsage, tagRules } = pass;
   if (tagRules) {
-    for (const rule of matchTagRules(tagRules, description, entityId)) {
+    for (const rule of matchTagRules(tagRules, description, entityId, pass.identities)) {
       pushRuleTags(pass, rule.tags, rule.descriptionPattern, rule.entityId !== null);
     }
     return;
   }
-  const matching = findMatchingTagRules(db, description, entityId);
+  const matching = findMatchingTagRules(db, description, entityId, pass.identities);
   const matchedIds = matching.map((rule) => rule.id);
   pass.onTagRulesMatched?.(matchedIds);
   if (recordTagRuleUsage) creditTagRuleUsage(db, matchedIds);
@@ -195,7 +199,7 @@ function addTagRuleTags(pass: TagPass): void {
 function addEntityTags(pass: TagPass): void {
   const { entityId, entityDefaultTags, seen, result } = pass;
   if (!entityId) return;
-  const tags = entityDefaultTags.get(entityId);
+  const tags = entityDefaultTags.get(entityIdentity(entityId, pass.identities) ?? entityId);
   if (!tags) return;
   for (const tag of tags) {
     pushSuggestion(seen, result, { tag, source: 'entity' });
@@ -204,6 +208,7 @@ function addEntityTags(pass: TagPass): void {
 
 export function suggestTags(db: FinanceDb, opts: SuggestTagsOptions): SuggestedTag[] {
   const pass: TagPass = {
+    identities: opts.identities,
     db,
     description: opts.description,
     accountId: opts.accountId ?? null,

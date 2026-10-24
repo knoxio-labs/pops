@@ -16,6 +16,7 @@ import {
   type CreateOrFetchResult,
 } from '../contacts/client.js';
 import { assertKnownDefaultTags } from '../contacts/default-tags.js';
+import { DependencyUnavailableError } from '../shared/errors.js';
 
 import type { KnownTagSet } from '../../db/services/tag-vocabulary.js';
 
@@ -73,6 +74,8 @@ export interface ContactsFakeOptions {
    * was sent at all — which callers are expected to treat differently.
    */
   unavailableDetail?: string;
+  /** Historical aliases visible to canonical identity reads. */
+  canonicalIds?: ReadonlyMap<string, string | null>;
 }
 
 function filterEntities(
@@ -100,6 +103,40 @@ function findExisting(
   return matching[0];
 }
 
+function fakeCanonicalIdentities(
+  ids: readonly string[],
+  entities: readonly ContactEntity[],
+  aliases: ReadonlyMap<string, string | null> | undefined
+): ReadonlyMap<string, string | null> {
+  return new Map(
+    ids.map((id): [string, string | null] => {
+      if (aliases?.has(id)) return [id, aliases.get(id) ?? null];
+      return [id, entities.some((entity) => entity.id === id) ? id : null];
+    })
+  );
+}
+
+function updateFakeDefaults(
+  context: {
+    entities: ContactEntity[];
+    unavailable: boolean;
+    writes: { entityId: string; defaultTags: string[] }[];
+  },
+  input: { entityId: string; defaultTags: string[]; known: KnownTagSet }
+): ContactEntity {
+  const { entities, unavailable, writes: defaultTagWrites } = context;
+  const { entityId, defaultTags, known } = input;
+  // The fake enforces it too. A double that admitted what the real client
+  // refuses would let a caller's test pass on a write production rejects.
+  assertKnownDefaultTags(entityId, defaultTags, known);
+  if (unavailable) throw new ContactsUnavailableError('unavailable', 'entity defaultTags update');
+  const target = entities.find((e) => e.id === entityId);
+  if (!target) throw new ContactsPermanentError('not-found', 'entity defaultTags update');
+  target.defaultTags = defaultTags;
+  defaultTagWrites.push({ entityId, defaultTags });
+  return target;
+}
+
 export function makeContactsFake(options: ContactsFakeOptions = {}): ContactsFake {
   const entities = (options.seed ?? []).map(toEntity);
   const created: { name: string; type: string }[] = [];
@@ -113,6 +150,11 @@ export function makeContactsFake(options: ContactsFakeOptions = {}): ContactsFak
     defaultTagWrites,
     setUnavailable(value: boolean): void {
       unavailable = value;
+    },
+    async resolveEntityIds(ids: readonly string[]) {
+      if (ids.length > 0 && unavailable)
+        throw new DependencyUnavailableError('Contact identities are unavailable');
+      return fakeCanonicalIdentities(ids, entities, options.canonicalIds);
     },
     async fetchAllEntities(query = {}): Promise<ContactEntity[]> {
       return unavailable ? [] : filterEntities(entities, query);
@@ -149,16 +191,10 @@ export function makeContactsFake(options: ContactsFakeOptions = {}): ContactsFak
       defaultTags: string[],
       known: KnownTagSet
     ): Promise<ContactEntity> {
-      // The fake enforces it too. A double that admitted what the real client
-      // refuses would let a caller's test pass on a write production rejects.
-      assertKnownDefaultTags(entityId, defaultTags, known);
-      if (unavailable)
-        throw new ContactsUnavailableError('unavailable', 'entity defaultTags update');
-      const target = entities.find((e) => e.id === entityId);
-      if (!target) throw new ContactsPermanentError('not-found', 'entity defaultTags update');
-      target.defaultTags = defaultTags;
-      defaultTagWrites.push({ entityId, defaultTags });
-      return target;
+      return updateFakeDefaults(
+        { entities, unavailable, writes: defaultTagWrites },
+        { entityId, defaultTags, known }
+      );
     },
   };
 }

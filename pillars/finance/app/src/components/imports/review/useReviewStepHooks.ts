@@ -1,7 +1,10 @@
 import { useCallback, useMemo } from 'react';
 
+import { referencedEntityIds } from '@pops/finance';
+
 import { useImportStore } from '../../../store/importStore';
 import { useBulkAssignment } from '../hooks/useBulkAssignment';
+import { useEntities } from '../hooks/useEntities';
 import { useProposalGeneration } from '../hooks/useProposalGeneration';
 import { useSuggestedTagRecompute } from '../hooks/useSuggestedTagRecompute';
 import { useTransactionEditing } from '../hooks/useTransactionEditing';
@@ -30,22 +33,27 @@ function useReviewCommit(matched: ProcessedTransaction[]) {
 export function useReviewStepHooks() {
   const { findSimilar } = useImportStore();
   const review = useTransactionReview();
+  const identityIds = referencedEntityIds(review.localTransactions);
+  const { identities } = useEntities(identityIds);
   const proposal = useProposalGeneration();
   const { recomputeForEntity, isRecomputingTags } = useSuggestedTagRecompute({
     setLocalTransactions: review.setLocalTransactions,
   });
   const reviewActions = useReviewActions({
+    identities,
     setLocalTransactions: review.setLocalTransactions,
     findSimilar,
     generateProposal: proposal.generateProposal,
     recomputeForEntity,
   });
   const editing = useTransactionEditing({
+    identities,
     setLocalTransactions: review.setLocalTransactions,
     generateProposal: proposal.generateProposal,
     recomputeForEntity,
   });
   const bulk = useBulkAssignment({
+    identityIds,
     setLocalTransactions: review.setLocalTransactions,
     handleEntitySelect: reviewActions.handleEntitySelect,
     openRuleProposalDialog: proposal.openRuleProposalDialog,

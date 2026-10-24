@@ -11,6 +11,7 @@
 import { desc, sql } from 'drizzle-orm';
 
 import { transactions } from '../schema.js';
+import { entityIdentitySql, type EntityIdentities } from './entity-identity.js';
 import {
   COST_OF_CREDIT,
   ROW_COUNT,
@@ -142,6 +143,7 @@ interface EntityRow {
  * name even where individual rows happen to have one.
  */
 export interface EntityQuery {
+  identities?: EntityIdentities;
   range: SummaryRange;
   totalCents: number;
   limit: number;
@@ -150,17 +152,17 @@ export interface EntityQuery {
 export function entityAmounts(
   db: FinanceDb,
   measure: LedgerMeasure,
-  { range, totalCents, limit }: EntityQuery
+  { range, totalCents, limit, identities }: EntityQuery
 ): EntityAmount[] {
   const rows = db.all<EntityRow>(sql`
-    SELECT ${transactions.entityId} AS entityId,
+    SELECT ${entityIdentitySql(transactions.entityId, identities)} AS entityId,
            MAX(${transactions.entityName}) AS entityName,
            ${measure.cents} AS cents,
            ${ROW_COUNT} AS transactionCount
     FROM ${transactions}
     WHERE ${measureWithinRange(measure, range)}
-    GROUP BY ${transactions.entityId}
-    ORDER BY ${desc(measure.cents)}, ${transactions.entityId}
+    GROUP BY ${entityIdentitySql(transactions.entityId, identities)}
+    ORDER BY ${desc(measure.cents)}, ${entityIdentitySql(transactions.entityId, identities)}
     LIMIT ${limit}
   `);
 
@@ -176,10 +178,14 @@ export function spendByEntity(
   db: FinanceDb,
   range: SummaryRange,
   totalCents: number,
-  limit: number
+  options: number | { limit: number; identities?: EntityIdentities }
 ): EntitySpend[] {
-  return entityAmounts(db, SPEND, { range, totalCents, limit }).map(({ amount, ...entity }) => ({
-    ...entity,
-    spend: amount,
-  }));
+  const { limit, identities } =
+    typeof options === 'number' ? { limit: options, identities: undefined } : options;
+  return entityAmounts(db, SPEND, { range, totalCents, limit, identities }).map(
+    ({ amount, ...entity }) => ({
+      ...entity,
+      spend: amount,
+    })
+  );
 }
