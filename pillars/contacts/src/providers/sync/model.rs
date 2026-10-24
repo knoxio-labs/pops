@@ -49,3 +49,32 @@ pub struct CollectionPlan {
     /// Whether absence from the complete seen-key set means source removal.
     pub full_snapshot: bool,
 }
+
+/// Durable run state, including account epoch and collection continuation points.
+pub struct SyncRun {
+    /// Durable job identifier.
+    pub id: String,
+    /// Credential-bearing source account namespace.
+    pub account_id: String,
+    /// Connection lifecycle fence captured before any network request.
+    pub epoch: crate::providers::store::AccountEpoch,
+    /// One of running, completed, failed or cancelled.
+    pub status: String,
+    /// Every discovered or removed collection participating in this atomic scan.
+    pub collections: Vec<SyncCollection>,
+}
+
+/// A collection's server-side progress persisted between provider requests.
+#[derive(sqlx::FromRow)]
+pub struct SyncCollection {
+    /// Stable collection namespace.
+    pub key: String,
+    /// Whether completed enumeration permits absence-based removal.
+    pub full_snapshot: bool,
+    /// Whether the adapter proved collection enumeration complete.
+    pub complete: bool,
+    /// The checkpoint that all requests in this scan must consistently use.
+    pub checkpoint: Option<String>,
+    /// The next opaque page cursor, or none for the initial/terminal page.
+    pub continuation: Option<String>,
+}

@@ -246,6 +246,14 @@ pub async fn commit(
             ));
         }
     }
+    crate::providers::sync::validate_batch(&mut tx, batch_id)
+        .await
+        .map_err(|error| match error {
+            ProviderStoreError::StaleAccount => {
+                ImportError::Conflict("Provider scan changed; stage a new preview")
+            }
+            _ => ImportError::Storage,
+        })?;
     let rows: HashMap<&str, &ImportRow> = batch
         .rows
         .iter()

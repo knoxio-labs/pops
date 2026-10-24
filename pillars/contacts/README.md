@@ -99,6 +99,22 @@ identity is guaranteed only for the same file. Reordered or changed exports make
 new proposals. Providers use the same staging transaction after gathering a full
 scan, and explicit removals deactivate only the source's contributions.
 
+Provider scans stage pages under one durable account run. A partial or failed
+scan changes no cached observations, checkpoint, or directory data. Only complete
+collection discovery and complete pages for every collection can atomically
+reconcile the cache and produce shared import previews. Full enumeration proves
+absence before proposing removals; incremental tombstones affect only their
+source keys. Cached active ETags avoid redundant CardDAV downloads. Every preview
+contains the complete current cached collection, including unchanged contacts
+that still need a person decision. A later successful scan invalidates earlier
+provider previews, including proposals without a linked person.
+
+Provider modules expose backend authorization, transport and scan primitives.
+Credential installation requires an explicitly verified human operator; encrypted
+credentials bind to the provider account, and disconnect/reconnect fences older
+callbacks, jobs and previews. Runtime routes and job scheduling must use these
+primitives together before offering an account connection flow.
+
 Registration is outbound: on boot (when opted in) contacts POSTs its manifest to
 the registry, then heartbeats every 10s and deregisters on `SIGTERM`/`SIGINT`.
 
