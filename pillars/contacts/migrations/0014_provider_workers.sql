@@ -1,0 +1,10 @@
+ALTER TABLE provider_accounts ADD COLUMN reauthorization_required INTEGER NOT NULL DEFAULT 0 CHECK(reauthorization_required IN (0,1));
+ALTER TABLE provider_sync_runs ADD COLUMN lease_owner TEXT;
+ALTER TABLE provider_sync_runs ADD COLUMN lease_until INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE provider_sync_runs ADD COLUMN next_attempt_at INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE provider_sync_runs ADD COLUMN attempt_count INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE provider_run_collections ADD COLUMN reset_count INTEGER NOT NULL DEFAULT 0;
+CREATE INDEX idx_provider_sync_ready ON provider_sync_runs(status,next_attempt_at,lease_until);
+ALTER TABLE provider_accounts ADD COLUMN next_sync_at INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE provider_accounts ADD COLUMN refresh_owner TEXT;
+ALTER TABLE provider_accounts ADD COLUMN refresh_until INTEGER NOT NULL DEFAULT 0;

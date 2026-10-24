@@ -52,6 +52,20 @@ impl SecretBytes {
         Ok(Self(bytes))
     }
 
+    /// Read a bounded Docker secret, trimming surrounding ASCII whitespace.
+    /// No environment-value fallback or generated credential is accepted.
+    pub fn from_secret_file(path: &Path) -> Result<Self, CredentialError> {
+        let file = std::fs::File::open(path).map_err(|_| CredentialError::KeyUnavailable)?;
+        let mut bytes = Zeroizing::new(Vec::new());
+        file.take((MAX_SECRET_LENGTH + 1) as u64)
+            .read_to_end(&mut bytes)
+            .map_err(|_| CredentialError::KeyUnavailable)?;
+        if bytes.len() > MAX_SECRET_LENGTH {
+            return Err(CredentialError::InvalidCredential);
+        }
+        Self::new(bytes.trim_ascii().to_vec())
+    }
+
     /// Borrow plaintext only at the encryption or authenticated transport boundary.
     pub fn expose(&self) -> &[u8] {
         &self.0
@@ -303,5 +317,38 @@ mod tests {
             CredentialError::InvalidEnvelope.to_string(),
             "CONTACTS_PROVIDER_CREDENTIAL_UNREADABLE"
         );
+    }
+}
+
+#[cfg(test)]
+mod secret_file_tests {
+    use super::*;
+
+    #[test]
+    fn secret_files_are_bounded_nonempty_and_trim_only_surrounding_ascii_space() {
+        let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tmp");
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join(format!(
+            "fictional-provider-secret-{}",
+            uuid::Uuid::new_v4()
+        ));
+        for (bytes, valid) in [
+            (b"  fictional value\n".to_vec(), true),
+            (b"  \n".to_vec(), false),
+            (vec![b'x'; MAX_SECRET_LENGTH], true),
+            (vec![b'x'; MAX_SECRET_LENGTH + 1], false),
+        ] {
+            std::fs::write(&path, &bytes).unwrap();
+            let result = SecretBytes::from_secret_file(&path);
+            assert_eq!(result.is_ok(), valid);
+            if let Ok(secret) = result {
+                assert_eq!(secret.expose(), bytes.trim_ascii());
+            }
+        }
+        std::fs::remove_file(&path).unwrap();
+        assert!(matches!(
+            SecretBytes::from_secret_file(&path),
+            Err(CredentialError::KeyUnavailable)
+        ));
     }
 }

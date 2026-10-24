@@ -122,7 +122,14 @@ async fn state_is_bound_to_operator_expires_at_boundary_and_is_consumed_once() {
     assert_eq!(consumed.account_id, account.id);
     assert_eq!(consumed.epoch, epoch);
     assert_eq!(consumed.pkce_verifier.expose().len(), 43);
-    assert_eq!(attempt.pkce_challenge.len(), 43);
+    use base64::Engine;
+    assert_eq!(
+        attempt.pkce_challenge,
+        base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(ring::digest::digest(
+            &ring::digest::SHA256,
+            consumed.pkce_verifier.expose()
+        ))
+    );
     assert!(matches!(
         consume_authorization(&pool, &cipher, &operator, &attempt.state, 1599).await,
         Err(ProviderStoreError::InvalidState)
@@ -240,7 +247,7 @@ async fn disconnect_preserves_canonical_person_local_points_and_other_sources() 
         .await
         .unwrap();
     let points = list_points(&pool, &person).await.unwrap();
-    assert_eq!(points.len(), 3);
+    assert_eq!(points.len(), 2);
     assert!(
         points
             .iter()
@@ -255,17 +262,118 @@ async fn disconnect_preserves_canonical_person_local_points_and_other_sources() 
             .unwrap()
             .active
     );
-    assert!(
-        !points
-            .iter()
-            .find(|point| point.value == "google@example.test")
-            .unwrap()
-            .active
-    );
+    assert!(points
+        .iter()
+        .all(|point| point.value != "google@example.test"));
+    let retained_google: (bool, bool, bool) = sqlx::query_as("SELECT r.active,p.active,EXISTS(SELECT 1 FROM source_record_history h WHERE h.source_record_id=r.id) FROM source_records r JOIN contact_points p ON p.source_record_id=r.id WHERE r.account_id=?1 AND r.entity_id=?2 AND p.value=?3")
+        .bind(&account.id)
+        .bind(&person)
+        .bind("google@example.test")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(retained_google, (false, false, true));
     let people: i64 = sqlx::query_scalar("SELECT count(*) FROM entities WHERE id=?1")
         .bind(&person)
         .fetch_one(&pool)
         .await
         .unwrap();
     assert_eq!(people, 1);
+}
+
+#[tokio::test]
+async fn abandoned_expired_states_and_fenced_attempts_are_purged() {
+    let (pool, cipher, operator, account, epoch) = setup("google").await;
+    begin_authorization(&pool, &cipher, &operator, &account.id, epoch, 1000)
+        .await
+        .unwrap();
+    begin_authorization(&pool, &cipher, &operator, &account.id, epoch, 1600)
+        .await
+        .unwrap();
+    let count: i64 = sqlx::query_scalar("SELECT count(*) FROM provider_oauth_states")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(count, 1);
+    install_credential(&pool, &cipher, &operator, &account.id, epoch, &secret())
+        .await
+        .unwrap();
+    let count: i64 = sqlx::query_scalar("SELECT count(*) FROM provider_oauth_states")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(count, 0);
+}
+
+#[tokio::test]
+async fn refresh_preserves_epoch_and_rejects_concurrent_stale_and_disconnected_values() {
+    let (pool, cipher, operator, account, epoch) = setup("google").await;
+    let old = secret();
+    let next = SecretBytes::new(vec![43; 25]).unwrap();
+    let later = SecretBytes::new(vec![44; 25]).unwrap();
+    let epoch = install_credential(&pool, &cipher, &operator, &account.id, epoch, &old)
+        .await
+        .unwrap();
+    refresh_credential(&pool, &cipher, &account.id, epoch, &old, &next)
+        .await
+        .unwrap();
+    let current = load_credential(&pool, &cipher, &account.id).await.unwrap();
+    assert_eq!(current.epoch, epoch);
+    assert_eq!(current.secret.expose(), next.expose());
+    assert_eq!(
+        refresh_credential(&pool, &cipher, &account.id, epoch, &old, &later).await,
+        Err(ProviderStoreError::StaleAccount)
+    );
+    assert_eq!(
+        load_credential(&pool, &cipher, &account.id)
+            .await
+            .unwrap()
+            .secret
+            .expose(),
+        next.expose()
+    );
+    disconnect_account(&pool, &operator, &account.id)
+        .await
+        .unwrap();
+    assert_eq!(
+        refresh_credential(&pool, &cipher, &account.id, epoch, &next, &later).await,
+        Err(ProviderStoreError::StaleAccount)
+    );
+}
+
+#[tokio::test]
+async fn refresh_leases_serialize_outbound_rotation_and_reject_late_results() {
+    let (pool, cipher, human, account, epoch) = setup("google").await;
+    let epoch = install_credential(&pool, &cipher, &human, &account.id, epoch, &secret())
+        .await
+        .unwrap();
+    let old = claim_refresh(&pool, &account.id, epoch, 100).await.unwrap();
+    assert!(matches!(
+        claim_refresh(&pool, &account.id, epoch, 399).await,
+        Err(ProviderStoreError::StaleAccount)
+    ));
+    let new = claim_refresh(&pool, &account.id, epoch, 400).await.unwrap();
+    let replacement = SecretBytes::new(vec![43; 25]).unwrap();
+    assert_eq!(
+        refresh_claimed(&pool, &cipher, &old, &secret(), &replacement, 400).await,
+        Err(ProviderStoreError::StaleAccount)
+    );
+    release_refresh(&pool, &old).await.unwrap();
+    assert!(matches!(
+        claim_refresh(&pool, &account.id, epoch, 401).await,
+        Err(ProviderStoreError::StaleAccount)
+    ));
+    refresh_claimed(&pool, &cipher, &new, &secret(), &replacement, 401)
+        .await
+        .unwrap();
+    release_refresh(&pool, &new).await.unwrap();
+    assert_eq!(
+        load_credential(&pool, &cipher, &account.id)
+            .await
+            .unwrap()
+            .secret
+            .expose(),
+        replacement.expose()
+    );
+    assert!(claim_refresh(&pool, &account.id, epoch, 402).await.is_ok());
 }

@@ -8,6 +8,7 @@ import {
   personProfile,
   sourceAccount,
 } from './contacts-fixtures';
+import { providerOperation, providerStatus, providerAccounts } from './contacts-provider-fixtures';
 import { created, noContent, notFound, ok, page } from './respond';
 
 import type { MockHandler, MockHandlers } from '@pops/pillar-sdk/testing/api-mock';
@@ -154,6 +155,15 @@ export const contactsHandlers: MockHandlers = {
   'GET /imports/{id}/review-proposals': ok(importReview),
   'POST /imports/{id}/commit': ok(importReceipt),
   'POST /imports/{id}/review-decisions': ok(importReviewReceipt),
+  'GET /providers/accounts': ok(providerAccounts),
+  'POST /providers/google/authorize': () => ({ status: 201 }),
+  'GET /providers/google/callback': () => ({ status: 303 }),
+  'POST /providers/icloud/accounts': created({
+    accountId: providerOperation.accountId,
+  }),
+  'DELETE /providers/accounts/{id}': noContent,
+  'POST /providers/accounts/{id}/sync': () => ({ status: 202, body: providerOperation }),
+  'GET /providers/sync/{id}': ok(providerStatus),
 };
 
 /**

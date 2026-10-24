@@ -161,6 +161,71 @@ identity is guaranteed only for the same file. Reordered or changed exports make
 new proposals. Providers use the same staging transaction after gathering a full
 scan, and explicit removals deactivate only the source's contributions.
 
+Provider scans stage pages under one durable account run. A partial or failed
+scan changes no cached observations, checkpoint, or directory data. Only complete
+collection discovery and complete pages for every collection can atomically
+reconcile the cache and produce shared import previews. Full enumeration proves
+absence before proposing removals; incremental tombstones affect only their
+source keys. Cached active ETags avoid redundant CardDAV downloads. Every preview
+contains the complete current cached collection, including unchanged contacts
+that still need a person decision. A later successful scan invalidates earlier
+provider previews, including proposals without a linked person.
+
+Provider management verifies an explicit human Cloudflare Access operator session;
+LAN requests, absent API keys and service tokens do not authorize credential
+administration. `GET /providers/accounts` returns connection state,
+`POST /providers/google/authorize` creates a one-use read-only Google consent
+attempt and returns its browser URL in the `201` response `Location` header; the
+caller opens that URL after the request completes. A fetch never follows an
+authorization redirect across origins.
+`GET /providers/google/callback` consumes one-use operator-bound state before code
+exchange. Successful callbacks return `303` to the fixed shell route
+`/contacts/connections`; failed callbacks return the structured error envelope.
+Neither response includes authorization details in a redirect. Ordinary consent
+requests only `contacts.readonly`. Setting
+`includeOtherContacts: true` on the authorization request explicitly adds
+`contacts.other.readonly`; the choice is saved in the one-use authorization state
+and installed account policy. A callback cannot broaden it. Other contacts use a
+separate `other_contacts` collection, checkpoint and source namespace, even where
+Google returns the same resource name in both streams. Both streams paginate and
+reset expired seven-day sync tokens through the same atomic account coordinator.
+Changing that policy requires a fresh human authorization and fences old jobs and
+previews. `POST /providers/icloud/accounts` validates an app password against the
+actual CardDAV principal. Existing account IDs reconnect only the same provider
+subject; a mismatch changes neither the credential nor the account checkpoint.
+`DELETE /providers/accounts/{id}` erases credentials and fences older work while
+preserving canonical people, local observations and other account contributions.
+
+`POST /providers/accounts/{id}/sync` starts a durable scan, and
+`GET /providers/sync/{id}` exposes safe progress and import preview IDs. Account
+status includes `latestRunId` and `previewRunId`, so hourly worker scans can be
+discovered after reload; the last successful previews remain visible while a
+later attempt runs or fails. These two
+operations admit a verified operator or a registry-verified service account with
+`contacts.providers.sync` scope. The process resumes saved scans after restart and
+schedules connected accounts hourly. Expiring database leases reject old workers;
+refresh requests are serialized separately before token rotation, with both
+credential comparison and account-epoch checks before persistence. Transient
+requests have three attempts with bounded backoff; durable job retries stop after
+five operation failures. Revoked grants pause scheduling until reconnection.
+
+Connections are optional. Without a valid root-key secret and Access configuration,
+provider routes fail closed while ordinary contacts APIs continue. Production uses
+`infra/docker-compose.contacts-providers.yml` as an opt-in overlay on the base
+compose file. Provision `secrets/contacts_provider_root_key` with a random 32-byte
+key encoded as 64 hexadecimal characters. Back up that key separately from SQLite;
+losing it requires reconnecting accounts. Set `CLOUDFLARE_ACCESS_TEAM_NAME`,
+`CLOUDFLARE_ACCESS_AUD` and `POPS_OPERATOR_EMAILS` as non-secret configuration.
+
+Google additionally uses `infra/docker-compose.contacts-google.yml`,
+`secrets/contacts_google_client_secret`, `CONTACTS_GOOGLE_CLIENT_ID`, and an exact
+HTTPS `CONTACTS_GOOGLE_CALLBACK_URL` registered with Google. Browser connections
+use the public shell origin and `/contacts-api/providers/google/callback` so the
+fixed success redirect returns to the connections screen. The shell access log
+removes callback query arguments; responses set `no-store` and `no-referrer`.
+The root key and OAuth client secret enter the container only as Docker secrets;
+provider passwords and refresh tokens are encrypted in the contacts database.
+
 Registration is outbound: on boot (when opted in) contacts POSTs its manifest to
 the registry, then heartbeats every 10s and deregisters on `SIGTERM`/`SIGINT`.
 

@@ -1,0 +1,12 @@
+services:
+  contacts-api:
+    secrets:
+      - contacts_google_client_secret
+    environment:
+      CONTACTS_GOOGLE_CLIENT_ID: ${CONTACTS_GOOGLE_CLIENT_ID:-}
+      CONTACTS_GOOGLE_CALLBACK_URL: ${CONTACTS_GOOGLE_CALLBACK_URL:-}
+      CONTACTS_GOOGLE_CLIENT_SECRET_FILE: /run/secrets/contacts_google_client_secret
+
+secrets:
+  contacts_google_client_secret:
+    file: ../secrets/contacts_google_client_secret

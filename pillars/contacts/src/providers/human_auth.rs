@@ -67,11 +67,13 @@ pub struct HumanAccessVerifier {
     audience: String,
     operators: HashSet<String>,
     cache: Arc<Mutex<Option<CachedKeys>>>,
+    refresh: Arc<Mutex<()>>,
 }
 
 struct CachedKeys {
-    keys: Jwks,
+    keys: Arc<Jwks>,
     expires: Instant,
+    miss_refreshed_at: Option<Instant>,
 }
 
 #[derive(Deserialize)]
@@ -151,6 +153,7 @@ impl HumanAccessVerifier {
             audience: audience.to_string(),
             operators,
             cache: Arc::new(Mutex::new(None)),
+            refresh: Arc::new(Mutex::new(())),
         })
     }
 
@@ -168,40 +171,80 @@ impl HumanAccessVerifier {
         if assertions.next().is_some() {
             return Err(HumanAuthError::Unauthorized);
         }
-        let mut cache = self.cache.lock().await;
-        if cache
-            .as_ref()
-            .is_none_or(|entry| entry.expires <= Instant::now())
-        {
-            let response = ProviderOrigin::CloudflareAccessKeys
-                .request(
-                    Method::GET,
-                    &format!("{}/cdn-cgi/access/certs", self.issuer),
-                    None,
-                    HeaderMap::new(),
-                    None,
-                )
-                .await
-                .map_err(|_| HumanAuthError::Unavailable)?;
-            if !response.status.is_success() {
-                return Err(HumanAuthError::Unavailable);
-            }
-            let keys = serde_json::from_slice::<Jwks>(response.body())
-                .map_err(|_| HumanAuthError::Unavailable)?;
-            if keys.keys.is_empty() || keys.keys.len() > 32 {
-                return Err(HumanAuthError::Unavailable);
-            }
-            *cache = Some(CachedKeys {
-                keys,
-                expires: Instant::now() + Duration::from_secs(900),
-            });
-        }
-        let keys = &cache.as_ref().ok_or(HumanAuthError::Unavailable)?.keys;
+        let header = read_header(token)?;
+        let keys = self.signing_keys(&header.kid, || self.fetch_keys()).await?;
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map_err(|_| HumanAuthError::Unavailable)?
             .as_secs();
-        self.verify_with_keys(token, keys, now)
+        self.verify_with_keys(token, &keys, now)
+    }
+
+    async fn fetch_keys(&self) -> Result<Jwks, HumanAuthError> {
+        let response = ProviderOrigin::CloudflareAccessKeys
+            .request(
+                Method::GET,
+                &format!("{}/cdn-cgi/access/certs", self.issuer),
+                None,
+                HeaderMap::new(),
+                None,
+            )
+            .await
+            .map_err(|_| HumanAuthError::Unavailable)?;
+        if !response.status.is_success() {
+            return Err(HumanAuthError::Unavailable);
+        }
+        let keys = serde_json::from_slice::<Jwks>(response.body())
+            .map_err(|_| HumanAuthError::Unavailable)?;
+        if keys.keys.is_empty() || keys.keys.len() > 32 {
+            return Err(HumanAuthError::Unavailable);
+        }
+        Ok(keys)
+    }
+
+    async fn signing_keys<F, Fut>(&self, kid: &str, fetch: F) -> Result<Arc<Jwks>, HumanAuthError>
+    where
+        F: FnOnce() -> Fut,
+        Fut: std::future::Future<Output = Result<Jwks, HumanAuthError>>,
+    {
+        if let Some(keys) = self.cached_keys(kid, false).await {
+            return Ok(keys);
+        }
+        let _refresh = self.refresh.lock().await;
+        if let Some(keys) = self.cached_keys(kid, true).await {
+            return Ok(keys);
+        }
+        let miss = self
+            .cache
+            .lock()
+            .await
+            .as_ref()
+            .is_some_and(|entry| entry.expires > Instant::now());
+        if miss {
+            if let Some(entry) = self.cache.lock().await.as_mut() {
+                entry.miss_refreshed_at = Some(Instant::now());
+            }
+        }
+        let keys = Arc::new(fetch().await?);
+        *self.cache.lock().await = Some(CachedKeys {
+            keys: Arc::clone(&keys),
+            expires: Instant::now() + Duration::from_secs(900),
+            miss_refreshed_at: if miss { Some(Instant::now()) } else { None },
+        });
+        Ok(keys)
+    }
+
+    async fn cached_keys(&self, kid: &str, rate_limit_miss: bool) -> Option<Arc<Jwks>> {
+        let cache = self.cache.lock().await;
+        let entry = cache
+            .as_ref()
+            .filter(|entry| entry.expires > Instant::now())?;
+        let known = entry.keys.keys.iter().any(|key| key.kid == kid);
+        let recent_miss = rate_limit_miss
+            && entry
+                .miss_refreshed_at
+                .is_some_and(|at| at.elapsed() < Duration::from_secs(30));
+        (known || recent_miss).then(|| Arc::clone(&entry.keys))
     }
 
     fn verify_with_keys(
@@ -210,21 +253,11 @@ impl HumanAccessVerifier {
         keys: &Jwks,
         now: u64,
     ) -> Result<HumanIdentity, HumanAuthError> {
-        if token.len() > 16_384 {
-            return Err(HumanAuthError::Unauthorized);
-        }
+        let header = read_header(token)?;
         let segments: Vec<&str> = token.split('.').collect();
-        let [header, payload, signature] = segments.as_slice() else {
+        let [_, payload, signature] = segments.as_slice() else {
             return Err(HumanAuthError::Unauthorized);
         };
-        let header: JwtHeader =
-            serde_json::from_slice(&decode(header)?).map_err(|_| HumanAuthError::Unauthorized)?;
-        if header.alg != "RS256"
-            || header.kid.is_empty()
-            || header.crit.is_some_and(|crit| !crit.is_empty())
-        {
-            return Err(HumanAuthError::Unauthorized);
-        }
         let mut matching = keys.keys.iter().filter(|key| key.kid == header.kid);
         let key = matching.next().ok_or(HumanAuthError::Unauthorized)?;
         if matching.next().is_some()
@@ -276,6 +309,25 @@ impl HumanAccessVerifier {
             subject: claims.sub,
         })
     }
+}
+
+fn read_header(token: &str) -> Result<JwtHeader, HumanAuthError> {
+    if token.len() > 16_384 || token.split('.').count() != 3 {
+        return Err(HumanAuthError::Unauthorized);
+    }
+    let encoded = token
+        .split('.')
+        .next()
+        .ok_or(HumanAuthError::Unauthorized)?;
+    let header: JwtHeader =
+        serde_json::from_slice(&decode(encoded)?).map_err(|_| HumanAuthError::Unauthorized)?;
+    if header.alg != "RS256"
+        || header.kid.is_empty()
+        || header.crit.as_ref().is_some_and(|crit| !crit.is_empty())
+    {
+        return Err(HumanAuthError::Unauthorized);
+    }
+    Ok(header)
 }
 
 fn decode(encoded: &str) -> Result<Zeroizing<Vec<u8>>, HumanAuthError> {
@@ -387,6 +439,65 @@ mod tests {
             Err(HumanAuthError::Unauthorized)
         ));
         assert!(verifier.cache.lock().await.is_none());
+    }
+
+    #[tokio::test]
+    async fn unknown_key_refreshes_once_and_repeated_misses_are_rate_limited() {
+        let verifier = verifier();
+        verifier
+            .signing_keys("synthetic-key", || async { Ok(fixtures().jwks) })
+            .await
+            .unwrap();
+        let rotated = verifier
+            .signing_keys("rotated-key", || async {
+                let mut keys = fixtures().jwks;
+                keys.keys[0].kid = "rotated-key".to_string();
+                Ok(keys)
+            })
+            .await
+            .unwrap();
+        assert_eq!(rotated.keys[0].kid, "rotated-key");
+        let cached = verifier
+            .signing_keys("unknown-key", || async { Err(HumanAuthError::Unavailable) })
+            .await
+            .unwrap();
+        assert_eq!(cached.keys[0].kid, "rotated-key");
+    }
+
+    #[tokio::test]
+    async fn known_keys_remain_available_during_a_rotation_fetch() {
+        let verifier = verifier();
+        verifier
+            .signing_keys("synthetic-key", || async { Ok(fixtures().jwks) })
+            .await
+            .unwrap();
+        let started = Arc::new(tokio::sync::Notify::new());
+        let release = Arc::new(tokio::sync::Notify::new());
+        let refreshing = verifier.clone();
+        let task_started = Arc::clone(&started);
+        let task_release = Arc::clone(&release);
+        let refresh = tokio::spawn(async move {
+            refreshing
+                .signing_keys("rotated-key", || async {
+                    task_started.notify_one();
+                    task_release.notified().await;
+                    Ok(fixtures().jwks)
+                })
+                .await
+        });
+        started.notified().await;
+        let cached = tokio::time::timeout(
+            Duration::from_millis(100),
+            verifier.signing_keys("synthetic-key", || async {
+                Err(HumanAuthError::Unavailable)
+            }),
+        )
+        .await
+        .unwrap()
+        .unwrap();
+        assert_eq!(cached.keys[0].kid, "synthetic-key");
+        release.notify_one();
+        assert!(refresh.await.unwrap().is_ok());
     }
 
     #[test]

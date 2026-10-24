@@ -48,6 +48,12 @@ impl std::fmt::Display for TransportError {
 
 impl std::error::Error for TransportError {}
 
+impl<T: ProviderTransport + ?Sized> ProviderTransport for std::sync::Arc<T> {
+    fn send<'a>(&'a self, request: ProviderRequest<'a>) -> ProviderResponseFuture<'a> {
+        self.as_ref().send(request)
+    }
+}
+
 /// A bounded response without Debug/Serialize implementations; provider payloads
 /// may contain tokens or personal data and must not appear in diagnostics.
 pub struct ProviderResponse {
@@ -58,7 +64,73 @@ pub struct ProviderResponse {
     body: Zeroizing<Vec<u8>>,
 }
 
+/// A single provider request. No formatting implementation can reveal credentials.
+pub struct ProviderRequest<'a> {
+    /// Code-owned target class; the network transport enforces its origin policy.
+    pub origin: ProviderOrigin,
+    /// HTTP method, including CardDAV PROPFIND and REPORT.
+    pub method: Method,
+    /// Target validated before any credentials are attached.
+    pub url: &'a str,
+    /// Complete Bearer or Basic header in a zeroizing buffer.
+    pub authorization: Option<&'a SecretBytes>,
+    /// Request metadata, such as XML content type or Depth.
+    pub headers: HeaderMap,
+    /// Optional zeroizing form/XML body, retained only for the request lifetime.
+    pub body: Option<&'a SecretBytes>,
+}
+
+/// Boxed response future used by production transports and deterministic fakes.
+pub type ProviderResponseFuture<'a> = std::pin::Pin<
+    Box<dyn std::future::Future<Output = Result<ProviderResponse, TransportError>> + Send + 'a>,
+>;
+
+/// Injected outbound boundary. Production callers use NetworkTransport, whose
+/// fixed-origin, DNS pinning and redirect policies are not caller-configurable.
+pub trait ProviderTransport: Send + Sync {
+    /// Send one request without formatting its credentials or response payload.
+    fn send<'a>(&'a self, request: ProviderRequest<'a>) -> ProviderResponseFuture<'a>;
+}
+
+/// Production provider transport with public-only HTTPS and bounded bodies.
+pub struct NetworkTransport;
+
+impl ProviderTransport for NetworkTransport {
+    fn send<'a>(&'a self, request: ProviderRequest<'a>) -> ProviderResponseFuture<'a> {
+        Box::pin(async move {
+            request
+                .origin
+                .request(
+                    request.method,
+                    request.url,
+                    request.authorization,
+                    request.headers,
+                    request.body,
+                )
+                .await
+        })
+    }
+}
+
 impl ProviderResponse {
+    /// Build a bounded response for an injected transport. The body is zeroized
+    /// on rejection and on drop; it cannot be formatted or serialized.
+    pub fn new(
+        status: StatusCode,
+        headers: HeaderMap,
+        body: Vec<u8>,
+    ) -> Result<Self, TransportError> {
+        let body = Zeroizing::new(body);
+        if body.len() > MAX_RESPONSE_BYTES {
+            return Err(TransportError::ResponseTooLarge);
+        }
+        Ok(Self {
+            status,
+            headers,
+            body,
+        })
+    }
+
     /// Borrow response bytes for provider-specific parsing.
     pub fn body(&self) -> &[u8] {
         &self.body
