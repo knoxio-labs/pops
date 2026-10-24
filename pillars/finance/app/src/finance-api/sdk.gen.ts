@@ -346,6 +346,7 @@ import type {
   TransactionsRestoreErrors,
   TransactionsRestoreResponses,
   TransactionsSuggestTagsData,
+  TransactionsSuggestTagsErrors,
   TransactionsSuggestTagsResponses,
   TransactionsUnlinkTransferData,
   TransactionsUnlinkTransferErrors,
@@ -2135,11 +2136,12 @@ export const transactionsRestore = <ThrowOnError extends boolean = false>(
  */
 export const transactionsSuggestTags = <ThrowOnError extends boolean = false>(
   options: Options<TransactionsSuggestTagsData, ThrowOnError>
-): RequestResult<TransactionsSuggestTagsResponses, unknown, ThrowOnError> =>
-  (options.client ?? client).get<TransactionsSuggestTagsResponses, unknown, ThrowOnError>({
-    url: '/transactions/suggest-tags',
-    ...options,
-  });
+): RequestResult<TransactionsSuggestTagsResponses, TransactionsSuggestTagsErrors, ThrowOnError> =>
+  (options.client ?? client).get<
+    TransactionsSuggestTagsResponses,
+    TransactionsSuggestTagsErrors,
+    ThrowOnError
+  >({ url: '/transactions/suggest-tags', ...options });
 
 /**
  * Delete a transaction; returns a snapshot for Undo via restore. A guest needs `edit` on its account, and their snapshot carries no `rawRow` or `checksum`

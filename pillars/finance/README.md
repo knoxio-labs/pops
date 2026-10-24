@@ -102,7 +102,7 @@ which attaches the pillar's service-account key as `X-API-Key`:
 
 | Leg                                        | Call                                                                                                                         | Scope needed        | Where                                                        |
 | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- | ------------------- | ------------------------------------------------------------ |
-| entity matcher / usage rollup / pre-create | `entities.list`, `entities.get`, `entities.create`                                                                           | `contacts.entities` | `src/api/contacts/client.ts`                                 |
+| entity matcher / usage rollup / pre-create | `entities.list`, `entities.get`, `entities.create`, `entities.resolve`                                                       | `contacts.entities` | `src/api/contacts/client.ts`                                 |
 | owner-URI reconciliation cron              | `users.get`                                                                                                                  | `registry.users`    | `src/api/cron/pillar-lookup.ts`                              |
 | shared tag vocabulary and carrier sync     | `tags.list`, `tags.create`; one sync retry for an unknown carrier tag id                                                     | `tags.tags`         | `src/api/tags/client.ts`, `src/api/cron/sync-shared-tags.ts` |
 | files attached to a transaction            | `receipt.store`, `receipt.extract`, `receipt.addReferences`, `receipt.removeReferences`, `receipt.read`, `receipt.thumbnail` | `purchases.receipt` | `src/api/purchases/client.ts`                                |
@@ -128,14 +128,21 @@ honest: it drives each leg through the real SDK against a real socket and
 asserts the header on the wire, and keeps a `/client` control alongside that
 asserts the absence.
 
-**A refusal is loud, everywhere it can be.** Every leg here is written to
-survive its callee being down — the cron leaves the flag as it was, and the
-contacts reads substitute an empty set — so a `401`/`403` folded into
-`unavailable` would be swallowed by design. The cron reports `unauthorized`
+**A refusal is loud, everywhere it can be.** The cron leaves its flag unchanged when its callee is down. Identity-dependent
+finance reads and writes instead return `503` if contacts cannot supply a
+complete canonical mapping; an unavailable directory must not split one
+counterparty across historical ids. A `401`/`403` is reported distinctly from
+`unavailable`. The cron reports `unauthorized`
 separately from `unavailable`, the contacts client logs a distinct refusal,
 and the tags client returns the SDK's `unauthorized` result instead of an
 empty list. A process holding no key at all reports `no-credential` from the
 cron and tags client, and never issues the call.
+
+Historical entity ids remain stored on transactions, accounts and rules.
+Canonical snapshots drive filtering, grouping and scoped rule comparisons.
+Resolution batches must share one directory revision; a changing directory is
+retried within a bound, then reported as unavailable. No contact calls run
+inside finance write transactions.
 
 **As of this writing finance has no service account provisioned** — no
 finance entry under `infra/secrets.example/` (compare `purchases`'s, which

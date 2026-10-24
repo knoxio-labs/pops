@@ -1,3 +1,4 @@
+import { type EntityIdentities } from './entity-identity.js';
 /**
  * Planning for the entity `venue:` default-tag backfill (POPS-2609).
  *
@@ -70,7 +71,8 @@ export {
 export function planEntityVenueDefaults(
   db: FinanceDb,
   liveEntities: readonly LiveEntityDefaults[],
-  overrides: ReadonlyMap<string, string> = new Map()
+  overrides: ReadonlyMap<string, string> = new Map(),
+  identities?: EntityIdentities
 ): EntityVenueDefaultsPlan {
   for (const [entityId, venue] of overrides) {
     if (!isVenueTag(venue)) {
@@ -79,7 +81,7 @@ export function planEntityVenueDefaults(
       );
     }
   }
-  const evidenceByEntity = collectEntityVenueEvidence(db);
+  const evidenceByEntity = collectEntityVenueEvidence(db, identities);
   const liveIds = new Set(liveEntities.map((e) => e.id));
   const plan: EntityVenueDefaultsPlan = {
     writes: [],

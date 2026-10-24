@@ -10,6 +10,7 @@
 import { and, count, desc, eq, gte, inArray, like, lt, lte, or, type SQL, sql } from 'drizzle-orm';
 
 import { transactions } from '../schema.js';
+import { equivalentEntityIds, type EntityIdentities } from './entity-identity.js';
 
 import type { TransactionType } from '../../contract/corrections-constants.js';
 import type { FinanceDb, TransactionRow } from './internal.js';
@@ -29,6 +30,8 @@ export interface TransactionFilters {
   endDate?: string | undefined;
   tag?: string | undefined;
   entityId?: string | undefined;
+  /** Canonical snapshot used to expand an entity filter across historical ids. */
+  identities?: EntityIdentities;
   type?: TransactionType | undefined;
   /** Only these transaction ids. An empty list matches nothing. */
   ids?: readonly string[] | undefined;
@@ -71,7 +74,9 @@ function buildListConditions(filters: TransactionFilters): SQL[] {
     );
   }
   if (filters.entityId) {
-    conditions.push(eq(transactions.entityId, filters.entityId));
+    conditions.push(
+      inArray(transactions.entityId, equivalentEntityIds(filters.entityId, filters.identities))
+    );
   }
   if (filters.type) {
     conditions.push(eq(transactions.type, filters.type));

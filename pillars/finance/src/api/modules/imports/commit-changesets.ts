@@ -7,6 +7,7 @@
  * opening transactions of their own.
  */
 import { reconcilePendingCorrectionChangeSets } from '../../../contract/corrections-reconcile.js';
+import { type EntityIdentities } from '../../../db/services/entity-identity.js';
 import {
   applyChangeSet,
   dropUnusableAddOps,
@@ -81,12 +82,13 @@ export interface TagRulePhaseResult {
 export function applyTagRuleChangeSetsPhase(
   tx: FinanceDb,
   tagRuleChangeSets: CommitPayload['tagRuleChangeSets'],
-  tempIdMap: Map<string, string>
+  tempIdMap: Map<string, string>,
+  identities?: EntityIdentities
 ): TagRulePhaseResult {
   const result: TagRulePhaseResult = { applied: 0, writes: { inserted: 0, reinforced: 0 } };
   for (const entry of tagRuleChangeSets) {
     const resolved = resolveTagRuleChangeSetTempIds(entry.changeSet, tempIdMap);
-    const { writes } = applyTagRuleChangeSet(tx, resolved);
+    const { writes } = applyTagRuleChangeSet(tx, resolved, identities);
     result.applied += resolved.ops.length;
     result.writes.inserted += writes.inserted;
     result.writes.reinforced += writes.reinforced;

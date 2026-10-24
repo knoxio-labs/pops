@@ -697,6 +697,8 @@ export type {
   TransactionsRestoreResponse,
   TransactionsRestoreResponses,
   TransactionsSuggestTagsData,
+  TransactionsSuggestTagsError,
+  TransactionsSuggestTagsErrors,
   TransactionsSuggestTagsResponse,
   TransactionsSuggestTagsResponses,
   TransactionsUnlinkTransferData,

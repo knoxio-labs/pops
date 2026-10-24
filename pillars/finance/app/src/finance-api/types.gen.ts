@@ -11475,6 +11475,16 @@ export type TransactionsSuggestTagsData = {
   url: '/transactions/suggest-tags';
 };
 
+export type TransactionsSuggestTagsErrors = {
+  /**
+   * 503
+   */
+  503: ErrorBody;
+};
+
+export type TransactionsSuggestTagsError =
+  TransactionsSuggestTagsErrors[keyof TransactionsSuggestTagsErrors];
+
 export type TransactionsSuggestTagsResponses = {
   /**
    * 200

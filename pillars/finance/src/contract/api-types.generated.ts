@@ -17765,6 +17765,15 @@ export interface operations {
           };
         };
       };
+      /** @description 503 */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorBody'];
+        };
+      };
     };
   };
   'transactions.get': {

@@ -236,7 +236,7 @@ export const EXPECTATIONS = [
     // `search` widens that to an unfiltered first page, where "more than one
     // candidate" is always true and every receipt silently resolves to no
     // merchant.
-    query: ['search', 'limit'],
+    query: ['search', 'limit', 'excludePersons'],
     usedBy: 'pillars/purchases/src/api/contacts/merchant.ts',
   },
   {
@@ -864,13 +864,31 @@ export const EXPECTATIONS = [
   {
     consumer: 'finance',
     producer: 'contacts',
+    operationId: 'entities.resolve',
+    path: '/entities/resolve',
+    method: 'post',
+    query: [],
+    usedBy: 'pillars/finance/src/api/contacts/client.ts',
+  },
+  {
+    consumer: 'purchases',
+    producer: 'contacts',
+    operationId: 'entities.resolve',
+    path: '/entities/resolve',
+    method: 'post',
+    query: [],
+    usedBy: 'pillars/purchases/src/api/contacts/canonical.ts',
+  },
+  {
+    consumer: 'finance',
+    producer: 'contacts',
     operationId: 'entities.list',
     path: '/entities',
     method: 'get',
     // `offset` is the paging leg of a sweep with a page cap: without it the
     // sweep re-reads page one until the cap and reports a truncated set as a
     // complete one.
-    query: ['search', 'type', 'limit', 'offset'],
+    query: ['search', 'type', 'limit', 'offset', 'excludePersons'],
     usedBy: 'pillars/finance/src/api/contacts/client.ts',
   },
   {

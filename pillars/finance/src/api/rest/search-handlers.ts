@@ -27,7 +27,7 @@
  * `uri` shapes are a cross-pillar contract: the search orchestrator dispatches
  * on them and caches client links keyed by them, so they must stay stable.
  */
-import { and, eq, gte, like, lte, sql } from 'drizzle-orm';
+import { and, eq, inArray, gte, like, lte, sql } from 'drizzle-orm';
 
 import {
   budgets,
@@ -39,7 +39,10 @@ import {
   wishList,
   type WishlistSearchScope,
 } from '../../db/index.js';
+import { equivalentEntityIds, type EntityIdentities } from '../../db/services/entity-identity.js';
 import { centsToDollars, centsToDollarsNullable } from '../../money.js';
+import { loadEntityIdentities } from '../contacts/identity-snapshot.js';
+import { type ContactsClient } from '../contacts/types.js';
 import { ValidationError } from '../shared/errors.js';
 import { runHttp } from './error-mapping.js';
 import {
@@ -62,13 +65,17 @@ const BUDGETS_DEFAULT_LIMIT = 20;
 function searchTransactions(
   db: FinanceDb,
   text: string,
-  scope: TransactionsSearchScope
+  scope: TransactionsSearchScope,
+  identities?: EntityIdentities
 ): SearchHit[] {
   const conditions = [
     like(sql`pops_unicode_lower(${transactions.description})`, `%${text.toLowerCase()}%`),
   ];
   if (scope.type !== undefined) conditions.push(eq(transactions.type, scope.type));
-  if (scope.entityId !== undefined) conditions.push(eq(transactions.entityId, scope.entityId));
+  if (scope.entityId !== undefined)
+    conditions.push(
+      inArray(transactions.entityId, equivalentEntityIds(scope.entityId, identities))
+    );
   if (scope.startDate !== undefined) conditions.push(gte(transactions.date, scope.startDate));
   if (scope.endDate !== undefined) conditions.push(lte(transactions.date, scope.endDate));
 
@@ -191,21 +198,24 @@ function searchWishlist(db: FinanceDb, text: string, scope: WishlistSearchScope)
   return rank(candidates);
 }
 
-export function makeSearchHandlers(db: FinanceDb) {
+export function makeSearchHandlers(db: FinanceDb, contacts: ContactsClient) {
   return {
     search: ({ body }: Req['search']) =>
-      runHttp(() => {
+      runHttp(async () => {
         const filterResult = searchFilterScope(body.query.filters ?? []);
         if (!filterResult.ok) {
           throw new ValidationError(filterResult.message, { filters: body.query.filters });
         }
         const { scope } = filterResult;
+        const identities = scope.transactions.entityId
+          ? await loadEntityIdentities(db, contacts, [scope.transactions.entityId])
+          : undefined;
 
         const text = body.query.text.trim();
         if (!text) return { status: 200 as const, body: { hits: [] } };
 
         const hits: SearchHit[] = [
-          ...searchTransactions(db, text, scope.transactions),
+          ...searchTransactions(db, text, scope.transactions, identities),
           ...searchBudgets(db, text, scope.budgets),
           ...searchWishlist(db, text, scope.wishlist),
         ].toSorted(byScoreDescending);

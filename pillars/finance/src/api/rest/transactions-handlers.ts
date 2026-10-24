@@ -7,6 +7,7 @@
  */
 import { type FinanceDb, transactionsService, transferPairsService } from '../../db/index.js';
 import { type ContactsClient } from '../contacts/client.js';
+import { loadEntityIdentities } from '../contacts/identity-snapshot.js';
 import { suggestTags as computeSuggestedTags } from '../modules/tag-suggester/index.js';
 import { toTransaction } from '../modules/transactions-types.js';
 import { type PurchasesReceiptsClient } from '../purchases/client.js';
@@ -30,8 +31,8 @@ export function makeTransactionsHandlers(
   contacts: ContactsClient,
   purchases: PurchasesReceiptsClient
 ) {
-  const reads = makeTransactionReadHandlers(db);
-  const writes = makeTransactionWriteHandlers(db, purchases);
+  const reads = makeTransactionReadHandlers(db, contacts);
+  const writes = makeTransactionWriteHandlers(db, purchases, contacts);
 
   // Express registers these in key order, so `get` (`/transactions/:id`) has
   // to stay below the literal `suggest-tags` and `descriptions-preview` paths
@@ -42,12 +43,14 @@ export function makeTransactionsHandlers(
     suggestTags: ({ query }: Req['suggestTags']) =>
       runHttp(async () => {
         const entityId = query.entityId ?? null;
+        const identities = await loadEntityIdentities(db, contacts, entityId ? [entityId] : []);
         const entityDefaultTags = entityId
           ? new Map([[entityId, await contacts.fetchEntityDefaultTags(entityId)]])
           : undefined;
         const suggested = computeSuggestedTags(db, {
           description: query.description,
           entityId,
+          identities,
           entityDefaultTags,
           recordTagRuleUsage: false,
         });

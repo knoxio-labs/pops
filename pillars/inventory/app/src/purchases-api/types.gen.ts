@@ -44,6 +44,10 @@ export type AnalyticsMerchantSpendErrors = {
    * 400
    */
   400: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type AnalyticsMerchantSpendError =
@@ -118,6 +122,10 @@ export type AnalyticsMonthSummaryErrors = {
    * 400
    */
   400: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type AnalyticsMonthSummaryError =
@@ -215,6 +223,10 @@ export type AnalyticsProductLeaderboardErrors = {
    * 400
    */
   400: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type AnalyticsProductLeaderboardError =
@@ -578,6 +590,10 @@ export type ProductProposeErrors = {
    * 400
    */
   400: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type ProductProposeError = ProductProposeErrors[keyof ProductProposeErrors];
@@ -727,6 +743,10 @@ export type PurchaseListErrors = {
    * 400
    */
   400: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type PurchaseListError = PurchaseListErrors[keyof PurchaseListErrors];
@@ -1684,6 +1704,10 @@ export type PurchaseUpdateErrors = {
    * 502
    */
   502: ErrorBody;
+  /**
+   * 503
+   */
+  503: ErrorBody;
 };
 
 export type PurchaseUpdateError = PurchaseUpdateErrors[keyof PurchaseUpdateErrors];

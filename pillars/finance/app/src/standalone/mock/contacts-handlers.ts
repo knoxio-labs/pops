@@ -79,6 +79,22 @@ const sourceAccount: SourceAccountResponse = {
   },
 };
 
+const resolveEntities: MockHandler = ({ body }) => {
+  const ids =
+    typeof body === 'object' && body !== null && 'ids' in body && Array.isArray(body.ids)
+      ? body.ids.filter((id: unknown): id is string => typeof id === 'string')
+      : [];
+  return {
+    body: {
+      data: ids.map((id) => ({
+        id,
+        canonicalId: CONTACT_ENTITIES.some((entity) => entity.id === id) ? id : null,
+      })),
+      revision: 0,
+    },
+  };
+};
+
 export const contactsHandlers: MockHandlers = {
   'GET /': ok('contacts'),
   'GET /openapi': ok({}),
@@ -95,6 +111,12 @@ export const contactsHandlers: MockHandlers = {
     entities: CONTACT_ENTITIES.map(({ id, name, aliases, type }) => ({ id, name, aliases, type })),
     fetchedAt: '2026-09-05T08:00:00.000Z',
   }),
+  'POST /entities/resolve': resolveEntities,
+  'POST /merges': () => notFound('person', 'contacts.resource.not_found'),
+  'GET /merges/groups/{id}': () => notFound('person', 'contacts.resource.not_found'),
+  'GET /merges/keep-separate': ok({ data: [], revision: 0 }),
+  'POST /merges/keep-separate': () => notFound('person', 'contacts.resource.not_found'),
+  'POST /merges/{id}/undo': () => notFound('merge', 'contacts.resource.not_found'),
   'GET /entities/{id}': entityById,
   'PATCH /entities/{id}': ok(mutation),
   'DELETE /entities/{id}': ok({ message: 'deleted' }),
