@@ -22,6 +22,27 @@ export function entityAnswersTo(
   return (entity.aliases ?? []).some((alias) => alias.toLowerCase() === lowercaseName);
 }
 
+function merchantMatches<T extends { name: string; type?: string; aliases?: readonly string[] }>(
+  entities: readonly T[],
+  target: string
+): T[] {
+  const merchants = entities.filter((entity) => entity.type !== 'person');
+  const named = merchants.filter((entity) => entity.name.toLowerCase() === target);
+  return named.length > 0 ? named : merchants.filter((entity) => entityAnswersTo(entity, target));
+}
+
+/** Resolve an AI merchant suggestion only within non-person identities; reject ambiguity. */
+export function resolveSuggestedMerchant<
+  T extends { id: string; name: string; type: string; aliases?: readonly string[] },
+>(entities: readonly T[], name: string): T | undefined {
+  const target = name.toLowerCase();
+  const matching = merchantMatches(entities, target);
+  if (new Set(matching.map((entity) => entity.id)).size > 1) {
+    throw new Error('Multiple contacts match this merchant name; select an entity explicitly');
+  }
+  return matching[0];
+}
+
 /**
  * Classify `entityName` against the entities currently loaded. `entities` is
  * the complete contact set once loaded (see `useEntities`), so an absent name
@@ -33,14 +54,16 @@ export function entityAnswersTo(
  */
 export function resolveEntityExistence(
   entityName: string | null | undefined,
-  entities: ReadonlyArray<{ name: string; aliases?: readonly string[] }> | undefined,
+  entities: ReadonlyArray<{ name: string; type?: string; aliases?: readonly string[] }> | undefined,
   verification: EntityVerification
 ): EntityExistence {
   if (!entityName) return 'unavailable';
   if (verification === 'checking' || verification === 'unavailable') return verification;
   if (!entities) return 'unavailable';
   const target = entityName.toLowerCase();
-  return entities.some((e) => entityAnswersTo(e, target)) ? 'existing' : 'new';
+  const matching = merchantMatches(entities, target);
+  if (matching.length > 1) return 'unavailable';
+  return matching.length === 1 ? 'existing' : 'new';
 }
 
 const LABELS: Record<EntityExistence, Record<AcceptScope, (name: string) => string>> = {

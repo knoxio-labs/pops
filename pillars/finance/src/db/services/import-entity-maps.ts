@@ -42,21 +42,30 @@ export interface EntityMaps {
  * - Values preserve the original-case name for display.
  * - Aliases arrive already split into arrays from the contacts wire shape;
  *   whitespace-only aliases are dropped.
+ * - Ambiguous names and aliases are excluded; unique person counterparties remain.
  */
 export function buildEntityMaps(contacts: ContactEntity[]): EntityMaps {
   const entityLookup = new Map<string, EntityLookupEntry>();
   const aliasMap = new Map<string, string>();
 
+  const identities = new Map<string, Set<string>>();
   for (const contact of contacts) {
-    entityLookup.set(contact.name.toLowerCase(), {
-      id: contact.id,
-      name: contact.name,
-      type: contact.type,
-    });
+    for (const raw of [contact.name, ...contact.aliases]) {
+      const key = raw.trim().toLowerCase();
+      const ids = identities.get(key) ?? new Set<string>();
+      ids.add(contact.id);
+      identities.set(key, ids);
+    }
+  }
+  for (const contact of contacts) {
+    const nameKey = contact.name.toLowerCase();
+    if (identities.get(nameKey)?.size !== 1) continue;
+    entityLookup.set(nameKey, { id: contact.id, name: contact.name, type: contact.type });
     for (const raw of contact.aliases) {
-      const alias = raw.trim();
-      if (alias.length === 0) continue;
-      aliasMap.set(alias.toLowerCase(), contact.name);
+      const alias = raw.trim().toLowerCase();
+      if (alias.length > 0 && identities.get(alias)?.size === 1) {
+        aliasMap.set(alias, contact.name);
+      }
     }
   }
 

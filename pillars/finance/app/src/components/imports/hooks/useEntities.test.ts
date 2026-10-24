@@ -28,7 +28,7 @@ function wrapper({ children }: { children: ReactNode }) {
 function lookupResolves(...names: Array<[id: string, name: string]>) {
   mockEntitiesLookup.mockResolvedValue({
     data: {
-      entities: names.map(([id, name]) => ({ id, name, aliases: [] })),
+      entities: names.map(([id, name]) => ({ id, name, aliases: [], type: 'company' })),
       fetchedAt: '2026-01-01T00:00:00.000Z',
     },
     error: undefined,
@@ -58,8 +58,8 @@ describe('useEntities', () => {
     mockEntitiesList.mockResolvedValue({
       data: {
         data: [
-          { id: 'ent-coles', name: 'Coles', aliases: [] },
-          { id: 'ent-woolies', name: 'Woolworths', aliases: [] },
+          { id: 'ent-coles', name: 'Coles', aliases: [], type: 'company' },
+          { id: 'ent-woolies', name: 'Woolworths', aliases: [], type: 'company' },
         ],
         pagination: { total: 2, limit: 200, offset: 0 },
       },
