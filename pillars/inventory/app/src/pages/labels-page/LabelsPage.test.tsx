@@ -522,15 +522,7 @@ describe('existing Fragile metadata', () => {
     expect(screen.queryByRole('img', { name: 'Fragile: cracked glass' })).not.toBeInTheDocument();
   });
 
-  it('inherits warnings through a nested container but not an unrelated branch', async () => {
-    items.set(
-      BOX,
-      item(BOX, 'Kitchen 12', 'B412', {
-        isContainer: true,
-        typeKey: 'storage_box',
-        fields: { Fragile: false },
-      })
-    );
+  it('allows a manual warning for nested fragile contents when the container has no Fragile field', async () => {
     items.set(
       MACHINE,
       item(MACHINE, 'Inner crate', 'C1', { isContainer: true, containingItemId: BOX })
@@ -540,15 +532,17 @@ describe('existing Fragile metadata', () => {
       item(JUG, 'Fragile jug', 'J1', { containingItemId: MACHINE, fields: { Fragile: true } })
     );
     renderPage(`?ids=${BOX},${GRINDER}&sheet=L7169`);
-    fireEvent.click(await screen.findByRole('button', { name: 'Label shows: Auto' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Fragile' }));
+    const toggle = await screen.findByRole('switch', { name: 'Fragile label for Kitchen 12' });
+    expect(toggle).not.toBeChecked();
+    expect(screen.queryByRole('img', { name: 'Fragile: cracked glass' })).not.toBeInTheDocument();
+    fireEvent.click(toggle);
     expect(screen.getAllByRole('img', { name: 'Fragile: cracked glass' })).toHaveLength(2);
-    expect(
-      screen.queryByRole('switch', { name: 'Fragile label for Kitchen 12' })
-    ).not.toBeInTheDocument();
+    expect(toggle).toBeChecked();
     expect(
       screen.getByRole('switch', { name: 'Fragile label for Coffee grinder' })
     ).toBeInTheDocument();
+    fireEvent.click(toggle);
+    expect(screen.queryByRole('img', { name: 'Fragile: cracked glass' })).not.toBeInTheDocument();
   });
 
   it('shows a read failure instead of a perpetual contents-expansion loading state', async () => {
