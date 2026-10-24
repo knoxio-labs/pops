@@ -6,7 +6,7 @@
  * header; printing is the browser's own dialog.
  */
 import { Printer } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 
 import { matchingPreset } from '@pops/inventory/labels';
@@ -25,6 +25,7 @@ import { LabelsSelection } from './labels-selection';
 import { PrintOptions } from './print-options';
 import { PrintPreview } from './print-preview';
 import { LabelPrintStyles } from './print-styles';
+import { useExpandLabelContents } from './use-expand-label-contents';
 import { useLabelJob } from './useLabelJob';
 import { useLabelSubjects } from './useLabelSubjects';
 import { useSaveCode } from './useSaveCode';
@@ -110,34 +111,6 @@ function useIdsParam(defaults: LabelPageDefaults) {
   return { params, setIds, setContent };
 }
 
-/**
- * `contents=1` prints each listed box with what is in it: once the boxes'
- * contents are known they are written into `ids`, which stays the one
- * record of what the job holds.
- */
-function useExpandContents(
-  params: LabelParams,
-  data: LabelSubjects,
-  setIds: (ids: string[], dropContents: boolean) => void
-) {
-  useEffect(() => {
-    if (!params.contents || data.isLoading || data.contentsLoading || data.error) return;
-    const expanded = params.ids.flatMap((id) => [
-      id,
-      ...(data.contents.get(id) ?? []).map((held) => held.id),
-    ]);
-    setIds(expanded, true);
-  }, [
-    params.contents,
-    params.ids,
-    data.isLoading,
-    data.contentsLoading,
-    data.contents,
-    data.error,
-    setIds,
-  ]);
-}
-
 function LabelsContent({
   data,
   params,
@@ -153,7 +126,9 @@ function LabelsContent({
     content: params.content,
     details: data.details,
     fragility: data.fragility,
-    readsPending: data.contentsLoading,
+    reads: data.reads,
+    fields: data.fields,
+    fieldErrors: data.fieldErrors,
     sheetId: params.sheetId,
   });
   const { save } = useSaveCode();
@@ -207,12 +182,18 @@ export function LabelsPage() {
   };
   const { params, setIds, setContent } = useIdsParam(defaults);
   const data = useLabelSubjects(params.ids);
-  useExpandContents(params, data, setIds);
-  if (data.error) {
+  useExpandLabelContents(params, data, setIds);
+  const error = data.error ?? (params.contents ? data.contentsError : null);
+  if (error) {
     return (
       <Alert variant="destructive">
         <AlertTitle>Could not load the items</AlertTitle>
-        <AlertDescription>{data.error.message}</AlertDescription>
+        <AlertDescription>{error.message}</AlertDescription>
+        {params.contents && data.contentsError ? (
+          <Button variant="outline" onClick={() => setIds(params.ids, true)}>
+            Use selected items only
+          </Button>
+        ) : null}
       </Alert>
     );
   }

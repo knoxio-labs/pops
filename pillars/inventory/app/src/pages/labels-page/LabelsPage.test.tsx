@@ -5,8 +5,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { decodeQrSvg } from '@pops/ui/testing/decode-qr';
 
+import { testField, testType } from '../../catalogue-editor/type-tree-test-utils';
 import { PAGE_HEIGHT } from '../../foundation/frame/page-frame.js';
 import { SHEET_STORAGE_KEY } from './label-storage';
+
+import type { WebItem } from './label-item';
 
 const api = vi.hoisted(() => ({
   webList: vi.fn(),
@@ -28,7 +31,7 @@ vi.mock('../../inventory-api/index.js', () => ({
 
 import { LabelsPage } from './LabelsPage';
 
-interface FakeItem {
+interface FakeItem extends Pick<WebItem, 'typeId' | 'fieldValues' | 'computedValues'> {
   id: string;
   name: string;
   code: string | null;
@@ -59,6 +62,9 @@ function item(id: string, name: string, code: string | null, extra: Partial<Fake
     revision: 1,
     typeKey: null,
     fields: {},
+    typeId: null,
+    fieldValues: [],
+    computedValues: [],
     ...extra,
   };
 }
@@ -548,6 +554,51 @@ describe('fragile labels', () => {
 });
 
 describe('existing Fragile metadata', () => {
+  it('allows unchecked unavailable computed Fragile and recovers after deselecting it', async () => {
+    const fragile = testField('fragile', 'box-type', 'Fragile', {
+      kind: 'boolean',
+      storage: 'computed',
+    });
+    const type = testType('box-type', 'Box', null, { fields: [fragile] });
+    items.set(
+      BOX,
+      item(BOX, 'Kitchen 12', 'B412', {
+        isContainer: true,
+        typeId: type.id,
+        typeKey: type.key,
+      })
+    );
+    api.typesReadCatalogue.mockResolvedValue(ok({ types: [type], revision: { revision: 1 } }));
+    renderPage(`?ids=${BOX}&shows=qr-code&sheet=L7169`);
+    const print = await screen.findByRole('button', { name: 'Print 2 labels' });
+    await waitFor(() => expect(print).toBeEnabled());
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Label shows: QR and code' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Fragile' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('Could not read Fragile for Kitchen 12');
+    expect(print).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Fragile' }));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(print).toBeEnabled();
+  });
+
+  it('keeps optional failed content reads out of QR/code printing and exposes selected contents errors', async () => {
+    api.webList.mockImplementation(async ({ query }: { query: { ids?: string } }) => {
+      if (query.ids) return ok({ items: [items.get(BOX)], nextCursor: null });
+      throw new Error('Contents unavailable');
+    });
+    renderPage(`?ids=${BOX}&shows=qr-code&sheet=L7169`);
+    const print = await screen.findByRole('button', { name: 'Print 2 labels' });
+    await waitFor(() => expect(print).toBeEnabled());
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Label shows: QR and code' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Contents' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('Contents unavailable');
+    expect(print).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Contents' }));
+    expect(print).toBeEnabled();
+  });
+
   it.each([true, false])(
     'allows an explicit warning for untyped legacy Fragile=%s',
     async (fragile) => {
@@ -623,6 +674,9 @@ describe('existing Fragile metadata', () => {
     renderPage(`?ids=${BOX}&contents=1`);
     expect(await screen.findByRole('alert')).toHaveTextContent('Contents unavailable');
     expect(screen.queryByRole('button', { name: 'Print 2 labels' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Use selected items only' }));
+    expect(await screen.findByRole('button', { name: 'Print 2 labels' })).toBeEnabled();
+    expect(screen.getByTestId('address')).not.toHaveTextContent('contents=1');
   });
 });
 

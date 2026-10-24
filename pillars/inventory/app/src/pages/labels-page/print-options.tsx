@@ -8,7 +8,7 @@ import { labelsPerSheet, MIN_QR_MM } from '@pops/inventory/labels';
  * standard A4 sheets whose die-cuts the page knows, and a sheet they miss is
  * measured once as the custom sheet.
  */
-import { NumberInput } from '@pops/ui';
+import { Alert, AlertDescription, AlertTitle, NumberInput } from '@pops/ui';
 
 import { LabelShowsPicker } from './label-shows-picker';
 import { OptionField } from './print-option-field';
@@ -68,6 +68,14 @@ function CopiesChoice({ job, kind }: { job: PrintJob; kind: PrintSubject['kind']
  * nothing: a QR smaller than its minimum is a label no phone reads.
  */
 export function SheetFitNotice({ job }: { job: PrintJob }) {
+  if (job.readError) {
+    return (
+      <Alert variant="destructive">
+        <AlertTitle>Could not prepare the selected label content</AlertTitle>
+        <AlertDescription>{job.readError.message}</AlertDescription>
+      </Alert>
+    );
+  }
   if (job.block === 'too-many') {
     return (
       <p className="text-sm text-destructive" role="alert">
@@ -78,7 +86,7 @@ export function SheetFitNotice({ job }: { job: PrintJob }) {
   if (job.block === 'loading')
     return (
       <p className="text-sm text-muted-foreground" role="status">
-        Checking fragility in the selected items and their contents…
+        Loading the selected label content…
       </p>
     );
   if (job.block === 'too-small') {

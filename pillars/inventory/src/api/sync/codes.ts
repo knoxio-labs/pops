@@ -87,6 +87,25 @@ function suggestionsFromPattern(db: CommandDb, pattern: CodePattern, typeLetter:
   });
 }
 
+function configuredPattern(db: CommandDb): CodePattern {
+  const settings = readCodeSettings(db);
+  const pattern = parseCodePattern(settings.pattern) ?? parseCodePattern(DEFAULT_CODE_PATTERN);
+  if (pattern === null) throw new Error('default inventory code pattern is invalid');
+  return pattern;
+}
+
+function patternMatcher(db: CommandDb, request: SuggestRequest): RegExp {
+  const pattern = configuredPattern(db);
+  const { prefix, suffix } = renderAffixes(
+    pattern,
+    typeLetterFor(db, request.typeKey, request.name)
+  );
+  return new RegExp(
+    `^${escapeRegExp(prefix)}(\\d{${pattern.width},})${escapeRegExp(suffix)}$`,
+    'i'
+  );
+}
+
 /**
  * Deterministic code suggestions, used when no model answer is available.
  * An explicit stem continues that stem's highest number at its own width;
@@ -98,8 +117,7 @@ export function suggestCodes(db: CommandDb, request: SuggestRequest): string[] {
   if (!settings.suggest) return [];
   if (request.stem) return suggestionsFromStem(db, request.stem);
 
-  const pattern = parseCodePattern(settings.pattern) ?? parseCodePattern(DEFAULT_CODE_PATTERN);
-  if (pattern === null) throw new Error('default inventory code pattern is invalid');
+  const pattern = configuredPattern(db);
   return suggestionsFromPattern(db, pattern, typeLetterFor(db, request.typeKey, request.name));
 }
 
@@ -107,25 +125,29 @@ export function suggestCodes(db: CommandDb, request: SuggestRequest): string[] {
 const MAX_CODE_LENGTH = 64;
 
 /**
- * Keep the candidates that could be offered as-is: trimmed, 1–64 characters,
- * starting with `stem` when one is given, not repeated, and not carried by any
- * item (tombstones included, matched case-insensitively like the unique
- * index). Order is preserved and the result is capped at
+ * Keep candidates that start with a typed stem or match the saved pattern's
+ * affixes and minimum numeric width, are 1–64 characters, are not repeated,
+ * and are not carried by any item (tombstones included, matched
+ * case-insensitively like the unique index). Order is preserved and the result is capped at
  * {@link SUGGESTION_COUNT}.
  */
 export function keepFreeCodes(
   db: CommandDb,
   candidates: readonly string[],
-  stem?: string
+  request: SuggestRequest
 ): string[] {
-  const prefix = stem?.toLowerCase();
+  const matcher = request.stem === undefined ? patternMatcher(db, request) : undefined;
+  const stem = request.stem?.toLowerCase();
   const seen = new Set<string>();
   const shaped: string[] = [];
   for (const raw of candidates) {
     const code = raw.trim();
     const key = code.toLowerCase();
     if (code.length === 0 || code.length > MAX_CODE_LENGTH || seen.has(key)) continue;
-    if (prefix !== undefined && !key.startsWith(prefix)) continue;
+    if (stem !== undefined && !key.startsWith(stem)) continue;
+    if (matcher !== undefined) {
+      if (!matcher.test(code)) continue;
+    }
     seen.add(key);
     shaped.push(code);
   }
