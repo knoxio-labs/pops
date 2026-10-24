@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, readdirSync, rmSync, utimesSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -61,6 +61,7 @@ function workspace(): string {
       test: 'node ../../scripts/require-built-graph.mjs && vitest run',
     }),
     'pillars/alpha/src/index.ts': 'export const alpha = 1;\n',
+    'pillars/alpha/.env.example': 'ALPHA_URL=\n',
     'pillars/alpha/openapi/alpha.openapi.json': '{"openapi":"3.1.0"}\n',
     'pillars/alpha/generated/client.gen.ts': 'export const generated = 1;\n',
     'pillars/alpha/src/tracked.gen.ts': 'export const tracked = 1;\n',
@@ -136,6 +137,21 @@ describe('receipt keys', { timeout: 30_000 }, () => {
     const before = key(root, 'unit-ts', alpha);
     write(root, file, `${readFileSync(join(root, file), 'utf8')}// changed\n`);
     expect(key(root, 'unit-ts', alpha)).toBe(before);
+  });
+
+  it('ignores checkout timestamps, including on committed env examples', () => {
+    const root = workspace();
+    const before = key(root, 'unit-ts', alpha);
+    const later = new Date(Date.now() + 60_000);
+    for (const file of [
+      'pillars/alpha/.env.example',
+      'pillars/alpha/src/index.ts',
+      'pnpm-lock.yaml',
+    ])
+      utimesSync(join(root, file), later, later);
+    expect(key(root, 'unit-ts', alpha)).toBe(before);
+    write(root, 'pillars/alpha/.env.example', 'ALPHA_URL=http://localhost\n');
+    expect(key(root, 'unit-ts', alpha)).not.toBe(before);
   });
 
   it('counts untracked source and a deleted tracked file', () => {

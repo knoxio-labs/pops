@@ -284,7 +284,7 @@ export function receiptKey({ root, lane, unit, environment }) {
       Object.fromEntries(keyedEnvironment.map((key) => [key, environment[key] ?? '']))
     )
   );
-  for (const file of files) addRepositoryFile(hash, root, file);
+  for (const file of files) addRepositoryFile(hash, root, file, { environmentFileContent: true });
   const digest = hash.digest('hex');
   return {
     digest,

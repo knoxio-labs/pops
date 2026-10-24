@@ -21,12 +21,15 @@ export function listRepositoryFiles(cwd, pathspecs = []) {
 
 /**
  * Add one repository file's path, mode and content to a digest. Environment
- * files contribute metadata only, so their values never enter a fingerprint.
+ * files contribute metadata only, so their values never enter a fingerprint,
+ * unless `environmentFileContent` is set by a caller keying a clean checkout,
+ * where that metadata is the checkout time and never repeats.
  * @param {import('node:crypto').Hash} hash
  * @param {string} cwd
  * @param {string} file
+ * @param {{environmentFileContent?: boolean}} [options]
  */
-export function addRepositoryFile(hash, cwd, file) {
+export function addRepositoryFile(hash, cwd, file, { environmentFileContent = false } = {}) {
   hash.update(file);
   const absolute = join(cwd, file);
   if (!existsSync(absolute)) {
@@ -40,7 +43,7 @@ export function addRepositoryFile(hash, cwd, file) {
     return;
   }
   if (!stat.isFile()) return;
-  if (/(^|\/)\.env(?:\.|$)/u.test(file))
+  if (!environmentFileContent && /(^|\/)\.env(?:\.|$)/u.test(file))
     hash.update(JSON.stringify([stat.size, stat.mtimeMs, stat.ctimeMs]));
   else hash.update(readFileSync(absolute));
 }
