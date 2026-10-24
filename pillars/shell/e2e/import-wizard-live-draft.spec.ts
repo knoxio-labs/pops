@@ -45,6 +45,7 @@
  *   GET  /finance-api/transactions/descriptions-preview → DB rows for preview
  *   POST /finance-api/imports/commit                → the commit result
  *   GET  /contacts-api/entities                     → the one known merchant
+ *   POST /contacts-api/entities/resolve              → { data:[{ id, canonicalId }], revision }
  *   GET  /finance-api/accounts                      → the one account
  *   GET  /finance-api/tag-rules/vocabulary          → { tags:[] } (Tag Review's picker, unused here)
  *   GET  /finance-api/tag-rules/facets              → { facets:[] } (ditto)
@@ -54,6 +55,7 @@
 import { z } from 'zod';
 
 import { expect, test } from './fixtures/pillar-rest-guard';
+import { stubCanonicalContacts } from './helpers/contacts-identities';
 import { AccountsListResponseSchema } from './helpers/finance-accounts';
 import {
   type DraftTraffic,
@@ -253,7 +255,14 @@ const CommitResponseSchema = z
 const EntityLookupResponseSchema = z
   .object({
     entities: z.array(
-      z.object({ id: z.string(), name: z.string(), aliases: z.array(z.string()) }).strict()
+      z
+        .object({
+          id: z.string(),
+          name: z.string(),
+          type: z.string(),
+          aliases: z.array(z.string()),
+        })
+        .strict()
     ),
     fetchedAt: z.string(),
   })
@@ -463,8 +472,8 @@ const commitBody = {
 
 /** The merchant the AI suggested already exists, so the accept button assigns rather than creates. */
 const knownEntities = [
-  { id: 'entity-woolworths', name: 'Woolworths', aliases: [] },
-  { id: 'entity-coles', name: 'Coles', aliases: [] },
+  { id: 'entity-woolworths', name: 'Woolworths', type: 'company', aliases: [] },
+  { id: 'entity-coles', name: 'Coles', type: 'company', aliases: [] },
 ];
 
 const entitiesBody = {
@@ -507,6 +516,10 @@ let commitRequest: CommitRequestBody | null;
 async function setupMocks(page: Page): Promise<void> {
   commitRequest = null;
   draftTraffic = await stubLiveImportDraft(page, liveSeed);
+  await stubCanonicalContacts(
+    page,
+    new Map([...knownEntities.map(({ id }) => [id, id] as const), ['ent-up', 'ent-up']])
+  );
 
   await page.route(
     '**/finance-api/corrections/analyze',

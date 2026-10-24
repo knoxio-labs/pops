@@ -33,6 +33,7 @@
  *   GET  /contacts-api/entities                    → { data:[], pagination }
  *   GET  /finance-api/accounts                     → { data:[…1 account…], pagination }
  *   POST /contacts-api/entities/lookup              → { entities:[], fetchedAt }
+ *   POST /contacts-api/entities/resolve             → { data:[{ id, canonicalId }], revision }
  *   GET  /finance-api/currencies                    → { data:[…AUD…] } (account-add dialog, never opened)
  *   GET  /finance-api/tag-rules/vocabulary          → { tags:[] } (Tag Review's picker, unused here)
  *   GET  /finance-api/tag-rules/facets              → { facets:[] } (ditto)
@@ -49,6 +50,7 @@
 import { z } from 'zod';
 
 import { expect, test } from './fixtures/pillar-rest-guard';
+import { stubCanonicalContacts } from './helpers/contacts-identities';
 import { AccountsListResponseSchema } from './helpers/finance-accounts';
 import { DRAFT_ID, type DraftTraffic, stubImportDrafts } from './helpers/finance-import-drafts';
 import { fulfilWith, stubShellBoot } from './helpers/pillar-rest';
@@ -272,7 +274,14 @@ const EntitiesListResponseSchema = z
 const EntitiesLookupResponseSchema = z
   .object({
     entities: z.array(
-      z.object({ id: z.string(), name: z.string(), aliases: z.array(z.string()) }).strict()
+      z
+        .object({
+          id: z.string(),
+          name: z.string(),
+          type: z.string(),
+          aliases: z.array(z.string()),
+        })
+        .strict()
     ),
     fetchedAt: z.string(),
   })
@@ -419,6 +428,14 @@ let draftTraffic: DraftTraffic;
 
 async function setupMocks(page: Page): Promise<void> {
   draftTraffic = await stubImportDrafts(page, 'acc-amex');
+  await stubCanonicalContacts(
+    page,
+    new Map([
+      ['entity-woolworths', 'entity-woolworths'],
+      ['entity-netflix', 'entity-netflix'],
+      ['ent-amex', 'ent-amex'],
+    ])
+  );
   await page.route(
     '**/finance-api/imports/process',
     fulfilWith(
