@@ -7,6 +7,7 @@ import type {
   ImportReview,
   PersonProfileResponse,
   ReviewDecisionReceipt,
+  ReadyBatchReceipt,
   SourceAccountResponse,
 } from '../../contacts-api/types.gen';
 
@@ -99,6 +100,17 @@ export const importReview: ImportReview = {
   offset: 0,
   limit: 50,
   counts: { automatic: 0, review: 0, new: 1, invalid: 0 },
+  ready: {
+    proposalRevision: 'fictional-ready-proof',
+    eligibleRows: 1,
+    automaticMerges: 0,
+    newPeople: 1,
+    sourceUpdates: 0,
+    sourceRemovals: 0,
+    deferred: 0,
+    reviewRequired: 0,
+    alreadyProcessed: 0,
+  },
   source: {
     id: null,
     accountId: importBatch.accountId,
@@ -132,4 +144,15 @@ export const importReview: ImportReview = {
       candidates: [],
     },
   ],
+};
+
+/** Atomic server-resolved batch receipt for the standalone contract. */
+export const importReadyReceipt: ReadyBatchReceipt = {
+  batchId: importBatch.id,
+  batchRevision: 2,
+  directoryRevision: 2,
+  rows: [importReviewReceipt],
+  deferred: 0,
+  reviewRequired: 0,
+  alreadyProcessed: 0,
 };

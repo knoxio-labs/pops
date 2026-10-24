@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::merges::model::FieldSelection;
+use crate::merges::model::{FieldSelection, SourceMergeField};
 
 /// A fresh row proposal and explicit candidate choices. Omitted candidates remain pending.
 /// Empty candidate lists explicitly ingest the row without declaring candidate identity.
@@ -25,6 +25,9 @@ pub struct ReviewDecisionInput {
     pub selections: Vec<FieldSelection>,
     #[serde(default)]
     pub preferred_point_ids: Vec<String>,
+    /// Explicit replacements from this row's validated immutable source observation.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub incoming_fields: Vec<SourceMergeField>,
 }
 
 /// Immutable receipt for the entire reviewed action, including ingestion, decisions and subset merge.

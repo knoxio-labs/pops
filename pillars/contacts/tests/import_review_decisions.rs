@@ -93,6 +93,7 @@ async fn input(pool: &SqlitePool, batch_id: &str, row_id: &str, key: &str) -> Re
         later_entity_ids: vec![],
         selections: vec![],
         preferred_point_ids: vec![],
+        incoming_fields: Vec::new(),
     }
 }
 

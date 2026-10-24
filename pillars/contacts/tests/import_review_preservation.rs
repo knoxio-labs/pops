@@ -127,6 +127,7 @@ async fn manual_empty_selections_preserve_existing_preferred_values() {
             later_entity_ids: vec![],
             selections: vec![],
             preferred_point_ids: vec![],
+            incoming_fields: Vec::new(),
         },
     )
     .await
@@ -176,6 +177,7 @@ async fn decision(pool: &SqlitePool, batch: &ImportBatch, key: &str) -> ReviewDe
         later_entity_ids: vec![],
         selections: vec![],
         preferred_point_ids: vec![],
+        incoming_fields: Vec::new(),
     }
 }
 
@@ -316,4 +318,138 @@ async fn later_subset_preserves_canonical_source_owner_negatives_and_explicit_in
     assert!(negatives.data.iter().any(|pair| (pair.left_id == existing
         && pair.right_id == rejected)
         || (pair.right_id == existing && pair.left_id == rejected)));
+}
+
+#[tokio::test]
+async fn explicit_pre_ingestion_incoming_fields_replace_only_the_selected_fields() {
+    use contacts::merges::model::SourceMergeField;
+    let (pool, account) = setup().await;
+    let existing = person(
+        &pool,
+        "Existing label",
+        vec![email("incoming@example.test")],
+    )
+    .await;
+    persons::put_profile(&pool, &existing, name("Existing", "Chosen"))
+        .await
+        .unwrap();
+    let preferred = persons::list_points(&pool, &existing)
+        .await
+        .unwrap()
+        .remove(0);
+    persons::prefer_point(&pool, &existing, &preferred.id)
+        .await
+        .unwrap();
+    let mut incoming = row(
+        "replace",
+        "Incoming label",
+        vec![email("incoming@example.test")],
+    );
+    incoming.payload.as_mut().unwrap().name = name("Incoming", "Replacement");
+    let batch = stage(&pool, &account, vec![incoming]).await;
+    let mut body = decision(&pool, &batch, "explicit-incoming").await;
+    assert!(serde_json::to_value(&body)
+        .unwrap()
+        .get("incomingFields")
+        .is_none());
+    body.merge_entity_ids = vec![existing.clone()];
+    body.incoming_fields = vec![SourceMergeField::Name, SourceMergeField::PersonProfile];
+    let receipt = review_decision_service::decide(&pool, &batch.id, &body)
+        .await
+        .unwrap();
+    assert_eq!(receipt.entity_id.as_deref(), Some(existing.as_str()));
+    assert_eq!(
+        contacts::entities::repo::get(&pool, &existing)
+            .await
+            .unwrap()
+            .unwrap()
+            .name,
+        "Incoming label"
+    );
+    let profile = persons::get_profile(&pool, &existing)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(profile.name.family_name.as_deref(), Some("Replacement"));
+    assert!(profile.source_record_id.is_some() && profile.source_observation_id.is_some());
+    assert_ne!(profile.entity_id, existing);
+    assert!(persons::list_points(&pool, &existing)
+        .await
+        .unwrap()
+        .iter()
+        .any(|point| point.id == preferred.id && point.preferred));
+    let stored = persons::get_stored_profile(&mut pool.acquire().await.unwrap(), &existing)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(stored.name.family_name.as_deref(), Some("Chosen"));
+}
+
+#[tokio::test]
+async fn conflicting_or_unsubstantiated_incoming_fields_fail_atomically() {
+    use contacts::merges::model::{FieldSelection, MergeField, SourceMergeField};
+    let (pool, account) = setup().await;
+    let existing = person(&pool, "Existing", vec![email("missing-name@example.test")]).await;
+    let batch = stage(
+        &pool,
+        &account,
+        vec![row(
+            "missing",
+            "Incoming",
+            vec![email("missing-name@example.test")],
+        )],
+    )
+    .await;
+    let mut request = decision(&pool, &batch, "empty-evidence").await;
+    request.merge_entity_ids = vec![existing.clone()];
+    request.incoming_fields = vec![SourceMergeField::PersonProfile];
+    assert!(matches!(
+        review_decision_service::decide(&pool, &batch.id, &request).await,
+        Err(service::ImportError::Invalid(_))
+    ));
+    let source_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM source_records")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(source_count, 0);
+    let mut conflict = decision(&pool, &batch, "conflict").await;
+    conflict.merge_entity_ids = vec![existing.clone()];
+    conflict.incoming_fields = vec![SourceMergeField::Name];
+    conflict.selections = vec![FieldSelection::Entity {
+        field: MergeField::Name,
+        entity_id: existing.clone(),
+    }];
+    assert!(matches!(
+        review_decision_service::decide(&pool, &batch.id, &conflict).await,
+        Err(service::ImportError::Invalid(_))
+    ));
+    let mut deferred = decision(&pool, &batch, "deferred-intent").await;
+    deferred.later_entity_ids = vec![existing.clone()];
+    deferred.incoming_fields = vec![SourceMergeField::Name];
+    assert!(matches!(
+        review_decision_service::decide(&pool, &batch.id, &deferred).await,
+        Err(service::ImportError::Invalid(_))
+    ));
+    assert!(contacts::imports::review_state::get(
+        &mut pool.acquire().await.unwrap(),
+        &batch.rows[0].id
+    )
+    .await
+    .unwrap()
+    .is_none());
+    conflict.selections.clear();
+    conflict.incoming_fields.push(SourceMergeField::Name);
+    assert!(matches!(
+        review_decision_service::decide(&pool, &batch.id, &conflict).await,
+        Err(service::ImportError::Invalid(_))
+    ));
+    assert_eq!(
+        contacts::entities::repo::get(&pool, &existing)
+            .await
+            .unwrap()
+            .unwrap()
+            .name,
+        "Existing"
+    );
+    assert!(!service::get(&pool, &batch.id).await.unwrap().rows[0].processed);
 }

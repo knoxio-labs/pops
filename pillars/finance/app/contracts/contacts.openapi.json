@@ -840,6 +840,9 @@
           "proposalRevision": {
             "type": "string"
           },
+          "ready": {
+            "$ref": "#/components/schemas/ReadySummary"
+          },
           "rows": {
             "items": {
               "$ref": "#/components/schemas/ReviewRow"
@@ -864,6 +867,7 @@
           "offset",
           "limit",
           "counts",
+          "ready",
           "rows"
         ],
         "type": "object"
@@ -1317,6 +1321,129 @@
         ],
         "type": "object"
       },
+      "ReadyBatchInput": {
+        "additionalProperties": false,
+        "description": "Apply only server-resolved rows from the exact complete ready snapshot, never client-picked targets.",
+        "properties": {
+          "batchRevision": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "directoryRevision": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "idempotencyKey": {
+            "type": "string"
+          },
+          "proposalRevision": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "batchRevision",
+          "directoryRevision",
+          "proposalRevision",
+          "idempotencyKey"
+        ],
+        "type": "object"
+      },
+      "ReadyBatchReceipt": {
+        "description": "One transaction's exact retry result. Held/review-required rows and their prior choices stay untouched.",
+        "properties": {
+          "alreadyProcessed": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "batchId": {
+            "type": "string"
+          },
+          "batchRevision": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "deferred": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "directoryRevision": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "reviewRequired": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewDecisionReceipt"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "batchId",
+          "batchRevision",
+          "directoryRevision",
+          "rows",
+          "deferred",
+          "reviewRequired",
+          "alreadyProcessed"
+        ],
+        "type": "object"
+      },
+      "ReadySummary": {
+        "description": "Complete-batch eligibility, independent of row/candidate pagination.\nThis proposalRevision includes pending evidence from other batches and differs from paging proofs.",
+        "properties": {
+          "alreadyProcessed": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "automaticMerges": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "deferred": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "eligibleRows": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "newPeople": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "proposalRevision": {
+            "type": "string"
+          },
+          "reviewRequired": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "sourceRemovals": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "sourceUpdates": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "proposalRevision",
+          "eligibleRows",
+          "automaticMerges",
+          "newPeople",
+          "sourceUpdates",
+          "sourceRemovals",
+          "deferred",
+          "reviewRequired",
+          "alreadyProcessed"
+        ],
+        "type": "object"
+      },
       "ResolveBody": {
         "additionalProperties": false,
         "description": "Bounded IDs to resolve, preserving request order and repeated historical IDs.",
@@ -1515,6 +1642,13 @@
           },
           "idempotencyKey": {
             "type": "string"
+          },
+          "incomingFields": {
+            "description": "Explicit replacements from this row's validated immutable source observation.",
+            "items": {
+              "$ref": "#/components/schemas/SourceMergeField"
+            },
+            "type": "array"
           },
           "laterEntityIds": {
             "items": {
@@ -3651,6 +3785,73 @@
         "summary": "Read a durable preview after a partial commit or a process restart.",
         "tags": [
           "crate::imports::routes"
+        ]
+      }
+    },
+    "/imports/{id}/apply-ready": {
+      "post": {
+        "operationId": "imports.ready.apply",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReadyBatchInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadyBatchReceipt"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Apply only complete-snapshot ready rows; every late failure rolls back the whole action.",
+        "tags": [
+          "crate::imports::ready_routes"
         ]
       }
     },

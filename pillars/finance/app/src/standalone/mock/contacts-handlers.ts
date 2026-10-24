@@ -5,6 +5,7 @@ import {
   importReview,
   importReceipt,
   importReviewReceipt,
+  importReadyReceipt,
   personProfile,
   sourceAccount,
 } from './contacts-fixtures';
@@ -164,6 +165,7 @@ export const contactsHandlers: MockHandlers = {
   'DELETE /providers/accounts/{id}': noContent,
   'POST /providers/accounts/{id}/sync': () => ({ status: 202, body: providerOperation }),
   'GET /providers/sync/{id}': ok(providerStatus),
+  'POST /imports/{id}/apply-ready': ok(importReadyReceipt),
 };
 
 /**
