@@ -13,9 +13,6 @@ import { defineConfig } from '@hey-api/openapi-ts';
 
 export default defineConfig({
   input: '../openapi/inventory.openapi.json',
-  output: {
-    path: 'src/inventory-api',
-  },
   plugins: [
     {
       name: '@hey-api/client-fetch',

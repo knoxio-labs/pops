@@ -22,9 +22,6 @@ import { defineConfig } from '@hey-api/openapi-ts';
 
 export default defineConfig({
   input: fileURLToPath(new URL('./contracts/contacts.openapi.json', import.meta.url)),
-  output: {
-    path: 'src/contacts-api',
-  },
   plugins: [
     {
       name: '@hey-api/client-fetch',

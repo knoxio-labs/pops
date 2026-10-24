@@ -147,3 +147,32 @@ data/
 !libs/**/src/**/data/
 !libs/**/src/**/data/**
 secrets
+
+# Derived API clients, generated from the committed OpenAPI snapshots by
+# scripts/codegen/generate.mjs on install and build. Listed path by path, so a
+# hand-written directory can never be ignored by accident; the generator fails
+# when one of its outputs is missing from here.
+libs/overlay-ego/src/ego-api/
+pillars/ai/app/src/ai-api/
+pillars/bfm/app/src/bfm-api/
+pillars/cerebrum/app/src/cerebrum-api/
+pillars/finance/app/src/contacts-api/
+pillars/finance/app/src/finance-api/
+pillars/finance/app/src/purchases-api/
+pillars/food/app/src/food-api/
+pillars/food/app/src/lists-api/
+pillars/inventory/app/src/inventory-api/
+pillars/inventory/app/src/purchases-api/
+pillars/lists/app/src/lists-api/
+pillars/media/app/src/media-api/
+pillars/purchases/app/src/purchases-api/
+pillars/shell/src/registry-api/
+pillars/ai/src/contract/api-types.generated.ts
+pillars/cerebrum/src/contract/api-types.generated.ts
+pillars/finance/src/contract/api-types.generated.ts
+pillars/food/src/contract/api-types.generated.ts
+pillars/inventory/src/contract/api-types.generated.ts
+pillars/lists/src/contract/api-types.generated.ts
+pillars/media/src/contract/api-types.generated.ts
+pillars/purchases/src/contract/api-types.generated.ts
+pillars/registry/src/contract/api-types.generated.ts

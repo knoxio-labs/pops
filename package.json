@@ -3,12 +3,12 @@
   "private": true,
   "scripts": {
     "dev": "mise run dev",
-    "build": "tsc -b tsconfig.build.json",
+    "build": "node scripts/codegen/generate.mjs && tsc -b tsconfig.build.json",
     "typecheck": "mise run typecheck",
     "test": "mise run test",
     "test:coverage": "mise run test:coverage",
-    "lint": "node scripts/check-deps-materialised.mjs && oxlint --type-aware",
-    "lint:fix": "node scripts/check-deps-materialised.mjs && oxlint --type-aware --fix",
+    "lint": "node scripts/check-deps-materialised.mjs && node scripts/codegen/generate.mjs && oxlint --type-aware",
+    "lint:fix": "node scripts/check-deps-materialised.mjs && node scripts/codegen/generate.mjs && oxlint --type-aware --fix",
     "lint:boundaries": "depcruise --config .dependency-cruiser.cjs --ignore-known --output-type err pillars libs scripts",
     "lint:boundaries:baseline": "depcruise --config .dependency-cruiser.cjs --output-type baseline --output-to .dependency-cruiser-known-violations.json pillars libs scripts",
     "extractability:deps": "bash scripts/extractability/check-changed-units.sh",
@@ -55,6 +55,7 @@
     "ci:fix": "pnpm lint:fix && pnpm format && pnpm typecheck",
     "registry:build": "pnpm --filter @pops/module-registry registry:build",
     "prepare": "husky && if [ -f scripts/git/install-merge-drivers.mjs ]; then node scripts/git/install-merge-drivers.mjs; fi",
+    "postinstall": "if [ -f scripts/codegen/generate.mjs ]; then node scripts/codegen/generate.mjs; fi",
     "check": "mise run check",
     "dev:ui": "node scripts/local-dev/ui-remote-watch.mjs"
   },

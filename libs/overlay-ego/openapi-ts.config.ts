@@ -13,9 +13,6 @@ import { defineConfig } from '@hey-api/openapi-ts';
 
 export default defineConfig({
   input: '../../pillars/cerebrum/openapi/cerebrum.openapi.json',
-  output: {
-    path: 'src/ego-api',
-  },
   plugins: [
     {
       name: '@hey-api/client-fetch',

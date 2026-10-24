@@ -14,8 +14,8 @@
     "test": "node ../../../scripts/require-built-graph.mjs && vitest run",
     "test:coverage": "node ../../../scripts/require-built-graph.mjs && vitest run --coverage",
     "test:watch": "vitest",
-    "generate:food-client": "openapi-ts && oxfmt --write src/food-api",
-    "generate:lists-client": "openapi-ts -f openapi-ts.lists.config.ts && oxfmt --write src/lists-api"
+    "generate:food-client": "openapi-ts -o src/food-api",
+    "generate:lists-client": "openapi-ts -f openapi-ts.lists.config.ts -o src/lists-api"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.18.7",
