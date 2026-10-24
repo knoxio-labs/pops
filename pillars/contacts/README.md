@@ -133,7 +133,10 @@ subject; a mismatch changes neither the credential nor the account checkpoint.
 preserving canonical people, local observations and other account contributions.
 
 `POST /providers/accounts/{id}/sync` starts a durable scan, and
-`GET /providers/sync/{id}` exposes safe progress and import preview IDs. These two
+`GET /providers/sync/{id}` exposes safe progress and import preview IDs. Account
+status includes `latestRunId` and `previewRunId`, so hourly worker scans can be
+discovered after reload; the last successful previews remain visible while a
+later attempt runs or fails. These two
 operations admit a verified operator or a registry-verified service account with
 `contacts.providers.sync` scope. The process resumes saved scans after restart and
 schedules connected accounts hourly. Expiring database leases reject old workers;

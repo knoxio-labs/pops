@@ -27,6 +27,10 @@ pub struct ProviderAccountStatus {
     pub connected: bool,
     pub reauthorization_required: bool,
     pub include_other_contacts: bool,
+    /// Most recent run, including unfinished or failed worker attempts.
+    pub latest_run_id: Option<String>,
+    /// Most recent successful scan whose preview IDs remain discoverable.
+    pub preview_run_id: Option<String>,
 }
 
 /// A browser authorization request. Omit accountId only for a new connection.
@@ -217,8 +221,15 @@ pub async fn list_accounts(
 ) -> Result<Response, ApiError> {
     let runtime = configured(extension)?;
     human(&runtime, &headers).await?;
-    let accounts:Vec<ProviderAccountStatus>=sqlx::query_as("SELECT account_id,provider,connected,reauthorization_required,google_other_contacts AS include_other_contacts FROM provider_accounts ORDER BY account_id").fetch_all(&state.pool).await.map_err(|_|api(ProviderError::Storage))?;
+    let accounts = account_statuses(&state.pool).await.map_err(api)?;
     Ok(private(Json(accounts).into_response()))
+}
+
+async fn account_statuses(
+    pool: &sqlx::SqlitePool,
+) -> Result<Vec<ProviderAccountStatus>, ProviderError> {
+    Ok(sqlx::query_as("SELECT p.account_id,p.provider,p.connected,p.reauthorization_required,p.google_other_contacts AS include_other_contacts,(SELECT id FROM provider_sync_runs r WHERE r.account_id=p.account_id ORDER BY r.rowid DESC LIMIT 1) AS latest_run_id,(SELECT id FROM provider_sync_runs r WHERE r.account_id=p.account_id AND r.status='completed' ORDER BY r.rowid DESC LIMIT 1) AS preview_run_id FROM provider_accounts p ORDER BY p.account_id")
+        .fetch_all(pool).await?)
 }
 
 /// Start one-use Google authorization under the verified operator identity.

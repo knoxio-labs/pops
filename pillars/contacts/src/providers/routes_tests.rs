@@ -221,3 +221,58 @@ fn authorization_creation_preserves_location_without_triggering_a_fetch_redirect
         .starts_with("https://accounts.google.com/o/oauth2/v2/auth?"));
     assert_eq!(response.headers()["cache-control"], "no-store");
 }
+
+#[tokio::test]
+async fn account_status_discovers_worker_runs_and_keeps_previews_visible_during_later_failures() {
+    let pool = crate::db::connect("sqlite::memory:").await.unwrap();
+    let human = crate::providers::human_auth::HumanIdentity::for_test("operator");
+    let id = crate::sources::repo::create_or_get_account(
+        &pool,
+        &crate::sources::model::SourceAccountInput {
+            provider: "google".into(),
+            account_key: "people/fictional".into(),
+            label: None,
+        },
+    )
+    .await
+    .unwrap()
+    .id;
+    let epoch = crate::providers::store::prepare_account(&pool, &human, &id)
+        .await
+        .unwrap();
+    let epoch = crate::providers::store::install_credential(
+        &pool,
+        &CredentialCipher::for_test(),
+        &human,
+        &id,
+        epoch,
+        &SecretBytes::new(vec![b'x'; 20]).unwrap(),
+    )
+    .await
+    .unwrap();
+    let initial = account_statuses(&pool).await.unwrap().remove(0);
+    assert!(initial.latest_run_id.is_none());
+    assert!(initial.preview_run_id.is_none());
+    let complete = crate::providers::sync::begin_sync(&pool, &id, epoch, &[])
+        .await
+        .unwrap();
+    crate::providers::sync::finalize_sync(&pool, &complete.id)
+        .await
+        .unwrap();
+    let pending = crate::providers::sync::begin_sync(&pool, &id, epoch, &[])
+        .await
+        .unwrap();
+    let status = account_statuses(&pool).await.unwrap().remove(0);
+    assert_eq!(status.latest_run_id.as_deref(), Some(pending.id.as_str()));
+    assert_eq!(status.preview_run_id.as_deref(), Some(complete.id.as_str()));
+    crate::providers::sync::abort_sync(
+        &pool,
+        &pending.id,
+        crate::providers::sync::SyncError::InvalidPage,
+    )
+    .await
+    .unwrap();
+    let status = account_statuses(&pool).await.unwrap().remove(0);
+    assert_eq!(status.latest_run_id.as_deref(), Some(pending.id.as_str()));
+    assert_eq!(status.preview_run_id.as_deref(), Some(complete.id.as_str()));
+}

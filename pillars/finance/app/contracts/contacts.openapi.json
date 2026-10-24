@@ -862,6 +862,16 @@
           "includeOtherContacts": {
             "type": "boolean"
           },
+          "latestRunId": {
+            "description": "Most recent run, including unfinished or failed worker attempts.",
+            "nullable": true,
+            "type": "string"
+          },
+          "previewRunId": {
+            "description": "Most recent successful scan whose preview IDs remain discoverable.",
+            "nullable": true,
+            "type": "string"
+          },
           "provider": {
             "type": "string"
           },

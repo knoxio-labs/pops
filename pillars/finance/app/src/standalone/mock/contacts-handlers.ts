@@ -103,6 +103,8 @@ const providerAccounts: ProviderAccountStatus[] = [
     connected: true,
     reauthorizationRequired: false,
     includeOtherContacts: false,
+    latestRunId: providerStatus.runId,
+    previewRunId: providerStatus.runId,
   },
 ];
 const importBatch: ImportBatch = {
