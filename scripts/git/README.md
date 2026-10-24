@@ -11,7 +11,9 @@ The binary is pinned in the root `mise.toml`; `mise install` provides it.
 
 Git reads merge-driver commands only from local config, never from the
 repository. `install-merge-drivers.mjs` writes that config. It runs from the
-root `prepare` script, from `mise setup` and from the pre-commit hook. Existing
+root `prepare` script, from `mise setup` and from the pre-commit hook. pnpm runs
+the root `prepare` even for the filtered installs inside the pillar images, whose
+build context has no `scripts/`, so `prepare` calls it only when the file exists. Existing
 clones therefore pick it up on their next commit, since pnpm skips `prepare`
 when the install is already up to date. Rerunning it writes nothing.
 
