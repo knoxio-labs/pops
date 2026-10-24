@@ -1,5 +1,13 @@
 import { execFileSync, spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  realpathSync,
+  rmSync,
+  utimesSync,
+  writeFileSync,
+} from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -317,20 +325,29 @@ describe('slot commands', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
 
   it('never reuses a dirty slot and fails at the cap listing the slots', () => {
     const f = createFixture();
+    const env = { POPS_WORKTREE_MAX_SLOTS: '1', POPS_WORKTREE_LEASE_GRACE_MS: '0' };
     const path = String(
-      f.cli(['acquire', 'feat/a'], { ...live, POPS_WORKTREE_MAX_SLOTS: '1' }).stdout
+      f.cli(['acquire', 'feat/a'], { ...env, POPS_WORKTREE_HOLDER_PID: String(deadPid()) }).stdout
     ).trim();
     writeFileSync(join(path, 'README.md'), 'edited');
-    const result = f.cli(['acquire', 'feat/b'], {
-      POPS_WORKTREE_HOLDER_PID: String(deadPid()),
-      POPS_WORKTREE_MAX_SLOTS: '1',
-      POPS_WORKTREE_LEASE_GRACE_MS: '0',
-    });
+    const result = f.cli(['acquire', 'feat/b'], { ...env, ...live });
     expect(result.status).not.toBe(0);
     expect(String(result.stderr)).toContain('cap of 1');
-    expect(String(result.stderr)).toContain('pops-slot-1: busy');
+    expect(String(result.stderr)).toContain('pops-slot-1: dirty (feat/a)');
     expect(git(path, 'branch', '--show-current')).toBe('feat/a');
-    expect(String(git(path, 'status', '--porcelain'))).toContain('README.md');
+    expect(git(path, 'status', '--porcelain')).toContain('README.md');
+  });
+
+  it('removes an abandoned pool lock that has no pid file', () => {
+    const f = createFixture();
+    mkdirSync(f.pool, { recursive: true });
+    const lock = join(f.pool, '.pops-slots.lock');
+    mkdirSync(lock);
+    const old = new Date(Date.now() - 60_000);
+    utimesSync(lock, old, old);
+    const result = f.cli(['acquire', 'feat/lock'], live);
+    expect(result.status).toBe(0);
+    expect(existsSync(lock)).toBe(false);
   });
 
   it('reclaims a clean slot whose holder is dead and refuses while the holder lives', () => {

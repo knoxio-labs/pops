@@ -1,5 +1,13 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 
 export const SLOT_PREFIX = 'pops-slot-';
@@ -7,6 +15,7 @@ export const DEFAULT_MAX_SLOTS = 6;
 export const DEFAULT_LEASE_GRACE_MS = 30 * 60 * 1000;
 
 const LEASE_FILE = 'pops-slot-lease.json';
+const LOCK_ORPHAN_MS = 10_000;
 const LOCK_DIR = '.pops-slots.lock';
 const SLOT_NAME = new RegExp(`^${SLOT_PREFIX}(\\d+)$`);
 
@@ -413,7 +422,9 @@ function withPoolLock(root, action) {
       if (!(error instanceof Error && 'code' in error && error.code === 'EEXIST')) throw error;
       const holderFile = join(lock, 'pid');
       const holder = existsSync(holderFile) ? Number(readFileSync(holderFile, 'utf8')) : 0;
-      if (holder > 0 && !isPidAlive(holder)) {
+      const abandoned =
+        holder > 0 ? !isPidAlive(holder) : Date.now() - statSync(lock).mtimeMs > LOCK_ORPHAN_MS;
+      if (abandoned) {
         rmSync(lock, { recursive: true, force: true });
         continue;
       }
