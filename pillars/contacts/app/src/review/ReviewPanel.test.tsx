@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { expect, it, vi } from 'vitest';
 
 import { ReviewPanel } from './ReviewPanel';
+import { noReadyRows } from './test-fixtures';
 
 import type { ReviewGateway, ReviewSnapshot } from './contracts';
 import type { ReviewItem } from './model';
@@ -45,6 +46,7 @@ it('preserves choices through queue pages and submits the selected stable row an
     totalRows: 51,
     offset: 0,
     limit: 50,
+    ready: noReadyRows,
     counts: { automatic: 0, review: 51, new: 0, invalid: 0 },
     batchRevision: 3,
     directoryRevision: 7,
@@ -52,6 +54,7 @@ it('preserves choices through queue pages and submits the selected stable row an
   };
   const save = vi.fn<ReviewGateway['save']>().mockResolvedValue(undefined);
   const gateway: ReviewGateway = {
+    applyReady: vi.fn().mockResolvedValue({ appliedRows: 0 }),
     load: vi.fn<ReviewGateway['load']>().mockImplementation(async (_batchId, page) => ({
       ...snapshot,
       offset: page?.offset ?? 0,
@@ -113,6 +116,7 @@ it('retains selected candidates from earlier evidence pages in one stable-ID con
     totalRows: 1,
     offset: 0,
     limit: 50,
+    ready: noReadyRows,
     counts: { automatic: 0, review: 1, new: 0, invalid: 0 },
     items: [
       {
@@ -127,7 +131,10 @@ it('retains selected candidates from earlier evidence pages in one stable-ID con
   const save = vi.fn<ReviewGateway['save']>().mockResolvedValue(undefined);
   render(
     <QueryClientProvider client={new QueryClient()}>
-      <ReviewPanel batchId="batch" gateway={{ load, save }} />
+      <ReviewPanel
+        batchId="batch"
+        gateway={{ load, save, applyReady: vi.fn().mockResolvedValue({ appliedRows: 0 }) }}
+      />
     </QueryClientProvider>
   );
   await user.click(await screen.findByRole('checkbox', { name: 'Stored 0' }));
@@ -151,5 +158,142 @@ it('retains selected candidates from earlier evidence pages in one stable-ID con
       candidateOffset: 1,
       proposalRevision: 'whole-snapshot',
     })
+  );
+});
+
+it('applies off-page server-resolved contacts in one action while a persisted Later row stays pending', async () => {
+  const user = userEvent.setup();
+  const pending = { ...item(50), initialChoices: { 'person-50': 'later' as const } };
+  const before: ReviewSnapshot = {
+    batchId: 'batch',
+    batchRevision: 2,
+    directoryRevision: 7,
+    proposalRevision: 'paging-proof',
+    totalRows: 51,
+    offset: 50,
+    limit: 50,
+    counts: { automatic: 1, new: 1, review: 49, invalid: 0 },
+    ready: {
+      ...noReadyRows,
+      eligibleRows: 2,
+      automaticMerges: 1,
+      newPeople: 1,
+      reviewRequired: 48,
+      deferred: 1,
+    },
+    items: [pending],
+  };
+  const after = {
+    ...before,
+    batchRevision: 3,
+    directoryRevision: 8,
+    ready: { ...before.ready, eligibleRows: 0, alreadyProcessed: 2 },
+  };
+  const api: ReviewGateway = {
+    load: vi.fn().mockResolvedValueOnce(before).mockResolvedValue(after),
+    save: vi.fn(),
+    applyReady: vi.fn().mockResolvedValue({ appliedRows: 2 }),
+  };
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <ReviewPanel batchId="batch" gateway={api} />
+    </QueryClientProvider>
+  );
+  const action = await screen.findByRole('button', { name: 'Import resolved contacts' });
+  await waitFor(() => expect(action).toBeEnabled());
+  expect(screen.getByText('Ready: 2')).toBeVisible();
+  await user.click(action);
+  await waitFor(() => expect(api.applyReady).toHaveBeenCalledTimes(1));
+  expect(vi.mocked(api.applyReady).mock.calls[0]?.[0]).toMatchObject({
+    batchId: 'batch',
+    proposalRevision: 'ready-proof',
+  });
+  expect(api.save).not.toHaveBeenCalled();
+  await screen.findByText(
+    'Imported 2 resolved contacts. Contacts requiring review or saved for later remain pending.'
+  );
+  expect(screen.getByRole('checkbox')).not.toBeChecked();
+  expect(screen.getByRole('button', { name: 'Review later' })).toHaveAttribute(
+    'aria-pressed',
+    'true'
+  );
+  expect(action).toBeDisabled();
+});
+
+it('blocks the global action while local candidate choices have not been saved', async () => {
+  const user = userEvent.setup();
+  const snapshot: ReviewSnapshot = {
+    batchId: 'batch',
+    batchRevision: 1,
+    directoryRevision: 2,
+    proposalRevision: 'paging',
+    totalRows: 1,
+    offset: 0,
+    limit: 50,
+    counts: { automatic: 0, new: 0, review: 1, invalid: 0 },
+    ready: { ...noReadyRows, eligibleRows: 1 },
+    items: [item(0)],
+  };
+  const api: ReviewGateway = {
+    load: vi.fn().mockResolvedValue(snapshot),
+    save: vi.fn(),
+    applyReady: vi.fn(),
+  };
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <ReviewPanel batchId="batch" gateway={api} />
+    </QueryClientProvider>
+  );
+  const candidate = await screen.findByRole('checkbox');
+  await user.click(candidate);
+  const action = screen.getByRole('button', { name: 'Import resolved contacts' });
+  expect(action).toBeDisabled();
+  expect(screen.getByText(/Save your current choices before importing/)).toBeVisible();
+  await user.click(action);
+  expect(api.applyReady).not.toHaveBeenCalled();
+});
+
+it('keeps another row’s unsaved Later choice after saving a separate row', async () => {
+  const user = userEvent.setup();
+  const snapshot: ReviewSnapshot = {
+    batchId: 'batch',
+    batchRevision: 1,
+    directoryRevision: 2,
+    proposalRevision: 'paging',
+    totalRows: 2,
+    offset: 0,
+    limit: 50,
+    counts: { automatic: 0, new: 0, review: 2, invalid: 0 },
+    ready: { ...noReadyRows, eligibleRows: 1 },
+    items: [item(0), item(1)],
+  };
+  const api: ReviewGateway = {
+    load: vi.fn().mockResolvedValue(snapshot),
+    save: vi.fn().mockResolvedValue(undefined),
+    applyReady: vi.fn(),
+  };
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <ReviewPanel batchId="batch" gateway={api} />
+    </QueryClientProvider>
+  );
+  await user.click(await screen.findByRole('button', { name: 'Review later' }));
+  const queue = within(screen.getByRole('navigation', { name: 'Incoming contact queue' }));
+  await user.click(queue.getByRole('button', { name: /Incoming 1/ }));
+  await user.click(screen.getByRole('checkbox'));
+  await user.click(screen.getByRole('button', { name: 'Merge 1 selected' }));
+  await screen.findByText('Decision saved. Deferred candidates remain available for review.');
+  expect(screen.getByRole('button', { name: 'Review later' })).toHaveAttribute(
+    'aria-pressed',
+    'true'
+  );
+  expect(screen.getByRole('button', { name: 'Import resolved contacts' })).toBeDisabled();
+  await user.click(screen.getByRole('button', { name: 'Reload evidence' }));
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: 'Import resolved contacts' })).toBeEnabled()
+  );
+  expect(screen.getByRole('button', { name: 'Review later' })).toHaveAttribute(
+    'aria-pressed',
+    'false'
   );
 });

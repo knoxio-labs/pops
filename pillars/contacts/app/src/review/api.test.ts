@@ -5,8 +5,9 @@ import { client } from '../contacts-api/client.gen';
 import { fileImportGateway } from '../imports/api';
 import { reviewGateway } from './api';
 import { mapReview } from './mapReview';
+import { noReadyRows } from './test-fixtures';
 
-import type { ImportReview, ReviewCandidate } from '../contacts-api/types.gen';
+import type { ImportReview, ReadyBatchReceipt, ReviewCandidate } from '../contacts-api/types.gen';
 
 const source = {
   accountId: 'account',
@@ -46,6 +47,7 @@ const candidate: ReviewCandidate = {
   ],
 };
 const review: ImportReview = {
+  ready: noReadyRows,
   batchId: 'batch',
   batchRevision: 4,
   directoryRevision: 9,
@@ -101,6 +103,7 @@ describe('generated contacts API bindings', () => {
   it('preserves server classifications, proofs and raw selector evidence', () => {
     const result = mapReview(review);
     expect(result.counts).toEqual(review.counts);
+    expect(result.ready).toEqual(review.ready);
     expect(result.items[0]).toMatchObject({
       id: 'row-51',
       proposalRevision: 'row-proof',
@@ -158,6 +161,69 @@ describe('generated contacts API bindings', () => {
         { kind: 'entity', field: 'personProfile', entityId: 'person' },
       ],
       preferredPointIds: ['point'],
+    });
+  });
+
+  it('sends only the dedicated ready proof and counts acknowledged rows from the receipt', async () => {
+    const row = {
+      batchId: 'batch',
+      rowId: 'safe-row',
+      batchRevision: 5,
+      directoryRevision: 10,
+      entityId: 'person',
+      operationId: null,
+      pendingEntityIds: [],
+      processed: true,
+    };
+    const receipt: ReadyBatchReceipt = {
+      batchId: 'batch',
+      batchRevision: 5,
+      directoryRevision: 10,
+      rows: [row],
+      deferred: 1,
+      reviewRequired: 1,
+      alreadyProcessed: 0,
+    };
+    const requests = intercept([receipt]);
+    const result = await reviewGateway.applyReady({
+      batchId: 'batch',
+      batchRevision: 4,
+      directoryRevision: 9,
+      proposalRevision: 'strong-ready-proof',
+      idempotencyKey: 'ready-retry-key',
+    });
+    expect(result).toEqual({ appliedRows: 1 });
+    expect(new URL(requests[0]!.url).pathname).toBe('/contacts-api/imports/batch/apply-ready');
+    expect(await requests[0]!.json()).toEqual({
+      batchRevision: 4,
+      directoryRevision: 9,
+      proposalRevision: 'strong-ready-proof',
+      idempotencyKey: 'ready-retry-key',
+    });
+  });
+
+  it('sends explicit incoming fields independently of existing identity selectors', async () => {
+    const requests = intercept([{ batchId: 'batch' }]);
+    await reviewGateway.save({
+      batchId: 'batch',
+      rowId: 'row',
+      batchRevision: 4,
+      directoryRevision: 9,
+      proposalRevision: 'row-proof',
+      idempotencyKey: 'incoming-key',
+      mergeEntityIds: ['person'],
+      differentEntityIds: [],
+      laterEntityIds: [],
+      choices: {
+        candidates: { person: 'merge' },
+        incomingFields: ['name', 'personProfile'],
+        preferredPointIds: [],
+      },
+    });
+    expect(await requests[0]!.json()).toMatchObject({
+      incomingFields: ['name', 'personProfile'],
+      selections: [],
+      preferredPointIds: [],
     });
   });
 

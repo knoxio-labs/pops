@@ -41,6 +41,7 @@ export class ReviewPageCache {
     if (!this.page) throw new ContactError('missingQueue', 'contacts.review.missing_queue');
     return {
       ...this.page,
+      ready: snapshot.ready,
       items: this.pageIds.flatMap((id) => {
         const row = this.rows.get(id);
         return row ? [row] : [];

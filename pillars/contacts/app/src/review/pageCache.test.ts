@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { StaleReviewError, type ReviewSnapshot } from './contracts';
 import { ReviewPageCache } from './pageCache';
+import { noReadyRows } from './test-fixtures';
 
 import type { ReviewCandidate } from './model';
 
@@ -25,6 +26,7 @@ function snapshot(id: string): ReviewSnapshot {
     totalRows: 100,
     offset: 0,
     limit: 50,
+    ready: noReadyRows,
     counts: { automatic: 0, review: 100, new: 0, invalid: 0 },
     items: [
       {
@@ -46,6 +48,15 @@ function snapshot(id: string): ReviewSnapshot {
 }
 
 describe('stable review page cache', () => {
+  it('uses fresh server readiness metadata from candidate pages even when the paging proof is unchanged', () => {
+    const cache = new ReviewPageCache();
+    cache.accept(snapshot('a'), false);
+    const next = snapshot('b');
+    next.ready = { ...next.ready, proposalRevision: 'new-ready-proof', eligibleRows: 2 };
+    const result = cache.accept(next, true);
+    expect(result.proposalRevision).toBe('whole-proof');
+    expect(result.ready).toEqual(next.ready);
+  });
   it('accumulates candidates while displaying only the requested evidence page', () => {
     const cache = new ReviewPageCache();
     cache.accept(snapshot('a'), false);

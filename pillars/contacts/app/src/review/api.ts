@@ -1,4 +1,8 @@
-import { importsReviewDecide, importsReviewProposals } from '../contacts-api/sdk.gen';
+import {
+  importsReadyApply,
+  importsReviewDecide,
+  importsReviewProposals,
+} from '../contacts-api/sdk.gen';
 import { contactRequest } from '../request';
 import { mapReview } from './mapReview';
 
@@ -38,6 +42,10 @@ export const reviewGateway: ReviewGateway = {
         })
       )
     ),
+  applyReady: async ({ batchId, ...body }) => {
+    const receipt = await contactRequest(() => importsReadyApply({ path: { id: batchId }, body }));
+    return { appliedRows: receipt.rows.length };
+  },
   save: async (request) => {
     await contactRequest(() =>
       importsReviewDecide({
@@ -52,6 +60,7 @@ export const reviewGateway: ReviewGateway = {
           differentEntityIds: request.differentEntityIds,
           laterEntityIds: request.laterEntityIds,
           selections: selections(request),
+          incomingFields: request.choices.incomingFields,
           preferredPointIds: request.choices.preferredPointIds,
         },
       })

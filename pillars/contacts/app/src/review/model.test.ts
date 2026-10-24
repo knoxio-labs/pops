@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { chooseCandidate, emptyChoices, selectedCandidates, type ReviewItem } from './model';
+import {
+  chooseCandidate,
+  emptyChoices,
+  selectedCandidates,
+  type ReviewChoices,
+  type ReviewItem,
+} from './model';
 
 const item: ReviewItem = {
   id: 'row',
@@ -89,4 +95,15 @@ it('retains preferred values when another candidate is deferred', () => {
   const after = chooseCandidate(before, candidate('b'), 'later');
   expect(after.nameSourceRecordId).toBe('source-a');
   expect(after.preferredPointIds).toEqual(['point-a']);
+});
+
+it('clears incoming replacements when the final merge target is deferred', () => {
+  const first = chooseCandidate(emptyChoices(), candidate('a'), 'merge');
+  const selected: ReviewChoices = { ...first, incomingFields: ['name', 'personProfile'] };
+  const second = chooseCandidate(selected, candidate('b'), 'merge');
+  expect(chooseCandidate(second, candidate('a'), 'later').incomingFields).toEqual([
+    'name',
+    'personProfile',
+  ]);
+  expect(chooseCandidate(selected, candidate('a'), 'later').incomingFields).toBeUndefined();
 });

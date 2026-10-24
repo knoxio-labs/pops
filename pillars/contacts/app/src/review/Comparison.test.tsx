@@ -98,3 +98,43 @@ it('labels raw local and current source values explicitly and clears provenance 
   await user.click(candidate.getByRole('checkbox'));
   expect(screen.getByRole('combobox', { name: 'Display name' })).toHaveValue('');
 });
+
+it('preserves existing preferred values by default and encodes incoming replacements only after selection', async () => {
+  const user = userEvent.setup();
+  let latest = emptyChoices();
+  function IncomingFields() {
+    const [choices, setChoices] = useState(emptyChoices);
+    return (
+      <Comparison
+        item={{ ...item, incomingProfileLabel: 'Incoming Structured Alex' }}
+        choices={choices}
+        disabled={false}
+        onChange={(next) => {
+          latest = next;
+          setChoices(next);
+        }}
+      />
+    );
+  }
+  render(<IncomingFields />);
+  await user.click(screen.getByRole('checkbox', { name: 'First Alex' }));
+  const name = screen.getByRole('combobox', { name: 'Display name' });
+  const profile = screen.getByRole('combobox', { name: 'Structured person name' });
+  expect(name).toHaveValue('');
+  expect(profile).toHaveValue('');
+  expect(
+    within(name).getByRole('option', { name: 'Keep existing preferred values' })
+  ).toHaveProperty('selected', true);
+  expect(latest.incomingFields).toBeUndefined();
+  expect(latest.nameEntityId).toBeUndefined();
+  expect(latest.profileEntityId).toBeUndefined();
+  expect(latest.preferredPointIds).toEqual([]);
+  await user.selectOptions(name, 'incoming');
+  await user.selectOptions(profile, 'incoming');
+  expect(latest.incomingFields).toEqual(['name', 'personProfile']);
+  expect(latest.nameEntityId).toBeUndefined();
+  expect(latest.nameSourceRecordId).toBeUndefined();
+  await user.selectOptions(name, 'entity:0');
+  expect(latest.incomingFields).toEqual(['personProfile']);
+  expect(latest.nameEntityId).toBe('0');
+});

@@ -32,6 +32,7 @@ export interface ReviewItem {
   recognized?: boolean;
   ingestionAction?: 'create_person' | 'update_source' | 'deactivate_source';
   initialChoices?: Record<string, CandidateChoice>;
+  incomingProfileLabel?: string;
   name: string;
   source: string;
   points: { kind: string; value: string }[];
@@ -49,6 +50,7 @@ export interface ReviewItem {
 /** User selections are scoped to a row; no candidate is selected by default. */
 export interface ReviewChoices {
   candidates: Record<string, CandidateChoice>;
+  incomingFields?: ('name' | 'personProfile')[];
   nameEntityId?: string;
   profileEntityId?: string;
   nameSourceRecordId?: string;
@@ -74,6 +76,9 @@ export function chooseCandidate(
   return {
     ...choices,
     candidates,
+    incomingFields: Object.values(candidates).includes('merge')
+      ? choices.incomingFields
+      : undefined,
     nameEntityId: choices.nameEntityId === candidate.id ? undefined : choices.nameEntityId,
     profileEntityId: choices.profileEntityId === candidate.id ? undefined : choices.profileEntityId,
     nameSourceRecordId: sourceIds.has(choices.nameSourceRecordId ?? '')

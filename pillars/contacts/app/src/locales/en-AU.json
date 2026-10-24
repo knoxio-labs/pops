@@ -61,8 +61,8 @@
     "preferred": "Preferred fields",
     "name": "Display name",
     "profile": "Structured person name",
-    "currentValue": "Keep current preferred value",
-    "incomingValue": "Keep incoming value",
+    "currentValue": "Keep existing preferred values",
+    "incomingValue": "Use incoming value · {{value}}",
     "localValue": "Local · {{value}}",
     "sourceValue": "Source · {{value}}",
     "namedSourceValue": "Source ({{source}}) · {{value}}",
@@ -198,5 +198,21 @@
       "cancelled": "Google connection was cancelled. Open the Google card to try again when you are ready.",
       "failed": "Google connection could not be completed. Open the Google card to try again."
     }
+  },
+  "ready": {
+    "apply": "Import resolved contacts",
+    "summary": "Resolved contact eligibility",
+    "eligible": "Ready: {{count}}",
+    "merges": "Automatic merges: {{count}}",
+    "newPeople": "New people: {{count}}",
+    "updates": "Source updates: {{count}}",
+    "removals": "Source removals: {{count}}",
+    "reviewRequired": "Require review: {{count}}",
+    "deferred": "Deferred: {{count}}",
+    "processed": "Already processed: {{count}}",
+    "unsaved": "Save your current choices before importing resolved contacts. Reload evidence to discard unsaved choices.",
+    "saved_one": "Imported {{count}} resolved contact. Contacts requiring review or saved for later remain pending.",
+    "saved_other": "Imported {{count}} resolved contacts. Contacts requiring review or saved for later remain pending.",
+    "applying": "Importing resolved contacts…"
   }
 }

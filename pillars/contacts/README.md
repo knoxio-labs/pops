@@ -25,8 +25,16 @@ address-book namespace for subsequent exports. Select a phone country explicitly
 when national numbers should be normalized; leaving it blank retains the original
 number without inferring a country.
 
+The global “Import resolved contacts” action applies the server’s complete-batch
+plan in one atomic request. Eligibility counts and its dedicated proof come from
+the server; the browser never derives safe merges from visible rows or candidate
+labels. Ambiguous rows and saved Later decisions remain pending. Unsaved manual
+choices disable the global action until saved or evidence is explicitly reloaded.
+
 The focused review combines the incoming person with only the existing candidates
-selected for that decision. Different-person choices persist independently, and
+selected for that decision. Existing preferred names, profiles and points remain
+the default; using an incoming name or profile requires an explicit field choice.
+Different-person choices persist independently, and
 candidates left for later remain reviewable. Row and candidate pages share the
 server's complete-snapshot proof; pagination never reclassifies a subset in the
 browser. A conflict requires reloading evidence and choosing again. A network

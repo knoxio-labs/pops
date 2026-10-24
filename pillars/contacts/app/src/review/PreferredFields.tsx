@@ -22,11 +22,14 @@ function preferPoint(
 function fieldOptions(
   selected: ReviewCandidate[],
   field: 'name' | 'profile',
-  defaultLabel: string,
+  incomingValue: string | undefined,
   t: TFunction<'contacts'>
 ) {
   return [
-    { value: '', label: defaultLabel },
+    { value: '', label: t('review.currentValue') },
+    ...(incomingValue
+      ? [{ value: 'incoming', label: t('review.incomingValue', { value: incomingValue }) }]
+      : []),
     ...selected.flatMap((candidate) => {
       const local =
         field === 'name' || candidate.profileAvailable !== false
@@ -66,11 +69,19 @@ function selectField(
   field: 'name' | 'profile',
   value: string
 ): ReviewChoices {
+  const incomingField: 'name' | 'personProfile' = field === 'name' ? 'name' : 'personProfile';
+  const remaining = choices.incomingFields?.filter((entry) => entry !== incomingField) ?? [];
+  const incomingFields = value === 'incoming' ? [...remaining, incomingField] : remaining;
   const entityId = value.startsWith('entity:') ? value.slice(7) : undefined;
   const sourceRecordId = value.startsWith('source:') ? value.slice(7) : undefined;
   return field === 'name'
-    ? { ...choices, nameEntityId: entityId, nameSourceRecordId: sourceRecordId }
-    : { ...choices, profileEntityId: entityId, profileSourceRecordId: sourceRecordId };
+    ? { ...choices, incomingFields, nameEntityId: entityId, nameSourceRecordId: sourceRecordId }
+    : {
+        ...choices,
+        incomingFields,
+        profileEntityId: entityId,
+        profileSourceRecordId: sourceRecordId,
+      };
 }
 
 /** Preferred fields may come only from explicitly selected identities and their retained sources. */
@@ -79,13 +90,15 @@ export function PreferredFields({
   choices,
   onChange,
   disabled,
-  defaultLabel,
+  incomingName,
+  incomingProfile,
 }: {
   selected: ReviewCandidate[];
   choices: ReviewChoices;
   onChange: (choices: ReviewChoices) => void;
   disabled: boolean;
-  defaultLabel: string;
+  incomingName: string;
+  incomingProfile?: string;
 }) {
   const { t } = useTranslation('contacts');
   const points = selected
@@ -103,16 +116,18 @@ export function PreferredFields({
       <Select
         className="min-w-0"
         label={t('review.name')}
-        options={fieldOptions(selected, 'name', defaultLabel, t)}
-        value={nameValue ?? ''}
+        options={fieldOptions(selected, 'name', incomingName, t)}
+        value={choices.incomingFields?.includes('name') ? 'incoming' : (nameValue ?? '')}
         disabled={disabled}
         onChange={(event) => onChange(selectField(choices, 'name', event.target.value))}
       />
       <Select
         className="min-w-0"
         label={t('review.profile')}
-        options={fieldOptions(selected, 'profile', defaultLabel, t)}
-        value={profileValue ?? ''}
+        options={fieldOptions(selected, 'profile', incomingProfile, t)}
+        value={
+          choices.incomingFields?.includes('personProfile') ? 'incoming' : (profileValue ?? '')
+        }
         disabled={disabled}
         onChange={(event) => onChange(selectField(choices, 'profile', event.target.value))}
       />

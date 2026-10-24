@@ -1,51 +1,60 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Button, Skeleton } from '@pops/ui';
+import { Button } from '@pops/ui';
 
-import { describeContactError } from '../errors';
 import { Comparison } from './Comparison';
 import { emptyChoices, type ReviewChoices, type ReviewItem } from './model';
+import { ReadyAction, ReadyCounts } from './ReadyControls';
+import { ReviewFeedback } from './ReviewFeedback';
 import { ReviewQueue } from './ReviewQueue';
 import { useReview } from './useReview';
 
 import type { TFunction } from 'i18next';
+import type { ReactNode } from 'react';
 
 import type { ReviewGateway, ReviewSnapshot } from './contracts';
 
+type DraftChoices = Record<string, ReviewChoices>;
+
 /** Review one durable import batch with an atomic save, explicit retries and stale-evidence recovery. */
-export function ReviewPanel({ batchId, gateway }: { batchId: string; gateway: ReviewGateway }) {
+export function ReviewPanel({
+  batchId,
+  gateway,
+  renderHeader,
+}: {
+  batchId: string;
+  gateway: ReviewGateway;
+  renderHeader?: (actions: ReactNode) => ReactNode;
+}) {
   const { t } = useTranslation('contacts');
-  const model = useReview(batchId, gateway);
+  const [drafts, setDrafts] = useState<DraftChoices>({});
+  const model = useReview(batchId, gateway, (operation) => {
+    if (operation.kind === 'row')
+      setDrafts((current) =>
+        Object.fromEntries(Object.entries(current).filter(([id]) => id !== operation.request.rowId))
+      );
+  });
+  const dirty = Object.keys(drafts).length > 0;
+  function reload() {
+    setDrafts({});
+    void model.reload();
+  }
+  const action = (
+    <ReadyAction
+      ready={model.data?.ready}
+      disabled={isBlocked(model)}
+      applying={model.readyApplying}
+      dirty={dirty}
+      onApply={() => void model.applyReady()}
+      onReload={reload}
+    />
+  );
   return (
     <div className="space-y-6">
-      {model.error && (
-        <div role="alert" className="space-y-3 rounded-lg border border-destructive p-4">
-          <p>{describeContactError(model.error, t)}</p>
-          <div className="flex flex-wrap gap-2">
-            {model.uncertain && (
-              <Button disabled={model.saving} onClick={() => void model.retry()}>
-                {t('review.retry')}
-              </Button>
-            )}
-            <Button variant="outline" disabled={model.saving} onClick={() => void model.reload()}>
-              {t('review.reload')}
-            </Button>
-          </div>
-          <p className="text-sm">{t('review.reloadHint')}</p>
-        </div>
-      )}
-      {model.success && (
-        <p role="status" className="text-base font-semibold">
-          {t('review.saved')}
-        </p>
-      )}
-      {model.isPending && (
-        <div aria-label={t('review.loading')} className="space-y-3">
-          <Skeleton className="h-12 w-full" />
-          <Skeleton className="h-64 w-full" />
-        </div>
-      )}
+      {renderHeader ? renderHeader(action) : action}
+      {model.data && <ReadyCounts ready={model.data.ready} />}
+      <ReviewFeedback model={model} onReload={reload} />
       {model.data && model.data.items.length === 0 && (
         <p className="text-base">{t('review.empty')}</p>
       )}
@@ -56,6 +65,10 @@ export function ReviewPanel({ batchId, gateway }: { batchId: string; gateway: Re
           onRowsPage={model.pageRows}
           onCandidatesPage={model.pageCandidates}
           disabled={isBlocked(model)}
+          drafts={drafts}
+          onChoicesChanged={(rowId, value) =>
+            setDrafts((current) => ({ ...current, [rowId]: value }))
+          }
           onSave={(item, choices) => void model.save(item, choices)}
         />
       )}
@@ -69,22 +82,27 @@ interface WorkspaceProps {
   onCandidatesPage: (rowId: string, offset: number) => void;
   disabled: boolean;
   onSave: (item: ReviewItem, choices: ReviewChoices) => void;
+  drafts: DraftChoices;
+  onChoicesChanged: (rowId: string, choices: ReviewChoices) => void;
 }
 
-function Workspace({ snapshot, onRowsPage, onCandidatesPage, disabled, onSave }: WorkspaceProps) {
-  const { t } = useTranslation('contacts');
+function Workspace({
+  snapshot,
+  onRowsPage,
+  onCandidatesPage,
+  disabled,
+  onSave,
+  onChoicesChanged,
+  drafts,
+}: WorkspaceProps) {
   const items = snapshot.items;
   const [selectedId, setSelectedId] = useState(items[0]?.id);
-  const [choices, setChoices] = useState<Record<string, ReviewChoices>>({});
   const item = items.find((entry) => entry.id === selectedId) ?? items[0];
   if (!item) return null;
-  const selectedChoices = choices[item.id] ?? {
+  const selectedChoices = drafts[item.id] ?? {
     ...emptyChoices(),
     candidates: item.initialChoices ?? {},
   };
-  const selectedCount = Object.values(selectedChoices.candidates).filter(
-    (choice) => choice === 'merge'
-  ).length;
   return (
     <div className="grid gap-6 lg:grid-cols-3">
       <ReviewQueue
@@ -100,27 +118,48 @@ function Workspace({ snapshot, onRowsPage, onCandidatesPage, disabled, onSave }:
           onCandidatesPage={(offset) => onCandidatesPage(item.id, offset)}
           choices={selectedChoices}
           disabled={disabled}
-          onChange={(value) => setChoices({ ...choices, [item.id]: value })}
+          onChange={(value) => {
+            onChoicesChanged(item.id, value);
+          }}
         />
-        <div className="flex flex-wrap gap-3">
-          <Button
-            disabled={disabled || item.errors.length > 0}
-            onClick={() => onSave(item, selectedChoices)}
-          >
-            {saveLabel(selectedCount, item, t)}
-          </Button>
-          <Button
-            variant="outline"
-            disabled={disabled}
-            onClick={() => {
-              const index = items.findIndex((entry) => entry.id === item.id);
-              setSelectedId(items[(index + 1) % items.length]?.id);
-            }}
-          >
-            {t('review.next')}
-          </Button>
-        </div>
+        <WorkspaceActions
+          item={item}
+          choices={selectedChoices}
+          disabled={disabled}
+          onSave={onSave}
+          onNext={() => {
+            const index = items.findIndex((entry) => entry.id === item.id);
+            setSelectedId(items[(index + 1) % items.length]?.id);
+          }}
+        />
       </div>
+    </div>
+  );
+}
+
+function WorkspaceActions({
+  item,
+  choices,
+  disabled,
+  onSave,
+  onNext,
+}: {
+  item: ReviewItem;
+  choices: ReviewChoices;
+  disabled: boolean;
+  onSave: WorkspaceProps['onSave'];
+  onNext: () => void;
+}) {
+  const { t } = useTranslation('contacts');
+  const count = Object.values(choices.candidates).filter((choice) => choice === 'merge').length;
+  return (
+    <div className="flex flex-wrap gap-3">
+      <Button disabled={disabled || item.errors.length > 0} onClick={() => onSave(item, choices)}>
+        {saveLabel(count, item, t)}
+      </Button>
+      <Button variant="outline" disabled={disabled} onClick={onNext}>
+        {t('review.next')}
+      </Button>
     </div>
   );
 }

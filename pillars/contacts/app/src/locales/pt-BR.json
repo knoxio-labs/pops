@@ -61,8 +61,8 @@
     "preferred": "Campos preferidos",
     "name": "Nome de exibição",
     "profile": "Nome estruturado da pessoa",
-    "currentValue": "Manter o valor preferido atual",
-    "incomingValue": "Manter o valor recebido",
+    "currentValue": "Manter os valores preferidos existentes",
+    "incomingValue": "Usar valor recebido · {{value}}",
     "localValue": "Local · {{value}}",
     "sourceValue": "Origem · {{value}}",
     "namedSourceValue": "Origem ({{source}}) · {{value}}",
@@ -198,5 +198,21 @@
       "cancelled": "A conexão com o Google foi cancelada. Abra o cartão Google para tentar novamente quando quiser.",
       "failed": "Não foi possível concluir a conexão com o Google. Abra o cartão Google para tentar novamente."
     }
+  },
+  "ready": {
+    "apply": "Importar contatos resolvidos",
+    "summary": "Contatos elegíveis para importação",
+    "eligible": "Prontos: {{count}}",
+    "merges": "Unificações automáticas: {{count}}",
+    "newPeople": "Novas pessoas: {{count}}",
+    "updates": "Atualizações de origem: {{count}}",
+    "removals": "Remoções de origem: {{count}}",
+    "reviewRequired": "Requerem revisão: {{count}}",
+    "deferred": "Adiadas: {{count}}",
+    "processed": "Já processados: {{count}}",
+    "unsaved": "Salve suas escolhas atuais antes de importar os contatos resolvidos. Recarregue as evidências para descartar escolhas não salvas.",
+    "saved_one": "{{count}} contato resolvido importado. Contatos que exigem revisão ou foram adiados continuam pendentes.",
+    "saved_other": "{{count}} contatos resolvidos importados. Contatos que exigem revisão ou foram adiados continuam pendentes.",
+    "applying": "Importando contatos resolvidos…"
   }
 }

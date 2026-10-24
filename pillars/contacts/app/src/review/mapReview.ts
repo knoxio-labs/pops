@@ -15,6 +15,10 @@ function fullName(name: PersonName): string {
     .join(' ');
 }
 
+function incomingProfileLabel(incoming: ReviewRow['incoming']): string | undefined {
+  return incoming ? fullName(incoming.name) || undefined : undefined;
+}
+
 function candidateId(candidate: CandidateDto): string {
   if (candidate.entityId) return candidate.entityId;
   if (candidate.rowId) return `row:${candidate.rowId}`;
@@ -93,6 +97,7 @@ function mapRow(row: ReviewRow, source: ImportReview['source']): ReviewItem {
     candidateOffset: row.candidateOffset,
     candidateLimit: row.candidateLimit,
     initialChoices,
+    incomingProfileLabel: incomingProfileLabel(row.incoming),
   };
 }
 
@@ -104,6 +109,7 @@ export function mapReview(review: ImportReview): ReviewSnapshot {
     offset: review.offset,
     limit: review.limit,
     counts: review.counts,
+    ready: review.ready,
     batchId: review.batchId,
     batchRevision: review.batchRevision,
     directoryRevision: review.directoryRevision,

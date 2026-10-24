@@ -1,7 +1,12 @@
 import { useRef, useState } from 'react';
 
 import { ContactError } from '../errors';
-import { StaleReviewError, type ReviewGateway, type ReviewRequest } from './contracts';
+import {
+  StaleReviewError,
+  type ReviewGateway,
+  type ReviewOperation,
+  type ReviewRequest,
+} from './contracts';
 import { selectedCandidates, type ReviewChoices, type ReviewItem } from './model';
 import { useReviewData } from './useReviewData';
 
@@ -12,6 +17,8 @@ interface SubmissionState {
   stale: boolean;
   uncertain: boolean;
   generation: number;
+  readyApplied: number | null;
+  readyApplying: boolean;
 }
 const initialSubmission: SubmissionState = {
   saving: false,
@@ -20,25 +27,57 @@ const initialSubmission: SubmissionState = {
   stale: false,
   uncertain: false,
   generation: 0,
+  readyApplied: null,
+  readyApplying: false,
 };
 
-function useSubmission(gateway: ReviewGateway, refresh: () => Promise<unknown>) {
-  const request = useRef<ReviewRequest | null>(null);
+function starting(state: SubmissionState, operation: ReviewOperation): SubmissionState {
+  return {
+    ...state,
+    saving: true,
+    readyApplying: operation.kind === 'ready',
+    error: null,
+    success: false,
+    uncertain: true,
+  };
+}
+
+function acknowledged(state: SubmissionState, readyApplied: number | null): SubmissionState {
+  return {
+    ...state,
+    success: true,
+    readyApplied,
+    uncertain: false,
+    generation: state.generation + 1,
+  };
+}
+
+async function applyOperation(
+  gateway: ReviewGateway,
+  operation: ReviewOperation
+): Promise<number | null> {
+  if (operation.kind === 'ready') return (await gateway.applyReady(operation.request)).appliedRows;
+  await gateway.save(operation.request);
+  return null;
+}
+
+function useSubmission(
+  gateway: ReviewGateway,
+  refresh: () => Promise<unknown>,
+  onSaved?: (operation: ReviewOperation) => void
+) {
+  const request = useRef<ReviewOperation | null>(null);
   const [state, setState] = useState(initialSubmission);
-  async function send(pending: ReviewRequest) {
+  async function send(pending: ReviewOperation) {
     request.current = pending;
-    setState((value) => ({ ...value, saving: true, error: null, success: false, uncertain: true }));
+    setState((value) => starting(value, pending));
     let saved = false;
     try {
-      await gateway.save(pending);
+      const readyApplied = await applyOperation(gateway, pending);
       saved = true;
+      onSaved?.(pending);
       request.current = null;
-      setState((value) => ({
-        ...value,
-        success: true,
-        uncertain: false,
-        generation: value.generation + 1,
-      }));
+      setState((value) => acknowledged(value, readyApplied));
       await refresh();
     } catch (failure) {
       const error =
@@ -52,7 +91,7 @@ function useSubmission(gateway: ReviewGateway, refresh: () => Promise<unknown>) 
         uncertain: !saved && !(error instanceof StaleReviewError),
       }));
     } finally {
-      setState((value) => ({ ...value, saving: false }));
+      setState((value) => ({ ...value, saving: false, readyApplying: false }));
     }
   }
   async function reload() {
@@ -68,12 +107,12 @@ function useSubmission(gateway: ReviewGateway, refresh: () => Promise<unknown>) 
           : new ContactError('network', 'contacts.review.reload_failed');
       setState((value) => ({ ...value, error, stale: error instanceof StaleReviewError }));
     } finally {
-      setState((value) => ({ ...value, saving: false }));
+      setState((value) => ({ ...value, saving: false, readyApplying: false }));
     }
   }
   return {
     ...state,
-    submit: (pending: ReviewRequest) => (request.current ? Promise.resolve() : send(pending)),
+    submit: (pending: ReviewOperation) => (request.current ? Promise.resolve() : send(pending)),
     reload,
     setError: (error: Error) => setState((value) => ({ ...value, error })),
     retry: () =>
@@ -82,9 +121,13 @@ function useSubmission(gateway: ReviewGateway, refresh: () => Promise<unknown>) 
 }
 
 /** Load consistent evidence and retain exact write intent across uncertain network outcomes. */
-export function useReview(batchId: string, gateway: ReviewGateway) {
+export function useReview(
+  batchId: string,
+  gateway: ReviewGateway,
+  onSaved?: (operation: ReviewOperation) => void
+) {
   const query = useReviewData(batchId, gateway);
-  const submission = useSubmission(gateway, () => query.refresh());
+  const submission = useSubmission(gateway, () => query.refresh(), onSaved);
   async function save(item: ReviewItem, choices: ReviewChoices) {
     if (!query.data || submission.saving || submission.stale || submission.uncertain) return;
     try {
@@ -98,7 +141,7 @@ export function useReview(batchId: string, gateway: ReviewGateway) {
         choices: structuredClone(choices),
         ...selectedCandidates(item, choices),
       };
-      await submission.submit(pending);
+      await submission.submit({ kind: 'row', request: pending });
     } catch (failure) {
       submission.setError(
         failure instanceof Error
@@ -107,11 +150,34 @@ export function useReview(batchId: string, gateway: ReviewGateway) {
       );
     }
   }
+  async function applyReady() {
+    const snapshot = query.data;
+    if (
+      !snapshot ||
+      snapshot.ready.eligibleRows === 0 ||
+      submission.saving ||
+      submission.stale ||
+      submission.uncertain
+    )
+      return;
+    await submission.submit({
+      kind: 'ready',
+      request: {
+        batchId,
+        batchRevision: snapshot.batchRevision,
+        directoryRevision: snapshot.directoryRevision,
+        proposalRevision: snapshot.ready.proposalRevision,
+        idempotencyKey: crypto.randomUUID(),
+      },
+    });
+  }
+
   return {
     ...query,
     ...submission,
     stale: submission.stale || query.error instanceof StaleReviewError,
     error: submission.error ?? query.error,
     save,
+    applyReady,
   };
 }

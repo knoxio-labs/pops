@@ -58,7 +58,8 @@ export function Comparison({
         )}
         {selected.length > 0 && (
           <PreferredFields
-            defaultLabel={t(item.recognized ? 'review.currentValue' : 'review.incomingValue')}
+            incomingName={item.name}
+            incomingProfile={item.incomingProfileLabel}
             selected={selected}
             choices={choices}
             onChange={onChange}
