@@ -104,7 +104,12 @@ impl ProviderRuntime {
             Err(ProviderError::Conflict) => {
                 let run = sync::get_run(pool, &claim.run_id).await?;
                 match store::load_credential(pool, &self.cipher, &run.account_id).await {
-                    Ok(credential) if credential.epoch == run.epoch => return Ok(true),
+                    Ok(credential) if credential.epoch == run.epoch => {
+                        match lease::release(pool, &claim, false, now()).await {
+                            Ok(()) | Err(sync::SyncError::Conflict) => return Ok(true),
+                            Err(error) => return Err(error.into()),
+                        }
+                    }
                     Ok(_) | Err(store::ProviderStoreError::StaleAccount) => {}
                     Err(error) => return Err(error.into()),
                 }

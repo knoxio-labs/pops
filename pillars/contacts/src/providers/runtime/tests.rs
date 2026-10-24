@@ -567,3 +567,32 @@ async fn explicit_other_contacts_consent_persists_and_stages_distinct_streams_at
             .include_other_contacts
     );
 }
+
+#[tokio::test]
+async fn a_busy_refresh_releases_job_ownership_without_consuming_retry_budget() {
+    let (pool, runtime, fake, id, epoch) = setup("google", "people/one").await;
+    let run = begin(&pool, &id, epoch).await;
+    let refresh = store::claim_refresh(&pool, &id, epoch, super::now())
+        .await
+        .unwrap();
+    assert!(runtime.work_once(&pool).await.unwrap());
+    let (until, attempts): (i64, i64) =
+        sqlx::query_as("SELECT lease_until,attempt_count FROM provider_sync_runs WHERE id=?1")
+            .bind(&run)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert_eq!((until, attempts), (0, 0));
+    assert!(fake.urls.lock().unwrap().is_empty());
+    store::release_refresh(&pool, &refresh).await.unwrap();
+    fake.replies.lock().unwrap().extend([
+        (200, token()),
+        (200, json!({"nextSyncToken":"complete"}).to_string()),
+    ]);
+    assert!(runtime.work_once(&pool).await.unwrap());
+    assert!(runtime.work_once(&pool).await.unwrap());
+    assert_eq!(
+        sync::get_run(&pool, &run).await.unwrap().status,
+        "completed"
+    );
+}
