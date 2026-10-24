@@ -288,6 +288,14 @@ pub(crate) async fn validate_batch_fences(
             ));
         }
     }
+    crate::providers::sync::validate_batch(conn, &batch.id)
+        .await
+        .map_err(|error| match error {
+            ProviderStoreError::StaleAccount => {
+                ImportError::Conflict("Provider scan changed; stage a new preview")
+            }
+            _ => ImportError::Storage,
+        })?;
     Ok(())
 }
 
