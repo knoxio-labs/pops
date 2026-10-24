@@ -49,7 +49,7 @@ pub fn parse_stage_input(
             );
         rows.push(StageRowInput {
             record_key: key,
-            payload: Some(to_payload(contact)),
+            payload: Some(payload_from_contact(contact)),
             removed: false,
             errors: issues,
         });
@@ -79,7 +79,9 @@ pub fn parse_stage_input(
     })
 }
 
-fn to_payload(contact: SourceContact) -> ImportPayload {
+/// Convert parsed observations without assigning source identity or inferring name completeness.
+/// Callers choose a stable record key separately; parser ordinals are not provider identities.
+pub fn payload_from_contact(contact: SourceContact) -> ImportPayload {
     let name = contact
         .structured_name
         .map_or_else(PersonName::default, |name| PersonName {
