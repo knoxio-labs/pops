@@ -192,3 +192,19 @@ BEGIN DELETE FROM merge_selections WHERE canonical_id=NEW.entity_id AND field='p
 CREATE TRIGGER entities_decision_delete BEFORE DELETE ON entities
 WHEN EXISTS(SELECT 1 FROM keep_separate WHERE left_id=OLD.id OR right_id=OLD.id)
 BEGIN SELECT RAISE(ABORT, 'identity decisions must be cleared before deletion'); END;
+CREATE TRIGGER source_record_history_immutable_update BEFORE UPDATE ON source_record_history
+BEGIN SELECT RAISE(ABORT, 'source observation is immutable'); END;
+CREATE VIEW entity_identity_lookup AS
+SELECT e.id,
+       CASE WHEN selected_name.source_history_id IS NOT NULL THEN json_extract(history.observation,'$.displayName')
+            WHEN selected_name.owner_entity_id IS NOT NULL THEN chosen_name.name
+            ELSE e.name END AS name,
+       e.type,
+       CASE WHEN selected_aliases.owner_entity_id IS NOT NULL THEN chosen_aliases.aliases ELSE e.aliases END AS aliases
+FROM entities e
+LEFT JOIN merge_selections selected_name ON selected_name.canonical_id=e.id AND selected_name.field='name'
+LEFT JOIN entities chosen_name ON chosen_name.id=selected_name.owner_entity_id
+LEFT JOIN source_record_history history ON history.id=selected_name.source_history_id
+LEFT JOIN merge_selections selected_aliases ON selected_aliases.canonical_id=e.id AND selected_aliases.field='aliases'
+LEFT JOIN entities chosen_aliases ON chosen_aliases.id=selected_aliases.owner_entity_id
+WHERE NOT EXISTS(SELECT 1 FROM entity_redirects WHERE member_id=e.id);
