@@ -13,9 +13,6 @@ import { defineConfig } from '@hey-api/openapi-ts';
 
 export default defineConfig({
   input: '../openapi/bfm.openapi.json',
-  output: {
-    path: 'src/bfm-api',
-  },
   plugins: [
     {
       name: '@hey-api/client-fetch',

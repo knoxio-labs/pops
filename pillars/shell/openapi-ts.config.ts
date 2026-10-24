@@ -25,9 +25,6 @@ const require = createRequire(import.meta.url);
 
 export default defineConfig({
   input: require.resolve('@pops/registry/openapi'),
-  output: {
-    path: 'src/registry-api',
-  },
   plugins: [
     {
       name: '@hey-api/client-fetch',

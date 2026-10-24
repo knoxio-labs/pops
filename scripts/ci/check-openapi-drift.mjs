@@ -15,12 +15,10 @@
  * nothing there to read; several of these pillars (`documents`) declare no
  * `exports` field at all.
  *
- * That committed snapshot is the root of a contract chain other guards
- * already police rigorously: `check-api-types-drift.mjs` regenerates a
- * TypeScript type map FROM it, `check-generated-clients.mjs` and the
- * `cross-pillar-clients` job regenerate FE clients from it, and
- * `check-vendored-contracts.mjs` (ADR-033) diffs vendored copies of it. None
- * of them verify the snapshot itself agrees with the contract source it
+ * That committed snapshot is the root of a contract chain:
+ * `scripts/codegen/generate.mjs` builds the TypeScript type maps and FE
+ * clients FROM it on every install, and `check-vendored-contracts.mjs`
+ * (ADR-033) diffs vendored copies of it. None of them verify the snapshot itself agrees with the contract source it
  * claims to project — this guard is the one that does.
  *
  * Unlike its Tier A siblings, this one needs a build. `generate-openapi.ts`
@@ -170,9 +168,8 @@ export function discoverOpenApiTargets(root) {
 /**
  * The exact set of pillars that own a `generate:openapi` script today. A
  * bare discovery floor only catches losing every target; this catches
- * losing (or gaining) any one — the same reasoning
- * `check-api-types-drift.mjs`'s and `check-generated-clients.mjs`'s
- * `EXPECTED_TARGETS` document, kept honest by `findExpectedTargetSetViolations`
+ * losing (or gaining) any one — the same reasoning behind
+ * `scripts/codegen/generate.mjs`'s `EXPECTED_TARGETS`, kept honest by `findExpectedTargetSetViolations`
  * running on every real invocation of this guard, not only in the sibling
  * Vitest suite or `selfTestRealRepo`. Adding or removing a pillar's OpenAPI
  * generator means editing this list in the same commit.

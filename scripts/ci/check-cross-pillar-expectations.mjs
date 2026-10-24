@@ -10,9 +10,10 @@
  * that renames an operation, moves a path, or renames a parameter breaks
  * the consumer silently, at runtime, in production.
  *
- * The frontend equivalent of this seam is gated by regenerating a client
- * and diffing it (`cross-pillar-clients` in quality.yml). There is no
- * codegen on the backend side to diff, so this guard asserts the narrow
+ * The frontend equivalent of this seam needs no gate: its client is
+ * generated from the producer's snapshot on every install
+ * (`scripts/codegen/generate.mjs`). There is no codegen on the backend
+ * side, so this guard asserts the narrow
  * thing the consumer actually depends on instead: that the operation still
  * exists, at the path and method expected, carrying the query parameters
  * the consumer sends and the path parameters it substitutes.

@@ -8,7 +8,7 @@ Backend-to-backend cross-pillar calls go through the `@pops/pillar-sdk` `pillar(
 
 Two things that look like they should apply here and do not:
 
-- **The `cross-pillar-clients` CI job does not cover this.** It gates browser-facing per-consumer generated clients, and ADR-040's whole regenerate-and-diff apparatus is scoped to that surface. There is no backend equivalent.
+- **Client generation does not cover this.** `scripts/codegen/generate.mjs` builds browser-facing per-consumer clients, and ADR-040's discipline is scoped to that surface. There is no backend equivalent.
 - **ADR-033 vendoring does not apply either.** A vendored OpenAPI snapshot is required when the producer has no npm package — the Rust `contacts` pillar. `finance` is an ordinary TS pillar.
 
 Depending on `@pops/finance` would buy nothing anyway: `pillar<TRouter>()` is typed by the **caller**, and the proxy resolves routes from the producer's OpenAPI at runtime, so there is no compile-time link to break. The local router type is an assertion, not a check.

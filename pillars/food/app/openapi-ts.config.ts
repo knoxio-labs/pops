@@ -13,9 +13,6 @@ import { defineConfig } from '@hey-api/openapi-ts';
 
 export default defineConfig({
   input: '../openapi/food.openapi.json',
-  output: {
-    path: 'src/food-api',
-  },
   plugins: [
     {
       name: '@hey-api/client-fetch',
