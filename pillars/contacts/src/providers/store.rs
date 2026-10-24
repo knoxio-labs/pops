@@ -101,11 +101,16 @@ pub async fn install_credential(
     let encrypted = cipher
         .encrypt(&provider, account_id, secret)
         .map_err(|_| ProviderStoreError::CredentialUnavailable)?;
+    let mut transaction = pool.begin().await?;
     let epoch: Option<i64> = sqlx::query_scalar("UPDATE provider_accounts SET credential=?1,connected=1,owner_subject=?2,epoch=epoch+1 WHERE account_id=?3 AND epoch=?4 RETURNING epoch")
-        .bind(encrypted).bind(operator.subject()).bind(account_id).bind(expected.0).fetch_optional(pool).await?;
-    epoch
-        .map(AccountEpoch)
-        .ok_or(ProviderStoreError::StaleAccount)
+        .bind(encrypted).bind(operator.subject()).bind(account_id).bind(expected.0).fetch_optional(&mut *transaction).await?;
+    let epoch = epoch.ok_or(ProviderStoreError::StaleAccount)?;
+    sqlx::query("DELETE FROM provider_oauth_states WHERE account_id=?1")
+        .bind(account_id)
+        .execute(&mut *transaction)
+        .await?;
+    transaction.commit().await?;
+    Ok(AccountEpoch(epoch))
 }
 
 /// Load connected account credentials for a worker. Callers must re-check the

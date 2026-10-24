@@ -60,11 +60,15 @@ pub async fn begin_authorization(
     let encrypted = cipher
         .encrypt("google-oauth-pkce", &binding, &verifier)
         .map_err(|_| ProviderStoreError::CredentialUnavailable)?;
+    let mut transaction = pool.begin().await?;
+    sqlx::query("DELETE FROM provider_oauth_states WHERE expires_at<=?1 OR account_epoch<>(SELECT epoch FROM provider_accounts WHERE account_id=provider_oauth_states.account_id)")
+        .bind(now).execute(&mut *transaction).await?;
     let inserted = sqlx::query("INSERT INTO provider_oauth_states(state_hash,account_id,owner_subject,account_epoch,expires_at,verifier) SELECT ?1,account_id,?2,epoch,?3,?4 FROM provider_accounts WHERE account_id=?5 AND epoch=?6 AND provider='google'")
-        .bind(state_hash.as_ref()).bind(operator.subject()).bind(expires).bind(encrypted).bind(account_id).bind(expected.0).execute(pool).await?.rows_affected();
+        .bind(state_hash.as_ref()).bind(operator.subject()).bind(expires).bind(encrypted).bind(account_id).bind(expected.0).execute(&mut *transaction).await?.rows_affected();
     if inserted == 0 {
         return Err(ProviderStoreError::StaleAccount);
     }
+    transaction.commit().await?;
     Ok(AuthorizationAttempt {
         state,
         pkce_challenge: URL_SAFE_NO_PAD.encode(digest(&SHA256, verifier.expose())),
