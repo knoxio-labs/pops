@@ -214,10 +214,11 @@ fn rejected(
             .map(String::as_str)
             .chain(candidate.records.iter().map(|record| record.id.as_str()))
             .chain(std::iter::once(candidate.entity_id.as_str()));
-        if candidate
-            .records
-            .iter()
-            .any(|record| record.id == incoming.id)
+        if candidate.entity_id == incoming.id
+            || candidate
+                .records
+                .iter()
+                .any(|record| record.id == incoming.id)
             || candidate.member_ids.contains(&incoming.id)
         {
             incoming_members.extend(members.clone());

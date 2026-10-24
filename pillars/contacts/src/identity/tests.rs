@@ -351,3 +351,25 @@ fn repeated_observations_in_one_group_do_not_create_ambiguity() {
         }
     );
 }
+
+#[test]
+fn rejections_follow_incoming_entity_members_without_a_matching_observation_id() {
+    let incoming = record("incoming-entity", "", "", "a@example.com", "");
+    let mut own_group = candidate(
+        "incoming-entity",
+        record("prior-observation", "", "", "", ""),
+    );
+    own_group.member_ids.push("prior-member".into());
+    let target = candidate("target", record("existing", "", "", "a@example.com", ""));
+    assert_eq!(
+        classify(
+            &incoming,
+            &[own_group, target],
+            &[KeepSeparate {
+                left_id: "prior-member".into(),
+                right_id: "target".into()
+            }]
+        ),
+        expected_review(ReviewReason::KeepSeparate, &["target"])
+    );
+}
