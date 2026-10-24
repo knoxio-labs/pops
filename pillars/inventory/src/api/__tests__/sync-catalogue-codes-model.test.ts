@@ -142,37 +142,21 @@ describe('POST /codes/suggest — model suggestions', () => {
     expect(seen.mock.calls[0]?.[0].destination).toBeUndefined();
   });
 
-  it('accepts only candidates matching the saved affixes and minimum width', async () => {
-    withModel(async () => [
-      'S7-END',
-      'X007-END',
-      'S007',
-      'S007-OTHER',
-      'S0000-END',
-      'S007-END',
-      'S1000-END',
-      's008-end',
-    ]);
+  it('offers model codes whatever the saved pattern says', async () => {
+    withModel(async () => ['BOX-OFFICE-5', 'crate 7', 'S007-OTHER']);
     h.db.db
       .insert(settings)
       .values({ key: 'inventory.codePattern', value: '{type}{###}-END' })
       .run();
 
     expect(await suggest({ name: 'Moving box', typeKey: 'storage_box' })).toEqual([
-      'S0000-END',
-      'S007-END',
-      'S1000-END',
+      'BOX-OFFICE-5',
+      'crate 7',
+      'S007-OTHER',
     ]);
   });
 
-  it('falls back when no model candidate follows the saved pattern', async () => {
-    withModel(async () => ['B1-END', 'B001-WRONG', 'X001-END']);
-    h.db.db.insert(settings).values({ key: 'inventory.codePattern', value: 'B{###}-END' }).run();
-
-    expect(await suggest({ name: 'Box' })).toEqual(['B001-END', 'B002-END', 'B003-END']);
-  });
-
-  it('lets a typed stem override the saved pattern', async () => {
+  it('keeps only model codes starting with a typed stem', async () => {
     withModel(async () => ['B001-END', 'BK-SCIENCE-1', 'bk-8']);
     h.db.db.insert(settings).values({ key: 'inventory.codePattern', value: 'B{###}-END' }).run();
 
