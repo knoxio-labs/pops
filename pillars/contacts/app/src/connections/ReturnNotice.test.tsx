@@ -27,12 +27,15 @@ describe('provider callback outcome', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Google connection could not be completed');
     expect(screen.queryByText(/fictional-private-detail/)).not.toBeInTheDocument();
   });
-  it('does not manufacture an error after success or for unknown query values', () => {
-    render(
-      <MemoryRouter initialEntries={['/contacts/connections?connectionError=unexpected']}>
-        <ReturnNotice />
-      </MemoryRouter>
-    );
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-  });
+  it.each(['/contacts/connections', '/contacts/connections?connectionError=unexpected'])(
+    'does not manufacture an error at %s',
+    (path) => {
+      render(
+        <MemoryRouter initialEntries={[path]}>
+          <ReturnNotice />
+        </MemoryRouter>
+      );
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    }
+  );
 });
