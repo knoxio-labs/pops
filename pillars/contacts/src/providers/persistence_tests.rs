@@ -122,7 +122,14 @@ async fn state_is_bound_to_operator_expires_at_boundary_and_is_consumed_once() {
     assert_eq!(consumed.account_id, account.id);
     assert_eq!(consumed.epoch, epoch);
     assert_eq!(consumed.pkce_verifier.expose().len(), 43);
-    assert_eq!(attempt.pkce_challenge.len(), 43);
+    use base64::Engine;
+    assert_eq!(
+        attempt.pkce_challenge,
+        base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(ring::digest::digest(
+            &ring::digest::SHA256,
+            consumed.pkce_verifier.expose()
+        ))
+    );
     assert!(matches!(
         consume_authorization(&pool, &cipher, &operator, &attempt.state, 1599).await,
         Err(ProviderStoreError::InvalidState)
@@ -267,4 +274,28 @@ async fn disconnect_preserves_canonical_person_local_points_and_other_sources() 
         .await
         .unwrap();
     assert_eq!(people, 1);
+}
+
+#[tokio::test]
+async fn abandoned_expired_states_and_fenced_attempts_are_purged() {
+    let (pool, cipher, operator, account, epoch) = setup("google").await;
+    begin_authorization(&pool, &cipher, &operator, &account.id, epoch, 1000)
+        .await
+        .unwrap();
+    begin_authorization(&pool, &cipher, &operator, &account.id, epoch, 1600)
+        .await
+        .unwrap();
+    let count: i64 = sqlx::query_scalar("SELECT count(*) FROM provider_oauth_states")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(count, 1);
+    install_credential(&pool, &cipher, &operator, &account.id, epoch, &secret())
+        .await
+        .unwrap();
+    let count: i64 = sqlx::query_scalar("SELECT count(*) FROM provider_oauth_states")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(count, 0);
 }
