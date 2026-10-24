@@ -586,6 +586,7 @@ async fn national_phones_need_explicit_known_country_context() {
     assert_eq!(explicit["data"]["countryCode"], "AU");
     for body in [
         json!({"kind":"phone","value":"0412 345 678","countryCode":"not-a-region"}),
+        json!({"kind":"phone","value":"0412 345 678","countryCode":"ZZ"}),
         json!({"kind":"email","value":"a@example.test","countryCode":"AU"}),
     ] {
         assert_eq!(
