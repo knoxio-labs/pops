@@ -39,7 +39,7 @@ function documentsClient(
         maxUploadBytes: null,
         allowedMimeTypes: null,
       }),
-    searchPaperlessDocuments: () => Promise.resolve([]),
+    searchPaperlessDocuments: () => Promise.resolve({ ok: true, documents: [] }),
     paperlessDocumentMissing,
   };
 }

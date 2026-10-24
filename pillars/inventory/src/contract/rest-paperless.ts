@@ -54,7 +54,10 @@ export const inventoryPaperlessContract = c.router({
         ),
       }),
       412: ErrorBodySchema,
+      502: ErrorBodySchema,
+      503: ErrorBodySchema,
     },
-    summary: 'Search Paperless-ngx documents (412 if not configured)',
+    summary:
+      'Search Paperless-ngx documents (412 if not configured, 503 if unreachable, 502 on an unexpected answer)',
   },
 });

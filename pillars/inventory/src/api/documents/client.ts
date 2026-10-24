@@ -15,7 +15,13 @@
  * contract already models for "not configured" — no new error states reach
  * inventory's frontend.
  */
-import { isOk, pillar, type CallResult, type PillarHandle } from '@pops/pillar-sdk/client';
+import {
+  isOk,
+  pillar,
+  type CallFailure,
+  type CallResult,
+  type PillarHandle,
+} from '@pops/pillar-sdk/client';
 
 /** The documents pillar id, as registered with the registry. */
 export const DOCUMENTS_PILLAR_ID = 'documents';
@@ -53,6 +59,11 @@ export interface PaperlessSearchDocument {
   thumbnailUrl: string;
 }
 
+/** A Paperless search's documents, or the documents call's failure with its reason intact. */
+export type PaperlessSearchResult =
+  | { ok: true; documents: PaperlessSearchDocument[] }
+  | { ok: false; failure: CallFailure };
+
 /**
  * Typed handle over the subset of the documents pillar router inventory
  * calls. Declared as a `type` (not `interface`) so it satisfies the SDK
@@ -76,14 +87,11 @@ export interface DocumentsClient {
    */
   getPaperlessStatus(): Promise<PaperlessStatus>;
   /**
-   * Search paperless-ngx documents via the documents pillar. Returns `null`
-   * when the search could not be served — either `documents` reports the
-   * integration is unconfigured (wire 412, which the SDK maps to
-   * `kind: 'unavailable'` like any other non-2xx it doesn't special-case) or
-   * `documents` itself is unreachable. The caller maps `null` to the same
-   * 412 the pre-move embedded-client path returned for "not configured".
+   * Search paperless-ngx documents via the documents pillar. A failure keeps
+   * the SDK's reason, so the caller can tell documents' 412 "not configured"
+   * apart from Paperless or documents being unreachable.
    */
-  searchPaperlessDocuments(query: string): Promise<PaperlessSearchDocument[] | null>;
+  searchPaperlessDocuments(query: string): Promise<PaperlessSearchResult>;
   /**
    * Whether a linked Paperless document still exists. Returns `false` for a
    * successful resolve, `true` for a producer 404 and `null` when the
@@ -94,9 +102,7 @@ export interface DocumentsClient {
 
 function warnDegraded(operation: string, result: CallResult<unknown>): void {
   if (isOk(result)) return;
-  console.warn(
-    `[documents] ${operation} degraded (kind=${result.kind}); treating paperless as unconfigured`
-  );
+  console.warn(`[documents] ${operation} failed (kind=${result.kind})`);
 }
 
 /**
@@ -130,13 +136,13 @@ export function createDocumentsClient(
       };
     },
 
-    async searchPaperlessDocuments(query: string): Promise<PaperlessSearchDocument[] | null> {
+    async searchPaperlessDocuments(query: string): Promise<PaperlessSearchResult> {
       const result = await handleFactory().paperless.search({ query });
       if (!isOk(result)) {
         warnDegraded('paperless.search', result);
-        return null;
+        return { ok: false, failure: result };
       }
-      return result.value.data;
+      return { ok: true, documents: result.value.data };
     },
 
     async paperlessDocumentMissing(id: number): Promise<boolean | null> {
