@@ -1,6 +1,6 @@
 //! Stable-member separation decisions survive regrouping, undo and source replay.
 
-use sqlx::SqlitePool;
+use sqlx::{SqliteConnection, SqlitePool};
 
 use super::model::{SeparateBody, SeparateResult};
 use super::repo::{self, conflict, MergeError};
@@ -9,8 +9,17 @@ use crate::{digest::sha256_hex, time::now_rfc3339};
 
 /// Apply a candidate-specific decision to every current cross-group member pair.
 /// Unselected candidates and their source records are never modified.
-pub async fn decide(
-    pool: &SqlitePool,
+pub async fn decide(pool: &SqlitePool, body: SeparateBody) -> Result<SeparateResult, MergeError> {
+    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+    let result = decide_in_transaction(&mut tx, body).await?;
+    tx.commit().await?;
+    Ok(result)
+}
+
+/// Record separation inside the caller's reserved write transaction without committing it.
+/// A later failure must roll back the whole caller transaction; apply composite rejection decisions before its merge.
+pub async fn decide_in_transaction(
+    conn: &mut SqliteConnection,
     mut body: SeparateBody,
 ) -> Result<SeparateResult, MergeError> {
     validate_decision(&body.idempotency_key, &body.evidence)?;
@@ -24,27 +33,25 @@ pub async fn decide(
     }
     let request_body = repo::encode(&body)?;
     let hash = sha256_hex(request_body.as_bytes());
-    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
-    if let Some(result) = repo::receipt(&mut tx, "separate", &body.idempotency_key, &hash).await? {
-        tx.commit().await?;
+    if let Some(result) = repo::receipt(conn, "separate", &body.idempotency_key, &hash).await? {
         return Ok(result);
     }
-    repo::expect_revision(&mut tx, body.expected_revision).await?;
-    let left = repo::resolve_one(&mut tx, &body.left_id)
+    repo::expect_revision(conn, body.expected_revision).await?;
+    let left = repo::resolve_one(conn, &body.left_id)
         .await?
         .ok_or_else(|| MergeError::NotFound(body.left_id.clone()))?;
-    let right = repo::resolve_one(&mut tx, &body.right_id)
+    let right = repo::resolve_one(conn, &body.right_id)
         .await?
         .ok_or_else(|| MergeError::NotFound(body.right_id.clone()))?;
-    repo::require_root(&mut tx, &left).await?;
-    repo::require_root(&mut tx, &right).await?;
+    repo::require_root(conn, &left).await?;
+    repo::require_root(conn, &right).await?;
     if left == right && body.keep_separate {
         return Err(conflict(
             "Undo the merge before separating members of the same group",
         ));
     }
-    let left_members = repo::members(&mut tx, &left).await?;
-    let right_members = repo::members(&mut tx, &right).await?;
+    let left_members = repo::members(conn, &left).await?;
+    let right_members = repo::members(conn, &right).await?;
     if left_members.len().saturating_mul(right_members.len()) > 10_000 {
         return Err(MergeError::Invalid(
             "Separation decision exceeds 10000 stable member pairs".into(),
@@ -62,12 +69,12 @@ pub async fn decide(
             };
             if body.keep_separate {
                 sqlx::query("INSERT INTO keep_separate(left_id,right_id) VALUES(?1,?2) ON CONFLICT DO NOTHING")
-                    .bind(first).bind(second).execute(&mut *tx).await?;
+                    .bind(first).bind(second).execute(&mut *conn).await?;
             } else {
                 sqlx::query("DELETE FROM keep_separate WHERE left_id=?1 AND right_id=?2")
                     .bind(first)
                     .bind(second)
-                    .execute(&mut *tx)
+                    .execute(&mut *conn)
                     .await?;
             }
         }
@@ -78,15 +85,14 @@ pub async fn decide(
     .bind(uuid::Uuid::new_v4().to_string())
     .bind(request_body)
     .bind(now_rfc3339())
-    .execute(&mut *tx)
+    .execute(&mut *conn)
     .await?;
     let result = SeparateResult {
         left_id: body.left_id,
         right_id: body.right_id,
         keep_separate: body.keep_separate,
-        revision: repo::revision(&mut tx).await?,
+        revision: repo::revision(conn).await?,
     };
-    repo::save_receipt(&mut tx, "separate", &body.idempotency_key, &hash, &result).await?;
-    tx.commit().await?;
+    repo::save_receipt(conn, "separate", &body.idempotency_key, &hash, &result).await?;
     Ok(result)
 }

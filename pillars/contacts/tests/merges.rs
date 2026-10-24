@@ -113,7 +113,7 @@ async fn selected_subset_projects_fields_and_preserves_original_ids_and_ownershi
         .expect("point")
     };
     let mut body = request(&pool, &a, &[&b], "subset").await;
-    body.selections.push(FieldSelection {
+    body.selections.push(FieldSelection::Entity {
         field: MergeField::Name,
         entity_id: b.clone(),
     });
@@ -236,7 +236,7 @@ async fn invalid_selection_and_mid_transaction_failure_roll_back_every_redirect(
     let b = person(&pool, "B").await;
     let c = person(&pool, "C").await;
     let mut invalid = request(&pool, &a, &[&b], "invalid").await;
-    invalid.selections.push(FieldSelection {
+    invalid.selections.push(FieldSelection::Entity {
         field: MergeField::Name,
         entity_id: c.clone(),
     });
@@ -385,13 +385,13 @@ async fn undo_restores_previous_groups_and_selections_and_replays_without_overwr
     let b = person(&pool, "B").await;
     let c = person(&pool, "C").await;
     let mut first = request(&pool, &a, &[&b], "ab").await;
-    first.selections.push(FieldSelection {
+    first.selections.push(FieldSelection::Entity {
         field: MergeField::Name,
         entity_id: b.clone(),
     });
     service::merge(&pool, first).await.expect("first");
     let mut second = request(&pool, &c, &[&a], "cab").await;
-    second.selections.push(FieldSelection {
+    second.selections.push(FieldSelection::Entity {
         field: MergeField::Name,
         entity_id: a.clone(),
     });
@@ -519,4 +519,81 @@ async fn resolution_contract_reports_missing_and_caps_without_dropping_ids() {
     )
     .await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn separation_blocks_deletion_with_conflict_and_own_preferences_cascade_after_revocation() {
+    let pool = pool().await;
+    let a = person(&pool, "A").await;
+    let c = person(&pool, "C").await;
+    decisions::decide(
+        &pool,
+        SeparateBody {
+            left_id: a.clone(),
+            right_id: c.clone(),
+            keep_separate: true,
+            expected_revision: revision(&pool).await,
+            idempotency_key: "separate".into(),
+            evidence: "Distinct people".into(),
+        },
+    )
+    .await
+    .expect("separation");
+    let (status, error) = api(
+        &pool,
+        Method::DELETE,
+        &format!("/entities/{a}"),
+        Value::Null,
+    )
+    .await;
+    assert_eq!(status, StatusCode::CONFLICT);
+    assert_eq!(error["code"], "contacts.entity.identity_conflict");
+    decisions::decide(
+        &pool,
+        SeparateBody {
+            left_id: a.clone(),
+            right_id: c,
+            keep_separate: false,
+            expected_revision: revision(&pool).await,
+            idempotency_key: "revoke".into(),
+            evidence: "Explicitly revoke before deletion".into(),
+        },
+    )
+    .await
+    .expect("revocation");
+    let point = persons::insert_point(
+        &mut pool.acquire().await.expect("connection"),
+        &a,
+        &ContactPointInput {
+            kind: ContactPointKind::Email,
+            value: "a@example.test".into(),
+            label: None,
+            country_code: None,
+        },
+        None,
+    )
+    .await
+    .expect("point");
+    persons::prefer_point(&pool, &a, &point.id)
+        .await
+        .expect("preference");
+    let (status, _) = api(
+        &pool,
+        Method::DELETE,
+        &format!("/entities/{a}"),
+        Value::Null,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM merge_selections")
+            .fetch_one(&pool)
+            .await
+            .expect("selections"),
+        0
+    );
+    assert_eq!(
+        repo::separate_pairs(&pool).await.expect("pairs").data.len(),
+        0
+    );
 }

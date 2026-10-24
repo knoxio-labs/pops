@@ -3,6 +3,7 @@
 use sqlx::{SqliteConnection, SqlitePool};
 
 use super::model::{SourceAccount, SourceAccountInput, SourceRecord, SourceRecordInput};
+use crate::persons::model::{ContactPoint, ContactPointInput};
 use crate::persons::repo::{
     insert_point, require_person, validate_name, validate_point, PersonError,
 };
@@ -100,7 +101,8 @@ pub fn validate_record(input: &SourceRecordInput) -> Result<(), SourceError> {
 }
 
 /// Replace one source record's observations in the caller's transaction without committing it.
-/// Local points/profile and existing preferred selections survive; old source values remain inactive.
+/// Local points/profile and existing preferred selections survive. Unchanged points retain their IDs;
+/// removed source values remain inactive.
 /// Reusing a namespace for a different canonical person is an explicit conflict.
 /// Reapplying an identical active observation performs no writes and keeps its revision.
 pub async fn apply_record(
@@ -146,17 +148,50 @@ pub async fn apply_record(
     let now = now_rfc3339();
     sqlx::query("INSERT INTO source_records(id,account_id,collection_key,record_key,entity_id,display_name,given_name,additional_names,family_name,name_prefix,name_suffix,name_completeness,active,last_seen_at) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,1,?13) ON CONFLICT(account_id,collection_key,record_key) DO UPDATE SET display_name=excluded.display_name,given_name=excluded.given_name,additional_names=excluded.additional_names,family_name=excluded.family_name,name_prefix=excluded.name_prefix,name_suffix=excluded.name_suffix,name_completeness=excluded.name_completeness,active=1,last_seen_at=excluded.last_seen_at,revision=source_records.revision+1")
         .bind(&id).bind(&input.account_id).bind(&input.collection_key).bind(&input.record_key).bind(&input.entity_id).bind(&input.display_name).bind(&input.name.given_name).bind(&input.name.additional_names).bind(&input.name.family_name).bind(&input.name.name_prefix).bind(&input.name.name_suffix).bind(input.name.completeness.as_str()).bind(&now).execute(&mut *conn).await?;
-    sqlx::query("UPDATE contact_points SET active=0 WHERE source_record_id=?1")
-        .bind(&id)
-        .execute(&mut *conn)
-        .await?;
-    for point in &input.points {
-        insert_point(conn, &input.entity_id, point, Some(&id)).await?;
-    }
+    refresh_points(conn, &input.entity_id, &id, &input.points).await?;
     sqlx::query("INSERT INTO source_record_history(id,source_record_id,observed_at,observation) VALUES(?1,?2,?3,?4)")
         .bind(uuid::Uuid::new_v4().to_string()).bind(&id).bind(&now).bind(snapshot).execute(&mut *conn).await?;
     Ok(sqlx::query_as("SELECT id,account_id,collection_key,record_key,entity_id,display_name,given_name,additional_names,family_name,name_prefix,name_suffix,name_completeness,active,last_seen_at,revision FROM source_records WHERE id=?1")
         .bind(id).fetch_one(conn).await?)
+}
+
+async fn refresh_points(
+    conn: &mut SqliteConnection,
+    entity_id: &str,
+    source_id: &str,
+    points: &[ContactPointInput],
+) -> Result<(), SourceError> {
+    let mut prior: Vec<ContactPoint> = sqlx::query_as("SELECT id,entity_id,kind,value,normalized_value,label,country_code,source_record_id,active,preferred,created_at FROM contact_points WHERE source_record_id=?1 AND (active=1 OR preferred=1 OR EXISTS(SELECT 1 FROM merge_selections WHERE point_id=contact_points.id)) ORDER BY EXISTS(SELECT 1 FROM merge_selections WHERE point_id=contact_points.id) DESC,preferred DESC,active DESC,created_at,id")
+        .bind(source_id).fetch_all(&mut *conn).await?;
+    for point in points {
+        let position = prior.iter().position(|old| {
+            old.kind == point.kind.as_str()
+                && old.value == point.value
+                && old.label == point.label
+                && old.country_code == point.country_code
+        });
+        match position {
+            Some(position) => {
+                let old = prior.remove(position);
+                if !old.active {
+                    sqlx::query("UPDATE contact_points SET active=1 WHERE id=?1")
+                        .bind(old.id)
+                        .execute(&mut *conn)
+                        .await?;
+                }
+            }
+            None => {
+                insert_point(conn, entity_id, point, Some(source_id)).await?;
+            }
+        }
+    }
+    for removed in prior.into_iter().filter(|point| point.active) {
+        sqlx::query("UPDATE contact_points SET active=0 WHERE id=?1")
+            .bind(removed.id)
+            .execute(&mut *conn)
+            .await?;
+    }
+    Ok(())
 }
 
 /// Deactivate one source and its observations without deleting people or clearing preferred/local values.
