@@ -462,6 +462,33 @@ async fn imported_name_selections_bind_immutable_observations_and_preserve_prove
             .name,
         "B local"
     );
+    let lookup = entities::lookup_bulk(&pool).await.expect("bulk projection");
+    assert_eq!(lookup.len(), 1);
+    assert_eq!(lookup[0].name, "Original imported name");
+    let filtered = entities::lookup_by_ids(&pool, &[b.clone(), a.clone()])
+        .await
+        .expect("historical projection");
+    assert_eq!(filtered.len(), 1);
+    assert_eq!(filtered[0].id, a);
+    let search = entities::search_candidates(&pool, "Original imported")
+        .await
+        .expect("selected source search");
+    assert!(!search.is_empty());
+    assert!(search.iter().all(|row| row.id == a
+        && row.name == "Original imported name"
+        && row.matching_name == "Original imported name"));
+    let (listed, total) = entities::list(&pool, Some("Original imported"), None, 10, 0)
+        .await
+        .expect("selected source filter");
+    assert_eq!(total, 1);
+    assert_eq!(listed[0].name, "Original imported name");
+    assert!(
+        sqlx::query("UPDATE source_record_history SET observation='{}' WHERE id=?1")
+            .bind(&observation)
+            .execute(&pool)
+            .await
+            .is_err()
+    );
     input.display_name = Some("Provider changed name".into());
     input.name.family_name = Some("Changed".into());
     sources::apply_record(&mut pool.acquire().await.expect("connection"), &input)
