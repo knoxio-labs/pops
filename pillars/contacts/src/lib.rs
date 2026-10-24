@@ -9,6 +9,7 @@ pub mod app;
 pub mod blobs;
 pub mod config;
 pub mod db;
+pub mod digest;
 pub mod entities;
 pub mod health;
 pub mod identity;
