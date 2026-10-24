@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::persons::model::{ContactPointInput, PersonName};
+use crate::persons::model::{ContactPointInput, NameCompleteness, PersonName};
 
 /// Source observations to propose; staging never changes the canonical directory.
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
@@ -12,6 +12,24 @@ pub struct ImportPayload {
     pub display_name: Option<String>,
     pub name: PersonName,
     pub points: Vec<ContactPointInput>,
+}
+
+/// Qualify unknown source-name completeness using explicit nonblank given and family parts.
+/// Declared completeness and every original part are retained; display text is never inspected.
+pub fn qualify_structured_name(mut name: PersonName) -> PersonName {
+    if name.completeness == NameCompleteness::Unknown
+        && name
+            .given_name
+            .as_deref()
+            .is_some_and(|given| !given.trim().is_empty())
+        && name
+            .family_name
+            .as_deref()
+            .is_some_and(|family| !family.trim().is_empty())
+    {
+        name.completeness = NameCompleteness::Complete;
+    }
+    name
 }
 
 /// Sanitized validation failures retained alongside a preview row.
@@ -130,4 +148,57 @@ pub struct CommitReceipt {
     pub batch_id: String,
     pub revision: i64,
     pub rows: Vec<CommittedRow>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::qualify_structured_name;
+    use crate::persons::model::{NameCompleteness, PersonName};
+
+    #[test]
+    fn explicit_given_and_family_qualify_without_modifying_original_parts() {
+        let name = qualify_structured_name(PersonName {
+            given_name: Some(" Rosane ".into()),
+            additional_names: Some("Maria".into()),
+            family_name: Some(" Menegotto ".into()),
+            name_prefix: Some("Dr.".into()),
+            name_suffix: Some("Jr.".into()),
+            ..PersonName::default()
+        });
+        assert_eq!(name.completeness, NameCompleteness::Complete);
+        assert_eq!(name.given_name.as_deref(), Some(" Rosane "));
+        assert_eq!(name.additional_names.as_deref(), Some("Maria"));
+        assert_eq!(name.family_name.as_deref(), Some(" Menegotto "));
+        assert_eq!(name.name_prefix.as_deref(), Some("Dr."));
+        assert_eq!(name.name_suffix.as_deref(), Some("Jr."));
+    }
+
+    #[test]
+    fn missing_or_blank_parts_and_multiword_given_only_are_not_complete() {
+        for (given, family) in [
+            (Some("Rosane Menegotto"), None),
+            (Some("Rosane"), Some("  ")),
+            (None, Some("Menegotto")),
+            (Some("  "), Some("Menegotto")),
+            (None, None),
+        ] {
+            let name = qualify_structured_name(PersonName {
+                given_name: given.map(str::to_owned),
+                family_name: family.map(str::to_owned),
+                ..PersonName::default()
+            });
+            assert_eq!(name.completeness, NameCompleteness::Unknown);
+        }
+    }
+
+    #[test]
+    fn declared_incomplete_metadata_is_not_promoted() {
+        let name = qualify_structured_name(PersonName {
+            given_name: Some("Rosane".into()),
+            family_name: Some("Menegotto".into()),
+            completeness: NameCompleteness::Incomplete,
+            ..PersonName::default()
+        });
+        assert_eq!(name.completeness, NameCompleteness::Incomplete);
+    }
 }
