@@ -27,7 +27,7 @@
   },
   "scripts": {
     "backfill:ordered-at-offset": "tsx scripts/backfill-ordered-at-offset.ts",
-    "build": "tsx scripts/verify-manifest.ts && tsc -b tsconfig.build.json && tsx scripts/generate-openapi.ts && tsx scripts/generate-api-types.ts",
+    "build": "tsx scripts/verify-manifest.ts && tsc -b tsconfig.build.json && tsx scripts/generate-openapi.ts && tsx scripts/generate-api-types.ts && tsc -b tsconfig.build.json",
     "dev": "tsx watch --clear-screen=false src/api/server.ts",
     "generate:api-types": "tsx scripts/generate-api-types.ts",
     "generate:manifest": "tsx scripts/generate-manifest.ts",

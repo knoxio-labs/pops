@@ -17,8 +17,8 @@ Frontend-only: this package owns no database. Everything goes over the bfm
 pillar's REST contract through the generated `@hey-api/client-fetch` client in
 `src/bfm-api/`, served at the shell's `/bfm-api` proxy path
 (see `src/bfm-api-runtime-config.ts`). Because the app consumes its **own**
-pillar, there is no cross-pillar client leg and nothing to add to the
-`cross-pillar-clients` CI job.
+pillar, there is no cross-pillar client leg. The client is generated, not
+committed: `scripts/codegen/generate.mjs` builds it on install.
 
 ## Layout
 

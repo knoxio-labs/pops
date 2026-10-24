@@ -22,6 +22,10 @@ on:
       - ".github/workflows/docker-build.yml"
       - ".github/actions/**"
       - "scripts/ci/smoke-image.mjs"
+      # The UI images copy and run the client generator, and pnpm runs the root
+      # package.json's lifecycle scripts inside every image's install.
+      - "scripts/codegen/**"
+      - "package.json"
   push:
     branches: [main]
     paths:
@@ -37,6 +41,10 @@ on:
       - ".github/workflows/docker-build.yml"
       - ".github/actions/**"
       - "scripts/ci/smoke-image.mjs"
+      # The UI images copy and run the client generator, and pnpm runs the root
+      # package.json's lifecycle scripts inside every image's install.
+      - "scripts/codegen/**"
+      - "package.json"
   # A merge group cannot carry a `paths:` filter, and `dorny/paths-filter` has
   # no diff base on this event either. The `scope` job below is that filter:
   # it reads the `pull_request.paths` list above off disk and answers it
