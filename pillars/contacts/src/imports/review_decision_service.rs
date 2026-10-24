@@ -32,11 +32,22 @@ pub async fn decide(
     batch_id: &str,
     input: &ReviewDecisionInput,
 ) -> Result<ReviewDecisionReceipt, ImportError> {
+    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+    let receipt = decide_in_transaction(&mut tx, batch_id, input).await?;
+    tx.commit().await?;
+    Ok(receipt)
+}
+
+/// Apply a row inside a caller-owned reserved transaction; errors require full caller rollback.
+pub async fn decide_in_transaction(
+    conn: &mut SqliteConnection,
+    batch_id: &str,
+    input: &ReviewDecisionInput,
+) -> Result<ReviewDecisionReceipt, ImportError> {
     validate(input)?;
     let hash = sha256_hex(&serde_json::to_vec(input)?);
-    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
     let stored: Option<(String, String)> = sqlx::query_as("SELECT body_hash,receipt FROM contact_import_review_receipts WHERE batch_id=?1 AND idempotency_key=?2")
-        .bind(batch_id).bind(&input.idempotency_key).fetch_optional(&mut *tx).await?;
+        .bind(batch_id).bind(&input.idempotency_key).fetch_optional(&mut *conn).await?;
     if let Some((stored_hash, receipt)) = stored {
         if stored_hash != hash {
             return Err(ImportError::Conflict(
@@ -45,16 +56,38 @@ pub async fn decide(
         }
         return Ok(serde_json::from_str(&receipt)?);
     }
-    let batch = super::repo::get_batch(&mut tx, batch_id).await?;
-    service::validate_batch_fences(&mut tx, &batch).await?;
-    let snapshot = super::review::snapshot(&mut tx, batch_id).await?;
+    let batch = super::repo::get_batch(conn, batch_id).await?;
+    service::validate_batch_fences(conn, &batch).await?;
+    let snapshot = super::review::snapshot(conn, batch_id).await?;
     let authorization = snapshot.authorize(&input.row_id)?;
+    apply_authorized(conn, &batch, authorization, input, None).await
+}
+
+/// Apply authorization derived before any writes in the same reserved transaction.
+/// The caller must validate account/scan fences and the complete snapshot before composing rows.
+/// Existing canonical preferences win by default; explicit field/point selections remain replacements.
+pub(crate) async fn apply_authorized(
+    conn: &mut SqliteConnection,
+    batch: &ImportBatch,
+    authorization: super::review::ReviewAuthorization,
+    input: &ReviewDecisionInput,
+    preferred_canonical: Option<&str>,
+) -> Result<ReviewDecisionReceipt, ImportError> {
+    validate(input)?;
+    let hash = sha256_hex(&serde_json::to_vec(input)?);
     if input.batch_revision != authorization.batch_revision
         || input.directory_revision != authorization.directory_revision
         || input.proposal_revision != authorization.proposal_revision
         || authorization.stale_source
     {
         return Err(ImportError::Conflict("Review changed; reload the proposal"));
+    }
+    if preferred_canonical
+        .is_some_and(|id| !input.merge_entity_ids.iter().any(|target| target == id))
+    {
+        return Err(ImportError::Invalid(
+            "Preferred canonical must be a selected authorized candidate",
+        ));
     }
     let candidates: BTreeSet<String> = authorization.candidate_ids().map(str::to_owned).collect();
     for id in input
@@ -78,7 +111,12 @@ pub async fn decide(
             "A retained keep-separate decision prevents this merge",
         ));
     }
-    validate_pair_budget(&mut tx, authorization.entity_id.as_deref(), input).await?;
+    let preserved_canonical = preferred_canonical
+        .map(str::to_owned)
+        .or_else(|| authorization.entity_id.clone())
+        .or_else(|| input.merge_entity_ids.iter().min().cloned());
+    let preferred_canonical = preserved_canonical.as_deref();
+    validate_pair_budget(conn, authorization.entity_id.as_deref(), input).await?;
     let row = batch
         .rows
         .iter()
@@ -89,7 +127,7 @@ pub async fn decide(
             "This source row cannot be reviewed as a person",
         ));
     }
-    let previous = review_state::get(&mut tx, &input.row_id).await?;
+    let previous = review_state::get(conn, &input.row_id).await?;
     let mut choices = previous
         .as_ref()
         .map(|state| state.decisions.clone())
@@ -116,15 +154,16 @@ pub async fn decide(
         } else {
             RowAction::CreatePerson
         };
-        service::validate_decision(&mut tx, &batch, row, &action).await?;
-        let applied = service::apply_decision(&mut tx, &batch, row, &action).await?;
+        service::validate_decision(conn, batch, row, &action).await?;
+        let applied = service::apply_decision(conn, batch, row, &action).await?;
         let owner = applied.entity_id.ok_or(ImportError::Storage)?;
-        entity_id = merges::resolve_one(&mut tx, &owner).await?;
+        entity_id = merges::resolve_one(conn, &owner).await?;
         source_record_id = applied.source_record_id;
         created = matches!(action, RowAction::CreatePerson);
     }
     let mut selections = input.selections.clone();
     if created
+        && preferred_canonical.is_none()
         && !selections
             .iter()
             .any(|selection| selection.field() == MergeField::PersonProfile)
@@ -139,15 +178,25 @@ pub async fn decide(
         });
     }
     let operation_id = if !defer_only {
-        let canonical = entity_id.as_ref().ok_or(ImportError::Storage)?;
-        let mut roots = input.merge_entity_ids.clone();
-        roots.push(canonical.clone());
+        let incoming = entity_id.as_deref().ok_or(ImportError::Storage)?;
+        let canonical = preferred_canonical.unwrap_or(incoming);
+        let mut merge_members: Vec<String> = input
+            .merge_entity_ids
+            .iter()
+            .filter(|id| id.as_str() != canonical)
+            .cloned()
+            .collect();
+        if incoming != canonical {
+            merge_members.push(incoming.into());
+        }
+        let mut roots = merge_members.clone();
+        roots.push(canonical.into());
         for (left_index, left) in roots.iter().enumerate() {
             for (right_index, right) in input.different_entity_ids.iter().enumerate() {
                 let index = left_index * input.different_entity_ids.len() + right_index;
-                let revision = merges::revision(&mut tx).await?;
+                let revision = merges::revision(conn).await?;
                 decisions::decide_in_transaction(
-                    &mut tx,
+                    conn,
                     SeparateBody {
                         left_id: left.clone(),
                         right_id: right.clone(),
@@ -163,7 +212,7 @@ pub async fn decide(
         if input.merge_entity_ids.is_empty() {
             if !selections.is_empty() || !input.preferred_point_ids.is_empty() {
                 merge_service::select_in_transaction(
-                    &mut tx,
+                    conn,
                     canonical,
                     &selections,
                     &input.preferred_point_ids,
@@ -172,13 +221,13 @@ pub async fn decide(
             }
             None
         } else {
-            let revision = merges::revision(&mut tx).await?;
+            let revision = merges::revision(conn).await?;
             Some(
                 merge_service::merge_in_transaction(
-                    &mut tx,
+                    conn,
                     MergeBody {
-                        canonical_id: canonical.clone(),
-                        member_ids: input.merge_entity_ids.clone(),
+                        canonical_id: canonical.into(),
+                        member_ids: merge_members,
                         expected_revision: revision,
                         idempotency_key: format!("review:{hash}:merge"),
                         evidence: "Explicit import review selected subset".into(),
@@ -193,8 +242,11 @@ pub async fn decide(
     } else {
         None
     };
+    if let Some(canonical) = preferred_canonical {
+        entity_id = Some(canonical.into());
+    }
     record_choices(&mut choices, &candidates, input);
-    review_state::save_decisions(&mut tx, &input.row_id, &choices).await?;
+    review_state::save_decisions(conn, &input.row_id, &choices).await?;
     let pending_entity_ids: Vec<String> = candidates
         .into_iter()
         .filter(|id| {
@@ -211,14 +263,13 @@ pub async fn decide(
         batch_id: batch.id.clone(),
         row_id: row.id.clone(),
         batch_revision: batch.revision.checked_add(1).ok_or(ImportError::Storage)?,
-        directory_revision: merges::revision(&mut tx).await?,
+        directory_revision: merges::revision(conn).await?,
         entity_id,
         operation_id,
         pending_entity_ids,
         processed,
     };
-    finish(&mut tx, &batch, row, &hash, input, &receipt).await?;
-    tx.commit().await?;
+    finish(conn, batch, row, &hash, input, &receipt).await?;
     Ok(receipt)
 }
 
