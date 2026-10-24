@@ -341,7 +341,7 @@ export type PersonProfile = {
  * Local profile response; `null` means no local name override exists.
  */
 export type PersonProfileResponse = {
-  data?: PersonProfile | unknown;
+  data?: PersonProfile | null;
 };
 
 /**
