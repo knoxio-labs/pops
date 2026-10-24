@@ -8,6 +8,13 @@
 
 These are non-negotiable. Each is stated once here; the rest of the doc is reference.
 
+### CONFIGURABLE BEHAVIOUR MUST COME FROM DATA
+
+- **Do not hardcode user-configurable behaviour.** Published contracts, catalogue definitions and presentation metadata, persisted settings, and explicit user selections are authoritative. Trace the owning source before implementing a default, limit, field formatter or special case.
+- Never infer domain semantics from a field/type name, key, display label or example value unless an approved contract explicitly defines that convention. A fixture or screenshot is evidence of one state, not a new schema rule.
+- Never implicitly add unchecked output, replace a configured icon, silently constrain a value to the UI's shortcuts, or let an unselected optional field block an operation. Any fallback, semantic rendering override or cross-field dependency needs an explicit contract and regression coverage.
+- Physical standards, protocol limits and measured safety bounds may be constants. Name the constraint, document its source and test its boundary; do not present an implementation convenience as a product limit. If the required configuration or contract is missing, ask instead of inventing one.
+
 ### Workflow & shipping (mandatory, no exceptions)
 
 - **Never commit directly to `main`.** Every change goes through a PR. One branch = one focused task = one PR. Commits atomic and well-described.
