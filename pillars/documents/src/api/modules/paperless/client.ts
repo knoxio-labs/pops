@@ -9,6 +9,7 @@
 import { ensureOk, paperlessFetch, type PaperlessConnection } from './http.js';
 import { multipartUpload, type PaperlessUploadMeta, type SizedFile } from './multipart.js';
 import { mapPaperlessTask, RawTaskPageSchema, type PaperlessTaskStatus } from './task-state.js';
+import { PAPERLESS_TIMEOUTS } from './timeouts.js';
 import {
   PaperlessApiError,
   type PaperlessCorrespondent,
@@ -24,10 +25,6 @@ import {
   type RawPaperlessTag,
 } from './types.js';
 
-const READ_TIMEOUT_MS = 5_000;
-const THUMBNAIL_TIMEOUT_MS = 10_000;
-/** Bytes move through these calls, so they get minutes rather than seconds. */
-const TRANSFER_TIMEOUT_MS = 300_000;
 /** Paperless 3.2.1's default; pinned so a server-side default change cannot reshape tasks. */
 const TASKS_ACCEPT = 'application/json; version=10';
 
@@ -95,7 +92,7 @@ export class PaperlessClient {
   /** Fetch the raw thumbnail image for a document. Returns the response for piping. */
   async fetchThumbnail(id: number): Promise<Response> {
     return paperlessFetch(this.connection, `/api/documents/${id}/thumb/`, {
-      timeoutMs: THUMBNAIL_TIMEOUT_MS,
+      timeoutMs: PAPERLESS_TIMEOUTS.thumbnail,
     });
   }
 
@@ -114,7 +111,7 @@ export class PaperlessClient {
     return paperlessFetch(
       this.connection,
       `/api/documents/${id}/download/?original=${String(options.original)}`,
-      { headers, timeoutMs: TRANSFER_TIMEOUT_MS }
+      { headers, timeoutMs: PAPERLESS_TIMEOUTS.transfer }
     );
   }
 
@@ -129,7 +126,7 @@ export class PaperlessClient {
       headers: { ...headers, Accept: 'application/json' },
       body,
       duplex: 'half',
-      timeoutMs: TRANSFER_TIMEOUT_MS,
+      timeoutMs: PAPERLESS_TIMEOUTS.transfer,
     });
     const taskId: unknown = await (await ensureOk(response)).json();
     if (typeof taskId !== 'string' || taskId === '') {
@@ -143,7 +140,7 @@ export class PaperlessClient {
     const response = await paperlessFetch(
       this.connection,
       `/api/tasks/?${new URLSearchParams({ task_id: taskId }).toString()}`,
-      { headers: { Accept: TASKS_ACCEPT }, timeoutMs: READ_TIMEOUT_MS }
+      { headers: { Accept: TASKS_ACCEPT }, timeoutMs: PAPERLESS_TIMEOUTS.read }
     );
     const parsed = RawTaskPageSchema.safeParse(await (await ensureOk(response)).json());
     if (!parsed.success) {
@@ -170,7 +167,7 @@ export class PaperlessClient {
   async deleteDocument(id: number): Promise<void> {
     const response = await paperlessFetch(this.connection, `/api/documents/${id}/`, {
       method: 'DELETE',
-      timeoutMs: READ_TIMEOUT_MS,
+      timeoutMs: PAPERLESS_TIMEOUTS.write,
     });
     await ensureOk(response);
   }
@@ -257,7 +254,7 @@ export class PaperlessClient {
     const response = await paperlessFetch(this.connection, path, {
       ...init,
       headers,
-      timeoutMs: READ_TIMEOUT_MS,
+      timeoutMs: init.method === 'PATCH' ? PAPERLESS_TIMEOUTS.write : PAPERLESS_TIMEOUTS.read,
     });
     return (await (await ensureOk(response)).json()) as T;
   }

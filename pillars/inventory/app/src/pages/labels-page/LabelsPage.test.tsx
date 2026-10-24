@@ -5,8 +5,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { decodeQrSvg } from '@pops/ui/testing/decode-qr';
 
+import { testField, testType } from '../../catalogue-editor/type-tree-test-utils';
 import { PAGE_HEIGHT } from '../../foundation/frame/page-frame.js';
 import { SHEET_STORAGE_KEY } from './label-storage';
+
+import type { WebItem } from './label-item';
 
 const api = vi.hoisted(() => ({
   webList: vi.fn(),
@@ -28,7 +31,7 @@ vi.mock('../../inventory-api/index.js', () => ({
 
 import { LabelsPage } from './LabelsPage';
 
-interface FakeItem {
+interface FakeItem extends Pick<WebItem, 'typeId' | 'fieldValues' | 'computedValues'> {
   id: string;
   name: string;
   code: string | null;
@@ -59,6 +62,9 @@ function item(id: string, name: string, code: string | null, extra: Partial<Fake
     revision: 1,
     typeKey: null,
     fields: {},
+    typeId: null,
+    fieldValues: [],
+    computedValues: [],
     ...extra,
   };
 }
@@ -427,6 +433,56 @@ describe('items without a code', () => {
   });
 });
 
+describe('label copies', () => {
+  it.each([
+    [GRINDER, 'Copies per item'],
+    [BOX, 'Copies per box'],
+  ])('prints 72 copies across three 24-label sheets for %s', async (id, label) => {
+    renderPage(`?ids=${id}&sheet=L7159&shows=code`);
+    const input = await screen.findByRole('spinbutton', { name: label });
+    fireEvent.change(input, { target: { value: '72' } });
+    expect(await screen.findByText('72 labels on 3 sheets, from label 1')).toBeInTheDocument();
+    expect(document.querySelectorAll('.pops-print-sheet')).toHaveLength(3);
+    expect(printedCodes()).toHaveLength(72);
+    expect(screen.getByRole('button', { name: 'Print 72 labels' })).toBeEnabled();
+  });
+
+  it.each(['', '0', '-1', '1.5', '1001', '99999999'])(
+    'keeps the last valid quantity while editing %s',
+    async (value) => {
+      renderPage(`?ids=${GRINDER}`);
+      const input = await screen.findByRole('spinbutton', { name: 'Copies per item' });
+      fireEvent.change(input, { target: { value: '5' } });
+      fireEvent.change(input, { target: { value } });
+      expect(printedCodes()).toHaveLength(5);
+      fireEvent.blur(input);
+      expect(input).toHaveValue(5);
+    }
+  );
+
+  it('accounts for both kinds when limiting the job size', async () => {
+    renderPage(`?ids=${BOX},${GRINDER}`);
+    const boxes = await screen.findByRole('spinbutton', { name: 'Copies per box' });
+    const items = screen.getByRole('spinbutton', { name: 'Copies per item' });
+    expect(items).toHaveAttribute('max', '998');
+    fireEvent.change(boxes, { target: { value: '5' } });
+    expect(items).toHaveAttribute('max', '995');
+    fireEvent.change(items, { target: { value: '996' } });
+    expect(items).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByRole('alert')).toHaveTextContent('Enter a whole number from 1 to 995');
+    expect(printedCodes()).toHaveLength(6);
+  });
+
+  it('allows clearing the quantity before entering a new one', async () => {
+    renderPage(`?ids=${GRINDER}`);
+    const input = await screen.findByRole('spinbutton', { name: 'Copies per item' });
+    fireEvent.change(input, { target: { value: '' } });
+    expect(input).toHaveValue(null);
+    fireEvent.change(input, { target: { value: '24' } });
+    expect(printedCodes()).toHaveLength(24);
+  });
+});
+
 describe('the sheet', () => {
   it('prefers the browser remembered sheet over the stored setting', async () => {
     window.localStorage.setItem(SHEET_STORAGE_KEY, 'L7165');
@@ -498,6 +554,71 @@ describe('fragile labels', () => {
 });
 
 describe('existing Fragile metadata', () => {
+  it('allows unchecked unavailable computed Fragile and recovers after deselecting it', async () => {
+    const fragile = testField('fragile', 'box-type', 'Fragile', {
+      kind: 'boolean',
+      storage: 'computed',
+    });
+    const type = testType('box-type', 'Box', null, { fields: [fragile] });
+    items.set(
+      BOX,
+      item(BOX, 'Kitchen 12', 'B412', {
+        isContainer: true,
+        typeId: type.id,
+        typeKey: type.key,
+      })
+    );
+    api.typesReadCatalogue.mockResolvedValue(ok({ types: [type], revision: { revision: 1 } }));
+    renderPage(`?ids=${BOX}&shows=qr-code&sheet=L7169`);
+    const print = await screen.findByRole('button', { name: 'Print 2 labels' });
+    await waitFor(() => expect(print).toBeEnabled());
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Label shows: QR and code' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Fragile' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('Could not read Fragile for Kitchen 12');
+    expect(print).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Fragile' }));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(print).toBeEnabled();
+  });
+
+  it('keeps optional failed content reads out of QR/code printing and exposes selected contents errors', async () => {
+    api.webList.mockImplementation(async ({ query }: { query: { ids?: string } }) => {
+      if (query.ids) return ok({ items: [items.get(BOX)], nextCursor: null });
+      throw new Error('Contents unavailable');
+    });
+    renderPage(`?ids=${BOX}&shows=qr-code&sheet=L7169`);
+    const print = await screen.findByRole('button', { name: 'Print 2 labels' });
+    await waitFor(() => expect(print).toBeEnabled());
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Label shows: QR and code' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Contents' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('Contents unavailable');
+    expect(print).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Contents' }));
+    expect(print).toBeEnabled();
+  });
+
+  it.each([true, false])(
+    'allows an explicit warning for untyped legacy Fragile=%s',
+    async (fragile) => {
+      items.set(
+        BOX,
+        item(BOX, 'Kitchen glasses', 'B412', { isContainer: true, fields: { Fragile: fragile } })
+      );
+      renderPage(`?ids=${BOX}&sheet=L7169`);
+      const toggle = await screen.findByRole('switch', {
+        name: 'Fragile label for Kitchen glasses',
+      });
+      expect(toggle).not.toBeChecked();
+      expect(screen.queryByRole('img', { name: 'Fragile: cracked glass' })).not.toBeInTheDocument();
+      fireEvent.click(toggle);
+      expect(screen.getAllByRole('img', { name: 'Fragile: cracked glass' })).toHaveLength(2);
+      fireEvent.click(toggle);
+      expect(screen.queryByRole('img', { name: 'Fragile: cracked glass' })).not.toBeInTheDocument();
+    }
+  );
+
   it('uses the real field as the warning and removes the duplicate manual control and text', async () => {
     items.set(
       BOX,
@@ -508,7 +629,8 @@ describe('existing Fragile metadata', () => {
       })
     );
     renderPage(`?ids=${BOX}&sheet=L7169`);
-    await screen.findAllByRole('img', { name: 'Fragile: cracked glass' });
+    await screen.findByRole('button', { name: 'Print 2 labels' });
+    expect(screen.queryByRole('img', { name: 'Fragile: cracked glass' })).not.toBeInTheDocument();
     expect(
       screen.queryByRole('switch', { name: 'Fragile label for Kitchen glasses' })
     ).not.toBeInTheDocument();
@@ -517,9 +639,11 @@ describe('existing Fragile metadata', () => {
     expect(screen.getAllByRole('img', { name: 'Fragile: cracked glass' })).toHaveLength(2);
     expect(screen.queryByText('Fragile:')).not.toBeInTheDocument();
     expect(screen.queryByText('Yes')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Fragile' }));
+    expect(screen.queryByRole('img', { name: 'Fragile: cracked glass' })).not.toBeInTheDocument();
   });
 
-  it('inherits warnings through a nested container but not an unrelated branch', async () => {
+  it('allows a manual warning for nested fragile contents when the container has no Fragile field', async () => {
     items.set(
       MACHINE,
       item(MACHINE, 'Inner crate', 'C1', { isContainer: true, containingItemId: BOX })
@@ -529,14 +653,17 @@ describe('existing Fragile metadata', () => {
       item(JUG, 'Fragile jug', 'J1', { containingItemId: MACHINE, fields: { Fragile: true } })
     );
     renderPage(`?ids=${BOX},${GRINDER}&sheet=L7169`);
-    await screen.findAllByRole('img', { name: 'Fragile: cracked glass' });
+    const toggle = await screen.findByRole('switch', { name: 'Fragile label for Kitchen 12' });
+    expect(toggle).not.toBeChecked();
+    expect(screen.queryByRole('img', { name: 'Fragile: cracked glass' })).not.toBeInTheDocument();
+    fireEvent.click(toggle);
     expect(screen.getAllByRole('img', { name: 'Fragile: cracked glass' })).toHaveLength(2);
-    expect(
-      screen.queryByRole('switch', { name: 'Fragile label for Kitchen 12' })
-    ).not.toBeInTheDocument();
+    expect(toggle).toBeChecked();
     expect(
       screen.getByRole('switch', { name: 'Fragile label for Coffee grinder' })
     ).toBeInTheDocument();
+    fireEvent.click(toggle);
+    expect(screen.queryByRole('img', { name: 'Fragile: cracked glass' })).not.toBeInTheDocument();
   });
 
   it('shows a read failure instead of a perpetual contents-expansion loading state', async () => {
@@ -547,6 +674,9 @@ describe('existing Fragile metadata', () => {
     renderPage(`?ids=${BOX}&contents=1`);
     expect(await screen.findByRole('alert')).toHaveTextContent('Contents unavailable');
     expect(screen.queryByRole('button', { name: 'Print 2 labels' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Use selected items only' }));
+    expect(await screen.findByRole('button', { name: 'Print 2 labels' })).toBeEnabled();
+    expect(screen.getByTestId('address')).not.toHaveTextContent('contents=1');
   });
 });
 

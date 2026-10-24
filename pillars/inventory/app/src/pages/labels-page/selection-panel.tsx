@@ -121,9 +121,7 @@ export function SelectionPanel(props: SelectionPanelProps) {
               subject={subject}
               fragile={props.fragileIds?.has(subject.id)}
               onFragileChange={
-                props.onFragileChange &&
-                !props.fragility?.get(subject.id)?.recorded &&
-                !props.fragility?.get(subject.id)?.fragile
+                props.onFragileChange && !props.fragility?.get(subject.id)?.recorded
                   ? (fragile) => props.onFragileChange?.(subject.id, fragile)
                   : undefined
               }

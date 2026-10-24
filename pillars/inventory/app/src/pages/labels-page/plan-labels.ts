@@ -45,7 +45,9 @@ function resolvedForPrint(
   details: LabelDetails,
   { recorded, manual }: { recorded: LabelFragility | undefined; manual: boolean }
 ) {
-  const fragile = recorded?.fragile || (!recorded?.recorded && manual);
+  const fieldSelected =
+    content.kind === 'parts' && content.fields.some((id) => recorded?.fields.has(id));
+  const fragile = (fieldSelected && recorded?.fragile === true) || (!recorded?.recorded && manual);
   const printable =
     fragile && recorded
       ? { ...details, fields: details.fields.filter((field) => !recorded.fields.has(field.id)) }

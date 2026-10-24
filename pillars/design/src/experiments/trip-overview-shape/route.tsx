@@ -27,7 +27,7 @@ function RouteStop({
       >
         <span className="space-y-2">
           <span className="block text-2xl font-bold tracking-tight">{item.where}</span>
-          <span className="block text-base font-semibold">{item.when}</span>
+          {item.when && <span className="block text-base font-semibold">{item.when}</span>}
         </span>
         <span className="flex items-center gap-3">
           <ArrowUpRight className="size-4 shrink-0" aria-hidden />

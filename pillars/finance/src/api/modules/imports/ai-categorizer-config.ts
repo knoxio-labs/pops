@@ -25,7 +25,7 @@ import { resolveAiMaxTokens, resolveAiModel, resolveAiPercent } from '../ai-sett
 import type { FinanceDb } from '../../../db/index.js';
 
 /** Default categorizer model, overridable via `finance.aiCategorizer.model` then `FINANCE_AI_CATEGORIZER_MODEL`. */
-export const CATEGORIZER_DEFAULT_MODEL = 'claude-haiku-4-5-20251001';
+export const CATEGORIZER_DEFAULT_MODEL = 'claude-haiku-5-5';
 const DEFAULT_MAX_TOKENS = 200;
 /** Client-side request timeout (ms) — the SDK default (10min) is far too long for a single-row/batch categorization call (CF078/#3670). */
 const CLIENT_TIMEOUT_MS = 30_000;

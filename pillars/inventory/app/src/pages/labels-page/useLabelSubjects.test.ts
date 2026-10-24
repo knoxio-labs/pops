@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { detailsFor } from './label-details';
+import { labelFieldState } from './label-field-state';
 import { treeFragility } from './label-fragility';
 
 import type { CatalogueField, CatalogueType } from '../../catalogue-editor/types';
@@ -227,6 +228,43 @@ const fragileField = field({
 const fragileType: CatalogueType = { ...type, fields: [fragileField] };
 const fragileTypes = new Map([[type.id, fragileType]]);
 
+describe('label field availability', () => {
+  it('keeps an unavailable computed field selectable and reports only its own failure', () => {
+    const configured = {
+      ...fragileType,
+      fields: [{ ...fragileField, storage: 'computed' as const }, colour],
+    };
+    const state = labelFieldState(
+      { ...item, fieldValues: [], computedValues: [] },
+      new Map([[type.id, configured]])
+    );
+    expect(state.choices.map((choice) => choice.id)).toEqual([
+      'appliance.colour',
+      'appliance.Fragile',
+    ]);
+    expect([...state.errors.keys()]).toEqual(['appliance.Fragile']);
+    expect(state.errors.get('appliance.Fragile')?.message).toContain('Handling');
+  });
+
+  it('accepts an explicit override for an unavailable computed field', () => {
+    const configured = {
+      ...fragileType,
+      fields: [{ ...fragileField, storage: 'computed' as const }],
+    };
+    const state = labelFieldState(
+      {
+        ...item,
+        fieldValues: [
+          { catalogueRevision: 1, fieldId: fragileField.id, source: 'override', values: [false] },
+        ],
+      },
+      new Map([[type.id, configured]])
+    );
+    expect(state.errors.size).toBe(0);
+    expect(state.choices).toHaveLength(1);
+  });
+});
+
 function withFragility(value: unknown): WebItem {
   return {
     ...item,
@@ -310,7 +348,7 @@ describe('configured item fragility', () => {
     ).toBeNull();
   });
 
-  it('retains the manual fallback only when no Fragile field already exists', () => {
+  it('retains the manual fallback when no selectable Fragile field exists', () => {
     expect(treeFragility(item, [], new Map()).recorded).toBe(false);
     expect(
       treeFragility({ ...item, typeId: null, fields: { Fragile: true } }, [], new Map()).fragile
@@ -318,6 +356,17 @@ describe('configured item fragility', () => {
     expect(
       treeFragility({ ...item, typeId: null, fields: { Fragile: 'Yes' } }, [], new Map()).recorded
     ).toBe(false);
+  });
+
+  it.each([true, false])('allows a manual warning for untyped legacy Fragile=%s', (fragile) => {
+    const result = treeFragility(
+      { ...item, typeId: null, typeKey: null, fields: { Fragile: fragile } },
+      [],
+      new Map()
+    );
+    expect(result.fragile).toBe(fragile);
+    expect(result.recorded).toBe(false);
+    expect(result.fields.size).toBe(0);
   });
 });
 

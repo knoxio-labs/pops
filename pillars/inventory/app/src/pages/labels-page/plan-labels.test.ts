@@ -4,7 +4,7 @@ import { customLayout, sheetLayout } from '@pops/inventory/labels';
 
 import { planLabels } from './plan-labels';
 
-import type { PrintSubject } from '@pops/inventory/labels';
+import type { LabelContent, PrintSubject } from '@pops/inventory/labels';
 
 const marked: PrintSubject = {
   id: 'marked',
@@ -65,6 +65,26 @@ describe('label fit failure causes', () => {
 });
 
 describe('recorded fragility', () => {
+  it.each<LabelContent>([
+    { kind: 'auto' },
+    { kind: 'parts', parts: ['qr', 'code'], fields: [] },
+    { kind: 'parts', parts: ['code'], fields: ['box.room'] },
+  ])('omits recorded warnings when the Fragile field is unselected: %j', (content) => {
+    const plan = planLabels({
+      ...job,
+      content,
+      layout: sheetLayout('L7169'),
+      fragility: new Map([
+        [
+          marked.id,
+          { fragile: true, recorded: true, fields: new Set(['box.Fragile']), error: null },
+        ],
+      ]),
+    });
+    expect(plan.entries).toHaveLength(2);
+    expect(plan.entries.find((entry) => entry.subject.id === marked.id)?.fragile).toBeUndefined();
+  });
+
   it('prints the recorded true as one symbol without the selected text field', () => {
     const field = { id: 'box.Fragile', label: 'Fragile', value: 'Yes' };
     const plan = planLabels({
@@ -86,6 +106,7 @@ describe('recorded fragility', () => {
   it('does not allow the manual fallback to override a recorded false', () => {
     const plan = planLabels({
       ...job,
+      content: { kind: 'parts', parts: ['qr', 'code'], fields: ['box.Fragile'] },
       layout: sheetLayout('L7165'),
       fragility: new Map([
         [

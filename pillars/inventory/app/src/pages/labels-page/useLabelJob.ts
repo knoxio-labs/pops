@@ -9,27 +9,17 @@ import { useState } from 'react';
 import {
   DEFAULT_LABEL_CONTENT,
   clampStartAt,
-  CUSTOM_SHEET_ID,
-  customLayout,
   DEFAULT_COPIES,
-  DEFAULT_SHEET_ID,
   fieldChoices,
-  findPreset,
   nextStartAt,
   NO_DETAILS,
   planSheets,
-  sheetLayout,
 } from '@pops/inventory/labels';
 
-import {
-  loadCustomSheet,
-  loadSheetId,
-  loadStartAt,
-  storeCustomSheet,
-  storeSheetId,
-  storeStartAt,
-} from './label-storage';
+import { requiredLabelReads } from './label-read-state';
+import { storeStartAt } from './label-storage';
 import { planLabels } from './plan-labels';
+import { useLabelSheet } from './use-label-sheet';
 
 import type {
   CopiesByKind,
@@ -43,7 +33,8 @@ import type {
 } from '@pops/inventory/labels';
 
 import type { LabelFragility } from './label-fragility';
-import type { PrintLabelEntry } from './plan-labels';
+import type { LabelReads } from './label-read-state';
+import type { LabelPlanInput, PrintLabelEntry } from './plan-labels';
 
 /**
  * What happened after the browser's print dialog closed. Browsers do not
@@ -51,15 +42,27 @@ import type { PrintLabelEntry } from './plan-labels';
  */
 export type PrintOutcome = 'none' | 'asking' | 'printed' | 'cancelled';
 
-/** Why Print is off: nothing to print, an item still without a code, or labels too small for a QR. */
-export type PrintBlock = 'empty' | 'uncoded' | 'too-small' | 'loading' | null;
+/** Maximum expanded labels a browser job may preview and print. */
+export const MAX_JOB_LABELS = 1_000;
+
+/** Why printing is blocked by the selection, label fit, job size or pending reads. */
+export type PrintBlock =
+  | 'empty'
+  | 'uncoded'
+  | 'too-small'
+  | 'too-many'
+  | 'loading'
+  | 'read-error'
+  | null;
 
 /** The job's starting choices, from the page's address and inventory settings. */
 export interface LabelJobSeed {
   content?: LabelContent;
   details?: ReadonlyMap<string, LabelDetails>;
   fragility?: ReadonlyMap<string, LabelFragility>;
-  readsPending?: boolean;
+  reads?: LabelReads;
+  fields?: LabelFieldChoice[];
+  fieldErrors?: ReadonlyMap<string, ReadonlyMap<string, Error>>;
   /** A preset's size code or `custom`; null opens on the sheet this browser last used. */
   sheetId: string | null;
 }
@@ -83,6 +86,8 @@ export interface PrintJob {
   pages: SheetPage[];
   uncoded: PrintSubject[];
   block: PrintBlock;
+  /** Failure of data required by the current content choice, while controls stay editable. */
+  readError: Error | null;
   /** True only when a marked label failed to fit the selected stock. */
   fragileTooSmall: boolean;
   outcome: PrintOutcome;
@@ -97,38 +102,25 @@ export interface PrintJob {
   answer: (printed: boolean) => void;
 }
 
-function resolveLayout(sheetId: string, customSheet: SheetGeometry | null): SheetLayout {
-  if (sheetId === CUSTOM_SHEET_ID && customSheet) return customLayout(customSheet);
-  return findPreset(sheetId) ?? sheetLayout(DEFAULT_SHEET_ID);
-}
-
-function useSheet(seed: LabelJobSeed) {
-  const [customSheet, setCustomSheet] = useState<SheetGeometry | null>(loadCustomSheet);
-  const [sheetId, setSheetId] = useState(() => seed.sheetId ?? loadSheetId() ?? DEFAULT_SHEET_ID);
-  const layout = resolveLayout(sheetId, customSheet);
-  const [requestedStart, setRequestedStart] = useState(() => loadStartAt(layout.id));
-  const choose = (id: string) => {
-    storeSheetId(id);
-    setSheetId(id);
-    setRequestedStart(loadStartAt(id));
-  };
+function planJob({ subjects, copies, ...options }: LabelPlanInput) {
+  const tooMany =
+    subjects.reduce((total, subject) => total + copies[subject.kind], 0) > MAX_JOB_LABELS;
   return {
-    layout,
-    customSheet,
-    requestedStart,
-    setRequestedStart,
-    setSheet: choose,
-    saveCustomSheet: (geometry: SheetGeometry) => {
-      storeCustomSheet(geometry);
-      storeStartAt(CUSTOM_SHEET_ID, 1);
-      setCustomSheet(geometry);
-      choose(CUSTOM_SHEET_ID);
-    },
+    ...planLabels({ ...options, copies, subjects: tooMany ? [] : subjects }),
+    tooMany,
   };
 }
 
-function printBlock(labels: number, uncoded: number, tooSmall: boolean): PrintBlock {
-  if (tooSmall) return 'too-small';
+function printBlock(
+  labels: number,
+  uncoded: number,
+  plan: ReturnType<typeof planJob>,
+  read: { pending: boolean; error: Error | null }
+): PrintBlock {
+  if (read.error) return 'read-error';
+  if (read.pending) return 'loading';
+  if (plan.tooMany) return 'too-many';
+  if (plan.tooSmall) return 'too-small';
   if (labels === 0) return 'empty';
   return uncoded > 0 ? 'uncoded' : null;
 }
@@ -155,16 +147,23 @@ function useFragileLabels() {
   };
 }
 
+function jobFields(subjects: PrintSubject[], seed: LabelJobSeed): LabelFieldChoice[] {
+  return (
+    seed.fields ??
+    fieldChoices(subjects.map((subject) => seed.details?.get(subject.id) ?? NO_DETAILS))
+  );
+}
+
 /** The label page's job over `subjects`. */
 export function useLabelJob(subjects: PrintSubject[], seed: LabelJobSeed): PrintJob {
   const fragile = useFragileLabels();
-  const sheet = useSheet(seed);
+  const sheet = useLabelSheet(seed.sheetId);
   const { layout } = sheet;
   const [content, setContent] = useState<LabelContent>(seed.content ?? DEFAULT_LABEL_CONTENT);
   const [copies, setCopiesState] = useState<CopiesByKind>(DEFAULT_COPIES);
   const [outcome, setOutcome] = useState<PrintOutcome>('none');
   const startAt = clampStartAt(sheet.requestedStart, layout);
-  const plan = planLabels({
+  const plan = planJob({
     subjects,
     fragileIds: fragile.fragileIds,
     fragility: seed.fragility,
@@ -176,15 +175,14 @@ export function useLabelJob(subjects: PrintSubject[], seed: LabelJobSeed): Print
   const labels = plan.entries;
   const uncoded = uncodedSubjects(subjects, labels);
   const nextStart = nextStartAt(labels.length, startAt, layout);
-  const block = seed.readsPending
-    ? 'loading'
-    : printBlock(labels.length, uncoded.length, plan.tooSmall);
+  const read = requiredLabelReads(content, subjects, seed);
+  const block = printBlock(labels.length, uncoded.length, plan, read);
 
   return {
     subjects,
     ...fragile,
     content,
-    fields: fieldChoices(subjects.map((subject) => seed.details?.get(subject.id) ?? NO_DETAILS)),
+    fields: jobFields(subjects, seed),
     layout,
     customSheet: sheet.customSheet,
     setSheet: sheet.setSheet,
@@ -196,6 +194,7 @@ export function useLabelJob(subjects: PrintSubject[], seed: LabelJobSeed): Print
     pages: planSheets(labels.length, startAt, layout),
     uncoded,
     block,
+    readError: read.error,
     fragileTooSmall: plan.fragileTooSmall,
     outcome,
     nextStart,

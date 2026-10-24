@@ -1,6 +1,9 @@
 name: Trip overview — route, decisions or places
 question: When the trip is mostly open, should its overview lead with the route, the next decisions, or the places being considered?
-status: active
+status: decided
+chosen: route-first
+decided: 2026-10-24
+rationale: Route-first with automatic detail and dashed soft entries; only purchased arrangements are hard. Approved by Joao with redundant unset and before/after copy removed.
 screen: trips/overview
 frame: web
 variants:
