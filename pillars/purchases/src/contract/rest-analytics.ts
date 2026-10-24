@@ -476,6 +476,7 @@ export const purchasesAnalyticsContract = c.router({
       // Two merchant parameters at once, refused for the same reason the
       // order index refuses them.
       400: ErrorBodySchema,
+      503: ErrorBodySchema,
     },
     summary: 'Spend per merchant and currency over a period, with the explained/unexplained split',
   },
@@ -488,6 +489,7 @@ export const purchasesAnalyticsContract = c.router({
       // Inherited with the scope vocabulary: the same two-merchant-parameter
       // refusal, because this reads the scope the same way.
       400: ErrorBodySchema,
+      503: ErrorBodySchema,
     },
     summary:
       'Repeat purchases per product — cadence, unit-price history, and the identity basis each group was formed on',
@@ -499,6 +501,7 @@ export const purchasesAnalyticsContract = c.router({
     responses: {
       200: MonthSummarySchema,
       400: ErrorBodySchema,
+      503: ErrorBodySchema,
     },
     summary: 'The home screen figures for one calendar month, in the owner’s timezone',
   },

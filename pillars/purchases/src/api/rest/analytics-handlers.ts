@@ -7,6 +7,11 @@
  * ones ts-rest's response types expect.
  */
 import { monthSummary, rankProductPurchases, rollUpMerchantSpend } from '../../db/index.js';
+import {
+  resolveMerchantIdentities,
+  type CanonicalMerchantResolver,
+} from '../contacts/canonical.js';
+import { canonicalMerchantScope } from './canonical-merchant-scope.js';
 import { resolvePurchaseScope } from './purchase-scope.js';
 
 import type { z } from 'zod';
@@ -22,13 +27,19 @@ type MerchantSpendQuery = z.infer<typeof MerchantSpendQuerySchema>;
 type ProductLeaderboardQuery = z.infer<typeof ProductLeaderboardQuerySchema>;
 type MonthSummaryQuery = z.infer<typeof MonthSummaryQuerySchema>;
 
-export function makeAnalyticsHandlers(db: PurchasesDb) {
+/** Builds aggregate reads that require an authoritative Contacts identity snapshot. */
+export function makeAnalyticsHandlers(
+  db: PurchasesDb,
+  resolve: CanonicalMerchantResolver = resolveMerchantIdentities
+) {
   return {
     merchantSpend: async ({ query }: { query: MerchantSpendQuery }) => {
       const scope = resolvePurchaseScope(query);
       if (!scope.ok) return { status: 400 as const, body: scope.body };
 
-      const rollup = rollUpMerchantSpend(db, scope.scope);
+      const canonical = await canonicalMerchantScope(db, scope.scope, resolve);
+      if (!canonical.ok) return canonical.response;
+      const rollup = rollUpMerchantSpend(db, canonical.scope);
 
       return {
         status: 200 as const,
@@ -44,8 +55,10 @@ export function makeAnalyticsHandlers(db: PurchasesDb) {
       const scope = resolvePurchaseScope(query);
       if (!scope.ok) return { status: 400 as const, body: scope.body };
 
+      const canonical = await canonicalMerchantScope(db, scope.scope, resolve);
+      if (!canonical.ok) return canonical.response;
       const minOrderCount = query.minOrderCount ?? 1;
-      const leaderboard = rankProductPurchases(db, { ...scope.scope, minOrderCount });
+      const leaderboard = rankProductPurchases(db, { ...canonical.scope, minOrderCount });
 
       return {
         status: 200 as const,
@@ -62,7 +75,9 @@ export function makeAnalyticsHandlers(db: PurchasesDb) {
     },
 
     monthSummary: async ({ query }: { query: MonthSummaryQuery }) => {
-      const summary = monthSummary(db, query.month);
+      const canonical = await canonicalMerchantScope(db, {}, resolve);
+      if (!canonical.ok) return canonical.response;
+      const summary = monthSummary(db, query.month, canonical.scope.canonicalMerchants);
 
       return {
         status: 200 as const,

@@ -80,6 +80,7 @@ beforeEach(() => {
   __resetPillarRegistryCache();
   delete process.env['POPS_PILLARS'];
   app = createPurchasesApiApp({
+    canonicalMerchants: async (ids) => new Map(ids.map((id) => [id, id])),
     vision: null,
     purchasesDb: opened,
     version: '1.2.3',

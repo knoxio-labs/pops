@@ -18,6 +18,7 @@ import { identifyProduct, normalisedName } from '../db/services/product-identity
 import { productIdentityOf } from '../db/services/stored-product-identity.js';
 
 import type { ProductIdentity } from '../contract/types/purchase.js';
+import type { CanonicalMerchants } from '../db/services/canonical-merchants.js';
 import type { ProductDictionary, ProductLine } from '../db/services/product-identity.js';
 
 export { normalisedName };
@@ -26,8 +27,12 @@ export { normalisedName };
 export type BatchableItem = ProductLine;
 
 /** The batching key for one line. */
-export function batchingKey(item: BatchableItem, dictionary?: ProductDictionary): string {
-  return identifyProduct(item, dictionary).key;
+export function batchingKey(
+  item: BatchableItem,
+  dictionary?: ProductDictionary,
+  identities?: CanonicalMerchants
+): string {
+  return identifyProduct(item, dictionary, identities).key;
 }
 
 /** One product: every line that shares a batching key. */
@@ -61,11 +66,12 @@ export interface ProposalCandidate {
  */
 export function toCandidates(
   items: readonly BatchableItem[],
-  dictionary?: ProductDictionary
+  dictionary?: ProductDictionary,
+  identities?: CanonicalMerchants
 ): readonly ProposalCandidate[] {
   const byKey = new Map<string, { candidate: ProposalCandidate; itemIds: string[] }>();
   for (const item of items) {
-    const { key, identity } = identifyProduct(item, dictionary);
+    const { key, identity } = identifyProduct(item, dictionary, identities);
     const existing = byKey.get(key);
     if (existing === undefined) {
       const itemIds = [item.id];
