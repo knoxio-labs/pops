@@ -95,12 +95,25 @@ pub async fn put_profile(
 
 /// List all point observations, including inactive history and retained preferred selections.
 pub async fn list_points(pool: &SqlitePool, id: &str) -> Result<Vec<ContactPoint>, sqlx::Error> {
-    sqlx::query_as("SELECT id,entity_id,kind,value,normalized_value,label,source_record_id,active,preferred,created_at FROM contact_points WHERE entity_id=?1 ORDER BY created_at,id")
+    sqlx::query_as("SELECT id,entity_id,kind,value,normalized_value,label,country_code,source_record_id,active,preferred,created_at FROM contact_points WHERE entity_id=?1 ORDER BY created_at,id")
         .bind(id).fetch_all(pool).await
 }
 
 /// Validate a point observation before any source refresh mutates stored data.
 pub fn validate_point(point: &ContactPointInput) -> Result<(), PersonError> {
+    if let Some(country) = &point.country_code {
+        if point.kind != super::model::ContactPointKind::Phone
+            || country
+                .to_ascii_uppercase()
+                .parse::<phonenumber::country::Id>()
+                .is_err()
+        {
+            return Err(PersonError::Invalid(
+                "Country context requires a known ISO country code on a phone point".to_string(),
+            ));
+        }
+    }
+
     if point.value.trim().is_empty()
         || point.value.len() > 4096
         || point.label.as_ref().is_some_and(|label| label.len() > 256)
@@ -125,12 +138,15 @@ pub async fn insert_point(
     let point_id = uuid::Uuid::new_v4().to_string();
     let normalized = match point.kind {
         super::model::ContactPointKind::Email => crate::identity::normalize_email(&point.value),
-        super::model::ContactPointKind::Phone => crate::identity::normalize_phone(&point.value),
+        super::model::ContactPointKind::Phone => match &point.country_code {
+            Some(country) => crate::identity::normalize_phone_for_country(&point.value, country),
+            None => crate::identity::normalize_phone(&point.value),
+        },
         super::model::ContactPointKind::Social | super::model::ContactPointKind::Url => None,
     };
     let now = now_rfc3339();
-    sqlx::query("INSERT INTO contact_points(id,entity_id,kind,value,normalized_value,label,source_record_id,created_at) VALUES(?1,?2,?3,?4,?5,?6,?7,?8)")
-        .bind(&point_id).bind(id).bind(point.kind.as_str()).bind(&point.value).bind(&normalized).bind(&point.label).bind(source_record_id).bind(&now).execute(conn).await?;
+    sqlx::query("INSERT INTO contact_points(id,entity_id,kind,value,normalized_value,label,country_code,source_record_id,created_at) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9)")
+        .bind(&point_id).bind(id).bind(point.kind.as_str()).bind(&point.value).bind(&normalized).bind(&point.label).bind(&point.country_code).bind(source_record_id).bind(&now).execute(conn).await?;
     Ok(ContactPoint {
         id: point_id,
         entity_id: id.to_string(),
@@ -138,6 +154,7 @@ pub async fn insert_point(
         value: point.value.clone(),
         normalized_value: normalized,
         label: point.label.clone(),
+        country_code: point.country_code.clone(),
         source_record_id: source_record_id.map(str::to_string),
         active: true,
         preferred: false,

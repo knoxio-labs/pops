@@ -79,6 +79,8 @@ pub struct ContactPoint {
     pub value: String,
     pub normalized_value: Option<String>,
     pub label: Option<String>,
+    /// Explicit ISO country context for national phone normalization; absent never implies a locale.
+    pub country_code: Option<String>,
     pub source_record_id: Option<String>,
     pub active: bool,
     pub preferred: bool,
@@ -92,4 +94,6 @@ pub struct ContactPointInput {
     pub kind: ContactPointKind,
     pub value: String,
     pub label: Option<String>,
+    /// Explicit ISO country context for national phone normalization; absent never implies a locale.
+    pub country_code: Option<String>,
 }

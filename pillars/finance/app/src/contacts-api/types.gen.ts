@@ -35,6 +35,10 @@ export type AddressMutation = {
  */
 export type ContactPoint = {
   active: boolean;
+  /**
+   * Explicit ISO country context for national phone normalization; absent never implies a locale.
+   */
+  countryCode?: string | null;
   createdAt: string;
   entityId: string;
   id: string;
@@ -50,6 +54,10 @@ export type ContactPoint = {
  * A point observation. Normalized match keys are computed by the server, never accepted as input.
  */
 export type ContactPointInput = {
+  /**
+   * Explicit ISO country context for national phone normalization; absent never implies a locale.
+   */
+  countryCode?: string | null;
   kind: ContactPointKind;
   label?: string | null;
   value: string;
