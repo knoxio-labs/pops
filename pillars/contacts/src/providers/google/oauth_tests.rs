@@ -66,6 +66,7 @@ fn config() -> GoogleOAuthConfig {
 
 fn consumed() -> ConsumedAuthorization {
     ConsumedAuthorization {
+        include_other_contacts: false,
         account_id: "synthetic-account".to_string(),
         epoch: AccountEpoch(1),
         pkce_verifier: secret("synthetic-verifier"),
@@ -205,7 +206,7 @@ async fn revoked_grants_rate_limits_and_malformed_responses_are_sanitized() {
         let mut invalid = token();
         invalid["expires_in"] = serde_json::json!(seconds);
         assert!(matches!(
-            parse_tokens(invalid.to_string().as_bytes(), None, true, 1000),
+            parse_tokens(invalid.to_string().as_bytes(), None, true, false, 1000),
             Err(GoogleError::InvalidResponse)
         ));
     }
@@ -213,4 +214,31 @@ async fn revoked_grants_rate_limits_and_malformed_responses_are_sanitized() {
         GoogleError::ReauthorizationRequired.to_string(),
         "CONTACTS_GOOGLE_REAUTHORIZATION_REQUIRED"
     );
+}
+
+#[test]
+fn other_contacts_consent_is_explicit_and_scope_policy_rejects_unrequested_or_partial_grants() {
+    let config = config();
+    let state = secret(&"s".repeat(43));
+    let challenge = "c".repeat(43);
+    let default = config.authorization_location(&state, &challenge).unwrap();
+    let opted = config
+        .authorization_location_with_other_contacts(&state, &challenge, true)
+        .unwrap();
+    let scopes = |location: &AuthorizationLocation| {
+        Url::parse(location.expose())
+            .unwrap()
+            .query_pairs()
+            .find(|(key, _)| key == "scope")
+            .unwrap()
+            .1
+            .into_owned()
+    };
+    assert_eq!(scopes(&default), CONTACTS_READ_ONLY);
+    let extended = format!("{OTHER_CONTACTS_READ_ONLY} {CONTACTS_READ_ONLY}");
+    assert!(granted_scope_matches(&extended, true));
+    assert!(!granted_scope_matches(&extended, false));
+    assert!(!granted_scope_matches(CONTACTS_READ_ONLY, true));
+    assert!(!granted_scope_matches(&format!("{CONTACTS_READ_ONLY} {OTHER_CONTACTS_READ_ONLY} https://www.googleapis.com/auth/contacts"),true));
+    assert!(scopes(&opted).contains(OTHER_CONTACTS_READ_ONLY));
 }

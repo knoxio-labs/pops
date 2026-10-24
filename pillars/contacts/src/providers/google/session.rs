@@ -58,6 +58,7 @@ pub struct GoogleSession<'a, T, D> {
     transport: &'a T,
     delay: &'a D,
     tokens: GoogleTokens,
+    include_other_contacts: bool,
 }
 
 impl<'a, T: ProviderTransport, D: RetryDelay> GoogleSession<'a, T, D> {
@@ -73,7 +74,15 @@ impl<'a, T: ProviderTransport, D: RetryDelay> GoogleSession<'a, T, D> {
             transport,
             delay,
             tokens,
+            include_other_contacts: false,
         }
+    }
+
+    /// Apply the durable consent policy captured during authorization. This never
+    /// infers opt-in from token content, contact data or an API response.
+    pub fn with_other_contacts(mut self, include_other_contacts: bool) -> Self {
+        self.include_other_contacts = include_other_contacts;
+        self
     }
 
     /// Current refresh material, borrowed only for encrypted persistence.
@@ -83,8 +92,12 @@ impl<'a, T: ProviderTransport, D: RetryDelay> GoogleSession<'a, T, D> {
 
     async fn refresh(&mut self, now: u64) -> Result<(), GoogleError> {
         self.tokens = retry(self.delay, || {
-            self.config
-                .refresh(self.transport, &self.tokens.refresh_token, now)
+            self.config.refresh_with_other_contacts(
+                self.transport,
+                &self.tokens.refresh_token,
+                self.include_other_contacts,
+                now,
+            )
         })
         .await?;
         Ok(())
@@ -98,16 +111,42 @@ impl<'a, T: ProviderTransport, D: RetryDelay> GoogleSession<'a, T, D> {
         continuation: Option<&str>,
         now: u64,
     ) -> Result<ProviderPage, GoogleError> {
+        self.page_for_collection(checkpoint, continuation, now, false)
+            .await
+    }
+
+    /// Read Other contacts only when the account has a separately persisted opt-in.
+    pub async fn other_contacts_page(
+        &mut self,
+        checkpoint: Option<&str>,
+        continuation: Option<&str>,
+        now: u64,
+    ) -> Result<ProviderPage, GoogleError> {
+        if !self.include_other_contacts {
+            return Err(GoogleError::ScopeDenied);
+        }
+        self.page_for_collection(checkpoint, continuation, now, true)
+            .await
+    }
+
+    async fn page_for_collection(
+        &mut self,
+        checkpoint: Option<&str>,
+        continuation: Option<&str>,
+        now: u64,
+        other_contacts: bool,
+    ) -> Result<ProviderPage, GoogleError> {
         if self.tokens.expires_at <= now.saturating_add(30) {
             self.refresh(now).await?;
         }
         let first = retry(self.delay, || {
-            people::sync_page(
+            fetch_page(
                 self.transport,
                 &self.tokens.access_token,
                 checkpoint,
                 continuation,
                 now,
+                other_contacts,
             )
         })
         .await;
@@ -116,15 +155,31 @@ impl<'a, T: ProviderTransport, D: RetryDelay> GoogleSession<'a, T, D> {
         }
         self.refresh(now).await?;
         retry(self.delay, || {
-            people::sync_page(
+            fetch_page(
                 self.transport,
                 &self.tokens.access_token,
                 checkpoint,
                 continuation,
                 now,
+                other_contacts,
             )
         })
         .await
+    }
+}
+
+async fn fetch_page<T: ProviderTransport>(
+    transport: &T,
+    access: &SecretBytes,
+    checkpoint: Option<&str>,
+    continuation: Option<&str>,
+    now: u64,
+    other: bool,
+) -> Result<ProviderPage, GoogleError> {
+    if other {
+        people::sync_other_contacts_page(transport, access, checkpoint, continuation, now).await
+    } else {
+        people::sync_page(transport, access, checkpoint, continuation, now).await
     }
 }
 

@@ -102,6 +102,7 @@ const providerAccounts: ProviderAccountStatus[] = [
     provider: 'google',
     connected: true,
     reauthorizationRequired: false,
+    includeOtherContacts: false,
   },
 ];
 const importBatch: ImportBatch = {

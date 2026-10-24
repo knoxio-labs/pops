@@ -18,6 +18,8 @@ const CHECKPOINT_LIFETIME: u64 = 7 * 24 * 60 * 60;
 struct Checkpoint {
     token: String,
     full_synced_at: u64,
+    #[serde(default)]
+    other_contacts: bool,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -25,12 +27,14 @@ struct Continuation {
     page_token: String,
     checkpoint: Option<Checkpoint>,
     full_started_at: u64,
+    #[serde(default)]
+    other_contacts: bool,
 }
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct Connections {
-    #[serde(default)]
+    #[serde(default, alias = "otherContacts")]
     connections: Vec<Person>,
     next_page_token: Option<String>,
     next_sync_token: Option<String>,
@@ -123,7 +127,44 @@ pub async fn sync_page<T: ProviderTransport>(
     continuation: Option<&str>,
     now: u64,
 ) -> Result<ProviderPage, GoogleError> {
+    sync_page_for_collection(
+        transport,
+        access_token,
+        checkpoint,
+        continuation,
+        now,
+        false,
+    )
+    .await
+}
+
+/// Fetch a separately consented Other contacts page. It shares the bounded
+/// seven-day sync protocol but uses its own collection checkpoint namespace.
+pub async fn sync_other_contacts_page<T: ProviderTransport>(
+    transport: &T,
+    access_token: &SecretBytes,
+    checkpoint: Option<&str>,
+    continuation: Option<&str>,
+    now: u64,
+) -> Result<ProviderPage, GoogleError> {
+    sync_page_for_collection(transport, access_token, checkpoint, continuation, now, true).await
+}
+
+async fn sync_page_for_collection<T: ProviderTransport>(
+    transport: &T,
+    access_token: &SecretBytes,
+    checkpoint: Option<&str>,
+    continuation: Option<&str>,
+    now: u64,
+    other_contacts: bool,
+) -> Result<ProviderPage, GoogleError> {
     let checkpoint = checkpoint.map(parse_checkpoint).transpose()?;
+    if checkpoint
+        .as_ref()
+        .is_some_and(|checkpoint| checkpoint.other_contacts != other_contacts)
+    {
+        return Err(GoogleError::InvalidResponse);
+    }
     if checkpoint.as_ref().is_some_and(|checkpoint| {
         now < checkpoint.full_synced_at || now - checkpoint.full_synced_at >= CHECKPOINT_LIFETIME
     }) {
@@ -133,7 +174,8 @@ pub async fn sync_page<T: ProviderTransport>(
         Some(cursor) if cursor.len() <= MAX_CURSOR => {
             let page: Continuation =
                 serde_json::from_str(cursor).map_err(|_| GoogleError::InvalidResponse)?;
-            if page.checkpoint != checkpoint
+            if page.other_contacts != other_contacts
+                || page.checkpoint != checkpoint
                 || page.full_started_at > now
                 || page.page_token.is_empty()
             {
@@ -146,16 +188,29 @@ pub async fn sync_page<T: ProviderTransport>(
             page_token: String::new(),
             checkpoint: checkpoint.clone(),
             full_started_at: now,
+            other_contacts,
         },
     };
-    let mut url = Url::parse("https://people.googleapis.com/v1/people/me/connections")
-        .map_err(|_| GoogleError::InvalidResponse)?;
+    let endpoint = if other_contacts {
+        "https://people.googleapis.com/v1/otherContacts"
+    } else {
+        "https://people.googleapis.com/v1/people/me/connections"
+    };
+    let mut url = Url::parse(endpoint).map_err(|_| GoogleError::InvalidResponse)?;
     {
         let mut query = url.query_pairs_mut();
         query.extend_pairs([
             (
-                "personFields",
-                "names,emailAddresses,phoneNumbers,urls,metadata",
+                if other_contacts {
+                    "readMask"
+                } else {
+                    "personFields"
+                },
+                if other_contacts {
+                    "names,emailAddresses,phoneNumbers,metadata"
+                } else {
+                    "names,emailAddresses,phoneNumbers,urls,metadata"
+                },
             ),
             ("sources", "READ_SOURCE_TYPE_CONTACT"),
             ("pageSize", "1000"),
@@ -194,6 +249,7 @@ pub async fn sync_page<T: ProviderTransport>(
             checkpoint: Some(
                 serde_json::to_string(&Checkpoint {
                     token,
+                    other_contacts,
                     full_synced_at: checkpoint
                         .map_or(page.full_started_at, |checkpoint| checkpoint.full_synced_at),
                 })

@@ -92,6 +92,7 @@ async fn multiple_pages_preserve_parameters_and_only_terminal_page_yields_checkp
 async fn incremental_cursor_expiry_keeps_original_full_anchor_and_requires_reset() {
     let fake = Fake::new(vec![(200, json!({"nextSyncToken":"next"}))]);
     let checkpoint = serde_json::to_string(&Checkpoint {
+        other_contacts: false,
         token: "old".to_string(),
         full_synced_at: 1000,
     })
@@ -150,6 +151,7 @@ async fn malformed_pages_repeated_tokens_and_cross_checkpoint_continuations_fail
     assert!(sync_page(&fake, &access(), None, None, 1000).await.is_err());
     assert!(sync_page(&fake, &access(), None, None, 1000).await.is_err());
     let checkpoint = serde_json::to_string(&Checkpoint {
+        other_contacts: false,
         token: "other".to_string(),
         full_synced_at: 1000,
     })
@@ -177,4 +179,69 @@ async fn rate_limit_authentication_and_stable_self_identity_are_distinct() {
         Err(GoogleError::ReauthorizationRequired)
     ));
     assert_eq!(account_key(&fake, &access()).await.unwrap(), "people/12345");
+}
+
+#[tokio::test]
+async fn other_contacts_pages_have_separate_fields_checkpoints_and_tombstones() {
+    let fake = Fake::new(vec![
+        (
+            200,
+            json!({"otherContacts":[{"resourceName":"people/other1","emailAddresses":[{"value":"other@example.test"}]}],"nextPageToken":"second"}),
+        ),
+        (
+            200,
+            json!({"otherContacts":[{"resourceName":"people/other2","metadata":{"deleted":true}}],"nextSyncToken":"other-complete"}),
+        ),
+    ]);
+    let page = sync_other_contacts_page(&fake, &access(), None, None, 1000)
+        .await
+        .unwrap();
+    assert_eq!(page.changes[0].row.record_key, "people/other1");
+    let PageProgress::Continue { cursor } = page.progress else {
+        panic!("continuation")
+    };
+    assert!(matches!(
+        sync_page(&fake, &access(), None, Some(&cursor), 1001).await,
+        Err(GoogleError::InvalidResponse)
+    ));
+    let last = sync_other_contacts_page(&fake, &access(), None, Some(&cursor), 1001)
+        .await
+        .unwrap();
+    assert!(last.changes[0].row.removed);
+    let PageProgress::Complete {
+        checkpoint: Some(checkpoint),
+    } = last.progress
+    else {
+        panic!("checkpoint")
+    };
+    assert!(parse_checkpoint(&checkpoint).unwrap().other_contacts);
+    assert!(matches!(
+        sync_page(&fake, &access(), Some(&checkpoint), None, 1002).await,
+        Err(GoogleError::InvalidResponse)
+    ));
+    assert!(matches!(
+        sync_other_contacts_page(
+            &fake,
+            &access(),
+            Some(&checkpoint),
+            None,
+            1000 + CHECKPOINT_LIFETIME
+        )
+        .await,
+        Err(GoogleError::CursorExpired)
+    ));
+    let urls = fake.urls.lock().unwrap();
+    assert_eq!(urls.len(), 2);
+    for raw in &*urls {
+        let url = Url::parse(raw).unwrap();
+        assert_eq!(url.path(), "/v1/otherContacts");
+        let pairs: std::collections::HashMap<_, _> = url.query_pairs().collect();
+        assert_eq!(
+            pairs["readMask"],
+            "names,emailAddresses,phoneNumbers,metadata"
+        );
+        assert_eq!(pairs["sources"], "READ_SOURCE_TYPE_CONTACT");
+        assert_eq!(pairs["requestSyncToken"], "true");
+        assert!(!pairs.contains_key("personFields"));
+    }
 }

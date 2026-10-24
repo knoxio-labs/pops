@@ -208,7 +208,12 @@ impl ProviderRuntime {
         let result = async {
             let config = self.google.as_ref().ok_or(ProviderError::Disabled)?;
             let tokens = retry(&self.delay, || {
-                config.refresh(&self.transport, &credential.secret, now() as u64)
+                config.refresh_with_other_contacts(
+                    &self.transport,
+                    &credential.secret,
+                    credential.include_other_contacts,
+                    now() as u64,
+                )
             })
             .await?;
             store::refresh_claimed(
@@ -227,7 +232,11 @@ impl ProviderRuntime {
             if key != subject {
                 return Err(ProviderError::IdentityMismatch);
             }
-            Ok(vec!["contacts".to_string()])
+            let mut collections = vec!["contacts".to_string()];
+            if credential.include_other_contacts {
+                collections.push("other_contacts".to_string());
+            }
+            Ok(collections)
         }
         .await;
         store::release_refresh(pool, &claim).await?;
@@ -243,7 +252,12 @@ impl ProviderRuntime {
     ) -> Result<sync::ProviderPage, ProviderError> {
         let config = self.google.as_ref().ok_or(ProviderError::Disabled)?;
         let tokens = retry(&self.delay, || {
-            config.refresh(&self.transport, &credential.secret, now() as u64)
+            config.refresh_with_other_contacts(
+                &self.transport,
+                &credential.secret,
+                credential.include_other_contacts,
+                now() as u64,
+            )
         })
         .await?;
         store::refresh_claimed(
@@ -258,14 +272,29 @@ impl ProviderRuntime {
         let previous =
             crate::providers::credentials::SecretBytes::new(tokens.refresh_token.expose().to_vec())
                 .map_err(|_| ProviderError::Storage)?;
-        let mut session = GoogleSession::new(config, &self.transport, &self.delay, tokens);
-        let result = session
-            .page(
-                collection.checkpoint.as_deref(),
-                collection.continuation.as_deref(),
-                now() as u64,
-            )
-            .await;
+        let mut session = GoogleSession::new(config, &self.transport, &self.delay, tokens)
+            .with_other_contacts(credential.include_other_contacts);
+        let result = match collection.key.as_str() {
+            "contacts" => {
+                session
+                    .page(
+                        collection.checkpoint.as_deref(),
+                        collection.continuation.as_deref(),
+                        now() as u64,
+                    )
+                    .await
+            }
+            "other_contacts" => {
+                session
+                    .other_contacts_page(
+                        collection.checkpoint.as_deref(),
+                        collection.continuation.as_deref(),
+                        now() as u64,
+                    )
+                    .await
+            }
+            _ => return Err(ProviderError::Invalid),
+        };
         store::refresh_claimed(
             pool,
             &self.cipher,

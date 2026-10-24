@@ -11,8 +11,11 @@ use serde::Deserialize;
 use std::time::Duration;
 use zeroize::Zeroizing;
 
-/// The sole Google authorization scope requested by the contacts connector.
+/// Default Google authorization scope; Other contacts needs a separate explicit opt-in.
 pub const CONTACTS_READ_ONLY: &str = "https://www.googleapis.com/auth/contacts.readonly";
+/// Separate scope requested only after explicit opt-in to the Other contacts stream.
+pub const OTHER_CONTACTS_READ_ONLY: &str =
+    "https://www.googleapis.com/auth/contacts.other.readonly";
 
 /// Sanitized Google failures, excluding provider bodies and descriptions.
 #[derive(Debug, PartialEq, Eq)]
@@ -139,6 +142,21 @@ impl GoogleOAuthConfig {
         state: &SecretBytes,
         pkce_challenge: &str,
     ) -> Result<AuthorizationLocation, GoogleError> {
+        self.authorization_location_with_other_contacts(state, pkce_challenge, false)
+    }
+
+    /// Request the additional read-only scope only for a durable explicit opt-in.
+    pub fn authorization_location_with_other_contacts(
+        &self,
+        state: &SecretBytes,
+        pkce_challenge: &str,
+        include_other_contacts: bool,
+    ) -> Result<AuthorizationLocation, GoogleError> {
+        let scope = if include_other_contacts {
+            format!("{CONTACTS_READ_ONLY} {OTHER_CONTACTS_READ_ONLY}")
+        } else {
+            CONTACTS_READ_ONLY.to_string()
+        };
         let state = text(state)?;
         if state.len() != 43 || pkce_challenge.len() != 43 {
             return Err(GoogleError::InvalidResponse);
@@ -149,7 +167,7 @@ impl GoogleOAuthConfig {
             ("client_id", self.client_id.as_str()),
             ("redirect_uri", self.redirect_uri.as_str()),
             ("response_type", "code"),
-            ("scope", CONTACTS_READ_ONLY),
+            ("scope", scope.as_str()),
             ("access_type", "offline"),
             ("include_granted_scopes", "false"),
             ("prompt", "consent"),
@@ -179,7 +197,13 @@ impl GoogleOAuthConfig {
             ("code_verifier", text(&consumed.pkce_verifier)?),
         ])?;
         let response = token_request(transport, &body).await?;
-        parse_tokens(response.body(), previous_refresh, true, now)
+        parse_tokens(
+            response.body(),
+            previous_refresh,
+            true,
+            consumed.include_other_contacts,
+            now,
+        )
     }
 
     /// Refresh an expired access token. An omitted replacement refresh token
@@ -190,6 +214,19 @@ impl GoogleOAuthConfig {
         refresh_token: &SecretBytes,
         now: u64,
     ) -> Result<GoogleTokens, GoogleError> {
+        self.refresh_with_other_contacts(transport, refresh_token, false, now)
+            .await
+    }
+
+    /// Refresh under the exact originally consented scope policy. Scope omission
+    /// preserves that policy; a returned broader or narrower grant is rejected.
+    pub async fn refresh_with_other_contacts<T: ProviderTransport>(
+        &self,
+        transport: &T,
+        refresh_token: &SecretBytes,
+        include_other_contacts: bool,
+        now: u64,
+    ) -> Result<GoogleTokens, GoogleError> {
         let body = form(&[
             ("grant_type", "refresh_token"),
             ("refresh_token", text(refresh_token)?),
@@ -197,7 +234,13 @@ impl GoogleOAuthConfig {
             ("client_secret", text(&self.client_secret)?),
         ])?;
         let response = token_request(transport, &body).await?;
-        parse_tokens(response.body(), Some(refresh_token), false, now)
+        parse_tokens(
+            response.body(),
+            Some(refresh_token),
+            false,
+            include_other_contacts,
+            now,
+        )
     }
 }
 
@@ -244,6 +287,7 @@ fn parse_tokens(
     bytes: &[u8],
     previous_refresh: Option<&SecretBytes>,
     require_scope: bool,
+    include_other_contacts: bool,
     now: u64,
 ) -> Result<GoogleTokens, GoogleError> {
     let response: TokenResponse =
@@ -255,8 +299,7 @@ fn parse_tokens(
         return Err(GoogleError::InvalidResponse);
     }
     match response.scope.as_deref() {
-        Some(scope)
-            if scope.split_ascii_whitespace().collect::<Vec<_>>() == vec![CONTACTS_READ_ONLY] => {}
+        Some(scope) if granted_scope_matches(scope, include_other_contacts) => {}
         None if !require_scope => {}
         _ => return Err(GoogleError::ScopeDenied),
     }
@@ -277,6 +320,17 @@ fn parse_tokens(
             .checked_add(response.expires_in)
             .ok_or(GoogleError::InvalidResponse)?,
     })
+}
+
+fn granted_scope_matches(scope: &str, include_other_contacts: bool) -> bool {
+    let granted: Vec<&str> = scope.split_ascii_whitespace().collect();
+    if include_other_contacts {
+        granted.len() == 2
+            && granted.contains(&CONTACTS_READ_ONLY)
+            && granted.contains(&OTHER_CONTACTS_READ_ONLY)
+    } else {
+        granted == [CONTACTS_READ_ONLY]
+    }
 }
 
 pub(super) fn retry_after(headers: &HeaderMap) -> Duration {

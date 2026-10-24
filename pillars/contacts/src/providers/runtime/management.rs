@@ -4,7 +4,9 @@ use crate::providers::credentials::SecretBytes;
 use crate::providers::google::oauth::AuthorizationLocation;
 use crate::providers::google::{people, session::retry};
 use crate::providers::human_auth::HumanIdentity;
-use crate::providers::oauth_state::{begin_authorization, consume_authorization};
+use crate::providers::oauth_state::{
+    begin_authorization_with_other_contacts, consume_authorization,
+};
 use crate::providers::store::{self, AccountEpoch};
 use crate::sources::model::{SourceAccount, SourceAccountInput};
 use crate::sources::repo::create_or_get_account;
@@ -20,6 +22,7 @@ impl ProviderRuntime {
         account_id: Option<&str>,
         label: Option<String>,
         now: i64,
+        include_other_contacts: bool,
     ) -> Result<AuthorizationLocation, ProviderError> {
         let config = self.google.as_ref().ok_or(ProviderError::Disabled)?;
         let account = match account_id {
@@ -36,10 +39,22 @@ impl ProviderRuntime {
             .map_err(|_| ProviderError::Storage)?,
         };
         let epoch = store::prepare_account(pool, human, &account.id).await?;
-        let attempt =
-            begin_authorization(pool, &self.cipher, human, &account.id, epoch, now).await?;
+        let attempt = begin_authorization_with_other_contacts(
+            pool,
+            &self.cipher,
+            human,
+            &account.id,
+            epoch,
+            now,
+            include_other_contacts,
+        )
+        .await?;
         config
-            .authorization_location(&attempt.state, &attempt.pkce_challenge)
+            .authorization_location_with_other_contacts(
+                &attempt.state,
+                &attempt.pkce_challenge,
+                include_other_contacts,
+            )
             .map_err(Into::into)
     }
 
@@ -76,13 +91,14 @@ impl ProviderRuntime {
         })
         .await?;
         bind_google_subject(pool, &consumed.account_id, consumed.epoch, &subject).await?;
-        store::install_credential(
+        store::install_google_credential(
             pool,
             &self.cipher,
             human,
             &consumed.account_id,
             consumed.epoch,
             &tokens.refresh_token,
+            consumed.include_other_contacts,
         )
         .await?;
         Ok(consumed.account_id)

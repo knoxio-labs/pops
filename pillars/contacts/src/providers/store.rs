@@ -49,6 +49,8 @@ pub struct AccountEpoch(pub i64);
 pub struct AccountCredential {
     /// Fixed provider type read from the account row.
     pub provider: String,
+    /// Separately consented Google Other contacts stream; false for other providers.
+    pub include_other_contacts: bool,
     /// Fence to check in the same transaction that applies provider results.
     pub epoch: AccountEpoch,
     /// Plaintext lives only in a zeroizing buffer at the authenticated boundary.
@@ -90,6 +92,50 @@ pub async fn install_credential(
     expected: AccountEpoch,
     secret: &SecretBytes,
 ) -> Result<AccountEpoch, ProviderStoreError> {
+    install_credential_policy(pool, cipher, operator, account_id, expected, secret, false).await
+}
+
+/// Install a Google refresh credential and its explicit Other contacts consent in
+/// the same epoch-changing transaction. The default installation grants no opt-in.
+pub async fn install_google_credential(
+    pool: &SqlitePool,
+    cipher: &CredentialCipher,
+    operator: &HumanIdentity,
+    account_id: &str,
+    expected: AccountEpoch,
+    secret: &SecretBytes,
+    include_other_contacts: bool,
+) -> Result<AccountEpoch, ProviderStoreError> {
+    let google: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM provider_accounts WHERE account_id=?1 AND provider='google')",
+    )
+    .bind(account_id)
+    .fetch_one(pool)
+    .await?;
+    if !google {
+        return Err(ProviderStoreError::InvalidAccount);
+    }
+    install_credential_policy(
+        pool,
+        cipher,
+        operator,
+        account_id,
+        expected,
+        secret,
+        include_other_contacts,
+    )
+    .await
+}
+
+async fn install_credential_policy(
+    pool: &SqlitePool,
+    cipher: &CredentialCipher,
+    operator: &HumanIdentity,
+    account_id: &str,
+    expected: AccountEpoch,
+    secret: &SecretBytes,
+    include_other_contacts: bool,
+) -> Result<AccountEpoch, ProviderStoreError> {
     let provider: Option<String> = sqlx::query_scalar(
         "SELECT provider FROM provider_accounts WHERE account_id=?1 AND epoch=?2",
     )
@@ -102,8 +148,8 @@ pub async fn install_credential(
         .encrypt(&provider, account_id, secret)
         .map_err(|_| ProviderStoreError::CredentialUnavailable)?;
     let mut transaction = pool.begin().await?;
-    let epoch: Option<i64> = sqlx::query_scalar("UPDATE provider_accounts SET credential=?1,connected=1,reauthorization_required=0,refresh_owner=NULL,refresh_until=0,owner_subject=?2,epoch=epoch+1 WHERE account_id=?3 AND epoch=?4 RETURNING epoch")
-        .bind(encrypted).bind(operator.subject()).bind(account_id).bind(expected.0).fetch_optional(&mut *transaction).await?;
+    let epoch: Option<i64> = sqlx::query_scalar("UPDATE provider_accounts SET credential=?1,connected=1,google_other_contacts=?5,reauthorization_required=0,refresh_owner=NULL,refresh_until=0,owner_subject=?2,epoch=epoch+1 WHERE account_id=?3 AND epoch=?4 RETURNING epoch")
+        .bind(encrypted).bind(operator.subject()).bind(account_id).bind(expected.0).bind(include_other_contacts).fetch_optional(&mut *transaction).await?;
     let epoch = epoch.ok_or(ProviderStoreError::StaleAccount)?;
     sqlx::query("DELETE FROM provider_oauth_states WHERE account_id=?1")
         .bind(account_id)
@@ -120,14 +166,16 @@ pub async fn load_credential(
     cipher: &CredentialCipher,
     account_id: &str,
 ) -> Result<AccountCredential, ProviderStoreError> {
-    let row: Option<(String,i64,Vec<u8>)> = sqlx::query_as("SELECT provider,epoch,credential FROM provider_accounts WHERE account_id=?1 AND connected=1")
+    let row: Option<(String,i64,Vec<u8>,bool)> = sqlx::query_as("SELECT provider,epoch,credential,google_other_contacts FROM provider_accounts WHERE account_id=?1 AND connected=1")
         .bind(account_id).fetch_optional(pool).await?;
-    let (provider, epoch, encrypted) = row.ok_or(ProviderStoreError::StaleAccount)?;
+    let (provider, epoch, encrypted, include_other_contacts) =
+        row.ok_or(ProviderStoreError::StaleAccount)?;
     let secret = cipher
         .decrypt(&provider, account_id, &encrypted)
         .map_err(|_| ProviderStoreError::CredentialUnavailable)?;
     Ok(AccountCredential {
         provider,
+        include_other_contacts,
         epoch: AccountEpoch(epoch),
         secret,
     })

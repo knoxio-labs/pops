@@ -406,7 +406,7 @@ async fn new_google_authorization_binds_real_identity_and_installs_only_refresh_
     let runtime = runtime(fake.clone());
     let human = HumanIdentity::for_test("operator");
     let location = runtime
-        .begin_google(&pool, &human, None, None, 100)
+        .begin_google(&pool, &human, None, None, 100, false)
         .await
         .unwrap();
     let url = reqwest::Url::parse(location.expose()).unwrap();
@@ -473,4 +473,97 @@ async fn new_icloud_flow_verifies_principal_and_cannot_implicitly_reconnect_an_e
     assert!(store::load_credential(&pool, &runtime.cipher, &id)
         .await
         .is_err());
+}
+
+#[tokio::test]
+async fn explicit_other_contacts_consent_persists_and_stages_distinct_streams_atomically() {
+    let pool = crate::db::connect("sqlite::memory:").await.unwrap();
+    let fake = Arc::new(Fake::default());
+    let runtime = runtime(fake.clone());
+    let human = HumanIdentity::for_test("operator");
+    let location = runtime
+        .begin_google(&pool, &human, None, None, 100, true)
+        .await
+        .unwrap();
+    let url = reqwest::Url::parse(location.expose()).unwrap();
+    let state = url
+        .query_pairs()
+        .find(|(key, _)| key == "state")
+        .unwrap()
+        .1
+        .into_owned();
+    assert!(url
+        .query_pairs()
+        .find(|(key, _)| key == "scope")
+        .unwrap()
+        .1
+        .contains(crate::providers::google::oauth::OTHER_CONTACTS_READ_ONLY));
+    fake.replies.lock().unwrap().extend([(200,json!({"access_token":"fictional-access","refresh_token":"fictional-refresh","token_type":"Bearer","expires_in":3600,"scope":format!("{} {}",crate::providers::google::oauth::OTHER_CONTACTS_READ_ONLY,crate::providers::google::oauth::CONTACTS_READ_ONLY)}).to_string()),(200,json!({"resourceName":"people/new"}).to_string())]);
+    let id = runtime
+        .finish_google(
+            &pool,
+            &human,
+            &SecretBytes::new(state.into_bytes()).unwrap(),
+            &secret(),
+            101,
+        )
+        .await
+        .unwrap();
+    let saved = store::load_credential(&pool, &runtime.cipher, &id)
+        .await
+        .unwrap();
+    assert!(saved.include_other_contacts);
+    fake.replies.lock().unwrap().extend([
+        (200, token()),
+        (200, json!({"resourceName":"people/new"}).to_string()),
+    ]);
+    let run = runtime.start_sync(&pool, &id).await.unwrap();
+    assert_eq!(run.collections.len(), 2);
+    fake.replies.lock().unwrap().extend([(200,token()),(200,json!({"connections":[{"resourceName":"people/shared","names":[{"displayName":"Fictional"}]}],"nextSyncToken":"connections-token"}).to_string())]);
+    runtime.work_once(&pool).await.unwrap();
+    assert!(sync::checkpoint(&pool, &id, "contacts")
+        .await
+        .unwrap()
+        .is_none());
+    fake.replies.lock().unwrap().extend([(200,token()),(200,json!({"otherContacts":[{"resourceName":"people/shared","names":[{"displayName":"Fictional"}]}],"nextSyncToken":"other-token"}).to_string())]);
+    runtime.work_once(&pool).await.unwrap();
+    runtime.work_once(&pool).await.unwrap();
+    assert_eq!(
+        sync::get_run(&pool, &run.id).await.unwrap().status,
+        "completed"
+    );
+    assert!(sync::checkpoint(&pool, &id, "contacts")
+        .await
+        .unwrap()
+        .is_some());
+    assert!(sync::checkpoint(&pool, &id, "other_contacts")
+        .await
+        .unwrap()
+        .is_some());
+    let records:i64=sqlx::query_scalar("SELECT count(*) FROM provider_records WHERE account_id=?1 AND record_key='people/shared' AND active=1").bind(&id).fetch_one(&pool).await.unwrap();
+    assert_eq!(records, 2);
+    let directory: i64 = sqlx::query_scalar("SELECT count(*) FROM entities")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(directory, 0);
+    let original_epoch = saved.epoch;
+    let new_epoch = store::install_google_credential(
+        &pool,
+        &runtime.cipher,
+        &human,
+        &id,
+        original_epoch,
+        &saved.secret,
+        false,
+    )
+    .await
+    .unwrap();
+    assert!(new_epoch.0 > original_epoch.0);
+    assert!(
+        !store::load_credential(&pool, &runtime.cipher, &id)
+            .await
+            .unwrap()
+            .include_other_contacts
+    );
 }

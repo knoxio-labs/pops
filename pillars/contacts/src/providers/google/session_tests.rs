@@ -149,3 +149,16 @@ async fn transient_retry_has_an_attempt_budget_and_bounded_backoff() {
     .await;
     assert_eq!(*delay.0.lock().unwrap(), vec![Duration::from_secs(60); 2]);
 }
+
+#[tokio::test]
+async fn other_contacts_cannot_be_requested_without_persisted_consent() {
+    let transport = Fake(Mutex::new(VecDeque::new()));
+    let config = config();
+    let delay = Delay::default();
+    let mut session = GoogleSession::new(&config, &transport, &delay, tokens(5000));
+    assert!(matches!(
+        session.other_contacts_page(None, None, 100).await,
+        Err(GoogleError::ScopeDenied)
+    ));
+    assert!(transport.0.lock().unwrap().is_empty());
+}

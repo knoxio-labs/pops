@@ -484,6 +484,10 @@
             "nullable": true,
             "type": "string"
           },
+          "includeOtherContacts": {
+            "description": "Separately opt in to Google's additional read-only Other contacts scope.",
+            "type": "boolean"
+          },
           "label": {
             "nullable": true,
             "type": "string"
@@ -855,6 +859,9 @@
           "connected": {
             "type": "boolean"
           },
+          "includeOtherContacts": {
+            "type": "boolean"
+          },
           "provider": {
             "type": "string"
           },
@@ -866,7 +873,8 @@
           "accountId",
           "provider",
           "connected",
-          "reauthorizationRequired"
+          "reauthorizationRequired",
+          "includeOtherContacts"
         ],
         "type": "object"
       },

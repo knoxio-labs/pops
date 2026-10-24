@@ -115,7 +115,15 @@ LAN requests, absent API keys and service tokens do not authorize credential
 administration. `GET /providers/accounts` returns connection state,
 `POST /providers/google/authorize` redirects to read-only Google consent, and
 `GET /providers/google/callback` consumes one-use operator-bound state before code
-exchange. `POST /providers/icloud/accounts` validates an app password against the
+exchange. Ordinary consent requests only `contacts.readonly`. Setting
+`includeOtherContacts: true` on the authorization request explicitly adds
+`contacts.other.readonly`; the choice is saved in the one-use authorization state
+and installed account policy. A callback cannot broaden it. Other contacts use a
+separate `other_contacts` collection, checkpoint and source namespace, even where
+Google returns the same resource name in both streams. Both streams paginate and
+reset expired seven-day sync tokens through the same atomic account coordinator.
+Changing that policy requires a fresh human authorization and fences old jobs and
+previews. `POST /providers/icloud/accounts` validates an app password against the
 actual CardDAV principal. Existing account IDs reconnect only the same provider
 subject; a mismatch changes neither the credential nor the account checkpoint.
 `DELETE /providers/accounts/{id}` erases credentials and fences older work while

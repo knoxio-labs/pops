@@ -26,12 +26,16 @@ pub struct ProviderAccountStatus {
     pub provider: String,
     pub connected: bool,
     pub reauthorization_required: bool,
+    pub include_other_contacts: bool,
 }
 
 /// A browser authorization request. Omit accountId only for a new connection.
 #[derive(Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct GoogleAuthorizeRequest {
+    /// Separately opt in to Google's additional read-only Other contacts scope.
+    #[serde(default)]
+    pub include_other_contacts: bool,
     pub account_id: Option<String>,
     pub label: Option<String>,
 }
@@ -213,7 +217,7 @@ pub async fn list_accounts(
 ) -> Result<Response, ApiError> {
     let runtime = configured(extension)?;
     human(&runtime, &headers).await?;
-    let accounts:Vec<ProviderAccountStatus>=sqlx::query_as("SELECT account_id,provider,connected,reauthorization_required FROM provider_accounts ORDER BY account_id").fetch_all(&state.pool).await.map_err(|_|api(ProviderError::Storage))?;
+    let accounts:Vec<ProviderAccountStatus>=sqlx::query_as("SELECT account_id,provider,connected,reauthorization_required,google_other_contacts AS include_other_contacts FROM provider_accounts ORDER BY account_id").fetch_all(&state.pool).await.map_err(|_|api(ProviderError::Storage))?;
     Ok(private(Json(accounts).into_response()))
 }
 
@@ -235,6 +239,7 @@ pub async fn authorize_google(
             body.account_id.as_deref(),
             body.label,
             super::runtime::now(),
+            body.include_other_contacts,
         )
         .await
         .map_err(api)?;
