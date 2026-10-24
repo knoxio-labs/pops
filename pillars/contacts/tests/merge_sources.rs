@@ -462,6 +462,33 @@ async fn imported_name_selections_bind_immutable_observations_and_preserve_prove
             .name,
         "B local"
     );
+    let lookup = entities::lookup_bulk(&pool).await.expect("bulk projection");
+    assert_eq!(lookup.len(), 1);
+    assert_eq!(lookup[0].name, "Original imported name");
+    let filtered = entities::lookup_by_ids(&pool, &[b.clone(), a.clone()])
+        .await
+        .expect("historical projection");
+    assert_eq!(filtered.len(), 1);
+    assert_eq!(filtered[0].id, a);
+    let search = entities::search_candidates(&pool, "Original imported")
+        .await
+        .expect("selected source search");
+    assert!(!search.is_empty());
+    assert!(search.iter().all(|row| row.id == a
+        && row.name == "Original imported name"
+        && row.matching_name == "Original imported name"));
+    let (listed, total) = entities::list(&pool, Some("Original imported"), None, 10, 0)
+        .await
+        .expect("selected source filter");
+    assert_eq!(total, 1);
+    assert_eq!(listed[0].name, "Original imported name");
+    assert!(
+        sqlx::query("UPDATE source_record_history SET observation='{}' WHERE id=?1")
+            .bind(&observation)
+            .execute(&pool)
+            .await
+            .is_err()
+    );
     input.display_name = Some("Provider changed name".into());
     input.name.family_name = Some("Changed".into());
     sources::apply_record(&mut pool.acquire().await.expect("connection"), &input)
@@ -778,4 +805,76 @@ async fn incoming_profile_selection_needs_no_merge_and_preserves_original_eviden
         .await
         .expect("rolled back selection")
         .is_none());
+}
+
+#[tokio::test]
+async fn removed_source_preferences_remain_visible_while_unselected_history_disappears() {
+    let pool = pool().await;
+    let a = person(&pool, "Canonical").await;
+    let b = person(&pool, "Imported").await;
+    let mut input = source(&pool, &b).await;
+    input.points.extend([
+        ContactPointInput {
+            kind: ContactPointKind::Email,
+            value: "unused@example.test".into(),
+            label: None,
+            country_code: None,
+        },
+        ContactPointInput {
+            kind: ContactPointKind::Phone,
+            value: "+61412345678".into(),
+            label: Some("mobile".into()),
+            country_code: None,
+        },
+        ContactPointInput {
+            kind: ContactPointKind::Phone,
+            value: "+61487654321".into(),
+            label: None,
+            country_code: None,
+        },
+    ]);
+    sources::apply_record(&mut pool.acquire().await.expect("connection"), &input)
+        .await
+        .expect("source");
+    let points = persons::list_points(&pool, &b)
+        .await
+        .expect("source points");
+    let selected: Vec<String> = points
+        .iter()
+        .filter(|point| point.value == "person@example.test" || point.value == "+61412345678")
+        .map(|point| point.id.clone())
+        .collect();
+    assert_eq!(selected.len(), 2);
+    let mut body = merge_body(&pool, &a, &b).await;
+    body.preferred_point_ids = selected.clone();
+    service::merge(&pool, body)
+        .await
+        .expect("explicit preferences");
+    input.points.clear();
+    sources::apply_record(&mut pool.acquire().await.expect("connection"), &input)
+        .await
+        .expect("upstream removed all values");
+    let projected = persons::list_points(&pool, &a)
+        .await
+        .expect("canonical projection");
+    assert_eq!(projected.len(), 2);
+    assert!(projected.iter().all(|point| selected.contains(&point.id)
+        && point.preferred
+        && !point.active
+        && point.entity_id == b));
+    assert!(projected
+        .iter()
+        .any(|point| point.value == "person@example.test"));
+    assert!(projected.iter().any(|point| point.value == "+61412345678"));
+    let historical = persons::list_points(&pool, &b)
+        .await
+        .expect("historical id projection");
+    assert_eq!(historical.len(), 2);
+    let stored: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM contact_points WHERE entity_id=?1 AND active=0")
+            .bind(&b)
+            .fetch_one(&pool)
+            .await
+            .expect("retained history");
+    assert_eq!(stored, 4);
 }

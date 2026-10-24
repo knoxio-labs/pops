@@ -1,7 +1,7 @@
 //! HTTP endpoints for local person overrides and contact-point preferences.
 
 use axum::{
-    extract::{Path, State},
+    extract::{rejection::JsonRejection, Path, State},
     http::StatusCode,
     routing::get,
     Json, Router,
@@ -69,8 +69,9 @@ pub async fn get_profile(
 pub async fn put_profile(
     State(state): State<AppState>,
     Path(id): Path<String>,
-    Json(name): Json<PersonName>,
+    body: Result<Json<PersonName>, JsonRejection>,
 ) -> Result<Json<PersonProfileResponse>, ApiError> {
+    let Json(name) = body.map_err(|_| ApiError::bad_request("Invalid structured person name"))?;
     let profile = repo::put_profile(&state.pool, &id, name)
         .await
         .map_err(|error| person_error(error, &id))?;
@@ -102,8 +103,9 @@ pub async fn list_points(
 pub async fn create_point(
     State(state): State<AppState>,
     Path(id): Path<String>,
-    Json(point): Json<ContactPointInput>,
+    body: Result<Json<ContactPointInput>, JsonRejection>,
 ) -> Result<(StatusCode, Json<ContactPointResponse>), ApiError> {
+    let Json(point) = body.map_err(|_| ApiError::bad_request("Invalid contact point"))?;
     let mut tx = state.pool.begin().await.map_err(ApiError::database)?;
     let data = repo::insert_point(&mut tx, &id, &point, None)
         .await
