@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { acceptEntityLabel, resolveEntityExistence } from './entity-existence';
+import {
+  acceptEntityLabel,
+  resolveEntityExistence,
+  resolveSuggestedMerchant,
+} from './entity-existence';
 
 const ENTITIES = [{ name: 'Cloudflare' }, { name: 'Evie Networks' }];
 
@@ -71,5 +75,27 @@ describe('acceptEntityLabel', () => {
     }
     expect(one).toBe('Checking "Chargefox"…');
     expect(all).toBe('Checking "Chargefox"…');
+  });
+});
+
+describe('resolveSuggestedMerchant', () => {
+  it('retains people in the picker but excludes them from AI merchant resolution', () => {
+    const entities = [
+      { id: 'person', name: 'Alex Smith', type: 'person' },
+      { id: 'merchant', name: 'Alex Smith', type: 'company' },
+    ];
+    expect(resolveSuggestedMerchant(entities, 'Alex Smith')?.id).toBe('merchant');
+    expect(resolveSuggestedMerchant(entities.slice(0, 1), 'Alex Smith')).toBeUndefined();
+    expect(resolveEntityExistence('Alex Smith', entities.slice(0, 1), 'ready')).toBe('new');
+  });
+
+  it('rejects ambiguous merchant names and aliases', () => {
+    const entities = [
+      { id: 'one', name: 'Acme', type: 'company', aliases: ['Shared'] },
+      { id: 'two', name: 'ACME', type: 'bank', aliases: ['Shared'] },
+    ];
+    expect(() => resolveSuggestedMerchant(entities, 'Acme')).toThrow('Multiple contacts');
+    expect(() => resolveSuggestedMerchant(entities, 'Shared')).toThrow('Multiple contacts');
+    expect(resolveEntityExistence('Acme', entities, 'ready')).toBe('unavailable');
   });
 });

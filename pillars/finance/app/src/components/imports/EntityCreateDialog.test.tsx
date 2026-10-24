@@ -63,7 +63,7 @@ const DEFAULT_PROPS = {
   onOpenChange: vi.fn(),
   onEntityCreated: vi.fn(),
   suggestedName: '',
-  dbEntities: [] as Array<{ name: string }>,
+  dbEntities: [] as Array<{ name: string; type: string }>,
 };
 
 function renderDialog(overrides: Partial<typeof DEFAULT_PROPS> = {}) {
@@ -92,7 +92,10 @@ describe('EntityCreateDialog', () => {
   });
 
   it('passes dbEntities to addPendingEntity for uniqueness checking', () => {
-    const dbEntities = [{ name: 'Coles' }, { name: 'Aldi' }];
+    const dbEntities = [
+      { name: 'Coles', type: 'company' },
+      { name: 'Aldi', type: 'company' },
+    ];
     renderDialog({ suggestedName: 'Woolworths', dbEntities });
 
     fireEvent.click(screen.getByRole('button', { name: /Create Entity/i }));

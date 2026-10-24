@@ -152,7 +152,7 @@ export interface ImportStore {
 
   addPendingEntity: (
     input: AddPendingEntityInput,
-    dbEntities?: Array<{ name: string }>
+    dbEntities?: Array<{ name: string; type: string }>
   ) => PendingEntity;
   listPendingEntities: () => PendingEntity[];
   removePendingEntity: (tempId: string) => void;
