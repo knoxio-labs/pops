@@ -8,3 +8,4 @@ pub mod transport;
 
 #[cfg(test)]
 mod persistence_tests;
+pub mod sync;
