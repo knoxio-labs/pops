@@ -84,7 +84,8 @@ export interface ContactsClient {
    * Resolve a contact for `name`, creating it only when absent. Fetches by
    * (case-insensitive) name FIRST, creates when none matches, and tolerates a
    * 409 from a racing concurrent create by re-fetching. `created` reports
-   * whether THIS call inserted a new contact. Never resolves silently on
+   * whether THIS call inserted a new contact. Person names resolve only people;
+   * other types exclude people. Ambiguous matches fail permanently. Never resolves silently on
    * failure: a TRANSIENT failure (contacts unreachable / mid-recovery /
    * rate-limited) throws {@link ContactsUnavailableError}; a PERMANENT one
    * (malformed request, auth, contract mismatch, an unrecognised refusal)

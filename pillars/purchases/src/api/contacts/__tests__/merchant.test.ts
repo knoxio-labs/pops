@@ -5,7 +5,7 @@
  * spending under this merchant, and looks perfectly ordinary while doing
  * it. Every test here is about preferring the first.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   chooseMerchant,
@@ -16,19 +16,48 @@ import {
   type ContactsRouter,
 } from '../merchant.js';
 
-import type { PillarHandle } from '@pops/pillar-sdk/client';
+import type {
+  CallDynamicFn,
+  CallResult,
+  CallableProcedure,
+  PillarHandle,
+} from '@pops/pillar-sdk/client';
 
-const entity = (id: string, name: string, aliases: string[] = []) => ({ id, name, aliases });
+const entity = (id: string, name: string, aliases: string[] = [], type = 'company') => ({
+  id,
+  name,
+  aliases,
+  type,
+});
+
+function handleWithList(
+  fn: (input: Parameters<ContactsRouter['entities']['list']>[0]) => Promise<CallResult<unknown>>
+): PillarHandle<ContactsRouter> {
+  const list: CallableProcedure<
+    Parameters<ContactsRouter['entities']['list']>,
+    unknown
+  > = Object.assign(fn, {
+    orThrow: async (input: Parameters<ContactsRouter['entities']['list']>[0]) => {
+      const result = await fn(input);
+      if (result.kind !== 'ok') throw new Error(result.kind);
+      return result.value;
+    },
+  });
+  const callDynamic: CallDynamicFn = () => {
+    throw new Error('Unexpected dynamic call');
+  };
+  return { entities: { list }, callDynamic };
+}
 
 const handleReturning = (value: unknown): PillarHandle<ContactsRouter> =>
-  ({
-    entities: { list: async () => ({ kind: 'ok', status: 200, value }) },
-  }) as unknown as PillarHandle<ContactsRouter>;
+  handleWithList(async () => ({ kind: 'ok', value }));
 
-const handleFailing = (kind: string): PillarHandle<ContactsRouter> =>
-  ({
-    entities: { list: async () => ({ kind, pillar: 'contacts' }) },
-  }) as unknown as PillarHandle<ContactsRouter>;
+const handleFailing = (): PillarHandle<ContactsRouter> =>
+  handleWithList(async () => ({
+    kind: 'unavailable',
+    pillar: 'contacts',
+    reason: 'not-registered',
+  }));
 
 describe('folding a name', () => {
   it('sees through the ways a receipt and a contact list differ', () => {
@@ -164,21 +193,31 @@ describe('the live resolver', () => {
     await expect(resolver.resolve('Bunnings Warehouse')).resolves.toBe('e2');
   });
 
+  it('requests only merchants and ignores same-name persons in responses', async () => {
+    const list = vi.fn(
+      async () =>
+        ({
+          kind: 'ok',
+          value: {
+            data: [entity('person', 'Bunnings', [], 'person'), entity('merchant', 'Bunnings')],
+          },
+        }) satisfies CallResult<unknown>
+    );
+    const resolver = createMerchantResolver(handleWithList(list));
+    await expect(resolver.resolve('Bunnings')).resolves.toBe('merchant');
+    expect(list).toHaveBeenCalledWith(expect.objectContaining({ excludePersons: true }));
+    expect(chooseMerchant('Bunnings', [entity('person', 'Bunnings', [], 'person')])).toBeNull();
+  });
+
   it('answers nothing rather than failing when contacts is unreachable', async () => {
     // A pillar that is down must not stop a receipt being read. The
     // purchase is real and the merchant name off the paper is still kept.
-    for (const kind of ['unavailable', 'error', 'not-registered']) {
-      const resolver = createMerchantResolver(handleFailing(kind));
-      await expect(resolver.resolve('Bunnings Warehouse')).resolves.toBeNull();
-    }
+    const resolver = createMerchantResolver(handleFailing());
+    await expect(resolver.resolve('Bunnings Warehouse')).resolves.toBeNull();
   });
 
   it('answers nothing when the call throws outright', async () => {
-    const throwing = {
-      entities: {
-        list: () => Promise.reject(new Error('socket hang up')),
-      },
-    } as unknown as PillarHandle<ContactsRouter>;
+    const throwing = handleWithList(() => Promise.reject(new Error('socket hang up')));
     await expect(createMerchantResolver(throwing).resolve('Bunnings')).resolves.toBeNull();
   });
 
@@ -189,14 +228,10 @@ describe('the live resolver', () => {
 
   it('does not call contacts at all for a name with nothing to search on', async () => {
     let called = false;
-    const spy = {
-      entities: {
-        list: async () => {
-          called = true;
-          return { kind: 'ok', status: 200, value: { data: [] } };
-        },
-      },
-    } as unknown as PillarHandle<ContactsRouter>;
+    const spy = handleWithList(async () => {
+      called = true;
+      return { kind: 'ok', value: { data: [] } };
+    });
 
     await expect(createMerchantResolver(spy).resolve('Pty Ltd')).resolves.toBeNull();
     expect(called).toBe(false);

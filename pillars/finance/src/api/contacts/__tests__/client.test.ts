@@ -116,6 +116,62 @@ describe('createContactsClient.createOrFetchByName — robust against case-sensi
     expect(result.id).toBe('acme-id');
   });
 
+  it('scopes merchant reuse away from a same-name person', async () => {
+    const list = vi.fn(async () =>
+      page(
+        [
+          entity({ id: 'person-id', name: 'Acme', type: 'person' }),
+          entity({ id: 'merchant-id', name: 'Acme', type: 'bank' }),
+        ],
+        false
+      )
+    );
+    const client = createContactsClient(() => stubHandle({ list }));
+    await expect(client.createOrFetchByName('Acme', 'company')).resolves.toMatchObject({
+      id: 'merchant-id',
+    });
+    expect(list).toHaveBeenCalledWith(expect.objectContaining({ excludePersons: true }));
+  });
+
+  it('retains an unambiguous person counterparty', async () => {
+    const list = vi.fn(async () =>
+      page(
+        [
+          entity({ id: 'merchant-id', name: 'Alex Smith' }),
+          entity({ id: 'person-id', name: 'Alex Smith', type: 'person' }),
+        ],
+        false
+      )
+    );
+    const client = createContactsClient(() => stubHandle({ list }));
+    await expect(client.createOrFetchByName('Alex Smith', 'person')).resolves.toMatchObject({
+      id: 'person-id',
+    });
+    expect(list).toHaveBeenCalledWith(expect.objectContaining({ type: 'person' }));
+  });
+
+  it.each([false, true])('rejects person homonyms across pages (aliases=%s)', async (alias) => {
+    const list = vi.fn(async (input: { offset?: number }) =>
+      page(
+        [
+          entity({
+            id: input.offset ? 'second' : 'first',
+            name: alias ? `Person ${input.offset ?? 0}` : 'Alex Smith',
+            type: 'person',
+            aliases: ['Alex Smith'],
+          }),
+        ],
+        !input.offset
+      )
+    );
+    const create = vi.fn(() => unexpected('entities.create'));
+    const client = createContactsClient(() => stubHandle({ list, create }));
+    await expect(client.createOrFetchByName('Alex Smith', 'person')).rejects.toBeInstanceOf(
+      ContactsPermanentError
+    );
+    expect(create).not.toHaveBeenCalled();
+  });
+
   it('tolerates a 409 race: fetch-first misses, create 409s, re-fetch resolves (created=false)', async () => {
     const existing = entity({ id: 'raced-id', name: 'Globex' });
     let listCalls = 0;
