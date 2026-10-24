@@ -42,6 +42,41 @@ fn access() -> SecretBytes {
 }
 
 #[tokio::test]
+async fn explicit_primary_given_and_family_qualify_without_splitting_display_names() {
+    use crate::persons::model::NameCompleteness;
+    let fake = Fake::new(vec![(
+        200,
+        json!({"connections":[
+        {"resourceName":"people/full","names":[
+            {"displayName":"Other Display"},
+            {"metadata":{"primary":true},"displayName":"Dr. Fictional Middle Example Jr.","givenName":"Fictional","middleName":"Middle","familyName":"Example","honorificPrefix":"Dr.","honorificSuffix":"Jr."}
+        ]},
+        {"resourceName":"people/display","names":[{"displayName":"Fictional Example"}]},
+        {"resourceName":"people/given","names":[{"givenName":"Fictional Example"}]},
+        {"resourceName":"people/blank","names":[{"givenName":"Fictional","familyName":"  "}]}
+    ],"nextSyncToken":"terminal"}),
+    )]);
+    let page = sync_page(&fake, &access(), None, None, 1000).await.unwrap();
+    let full = page.changes[0].row.payload.as_ref().unwrap();
+    assert_eq!(full.name.completeness, NameCompleteness::Complete);
+    assert_eq!(full.name.given_name.as_deref(), Some("Fictional"));
+    assert_eq!(full.name.additional_names.as_deref(), Some("Middle"));
+    assert_eq!(full.name.family_name.as_deref(), Some("Example"));
+    assert_eq!(full.name.name_prefix.as_deref(), Some("Dr."));
+    assert_eq!(full.name.name_suffix.as_deref(), Some("Jr."));
+    assert_eq!(
+        full.display_name.as_deref(),
+        Some("Dr. Fictional Middle Example Jr.")
+    );
+    for change in &page.changes[1..] {
+        assert_eq!(
+            change.row.payload.as_ref().unwrap().name.completeness,
+            NameCompleteness::Unknown
+        );
+    }
+}
+
+#[tokio::test]
 async fn multiple_pages_preserve_parameters_and_only_terminal_page_yields_checkpoint() {
     let fake = Fake::new(vec![
         (
