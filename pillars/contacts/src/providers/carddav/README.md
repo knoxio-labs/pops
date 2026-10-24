@@ -24,8 +24,10 @@ bounded full `PROPFIND` fallback; an incremental run must restart first.
 The shared coordinator owns durable staging, restart leases, account fencing and
 checkpoint writes. A full run must retain every returned seen key, including
 unchanged resources skipped through ETag comparison. It may infer removals only
-after the entire full enumeration completes. Incremental removals come from
-explicit resource `404` responses. A failed page offers no advancing checkpoint.
+after the entire full enumeration completes. Explicit resource `404` responses
+remove the key from the run's seen set, including when a later page deletes a
+resource observed earlier in a full run. A failed page offers no advancing
+checkpoint.
 
 XML parsing checks expanded namespaces, refuses DTDs and unknown entities, and
 bounds bodies to 4 MiB, nesting to 32 levels, namespace declarations to 32 per
