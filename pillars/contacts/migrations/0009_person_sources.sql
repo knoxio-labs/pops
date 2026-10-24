@@ -44,6 +44,7 @@ CREATE TABLE contact_points (
     value TEXT NOT NULL,
     normalized_value TEXT,
     label TEXT,
+    country_code TEXT,
     source_record_id TEXT REFERENCES source_records(id),
     active INTEGER NOT NULL DEFAULT 1 CHECK(active IN (0, 1)),
     preferred INTEGER NOT NULL DEFAULT 0 CHECK(preferred IN (0, 1)),

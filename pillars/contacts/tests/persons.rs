@@ -266,6 +266,7 @@ async fn local_profiles_and_points_reject_wrong_types_and_cross_person_preferenc
 fn point(value: &str) -> ContactPointInput {
     ContactPointInput {
         kind: ContactPointKind::Email,
+        country_code: None,
         value: value.to_string(),
         label: Some("work".to_string()),
     }
@@ -557,4 +558,45 @@ async fn malformed_person_and_source_metadata_use_safe_error_envelopes() {
         Err(sources::SourceError::NotFound)
     ));
     tx.rollback().await.unwrap();
+}
+
+#[tokio::test]
+async fn national_phones_need_explicit_known_country_context() {
+    let (app, pool) = app().await;
+    let person = create(&app, "Alex", "person").await;
+    let path = format!("/entities/{person}/contact-points");
+    let (_, without) = send(
+        &app,
+        "POST",
+        &path,
+        json!({"kind":"phone","value":"0412 345 678"}),
+    )
+    .await;
+    assert!(without["data"]["normalizedValue"].is_null());
+    let (status, explicit) = send(
+        &app,
+        "POST",
+        &path,
+        json!({"kind":"phone","value":"0412 345 678","countryCode":"AU","label":"mobile"}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    assert_eq!(explicit["data"]["normalizedValue"], "+61412345678");
+    assert_eq!(explicit["data"]["value"], "0412 345 678");
+    assert_eq!(explicit["data"]["countryCode"], "AU");
+    for body in [
+        json!({"kind":"phone","value":"0412 345 678","countryCode":"not-a-region"}),
+        json!({"kind":"email","value":"a@example.test","countryCode":"AU"}),
+    ] {
+        assert_eq!(
+            send(&app, "POST", &path, body).await.0,
+            StatusCode::BAD_REQUEST
+        );
+    }
+    let points = persons::list_points(&pool, &person).await.unwrap();
+    assert_eq!(points.len(), 2);
+    assert!(points
+        .iter()
+        .any(|point| point.country_code.as_deref() == Some("AU")
+            && point.normalized_value.as_deref() == Some("+61412345678")));
 }
