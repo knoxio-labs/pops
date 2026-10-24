@@ -13,9 +13,6 @@ import { defineConfig } from '@hey-api/openapi-ts';
 
 export default defineConfig({
   input: '../openapi/media.openapi.json',
-  output: {
-    path: 'src/media-api',
-  },
   plugins: [
     {
       name: '@hey-api/client-fetch',

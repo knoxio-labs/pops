@@ -55,6 +55,14 @@ The table's "or a vendored snapshot for a non-npm producer per ADR-033" framing 
 
 `finance/app` -> `purchases` now vendors its snapshot under the same ADR-033 mechanism `contacts` uses, kept honest by the same `scripts/ci/check-vendored-contracts.mjs` drift guard. The decision rule going forward: vendor whenever a producer is same-workspace but TS-pillar-shaped — package.json `dependencies` that are the producer's own runtime, not shared contract-only code — even though a live package dependency would technically resolve. A future per-pillar contract-only sub-package (exporting just the spec and generated types, no runtime deps) would let such legs go back to a live dependency without paying this cost; this amendment does not implement that, it only records that the missing-npm-package case is not the only one vendoring exists for. `food/app` -> `lists` has the identical shape and has not been converted — tracked separately so this amendment doesn't silently claim it as fixed.
 
+## Amendment — 2026-10-24: generated clients are built, not committed
+
+Decision 1 gated each leg by regenerating the committed client and diffing it. That made every generated client a merge hotspot. In the 30 days to this amendment, `inventory-api/types.gen.ts` and `api-types.generated.ts` each changed in 40 commits. A three-line contract change rewrote four or five derived files, and every parallel branch conflicted on them.
+
+The derived TypeScript is no longer committed. `scripts/codegen/generate.mjs` builds every Hey API client and every `api-types.generated.ts` from the committed snapshots on install, build and lint, and in the UI image builds. A client therefore cannot drift from the snapshot it is built from, and the regenerate-and-diff jobs are gone. The guarantee decision 1 wanted now rests on two things: the snapshot itself (the `openapi-drift` job and, for vendored legs, `check-vendored-contracts.mjs`) and the consuming app's typecheck against the freshly built client. The pillar's OpenAPI snapshot stays committed as the reviewable contract.
+
+Two alternatives were rejected. Keeping the clients committed with a regenerating merge driver does not work: git runs a driver per file before the merged sources reach the work tree, so it has no merged contract to regenerate from. Generating at image build only would leave typecheck, lint and tests without a client. The iOS client stays committed, for the reasons in `scripts/codegen/README.md`.
+
 ## Consequences
 
 - Every browser-facing cross-pillar generated client either regenerates clean in CI or fails the build — a producer contract edit can no longer ship without its consumer(s) noticing.

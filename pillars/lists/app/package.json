@@ -14,7 +14,7 @@
     "test": "node ../../../scripts/require-built-graph.mjs && vitest run",
     "test:coverage": "node ../../../scripts/require-built-graph.mjs && vitest run --coverage",
     "test:watch": "vitest",
-    "generate:lists-client": "openapi-ts && oxfmt --write src/lists-api"
+    "generate:lists-client": "openapi-ts -o src/lists-api"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
