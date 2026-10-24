@@ -120,10 +120,7 @@ pub async fn list_points(pool: &SqlitePool, id: &str) -> Result<Vec<ContactPoint
 pub fn validate_point(point: &ContactPointInput) -> Result<(), PersonError> {
     if let Some(country) = &point.country_code {
         if point.kind != super::model::ContactPointKind::Phone
-            || country
-                .to_ascii_uppercase()
-                .parse::<phonenumber::country::Id>()
-                .is_err()
+            || crate::identity::normalize::phone_country(country).is_none()
         {
             return Err(PersonError::Invalid(
                 "Country context requires a known ISO country code on a phone point".to_string(),
