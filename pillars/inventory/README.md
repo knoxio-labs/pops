@@ -131,9 +131,14 @@ untyped legacy items and containers whose contents are fragile; it never edits
 inventory records.
 
 QR, text and the handling symbol share one row; both symbols have the same size,
-up to 24 mm. Printing is blocked while the selected items, full paginated tree
-or catalogue are being refreshed, when a required read or computed Fragile value
-is unavailable, or when stock cannot fit the warning beside a readable QR.
+up to 24 mm. Selected-item reads must finish before printing. Catalogue reads and
+computed field values block printing only when fields are selected; full descendant
+reads and their Fragile evaluations are required only for a selected handling field.
+Direct contents reads are required for printed contents or explicit contents expansion.
+Optional reads may refresh or fail without blocking other label content. A required
+failure disables printing and stays visible beside the editable content controls, so
+removing that content can recover the job. Unavailable computed fields remain selectable.
+Stock must still fit the warning beside a readable QR.
 Contained inactive items participate in the handling warning without being added
 to the selected labels or direct contents list.
 
@@ -645,7 +650,9 @@ whatever happened to be in the process environment.
 the new item, its destination (`locationId` or `containerId`) and up to 500
 codes in use with their item, type and place (`src/api/sync/code-context.ts`),
 and offers the codes the model proposes after dropping any that are held,
-repeated, over 64 characters or off the requested stem. With no usable answer —
+repeated, over 64 characters or inconsistent with the saved code pattern's rendered
+prefix, suffix and minimum numeric width. An explicitly typed stem takes precedence
+over that pattern and retains case-insensitive prefix matching. With no usable answer —
 no key, a rejected credential, a timeout, a non-2xx, or every code filtered out
 — deterministic numbering (`src/api/sync/codes.ts`) answers instead.
 

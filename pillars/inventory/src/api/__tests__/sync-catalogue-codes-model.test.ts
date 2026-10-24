@@ -63,23 +63,17 @@ async function item(
 
 describe('POST /codes/suggest — model suggestions', () => {
   it('offers the model codes, dropping held, repeated and over-long ones', async () => {
-    withModel(async () => [
-      'box-office-4',
-      'BOX-OFFICE-5',
-      'box-office-5',
-      'X'.repeat(65),
-      'BOX-HOME-1',
-    ]);
-    await item('Office 4', { code: 'BOX-OFFICE-4' });
+    withModel(async () => ['o04', 'O05', 'o05', 'X'.repeat(65), 'O06']);
+    await item('Office 4', { code: 'O04' });
 
-    expect(await suggest({ name: 'Office 5' })).toEqual(['BOX-OFFICE-5', 'BOX-HOME-1']);
+    expect(await suggest({ name: 'Office 5' })).toEqual(['O05', 'O06']);
   });
 
   it('drops a code a tombstoned item still holds', async () => {
-    withModel(async () => ['K-7', 'K-8']);
-    await item('Old kettle', { code: 'K-7', deletedAt: '2026-09-19T00:00:00.000Z' });
+    withModel(async () => ['K07', 'K08']);
+    await item('Old kettle', { code: 'K07', deletedAt: '2026-09-19T00:00:00.000Z' });
 
-    expect(await suggest({ name: 'Kettle' })).toEqual(['K-8']);
+    expect(await suggest({ name: 'Kettle' })).toEqual(['K08']);
   });
 
   it('drops codes that ignore the stem the owner typed', async () => {
@@ -128,7 +122,7 @@ describe('POST /codes/suggest — model suggestions', () => {
   });
 
   it('describes a location destination by its full path', async () => {
-    const seen = vi.fn<AiClient['suggestCodes']>(async () => ['A-1']);
+    const seen = vi.fn<AiClient['suggestCodes']>(async () => ['R01']);
     withModel(seen);
     const home = await location('Home');
     const pantry = await location('Pantry', home);
@@ -139,13 +133,50 @@ describe('POST /codes/suggest — model suggestions', () => {
   });
 
   it('ignores a destination it cannot find rather than refusing', async () => {
-    const seen = vi.fn<AiClient['suggestCodes']>(async () => ['A-1']);
+    const seen = vi.fn<AiClient['suggestCodes']>(async () => ['R01']);
     withModel(seen);
 
     expect(await suggest({ name: 'Rice', locationId: 'gone', containerId: 'gone' })).toEqual([
-      'A-1',
+      'R01',
     ]);
     expect(seen.mock.calls[0]?.[0].destination).toBeUndefined();
+  });
+
+  it('accepts only candidates matching the saved affixes and minimum width', async () => {
+    withModel(async () => [
+      'S7-END',
+      'X007-END',
+      'S007',
+      'S007-OTHER',
+      'S0000-END',
+      'S007-END',
+      'S1000-END',
+      's008-end',
+    ]);
+    h.db.db
+      .insert(settings)
+      .values({ key: 'inventory.codePattern', value: '{type}{###}-END' })
+      .run();
+
+    expect(await suggest({ name: 'Moving box', typeKey: 'storage_box' })).toEqual([
+      'S0000-END',
+      'S007-END',
+      'S1000-END',
+    ]);
+  });
+
+  it('falls back when no model candidate follows the saved pattern', async () => {
+    withModel(async () => ['B1-END', 'B001-WRONG', 'X001-END']);
+    h.db.db.insert(settings).values({ key: 'inventory.codePattern', value: 'B{###}-END' }).run();
+
+    expect(await suggest({ name: 'Box' })).toEqual(['B001-END', 'B002-END', 'B003-END']);
+  });
+
+  it('lets a typed stem override the saved pattern', async () => {
+    withModel(async () => ['B001-END', 'BK-SCIENCE-1', 'bk-8']);
+    h.db.db.insert(settings).values({ key: 'inventory.codePattern', value: 'B{###}-END' }).run();
+
+    expect(await suggest({ name: 'Box', stem: 'BK-' })).toEqual(['BK-SCIENCE-1', 'bk-8']);
   });
 });
 

@@ -5,7 +5,7 @@ import {
 import { fieldIconFromPresentation } from '../../catalogue-editor/field-icon.js';
 import { compareInventoryNames } from '../../lib/sort-names.js';
 import { effectiveType, typePathLabel } from '../../lib/type-tree.js';
-import { fieldValuesFor } from './label-field-values';
+import { fieldValuesFor, labelFieldId } from './label-field-values';
 
 import type { LabelDetails, LabelFieldValue, PrintSubject } from '@pops/inventory/labels';
 
@@ -72,10 +72,9 @@ function catalogueDetailsFor(
       .filter(Boolean)
       .join(', ');
     if (value.length === 0) continue;
-    const ownerKey = types.get(field.typeId)?.key ?? itemTypeKey;
     const icon = fieldIconFromPresentation(field.presentation);
     fields.push({
-      id: `${ownerKey}.${field.key}`,
+      id: labelFieldId(field, types, itemTypeKey),
       label: field.label,
       value,
       ...(icon === undefined ? {} : { icon }),
