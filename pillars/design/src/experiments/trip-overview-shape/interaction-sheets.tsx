@@ -16,17 +16,19 @@ function ItemDetails({
     <div className="space-y-6">
       <div className="flex flex-wrap gap-2">
         <Badge variant="secondary">{item.intention}</Badge>
-        <Badge variant="outline">{tripItemTier(item)}</Badge>
+        {item.kind !== 'city' && <Badge variant="outline">{tripItemTier(item)}</Badge>}
       </div>
       <dl className="space-y-4 text-sm">
         <div>
           <dt className="text-muted-foreground">Where</dt>
           <dd className="mt-1 font-medium">{item.where}</dd>
         </div>
-        <div>
-          <dt className="text-muted-foreground">When</dt>
-          <dd className="mt-1 font-medium">{item.when}</dd>
-        </div>
+        {item.when && (
+          <div>
+            <dt className="text-muted-foreground">When</dt>
+            <dd className="mt-1 font-medium">{item.when}</dd>
+          </div>
+        )}
       </dl>
       {item.notes && <p className="text-sm leading-relaxed">{item.notes}</p>}
       <div className="space-y-3 rounded-xl border bg-muted/30 p-4">

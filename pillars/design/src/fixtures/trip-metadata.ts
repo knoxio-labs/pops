@@ -31,5 +31,6 @@ export function tripDisplayName(trip: TripMetadata): string {
 
 /** Format trip bounds without inferring a return date from the last wanted event. */
 export function tripDateLabel(trip: TripMetadata): string {
-  return `${formatTripDate(trip.departureDate)} ${trip.departureDate.slice(0, 4)} → ${trip.returnDate ? formatTripDate(trip.returnDate) : 'return date unset'}`;
+  const departure = `${formatTripDate(trip.departureDate)} ${trip.departureDate.slice(0, 4)}`;
+  return trip.returnDate ? `${departure} → ${formatTripDate(trip.returnDate)}` : departure;
 }
