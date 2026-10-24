@@ -1,12 +1,9 @@
 import AppCore
-import AppCoreFakes
 import FeatureInventory
 import Foundation
 import SwiftUI
 import Testing
 import UIKit
-
-@testable import Pops
 
 /// The Parts section draws nothing until the server answers, so whatever
 /// starts its read has to exist while the section is empty. Only a mounted
