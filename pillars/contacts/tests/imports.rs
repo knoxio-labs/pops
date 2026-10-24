@@ -149,6 +149,14 @@ async fn selected_commit_is_atomic_partial_and_exactly_retryable_before_revision
     );
     let receipt = service::commit(&pool, &batch.id, &first).await.unwrap();
     assert_eq!(receipt.revision, 2);
+    let binding =
+        contacts::imports::review_state::get(&mut pool.acquire().await.unwrap(), &batch.rows[0].id)
+            .await
+            .unwrap()
+            .unwrap();
+    assert_eq!(binding.entity_id, receipt.rows[0].entity_id);
+    assert_eq!(binding.source_record_id, receipt.rows[0].source_record_id);
+    assert_eq!(binding.source_revision, Some(1));
     assert_eq!(counts(&pool).await, (1, 1));
     let replay = service::commit(&pool, &batch.id, &first).await.unwrap();
     assert_eq!(
@@ -226,6 +234,11 @@ async fn a_failed_late_write_rolls_back_people_sources_rows_revisions_and_receip
         .await
         .unwrap();
     assert_eq!(receipts, 0);
+    let bindings: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM contact_import_review_states")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(bindings, 0);
     sqlx::query("DROP TRIGGER fail_second_import")
         .execute(&pool)
         .await
@@ -753,4 +766,48 @@ async fn new_links_reject_retired_people_while_recognized_sources_keep_original_
     let owner: String = sqlx::query_scalar("SELECT entity_id FROM source_records WHERE account_id=?1 AND collection_key='personal' AND record_key='b'").bind(&account).fetch_one(&pool).await.unwrap();
     assert_eq!(&owner, retired);
     assert_eq!(counts(&pool).await, (2, 3));
+}
+
+#[tokio::test]
+async fn row_binding_preserves_independent_deferred_candidate_decisions() {
+    use contacts::imports::review_state::{self, CandidateDecision};
+    let (pool, account) = setup().await;
+    let batch = service::stage(&pool, &input(&account, vec![row("one", "One")]))
+        .await
+        .unwrap();
+    let row_id = &batch.rows[0].id;
+    let decisions = std::collections::BTreeMap::from([(
+        "candidate-later".to_string(),
+        CandidateDecision::Later,
+    )]);
+    let mut tx = pool.begin().await.unwrap();
+    review_state::save_decisions(&mut tx, row_id, &decisions)
+        .await
+        .unwrap();
+    tx.commit().await.unwrap();
+    let deferred = review_state::get(&mut pool.acquire().await.unwrap(), row_id)
+        .await
+        .unwrap()
+        .unwrap();
+    assert!(deferred.entity_id.is_none());
+    assert_eq!(deferred.decisions, decisions);
+    let receipt = service::commit(
+        &pool,
+        &batch.id,
+        &commit(1, "bind", vec![(row_id, RowAction::CreatePerson)]),
+    )
+    .await
+    .unwrap();
+    let bound = review_state::get(&mut pool.acquire().await.unwrap(), row_id)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(bound.entity_id, receipt.rows[0].entity_id);
+    assert_eq!(bound.decisions, decisions);
+    assert_eq!(bound.source_revision, Some(1));
+    let all = review_state::get_batch(&mut pool.acquire().await.unwrap(), &batch.id)
+        .await
+        .unwrap();
+    assert_eq!(all.len(), 1);
+    assert_eq!(all[row_id].entity_id, bound.entity_id);
 }
