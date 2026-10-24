@@ -111,7 +111,11 @@ export function isSameMerchant(receiptName: string, candidateName: string): bool
  */
 export type ContactsRouter = {
   entities: {
-    list: (input: { search?: string; limit?: number }) => Promise<unknown>;
+    list: (input: {
+      search?: string;
+      limit?: number;
+      excludePersons?: boolean;
+    }) => Promise<unknown>;
   };
 };
 
@@ -158,6 +162,7 @@ export function chooseMerchant(
   candidates: readonly ContactEntity[]
 ): string | null {
   const tiered = candidates
+    .filter((entity) => entity.type !== 'person')
     .map((entity) => ({ entity, tier: matchTier(receiptName, entity) }))
     .filter((candidate): candidate is { entity: ContactEntity; tier: MatchTier } =>
       Boolean(candidate.tier)
@@ -200,7 +205,11 @@ export function createMerchantResolver(handle?: PillarHandle<ContactsRouter>): M
 
       let result: CallResult<unknown>;
       try {
-        result = await contacts.entities.list({ search: seed, limit: CANDIDATE_LIMIT });
+        result = await contacts.entities.list({
+          search: seed,
+          limit: CANDIDATE_LIMIT,
+          excludePersons: true,
+        });
       } catch {
         return null;
       }

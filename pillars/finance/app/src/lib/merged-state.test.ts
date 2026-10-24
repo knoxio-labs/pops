@@ -3,9 +3,10 @@ import { describe, expect, it } from 'vitest';
 import { elementAt } from '../test-utils';
 import { computeMergedEntities, computeMergedRules } from './merged-state';
 
-import type { Correction, Entity } from '@pops/finance';
+import type { Correction } from '@pops/finance';
 
 import type { ChangeSet, PendingChangeSet, PendingEntity } from '../store/importStore';
+import type { PickableEntity } from './merged-state';
 
 function makeRule(overrides: Partial<Correction> = {}): Correction {
   return {
@@ -41,12 +42,12 @@ function makePendingChangeSet(
   };
 }
 
-function makeEntity(overrides: Partial<Entity> = {}): Entity {
+function makeEntity(overrides: Partial<PickableEntity> = {}): PickableEntity {
   return {
     id: 'entity-1',
     name: 'Woolworths',
+    type: 'company',
     aliases: [],
-    lastEditedTime: '2026-01-01T00:00:00Z',
     ...overrides,
   };
 }
@@ -315,6 +316,16 @@ describe('computeMergedEntities', () => {
     expect(elementAt(result, 0).name).toBe('Woolworths');
   });
 
+  it('preserves every person id when a pending merchant shares their name', () => {
+    const people = [
+      makeEntity({ id: 'one', name: 'Alex Smith', type: 'person' }),
+      makeEntity({ id: 'two', name: 'Alex Smith', type: 'person' }),
+    ];
+    const result = computeMergedEntities(people, [makePendingEntity({ name: 'Alex Smith' })]);
+    expect(result.map((entity) => entity.id)).toEqual(expect.arrayContaining(['one', 'two']));
+    expect(result).toHaveLength(3);
+  });
+
   it('handles multiple collisions', () => {
     const dbEntities = [
       makeEntity({ id: 'e1', name: 'Woolworths' }),
@@ -360,7 +371,7 @@ describe('computeMergedEntities', () => {
     // A pending entity has no aliases and no edit time to report; inventing an
     // edit time from the wall clock made computeMergedEntities impure (see the
     // purity test below), and it is gone.
-    expect(Object.keys(elementAt(result, 0)).toSorted()).toEqual(['aliases', 'id', 'name']);
+    expect(Object.keys(elementAt(result, 0)).toSorted()).toEqual(['aliases', 'id', 'name', 'type']);
     expect(elementAt(result, 0).aliases).toEqual([]);
   });
 
