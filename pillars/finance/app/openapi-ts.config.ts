@@ -13,9 +13,6 @@ import { defineConfig } from '@hey-api/openapi-ts';
 
 export default defineConfig({
   input: '../openapi/finance.openapi.json',
-  output: {
-    path: 'src/finance-api',
-  },
   plugins: [
     {
       name: '@hey-api/client-fetch',

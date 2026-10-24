@@ -38,8 +38,8 @@
  *     validates a live snapshot against;
  *   - the shell manifest through a schema typed against the generated
  *     `ShellManifestResponses` (`src/registry-api/types.gen.ts`), which is
- *     itself regenerated from `@pops/registry`'s OpenAPI spec and diffed in
- *     CI (`generated-clients`, ADR-040) — a producer-side shape change is a
+ *     itself generated from `@pops/registry`'s OpenAPI spec on every install
+ *     (`scripts/codegen/generate.mjs`) — a producer-side shape change is a
  *     compile error here before it is ever a runtime one;
  *   - the orchestrator search response through `parseSearchResponse`
  *     (`@pops/navigation`) — the literal function the search bar's own fetch

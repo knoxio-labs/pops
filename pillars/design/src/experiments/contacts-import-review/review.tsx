@@ -4,8 +4,8 @@ import { useState } from 'react';
 
 import { Button, Card, CardContent, EmptyState, PageHeader } from '@pops/ui';
 
-import { type Choice, type ReviewModel } from './review-controls';
 import { ReviewCompare, ReviewTable } from './review-layouts';
+import { useReviewModel, type ReviewModel } from './review-model';
 
 import type { ScreenStates } from '@/contract';
 
@@ -30,28 +30,6 @@ const boundaryContent = {
   ],
 };
 
-function useReviewModel(): ReviewModel {
-  const [selected, setSelected] = useState('ambiguous');
-  const [candidate, setCandidate] = useState('');
-  const [choices, setChoices] = useState<Partial<Record<string, Choice>>>({
-    separate: 'Keep separate',
-  });
-  return {
-    selected,
-    candidate,
-    choices,
-    select: (id) => {
-      setSelected(id);
-      setCandidate('');
-    },
-    selectCandidate: (id, name) => {
-      setSelected(id);
-      setCandidate(name);
-    },
-    choose: (id, choice) => setChoices((previous) => ({ ...previous, [id]: choice })),
-  };
-}
-
 function Boundary({ condition }: { condition: Exclude<Condition, 'ready'> }) {
   const [title, description] = boundaryContent[condition];
   return (
@@ -70,21 +48,24 @@ function Boundary({ condition }: { condition: Exclude<Condition, 'ready'> }) {
 }
 
 function ReviewPolicy({ model }: { model: ReviewModel }) {
-  const held = Object.values(model.choices).filter((choice) => choice === 'Later').length;
+  const held =
+    Object.values(model.choices).filter((choice) => choice === 'Later').length +
+    Object.values(model.candidates)
+      .flatMap((decisions) => Object.values(decisions))
+      .filter((choice) => choice === 'later').length;
   return (
     <>
       <Card>
         <CardContent className="space-y-2 pt-6">
-          <p className="font-medium">Only exact evidence can merge automatically</p>
-          <p className="text-sm text-muted-foreground">
-            Exact email or phone, or one unambiguous complete full name. A first name alone never
-            merges automatically. Conflicting or multiple candidates require your review. Later
-            holds that contact out of this import.
+          <p className="text-lg font-semibold">Exact matches are ready. You decide the rest.</p>
+          <p className="max-w-3xl text-base leading-7 text-foreground/90">
+            Email, phone or one unambiguous complete name can match automatically. First names alone
+            never trigger an automatic merge. Select only the contacts that belong together.
           </p>
         </CardContent>
       </Card>
-      <p className="text-sm text-muted-foreground">
-        {held} held for later · Existing POPS details stay unless you choose a replacement.
+      <p className="text-base leading-7 text-foreground/85">
+        {held} reviews saved for later. Existing details stay unless you choose a replacement.
       </p>
     </>
   );
@@ -94,22 +75,33 @@ function ReviewPolicy({ model }: { model: ReviewModel }) {
 export function ContactReview({
   layout,
   condition = 'ready',
+  initialSubset = false,
 }: {
   layout: Layout;
   condition?: Condition;
+  initialSubset?: boolean;
 }) {
-  const model = useReviewModel();
+  const model = useReviewModel(initialSubset);
   const [committed, setCommitted] = useState(false);
-  const pending = contactImportRows.filter(
-    (row) => row.outcome === 'Review required' && !model.choices[row.id]
-  ).length;
+  const pending = contactImportRows.reduce((count, row) => {
+    if (row.outcome !== 'Review required' || model.choices[row.id] === 'Later') return count;
+    const decisions = model.candidates[row.id] ?? {};
+    const unanswered = row.candidates.filter((candidate) => !decisions[candidate.id]).length;
+    const needsConfirmation =
+      !model.choices[row.id] &&
+      row.candidates.some(
+        (candidate) =>
+          decisions[candidate.id] === 'merge' || decisions[candidate.id] === 'different'
+      );
+    return count + unanswered + Number(needsConfirmation);
+  }, 0);
   if (committed) return <Boundary condition="success" />;
   if (condition !== 'ready') return <Boundary condition={condition} />;
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-6">
       <PageHeader
         title="Review contact import"
-        description={`6 incoming contacts · 3 automatic merges · ${pending} unresolved · 1 new person`}
+        description={`6 incoming contacts · 3 automatic merges · ${pending} decisions pending · 1 new person`}
         actions={
           <Button disabled={pending > 0} onClick={() => setCommitted(true)}>
             <Check className="size-4" />
@@ -130,5 +122,6 @@ export function reviewStates(layout: Layout): ScreenStates {
     error: () => <ContactReview layout={layout} condition="error" />,
     empty: () => <ContactReview layout={layout} condition="empty" />,
     success: () => <ContactReview layout={layout} condition="success" />,
+    'subset-selected': () => <ContactReview layout={layout} initialSubset />,
   };
 }

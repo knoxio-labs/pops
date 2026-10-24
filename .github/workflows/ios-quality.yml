@@ -397,8 +397,9 @@ jobs:
             openapi-generator-${{ runner.os }}-${{ env.POPS_XCODE_VERSION }}-${{ env.POPS_XCODE_BUILD }}-
 
       # The iOS half of ADR-040's regenerate-and-diff discipline, and the reason
-      # `pillars/bfm/openapi/**` is in this workflow's path filter. Its TypeScript
-      # counterpart is the `cross-pillar-clients` job in `quality.yml`.
+      # `pillars/bfm/openapi/**` is in this workflow's path filter. The
+      # TypeScript clients are not committed at all; scripts/codegen/generate.mjs
+      # builds them from the snapshots on install.
       #
       # This app is DISTRIBUTED, not deployed: a build already on a phone keeps
       # calling yesterday's contract for as long as its owner declines to update.

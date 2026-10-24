@@ -14,7 +14,7 @@
     "test": "node ../../../scripts/require-built-graph.mjs && vitest run",
     "test:coverage": "node ../../../scripts/require-built-graph.mjs && vitest run --coverage",
     "test:watch": "vitest",
-    "generate:cerebrum-client": "openapi-ts && oxfmt --write src/cerebrum-api"
+    "generate:cerebrum-client": "openapi-ts -o src/cerebrum-api"
   },
   "dependencies": {
     "@hey-api/client-fetch": "^0.13.1",
