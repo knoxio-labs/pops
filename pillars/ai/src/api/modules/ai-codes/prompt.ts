@@ -5,8 +5,8 @@ import type { CodeSuggestion, CodesSuggestRequest } from '../../../contract/rest
 /** Bumped whenever the instructions below change, so the ledger can tell prompts apart. */
 export const CODE_PROMPT_VERSION = 'codes-suggest-v1';
 
-/** What a suggested code may contain. Inventory still decides whether it is free. */
-const CODE_SHAPE = /^[A-Za-z0-9][A-Za-z0-9-]{0,31}$/;
+/** Longest code inventory's `item.setCode` accepts; the response contract caps it too. */
+const MAX_CODE_LENGTH = 64;
 
 export const CODE_SYSTEM_PROMPT = `You suggest sticker codes for items in a personal home inventory. Codes are printed on small labels and typed by hand, so they must be short, readable and consistent with the codes the owner already uses.
 
@@ -103,8 +103,9 @@ export function buildCodePrompt(request: CodesSuggestRequest): string {
 
 /**
  * Parse and filter a model reply into at most `request.count` usable
- * suggestions: well-formed, starting with the required stem, not already in
- * use and not repeated (all compared case-insensitively).
+ * suggestions: 1–64 characters, starting with the required stem, not already
+ * in use and not repeated (all compared case-insensitively). The prompt's
+ * style rules are guidance, not filters.
  *
  * @returns null when the reply is not the JSON shape the schema demands.
  */
@@ -127,7 +128,7 @@ export function parseCodeReply(
   for (const suggestion of parsed.data.suggestions) {
     const code = suggestion.code.trim();
     const key = code.toLowerCase();
-    if (!CODE_SHAPE.test(code) || taken.has(key)) continue;
+    if (code.length === 0 || code.length > MAX_CODE_LENGTH || taken.has(key)) continue;
     if (stem !== undefined && !key.startsWith(stem)) continue;
     taken.add(key);
     accepted.push({ code, reason: suggestion.reason.trim().slice(0, 200) });

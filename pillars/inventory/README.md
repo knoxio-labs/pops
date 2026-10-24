@@ -649,15 +649,14 @@ whatever happened to be in the process environment.
 `POST /codes/suggest` (`src/api/rest/sync-handlers.ts`) sends the `ai` pillar
 the new item, its destination (`locationId` or `containerId`) and up to 500
 codes in use with their item, type and place (`src/api/sync/code-context.ts`),
-and offers the codes the model proposes after dropping any that are held,
-repeated, over 64 characters, or that neither match the saved code pattern
-(rendered prefix, suffix and minimum numeric width) nor continue a code family
-the item's type already uses. An explicitly typed stem replaces both and keeps
-case-insensitive prefix matching. With no usable answer — no key, a rejected
-credential, a timeout, a non-2xx, or every code filtered out — deterministic
-numbering (`src/api/sync/codes.ts`) continues the type's best family (members in
-the destination container, then nearest location, then size), using the saved
-pattern only when the type has none.
+and offers the codes the model proposes after dropping only those that are
+held, repeated, blank, over 64 characters or, when a stem is typed, not
+starting with it. The saved code pattern does not filter model codes. With no
+usable answer — no key, a rejected credential, a timeout, a non-2xx, or every
+code filtered out — deterministic numbering (`src/api/sync/codes.ts`)
+continues the type's best family (members in the destination container, then
+nearest location, then size), using the saved pattern only when the type has
+none.
 
 `src/api/pillars/service-account.ts`'s `INVENTORY_SERVICE_ACCOUNT_SCOPES`
 grants `ai.codes.suggest` for code suggestions and `finance.transactions.get`

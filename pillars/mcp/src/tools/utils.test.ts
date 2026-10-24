@@ -53,6 +53,32 @@ describe('mapCallResult', () => {
     });
   });
 
+  it("relays a producer's own reason when it answers unavailable", () => {
+    const result = mapCallResult({
+      kind: 'unavailable',
+      pillar: 'inventory',
+      message: 'Paperless could not be reached. Try again shortly.',
+      code: 'inventory.paperless.unavailable',
+    });
+
+    expect(result).toEqual({
+      content: [
+        {
+          type: 'text',
+          text: 'Paperless could not be reached. Try again shortly.\n{"code":"inventory.paperless.unavailable"}',
+        },
+      ],
+      isError: true,
+    });
+  });
+
+  it('names the pillar when it is unreachable and says nothing itself', () => {
+    expect(mapCallResult({ kind: 'unavailable', pillar: 'inventory' })).toEqual({
+      content: [{ type: 'text', text: "Pillar 'inventory' is unavailable. Try again shortly." }],
+      isError: true,
+    });
+  });
+
   it('names the scoped tool producer in an authorization refusal', () => {
     const result = mapCallResult(
       {

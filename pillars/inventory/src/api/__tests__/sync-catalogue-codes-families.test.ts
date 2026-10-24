@@ -1,7 +1,7 @@
 /**
- * `POST /codes/suggest` without a stem continues the code families the
- * item's type already uses, with and without a model answer. The saved
- * pattern answers only when the type has no family.
+ * `POST /codes/suggest` falls back, without a stem, to continuing the code
+ * families the item's type already uses. The saved pattern answers only when
+ * the type has no family.
  */
 import { randomUUID } from 'node:crypto';
 
@@ -193,28 +193,5 @@ describe('POST /codes/suggest — family fallback', () => {
         stem: 'BOX-PANTRY-',
       })
     ).toEqual(['BOX-PANTRY-001', 'BOX-PANTRY-002', 'BOX-PANTRY-003']);
-  });
-});
-
-describe('POST /codes/suggest — model codes that continue a family', () => {
-  it("offers a model code continuing one of the type's families, despite the saved pattern", async () => {
-    withModel(async () => ['BOX-OFFICE-5', 'BOX-PANTRY-2', 'S01']);
-    const { office, pantry } = await rooms();
-    await coded('BOX-OFFICE-4', 'storage_box', at(office));
-    await coded('BOX-PANTRY-1', 'storage_box', at(pantry));
-
-    expect(await suggest({ name: 'Syrups', typeKey: 'storage_box', locationId: office })).toEqual([
-      'BOX-OFFICE-5',
-      'BOX-PANTRY-2',
-      'S01',
-    ]);
-  });
-
-  it("drops a model code from another type's family or an invented one", async () => {
-    withModel(async () => ['BK-NOVEL-2', 'CRATE-1', 'BOX-OFFICE-2']);
-    await coded('BK-NOVEL-1', 'book');
-    await coded('BOX-OFFICE-1', 'storage_box');
-
-    expect(await suggest({ name: 'Syrups', typeKey: 'storage_box' })).toEqual(['BOX-OFFICE-2']);
   });
 });
