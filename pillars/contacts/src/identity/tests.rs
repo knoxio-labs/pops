@@ -435,3 +435,21 @@ fn blank_display_names_cannot_hide_a_homonym_from_complete_name_matching() {
         );
     }
 }
+
+#[test]
+fn preferred_display_names_do_not_hide_complete_name_review_evidence() {
+    let mut complete = record("complete-record", "Jane", "Doe", "", "");
+    complete.name.display_name = Some("Janey".into());
+    let mut display = record("display-record", "", "", "", "");
+    display.name.display_name = Some("Jane Doe".into());
+    assert_eq!(
+        classify(&display, &[candidate("person", complete.clone())], &[]),
+        expected_review(ReviewReason::IncompleteName, &["person"]),
+        "an existing preferred display must not hide its complete structured name"
+    );
+    assert_eq!(
+        classify(&complete, &[candidate("person", display)], &[]),
+        expected_review(ReviewReason::IncompleteName, &["person"]),
+        "an incoming preferred display must not hide its complete structured name"
+    );
+}

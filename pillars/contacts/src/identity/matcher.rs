@@ -160,24 +160,26 @@ fn strong_matches(left: &IdentityRecord, right: &IdentityRecord) -> BTreeSet<Mat
     reasons
 }
 
-fn display_key(record: &IdentityRecord) -> Option<String> {
+fn name_keys(record: &IdentityRecord) -> BTreeSet<String> {
     record
         .name
         .display_name
         .as_ref()
         .map(|name| normalize_name(name))
-        .filter(|name| !name.is_empty())
-        .or_else(|| {
+        .into_iter()
+        .chain(
             record
                 .name
                 .complete_name
                 .as_ref()
-                .map(|name| name.as_str().to_owned())
-        })
+                .map(|name| name.as_str().to_owned()),
+        )
+        .filter(|name| !name.is_empty())
+        .collect()
 }
 
 fn same_display_name(left: &IdentityRecord, right: &IdentityRecord) -> bool {
-    display_key(left).is_some_and(|name| display_key(right).as_ref() == Some(&name))
+    !name_keys(left).is_disjoint(&name_keys(right))
 }
 
 fn shared_identifier(
