@@ -2,7 +2,9 @@
 
 use crate::providers::credentials::SecretBytes;
 use crate::providers::oauth_state::ConsumedAuthorization;
-use crate::providers::transport::{ProviderOrigin, ProviderRequest, ProviderTransport};
+use crate::providers::transport::{
+    ProviderOrigin, ProviderRequest, ProviderTransport, TransportError,
+};
 use reqwest::header::{HeaderMap, HeaderValue, CONTENT_TYPE};
 use reqwest::{Method, Url};
 use serde::Deserialize;
@@ -43,6 +45,15 @@ impl std::fmt::Display for GoogleError {
 }
 
 impl std::error::Error for GoogleError {}
+
+impl From<TransportError> for GoogleError {
+    fn from(error: TransportError) -> Self {
+        match error {
+            TransportError::Unavailable => Self::Retryable(Duration::from_secs(2)),
+            _ => Self::InvalidResponse,
+        }
+    }
+}
 
 /// Confidential OAuth application configuration; the client secret cannot be
 /// formatted or serialized. The callback is a fixed operator-configured HTTPS URI.
@@ -206,7 +217,7 @@ async fn token_request<T: ProviderTransport>(
             body: Some(body),
         })
         .await
-        .map_err(|_| GoogleError::Retryable(Duration::from_secs(2)))?;
+        .map_err(GoogleError::from)?;
     if response.status.is_success() {
         return Ok(response);
     }

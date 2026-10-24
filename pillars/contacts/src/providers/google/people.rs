@@ -10,7 +10,6 @@ use crate::providers::transport::{
 };
 use reqwest::{header::HeaderMap, Method, Url};
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
 
 const MAX_CURSOR: usize = 16_384;
 const CHECKPOINT_LIFETIME: u64 = 7 * 24 * 60 * 60;
@@ -251,7 +250,7 @@ async fn get<T: ProviderTransport>(
             body: None,
         })
         .await
-        .map_err(|_| GoogleError::Retryable(Duration::from_secs(2)))?;
+        .map_err(GoogleError::from)?;
     if response.status.is_success() {
         return Ok(response);
     }
