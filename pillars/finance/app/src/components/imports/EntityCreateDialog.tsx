@@ -21,7 +21,7 @@ interface EntityCreateDialogProps {
   onEntityCreated: (entity: { entityId: string; entityName: string }) => void;
   suggestedName?: string;
   /** DB entities for uniqueness check */
-  dbEntities?: Array<{ name: string }>;
+  dbEntities?: Array<{ name: string; type: string }>;
 }
 
 interface NameFieldProps {

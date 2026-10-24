@@ -30,6 +30,21 @@ import type {
   EntitiesLookupData,
   EntitiesLookupErrors,
   EntitiesLookupResponses,
+  EntitiesPersonGetData,
+  EntitiesPersonGetErrors,
+  EntitiesPersonGetResponses,
+  EntitiesPersonPutData,
+  EntitiesPersonPutErrors,
+  EntitiesPersonPutResponses,
+  EntitiesPointsCreateData,
+  EntitiesPointsCreateErrors,
+  EntitiesPointsCreateResponses,
+  EntitiesPointsListData,
+  EntitiesPointsListErrors,
+  EntitiesPointsListResponses,
+  EntitiesPointsPreferData,
+  EntitiesPointsPreferErrors,
+  EntitiesPointsPreferResponses,
   EntitiesRemoveAvatarData,
   EntitiesRemoveAvatarErrors,
   EntitiesRemoveAvatarResponses,
@@ -39,6 +54,9 @@ import type {
   EntitiesRerollColourData,
   EntitiesRerollColourErrors,
   EntitiesRerollColourResponses,
+  EntitiesSourcesListData,
+  EntitiesSourcesListErrors,
+  EntitiesSourcesListResponses,
   EntitiesUpdateData,
   EntitiesUpdateErrors,
   EntitiesUpdateResponses,
@@ -50,12 +68,26 @@ import type {
   EntitiesUploadPosterResponses,
   HealthGetData,
   HealthGetResponses,
+  ImportsCommitData,
+  ImportsCommitErrors,
+  ImportsCommitResponses,
+  ImportsFilesStageData,
+  ImportsFilesStageErrors,
+  ImportsFilesStageResponses,
+  ImportsGetData,
+  ImportsGetErrors,
+  ImportsGetResponses,
   OpenapiGetData,
   OpenapiGetResponses,
   RootGetData,
   RootGetResponses,
   SearchSearchData,
   SearchSearchResponses,
+  SourcesAccountsListData,
+  SourcesAccountsListResponses,
+  SourcesAccountsRegisterData,
+  SourcesAccountsRegisterErrors,
+  SourcesAccountsRegisterResponses,
 } from './types.gen';
 
 export type Options<
@@ -232,6 +264,76 @@ export const entitiesRerollColour = <ThrowOnError extends boolean = false>(
   >({ url: '/entities/{id}/colour/reroll', ...options });
 
 /**
+ * Read all local and source points, with their provenance and preference flags.
+ */
+export const entitiesPointsList = <ThrowOnError extends boolean = false>(
+  options: Options<EntitiesPointsListData, ThrowOnError>
+): RequestResult<EntitiesPointsListResponses, EntitiesPointsListErrors, ThrowOnError> =>
+  (options.client ?? client).get<
+    EntitiesPointsListResponses,
+    EntitiesPointsListErrors,
+    ThrowOnError
+  >({ url: '/entities/{id}/contact-points', ...options });
+
+/**
+ * Add an explicit local contact point; source association is never client supplied here.
+ */
+export const entitiesPointsCreate = <ThrowOnError extends boolean = false>(
+  options: Options<EntitiesPointsCreateData, ThrowOnError>
+): RequestResult<EntitiesPointsCreateResponses, EntitiesPointsCreateErrors, ThrowOnError> =>
+  (options.client ?? client).post<
+    EntitiesPointsCreateResponses,
+    EntitiesPointsCreateErrors,
+    ThrowOnError
+  >({
+    url: '/entities/{id}/contact-points',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Set a local preference independently of whether the source observation is still active.
+ */
+export const entitiesPointsPrefer = <ThrowOnError extends boolean = false>(
+  options: Options<EntitiesPointsPreferData, ThrowOnError>
+): RequestResult<EntitiesPointsPreferResponses, EntitiesPointsPreferErrors, ThrowOnError> =>
+  (options.client ?? client).put<
+    EntitiesPointsPreferResponses,
+    EntitiesPointsPreferErrors,
+    ThrowOnError
+  >({ url: '/entities/{id}/contact-points/{point_id}/preferred', ...options });
+
+/**
+ * Read the independently maintained local person profile.
+ */
+export const entitiesPersonGet = <ThrowOnError extends boolean = false>(
+  options: Options<EntitiesPersonGetData, ThrowOnError>
+): RequestResult<EntitiesPersonGetResponses, EntitiesPersonGetErrors, ThrowOnError> =>
+  (options.client ?? client).get<EntitiesPersonGetResponses, EntitiesPersonGetErrors, ThrowOnError>(
+    { url: '/entities/{id}/person', ...options }
+  );
+
+/**
+ * Replace the local structured name without changing imported name observations.
+ */
+export const entitiesPersonPut = <ThrowOnError extends boolean = false>(
+  options: Options<EntitiesPersonPutData, ThrowOnError>
+): RequestResult<EntitiesPersonPutResponses, EntitiesPersonPutErrors, ThrowOnError> =>
+  (options.client ?? client).put<EntitiesPersonPutResponses, EntitiesPersonPutErrors, ThrowOnError>(
+    {
+      url: '/entities/{id}/person',
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+    }
+  );
+
+/**
  * `DELETE /entities/{id}/poster` — clear the entity's poster and delete the
  * backing blob.
  */
@@ -275,6 +377,18 @@ export const entitiesUploadPoster = <ThrowOnError extends boolean = false>(
   });
 
 /**
+ * List provenance for one canonical person, including inactive sources.
+ */
+export const entitiesSourcesList = <ThrowOnError extends boolean = false>(
+  options: Options<EntitiesSourcesListData, ThrowOnError>
+): RequestResult<EntitiesSourcesListResponses, EntitiesSourcesListErrors, ThrowOnError> =>
+  (options.client ?? client).get<
+    EntitiesSourcesListResponses,
+    EntitiesSourcesListErrors,
+    ThrowOnError
+  >({ url: '/entities/{id}/sources', ...options });
+
+/**
  * Liveness probe.
  */
 export const healthGet = <ThrowOnError extends boolean = false>(
@@ -283,6 +397,52 @@ export const healthGet = <ThrowOnError extends boolean = false>(
   (options?.client ?? client).get<HealthGetResponses, unknown, ThrowOnError>({
     url: '/health',
     ...options,
+  });
+
+/**
+ * Stage a raw export file; malformed records remain inspectable without directory writes.
+ */
+export const importsFilesStage = <ThrowOnError extends boolean = false>(
+  options: Options<ImportsFilesStageData, ThrowOnError>
+): RequestResult<ImportsFilesStageResponses, ImportsFilesStageErrors, ThrowOnError> =>
+  (options.client ?? client).post<
+    ImportsFilesStageResponses,
+    ImportsFilesStageErrors,
+    ThrowOnError
+  >({
+    bodySerializer: null,
+    url: '/imports/files',
+    ...options,
+    headers: {
+      'Content-Type': 'application/octet-stream',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Read a durable preview after a partial commit or a process restart.
+ */
+export const importsGet = <ThrowOnError extends boolean = false>(
+  options: Options<ImportsGetData, ThrowOnError>
+): RequestResult<ImportsGetResponses, ImportsGetErrors, ThrowOnError> =>
+  (options.client ?? client).get<ImportsGetResponses, ImportsGetErrors, ThrowOnError>({
+    url: '/imports/{id}',
+    ...options,
+  });
+
+/**
+ * Apply selected decisions atomically, preserving a receipt for identical retries.
+ */
+export const importsCommit = <ThrowOnError extends boolean = false>(
+  options: Options<ImportsCommitData, ThrowOnError>
+): RequestResult<ImportsCommitResponses, ImportsCommitErrors, ThrowOnError> =>
+  (options.client ?? client).post<ImportsCommitResponses, ImportsCommitErrors, ThrowOnError>({
+    url: '/imports/{id}/commit',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
   });
 
 /**
@@ -301,6 +461,36 @@ export const searchSearch = <ThrowOnError extends boolean = false>(
 ): RequestResult<SearchSearchResponses, unknown, ThrowOnError> =>
   (options.client ?? client).post<SearchSearchResponses, unknown, ThrowOnError>({
     url: '/search',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * List registered account identities without credential material.
+ */
+export const sourcesAccountsList = <ThrowOnError extends boolean = false>(
+  options?: Options<SourcesAccountsListData, ThrowOnError>
+): RequestResult<SourcesAccountsListResponses, unknown, ThrowOnError> =>
+  (options?.client ?? client).get<SourcesAccountsListResponses, unknown, ThrowOnError>({
+    url: '/sources/accounts',
+    ...options,
+  });
+
+/**
+ * Register or relabel an existing provider subject without changing its identity.
+ */
+export const sourcesAccountsRegister = <ThrowOnError extends boolean = false>(
+  options: Options<SourcesAccountsRegisterData, ThrowOnError>
+): RequestResult<SourcesAccountsRegisterResponses, SourcesAccountsRegisterErrors, ThrowOnError> =>
+  (options.client ?? client).post<
+    SourcesAccountsRegisterResponses,
+    SourcesAccountsRegisterErrors,
+    ThrowOnError
+  >({
+    url: '/sources/accounts',
     ...options,
     headers: {
       'Content-Type': 'application/json',

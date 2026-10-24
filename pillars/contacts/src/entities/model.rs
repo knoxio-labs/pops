@@ -88,6 +88,7 @@ impl From<EntityRow> for Entity {
 pub struct EntityLookupRow {
     pub id: String,
     pub name: String,
+    pub r#type: String,
     pub aliases: Option<String>,
 }
 
@@ -97,6 +98,7 @@ pub struct EntityLookupRow {
 pub struct EntityLookup {
     pub id: String,
     pub name: String,
+    pub r#type: String,
     pub aliases: Vec<String>,
 }
 
@@ -105,6 +107,7 @@ impl From<EntityLookupRow> for EntityLookup {
         EntityLookup {
             id: row.id,
             name: row.name,
+            r#type: row.r#type,
             aliases: decode_aliases(row.aliases.as_deref()),
         }
     }

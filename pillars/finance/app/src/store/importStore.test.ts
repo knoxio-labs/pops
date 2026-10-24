@@ -314,8 +314,22 @@ describe('importStore — pendingEntities (local-first-import)', () => {
     expect(useImportStore.getState().pendingEntities).toHaveLength(1);
   });
 
+  it('allows pending merchants beside homonymous people without replacing them', () => {
+    useImportStore.getState().addPendingEntity({ name: 'Alex Smith', type: 'person' });
+    const merchant = useImportStore
+      .getState()
+      .addPendingEntity({ name: 'Alex Smith', type: 'company' }, [
+        { name: 'Alex Smith', type: 'person' },
+      ]);
+    expect(merchant.type).toBe('company');
+    expect(useImportStore.getState().pendingEntities).toHaveLength(2);
+  });
+
   it('addPendingEntity rejects duplicate name in DB entity list (case-insensitive)', () => {
-    const dbEntities = [{ name: 'Coles' }, { name: 'Woolworths' }];
+    const dbEntities = [
+      { name: 'Coles', type: 'company' },
+      { name: 'Woolworths', type: 'company' },
+    ];
 
     expect(() =>
       useImportStore.getState().addPendingEntity({ name: 'coles', type: 'company' }, dbEntities)

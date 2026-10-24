@@ -50,6 +50,9 @@ pub fn build_router(state: AppState) -> Router {
         .merge(crate::entities::router())
         .merge(crate::entities::addresses_routes::router())
         .merge(crate::search::router())
+        .merge(crate::imports::routes::router())
+        .merge(crate::persons::routes::router())
+        .merge(crate::sources::routes::router())
         .with_state(state)
         .layer(middleware::from_fn_with_state(
             scope_gate,

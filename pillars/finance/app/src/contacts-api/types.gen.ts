@@ -30,6 +30,87 @@ export type AddressMutation = {
 };
 
 /**
+ * A selected subset of a preview with optimistic concurrency and retry identity.
+ */
+export type CommitBatchInput = {
+  decisions: Array<RowDecision>;
+  idempotencyKey: string;
+  revision: number;
+};
+
+/**
+ * Persisted receipt returned byte-equivalently on a retry with the same key and body.
+ */
+export type CommitReceipt = {
+  batchId: string;
+  revision: number;
+  rows: Array<CommittedRow>;
+};
+
+/**
+ * The stable result of one selected row, also retained in the retry receipt.
+ */
+export type CommittedRow = {
+  entityId?: string | null;
+  rowId: string;
+  skipped: boolean;
+  sourceRecordId?: string | null;
+};
+
+/**
+ * A local or imported point. `sourceRecordId: null` identifies an explicit local value.
+ * Preferred observations survive source refresh/deactivation, including their original value.
+ */
+export type ContactPoint = {
+  active: boolean;
+  /**
+   * Explicit ISO country context for national phone normalization; absent never implies a locale.
+   */
+  countryCode?: string | null;
+  createdAt: string;
+  entityId: string;
+  id: string;
+  kind: string;
+  label?: string | null;
+  normalizedValue?: string | null;
+  preferred: boolean;
+  sourceRecordId?: string | null;
+  value: string;
+};
+
+/**
+ * A point observation. Normalized match keys are computed by the server, never accepted as input.
+ */
+export type ContactPointInput = {
+  /**
+   * Explicit ISO country context for national phone normalization; absent never implies a locale.
+   */
+  countryCode?: string | null;
+  kind: ContactPointKind;
+  label?: string | null;
+  value: string;
+};
+
+/**
+ * A contact point's semantic kind; shared values never identify one person by themselves.
+ */
+export type ContactPointKind = 'email' | 'phone' | 'social' | 'url';
+
+/**
+ * Contact point observations, including inactive audit values and preferred selections.
+ */
+export type ContactPointListResponse = {
+  data: Array<ContactPoint>;
+};
+
+/**
+ * A newly added explicit local point.
+ */
+export type ContactPointResponse = {
+  data: ContactPoint;
+};
+
+/**
  * Body accepted by `POST /entities/:id/addresses`.
  */
 export type CreateAddressBody = {
@@ -91,6 +172,7 @@ export type EntityLookup = {
   aliases: Array<string>;
   id: string;
   name: string;
+  type: string;
 };
 
 /**
@@ -126,6 +208,8 @@ export type ErrorCode =
   | 'contacts.request.invalid'
   | 'contacts.resource.not_found'
   | 'contacts.entity.name_conflict'
+  | 'contacts.import.conflict'
+  | 'contacts.import.storage'
   | 'contacts.auth.unauthorized'
   | 'contacts.auth.forbidden'
   | 'contacts.auth.unavailable'
@@ -146,12 +230,55 @@ export type HealthResponse = {
 };
 
 /**
+ * A durable preview; its revision changes only after a successful selected-row commit.
+ */
+export type ImportBatch = {
+  accountId: string;
+  collectionKey: string;
+  createdAt: string;
+  id: string;
+  revision: number;
+  rows: Array<ImportRow>;
+  sourceEpoch?: number | null;
+};
+
+/**
+ * Source observations to propose; staging never changes the canonical directory.
+ */
+export type ImportPayload = {
+  displayName?: string | null;
+  name: PersonName;
+  points: Array<ContactPointInput>;
+};
+
+/**
+ * Persisted preview with the source revision that must still match at commit time.
+ */
+export type ImportRow = {
+  entityId?: string | null;
+  errors: Array<RowIssue>;
+  id: string;
+  ordinal: number;
+  payload?: ImportPayload | unknown;
+  processed: boolean;
+  proposal: RowProposal;
+  recordKey: string;
+  removed: boolean;
+  sourceRecordId?: string | null;
+  sourceRevision?: number | null;
+};
+
+/**
  * `POST /entities/lookup` body. `fields` is reserved for a future field
  * selector. `ids`, when present and non-empty, narrows the match set to
  * those ids (POPS-3925) instead of the whole contact set; omitted or empty
  * keeps the original "answer everything" behaviour existing callers rely on.
  */
 export type LookupBody = {
+  /**
+   * Exclude persons only for explicitly merchant-scoped consumers.
+   */
+  excludePersons?: boolean;
   fields?: Array<string> | null;
   ids?: Array<string> | null;
 };
@@ -175,6 +302,11 @@ export type MessageResponse = {
 };
 
 /**
+ * Whether the source explicitly knows a name to be complete, incomplete, or unknown.
+ */
+export type NameCompleteness = 'unknown' | 'complete' | 'incomplete';
+
+/**
  * Pagination envelope returned by every list endpoint.
  */
 export type PaginationMeta = {
@@ -183,6 +315,77 @@ export type PaginationMeta = {
   offset: number;
   total: number;
 };
+
+/**
+ * A structured name; completeness is explicit and is never inferred from display text.
+ */
+export type PersonName = {
+  additionalNames?: string | null;
+  completeness?: NameCompleteness;
+  familyName?: string | null;
+  givenName?: string | null;
+  namePrefix?: string | null;
+  nameSuffix?: string | null;
+};
+
+/**
+ * Local name override, independent of imported source names and entity display names.
+ */
+export type PersonProfile = {
+  entityId: string;
+  name: PersonName;
+  updatedAt: string;
+};
+
+/**
+ * Local profile response; `null` means no local name override exists.
+ */
+export type PersonProfileResponse = {
+  data?: PersonProfile | null;
+};
+
+/**
+ * An explicit decision for one pending row; linking never follows display-name similarity.
+ */
+export type RowAction =
+  | {
+      action: 'create_person';
+    }
+  | {
+      action: 'link_person';
+      entityId: string;
+    }
+  | {
+      action: 'update_source';
+    }
+  | {
+      action: 'deactivate_source';
+    }
+  | {
+      action: 'skip';
+    };
+
+/**
+ * One row decision inside an atomic commit request.
+ */
+export type RowDecision = {
+  decision: RowAction;
+  rowId: string;
+};
+
+/**
+ * Sanitized validation failures retained alongside a preview row.
+ */
+export type RowIssue =
+  | 'malformed_record'
+  | 'duplicate_source_key'
+  | 'invalid_record'
+  | 'invalid_removal';
+
+/**
+ * The only automatic proposals concern recognized source identity, never similar names.
+ */
+export type RowProposal = 'new_source' | 'update_source' | 'deactivate_source' | 'invalid';
 
 /**
  * One ranked search hit. `uri` is the canonical `pops:contacts/contact/<id>`.
@@ -222,6 +425,68 @@ export type SearchResponse = {
 };
 
 /**
+ * A provider account identity; `accountKey` is a stable provider subject, never a credential.
+ */
+export type SourceAccount = {
+  accountKey: string;
+  createdAt: string;
+  id: string;
+  label?: string | null;
+  provider: string;
+};
+
+/**
+ * Register a stable account namespace. Changing a display label does not change account identity.
+ */
+export type SourceAccountInput = {
+  accountKey: string;
+  label?: string | null;
+  provider: string;
+};
+
+/**
+ * Registered provider-account namespaces, without credentials.
+ */
+export type SourceAccountListResponse = {
+  data: Array<SourceAccount>;
+};
+
+/**
+ * Stable account namespace resulting from create-or-fetch registration.
+ */
+export type SourceAccountResponse = {
+  data: SourceAccount;
+};
+
+/**
+ * One namespaced external contact record attached to a canonical person entity.
+ */
+export type SourceRecord = {
+  accountId: string;
+  active: boolean;
+  additionalNames?: string | null;
+  collectionKey: string;
+  displayName?: string | null;
+  entityId: string;
+  familyName?: string | null;
+  givenName?: string | null;
+  id: string;
+  lastSeenAt: string;
+  nameCompleteness: string;
+  namePrefix?: string | null;
+  nameSuffix?: string | null;
+  recordKey: string;
+  revision: number;
+};
+
+/**
+ * Active and inactive external records linked to a person.
+ */
+export type SourceRecordListResponse = {
+  data: Array<SourceRecord>;
+};
+
+/**
  * Body accepted by `PATCH /entities/:id`. Every field is optional; a present
  * field (even `null` for the nullable columns) is applied, an absent field is
  * left untouched. The nullable columns use `Option<Option<T>>` to tell
@@ -245,6 +510,16 @@ export type UpdateEntityBody = {
   type?: string | null;
 };
 
+/**
+ * Explicit text decoding for file uploads.
+ */
+export type UploadEncoding = 'utf8' | 'utf16_le' | 'utf16_be' | 'windows1252';
+
+/**
+ * Supported export formats; the caller chooses explicitly rather than guessing from content.
+ */
+export type UploadFormat = 'google_csv' | 'vcard';
+
 export type RootGetData = {
   body?: never;
   path?: never;
@@ -265,6 +540,7 @@ export type EntitiesListData = {
   body?: never;
   path?: never;
   query?: {
+    excludePersons?: boolean | null;
     search?: string | null;
     type?: string | null;
     limit?: number | null;
@@ -632,6 +908,127 @@ export type EntitiesRerollColourResponses = {
 export type EntitiesRerollColourResponse =
   EntitiesRerollColourResponses[keyof EntitiesRerollColourResponses];
 
+export type EntitiesPointsListData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/entities/{id}/contact-points';
+};
+
+export type EntitiesPointsListErrors = {
+  400: ErrorBody;
+  404: ErrorBody;
+};
+
+export type EntitiesPointsListError = EntitiesPointsListErrors[keyof EntitiesPointsListErrors];
+
+export type EntitiesPointsListResponses = {
+  200: ContactPointListResponse;
+};
+
+export type EntitiesPointsListResponse =
+  EntitiesPointsListResponses[keyof EntitiesPointsListResponses];
+
+export type EntitiesPointsCreateData = {
+  body: ContactPointInput;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/entities/{id}/contact-points';
+};
+
+export type EntitiesPointsCreateErrors = {
+  400: ErrorBody;
+  404: ErrorBody;
+};
+
+export type EntitiesPointsCreateError =
+  EntitiesPointsCreateErrors[keyof EntitiesPointsCreateErrors];
+
+export type EntitiesPointsCreateResponses = {
+  201: ContactPointResponse;
+};
+
+export type EntitiesPointsCreateResponse =
+  EntitiesPointsCreateResponses[keyof EntitiesPointsCreateResponses];
+
+export type EntitiesPointsPreferData = {
+  body?: never;
+  path: {
+    id: string;
+    point_id: string;
+  };
+  query?: never;
+  url: '/entities/{id}/contact-points/{point_id}/preferred';
+};
+
+export type EntitiesPointsPreferErrors = {
+  400: ErrorBody;
+  404: ErrorBody;
+};
+
+export type EntitiesPointsPreferError =
+  EntitiesPointsPreferErrors[keyof EntitiesPointsPreferErrors];
+
+export type EntitiesPointsPreferResponses = {
+  /**
+   * Preference selected
+   */
+  204: void;
+};
+
+export type EntitiesPointsPreferResponse =
+  EntitiesPointsPreferResponses[keyof EntitiesPointsPreferResponses];
+
+export type EntitiesPersonGetData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/entities/{id}/person';
+};
+
+export type EntitiesPersonGetErrors = {
+  400: ErrorBody;
+  404: ErrorBody;
+};
+
+export type EntitiesPersonGetError = EntitiesPersonGetErrors[keyof EntitiesPersonGetErrors];
+
+export type EntitiesPersonGetResponses = {
+  200: PersonProfileResponse;
+};
+
+export type EntitiesPersonGetResponse =
+  EntitiesPersonGetResponses[keyof EntitiesPersonGetResponses];
+
+export type EntitiesPersonPutData = {
+  body: PersonName;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/entities/{id}/person';
+};
+
+export type EntitiesPersonPutErrors = {
+  400: ErrorBody;
+  404: ErrorBody;
+};
+
+export type EntitiesPersonPutError = EntitiesPersonPutErrors[keyof EntitiesPersonPutErrors];
+
+export type EntitiesPersonPutResponses = {
+  200: PersonProfileResponse;
+};
+
+export type EntitiesPersonPutResponse =
+  EntitiesPersonPutResponses[keyof EntitiesPersonPutResponses];
+
 export type EntitiesRemovePosterData = {
   body?: never;
   path: {
@@ -734,6 +1131,29 @@ export type EntitiesUploadPosterResponses = {
 export type EntitiesUploadPosterResponse =
   EntitiesUploadPosterResponses[keyof EntitiesUploadPosterResponses];
 
+export type EntitiesSourcesListData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/entities/{id}/sources';
+};
+
+export type EntitiesSourcesListErrors = {
+  400: ErrorBody;
+  404: ErrorBody;
+};
+
+export type EntitiesSourcesListError = EntitiesSourcesListErrors[keyof EntitiesSourcesListErrors];
+
+export type EntitiesSourcesListResponses = {
+  200: SourceRecordListResponse;
+};
+
+export type EntitiesSourcesListResponse =
+  EntitiesSourcesListResponses[keyof EntitiesSourcesListResponses];
+
 export type HealthGetData = {
   body?: never;
   path?: never;
@@ -749,6 +1169,113 @@ export type HealthGetResponses = {
 };
 
 export type HealthGetResponse = HealthGetResponses[keyof HealthGetResponses];
+
+export type ImportsFilesStageData = {
+  /**
+   * Raw export bytes; generated browser clients send a Blob or File without JSON encoding.
+   */
+  body: Blob | File;
+  path?: never;
+  query: {
+    accountId: string;
+    collectionKey: string;
+    format: UploadFormat;
+    encoding?: UploadEncoding;
+    phoneCountryCode?: string;
+  };
+  url: '/imports/files';
+};
+
+export type ImportsFilesStageErrors = {
+  /**
+   * Invalid upload
+   */
+  400: ErrorBody;
+  /**
+   * Unknown source account
+   */
+  404: ErrorBody;
+};
+
+export type ImportsFilesStageError = ImportsFilesStageErrors[keyof ImportsFilesStageErrors];
+
+export type ImportsFilesStageResponses = {
+  /**
+   * Persisted preview
+   */
+  201: ImportBatch;
+};
+
+export type ImportsFilesStageResponse =
+  ImportsFilesStageResponses[keyof ImportsFilesStageResponses];
+
+export type ImportsGetData = {
+  body?: never;
+  path: {
+    /**
+     * Import batch id
+     */
+    id: string;
+  };
+  query?: never;
+  url: '/imports/{id}';
+};
+
+export type ImportsGetErrors = {
+  /**
+   * Unknown import
+   */
+  404: ErrorBody;
+};
+
+export type ImportsGetError = ImportsGetErrors[keyof ImportsGetErrors];
+
+export type ImportsGetResponses = {
+  /**
+   * Import preview
+   */
+  200: ImportBatch;
+};
+
+export type ImportsGetResponse = ImportsGetResponses[keyof ImportsGetResponses];
+
+export type ImportsCommitData = {
+  body: CommitBatchInput;
+  path: {
+    /**
+     * Import batch id
+     */
+    id: string;
+  };
+  query?: never;
+  url: '/imports/{id}/commit';
+};
+
+export type ImportsCommitErrors = {
+  /**
+   * Invalid row decisions
+   */
+  400: ErrorBody;
+  /**
+   * Unknown import or person
+   */
+  404: ErrorBody;
+  /**
+   * Stale preview or conflicting retry
+   */
+  409: ErrorBody;
+};
+
+export type ImportsCommitError = ImportsCommitErrors[keyof ImportsCommitErrors];
+
+export type ImportsCommitResponses = {
+  /**
+   * Stable commit receipt
+   */
+  200: CommitReceipt;
+};
+
+export type ImportsCommitResponse = ImportsCommitResponses[keyof ImportsCommitResponses];
 
 export type OpenapiGetData = {
   body?: never;
@@ -779,3 +1306,38 @@ export type SearchSearchResponses = {
 };
 
 export type SearchSearchResponse = SearchSearchResponses[keyof SearchSearchResponses];
+
+export type SourcesAccountsListData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/sources/accounts';
+};
+
+export type SourcesAccountsListResponses = {
+  200: SourceAccountListResponse;
+};
+
+export type SourcesAccountsListResponse =
+  SourcesAccountsListResponses[keyof SourcesAccountsListResponses];
+
+export type SourcesAccountsRegisterData = {
+  body: SourceAccountInput;
+  path?: never;
+  query?: never;
+  url: '/sources/accounts';
+};
+
+export type SourcesAccountsRegisterErrors = {
+  400: ErrorBody;
+};
+
+export type SourcesAccountsRegisterError =
+  SourcesAccountsRegisterErrors[keyof SourcesAccountsRegisterErrors];
+
+export type SourcesAccountsRegisterResponses = {
+  200: SourceAccountResponse;
+};
+
+export type SourcesAccountsRegisterResponse =
+  SourcesAccountsRegisterResponses[keyof SourcesAccountsRegisterResponses];

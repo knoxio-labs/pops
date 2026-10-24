@@ -29,6 +29,8 @@ pub struct EntityNameRow {
 /// Failure modes of a write that are NOT raw SQL errors.
 #[derive(Debug)]
 pub enum RepoError {
+    /// The proposed type conflicts with existing person-only data.
+    Invalid(String),
     /// A unique-name (or `notion_id`) constraint was violated.
     Conflict(String),
     /// The addressed entity does not exist.
@@ -76,25 +78,39 @@ pub async fn list(
     limit: i64,
     offset: i64,
 ) -> Result<(Vec<EntityRow>, i64), sqlx::Error> {
+    list_scoped(pool, search, ty, false, limit, offset).await
+}
+
+/// List entities with an explicit merchant-only scope when `exclude_persons` is true.
+pub async fn list_scoped(
+    pool: &SqlitePool,
+    search: Option<&str>,
+    ty: Option<&str>,
+    exclude_persons: bool,
+    limit: i64,
+    offset: i64,
+) -> Result<(Vec<EntityRow>, i64), sqlx::Error> {
     let like = search.map(|s| format!("%{s}%"));
 
     let rows = sqlx::query_as::<_, EntityRow>(select_entities!(
-        "WHERE (?1 IS NULL OR name LIKE ?1 OR aliases LIKE ?1) AND (?2 IS NULL OR type = ?2) \
+        "WHERE (?1 IS NULL OR name LIKE ?1 OR aliases LIKE ?1) AND (?2 IS NULL OR type = ?2) AND (?5 = 0 OR type <> 'person') \
          ORDER BY name COLLATE UNICODE_NOCASE LIMIT ?3 OFFSET ?4"
     ))
     .bind(like.as_deref())
     .bind(ty)
     .bind(limit)
     .bind(offset)
+    .bind(exclude_persons)
     .fetch_all(pool)
     .await?;
 
     let total: i64 = sqlx::query(
         "SELECT COUNT(*) AS total FROM entities \
-         WHERE (?1 IS NULL OR name LIKE ?1 OR aliases LIKE ?1) AND (?2 IS NULL OR type = ?2)",
+         WHERE (?1 IS NULL OR name LIKE ?1 OR aliases LIKE ?1) AND (?2 IS NULL OR type = ?2) AND (?3 = 0 OR type <> 'person')",
     )
     .bind(like.as_deref())
     .bind(ty)
+    .bind(exclude_persons)
     .fetch_one(pool)
     .await?
     .get("total");
@@ -110,20 +126,22 @@ pub async fn get(pool: &SqlitePool, id: &str) -> Result<Option<EntityRow>, sqlx:
         .await
 }
 
-/// Fetch one entity by name, matched under the same identity rule as the
+/// Fetch one non-person entity by name, matched under the same identity rule as the
 /// unique index (`entities::name_identity`), or `None`. Backs the finance
 /// commit create-or-fetch-by-name idempotency path (a 409 on create fetches
 /// here) — the collation matches the name-uniqueness rule, so a `409`
 /// raised by a case- or diacritic-variant create resolves to the row that
 /// already owns that name.
 pub async fn find_by_name(pool: &SqlitePool, name: &str) -> Result<Option<EntityRow>, sqlx::Error> {
-    sqlx::query_as::<_, EntityRow>(select_entities!("WHERE name COLLATE UNICODE_NOCASE = ?1"))
-        .bind(name)
-        .fetch_optional(pool)
-        .await
+    sqlx::query_as::<_, EntityRow>(select_entities!(
+        "WHERE name COLLATE UNICODE_NOCASE = ?1 AND type <> 'person'"
+    ))
+    .bind(name)
+    .fetch_optional(pool)
+    .await
 }
 
-/// Insert a new entity. The name must be unique (a duplicate raises
+/// Insert a new entity. Non-person names must be unique (a duplicate raises
 /// [`RepoError::Conflict`]). A v4 UUID id and the current `last_edited_time`
 /// are generated server-side, and so is `colour` — assigned at random from
 /// the fixed palette in [`super::colours`] (POPS-3061 design correction: a
@@ -131,7 +149,9 @@ pub async fn find_by_name(pool: &SqlitePool, name: &str) -> Result<Option<Entity
 /// field for it, and the assignment happens here rather than at the route
 /// layer so there is no path to creating an entity without a colour).
 pub async fn create(pool: &SqlitePool, body: CreateEntityBody) -> Result<EntityRow, RepoError> {
-    if name_exists(pool, &body.name, None).await? {
+    if body.r#type.as_deref().unwrap_or(DEFAULT_ENTITY_TYPE) != "person"
+        && name_exists(pool, &body.name, None).await?
+    {
         return Err(RepoError::Conflict(format!(
             "Entity with name '{}' already exists",
             body.name
@@ -177,15 +197,23 @@ pub async fn update(
     id: &str,
     patch: UpdateEntityBody,
 ) -> Result<EntityRow, RepoError> {
-    if get(pool, id).await?.is_none() {
-        return Err(RepoError::NotFound);
-    }
-    if let Some(name) = patch.name.as_deref() {
-        if name_exists(pool, name, Some(id)).await? {
-            return Err(RepoError::Conflict(format!(
-                "Entity with name '{name}' already exists"
-            )));
+    let current = get(pool, id).await?.ok_or(RepoError::NotFound)?;
+    let effective_name = patch.name.as_deref().unwrap_or(&current.name);
+    let effective_type = patch.r#type.as_deref().unwrap_or(&current.r#type);
+    if current.r#type == "person" && effective_type != "person" {
+        let has_person_data: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM person_profiles WHERE entity_id=?1) OR EXISTS(SELECT 1 FROM source_records WHERE entity_id=?1) OR EXISTS(SELECT 1 FROM contact_points WHERE entity_id=?1)")
+            .bind(id).fetch_one(pool).await?;
+        if has_person_data {
+            return Err(RepoError::Invalid(
+                "Person data must be removed before changing entity type".to_string(),
+            ));
         }
+    }
+
+    if effective_type != "person" && name_exists(pool, effective_name, Some(id)).await? {
+        return Err(RepoError::Conflict(format!(
+            "Entity with name '{effective_name}' already exists"
+        )));
     }
 
     let mut builder = UpdateBuilder::new();
@@ -215,10 +243,7 @@ pub async fn update(
         builder
             .execute(pool, id)
             .await
-            .map_err(|err| match &patch.name {
-                Some(name) => name_conflict_or(err, name),
-                None => RepoError::Db(err),
-            })?;
+            .map_err(|err| name_conflict_or(err, effective_name))?;
     }
 
     get(pool, id).await?.ok_or(RepoError::NotFound)
@@ -294,7 +319,7 @@ pub async fn delete(pool: &SqlitePool, id: &str) -> Result<bool, sqlx::Error> {
 /// entity-usage rollup.
 pub async fn lookup_bulk(pool: &SqlitePool) -> Result<Vec<EntityLookupRow>, sqlx::Error> {
     sqlx::query_as::<_, EntityLookupRow>(
-        "SELECT id, name, aliases FROM entities ORDER BY name COLLATE UNICODE_NOCASE",
+        "SELECT id, name, type, aliases FROM entities ORDER BY name COLLATE UNICODE_NOCASE",
     )
     .fetch_all(pool)
     .await
@@ -324,7 +349,7 @@ pub async fn lookup_by_ids(
         .collect::<Vec<_>>()
         .join(", ");
     let sql = format!(
-        "SELECT id, name, aliases FROM entities WHERE id IN ({placeholders}) \
+        "SELECT id, name, type, aliases FROM entities WHERE id IN ({placeholders}) \
          ORDER BY name COLLATE UNICODE_NOCASE"
     );
 
@@ -385,7 +410,7 @@ async fn name_exists(
     exclude: Option<&str>,
 ) -> Result<bool, sqlx::Error> {
     let found: Option<String> = sqlx::query_scalar(
-        "SELECT id FROM entities WHERE name COLLATE UNICODE_NOCASE = ?1 AND (?2 IS NULL OR id <> ?2) LIMIT 1",
+        "SELECT id FROM entities WHERE type <> 'person' AND name COLLATE UNICODE_NOCASE = ?1 AND (?2 IS NULL OR id <> ?2) LIMIT 1",
     )
     .bind(name)
     .bind(exclude)

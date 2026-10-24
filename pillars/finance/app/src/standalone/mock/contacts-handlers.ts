@@ -62,7 +62,7 @@ export const contactsHandlers: MockHandlers = {
   'GET /entities': listEntities,
   'POST /entities': created(mutation),
   'POST /entities/lookup': ok<EntitiesLookupResponses[200]>({
-    entities: CONTACT_ENTITIES.map(({ id, name, aliases }) => ({ id, name, aliases })),
+    entities: CONTACT_ENTITIES.map(({ id, name, aliases, type }) => ({ id, name, aliases, type })),
     fetchedAt: '2026-09-05T08:00:00.000Z',
   }),
   'GET /entities/{id}': entityById,

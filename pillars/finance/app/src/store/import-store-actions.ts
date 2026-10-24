@@ -91,14 +91,17 @@ export function buildPendingEntityActions(set: StoreSet, get: StoreGet) {
   return {
     addPendingEntity: (
       input: AddPendingEntityInput,
-      dbEntities: Array<{ name: string }> = []
+      dbEntities: Array<{ name: string; type: string }> = []
     ): PendingEntity => {
       const nameLower = input.name.toLowerCase();
       const state = get();
-      if (state.pendingEntities.some((e) => e.name.toLowerCase() === nameLower)) {
+      const matches = (entity: { name: string; type: string }) =>
+        (entity.type === 'person') === (input.type === 'person') &&
+        entity.name.toLowerCase() === nameLower;
+      if (state.pendingEntities.some(matches)) {
         throw new Error(`Entity with name "${input.name}" already exists in pending list`);
       }
-      if (dbEntities.some((e) => e.name.toLowerCase() === nameLower)) {
+      if (dbEntities.some(matches)) {
         throw new Error(`Entity with name "${input.name}" already exists in the database`);
       }
       const entity: PendingEntity = {

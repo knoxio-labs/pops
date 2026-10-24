@@ -151,14 +151,25 @@ describe('buildEntityMaps', () => {
     expect(aliasMap.get('aldi store')).toBe('Aldi');
   });
 
-  it('keeps a single winner when two contacts share an alias', () => {
+  it('omits shared aliases rather than choosing either contact', () => {
     const { aliasMap } = buildEntityMaps([
-      contact({ name: 'Cafe One', aliases: ['shared'] }),
-      contact({ name: 'Cafe Two', aliases: ['shared'] }),
+      contact({ id: 'one', name: 'Cafe One', aliases: ['shared'] }),
+      contact({ id: 'two', name: 'Cafe Two', aliases: ['shared'] }),
     ]);
-    expect(aliasMap.size).toBe(1);
-    const winner = aliasMap.get('shared');
-    expect(winner === 'Cafe One' || winner === 'Cafe Two').toBe(true);
+    expect(aliasMap.has('shared')).toBe(false);
+  });
+
+  it('keeps unique people but never resolves homonyms by name or alias', () => {
+    const { entityLookup, aliasMap } = buildEntityMaps([
+      contact({ id: 'one', name: 'Alex Smith', type: 'person', aliases: ['Alex One'] }),
+      contact({ id: 'two', name: 'ALEX SMITH', type: 'person', aliases: ['Alex Two'] }),
+      contact({ id: 'three', name: 'Robin Jones', type: 'person', aliases: ['Robin'] }),
+    ]);
+    expect(entityLookup.has('alex smith')).toBe(false);
+    expect(aliasMap.has('alex one')).toBe(false);
+    expect(aliasMap.has('alex two')).toBe(false);
+    expect(entityLookup.get('robin jones')?.id).toBe('three');
+    expect(aliasMap.get('robin')).toBe('Robin Jones');
   });
 });
 
