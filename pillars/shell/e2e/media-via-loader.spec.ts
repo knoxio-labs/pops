@@ -10,6 +10,11 @@
 import { z } from 'zod';
 
 import { expect, test } from './fixtures/pillar-rest-guard';
+import {
+  stubMovieDetail,
+  stubRotationCandidates,
+  stubSeasonDetail,
+} from './helpers/media-detail-pages';
 import { fulfilWith, stubShellBoot } from './helpers/pillar-rest';
 
 /**
@@ -104,28 +109,34 @@ test.describe('media — mounted by the runtime loader', () => {
   // links off a list or an old bookmark, so a 404 here is invisible from the
   // rail.
   test('a movie detail deep link mounts', async ({ page }) => {
+    await stubMovieDetail(page, 123);
     await page.goto('/media/movies/123');
 
     await expect(page).toHaveURL(/\/media\/movies\/123/);
     await expect(page.getByTestId('external-pillar-load-error')).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Some movie' })).toBeVisible();
     await expect(page.getByRole('heading', { name: /not found|404/i })).toHaveCount(0);
   });
 
   test('a season detail, three segments deep, mounts', async ({ page }) => {
+    await stubSeasonDetail(page, 456, 2);
     await page.goto('/media/tv/456/season/2');
 
     await expect(page).toHaveURL(/\/media\/tv\/456\/season\/2/);
     await expect(page.getByTestId('external-pillar-load-error')).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Season 2' })).toBeVisible();
     await expect(page.getByRole('heading', { name: /not found|404/i })).toHaveCount(0);
   });
 
   test('the rotation surface mounts, which the old page list omitted entirely', async ({
     page,
   }) => {
+    await stubRotationCandidates(page);
     await page.goto('/media/rotation/candidates');
 
     await expect(page).toHaveURL(/\/media\/rotation\/candidates/);
     await expect(page.getByTestId('external-pillar-load-error')).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Candidate Queue' })).toBeVisible();
   });
 
   test('a legacy settings redirect still lands on the settings page', async ({ page }) => {

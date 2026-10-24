@@ -10,8 +10,14 @@ import {
 
 import { sharedRuntimeInternals } from './vite-plugin-shared-runtime.js';
 
-const { chunkNameFor, facadeSource, devUrlFor, buildImports, duplicatedSharedPackages } =
-  sharedRuntimeInternals;
+const {
+  chunkNameFor,
+  devPrebundleSpecifiers,
+  facadeSource,
+  devUrlFor,
+  buildImports,
+  duplicatedSharedPackages,
+} = sharedRuntimeInternals;
 
 /** A bundle entry shaped like the chunk the plugin reads. */
 function chunk(name: string, modules: readonly string[] = []) {
@@ -82,6 +88,27 @@ describe('facadeSource', () => {
       }
     }
   );
+});
+
+describe('devPrebundleSpecifiers', () => {
+  it('pre-bundles every third-party entry point, subpaths included', () => {
+    expect(devPrebundleSpecifiers()).toEqual(
+      expect.arrayContaining([
+        'react',
+        'react/jsx-runtime',
+        'react/jsx-dev-runtime',
+        'react-dom/client',
+        'recharts',
+        'sonner',
+      ])
+    );
+  });
+
+  it('leaves workspace packages to be served as source', () => {
+    expect(devPrebundleSpecifiers().some((specifier) => specifier.startsWith('@pops/'))).toBe(
+      false
+    );
+  });
 });
 
 describe('devUrlFor', () => {

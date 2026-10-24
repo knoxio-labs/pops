@@ -9,6 +9,7 @@
  * resolved by slot.
  */
 import { expect, test } from './fixtures/pillar-rest-guard';
+import { stubCerebrumIngestOptions, stubEngramDetail } from './helpers/cerebrum-pages';
 import { stubShellBoot } from './helpers/pillar-rest';
 
 test.describe('cerebrum — mounted by the runtime loader', () => {
@@ -18,6 +19,7 @@ test.describe('cerebrum — mounted by the runtime loader', () => {
     errors = [];
     page.on('pageerror', (err) => errors.push(err.message));
     await stubShellBoot(page);
+    await stubCerebrumIngestOptions(page);
   });
 
   test.afterEach(() => {
@@ -34,16 +36,19 @@ test.describe('cerebrum — mounted by the runtime loader', () => {
       'page'
     );
     await expect(page.getByTestId('external-pillar-load-error')).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Capture' })).toBeVisible();
   });
 
   // A detail route, two segments deep and reachable only from a list — the
   // kind most easily dropped from the page list, and the kind whose absence
   // shows up as a 404 rather than as anything visibly broken.
   test('an engram detail deep link mounts', async ({ page }) => {
+    await stubEngramDetail(page, 'some-engram-id');
     await page.goto('/cerebrum/engrams/some-engram-id');
 
     await expect(page).toHaveURL(/\/cerebrum\/engrams\/some-engram-id/);
     await expect(page.getByTestId('external-pillar-load-error')).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Some engram' })).toBeVisible();
     await expect(page.getByRole('heading', { name: /not found|404/i })).toHaveCount(0);
   });
 
@@ -53,33 +58,23 @@ test.describe('cerebrum — mounted by the runtime loader', () => {
    * added. Before it, the modal opened on its empty state for any pillar that
    * had left the static bundle map.
    */
-  test.describe('open the overlay without stubbing its own dropdown data', () => {
-    test.use({
-      allowUnroutedPillarRest:
-        'the ingest form fetches its own templates/scopes/tags for dropdown ' +
-        'options on mount; the assertions below only check the dialog and a ' +
-        'textbox rendered, not that those dropdowns have options, so this is ' +
-        'the same "mounted, unstubbed API" shape as `ai-via-loader.spec.ts`',
-    });
+  test('the capture hotkey opens cerebrum’s overlay from the remote bundle', async ({ page }) => {
+    await page.goto('/cerebrum');
+    await expect(page.getByRole('button', { name: 'Cerebrum', exact: true })).toBeVisible();
 
-    test('the capture hotkey opens cerebrum’s overlay from the remote bundle', async ({ page }) => {
-      await page.goto('/cerebrum');
-      await expect(page.getByRole('button', { name: 'Cerebrum', exact: true })).toBeVisible();
+    // `ControlOrMeta`, which Playwright resolves per platform, because the
+    // manifest declares `mod+shift+k` and the matcher resolves `mod` the same
+    // way. This pressed `Meta` for a while: `mod` was an alias for the Apple
+    // key, so the chord was unreachable on the Linux runner and on every
+    // Linux and Windows reader (POPS-3319). Pressing Meta here asserted a
+    // shortcut half the clients could not use.
+    await page.keyboard.press('ControlOrMeta+Shift+KeyK');
 
-      // `ControlOrMeta`, which Playwright resolves per platform, because the
-      // manifest declares `mod+shift+k` and the matcher resolves `mod` the same
-      // way. This pressed `Meta` for a while: `mod` was an alias for the Apple
-      // key, so the chord was unreachable on the Linux runner and on every
-      // Linux and Windows reader (POPS-3319). Pressing Meta here asserted a
-      // shortcut half the clients could not use.
-      await page.keyboard.press('ControlOrMeta+Shift+KeyK');
-
-      const dialog = page.getByRole('dialog');
-      await expect(dialog).toBeVisible();
-      // The overlay's own content, not merely a dialog frame: the empty state is
-      // also a visible dialog, which is exactly what a missing slot produces.
-      await expect(dialog.getByTestId('external-pillar-load-error')).toHaveCount(0);
-      await expect(dialog.getByRole('textbox').first()).toBeVisible();
-    });
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    // The overlay's own content, not merely a dialog frame: the empty state is
+    // also a visible dialog, which is exactly what a missing slot produces.
+    await expect(dialog.getByTestId('external-pillar-load-error')).toHaveCount(0);
+    await expect(dialog.getByRole('textbox').first()).toBeVisible();
   });
 });
