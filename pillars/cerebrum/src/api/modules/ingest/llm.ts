@@ -18,7 +18,12 @@
  */
 import Anthropic from '@anthropic-ai/sdk';
 
-import { callWithLogging, messageText, samplingParams } from '@pops/ai-telemetry';
+import {
+  callWithLogging,
+  messageText,
+  samplingParams,
+  thinkingBudgetParams,
+} from '@pops/ai-telemetry';
 
 import {
   ANTHROPIC_PROVIDER,
@@ -27,9 +32,9 @@ import {
 } from '../ai-telemetry-deps.js';
 import { resolveAnthropicApiKey } from '../anthropic-key.js';
 
-export const DEFAULT_CLASSIFIER_MODEL = 'claude-haiku-4-5-20251001';
-export const DEFAULT_ENTITY_EXTRACTOR_MODEL = 'claude-haiku-4-5-20251001';
-export const DEFAULT_SCOPE_INFERENCE_MODEL = 'claude-haiku-4-5-20251001';
+export const DEFAULT_CLASSIFIER_MODEL = 'claude-haiku-5-5';
+export const DEFAULT_ENTITY_EXTRACTOR_MODEL = 'claude-haiku-5-5';
+export const DEFAULT_SCOPE_INFERENCE_MODEL = 'claude-haiku-5-5';
 
 export interface IngestLlmRequest {
   /** Logical operation label, used only for log context. */
@@ -125,7 +130,7 @@ export class AnthropicIngestLlm implements IngestLlm {
               () =>
                 client.messages.create({
                   model: req.model,
-                  max_tokens: req.maxTokens,
+                  ...thinkingBudgetParams(req.model, req.maxTokens),
                   ...samplingParams(req.model, 0),
                   messages: [{ role: 'user', content: req.prompt }],
                 }),

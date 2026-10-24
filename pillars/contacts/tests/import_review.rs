@@ -815,6 +815,7 @@ async fn reviewed_input(
         later_entity_ids: vec![],
         selections: vec![],
         preferred_point_ids: vec![],
+        incoming_fields: Vec::new(),
     }
 }
 

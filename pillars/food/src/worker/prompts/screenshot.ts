@@ -10,7 +10,7 @@
 export const PROMPT_VERSION_SCREENSHOT = 'screenshot-v1.0';
 
 /** Default model for the vision call; overridable via `FOOD_SCREENSHOT_VISION_MODEL`. */
-export const SCREENSHOT_DEFAULT_MODEL = 'claude-haiku-4-5-20251001';
+export const SCREENSHOT_DEFAULT_MODEL = 'claude-haiku-5-5';
 
 export const SCREENSHOT_PROMPT = `You are extracting a recipe from a single image. The image may be a screenshot of a recipe website, a photo of a cookbook page, a photo of a handwritten note, or a screenshot of a recipe shared in a chat app.
 

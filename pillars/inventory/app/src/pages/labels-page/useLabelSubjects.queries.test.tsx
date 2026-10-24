@@ -110,10 +110,10 @@ describe('useLabelSubjects', () => {
         query: { within: 'box', includeInactive: true, limit: 200, cursor: 'more' },
       })
     );
-    expect(result.current.contentsLoading).toBe(true);
+    expect(result.current.reads.descendants.get('box')?.pending).toBe(true);
     lastPage.resolve(page([deep]));
 
-    await waitFor(() => expect(result.current.contentsLoading).toBe(false));
+    await waitFor(() => expect(result.current.reads.descendants.get('box')?.pending).toBe(false));
     expect(result.current.fragility.get('box')?.fragile).toBe(true);
     expect(result.current.contents.get('box')?.map((item) => item.id)).toEqual(['child']);
     expect(mocks.treeFragility).toHaveBeenCalledWith(box, [child, deep], expect.any(Map));
@@ -132,7 +132,7 @@ describe('useLabelSubjects', () => {
     expect(mocks.webList).toHaveBeenCalledTimes(1);
     expect(mocks.treeFragility).toHaveBeenCalledWith(child, [], expect.any(Map));
   });
-  it('surfaces descendant, catalogue, and fragility errors', async () => {
+  it('keeps descendant and catalogue failures separate from selected item failures', async () => {
     mocks.catalogue.mockReturnValue({
       typeById: new Map(),
       isPending: false,
@@ -147,7 +147,12 @@ describe('useLabelSubjects', () => {
       wrapper: withQueryClient(createTestQueryClient()),
     });
 
-    await waitFor(() => expect(result.current.error?.message).toBe('descendants unavailable'));
+    await waitFor(() =>
+      expect(result.current.reads.descendants.get('box')?.error?.message).toBe(
+        'descendants unavailable'
+      )
+    );
+    expect(result.current.error).toBeNull();
     expect(result.current.contentsLoading).toBe(false);
   });
   it('reports a fragility evaluation error for a selected item', async () => {
@@ -156,7 +161,10 @@ describe('useLabelSubjects', () => {
       wrapper: withQueryClient(createTestQueryClient()),
     });
 
-    await waitFor(() => expect(result.current.error?.message).toBe('fragility unavailable'));
+    await waitFor(() =>
+      expect(result.current.fragility.get('fault')?.error?.message).toBe('fragility unavailable')
+    );
+    expect(result.current.error).toBeNull();
   });
 
   it('waits for the catalogue and reports its failure independently', async () => {
@@ -167,7 +175,7 @@ describe('useLabelSubjects', () => {
     });
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(result.current.contentsLoading).toBe(true);
+    expect(result.current.reads.catalogue.pending).toBe(true);
     mocks.catalogue.mockReturnValue({
       typeById: new Map(),
       isPending: false,
@@ -175,7 +183,8 @@ describe('useLabelSubjects', () => {
     });
     rerender();
     expect(result.current.contentsLoading).toBe(false);
-    expect(result.current.error?.message).toBe('catalogue unavailable');
+    expect(result.current.reads.catalogue.error?.message).toBe('catalogue unavailable');
+    expect(result.current.error).toBeNull();
   });
 
   it('does not expose the previous selection while its replacement is pending', async () => {

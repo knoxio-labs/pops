@@ -13,7 +13,7 @@
  */
 import Anthropic from '@anthropic-ai/sdk';
 
-import { callWithLogging } from '@pops/ai-telemetry';
+import { callWithLogging, thinkingBudgetParams } from '@pops/ai-telemetry';
 
 import { ANTHROPIC_PROVIDER, FOOD_DOMAIN, foodTelemetryDeps } from './ai-telemetry-deps.js';
 
@@ -25,7 +25,7 @@ import type {
 export const SCREENSHOT_OPERATION = 'recipe-extract-screenshot';
 
 /**
- * Hard-coded Haiku 4.5 pricing in USD per million tokens, from Anthropic's
+ * Hard-coded Haiku pricing in USD per million tokens, from Anthropic's
  * public pricing page. This is only a local estimate persisted on the recipe
  * meta; the authoritative cost lives in the ai pillar's `ai_model_pricing`
  * table, applied independently by `callWithLogging`.
@@ -35,7 +35,13 @@ const HAIKU_4_5_PRICING_USD_PER_MTOK = {
   output: 1.25,
 } as const;
 
+const HAIKU_5_5_PRICING_USD_PER_MTOK = {
+  input: 0.1,
+  output: 0.5,
+} as const;
+
 const KNOWN_PRICING: Record<string, { input: number; output: number }> = {
+  'claude-haiku-5-5': HAIKU_5_5_PRICING_USD_PER_MTOK,
   'claude-haiku-4-5-20251001': HAIKU_4_5_PRICING_USD_PER_MTOK,
   'claude-haiku-4-5': HAIKU_4_5_PRICING_USD_PER_MTOK,
 };
@@ -132,7 +138,7 @@ function callVision(client: AnthropicLike, input: VisionCallInput): Promise<Anth
       call: async () => {
         const message = await client.messages.create({
           model: input.model,
-          max_tokens: input.maxTokens ?? 2048,
+          ...thinkingBudgetParams(input.model, input.maxTokens ?? 2048),
           messages: [
             {
               role: 'user',

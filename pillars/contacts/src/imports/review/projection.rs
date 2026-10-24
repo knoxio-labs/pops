@@ -105,6 +105,7 @@ pub(super) fn plan(snapshot: &ReviewSnapshot, row: &PreparedRow) -> Plan {
 pub(super) fn page(
     snapshot: &ReviewSnapshot,
     query: &ReviewQuery,
+    ready: super::super::ready_model::ReadySummary,
 ) -> Result<ImportReview, ImportError> {
     if !(1..=50).contains(&query.limit)
         || !(1..=200).contains(&query.candidate_limit)
@@ -169,6 +170,7 @@ pub(super) fn page(
             query.limit
         },
         counts,
+        ready,
         rows,
     })
 }

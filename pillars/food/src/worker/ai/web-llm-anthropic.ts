@@ -23,6 +23,7 @@ export interface AnthropicLike {
     create: (params: {
       model: string;
       max_tokens: number;
+      output_config?: { effort: 'low' };
       messages: { role: 'user'; content: string }[];
     }) => Promise<AnthropicMessage>;
   };

@@ -5,6 +5,7 @@ import {
   importReview,
   importReceipt,
   importReviewReceipt,
+  importReadyReceipt,
   personProfile,
   sourceAccount,
 } from './contacts-fixtures';
@@ -164,6 +165,7 @@ export const contactsHandlers: MockHandlers = {
   'POST /search': ok({ hits: [] }),
   'GET /imports/{id}/review-proposals': ok(importReview),
   'POST /imports/{id}/review-decisions': ok(importReviewReceipt),
+  'POST /imports/{id}/apply-ready': ok(importReadyReceipt),
 };
 
 /**

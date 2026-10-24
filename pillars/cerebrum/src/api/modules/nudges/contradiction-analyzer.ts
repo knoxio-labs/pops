@@ -19,7 +19,12 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { z } from 'zod';
 
-import { callWithLogging, messageText, samplingParams } from '@pops/ai-telemetry';
+import {
+  callWithLogging,
+  messageText,
+  samplingParams,
+  thinkingBudgetParams,
+} from '@pops/ai-telemetry';
 
 import {
   ANTHROPIC_PROVIDER,
@@ -31,7 +36,7 @@ import { withRateLimitRetry } from '../ingest/llm.js';
 
 import type { ContradictionEvidence } from './types.js';
 
-export const DEFAULT_PATTERN_CONTRADICTION_MODEL = 'claude-haiku-4-5-20251001';
+export const DEFAULT_PATTERN_CONTRADICTION_MODEL = 'claude-haiku-5-5';
 
 const OPERATION = 'cerebrum.patterns.contradiction';
 const MAX_BODY_CHARS = 2000;
@@ -163,7 +168,7 @@ async function runContradictionLlm(
           () =>
             client.messages.create({
               model,
-              max_tokens: 500,
+              ...thinkingBudgetParams(model, 500),
               ...samplingParams(model, 0),
               system: SYSTEM_PROMPT,
               messages: [{ role: 'user', content: prompt.userMessage }],

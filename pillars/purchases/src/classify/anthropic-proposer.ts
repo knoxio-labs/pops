@@ -12,7 +12,7 @@
  */
 import Anthropic from '@anthropic-ai/sdk';
 
-import { callWithLogging } from '@pops/ai-telemetry';
+import { callWithLogging, thinkingBudgetParams } from '@pops/ai-telemetry';
 
 import {
   ANTHROPIC_PROVIDER,
@@ -32,7 +32,7 @@ import type { ItemKindProposer } from './propose-item-kind.js';
  * drop-zone uses. The override exists because the right answer will change
  * before this file does.
  */
-export const DEFAULT_ITEM_KIND_MODEL = 'claude-haiku-4-5';
+export const DEFAULT_ITEM_KIND_MODEL = 'claude-haiku-5-5';
 
 /**
  * A batch is a list of short product names in and a list of enum values
@@ -72,7 +72,7 @@ export function createAnthropicItemKindProposer(): ItemKindProposer | null {
           call: async () => {
             const message = await client.messages.create({
               model,
-              max_tokens: MAX_TOKENS,
+              ...thinkingBudgetParams(model, MAX_TOKENS),
               messages: [{ role: 'user', content: kindPrompt(candidates) }],
             });
 

@@ -1,4 +1,9 @@
-import { callWithLogging, messageText, samplingParams } from '@pops/ai-telemetry';
+import {
+  callWithLogging,
+  messageText,
+  samplingParams,
+  thinkingBudgetParams,
+} from '@pops/ai-telemetry';
 
 import { ANTHROPIC_PROVIDER, FOOD_DOMAIN, foodTelemetryDeps } from '../ai/ai-telemetry-deps.js';
 import {
@@ -11,7 +16,7 @@ import { extractedRecipeSchema, type ExtractedRecipe } from './extracted-recipe.
 
 import type { ZodError } from 'zod';
 
-const DEFAULT_MODEL = 'claude-haiku-4-5-20251001';
+const DEFAULT_MODEL = 'claude-haiku-5-5';
 const MAX_OUTPUT_TOKENS = 2048;
 
 export function getTextModel(): string {
@@ -97,7 +102,7 @@ async function callClaude(
         call: async () => {
           const created = await client.messages.create({
             model,
-            max_tokens: MAX_OUTPUT_TOKENS,
+            ...thinkingBudgetParams(model, MAX_OUTPUT_TOKENS),
             ...samplingParams(model, 0),
             messages: [{ role: 'user', content: prompt }],
           });

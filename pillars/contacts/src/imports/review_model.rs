@@ -21,6 +21,7 @@ pub struct ImportReview {
     pub offset: usize,
     pub limit: usize,
     pub counts: ReviewCounts,
+    pub ready: super::ready_model::ReadySummary,
     pub rows: Vec<ReviewRow>,
 }
 

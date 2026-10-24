@@ -62,6 +62,7 @@ pub fn build_router_with_providers(
         .merge(crate::imports::routes::router())
         .merge(crate::imports::review_decision_routes::router())
         .merge(crate::imports::review_routes::router())
+        .merge(crate::imports::ready_routes::router())
         .merge(crate::providers::routes::router())
         .merge(crate::persons::routes::router())
         .merge(crate::sources::routes::router())

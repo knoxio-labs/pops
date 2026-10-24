@@ -47,6 +47,33 @@ impl ReviewAuthorization {
 }
 
 impl ReviewSnapshot {
+    /// Original complete batch retained by this immutable classification snapshot.
+    pub(crate) fn batch(&self) -> &ImportBatch {
+        &self.batch
+    }
+
+    /// Add every unprocessed external observation before deriving batch-ready authorization.
+    /// External staged IDs remain review-only candidates; they never authorize an entity link.
+    pub(crate) fn include_pending_batch(
+        &mut self,
+        batch: &ImportBatch,
+        states: &std::collections::BTreeMap<String, super::review_state::ReviewRowState>,
+    ) -> Result<(), ImportError> {
+        for incoming in batch.rows.iter().filter(|row| !row.processed) {
+            let row = row::PreparedRow::new(
+                incoming.clone(),
+                states.get(&incoming.id).cloned(),
+                batch,
+                &self.directory,
+                false,
+            )?;
+            if let Some(candidate) = row.engine_candidate() {
+                self.candidates.push(candidate);
+            }
+        }
+        Ok(())
+    }
+
     /// Derives complete candidate authorization without expanding contact points or source evidence.
     pub fn authorize(&self, row_id: &str) -> Result<ReviewAuthorization, ImportError> {
         let row = self
@@ -96,7 +123,8 @@ pub async fn get(
 ) -> Result<ImportReview, ImportError> {
     let mut tx = pool.begin().await?;
     let snapshot = snapshot(&mut tx, batch_id).await?;
-    let page = projection::page(&snapshot, query)?;
+    let ready = super::ready::summary(&mut tx, batch_id).await?;
+    let page = projection::page(&snapshot, query, ready)?;
     tx.commit().await?;
     Ok(page)
 }

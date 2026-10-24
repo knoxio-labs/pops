@@ -12,7 +12,7 @@
 import { readFile } from 'node:fs/promises';
 import { extname } from 'node:path';
 
-import { callWithLogging } from '@pops/ai-telemetry';
+import { callWithLogging, thinkingBudgetParams } from '@pops/ai-telemetry';
 
 import { ANTHROPIC_PROVIDER, FOOD_DOMAIN, foodTelemetryDeps } from '../../ai/ai-telemetry-deps.js';
 import { PROMPT_VERSION_IG_VISION, renderIgVisionPrompt } from '../../prompts/ig-vision.js';
@@ -21,7 +21,7 @@ import { extractedRecipeSchema, type ExtractedRecipe } from './extracted-recipe.
 import type { AnthropicLike, AnthropicMessage } from './anthropic-client.js';
 
 export const MAX_KEYFRAMES_TO_VISION = 5;
-export const DEFAULT_IG_VISION_MODEL = 'claude-haiku-4-5-20251001';
+export const DEFAULT_IG_VISION_MODEL = 'claude-haiku-5-5';
 export const IG_VISION_OPERATION = 'recipe-extract-ig-vision';
 
 const MAX_TOKENS = 2_000;
@@ -74,7 +74,7 @@ export async function extractWithClaudeVision(
       call: async () => {
         const message = await opts.client.messages.create({
           model,
-          max_tokens: MAX_TOKENS,
+          ...thinkingBudgetParams(model, MAX_TOKENS),
           messages: [
             {
               role: 'user',
