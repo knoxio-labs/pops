@@ -13,31 +13,40 @@ import {
   TableRow,
 } from '@pops/ui';
 
-import { Candidates, Decision, Evidence, type ReviewModel } from './review-controls';
+import { Candidates } from './candidate-controls';
+import { Decision, Evidence } from './review-controls';
+
+import type { ReviewModel } from './review-model';
 
 /** Batch arrangement exposes identity evidence and choices in each row. */
 export function ReviewTable({ model }: { model: ReviewModel }) {
   return (
-    <Table className="table-fixed">
+    <Table className="min-w-5xl table-fixed">
       <TableHeader>
         <TableRow>
-          <TableHead className="w-1/6">Incoming person</TableHead>
-          <TableHead className="w-1/4">Evidence</TableHead>
-          <TableHead className="w-1/3">Existing candidates</TableHead>
-          <TableHead>Decision</TableHead>
+          <TableHead className="w-1/6 text-sm font-semibold text-foreground">
+            Incoming person
+          </TableHead>
+          <TableHead className="w-1/5 text-sm font-semibold text-foreground">Evidence</TableHead>
+          <TableHead className="w-2/5 text-sm font-semibold text-foreground">
+            Existing contacts
+          </TableHead>
+          <TableHead className="text-sm font-semibold text-foreground">Decision</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {contactImportRows.map((row) => (
           <TableRow key={row.id}>
-            <TableCell className="whitespace-normal font-medium">{row.name}</TableCell>
-            <TableCell className="whitespace-normal">
+            <TableCell className="whitespace-normal align-top py-5 text-base font-semibold">
+              {row.name}
+            </TableCell>
+            <TableCell className="whitespace-normal align-top py-5">
               <Evidence row={row} />
             </TableCell>
-            <TableCell className="whitespace-normal">
+            <TableCell className="whitespace-normal align-top py-5">
               <Candidates row={row} model={model} />
             </TableCell>
-            <TableCell className="whitespace-normal">
+            <TableCell className="whitespace-normal align-top py-5">
               <Decision row={row} model={model} />
             </TableCell>
           </TableRow>
@@ -49,7 +58,10 @@ export function ReviewTable({ model }: { model: ReviewModel }) {
 
 function ReviewQueue({ model }: { model: ReviewModel }) {
   return (
-    <nav aria-label="Incoming contact queue" className="space-y-2">
+    <nav
+      aria-label="Incoming contact queue"
+      className="grid grid-cols-2 gap-2 lg:block lg:space-y-2"
+    >
       {contactImportRows.map((row) => (
         <Button
           key={row.id}
@@ -57,9 +69,9 @@ function ReviewQueue({ model }: { model: ReviewModel }) {
           className="h-auto min-h-11 w-full justify-between py-3 text-left"
           onClick={() => model.select(row.id)}
         >
-          <span>
+          <span className="text-base font-semibold">
             {row.name}
-            <span className="block text-xs text-muted-foreground">
+            <span className="mt-1 block text-sm font-normal text-foreground/85">
               {model.choices[row.id] ?? row.outcome}
             </span>
           </span>
@@ -77,23 +89,20 @@ function Comparison({ model }: { model: ReviewModel }) {
     <Card className="lg:col-span-2">
       <CardContent className="space-y-6 pt-6">
         <div>
-          <p className="text-xs text-muted-foreground">Incoming · {row.source}</p>
-          <h2 className="text-xl font-semibold">{row.name}</h2>
+          <p className="text-sm text-foreground/85">Incoming · {row.source}</p>
+          <h2 className="text-2xl font-semibold">{row.name}</h2>
         </div>
         <Evidence row={row} />
         <div className="space-y-3">
-          <h3 className="font-medium">Compare existing people</h3>
+          <h3 className="text-lg font-semibold">Choose who belongs in this merge</h3>
+          <p className="text-base leading-7 text-foreground/90">
+            Select matching contacts. Mark other people separately, or leave them for later.
+          </p>
           <Candidates row={row} model={model} />
         </div>
-        {model.candidate && (
-          <p className="rounded-md bg-muted p-4 text-sm">
-            Selected: {model.candidate}. Existing values are retained; incoming contact details are
-            added. Conflicting field values stay unchanged for a later edit.
-          </p>
-        )}
         <Decision row={row} model={model} />
-        <p className="text-sm text-muted-foreground">
-          Choose a candidate to enable Merge, keep these people separate, or review later.
+        <p className="text-sm leading-6 text-foreground/85">
+          Existing details are preserved. Nothing is deleted when you exclude a candidate.
         </p>
       </CardContent>
     </Card>
