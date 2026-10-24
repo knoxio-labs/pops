@@ -19,7 +19,7 @@
     "@ts-rest/core": "3.53.0-rc.1",
     "@ts-rest/express": "3.53.0-rc.1",
     "express": "^5.1.0",
-    "zod": "^4.6.2"
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "@pops/contract-openapi": "workspace:*",

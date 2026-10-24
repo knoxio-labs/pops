@@ -43,7 +43,7 @@
     "drizzle-orm": "^0.45.2",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.3",
-    "zod": "^4.6.2"
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "@pops/contract-openapi": "workspace:*",
