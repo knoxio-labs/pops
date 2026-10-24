@@ -439,3 +439,21 @@ fn ingested_observations_exclude_own_group_but_preserve_its_historical_rejection
         expected_review(ReviewReason::KeepSeparate, &["other"])
     );
 }
+
+#[test]
+fn display_only_names_can_review_a_different_display_with_matching_structured_name() {
+    let incoming = record("incoming", "", "", "", "");
+    let incoming = IdentityRecord {
+        name: NameEvidence {
+            display_name: Some("Jane Doe".into()),
+            complete_name: None,
+        },
+        ..incoming
+    };
+    let mut existing = record("existing", "Jane", "Doe", "", "");
+    existing.name.display_name = Some("Different preferred label".into());
+    assert_eq!(
+        classify(&incoming, &[candidate("target", existing)], &[]),
+        expected_review(ReviewReason::IncompleteName, &["target"])
+    );
+}

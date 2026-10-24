@@ -96,6 +96,24 @@ row; it does not declare two people different. A target link is always explicit:
 similar display names, first names, email addresses or phone numbers do not choose
 an owner. Recognized source updates are distinct from choosing a person to link.
 
+`GET /imports/{id}/review-proposals` classifies the complete batch against every
+eligible canonical person before returning bounded evidence. Incoming rows use
+`offset`/`limit` (default 50, maximum 50); candidates use `candidateOffset` and
+`candidateLimit` (default 50, maximum 200). `candidateRowId` requests one row's
+candidate page. Subsequent pages carry the top-level `proposalRevision`; changed
+directory, source or row-decision state returns `409`. Each row has its own
+proposal proof for an atomic review decision. Counts cover the full batch and
+candidate totals include omitted pages. Mutation authorization uses the complete
+candidate set, including candidates selected on earlier pages.
+
+Candidate IDs are current canonical people or persisted import row IDs. A
+collision between two new rows requires importing one row first, then refreshing
+to review the resulting person; an import row ID never pretends to be a person.
+Matching uses validated exact email/phone keys or proven complete structured
+names. Shared identifiers, conflicting signals, homonyms, incomplete names and
+stored keep-separate decisions require review. Original member/source ownership
+and explicit preferred values remain visible after canonical grouping.
+
 `POST /imports/{id}/review-decisions` applies one reviewed row with its exact
 `batchRevision`, `directoryRevision`, opaque `proposalRevision` and retry key.
 Explicit `mergeEntityIds` are the only identities combined with the incoming

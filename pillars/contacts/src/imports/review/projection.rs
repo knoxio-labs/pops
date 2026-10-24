@@ -47,8 +47,16 @@ pub(super) fn plan(snapshot: &ReviewSnapshot, row: &PreparedRow) -> Plan {
         };
         match outcome {
             IdentityOutcome::New => Plan {
-                classification: ReviewClassification::New,
-                reason: ProposalReason::NewPerson,
+                classification: if row.after_ingestion {
+                    ReviewClassification::Automatic
+                } else {
+                    ReviewClassification::New
+                },
+                reason: if row.after_ingestion {
+                    ProposalReason::SourceIdentity
+                } else {
+                    ProposalReason::NewPerson
+                },
                 candidate_ids: Vec::new(),
             },
             IdentityOutcome::RecognizedSource { entity_id } => Plan {
@@ -100,7 +108,8 @@ pub(super) fn page(
 ) -> Result<ImportReview, ImportError> {
     if !(1..=50).contains(&query.limit)
         || !(1..=200).contains(&query.candidate_limit)
-        || (query.candidate_row_id.is_some() && query.proposal_revision.is_none())
+        || ((query.candidate_row_id.is_some() || query.offset > 0 || query.candidate_offset > 0)
+            && query.proposal_revision.is_none())
     {
         return Err(ImportError::Invalid("Review pages require 1–50 rows, 1–200 candidates and a snapshot proof for candidate pages"));
     }
