@@ -107,14 +107,14 @@ describe('POST /codes/suggest', () => {
     expect(await suggest({ name: 'Anything', stem: 'Q' })).toEqual(['Q001', 'Q002', 'Q003']);
   });
 
-  it("numbers after the highest code the type's pattern matches", async () => {
+  it("continues the type's largest code family ahead of the saved pattern", async () => {
     await itemWithCode('CRATE12', 'storage_box');
     await itemWithCode('CRATE15', 'storage_box');
     await itemWithCode('S3', 'storage_box');
     expect(await suggest({ name: 'Moving box', typeKey: 'storage_box' })).toEqual([
-      'S04',
-      'S05',
-      'S06',
+      'CRATE16',
+      'CRATE17',
+      'CRATE18',
     ]);
   });
 
