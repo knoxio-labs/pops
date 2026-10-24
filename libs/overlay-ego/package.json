@@ -13,7 +13,7 @@
     "test": "node ../../scripts/require-built-graph.mjs && vitest run",
     "test:coverage": "node ../../scripts/require-built-graph.mjs && vitest run --coverage",
     "test:watch": "vitest",
-    "generate:ego-client": "openapi-ts && oxfmt --write src/ego-api"
+    "generate:ego-client": "openapi-ts -o src/ego-api"
   },
   "dependencies": {
     "@pops/navigation": "workspace:*",

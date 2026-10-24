@@ -1,0 +1,9 @@
+name: Trip overview — route, decisions or places
+question: When the trip is mostly open, should its overview lead with the route, the next decisions, or the places being considered?
+status: active
+screen: trips/overview
+frame: web
+variants:
+  route-first: A chronological route with flexible visits, gaps and possibilities alongside
+  decision-first: Open decisions and competing options with a compact route alongside
+  places-first: City workspaces grouping the people, events and arrangements being considered
