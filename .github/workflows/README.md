@@ -288,6 +288,9 @@ it, so the workflow conclusion, `CI Gate` and `Promotion validation` see a
 passing unit as before. Receipts are artifacts rather than cache entries
 because the Actions cache sits at its 10 GB limit, where iOS build products
 evict anything small within hours.
+Receipts carry across runs, not across a full re-run of one run: GitHub deletes
+the earlier attempt's artifacts when that re-run starts. Re-running only the
+failed jobs leaves the passing ones alone.
 
 A receipt counts only when the producing run belongs to this repository, ran
 this lane's workflow (or `promotion-quality.yml`), and was either a push or
