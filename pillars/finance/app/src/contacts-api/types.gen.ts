@@ -30,6 +30,34 @@ export type AddressMutation = {
 };
 
 /**
+ * A selected subset of a preview with optimistic concurrency and retry identity.
+ */
+export type CommitBatchInput = {
+  decisions: Array<RowDecision>;
+  idempotencyKey: string;
+  revision: number;
+};
+
+/**
+ * Persisted receipt returned byte-equivalently on a retry with the same key and body.
+ */
+export type CommitReceipt = {
+  batchId: string;
+  revision: number;
+  rows: Array<CommittedRow>;
+};
+
+/**
+ * The stable result of one selected row, also retained in the retry receipt.
+ */
+export type CommittedRow = {
+  entityId?: string | null;
+  rowId: string;
+  skipped: boolean;
+  sourceRecordId?: string | null;
+};
+
+/**
  * A local or imported point. `sourceRecordId: null` identifies an explicit local value.
  * Preferred observations survive source refresh/deactivation, including their original value.
  */
@@ -180,6 +208,8 @@ export type ErrorCode =
   | 'contacts.request.invalid'
   | 'contacts.resource.not_found'
   | 'contacts.entity.name_conflict'
+  | 'contacts.import.conflict'
+  | 'contacts.import.storage'
   | 'contacts.auth.unauthorized'
   | 'contacts.auth.forbidden'
   | 'contacts.auth.unavailable'
@@ -197,6 +227,45 @@ export type HealthResponse = {
   status: string;
   ts: string;
   version: string;
+};
+
+/**
+ * A durable preview; its revision changes only after a successful selected-row commit.
+ */
+export type ImportBatch = {
+  accountId: string;
+  collectionKey: string;
+  createdAt: string;
+  id: string;
+  revision: number;
+  rows: Array<ImportRow>;
+  sourceEpoch?: number | null;
+};
+
+/**
+ * Source observations to propose; staging never changes the canonical directory.
+ */
+export type ImportPayload = {
+  displayName?: string | null;
+  name: PersonName;
+  points: Array<ContactPointInput>;
+};
+
+/**
+ * Persisted preview with the source revision that must still match at commit time.
+ */
+export type ImportRow = {
+  entityId?: string | null;
+  errors: Array<RowIssue>;
+  id: string;
+  ordinal: number;
+  payload?: ImportPayload | unknown;
+  processed: boolean;
+  proposal: RowProposal;
+  recordKey: string;
+  removed: boolean;
+  sourceRecordId?: string | null;
+  sourceRevision?: number | null;
 };
 
 /**
@@ -274,6 +343,49 @@ export type PersonProfile = {
 export type PersonProfileResponse = {
   data?: PersonProfile | unknown;
 };
+
+/**
+ * An explicit decision for one pending row; linking never follows display-name similarity.
+ */
+export type RowAction =
+  | {
+      action: 'create_person';
+    }
+  | {
+      action: 'link_person';
+      entityId: string;
+    }
+  | {
+      action: 'update_source';
+    }
+  | {
+      action: 'deactivate_source';
+    }
+  | {
+      action: 'skip';
+    };
+
+/**
+ * One row decision inside an atomic commit request.
+ */
+export type RowDecision = {
+  decision: RowAction;
+  rowId: string;
+};
+
+/**
+ * Sanitized validation failures retained alongside a preview row.
+ */
+export type RowIssue =
+  | 'malformed_record'
+  | 'duplicate_source_key'
+  | 'invalid_record'
+  | 'invalid_removal';
+
+/**
+ * The only automatic proposals concern recognized source identity, never similar names.
+ */
+export type RowProposal = 'new_source' | 'update_source' | 'deactivate_source' | 'invalid';
 
 /**
  * One ranked search hit. `uri` is the canonical `pops:contacts/contact/<id>`.
@@ -397,6 +509,16 @@ export type UpdateEntityBody = {
   notes?: string | null;
   type?: string | null;
 };
+
+/**
+ * Explicit text decoding for file uploads.
+ */
+export type UploadEncoding = 'utf8' | 'utf16_le' | 'utf16_be' | 'windows1252';
+
+/**
+ * Supported export formats; the caller chooses explicitly rather than guessing from content.
+ */
+export type UploadFormat = 'google_csv' | 'vcard';
 
 export type RootGetData = {
   body?: never;
@@ -1047,6 +1169,113 @@ export type HealthGetResponses = {
 };
 
 export type HealthGetResponse = HealthGetResponses[keyof HealthGetResponses];
+
+export type ImportsFilesStageData = {
+  /**
+   * Raw export bytes; generated browser clients send a Blob or File without JSON encoding.
+   */
+  body: Blob | File;
+  path?: never;
+  query: {
+    accountId: string;
+    collectionKey: string;
+    format: UploadFormat;
+    encoding?: UploadEncoding;
+    phoneCountryCode?: string;
+  };
+  url: '/imports/files';
+};
+
+export type ImportsFilesStageErrors = {
+  /**
+   * Invalid upload
+   */
+  400: ErrorBody;
+  /**
+   * Unknown source account
+   */
+  404: ErrorBody;
+};
+
+export type ImportsFilesStageError = ImportsFilesStageErrors[keyof ImportsFilesStageErrors];
+
+export type ImportsFilesStageResponses = {
+  /**
+   * Persisted preview
+   */
+  201: ImportBatch;
+};
+
+export type ImportsFilesStageResponse =
+  ImportsFilesStageResponses[keyof ImportsFilesStageResponses];
+
+export type ImportsGetData = {
+  body?: never;
+  path: {
+    /**
+     * Import batch id
+     */
+    id: string;
+  };
+  query?: never;
+  url: '/imports/{id}';
+};
+
+export type ImportsGetErrors = {
+  /**
+   * Unknown import
+   */
+  404: ErrorBody;
+};
+
+export type ImportsGetError = ImportsGetErrors[keyof ImportsGetErrors];
+
+export type ImportsGetResponses = {
+  /**
+   * Import preview
+   */
+  200: ImportBatch;
+};
+
+export type ImportsGetResponse = ImportsGetResponses[keyof ImportsGetResponses];
+
+export type ImportsCommitData = {
+  body: CommitBatchInput;
+  path: {
+    /**
+     * Import batch id
+     */
+    id: string;
+  };
+  query?: never;
+  url: '/imports/{id}/commit';
+};
+
+export type ImportsCommitErrors = {
+  /**
+   * Invalid row decisions
+   */
+  400: ErrorBody;
+  /**
+   * Unknown import or person
+   */
+  404: ErrorBody;
+  /**
+   * Stale preview or conflicting retry
+   */
+  409: ErrorBody;
+};
+
+export type ImportsCommitError = ImportsCommitErrors[keyof ImportsCommitErrors];
+
+export type ImportsCommitResponses = {
+  /**
+   * Stable commit receipt
+   */
+  200: CommitReceipt;
+};
+
+export type ImportsCommitResponse = ImportsCommitResponses[keyof ImportsCommitResponses];
 
 export type OpenapiGetData = {
   body?: never;

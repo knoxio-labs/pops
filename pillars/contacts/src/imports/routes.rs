@@ -43,12 +43,13 @@ pub enum UploadEncoding {
 /// Account, collection and decoding metadata for a raw file upload.
 #[derive(Debug, Deserialize, IntoParams)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-#[into_params(rename_all = "camelCase")]
+#[into_params(parameter_in = Query, rename_all = "camelCase")]
 pub struct FileStageQuery {
     pub account_id: String,
     pub collection_key: String,
     pub format: UploadFormat,
     #[serde(default)]
+    #[param(required = false)]
     pub encoding: UploadEncoding,
     pub phone_country_code: Option<String>,
 }
