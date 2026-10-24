@@ -22,11 +22,11 @@ export function ReviewQueue({ snapshot, selectedId, disabled, onSelect, onPage }
           key={entry.id}
           disabled={disabled}
           variant={entry.id === selectedId ? 'secondary' : 'ghost'}
-          className="h-auto min-h-11 w-full justify-start whitespace-normal py-3 text-left"
+          className="h-auto min-h-11 min-w-0 w-full justify-start whitespace-normal py-3 text-left"
           aria-current={entry.id === selectedId ? 'true' : undefined}
           onClick={() => onSelect(entry.id)}
         >
-          <span className="text-base font-semibold">
+          <span className="min-w-0 break-words text-base font-semibold">
             {entry.name || t('unnamedContact')}
             <span className="mt-1 block text-sm font-normal text-foreground/85">
               {t(entry.status, { defaultValue: entry.status })}
