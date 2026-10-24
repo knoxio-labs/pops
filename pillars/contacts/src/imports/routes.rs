@@ -73,11 +73,7 @@ pub async fn stage_file(
     let Query(query) =
         query.map_err(|_| ApiError::bad_request("Invalid import upload metadata"))?;
     if query.phone_country_code.as_ref().is_some_and(|country| {
-        country.len() != 2
-            || country
-                .to_ascii_uppercase()
-                .parse::<phonenumber::country::Id>()
-                .is_err()
+        crate::identity::normalize::phone_country(country).is_none()
     }) {
         return Err(ApiError::bad_request(
             "Phone country context requires a known ISO country code",
