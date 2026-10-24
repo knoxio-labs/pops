@@ -216,6 +216,59 @@ describe('.gitattributes merge=mergiraf', { timeout: GIT_SCENARIO_TIMEOUT_MS }, 
   });
 });
 
+describe('the root prepare script', { timeout: GIT_SCENARIO_TIMEOUT_MS }, () => {
+  const manifest: unknown = JSON.parse(readFileSync(join(REPO_ROOT, 'package.json'), 'utf8'));
+  const prepare =
+    typeof manifest === 'object' &&
+    manifest !== null &&
+    'scripts' in manifest &&
+    typeof manifest.scripts === 'object' &&
+    manifest.scripts !== null &&
+    'prepare' in manifest.scripts &&
+    typeof manifest.scripts.prepare === 'string'
+      ? manifest.scripts.prepare
+      : '';
+
+  /** A PATH whose `husky` succeeds without touching any repository. */
+  function pathWithStubHusky(): string {
+    const bin = makeDir('pops-merge-husky-');
+    writeFileSync(join(bin, 'husky'), '#!/bin/sh\nexit 0\n', { mode: 0o755 });
+    return `${bin}:${dirname(process.execPath)}:${process.env.PATH ?? ''}`;
+  }
+
+  it('is declared', () => {
+    expect(prepare).toContain('install-merge-drivers.mjs');
+  });
+
+  it('succeeds in an image build context, which has no scripts directory', () => {
+    const context = makeDir('pops-merge-context-');
+
+    const result = spawnSync('sh', ['-c', prepare], {
+      cwd: context,
+      env: hermeticEnv(pathWithStubHusky()),
+      encoding: 'utf8',
+    });
+
+    expect(result.status, result.stderr).toBe(0);
+  });
+
+  it('installs the driver config in a clone', () => {
+    const env = hermeticEnv(pathWithStubHusky());
+    const { repo, git } = divergingBranches(env);
+    copyFileSync(
+      join(REPO_ROOT, 'scripts/git/install-merge-drivers.mjs'),
+      join(repo, 'scripts/git/install-merge-drivers.mjs')
+    );
+
+    const result = spawnSync('sh', ['-c', prepare], { cwd: repo, env, encoding: 'utf8' });
+
+    expect(result.status, result.stderr).toBe(0);
+    expect(String(git(['config', '--local', '--get', 'merge.mergiraf.driver']).stdout).trim()).toBe(
+      MERGE_DRIVER_CONFIG['merge.mergiraf.driver']
+    );
+  });
+});
+
 describe('installMergeDrivers', { timeout: GIT_SCENARIO_TIMEOUT_MS }, () => {
   it('writes every key once and nothing on a second run', () => {
     const env = hermeticEnv(process.env.PATH ?? '');
