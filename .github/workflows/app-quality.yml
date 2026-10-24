@@ -25,16 +25,11 @@ run-name: ${{ github.workflow }} for ${{ github.event_name }} into ${{ github.ba
 # single-app `ai-quality.yml` (now retired — app-ai is just another row in
 # this matrix) to every app unit.
 #
-# Codegen drift: every app's generated Hey API client(s) (`generate:*`
-# scripts — an app's own client, plus a cross-pillar consumer client where it
-# has one, e.g. app-finance also owns `generate:contacts-client`) are
-# checked-in output, not built at image time — `unit-quality.yml`'s own
-# codegen-drift gate never sees them (maxdepth-1 exclusion above). This lane
-# regenerates and diffs every one via `scripts/ci/check-generated-clients.mjs
-# --pkg <app>`, which runs for every row in the matrix (each app's
-# pre-existing drift was regenerated and committed ahead of widening this).
-# `quality.yml`'s `generated-clients` job covers the Hey API clients that
-# live OUTSIDE this matrix (the shell, overlay-ego, …) with the same script.
+# Generated clients: every app's Hey API client(s) (an app's own, plus a
+# cross-pillar consumer client where it has one) are generated from the
+# committed OpenAPI snapshots by scripts/codegen/generate.mjs, which the
+# install's postinstall already ran. The `Generated clients` step re-runs it
+# scoped to the row's package, which fails if the package owns no generator.
 #
 # Selectors use the manifest `name` (`@pops/app-<id>`) discovered from disk,
 # never a hardcoded list, so a newly added pillar app is covered with no edit.
@@ -118,7 +113,6 @@ jobs:
         run: |
           set -euo pipefail
           node scripts/ci/select-affected-apps.mjs --self-test
-          node scripts/ci/check-generated-clients.mjs --self-test
 
           force_all=0
           if [ "${{ github.event_name }}" = "merge_group" ] || [ "${{ inputs['full-validation'] }}" = "true" ]; then
@@ -192,17 +186,11 @@ jobs:
         # and bundle build all import are materialised before any of them run.
         run: pnpm --filter "${{ matrix.app.pkg }}^..." build
 
-      - name: Codegen drift
-        # Runs for every app unit in the matrix — every app's pre-existing
-        # drift was regenerated and committed ahead of widening this from
-        # app-finance only. `--pkg` scopes discovery to exactly this matrix
-        # row's package and fails if it matches zero generate:* scripts, on
-        # purpose: every app unit today owns at least one Hey API client, so
-        # "found none" means the app's script got renamed or the matrix
-        # passed a stale package name, not that there is nothing to check. A
-        # future app unit that genuinely has no Hey API client would need
-        # this step scoped away from it explicitly, not silently skipped.
-        run: node scripts/ci/check-generated-clients.mjs --pkg "${{ matrix.app.pkg }}"
+      - name: Generated clients
+        # A no-op when postinstall left them current. Every app unit owns at
+        # least one Hey API client, so a package with no generator means a
+        # renamed script or a stale matrix entry, and fails.
+        run: node scripts/codegen/generate.mjs --pkg "${{ matrix.app.pkg }}"
 
       - name: Typecheck
         run: pnpm --filter "${{ matrix.app.pkg }}" typecheck

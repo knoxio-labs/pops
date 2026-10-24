@@ -10,9 +10,8 @@
  * Regenerate after an OpenAPI spec change:
  *   pnpm --filter @pops/inventory generate:api-types
  *
- * The `api-types-drift` job in `.github/workflows/quality.yml` re-runs this
- * for every pillar and fails the build on any diff — see
- * scripts/ci/check-api-types-drift.mjs.
+ * The output is not committed: scripts/codegen/generate.mjs runs this on
+ * install and build, and the pillar's own `build` runs it before `tsc`.
  */
 import { execFileSync } from 'node:child_process';
 import { writeFileSync } from 'node:fs';

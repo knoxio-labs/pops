@@ -29,6 +29,12 @@ COPY pillars/ ./pillars/
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
     corepack enable && pnpm install --frozen-lockfile --filter "@pops/shell..."
 
+# The API clients the build compiles are generated from the committed OpenAPI
+# snapshots, not committed themselves. Copied after the install, which then
+# cannot run the root postinstall that generates them everywhere else.
+COPY scripts/codegen/ ./scripts/codegen/
+RUN node scripts/codegen/generate.mjs
+
 # Build the shell's workspace dependencies (pillars + shared packages) in
 # pnpm topological order, then the shell itself (tsc typecheck + vite build).
 RUN pnpm --filter "@pops/shell^..." build

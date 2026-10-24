@@ -14,7 +14,7 @@
     "test": "node ../../../scripts/require-built-graph.mjs && vitest run",
     "test:coverage": "node ../../../scripts/require-built-graph.mjs && vitest run --coverage",
     "test:watch": "vitest",
-    "generate:api": "openapi-ts && oxfmt --write src/bfm-api"
+    "generate:api": "openapi-ts -o src/bfm-api"
   },
   "dependencies": {
     "@hey-api/client-fetch": "^0.13.1",
