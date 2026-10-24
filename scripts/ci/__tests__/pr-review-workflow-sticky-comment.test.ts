@@ -27,11 +27,14 @@
  */
 
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
+
+import { encodeState, STATE_VERSION } from '../pr-review-state.mjs';
 
 const REAL_SUBPROCESS_TIMEOUT_MS = 60_000;
 
@@ -143,3 +146,74 @@ describe.each(['pr-review.yml', 'pr-review-dependabot.yml'])(
     });
   }
 );
+
+/**
+ * The last reviewed sha decides how much of the PR the reviewer reads, so it is
+ * only as trustworthy as the comment it came from. A forged state block naming
+ * the current head would otherwise turn every later push into an incremental
+ * review of nothing, so that sha must only count when the workflow's own login
+ * wrote it. This runs the shipped selection filter into the real `plan`.
+ */
+describe('pr-review.yml last-reviewed sha trust', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
+  function planModeFor(author: string): string {
+    const work = mkdtempSync(join(tmpdir(), 'pr-review-trust-'));
+    try {
+      const repo = join(work, 'repo');
+      const git = (...args: string[]) =>
+        execFileSync('git', ['-C', repo, ...args], { encoding: 'utf8' }).trim();
+      execFileSync('git', ['init', '-q', '-b', 'main', repo]);
+      const commit = (contents: string) => {
+        writeFileSync(join(repo, 'a.ts'), contents);
+        git('add', '-A');
+        git('-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '-m', contents);
+        return git('rev-parse', 'HEAD');
+      };
+      const base = commit('base\n');
+      const reviewed = commit('reviewed\n');
+      const head = commit('pushed\n');
+
+      const state = encodeState({
+        version: STATE_VERSION,
+        last_reviewed_sha: reviewed,
+        findings: [],
+      });
+      const comment: Comment = {
+        id: 9,
+        body: `## Review\n\n<!-- pr-review-state: ${state} -->`,
+        user: { login: author },
+      };
+      const selected = selectStickyComment('pr-review.yml', [comment]);
+      const outDir = join(work, 'review');
+      const args = [
+        resolve(here, '..', 'pr-review.mjs'),
+        'plan',
+        '--repo-root',
+        repo,
+        '--base',
+        base,
+        '--head',
+        head,
+        '--out-dir',
+        outDir,
+        '--findings-path',
+        join(outDir, 'findings.json'),
+      ];
+      if (selected !== undefined) {
+        writeFileSync(join(work, 'prior.md'), selected.body);
+        args.push('--comment-file', join(work, 'prior.md'));
+      }
+      execFileSync(process.execPath, args, { encoding: 'utf8' });
+      return readFileSync(join(outDir, 'mode'), 'utf8');
+    } finally {
+      rmSync(work, { recursive: true, force: true });
+    }
+  }
+
+  it('reviews incrementally from a sha the workflow itself recorded', () => {
+    expect(planModeFor('github-actions[bot]')).toBe('incremental');
+  });
+
+  it('ignores the same sha in a state block anyone else posted', () => {
+    expect(planModeFor('joao')).toBe('full');
+  });
+});

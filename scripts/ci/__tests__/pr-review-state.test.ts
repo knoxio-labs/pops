@@ -11,9 +11,11 @@
  * @see docs/architecture/adr-045-guards-must-prove-they-report.md
  */
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
+  addedLinesByFile,
+  admitToScope,
   applyRejudgement,
   computeDiffRange,
   disambiguateIds,
@@ -22,8 +24,10 @@ import {
   findingFromModel,
   findingId,
   isBlockingSeverity,
+  isFullSha,
   merge,
   normalize,
+  parseScope,
   parseState,
   rejudgeable,
   remedyFromModel,
@@ -33,6 +37,8 @@ import {
   STATE_VERSION,
   verifyStatus,
 } from '../pr-review-state.mjs';
+
+import type { DiffGit } from '../pr-review-state.mjs';
 
 type Finding = ReturnType<typeof findingFromModel>;
 
@@ -211,35 +217,233 @@ describe('parseState', () => {
 });
 
 describe('computeDiffRange', () => {
+  const BASE = 'base0000';
+  const LAST = 'a'.repeat(40);
+  const HEAD = 'b'.repeat(40);
+  const OLD_MERGE_BASE = 'c'.repeat(40);
+  const NEW_MERGE_BASE = 'e'.repeat(40);
+  const REPLAYED_TREE = 'd'.repeat(40);
+
+  /** A branch that has only had its own commits pushed since `LAST`. */
+  function linearHistory(over: Partial<DiffGit> = {}): DiffGit {
+    return {
+      isAncestor: () => true,
+      mergeBase: () => OLD_MERGE_BASE,
+      mergeTree: () => {
+        throw new Error('no base merge to replay on a linear history');
+      },
+      ...over,
+    };
+  }
+
+  /** Main merged into the branch after `LAST`: the merge base moved past it. */
+  function mergedFromBase(mergeTree: DiffGit['mergeTree']): DiffGit {
+    return {
+      isAncestor: (ancestor) => ancestor !== NEW_MERGE_BASE,
+      mergeBase: () => NEW_MERGE_BASE,
+      mergeTree,
+    };
+  }
+
+  function plan(over: Partial<Parameters<typeof computeDiffRange>[0]> = {}) {
+    return computeDiffRange({
+      baseSha: BASE,
+      headSha: HEAD,
+      lastReviewedSha: LAST,
+      git: linearHistory(),
+      ...over,
+    });
+  }
+
   it('reviews the full PR when nothing has been reviewed yet', () => {
-    expect(computeDiffRange('base', 'head', null, () => true)).toEqual({
-      range: 'base...head',
+    expect(plan({ lastReviewedSha: null })).toMatchObject({
       mode: 'full',
+      revisions: [`${BASE}...${HEAD}`],
     });
   });
 
-  it('reviews only the new commits when the last sha is still reachable', () => {
-    expect(computeDiffRange('base', 'head', 'last', () => true)).toEqual({
-      range: 'last..head',
-      mode: 'incremental',
-    });
+  it('reviews only the new commits on a normal push', () => {
+    expect(plan()).toMatchObject({ mode: 'incremental', revisions: [LAST, HEAD] });
   });
 
   it('reports empty when head has not moved', () => {
-    expect(computeDiffRange('base', 'head', 'head', () => true).mode).toBe('empty');
+    expect(plan({ headSha: LAST })).toMatchObject({ mode: 'empty', revisions: [] });
   });
 
-  it('falls back to a full review when the last sha was rewritten away', () => {
-    // A force-push leaves the recorded sha dangling; `dangling..head` is then
-    // either meaningless or the whole history.
-    expect(computeDiffRange('base', 'head', 'dangling', () => false)).toEqual({
-      range: 'base...head',
+  it('falls back to a full review when a force-push rewrote the reviewed commit', () => {
+    expect(plan({ git: linearHistory({ isAncestor: () => false }) })).toMatchObject({
       mode: 'full',
+      revisions: [`${BASE}...${HEAD}`],
     });
   });
 
-  it('treats an empty-string last sha as no state', () => {
-    expect(computeDiffRange('base', 'head', '', () => true).mode).toBe('full');
+  it('diffs from the reviewed commit replayed onto the new base after a merge from main', () => {
+    const calls: [string, string][] = [];
+    const result = plan({
+      git: mergedFromBase((ours, theirs) => {
+        calls.push([ours, theirs]);
+        return REPLAYED_TREE;
+      }),
+    });
+    expect(calls).toEqual([[LAST, NEW_MERGE_BASE]]);
+    expect(result).toMatchObject({ mode: 'incremental', revisions: [REPLAYED_TREE, HEAD] });
+  });
+
+  it('falls back to a full review when replaying the base merge conflicts', () => {
+    expect(plan({ git: mergedFromBase(() => null) }).mode).toBe('full');
+  });
+
+  it('falls back to a full review when the branch has no merge base', () => {
+    expect(plan({ git: linearHistory({ mergeBase: () => null }) }).mode).toBe('full');
+  });
+
+  it('reviews the full PR whenever the full-review label is set, even with head unmoved', () => {
+    expect(plan({ forceFull: true }).mode).toBe('full');
+    expect(plan({ forceFull: true, headSha: LAST }).mode).toBe('full');
+  });
+
+  it.each([
+    ['an empty string', ''],
+    ['an abbreviated sha', 'a'.repeat(12)],
+    ['a ref name', 'main'],
+    ['an option git would parse', '--output=/tmp/pwned'],
+    ['an uppercase sha', 'A'.repeat(40)],
+  ])('does not trust %s as the reviewed commit', (_label, recorded) => {
+    const isAncestor = vi.fn(() => true);
+    expect(plan({ lastReviewedSha: recorded, git: linearHistory({ isAncestor }) }).mode).toBe(
+      'full'
+    );
+    expect(isAncestor).not.toHaveBeenCalled();
+  });
+
+  it('accepts a SHA-256 object name', () => {
+    expect(plan({ lastReviewedSha: 'f'.repeat(64) }).mode).toBe('incremental');
+  });
+});
+
+describe('isFullSha', () => {
+  it('accepts exactly 40 or 64 lowercase hex characters', () => {
+    expect(isFullSha('0'.repeat(40))).toBe(true);
+    expect(isFullSha('0'.repeat(64))).toBe(true);
+    expect(isFullSha('0'.repeat(41))).toBe(false);
+    expect(isFullSha('0'.repeat(39))).toBe(false);
+    expect(isFullSha(null)).toBe(false);
+    expect(isFullSha(42)).toBe(false);
+  });
+});
+
+describe('addedLinesByFile', () => {
+  const DIFF = [
+    'diff --git a/a.ts b/a.ts',
+    'index 111..222 100644',
+    '--- a/a.ts',
+    '+++ b/a.ts',
+    '@@ -1 +1,2 @@',
+    '-const old = 1;',
+    '+const   fresh = 2;',
+    '++++ looks like a header but is content',
+    '+',
+    'diff --git a/gone.ts b/gone.ts',
+    'deleted file mode 100644',
+    '--- a/gone.ts',
+    '+++ /dev/null',
+    '@@ -1 +0,0 @@',
+    '-export {};',
+    'diff --git a/__proto__ b/__proto__',
+    '--- /dev/null',
+    '+++ b/__proto__',
+    '@@ -0,0 +1 @@',
+    '+polluted',
+  ].join('\n');
+
+  it('collects normalized added lines per destination path, skipping blanks', () => {
+    const added = addedLinesByFile(DIFF);
+    expect(added['a.ts']).toEqual(['const fresh = 2;', '+++ looks like a header but is content']);
+  });
+
+  it('records nothing for a deleted file', () => {
+    expect(Object.hasOwn(addedLinesByFile(DIFF), 'gone.ts')).toBe(false);
+  });
+
+  it('keeps a path named __proto__ as data rather than a prototype', () => {
+    const added = addedLinesByFile(DIFF);
+    expect(Object.hasOwn(added, '__proto__')).toBe(true);
+    expect(Object.getPrototypeOf(added)).toBe(Object.prototype);
+  });
+});
+
+describe('admitToScope', () => {
+  const scope = {
+    touched: ['a.ts', 'deleted-only.ts'],
+    added: { 'a.ts': ['const fresh = 2;', 'return fresh as unknown as Foo;'] },
+  };
+
+  function incoming(over: Record<string, unknown>) {
+    return findingFromModel({ file: 'a.ts', title: 'new', ...over }, 'sha2');
+  }
+
+  it('admits a new finding whose snippet overlaps an added line', () => {
+    const f = incoming({ snippet: 'fresh as unknown as Foo' });
+    expect(admitToScope([f], [], scope)).toEqual({ admitted: [f], dropped: [] });
+  });
+
+  it('admits a multi-line snippet when any one locating line was added', () => {
+    const f = incoming({ snippet: 'function g() {\n  return fresh as unknown as Foo;\n}' });
+    expect(admitToScope([f], [], scope).admitted).toEqual([f]);
+  });
+
+  it('drops a new finding on a line the diff did not add, in a touched file', () => {
+    const f = incoming({ snippet: 'const untouched = 3;' });
+    expect(admitToScope([f], [], scope)).toEqual({ admitted: [], dropped: [f] });
+  });
+
+  it('does not let punctuation-only snippet lines match any added line', () => {
+    const f = incoming({ snippet: '}\n);' });
+    expect(
+      admitToScope([f], [], { touched: ['a.ts'], added: { 'a.ts': ['});'] } }).dropped
+    ).toEqual([f]);
+  });
+
+  it('drops a new finding in a file the diff did not touch', () => {
+    const f = incoming({ file: 'b.ts', snippet: 'const fresh = 2;' });
+    expect(admitToScope([f], [], scope).dropped).toEqual([f]);
+  });
+
+  it('admits a snippet-less finding in a touched file and drops one elsewhere', () => {
+    const here = incoming({ file: 'deleted-only.ts', title: 'missing test' });
+    const elsewhere = incoming({ file: 'b.ts', title: 'missing test' });
+    expect(admitToScope([here, elsewhere], [], scope)).toEqual({
+      admitted: [here],
+      dropped: [elsewhere],
+    });
+  });
+
+  it('always admits a re-report of a carried finding, even on unchanged code', () => {
+    const carried = incoming({ snippet: 'const untouched = 3;' });
+    expect(admitToScope([carried], [carried], scope).admitted).toEqual([carried]);
+  });
+});
+
+describe('parseScope', () => {
+  it('round-trips what plan writes', () => {
+    const scope = { touched: ['a.ts'], added: { 'a.ts': ['x'] } };
+    expect(parseScope(JSON.stringify(scope))).toEqual(scope);
+  });
+
+  it.each([
+    ['absent', null],
+    ['not JSON', '{'],
+    ['the wrong shape', '{"touched": "a.ts"}'],
+    ['missing added', '{"touched": []}'],
+  ])('yields null when %s', (_label, raw) => {
+    expect(parseScope(raw)).toBeNull();
+  });
+
+  it('drops non-string entries rather than trusting them', () => {
+    expect(parseScope('{"touched": ["a.ts", 1], "added": {"a.ts": ["x", 2], "b.ts": 3}}')).toEqual({
+      touched: ['a.ts'],
+      added: { 'a.ts': ['x'] },
+    });
   });
 });
 

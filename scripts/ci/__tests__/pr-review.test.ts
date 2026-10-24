@@ -13,7 +13,7 @@
  * @see docs/architecture/adr-045-guards-must-prove-they-report.md
  */
 
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -47,7 +47,12 @@ function run(args: string[]): string {
   return execFileSync(process.execPath, [driver, ...args], { encoding: 'utf8' });
 }
 
-function plan(base: string, head: string, priorComment?: string): { mode: string; prompt: string } {
+function plan(
+  base: string,
+  head: string,
+  priorComment?: string,
+  extra: string[] = []
+): { mode: string; prompt: string } {
   const outDir = join(work, 'review');
   const comment = join(work, 'prior.md');
   if (priorComment !== undefined) writeFileSync(comment, priorComment);
@@ -64,6 +69,7 @@ function plan(base: string, head: string, priorComment?: string): { mode: string
     '--findings-path',
     join(outDir, 'findings.json'),
     ...(priorComment === undefined ? [] : ['--comment-file', comment]),
+    ...extra,
   ]);
   const mode = readFileSync(join(outDir, 'mode'), 'utf8');
   const promptPath = join(outDir, 'prompt.txt');
@@ -76,7 +82,9 @@ function publish(
   findings: unknown,
   priorComment?: string,
   /** Pass the list `plan` wrote, as the workflow does. Omitted = nothing re-judged. */
-  withRejudge = false
+  withRejudge = false,
+  /** Pass the scope `plan` wrote, as the workflow does. Omitted = nothing filtered. */
+  withScope = false
 ): string {
   const findingsPath = join(work, 'findings.json');
   const comment = join(work, 'prior.md');
@@ -97,6 +105,7 @@ function publish(
     out,
     ...(priorComment === undefined ? [] : ['--comment-file', comment]),
     ...(withRejudge ? ['--rejudge', join(work, 'review', 'rejudge.json')] : []),
+    ...(withScope ? ['--scope', join(work, 'review', 'scope.json')] : []),
   ]);
   return readFileSync(out, 'utf8');
 }
@@ -389,6 +398,177 @@ describe(
       const comment = publish(reintroduced, 'incremental', { findings: [finding] }, cleared, true);
 
       expect(comment).toContain('1 open finding');
+    });
+  }
+);
+
+describe(
+  'what an incremental run is allowed to see and say',
+  { timeout: REAL_SUBPROCESS_TIMEOUT_MS },
+  () => {
+    function commitAs(message: string): void {
+      git('add', '-A');
+      git('-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '-m', message);
+    }
+
+    function mergeMain(): string {
+      git('-c', 'user.email=t@t', '-c', 'user.name=t', 'merge', '-q', '--no-edit', 'main');
+      return git('rev-parse', 'HEAD');
+    }
+
+    /** main with one file, and a PR branch with one reviewed commit on it. */
+    function reviewedBranch(): { base: string; reviewed: string; comment: string } {
+      writeFileSync(join(repo, 'shared.ts'), 'export const shared = 1;\n');
+      const base = commit('main.ts', 'export const onMain = 1;\n', 'base');
+      git('checkout', '-q', '-b', 'pr');
+      const reviewed = commit('pr.ts', 'export const reviewed = 1;\n', 'pr work');
+      const comment = publish(reviewed, 'full', { findings: [] });
+      return { base, reviewed, comment };
+    }
+
+    it('excludes what a merge from main brought in, and keeps what the PR pushed', () => {
+      const { comment } = reviewedBranch();
+      git('checkout', '-q', 'main');
+      const mainTip = commit('main.ts', 'export const onMain = 2; // main-only change\n', 'main');
+      git('checkout', '-q', 'pr');
+      mergeMain();
+      const head = commit(
+        'pr.ts',
+        'export const reviewed = 1;\nexport const pushed = 2;\n',
+        'more'
+      );
+
+      const { mode, prompt } = plan(mainTip, head, comment);
+
+      expect(mode).toBe('incremental');
+      expect(prompt).toContain('+export const pushed = 2;');
+      expect(prompt).not.toContain('main-only change');
+      expect(prompt).not.toContain('main.ts');
+    });
+
+    it('treats a merge from main with nothing else pushed as nothing to review', () => {
+      const { comment } = reviewedBranch();
+      git('checkout', '-q', 'main');
+      const mainTip = commit('main.ts', 'export const onMain = 2; // main-only change\n', 'main');
+      git('checkout', '-q', 'pr');
+      const head = mergeMain();
+
+      const { mode, prompt } = plan(mainTip, head, comment);
+
+      expect(mode).toBe('incremental');
+      expect(prompt).toContain('(no textual changes)');
+      expect(prompt).not.toContain('main-only change');
+    });
+
+    it('falls back to a full review when the merge from main needed a conflict resolution', () => {
+      const { comment } = reviewedBranch();
+      commit('shared.ts', 'export const shared = "pr";\n', 'pr edits shared');
+      const reviewedAgain = git('rev-parse', 'HEAD');
+      const comment2 = publish(reviewedAgain, 'incremental', { findings: [] }, comment);
+      git('checkout', '-q', 'main');
+      const mainTip = commit('shared.ts', 'export const shared = "main";\n', 'main edits shared');
+      git('checkout', '-q', 'pr');
+      spawnSync('git', ['-C', repo, '-c', 'user.email=t@t', '-c', 'user.name=t', 'merge', 'main'], {
+        stdio: 'ignore',
+      });
+      writeFileSync(join(repo, 'shared.ts'), 'export const shared = "resolved";\n');
+      commitAs('resolve');
+      const head = git('rev-parse', 'HEAD');
+
+      const { mode, prompt } = plan(mainTip, head, comment2);
+
+      expect(mode).toBe('full');
+      expect(prompt).toContain(SCOPE.full);
+    });
+
+    it('reviews the full PR when the full-review label is set, even with head unmoved', () => {
+      const { base, reviewed, comment } = reviewedBranch();
+      expect(plan(base, reviewed, comment).mode).toBe('empty');
+
+      const { mode, prompt } = plan(base, reviewed, comment, ['--full-review', 'true']);
+
+      expect(mode).toBe('full');
+      expect(prompt).toContain('+export const reviewed = 1;');
+    });
+
+    it('drops a new finding on unchanged code and keeps one on an added line', () => {
+      const { base, comment } = reviewedBranch();
+      const head = commit(
+        'pr.ts',
+        'export const reviewed = 1;\nexport const pushed = 2 as unknown as number;\n',
+        'more'
+      );
+      expect(plan(base, head, comment).mode).toBe('incremental');
+
+      const after = publish(
+        head,
+        'incremental',
+        {
+          findings: [
+            {
+              file: 'pr.ts',
+              title: 'cast on new line',
+              severity: 'high',
+              snippet: 'as unknown as number',
+            },
+            {
+              file: 'pr.ts',
+              title: 'nit on old line',
+              severity: 'high',
+              snippet: 'export const reviewed = 1;',
+            },
+            { file: 'main.ts', title: 'untouched file', severity: 'high', snippet: 'onMain' },
+          ],
+        },
+        comment,
+        true,
+        true
+      );
+
+      const titles = parseState(after).findings.map((f) => f.title);
+      expect(titles).toEqual(['cast on new line']);
+    });
+
+    it('keeps every finding when the scope file is missing, so the gate cannot be starved', () => {
+      const { comment } = reviewedBranch();
+      const head = commit(
+        'pr.ts',
+        'export const reviewed = 1;\nexport const pushed = 2;\n',
+        'more'
+      );
+
+      const after = publish(
+        head,
+        'incremental',
+        {
+          findings: [
+            { file: 'main.ts', title: 'untouched file', severity: 'high', snippet: 'onMain' },
+          ],
+        },
+        comment
+      );
+
+      expect(parseState(after).findings.map((f) => f.title)).toEqual(['untouched file']);
+    });
+
+    it('does not filter a full review', () => {
+      const { base, reviewed } = reviewedBranch();
+      plan(base, reviewed, undefined);
+
+      const after = publish(
+        reviewed,
+        'full',
+        {
+          findings: [
+            { file: 'main.ts', title: 'untouched file', severity: 'high', snippet: 'onMain' },
+          ],
+        },
+        undefined,
+        true,
+        true
+      );
+
+      expect(parseState(after).findings.map((f) => f.title)).toEqual(['untouched file']);
     });
   }
 );

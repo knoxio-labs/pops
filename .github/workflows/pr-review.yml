@@ -28,13 +28,28 @@ name: PR Review
 # comment on, and this workflow is not a required context, so it has nothing to
 # report there and nothing to hold the queue open by staying silent.
 #
-# THE REVIEW COMPOUNDS. Each run reviews only the commits pushed since the last
-# one, edits ONE sticky comment rather than posting a new one, carries open
-# findings forward, and marks a finding resolved when the code it pointed at is
-# gone — or, for a finding whose fix belongs in another file, when that other
-# file has it (POPS-2705). All of that bookkeeping lives in
+# THE REVIEW COMPOUNDS. Each run reviews only what changed since the last
+# reviewed head, edits ONE sticky comment rather than posting a new one,
+# carries open findings forward, and marks a finding resolved when the code it
+# pointed at is gone — or, for a finding whose fix belongs in another file,
+# when that other file has it (POPS-2705). All of that bookkeeping lives in
 # `scripts/ci/pr-review-state.mjs` and is tested; this workflow only sequences
 # it around the model call.
+#
+# INCREMENTAL, NOT RE-REVIEWED. Re-reading the whole PR on every push hands a
+# nondeterministic reviewer code it already reviewed, and it finds something
+# new there each time, so fix rounds never converge. After the first review a
+# run diffs the last reviewed head against the new head, with any base-branch
+# merge replayed out of the comparison, and `publish --scope` discards a NEW
+# finding on a line that diff did not add. The last reviewed sha is read only
+# from the state block of a comment this workflow's own login wrote (the
+# fetch step below), the same trust rule `check-review-findings.mjs` applies.
+# A full review runs instead on the first review, when no such sha exists or
+# it was rewritten out of history (force-push, rebase), when the replayed
+# merge conflicts, and on every push while the PR carries the `full-review`
+# label. The cost, stated plainly: a defect the first full review missed, in
+# code no later push touches, is not caught by a later round. The label is the
+# way to ask for that look again.
 #
 # TIER A: no `pnpm install`, so both scripts are stdlib-only. Adding an import
 # to either means moving this job across that line in the same commit — see the
@@ -226,6 +241,7 @@ jobs:
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
           HEAD: ${{ github.event.pull_request.head.sha }}
+          FULL_REVIEW: ${{ contains(github.event.pull_request.labels.*.name, 'full-review') }}
         run: |
           # The base recorded on the event can be absent locally if the base
           # branch moved after the event fired; fetching it by sha is cheap
@@ -236,10 +252,10 @@ jobs:
             --head "$HEAD" \
             --comment-file "$RUNNER_TEMP/review/prior.md" \
             --out-dir "$RUNNER_TEMP/review" \
-            --findings-path "$RUNNER_TEMP/review/findings.json"
+            --findings-path "$RUNNER_TEMP/review/findings.json" \
+            --full-review "$FULL_REVIEW"
           mode=$(cat "$RUNNER_TEMP/review/mode")
           echo "mode=$mode" >> "$GITHUB_OUTPUT"
-          echo "Review mode: $mode"
 
       - name: Run the review
         if: steps.scope.outputs.proceed == 'true' && steps.plan.outputs.mode != 'empty'
@@ -290,6 +306,7 @@ jobs:
             --findings "$RUNNER_TEMP/review/findings.json" \
             --comment-file "$RUNNER_TEMP/review/prior.md" \
             --rejudge "$RUNNER_TEMP/review/rejudge.json" \
+            --scope "$RUNNER_TEMP/review/scope.json" \
             --repo-root . \
             --out "$RUNNER_TEMP/review/comment.md"
 
