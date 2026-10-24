@@ -69,10 +69,6 @@ fn parse_card(text: &str, record_id: String) -> Result<SourceContact, &'static s
         .into_iter()
         .zip(original_lines.iter().skip(1))
     {
-        let value = raw_value(original)?.to_owned();
-        if value.len() > MAX_FIELD_BYTES {
-            return Err("Field exceeds byte limit");
-        }
         let params = property.params.unwrap_or_default();
         let name = property.name.rsplit('.').next().unwrap_or(&property.name);
         if !matches!(
@@ -80,6 +76,14 @@ fn parse_card(text: &str, record_id: String) -> Result<SourceContact, &'static s
             "VERSION" | "FN" | "UID" | "N" | "EMAIL" | "TEL" | "URL" | "X-SOCIALPROFILE"
         ) {
             continue;
+        }
+        let value = raw_value(original)?.to_owned();
+        if value.len() > MAX_FIELD_BYTES
+            || params
+                .iter()
+                .any(|(_, values)| values.iter().any(|value| value.len() > MAX_FIELD_BYTES))
+        {
+            return Err("Field exceeds byte limit");
         }
         if params
             .iter()
@@ -162,12 +166,6 @@ fn unfold(text: &str) -> Result<Vec<String>, &'static str> {
                 .push_str(continuation);
         } else {
             lines.push(line.to_owned());
-        }
-        if lines
-            .last()
-            .is_some_and(|line| line.len() > MAX_FIELD_BYTES + 1024)
-        {
-            return Err("Property exceeds byte limit");
         }
     }
     Ok(lines)
