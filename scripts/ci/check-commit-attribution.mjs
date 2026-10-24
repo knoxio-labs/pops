@@ -25,6 +25,7 @@
  * - every commit in `<base>..HEAD`: the whole message, and the author and
  *   committer email;
  * - the pull request body, from `PR_BODY`, when the workflow provides one;
+ *   Dependabot's `Release notes` and `Commits` details blocks are excluded;
  * - or, with `--message-file <path>`, one commit message about to be written:
  *   the `.husky/commit-msg` hook, which stops a credit before it is committed
  *   rather than after it is pushed.
@@ -178,8 +179,52 @@ export function commitsInRange({ base, head = 'HEAD', cwd = repoRoot }) {
 export function findViolations({ commits, prBody = '' }) {
   return [
     ...commits.flatMap(commitViolations),
-    ...attributionLines(prBody).map((line) => `PR body credits an assistant — "${line}"`),
+    ...attributionLines(prBodyWithoutGeneratedDetails(prBody)).map(
+      (line) => `PR body credits an assistant — "${line}"`
+    ),
   ];
+}
+
+/**
+ * Exclude Dependabot's generated release-note and commit blocks while retaining
+ * other details content. Incomplete blocks stay visible to the scanner.
+ *
+ * @param {string} text
+ * @returns {string}
+ */
+function prBodyWithoutGeneratedDetails(text) {
+  let depth = 0;
+  let start = 0;
+  const excluded = [];
+  const detailsTag = /<details\b[^>]*>|<\/details\s*>/giu;
+
+  for (const tag of text.matchAll(detailsTag)) {
+    const index = tag.index ?? 0;
+    if (/^<\/details\b/iu.test(tag[0])) {
+      if (depth === 0) continue;
+      depth -= 1;
+      if (depth === 0) {
+        const end = index + tag[0].length;
+        const block = text.slice(start, end);
+        if (/<summary\b[^>]*>\s*(?:release notes|commits)\s*<\/summary>/iu.test(block)) {
+          excluded.push({ start, end });
+        }
+      }
+    } else {
+      if (depth === 0) start = index;
+      depth += 1;
+    }
+  }
+
+  if (excluded.length === 0) return text;
+
+  let visible = '';
+  let cursor = 0;
+  for (const block of excluded) {
+    visible += text.slice(cursor, block.start);
+    cursor = block.end;
+  }
+  return visible + text.slice(cursor);
 }
 
 /**
@@ -285,7 +330,19 @@ function selfTest() {
       1,
     ],
     ['a footer in the PR body is caught', (r) => r.commit('fix: one'), `Body.\n\n${footer}`, 1],
+    [
+      'generated release notes and commits are skipped while a PR-authored credit is caught',
+      (r) => r.commit('fix: one'),
+      `Body.\n\n<details>\n<summary>Release notes</summary>\n${trailer}\n</details>\n\n<details>\n<summary>Commits</summary>\n${footer}\n</details>\n\n${footer}`,
+      1,
+    ],
     ['a clean PR body passes', (r) => r.commit('fix: one'), 'Body.\n\nCloses POPS-1.', 0],
+    [
+      'an unclosed details block cannot hide a PR-body credit',
+      (r) => r.commit('fix: one'),
+      `<details>\n<summary>Release notes</summary>\n${footer}`,
+      1,
+    ],
   ];
 
   let ok = true;
