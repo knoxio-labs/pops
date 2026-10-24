@@ -15,6 +15,16 @@ fn xml_requires_expanded_names_and_rejects_ambiguous_fields() {
 }
 
 #[test]
+fn xml_accepts_default_dav_namespace_and_arbitrary_carddav_prefix() {
+    let source = "<multistatus xmlns='DAV:' xmlns:book='urn:ietf:params:xml:ns:carddav'><response><href>/fictional/one.vcf</href><propstat><prop><getetag>one</getetag><book:address-data>Fictional</book:address-data></prop><status>HTTP/1.1 200 OK</status></propstat></response></multistatus>";
+    let parsed = xml::parse(source.as_bytes()).unwrap();
+    assert_eq!(
+        parsed.responses[0].properties[0].1.card.as_deref(),
+        Some("Fictional")
+    );
+}
+
+#[test]
 fn xml_rejects_dtd_entities_unclosed_trees_and_excess_namespace_bindings() {
     for text in ["<!DOCTYPE multistatus [<!ENTITY leak SYSTEM 'file:///fictional'>]><d:multistatus xmlns:d='DAV:'>&leak;</d:multistatus>".to_owned(), "<d:multistatus xmlns:d='DAV:'>".to_owned(), format!("<d:multistatus xmlns:d='DAV:' {} />", (0..33).map(|index| format!("xmlns:n{index}='urn:{index}'")).collect::<Vec<_>>().join(" ")), "<d:multistatus xmlns:d='DAV:'>&unknown;</d:multistatus>".to_owned()] {
         assert!(xml::parse(text.as_bytes()).is_err());
