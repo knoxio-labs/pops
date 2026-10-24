@@ -31,7 +31,13 @@ async fn full_sync_fetches_only_changed_etags_and_retains_all_seen_members() {
     assert_eq!(page.changes[0].uid.as_deref(), Some("fictional-one"));
     assert_eq!(page.changes[0].etag.as_deref(), Some("\"one\""));
     assert!(!page.changes[0].row.removed);
-    assert!(page.changes[0].row.payload.is_some());
+    let name = &page.changes[0].row.payload.as_ref().unwrap().name;
+    assert_eq!(name.given_name.as_deref(), Some("Fictional"));
+    assert_eq!(name.family_name.as_deref(), Some("Example"));
+    assert_eq!(
+        name.completeness,
+        crate::persons::model::NameCompleteness::Complete
+    );
     assert!(
         matches!(page.progress, PageProgress::Complete { checkpoint: Some(token) } if token == "urn:fictional:final")
     );

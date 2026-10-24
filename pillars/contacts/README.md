@@ -57,9 +57,10 @@ unique person identifier, so consumers must reject ambiguous matches.
 
 Person profiles are explicit local structured-name overrides. Imported records
 retain their own display and structured names with an explicit completeness
-marker. Google names qualify as complete only with explicit nonblank given and
-family parts; additional names, prefixes and suffixes are retained. Display text
-alone does not establish complete-name evidence. Contact
+marker. File and provider adapters qualify names as complete only with explicit
+nonblank given and family parts; additional names, prefixes and suffixes are
+retained. CSV `Name`, vCard `FN` and Google display text never supply structured
+parts; display-only and first-name-only observations remain unknown. Contact
 points retain the original value and label. Conservative email and validated
 international phone keys are derived separately for matching. National phone
 values require an explicit known ISO `countryCode`; no country is inferred from
