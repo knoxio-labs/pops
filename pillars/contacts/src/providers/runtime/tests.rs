@@ -360,7 +360,7 @@ fn dav(properties: &str) -> String {
 fn discovery(principal: &str) -> [(u16, String); 3] {
     [(207,dav(&format!("<d:current-user-principal><d:href>{principal}</d:href></d:current-user-principal>"))),
     (207,dav("<c:addressbook-home-set><d:href>https://contacts.icloud.com/home/</d:href></c:addressbook-home-set>")),
-    (207,dav("<d:resourcetype><d:collection/><c:addressbook/></d:resourcetype>"))]
+    (207,dav("<d:resourcetype><d:collection/></d:resourcetype>").replace("<d:href>/</d:href>","<d:href>https://contacts.icloud.com/home/</d:href>"))]
 }
 
 #[tokio::test]
@@ -623,4 +623,82 @@ async fn fresh_human_consent_can_replace_a_credential_that_the_current_root_key_
         .unwrap();
     assert!(current.epoch.0 > epoch.0);
     assert_eq!(current.secret.expose(), b"fictional-reconnected-refresh");
+}
+
+#[tokio::test]
+async fn incomplete_icloud_discovery_cannot_replace_existing_cache_checkpoint_or_preview() {
+    let principal = "https://contacts.icloud.com/one/principal/";
+    let (pool, runtime, fake, id, epoch) = setup("icloud", principal).await;
+    let credential = crate::providers::carddav::credential::CardDavCredential::new(
+        "fictional@example.test".into(),
+        secret(),
+    )
+    .unwrap();
+    let epoch = store::install_credential(
+        &pool,
+        &runtime.cipher,
+        &HumanIdentity::for_test("operator"),
+        &id,
+        epoch,
+        &credential.encode(),
+    )
+    .await
+    .unwrap();
+    let book = "https://contacts.icloud.com/home/book/";
+    let run = sync::begin_sync(
+        &pool,
+        &id,
+        epoch,
+        &[CollectionPlan {
+            key: book.into(),
+            full_snapshot: true,
+        }],
+    )
+    .await
+    .unwrap();
+    sync::stage_page(
+        &pool,
+        &run.id,
+        book,
+        None,
+        &ProviderPage {
+            changes: vec![sync::ProviderChange {
+                row: crate::imports::model::StageRowInput {
+                    record_key: "one".into(),
+                    payload: Some(crate::imports::model::ImportPayload {
+                        display_name: Some("Fictional".into()),
+                        name: crate::persons::model::PersonName::default(),
+                        points: vec![],
+                    }),
+                    removed: false,
+                    errors: vec![],
+                },
+                etag: Some("fictional-etag".into()),
+                uid: Some("fictional-uid".into()),
+            }],
+            seen_record_keys: vec!["one".into()],
+            progress: PageProgress::Complete {
+                checkpoint: Some("original-checkpoint".into()),
+            },
+        },
+    )
+    .await
+    .unwrap();
+    let batches = sync::finalize_sync(&pool, &run.id).await.unwrap();
+    let mut responses = discovery(principal);
+    responses[2] = (207, "<d:multistatus xmlns:d=\"DAV:\"/>".into());
+    fake.replies.lock().unwrap().extend(responses);
+    assert!(matches!(
+        runtime.start_sync(&pool, &id).await,
+        Err(ProviderError::Invalid)
+    ));
+    assert_eq!(
+        sync::checkpoint(&pool, &id, book).await.unwrap().as_deref(),
+        Some("original-checkpoint")
+    );
+    let (active,runs):(i64,i64)=sqlx::query_as("SELECT (SELECT count(*) FROM provider_records WHERE account_id=?1 AND active=1),(SELECT count(*) FROM provider_sync_runs WHERE account_id=?1)").bind(&id).fetch_one(&pool).await.unwrap();
+    assert_eq!((active, runs), (1, 1));
+    let latest:String=sqlx::query_scalar("SELECT latest_run_id FROM provider_collection_states WHERE account_id=?1 AND collection_key=?2").bind(&id).bind(book).fetch_one(&pool).await.unwrap();
+    assert_eq!(latest, run.id);
+    assert_eq!(batches.len(), 1);
 }

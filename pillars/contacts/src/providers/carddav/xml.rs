@@ -14,6 +14,7 @@ const MAX_DEPTH: usize = 32;
 pub(super) struct Properties {
     pub principal: Option<String>,
     pub homes: Vec<String>,
+    pub resource_type_present: bool,
     pub addressbook: bool,
     pub collection: bool,
     pub display_name: Option<String>,
@@ -224,6 +225,7 @@ fn response(node: &Node) -> Result<Response, CardDavError> {
                 .collect::<Result<_, _>>()?;
         }
         if let Some(types) = prop.one(DAV, "resourcetype")? {
+            values.resource_type_present = true;
             values.addressbook = types.one(CARD, "addressbook")?.is_some();
             values.collection = types.one(DAV, "collection")?.is_some();
         }
