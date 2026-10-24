@@ -38,7 +38,7 @@ export function DirectPlanner({ scenario = 'default' }: { scenario?: PlannerScen
   return (
     <>
       <PlannerReview layout="direct" />
-      <main className="mx-auto max-w-7xl space-y-4 p-5 md:p-8">
+      <main className="mx-auto max-w-5xl space-y-4 p-5 md:p-8">
         <DirectHeader
           canUndo={canUndo}
           undo={undo}
@@ -48,7 +48,7 @@ export function DirectPlanner({ scenario = 'default' }: { scenario?: PlannerScen
         <SortableGrid
           items={records}
           getKey={(r) => r.id}
-          columnsClassName="grid-cols-1 lg:grid-cols-2"
+          columnsClassName="grid-cols-1"
           onReorder={reorder}
           renderItem={(record, index) => (
             <DirectNode record={record} index={index} state={state} change={change} />

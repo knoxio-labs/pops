@@ -36,7 +36,7 @@ export function PathOptions({
         <h2 className="text-lg font-semibold">{display.when}</h2>
         <Badge variant="outline">{options.length} alternatives</Badge>
       </div>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className={direct ? 'space-y-3' : 'grid gap-3 sm:grid-cols-2'}>
         {options.map((option) => (
           <PathOption
             key={option.id}
