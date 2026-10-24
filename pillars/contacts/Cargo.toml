@@ -34,6 +34,10 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 uuid = { workspace = true }
 unicode-normalization = { workspace = true }
+csv = "1.4"
+ical = "0.11"
+encoding_rs = "0.8"
+phonenumber = "0.3"
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["rt-multi-thread", "macros", "signal", "test-util"] }
