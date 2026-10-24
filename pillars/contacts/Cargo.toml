@@ -37,6 +37,10 @@ unicode-normalization = { workspace = true }
 ring = { workspace = true }
 zeroize = { workspace = true }
 base64 = { workspace = true }
+csv = "1.4"
+ical = "0.11"
+encoding_rs = "0.8"
+phonenumber = "0.3"
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["rt-multi-thread", "macros", "signal", "test-util"] }
