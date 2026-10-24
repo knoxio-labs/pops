@@ -427,6 +427,43 @@ describe('items without a code', () => {
   });
 });
 
+describe('label copies', () => {
+  it.each([
+    [GRINDER, 'Copies per item'],
+    [BOX, 'Copies per box'],
+  ])('prints 72 copies across three 24-label sheets for %s', async (id, label) => {
+    renderPage(`?ids=${id}&sheet=L7159`);
+    const input = await screen.findByRole('spinbutton', { name: label });
+    fireEvent.change(input, { target: { value: '72' } });
+    expect(await screen.findByText('72 labels on 3 sheets, from label 1')).toBeInTheDocument();
+    expect(document.querySelectorAll('.pops-print-sheet')).toHaveLength(3);
+    expect(printedCodes()).toHaveLength(72);
+    expect(screen.getByRole('button', { name: 'Print 72 labels' })).toBeEnabled();
+  });
+
+  it.each(['', '0', '-1', '1.5'])(
+    'keeps the last valid quantity while editing %s',
+    async (value) => {
+      renderPage(`?ids=${GRINDER}`);
+      const input = await screen.findByRole('spinbutton', { name: 'Copies per item' });
+      fireEvent.change(input, { target: { value: '5' } });
+      fireEvent.change(input, { target: { value } });
+      expect(printedCodes()).toHaveLength(5);
+      fireEvent.blur(input);
+      expect(input).toHaveValue(5);
+    }
+  );
+
+  it('allows clearing the quantity before entering a new one', async () => {
+    renderPage(`?ids=${GRINDER}`);
+    const input = await screen.findByRole('spinbutton', { name: 'Copies per item' });
+    fireEvent.change(input, { target: { value: '' } });
+    expect(input).toHaveValue(null);
+    fireEvent.change(input, { target: { value: '24' } });
+    expect(printedCodes()).toHaveLength(24);
+  });
+});
+
 describe('the sheet', () => {
   it('prefers the browser remembered sheet over the stored setting', async () => {
     window.localStorage.setItem(SHEET_STORAGE_KEY, 'L7165');

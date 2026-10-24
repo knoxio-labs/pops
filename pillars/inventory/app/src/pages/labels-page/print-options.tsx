@@ -8,7 +8,7 @@ import { labelsPerSheet, MIN_QR_MM } from '@pops/inventory/labels';
  * standard A4 sheets whose die-cuts the page knows, and a sheet they miss is
  * measured once as the custom sheet.
  */
-import { NumberInput, Tabs, TabsList, TabsTrigger } from '@pops/ui';
+import { NumberInput } from '@pops/ui';
 
 import { LabelShowsPicker } from './label-shows-picker';
 import { OptionField } from './print-option-field';
@@ -18,24 +18,27 @@ import type { LabelContent, PrintSubject } from '@pops/inventory/labels';
 
 import type { PrintJob } from './useLabelJob';
 
-const COPY_CHOICES = ['1', '2', '3', '4'] as const;
-
 function CopiesChoice({ job, kind }: { job: PrintJob; kind: PrintSubject['kind'] }) {
   const label = kind === 'container' ? 'Copies per box' : 'Copies per item';
+  const id = `print-copies-${kind}`;
+  const [editing, setEditing] = useState<string | null>(null);
   return (
-    <OptionField label={label}>
-      <Tabs
-        value={String(job.copies[kind])}
-        onValueChange={(value) => job.setCopies(kind, Number(value))}
-      >
-        <TabsList aria-label={label}>
-          {COPY_CHOICES.map((choice) => (
-            <TabsTrigger key={choice} value={choice}>
-              {choice}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
+    <OptionField label={label} htmlFor={id}>
+      <NumberInput
+        id={id}
+        value={editing ?? job.copies[kind]}
+        min={1}
+        step={1}
+        enableDrag={false}
+        onBlur={() => setEditing(null)}
+        onChange={(event) => {
+          const value = event.target.value;
+          setEditing(value);
+          const copies = Number(value);
+          if (Number.isSafeInteger(copies) && copies >= 1) job.setCopies(kind, copies);
+        }}
+        containerClassName="w-40"
+      />
     </OptionField>
   );
 }
