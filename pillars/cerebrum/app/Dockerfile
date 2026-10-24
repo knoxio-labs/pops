@@ -27,9 +27,11 @@ RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
 
 # The API clients the build compiles are generated from the committed OpenAPI
 # snapshots, not committed themselves. Copied after the install, which then
-# cannot run the root postinstall that generates them everywhere else.
+# cannot run the root postinstall that generates them everywhere else, and
+# scoped to the packages this image bundles: the filtered install leaves the
+# other units without their generators.
 COPY scripts/codegen/ ./scripts/codegen/
-RUN node scripts/codegen/generate.mjs
+RUN node scripts/codegen/generate.mjs --pkg @pops/app-cerebrum --pkg @pops/overlay-ego
 
 # Compiled libs first (pnpm no-ops the source-only ones), then the bundle.
 # `pnpm build` here runs `scripts/build-remote.ts`, which fails the build if

@@ -16,7 +16,7 @@ reviewed and checked for drift. The code derived from them is not committed:
 | root `build` / `mise build` | `mise check`, `mise test` and `mise dev` all build first |
 | `mise lint` / `pnpm lint`   | type-aware lint resolves the client types                |
 | UI image Dockerfiles        | their filtered install does not have this script yet     |
-| a pillar's own `build`      | `generate:api-types` runs before `tsc`                   |
+| a pillar's own `build`      | `tsc` runs again after `generate:api-types`              |
 
 After a contract change, `mise build` regenerates every client from the new
 snapshot. Run `node scripts/codegen/generate.mjs --force` to regenerate even

@@ -11,7 +11,8 @@
  *   pnpm --filter @pops/food generate:api-types
  *
  * The output is not committed: scripts/codegen/generate.mjs runs this on
- * install and build, and the pillar's own `build` runs it before `tsc`.
+ * install and build, and the pillar's own `build` runs it and then `tsc`
+ * again, so the compiled `./api-types` export exists.
  */
 import { execFileSync } from 'node:child_process';
 import { writeFileSync } from 'node:fs';

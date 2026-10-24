@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import {
   deriveApiTypesOutput,
+  discoverCandidateDirs,
   discoverTargets,
   extractOutputDir,
   findDiscoveryViolations,
@@ -369,29 +370,63 @@ describe('the root postinstall script', { timeout: FIXTURE_TIMEOUT_MS }, () => {
 });
 
 describe('image builds that bundle a client', () => {
-  const dockerfiles = [
-    ...new Set(
-      discoverTargets(REPO_ROOT)
-        .filter((target) => target.kind === 'hey-api')
-        .map((target) => `${target.pkgDir}/Dockerfile`)
-    ),
-  ].filter((file) => existsSync(join(REPO_ROOT, file)));
+  const targets = discoverTargets(REPO_ROOT);
+  const clientOwners = new Set(
+    targets.filter((target) => target.kind === 'hey-api').map((target) => target.pkgName)
+  );
+
+  /** Workspace package name -> its directory and its `workspace:` dependencies. */
+  const workspace = new Map<string, { dir: string; deps: string[] }>();
+  for (const dir of discoverCandidateDirs(REPO_ROOT)) {
+    const path = join(REPO_ROOT, dir, 'package.json');
+    if (!existsSync(path)) continue;
+    const manifest: unknown = JSON.parse(readFileSync(path, 'utf8'));
+    if (typeof manifest !== 'object' || manifest === null || !('name' in manifest)) continue;
+    const deps: string[] = [];
+    for (const field of ['dependencies', 'devDependencies']) {
+      const block = field in manifest ? Reflect.get(manifest, field) : undefined;
+      if (typeof block !== 'object' || block === null) continue;
+      for (const [dep, range] of Object.entries(block)) {
+        if (typeof range === 'string' && range.startsWith('workspace:')) deps.push(dep);
+      }
+    }
+    workspace.set(String(manifest.name), { dir, deps });
+  }
+
+  function closure(name: string): Set<string> {
+    const seen = new Set<string>();
+    const queue = [name];
+    for (let next = queue.pop(); next !== undefined; next = queue.pop()) {
+      if (seen.has(next)) continue;
+      seen.add(next);
+      queue.push(...(workspace.get(next)?.deps ?? []));
+    }
+    return seen;
+  }
+
+  const images = [...workspace.entries()]
+    .filter(([, unit]) => existsSync(join(REPO_ROOT, unit.dir, 'Dockerfile')))
+    .map(([name, unit]) => ({ name, file: `${unit.dir}/Dockerfile`, closure: closure(name) }))
+    .filter((image) => [...image.closure].some((dep) => clientOwners.has(dep)));
 
   it('are all found', () => {
-    expect(dockerfiles.length).toBeGreaterThanOrEqual(10);
+    expect(images.length).toBeGreaterThanOrEqual(10);
   });
 
-  it.each(dockerfiles)('%s generates its clients between install and build', (file) => {
-    const text = readFileSync(join(REPO_ROOT, file), 'utf8');
+  it.each(images)('$file generates every client it bundles between install and build', (image) => {
+    const text = readFileSync(join(REPO_ROOT, image.file), 'utf8');
     const install = text.indexOf('pnpm install --frozen-lockfile');
     const copy = text.indexOf('COPY scripts/codegen/ ./scripts/codegen/');
-    const generateStep = text.indexOf('RUN node scripts/codegen/generate.mjs');
+    const step = /^RUN node scripts\/codegen\/generate\.mjs(.*)$/mu.exec(text);
     const build = text.search(/^RUN pnpm .*build/mu);
+    const requested = [...(step?.[1] ?? '').matchAll(/--pkg (\S+)/gu)].map((match) => match[1]);
+    const bundled = [...image.closure].filter((dep) => clientOwners.has(dep)).toSorted();
 
     expect(install).toBeGreaterThan(-1);
     expect(copy).toBeGreaterThan(install);
-    expect(generateStep).toBeGreaterThan(copy);
-    expect(build).toBeGreaterThan(generateStep);
+    expect(step?.index ?? -1).toBeGreaterThan(copy);
+    expect(build).toBeGreaterThan(step?.index ?? Infinity);
+    expect(requested.toSorted()).toEqual(bundled);
   });
 });
 
