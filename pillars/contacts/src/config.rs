@@ -70,6 +70,19 @@ impl Config {
     }
 }
 
+/// Resolve the remote app directory from `CONTACTS_UI_PATH`, defaulting to the crate's build output.
+pub fn ui_assets_path() -> std::path::PathBuf {
+    resolve_ui_assets_path(env::var_os("CONTACTS_UI_PATH"))
+}
+
+fn resolve_ui_assets_path(raw: Option<std::ffi::OsString>) -> std::path::PathBuf {
+    raw.filter(|value| !value.is_empty())
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| {
+            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("app/dist/remote")
+        })
+}
+
 fn resolve_port() -> u16 {
     match env::var("CONTACTS_PORT").or_else(|_| env::var("PORT")) {
         Ok(raw) => raw.trim().parse().unwrap_or(DEFAULT_PORT),
@@ -110,6 +123,17 @@ fn strip_trailing_slashes(value: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn ui_assets_default_and_explicit_paths_are_resolved_without_global_env_mutation() {
+        let expected = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("app/dist/remote");
+        assert_eq!(resolve_ui_assets_path(None), expected);
+        assert_eq!(resolve_ui_assets_path(Some("".into())), expected);
+        assert_eq!(
+            resolve_ui_assets_path(Some("custom/ui".into())),
+            std::path::PathBuf::from("custom/ui")
+        );
+    }
 
     fn sample_config() -> Config {
         Config {

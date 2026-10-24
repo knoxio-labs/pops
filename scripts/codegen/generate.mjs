@@ -80,6 +80,7 @@ export const EXPECTED_TARGETS = Object.freeze([
   { pkgName: '@pops/app-ai', scriptName: 'generate:api' },
   { pkgName: '@pops/app-bfm', scriptName: 'generate:api' },
   { pkgName: '@pops/app-cerebrum', scriptName: 'generate:cerebrum-client' },
+  { pkgName: '@pops/app-contacts', scriptName: 'generate:contacts-client' },
   { pkgName: '@pops/app-finance', scriptName: 'generate:finance-client' },
   { pkgName: '@pops/app-finance', scriptName: 'generate:contacts-client' },
   { pkgName: '@pops/app-finance', scriptName: 'generate:purchases-client' },

@@ -9,6 +9,29 @@ self-registers with the `registry` pillar on boot. Default port **3010** (the
 slot after `ai` 3008 and `orchestrator` 3009; override with `CONTACTS_PORT` /
 `PORT`).
 
+## Contacts app
+
+The shell loads the contacts import-review bundle from `/contacts-api/ui/contacts.js`
+and its stylesheet from `/contacts-api/ui/contacts.css`. The Rust manifest owns the
+navigation and page slots. The same contacts image builds and serves the app;
+`CONTACTS_UI_PATH` defaults to `app/dist/remote` beneath the crate and points at
+`/app/ui` in the image. Static serving accepts only contained JS/CSS files, with
+no SPA fallback over API routes.
+
+The app uses its own generated client against this pillar's canonical OpenAPI
+snapshot. Open Contacts to stage a vCard or Google CSV export, then review its
+parsed records before saving any directory changes. Reuse the source name and
+address-book namespace for subsequent exports. Select a phone country explicitly
+when national numbers should be normalized; leaving it blank retains the original
+number without inferring a country.
+
+The focused review combines the incoming person with only the existing candidates
+selected for that decision. Different-person choices persist independently, and
+candidates left for later remain reviewable. Row and candidate pages share the
+server's complete-snapshot proof; pagination never reclassifies a subset in the
+browser. A conflict requires reloading evidence and choosing again. A network
+failure keeps the exact decision and idempotency key available for retry.
+
 ## Contract surface
 
 contacts has no ts-rest/zod contract because it is not TypeScript. Its wire

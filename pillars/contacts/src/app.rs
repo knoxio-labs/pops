@@ -62,6 +62,7 @@ pub fn build_router(state: AppState) -> Router {
             write_guard_state,
             crate::merges::routes::guard_writes,
         ))
+        .merge(crate::ui::router(crate::config::ui_assets_path()))
         .layer(middleware::from_fn_with_state(
             scope_gate,
             enforce_service_account_scope,
