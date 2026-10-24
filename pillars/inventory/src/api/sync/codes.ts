@@ -3,7 +3,7 @@ import { inArray, isNotNull, sql } from 'drizzle-orm';
 import { resolvePublishedType } from '../../catalogue/index.js';
 import { DEFAULT_CODE_PATTERN } from '../../contract/settings/code-pattern.js';
 import { items } from '../../db/index.js';
-import { FAMILY_CODE, rankCodeFamilies } from './code-families.js';
+import { rankCodeFamilies } from './code-families.js';
 import { parseCodePattern, readCodeSettings, renderAffixes } from './code-pattern.js';
 
 import type { CommandDb } from '../../domain/commands/index.js';
@@ -97,18 +97,6 @@ function configuredPattern(db: CommandDb): CodePattern {
   return pattern;
 }
 
-function patternMatcher(db: CommandDb, request: SuggestRequest): RegExp {
-  const pattern = configuredPattern(db);
-  const { prefix, suffix } = renderAffixes(
-    pattern,
-    typeLetterFor(db, request.typeKey, request.name)
-  );
-  return new RegExp(
-    `^${escapeRegExp(prefix)}(\\d{${pattern.width},})${escapeRegExp(suffix)}$`,
-    'i'
-  );
-}
-
 /**
  * Deterministic code suggestions, used when no model answer is available.
  * An explicit stem continues that stem's highest number at its own width.
@@ -137,42 +125,30 @@ function isPatternFamily(pattern: CodePattern, typeLetter: string, stem: string)
   return suffix === '' && prefix.toLowerCase() === stem.toLowerCase();
 }
 
-/** Whether a candidate follows the typed stem or, without one, the pattern or a family. */
-function conventionFor(db: CommandDb, request: SuggestRequest): (key: string) => boolean {
-  const stem = request.stem?.toLowerCase();
-  if (stem !== undefined) return (key) => key.startsWith(stem);
-  const matcher = patternMatcher(db, request);
-  const families = new Set(rankCodeFamilies(db, request).map((family) => family.toLowerCase()));
-  return (key) => {
-    const familyStem = FAMILY_CODE.exec(key)?.[1];
-    return matcher.test(key) || (familyStem !== undefined && families.has(familyStem));
-  };
-}
-
 /** Longest code `item.setCode` accepts. */
 const MAX_CODE_LENGTH = 64;
 
 /**
- * Keep candidates that start with a typed stem or, without one, match the
- * saved pattern's affixes and minimum numeric width or continue a code family
- * the item's type already uses. They must be 1–64 characters, not repeated,
- * and are not carried by any item (tombstones included, matched
- * case-insensitively like the unique index). Order is preserved and the result is capped at
- * {@link SUGGESTION_COUNT}.
+ * Keep the candidates that could be offered as-is: trimmed, 1–64 characters,
+ * starting with `stem` when one is given, not repeated, and not carried by any
+ * item (tombstones included, matched case-insensitively like the unique
+ * index). Nothing else is dropped: the saved pattern and existing families
+ * shape only the deterministic fallback. Order is preserved and the result is
+ * capped at {@link SUGGESTION_COUNT}.
  */
 export function keepFreeCodes(
   db: CommandDb,
   candidates: readonly string[],
-  request: SuggestRequest
+  stem?: string
 ): string[] {
-  const follows = conventionFor(db, request);
+  const prefix = stem?.toLowerCase();
   const seen = new Set<string>();
   const shaped: string[] = [];
   for (const raw of candidates) {
     const code = raw.trim();
     const key = code.toLowerCase();
     if (code.length === 0 || code.length > MAX_CODE_LENGTH || seen.has(key)) continue;
-    if (!follows(key)) continue;
+    if (prefix !== undefined && !key.startsWith(prefix)) continue;
     seen.add(key);
     shaped.push(code);
   }

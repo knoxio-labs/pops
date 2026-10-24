@@ -911,7 +911,7 @@ export const MODULES = [
                 type: 'text',
                 default: '{type}{##}',
                 description:
-                  'For {type}, use the type’s first letter, then the item name’s first letter, then X. {##} is the number, at least as many digits as #. Used while suggestions are on.',
+                  'For {type}, use the type’s first letter, then the item name’s first letter, then X. {##} is the number, at least as many digits as #. Shapes a suggestion only when the model has none and the item’s type has no numbered codes yet.',
                 validation: {
                   required: true,
                   pattern: '^(?:[A-Za-z0-9-]|\\{type\\})*\\{#{1,6}\\}(?:[A-Za-z0-9-]|\\{type\\})*$',

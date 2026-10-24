@@ -65,7 +65,7 @@ describe('parseCodeReply', () => {
     expect(parseCodeReply(JSON.stringify({ codes: ['BK-1'] }), base)).toBeNull();
   });
 
-  it('keeps well-formed, free codes in order and trims them', () => {
+  it('keeps free codes in order and trims them', () => {
     const parsed = parseCodeReply(reply([' BK-NOVEL-3 ', 'BOOK-1']), base);
 
     expect(parsed).toEqual([
@@ -74,13 +74,18 @@ describe('parseCodeReply', () => {
     ]);
   });
 
-  it('drops codes with spaces, punctuation, a leading hyphen or over 32 characters', () => {
+  it('keeps any code of 1 to 64 characters and drops blank or longer ones', () => {
     const parsed = parseCodeReply(
-      reply(['BK NOVEL', 'BK_1', '-BK-1', 'A'.repeat(33), 'A'.repeat(32)]),
-      base
+      reply(['BK NOVEL', 'BK_1', '-BK-1', '   ', 'A'.repeat(65), 'A'.repeat(64)]),
+      { ...base, count: 10 }
     );
 
-    expect(parsed?.map((entry) => entry.code)).toEqual(['A'.repeat(32)]);
+    expect(parsed?.map((entry) => entry.code)).toEqual([
+      'BK NOVEL',
+      'BK_1',
+      '-BK-1',
+      'A'.repeat(64),
+    ]);
   });
 
   it('drops codes already in use and repeats, case-insensitively', () => {
