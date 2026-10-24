@@ -214,6 +214,7 @@ async fn disconnect_preserves_canonical_person_local_points_and_other_sources() 
         .unwrap();
     let point = |value: &str| ContactPointInput {
         kind: ContactPointKind::Email,
+        country_code: None,
         value: value.to_string(),
         label: None,
     };
