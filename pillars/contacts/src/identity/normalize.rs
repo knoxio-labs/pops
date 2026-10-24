@@ -51,11 +51,22 @@ pub fn normalize_phone(value: &str) -> Option<String> {
 /// Validates a phone number using an explicit ISO 3166-1 alpha-2 country for national input.
 /// Invalid country codes, extensions and non-ASCII digits cannot produce comparison keys.
 pub fn normalize_phone_for_country(value: &str, country_code: &str) -> Option<String> {
-    let country = country_code.to_ascii_uppercase().parse().ok()?;
+    let country = phone_country(country_code)?;
     normalized_phone(value, Some(country))
 }
 
-fn normalized_phone(value: &str, country: Option<phonenumber::country::Id>) -> Option<String> {
+pub(crate) fn phone_country(country_code: &str) -> Option<rlibphonenumber::Region> {
+    if country_code.len() != 2 || !country_code.bytes().all(|byte| byte.is_ascii_alphabetic()) {
+        return None;
+    }
+    let region = country_code.to_ascii_uppercase().parse().ok()?;
+    rlibphonenumber::PHONE_NUMBER_UTIL
+        .get_supported_regions()
+        .any(|known| known == region)
+        .then_some(region)
+}
+
+fn normalized_phone(value: &str, country: Option<rlibphonenumber::Region>) -> Option<String> {
     let value = value.trim();
     if value.is_empty()
         || value.chars().filter(|character| *character == '+').count() > 1
@@ -66,10 +77,12 @@ fn normalized_phone(value: &str, country: Option<phonenumber::country::Id>) -> O
     {
         return None;
     }
-    let number = phonenumber::parse(country, value).ok()?;
-    number
-        .is_valid()
-        .then(|| number.format().mode(phonenumber::Mode::E164).to_string())
+    let number = rlibphonenumber::PhoneNumber::parse(value, country).ok()?;
+    number.is_valid().then(|| {
+        number
+            .format_as(rlibphonenumber::PhoneNumberFormat::E164)
+            .into_owned()
+    })
 }
 
 /// Produces a case-insensitive NFC name key while preserving accents, punctuation and token order.
@@ -127,7 +140,25 @@ mod tests {
             normalize_phone_for_country("0412 345 678", "AU").as_deref(),
             Some("+61412345678")
         );
-        assert_eq!(normalize_phone_for_country("0412 345 678", "invalid"), None);
+        assert_eq!(
+            normalize_phone_for_country("0412 345 678", "au").as_deref(),
+            Some("+61412345678")
+        );
+        for country in ["invalid", "ZZ", "AA", "001", ""] {
+            assert_eq!(normalize_phone_for_country("+61412345678", country), None);
+        }
+        for (value, country, expected) in [
+            ("202-555-0123", "US", "+12025550123"),
+            ("(11) 98765-4321", "BR", "+5511987654321"),
+            ("020 7946 0018", "GB", "+442079460018"),
+        ] {
+            assert_eq!(normalize_phone(value), None);
+            assert_eq!(
+                normalize_phone_for_country(value, country).as_deref(),
+                Some(expected)
+            );
+            assert_eq!(normalize_phone(expected).as_deref(), Some(expected));
+        }
         for value in [
             "",
             "0412345678",

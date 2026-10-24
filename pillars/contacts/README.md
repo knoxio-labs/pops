@@ -106,6 +106,9 @@ field selections reject the complete operation before it changes membership.
 Historical IDs resolve to the current canonical entity on reads. Lists, lookup
 and search expose canonical identities once; addresses, source records and
 contact points project the whole group while retaining their original owner IDs.
+Removed upstream points disappear from the current projection unless explicitly
+preferred; chosen values remain visible with `active: false` and `preferred: true`.
+All original point rows remain stored for provenance and undo.
 Ordinary writes through retired IDs and deletion of active merged members return 409. Recognized source refreshes retain their original member ownership and
 remain permitted. A new local edit or source link must target the canonical ID.
 
@@ -132,6 +135,16 @@ replay does not write or advance that revision. Undo restores previous membershi
 and selections only at the exact untouched post-merge revision. References written
 in another pillar after a merge still name the chosen canonical UUID after undo;
 contacts cannot reconstruct an external writer's intended former member.
+
+The import reviewed-action service can compose `merge_in_transaction`,
+`decide_in_transaction`, and `select_in_transaction` inside one caller-owned
+`BEGIN IMMEDIATE` transaction. Any failure requires rolling back the complete
+action. Create the incoming person and source, record candidate-specific negative
+pairs, and merge last so its undo revision covers the entire directory change.
+Selecting an incoming imported structured profile requires no local profile copy
+and works without merging any existing candidate. Review projections can reuse
+`group_in_transaction`, `projection::entity`, `persons::repo::get_profile_in_transaction`, and
+`projection::points_in_transaction` in one consistent read snapshot.
 
 ## OpenAPI emit and cross-language consumption
 
@@ -296,13 +309,3 @@ run through `@pops/pillar-sdk`. The registry origin resolves
 registry records for contacts resolves `CONTACTS_SELF_BASE_URL` →
 `http://localhost:<port>`. A missing or broken registry never blocks boot:
 registration retries in the background while the server serves its surface.
-
-The import reviewed-action service can compose `merge_in_transaction`,
-`decide_in_transaction`, and `select_in_transaction` inside one caller-owned
-`BEGIN IMMEDIATE` transaction. Any failure requires rolling back the complete
-action. Create the incoming person and source, record candidate-specific negative
-pairs, and merge last so its undo revision covers the entire directory change.
-Selecting an incoming imported structured profile requires no local profile copy
-and works without merging any existing candidate. Review projections can reuse
-`group_in_transaction`, `projection::entity`, `persons::repo::get_profile`, and
-`projection::points_in_transaction` in one consistent read snapshot.
