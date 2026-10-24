@@ -88,6 +88,7 @@ use crate::sources::routes::{
         crate::imports::routes::stage_file,
         crate::imports::routes::get_batch,
         crate::imports::routes::commit_batch,
+        crate::imports::review_decision_routes::decide,
         crate::persons::routes::get_profile,
         crate::persons::routes::put_profile,
         crate::persons::routes::list_points,
@@ -98,6 +99,8 @@ use crate::sources::routes::{
         crate::sources::routes::list_records,
     ),
     components(schemas(
+        crate::imports::review_decision_model::ReviewDecisionInput,
+        crate::imports::review_decision_model::ReviewDecisionReceipt,
         crate::imports::model::ImportPayload,
         crate::imports::model::RowIssue,
         crate::imports::model::RowProposal,
