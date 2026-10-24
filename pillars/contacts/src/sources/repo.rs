@@ -42,7 +42,8 @@ fn validate_key(value: &str) -> Result<(), SourceError> {
     Ok(())
 }
 
-/// Create or fetch an account by stable provider subject. A refresh may update only its label.
+/// Create or fetch an account by stable provider subject. A supplied label updates its label;
+/// omitting the optional label preserves the stored label.
 pub async fn create_or_get_account(
     pool: &SqlitePool,
     input: &SourceAccountInput,
@@ -54,7 +55,7 @@ pub async fn create_or_get_account(
             "Account label must be at most 256 bytes".to_string(),
         ));
     }
-    sqlx::query("INSERT INTO source_accounts(id,provider,account_key,label,created_at) VALUES(?1,?2,?3,?4,?5) ON CONFLICT(provider,account_key) DO UPDATE SET label=excluded.label WHERE source_accounts.label IS NOT excluded.label")
+    sqlx::query("INSERT INTO source_accounts(id,provider,account_key,label,created_at) VALUES(?1,?2,?3,?4,?5) ON CONFLICT(provider,account_key) DO UPDATE SET label=excluded.label WHERE excluded.label IS NOT NULL AND source_accounts.label IS NOT excluded.label")
         .bind(uuid::Uuid::new_v4().to_string()).bind(&input.provider).bind(&input.account_key).bind(&input.label).bind(now_rfc3339()).execute(pool).await?;
     Ok(sqlx::query_as("SELECT id,provider,account_key,label,created_at FROM source_accounts WHERE provider=?1 AND account_key=?2")
         .bind(&input.provider).bind(&input.account_key).fetch_one(pool).await?)
