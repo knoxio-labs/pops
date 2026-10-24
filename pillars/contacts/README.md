@@ -96,6 +96,21 @@ row; it does not declare two people different. A target link is always explicit:
 similar display names, first names, email addresses or phone numbers do not choose
 an owner. Recognized source updates are distinct from choosing a person to link.
 
+`POST /imports/{id}/review-decisions` applies one reviewed row with its exact
+`batchRevision`, `directoryRevision`, opaque `proposalRevision` and retry key.
+Explicit `mergeEntityIds` are the only identities combined with the incoming
+person; `differentEntityIds` persist pair decisions independently, and omitted or
+`laterEntityIds` stay pending. All ingestion, negative pairs, preferred-value
+selections, subset merge and retry receipt share one SQLite transaction. A failed
+selection rolls everything back. Empty candidate lists explicitly ingest an
+incoming row so other staged rows can be reviewed against a real person. A pure
+later decision saves the pending choices without creating a person. Selections
+and point preferences use the same provenance contracts as identity merges.
+Each request permits at most 499 merged or different identities, 10,000 deferred
+identities, nine field selections, four point preferences and 1,000 expanded
+negative-group operations or 10,000 stable member pairs; bodies are bounded to
+128 KiB.
+
 Batch revision, source-record revision and provider-account epoch protect stale
 previews with `409`. Identical key/body retries return their persisted receipt
 before checking revision; reusing a key with different decisions returns `409`.
