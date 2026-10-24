@@ -60,8 +60,10 @@ impl From<PersonError> for ImportError {
     fn from(error: PersonError) -> Self {
         match error {
             PersonError::NotFound => Self::NotFound,
-            PersonError::Retired(_) => Self::Conflict("Identity changed; stage a new preview"),
             PersonError::Invalid(_) => Self::Invalid("Invalid person decision"),
+            PersonError::Retired(_) => {
+                Self::Conflict("Person was merged; select the canonical person")
+            }
             PersonError::Db(_) => Self::Storage,
         }
     }
@@ -225,28 +227,7 @@ pub async fn commit(
             "Preview revision changed; reload the batch",
         ));
     }
-    if let Some(epoch) = batch.source_epoch {
-        fence_account(&mut tx, &batch.account_id, AccountEpoch(epoch))
-            .await
-            .map_err(|error| match error {
-                ProviderStoreError::StaleAccount => {
-                    ImportError::Conflict("Provider account changed; stage a new preview")
-                }
-                _ => ImportError::Storage,
-            })?;
-    } else {
-        let provider_registered: bool = sqlx::query_scalar(
-            "SELECT EXISTS(SELECT 1 FROM provider_accounts WHERE account_id=?1)",
-        )
-        .bind(&batch.account_id)
-        .fetch_one(&mut *tx)
-        .await?;
-        if provider_registered {
-            return Err(ImportError::Conflict(
-                "Provider account changed; stage a new preview",
-            ));
-        }
-    }
+    validate_batch_fences(&mut tx, &batch).await?;
     let rows: HashMap<&str, &ImportRow> = batch
         .rows
         .iter()
@@ -277,6 +258,45 @@ pub async fn commit(
     repo::finish_commit(&mut tx, &input.idempotency_key, &hash, &receipt).await?;
     tx.commit().await?;
     Ok(receipt)
+}
+
+/// Validate account and provider-scan fences inside the caller's reserved write transaction.
+/// Both selected-row commits and composite review decisions share this boundary.
+pub(crate) async fn validate_batch_fences(
+    conn: &mut SqliteConnection,
+    batch: &ImportBatch,
+) -> Result<(), ImportError> {
+    if let Some(epoch) = batch.source_epoch {
+        fence_account(conn, &batch.account_id, AccountEpoch(epoch))
+            .await
+            .map_err(|error| match error {
+                ProviderStoreError::StaleAccount => {
+                    ImportError::Conflict("Provider account changed; stage a new preview")
+                }
+                _ => ImportError::Storage,
+            })?;
+    } else {
+        let provider_registered: bool = sqlx::query_scalar(
+            "SELECT EXISTS(SELECT 1 FROM provider_accounts WHERE account_id=?1)",
+        )
+        .bind(&batch.account_id)
+        .fetch_one(&mut *conn)
+        .await?;
+        if provider_registered {
+            return Err(ImportError::Conflict(
+                "Provider account changed; stage a new preview",
+            ));
+        }
+    }
+    crate::providers::sync::validate_batch(conn, &batch.id)
+        .await
+        .map_err(|error| match error {
+            ProviderStoreError::StaleAccount => {
+                ImportError::Conflict("Provider scan changed; stage a new preview")
+            }
+            _ => ImportError::Storage,
+        })?;
+    Ok(())
 }
 
 fn valid_key(key: &str) -> bool {
@@ -327,7 +347,8 @@ fn validate_commit(input: &CommitBatchInput) -> Result<(), ImportError> {
     Ok(())
 }
 
-async fn validate_decision(
+/// Validate a pending row and chosen target before any source observation changes.
+pub(crate) async fn validate_decision(
     conn: &mut SqliteConnection,
     batch: &ImportBatch,
     row: &ImportRow,
@@ -372,7 +393,7 @@ async fn validate_decision(
             }
         }
         RowAction::LinkPerson { entity_id } if current.is_none() && !row.removed => {
-            crate::persons::repo::require_person(conn, entity_id).await?;
+            crate::persons::repo::require_writable_person(conn, entity_id).await?;
         }
         RowAction::UpdateSource if current.is_some() && !row.removed => {}
         RowAction::DeactivateSource if current.is_some() && row.removed => {}
@@ -385,7 +406,8 @@ async fn validate_decision(
     Ok(())
 }
 
-async fn apply_decision(
+/// Apply a previously validated row inside the caller transaction and retain its binding.
+pub(crate) async fn apply_decision(
     conn: &mut SqliteConnection,
     batch: &ImportBatch,
     row: &ImportRow,
@@ -402,6 +424,15 @@ async fn apply_decision(
     if matches!(action, RowAction::DeactivateSource) {
         let id = row.source_record_id.as_ref().ok_or(ImportError::Storage)?;
         deactivate_record(conn, id).await?;
+        let record = find_record(
+            conn,
+            &batch.account_id,
+            &batch.collection_key,
+            &row.record_key,
+        )
+        .await?
+        .ok_or(ImportError::Storage)?;
+        super::review_state::bind(conn, &row.id, &record).await?;
         return Ok(CommittedRow {
             row_id: row.id.clone(),
             entity_id: row.entity_id.clone(),
@@ -438,6 +469,7 @@ async fn apply_decision(
         },
     )
     .await?;
+    super::review_state::bind(conn, &row.id, &record).await?;
     Ok(CommittedRow {
         row_id: row.id.clone(),
         entity_id: Some(record.entity_id),

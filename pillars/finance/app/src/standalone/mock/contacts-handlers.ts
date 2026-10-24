@@ -2,7 +2,9 @@ import { CONTACT_ENTITIES } from '../fixtures/entities';
 import {
   contactPoint,
   importBatch,
+  importReview,
   importReceipt,
+  importReviewReceipt,
   personProfile,
   sourceAccount,
 } from './contacts-fixtures';
@@ -137,9 +139,6 @@ export const contactsHandlers: MockHandlers = {
   'GET /entities/{id}/sources': ok({ data: [] }),
   'GET /sources/accounts': ok({ data: [sourceAccount.data] }),
   'POST /sources/accounts': ok(sourceAccount),
-  'POST /imports/files': created(importBatch),
-  'GET /imports/{id}': ok(importBatch),
-  'POST /imports/{id}/commit': ok(importReceipt),
   'GET /entities/{id}/addresses': ok({ data: [] }),
   'POST /entities/{id}/addresses': addressCreated,
   'GET /entities/{id}/avatar': () => notFound('avatar', 'contacts.resource.not_found'),
@@ -150,6 +149,11 @@ export const contactsHandlers: MockHandlers = {
   'PUT /entities/{id}/poster': ok(mutation),
   'DELETE /entities/{id}/poster': ok(mutation),
   'POST /search': ok({ hits: [] }),
+  'POST /imports/files': created(importBatch),
+  'GET /imports/{id}': ok(importBatch),
+  'GET /imports/{id}/review-proposals': ok(importReview),
+  'POST /imports/{id}/commit': ok(importReceipt),
+  'POST /imports/{id}/review-decisions': ok(importReviewReceipt),
 };
 
 /**

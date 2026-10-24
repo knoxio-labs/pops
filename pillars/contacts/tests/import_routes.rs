@@ -361,6 +361,21 @@ async fn import_operations_require_their_published_service_account_scope() {
     )
     .await;
     assert_eq!(status, StatusCode::OK);
+    for (key, expected) in [
+        ("entities-test", StatusCode::FORBIDDEN),
+        ("imports-test", StatusCode::BAD_REQUEST),
+    ] {
+        let (status, _) = send(
+            &router,
+            "POST",
+            "/imports/missing/review-decisions",
+            "application/json",
+            b"{}".to_vec(),
+            Some(key),
+        )
+        .await;
+        assert_eq!(status, expected);
+    }
     server.abort();
 }
 
@@ -385,4 +400,40 @@ fn upload_contract_uses_binary_bytes_and_camel_case_query_parameters() {
     assert!(params
         .iter()
         .any(|param| param["name"] == "phoneCountryCode"));
+}
+
+#[tokio::test]
+async fn review_decision_contract_is_scoped_bounded_and_rejects_malformed_input() {
+    let (router, _, _) = setup().await;
+    let (status, _) = send(
+        &router,
+        "POST",
+        "/imports/missing/review-decisions",
+        "application/json",
+        b"{}".to_vec(),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    let (status, _) = send(
+        &router,
+        "POST",
+        "/imports/missing/review-decisions",
+        "application/json",
+        vec![b' '; 128 * 1024 + 1],
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    let spec = contacts::openapi::openapi_30_value();
+    let operation = &spec["paths"]["/imports/{id}/review-decisions"]["post"];
+    assert_eq!(operation["operationId"], "imports.review.decide");
+    let receipt = &spec["components"]["schemas"]["ReviewDecisionReceipt"];
+    for field in ["entityId", "operationId"] {
+        assert!(receipt["required"]
+            .as_array()
+            .unwrap()
+            .contains(&json!(field)));
+        assert_eq!(receipt["properties"][field]["nullable"], true);
+    }
 }

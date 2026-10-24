@@ -85,26 +85,6 @@ fn incomplete_and_display_names_always_require_review() {
 }
 
 #[test]
-fn first_names_do_not_disqualify_valid_email_or_phone_evidence() {
-    for (email, phone, reason) in [
-        ("a@example.com", "", MatchReason::Email),
-        ("", "+61412345678", MatchReason::Phone),
-    ] {
-        let mut incoming = record("incoming", "", "", email, phone);
-        incoming.name.display_name = Some("Jane".into());
-        let mut existing = record("existing", "", "", email, phone);
-        existing.name.display_name = Some("Janet".into());
-        assert_eq!(
-            classify(&incoming, &[candidate("person", existing)], &[]),
-            IdentityOutcome::AutoMatch {
-                entity_id: "person".into(),
-                reason
-            }
-        );
-    }
-}
-
-#[test]
 fn unique_complete_names_require_complete_evidence_on_both_sides() {
     let incoming = record("incoming", "José", "Silva", "", "");
     assert_eq!(
@@ -392,6 +372,90 @@ fn rejections_follow_incoming_entity_members_without_a_matching_observation_id()
         ),
         expected_review(ReviewReason::KeepSeparate, &["target"])
     );
+}
+
+#[test]
+fn signal_evidence_reports_all_exact_reasons_without_deciding_uniqueness() {
+    let left = record("left", "Jane", "Doe", "jane@example.test", "+61412345678");
+    let right = record("right", "Jane", "Doe", "jane@example.test", "+61412345678");
+    assert_eq!(
+        matching_signals(&left, &right)
+            .into_iter()
+            .collect::<Vec<_>>(),
+        vec![
+            MatchReason::Email,
+            MatchReason::Phone,
+            MatchReason::CompleteName
+        ]
+    );
+}
+
+#[test]
+fn ingested_observations_exclude_own_group_but_preserve_its_historical_rejections() {
+    let incoming = record("own", "Jane", "Doe", "jane@example.test", "");
+    let mut own = candidate("own", incoming.clone());
+    own.member_ids.push("prior-own".into());
+    let other = candidate(
+        "other",
+        record("existing", "Jane", "Doe", "jane@example.test", ""),
+    );
+    let candidates = [own, other];
+    assert_eq!(
+        classify_after_ingestion(&incoming, &candidates, &[]),
+        IdentityOutcome::AutoMatch {
+            entity_id: "other".into(),
+            reason: MatchReason::Email
+        }
+    );
+    assert_eq!(
+        classify_after_ingestion(
+            &incoming,
+            &candidates,
+            &[KeepSeparate {
+                left_id: "prior-own".into(),
+                right_id: "other".into()
+            }]
+        ),
+        expected_review(ReviewReason::KeepSeparate, &["other"])
+    );
+}
+
+#[test]
+fn display_only_names_can_review_a_different_display_with_matching_structured_name() {
+    let incoming = record("incoming", "", "", "", "");
+    let incoming = IdentityRecord {
+        name: NameEvidence {
+            display_name: Some("Jane Doe".into()),
+            complete_name: None,
+        },
+        ..incoming
+    };
+    let mut existing = record("existing", "Jane", "Doe", "", "");
+    existing.name.display_name = Some("Different preferred label".into());
+    assert_eq!(
+        classify(&incoming, &[candidate("target", existing)], &[]),
+        expected_review(ReviewReason::IncompleteName, &["target"])
+    );
+}
+
+#[test]
+fn first_names_do_not_disqualify_valid_email_or_phone_evidence() {
+    for (email, phone, reason) in [
+        ("a@example.com", "", MatchReason::Email),
+        ("", "+61412345678", MatchReason::Phone),
+    ] {
+        let mut incoming = record("incoming", "", "", email, phone);
+        incoming.name.display_name = Some("Jane".into());
+        let mut existing = record("existing", "", "", email, phone);
+        existing.name.display_name = Some("Janet".into());
+        assert_eq!(
+            classify(&incoming, &[candidate("person", existing)], &[]),
+            IdentityOutcome::AutoMatch {
+                entity_id: "person".into(),
+                reason
+            }
+        );
+    }
 }
 
 #[test]

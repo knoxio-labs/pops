@@ -149,6 +149,14 @@ async fn selected_commit_is_atomic_partial_and_exactly_retryable_before_revision
     );
     let receipt = service::commit(&pool, &batch.id, &first).await.unwrap();
     assert_eq!(receipt.revision, 2);
+    let binding =
+        contacts::imports::review_state::get(&mut pool.acquire().await.unwrap(), &batch.rows[0].id)
+            .await
+            .unwrap()
+            .unwrap();
+    assert_eq!(binding.entity_id, receipt.rows[0].entity_id);
+    assert_eq!(binding.source_record_id, receipt.rows[0].source_record_id);
+    assert_eq!(binding.source_revision, Some(1));
     assert_eq!(counts(&pool).await, (1, 1));
     let replay = service::commit(&pool, &batch.id, &first).await.unwrap();
     assert_eq!(
@@ -226,6 +234,11 @@ async fn a_failed_late_write_rolls_back_people_sources_rows_revisions_and_receip
         .await
         .unwrap();
     assert_eq!(receipts, 0);
+    let bindings: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM contact_import_review_states")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(bindings, 0);
     sqlx::query("DROP TRIGGER fail_second_import")
         .execute(&pool)
         .await
@@ -659,6 +672,146 @@ async fn previews_and_receipts_survive_reopening_and_concurrent_exact_retries() 
     std::fs::remove_file(path).unwrap();
 }
 
+#[tokio::test]
+async fn new_links_reject_retired_people_while_recognized_sources_keep_original_owners() {
+    let (pool, account) = setup().await;
+    let initial = service::stage(
+        &pool,
+        &input(
+            &account,
+            vec![row("a", "Canonical"), row("b", "Historical")],
+        ),
+    )
+    .await
+    .unwrap();
+    let receipt = service::commit(
+        &pool,
+        &initial.id,
+        &commit(
+            1,
+            "initial",
+            initial
+                .rows
+                .iter()
+                .map(|row| (row.id.as_str(), RowAction::CreatePerson))
+                .collect(),
+        ),
+    )
+    .await
+    .unwrap();
+    let canonical = receipt.rows[0].entity_id.as_ref().unwrap();
+    let retired = receipt.rows[1].entity_id.as_ref().unwrap();
+    let pending = service::stage(&pool, &input(&account, vec![row("new", "New contact")]))
+        .await
+        .unwrap();
+    let refresh = service::stage(&pool, &input(&account, vec![row("b", "Source update")]))
+        .await
+        .unwrap();
+    let revision = contacts::merges::repo::revision(&mut pool.acquire().await.unwrap())
+        .await
+        .unwrap();
+    contacts::merges::service::merge(
+        &pool,
+        contacts::merges::model::MergeBody {
+            canonical_id: canonical.clone(),
+            member_ids: vec![retired.clone()],
+            expected_revision: revision,
+            idempotency_key: "merge".into(),
+            evidence: "Explicit operator selection".into(),
+            selections: Vec::new(),
+            preferred_point_ids: Vec::new(),
+        },
+    )
+    .await
+    .unwrap();
+    let stale_link = commit(
+        1,
+        "retired-link",
+        vec![(
+            &pending.rows[0].id,
+            RowAction::LinkPerson {
+                entity_id: retired.clone(),
+            },
+        )],
+    );
+    assert!(matches!(
+        service::commit(&pool, &pending.id, &stale_link).await,
+        Err(ImportError::Conflict(_))
+    ));
+    assert!(!service::get(&pool, &pending.id).await.unwrap().rows[0].processed);
+    let explicit = commit(
+        1,
+        "canonical-link",
+        vec![(
+            &pending.rows[0].id,
+            RowAction::LinkPerson {
+                entity_id: canonical.clone(),
+            },
+        )],
+    );
+    service::commit(&pool, &pending.id, &explicit)
+        .await
+        .unwrap();
+    service::commit(
+        &pool,
+        &refresh.id,
+        &commit(
+            1,
+            "source-refresh",
+            vec![(&refresh.rows[0].id, RowAction::UpdateSource)],
+        ),
+    )
+    .await
+    .unwrap();
+    let owner: String = sqlx::query_scalar("SELECT entity_id FROM source_records WHERE account_id=?1 AND collection_key='personal' AND record_key='b'").bind(&account).fetch_one(&pool).await.unwrap();
+    assert_eq!(&owner, retired);
+    assert_eq!(counts(&pool).await, (2, 3));
+}
+
+#[tokio::test]
+async fn row_binding_preserves_independent_deferred_candidate_decisions() {
+    use contacts::imports::review_state::{self, CandidateDecision};
+    let (pool, account) = setup().await;
+    let batch = service::stage(&pool, &input(&account, vec![row("one", "One")]))
+        .await
+        .unwrap();
+    let row_id = &batch.rows[0].id;
+    let decisions = std::collections::BTreeMap::from([(
+        "candidate-later".to_string(),
+        CandidateDecision::Later,
+    )]);
+    let mut tx = pool.begin().await.unwrap();
+    review_state::save_decisions(&mut tx, row_id, &decisions)
+        .await
+        .unwrap();
+    tx.commit().await.unwrap();
+    let deferred = review_state::get(&mut pool.acquire().await.unwrap(), row_id)
+        .await
+        .unwrap()
+        .unwrap();
+    assert!(deferred.entity_id.is_none());
+    assert_eq!(deferred.decisions, decisions);
+    let receipt = service::commit(
+        &pool,
+        &batch.id,
+        &commit(1, "bind", vec![(row_id, RowAction::CreatePerson)]),
+    )
+    .await
+    .unwrap();
+    let bound = review_state::get(&mut pool.acquire().await.unwrap(), row_id)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(bound.entity_id, receipt.rows[0].entity_id);
+    assert_eq!(bound.decisions, decisions);
+    assert_eq!(bound.source_revision, Some(1));
+    let all = review_state::get_batch(&mut pool.acquire().await.unwrap(), &batch.id)
+        .await
+        .unwrap();
+    assert_eq!(all.len(), 1);
+    assert_eq!(all[row_id].entity_id, bound.entity_id);
+}
+
 #[test]
 fn retired_person_error_becomes_a_safe_import_conflict() {
     use contacts::imports::service::ImportError;
@@ -666,6 +819,6 @@ fn retired_person_error_becomes_a_safe_import_conflict() {
 
     assert!(matches!(
         ImportError::from(PersonError::Retired("fictional-canonical-id".to_string())),
-        ImportError::Conflict("Identity changed; stage a new preview")
+        ImportError::Conflict("Person was merged; select the canonical person")
     ));
 }

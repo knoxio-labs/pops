@@ -57,10 +57,7 @@ unique person identifier, so consumers must reject ambiguous matches.
 
 Person profiles are explicit local structured-name overrides. Imported records
 retain their own display and structured names with an explicit completeness
-marker. File adapters qualify explicit nonblank given and family fields as
-complete while retaining additional names, prefixes and suffixes. CSV `Name` and
-vCard `FN` display text are never split into parts; given-only names do not
-qualify. Declared incomplete metadata remains incomplete. Contact
+marker; display text alone does not establish complete-name evidence. Contact
 points retain the original value and label. Conservative email and validated
 international phone keys are derived separately for matching. National phone
 values require an explicit known ISO `countryCode`; no country is inferred from
@@ -99,6 +96,49 @@ row; it does not declare two people different. A target link is always explicit:
 similar display names, first names, email addresses or phone numbers do not choose
 an owner. Recognized source updates are distinct from choosing a person to link.
 
+`GET /imports/{id}/review-proposals` classifies the complete batch against every
+eligible canonical person before returning bounded evidence. Incoming rows use
+`offset`/`limit` (default 50, maximum 50); candidates use `candidateOffset` and
+`candidateLimit` (default 50, maximum 200). `candidateRowId` requests one row's
+candidate page. Subsequent pages carry the top-level `proposalRevision`; changed
+directory, source or row-decision state returns `409`. Each row has its own
+proposal proof for an atomic review decision. Counts cover the full batch and
+candidate totals include omitted pages. Mutation authorization uses the complete
+candidate set, including candidates selected on earlier pages.
+
+Candidate IDs are current canonical people or persisted import row IDs. A
+collision between two new rows requires importing one row first, then refreshing
+to review the resulting person; an import row ID never pretends to be a person.
+Matching uses validated exact email/phone keys or proven complete structured
+names. File and provider adapters qualify explicit nonblank given and family
+fields as complete, retaining additional names, prefixes and suffixes. CSV `Name`
+and vCard `FN` display text are never split into parts, and first-name-only or
+legacy display-only people still require manual name review. Declared incomplete
+metadata remains incomplete. Shared identifiers, conflicting signals, homonyms, incomplete names and
+stored keep-separate decisions require review. Original member/source ownership
+and explicit preferred values remain visible after canonical grouping.
+
+`POST /imports/{id}/review-decisions` applies one reviewed row with its exact
+`batchRevision`, `directoryRevision`, opaque `proposalRevision` and retry key.
+Explicit `mergeEntityIds` are the only identities combined with the incoming
+person; `differentEntityIds` persist pair decisions independently, and omitted or
+`laterEntityIds` stay pending. Existing canonical preferred values are the default:
+a first incoming merge retains the selected existing root (the smallest authorized
+ID when several are selected), while later decisions keep the row's current
+canonical group. Empty selectors preserve its scalar fields, structured profile
+and contact-point preferences; explicit validated field/point references replace
+them. The incoming source keeps its original retained owner independently of the
+canonical result. All ingestion, negative pairs, preferred-value
+selections, subset merge and retry receipt share one SQLite transaction. A failed
+selection rolls everything back. Empty candidate lists explicitly ingest an
+incoming row so other staged rows can be reviewed against a real person. A pure
+later decision saves the pending choices without creating a person. Selections
+and point preferences use the same provenance contracts as identity merges.
+Each request permits at most 499 merged or different identities, 10,000 deferred
+identities, nine field selections, four point preferences and 1,000 expanded
+negative-group operations or 10,000 stable member pairs; bodies are bounded to
+128 KiB.
+
 Batch revision, source-record revision and provider-account epoch protect stale
 previews with `409`. Identical key/body retries return their persisted receipt
 before checking revision; reusing a key with different decisions returns `409`.
@@ -108,6 +148,22 @@ identity is guaranteed only for the same file. Reordered or changed exports make
 new proposals. Providers use the same staging transaction after gathering a full
 scan, and explicit removals deactivate only the source's contributions.
 
+Provider scans stage pages under one durable account run. A partial or failed
+scan changes no cached observations, checkpoint, or directory data. Only complete
+collection discovery and complete pages for every collection can atomically
+reconcile the cache and produce shared import previews. Full enumeration proves
+absence before proposing removals; incremental tombstones affect only their
+source keys. Cached active ETags avoid redundant CardDAV downloads. Every preview
+contains the complete current cached collection, including unchanged contacts
+that still need a person decision. A later successful scan invalidates earlier
+provider previews, including proposals without a linked person.
+
+Provider modules expose backend authorization, transport and scan primitives.
+Credential installation requires an explicitly verified human operator; encrypted
+credentials bind to the provider account, and disconnect/reconnect fences older
+callbacks, jobs and previews. Runtime routes and job scheduling must use these
+primitives together before offering an account connection flow.
+
 Registration is outbound: on boot (when opted in) contacts POSTs its manifest to
 the registry, then heartbeats every 10s and deregisters on `SIGTERM`/`SIGINT`.
 
@@ -116,8 +172,9 @@ Every route error uses the ADR-054 envelope: `code`, `message`, `requestId`,
 under `contacts.*` and are enumerated in OpenAPI. The request-id layer echoes
 an incoming `X-Request-Id` or mints one, then returns it in both the response
 header and error body. Database diagnostics are logged with that id; clients
-receive only `contacts.internal` and a generic message, never SQLite or `sqlx`
-error text.
+receive a stable error code and generic message, never SQLite or `sqlx` error
+text. Import persistence logs contain only a safe classification and request id,
+with `contacts.import.storage` returned to the caller.
 
 ## Canonical person identity and guarded undo
 

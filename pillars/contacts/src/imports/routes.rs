@@ -145,7 +145,8 @@ pub async fn commit_batch(
         .map_err(api_error)
 }
 
-fn api_error(error: ImportError) -> ApiError {
+/// Map failures without copying raw observations or storage diagnostics.
+pub(super) fn api_error(error: ImportError) -> ApiError {
     match error {
         ImportError::Invalid(message) => ApiError::bad_request(message),
         ImportError::Conflict(message) => ApiError::import_conflict(message),
