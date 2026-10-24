@@ -154,7 +154,13 @@ and explicit preferred values remain visible after canonical grouping.
 `batchRevision`, `directoryRevision`, opaque `proposalRevision` and retry key.
 Explicit `mergeEntityIds` are the only identities combined with the incoming
 person; `differentEntityIds` persist pair decisions independently, and omitted or
-`laterEntityIds` stay pending. All ingestion, negative pairs, preferred-value
+`laterEntityIds` stay pending. Existing canonical preferred values are the default:
+a first incoming merge retains the selected existing root (the smallest authorized
+ID when several are selected), while later decisions keep the row's current
+canonical group. Empty selectors preserve its scalar fields, structured profile
+and contact-point preferences; explicit validated field/point references replace
+them. The incoming source keeps its original retained owner independently of the
+canonical result. All ingestion, negative pairs, preferred-value
 selections, subset merge and retry receipt share one SQLite transaction. A failed
 selection rolls everything back. Empty candidate lists explicitly ingest an
 incoming row so other staged rows can be reviewed against a real person. A pure
