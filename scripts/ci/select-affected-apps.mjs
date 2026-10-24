@@ -19,6 +19,10 @@ const fullSweepPaths = new Set([
   'mise.toml',
   'mise.ci.toml',
   '.github/workflows/app-quality.yml',
+  'scripts/ci/ci-receipts.mjs',
+  'scripts/ci/select-affected-apps.mjs',
+  'scripts/local-dev/fingerprint.mjs',
+  'scripts/local-dev/repository-inputs.mjs',
 ]);
 
 /** @typedef {{ name: string, dir: string, dependencies: Set<string>, isApp: boolean }} WorkspacePackage */

@@ -91,7 +91,11 @@ jobs:
                 "Cargo.lock",
                 ".github/workflows/unit-quality.yml",
                 ".github/workflows/_discover-units.yml",
-                ".github/actions/**"
+                ".github/actions/**",
+                "scripts/ci/ci-receipts.mjs",
+                "scripts/ci/select-affected-apps.mjs",
+                "scripts/local-dev/fingerprint.mjs",
+                "scripts/local-dev/repository-inputs.mjs"
               ],
               "FE Quality": [
                 "pillars/shell/**",
@@ -130,7 +134,11 @@ jobs:
                 "mise.toml",
                 "mise.ci.toml",
                 ".github/workflows/app-quality.yml",
-                ".github/actions/**"
+                ".github/actions/**",
+                "scripts/ci/ci-receipts.mjs",
+                "scripts/ci/select-affected-apps.mjs",
+                "scripts/local-dev/fingerprint.mjs",
+                "scripts/local-dev/repository-inputs.mjs"
               ],
               "Registry Generated Quality": [
                 "libs/module-registry/**",
