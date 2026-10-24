@@ -54,7 +54,10 @@ Person profiles are explicit local structured-name overrides. Imported records
 retain their own display and structured names with an explicit completeness
 marker; display text alone does not establish complete-name evidence. Contact
 points retain the original value and label. Conservative email and validated
-international phone keys are derived separately for matching; unsupported values
+international phone keys are derived separately for matching. National phone
+values require an explicit known ISO `countryCode`; no country is inferred from
+a machine locale or provider. The original value and country context are retained.
+Unsupported values
 and social/URL points remain raw observations without an eligible match key.
 
 Sources use an opaque UUID account plus stable `provider`/`accountKey` identity,
