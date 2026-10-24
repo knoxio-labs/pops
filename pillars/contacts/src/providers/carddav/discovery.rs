@@ -1,4 +1,4 @@
-use super::{joined, xml, CardDavAdapter, CardDavCollection, CardDavError};
+use super::{joined, xml, CardDavAccount, CardDavAdapter, CardDavCollection, CardDavError};
 use crate::providers::credentials::SecretBytes;
 use crate::providers::transport::ProviderTransport;
 use std::collections::BTreeMap;
@@ -12,6 +12,17 @@ impl<T: ProviderTransport> CardDavAdapter<T> {
         &self,
         authorization: &SecretBytes,
     ) -> Result<Vec<CardDavCollection>, CardDavError> {
+        self.discover_account(authorization)
+            .await
+            .map(|account| account.collections)
+    }
+
+    /// Discover the authenticated server principal and its books. The principal
+    /// key is a canonical vetted URL suitable for account reconnect comparison.
+    pub async fn discover_account(
+        &self,
+        authorization: &SecretBytes,
+    ) -> Result<CardDavAccount, CardDavError> {
         let principals = self
             .propfind(authorization, DISCOVERY, "0", "<d:current-user-principal/>")
             .await?;
@@ -87,7 +98,10 @@ impl<T: ProviderTransport> CardDavAdapter<T> {
                 }
             }
         }
-        Ok(books.into_values().collect())
+        Ok(CardDavAccount {
+            principal_key: principal,
+            collections: books.into_values().collect(),
+        })
     }
 
     pub(super) async fn propfind(

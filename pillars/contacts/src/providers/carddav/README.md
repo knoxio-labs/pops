@@ -6,6 +6,10 @@ finds the current principal and address-book home, then lists address books.
 Every discovered URL passes the transport's fixed iCloud host policy before
 credentials accompany another request. Redirects are refused.
 
+`discover_account` also returns the canonical authenticated principal URL.
+Management uses this server-derived identity to reject a reconnect to a different
+account, even when the submitted username or address-book labels look alike.
+
 `CardDavCredential` holds the account name and app password in zeroizing buffers
 without `Debug` or general serialization. It builds Basic authorization only at
 the transport boundary. Its versioned binary bundle is plaintext and must be
