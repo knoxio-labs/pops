@@ -61,6 +61,9 @@ impl From<PersonError> for ImportError {
         match error {
             PersonError::NotFound => Self::NotFound,
             PersonError::Invalid(_) => Self::Invalid("Invalid person decision"),
+            PersonError::Retired(_) => {
+                Self::Conflict("Person was merged; select the canonical person")
+            }
             PersonError::Db(_) => Self::Storage,
         }
     }
@@ -371,7 +374,7 @@ async fn validate_decision(
             }
         }
         RowAction::LinkPerson { entity_id } if current.is_none() && !row.removed => {
-            crate::persons::repo::require_person(conn, entity_id).await?;
+            crate::persons::repo::require_writable_person(conn, entity_id).await?;
         }
         RowAction::UpdateSource if current.is_some() && !row.removed => {}
         RowAction::DeactivateSource if current.is_some() && row.removed => {}

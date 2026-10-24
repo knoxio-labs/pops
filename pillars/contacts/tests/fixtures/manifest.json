@@ -25,9 +25,19 @@
     "mutations": [
       "contacts.entities.create",
       "contacts.entities.update",
-      "contacts.entities.delete"
+      "contacts.entities.delete",
+      "contacts.merges.merge",
+      "contacts.merges.undo",
+      "contacts.merges.separate"
     ],
-    "queries": ["contacts.entities.list", "contacts.entities.get", "contacts.search.search"],
+    "queries": [
+      "contacts.entities.list",
+      "contacts.entities.get",
+      "contacts.entities.resolve",
+      "contacts.merges.group",
+      "contacts.merges.separate_list",
+      "contacts.search.search"
+    ],
     "subscriptions": []
   },
   "search": {

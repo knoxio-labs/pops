@@ -88,7 +88,7 @@ pub async fn search(
     let mut hits: Vec<SearchHit> = candidates
         .into_iter()
         .filter_map(|row| {
-            score_and_classify(&row.name, &text).map(|(score, match_type)| SearchHit {
+            score_and_classify(&row.matching_name, &text).map(|(score, match_type)| SearchHit {
                 uri: format!("pops:contacts/contact/{}", row.id),
                 score,
                 match_field: "name".to_string(),
@@ -103,6 +103,8 @@ pub async fn search(
         .collect();
 
     hits.sort_by(|a, b| b.score.total_cmp(&a.score));
+    let mut seen = std::collections::HashSet::new();
+    hits.retain(|hit| seen.insert(hit.uri.clone()));
     hits.truncate(HIT_CAP);
     Ok(Json(SearchResponse { hits }))
 }

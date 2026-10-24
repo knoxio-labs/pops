@@ -5,9 +5,11 @@ import type { MockHandler, MockHandlers } from '@pops/pillar-sdk/testing/api-moc
 
 import type {
   AddressMutation,
+  CommitReceipt,
   EntitiesLookupResponses,
   EntityResponse,
   HealthResponse,
+  ImportBatch,
 } from '../../contacts-api/types.gen';
 
 /**
@@ -35,6 +37,39 @@ const entityById: MockHandler = ({ params }) => {
 };
 
 const mutation = { data: firstEntity, message: 'ok' };
+
+const importBatch: ImportBatch = {
+  accountId: 'account-standalone',
+  collectionKey: 'contacts',
+  createdAt: '2026-09-05T08:00:00.000Z',
+  id: 'import-standalone',
+  revision: 1,
+  rows: [
+    {
+      errors: [],
+      id: 'import-row-standalone',
+      ordinal: 0,
+      payload: { displayName: 'Morgan Vale', name: {}, points: [] },
+      processed: false,
+      proposal: 'new_source',
+      recordKey: 'fixture-contact',
+      removed: false,
+    },
+  ],
+};
+
+const importReceipt: CommitReceipt = {
+  batchId: importBatch.id,
+  revision: 2,
+  rows: [
+    {
+      entityId: 'person-standalone',
+      rowId: 'import-row-standalone',
+      skipped: false,
+      sourceRecordId: 'source-standalone',
+    },
+  ],
+};
 
 const addressCreated: MockHandler = ({ params }) => {
   const body: AddressMutation = {
@@ -78,6 +113,9 @@ export const contactsHandlers: MockHandlers = {
   'PUT /entities/{id}/poster': ok(mutation),
   'DELETE /entities/{id}/poster': ok(mutation),
   'POST /search': ok({ hits: [] }),
+  'POST /imports/files': created(importBatch),
+  'GET /imports/{id}': ok(importBatch),
+  'POST /imports/{id}/commit': ok(importReceipt),
 };
 
 /**

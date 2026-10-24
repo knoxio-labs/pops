@@ -31,6 +31,9 @@ pub enum ErrorCode {
     /// Import persistence failed without exposing the underlying observations.
     #[serde(rename = "contacts.import.storage")]
     ImportStorage,
+    /// Stale, retired or incompatible identity decisions.
+    #[serde(rename = "contacts.entity.identity_conflict")]
+    IdentityConflict,
     /// Missing, unknown, or revoked service-account credentials.
     #[serde(rename = "contacts.auth.unauthorized")]
     ServiceAccountUnauthorized,
@@ -87,6 +90,17 @@ impl ApiError {
             message: "Import could not be saved; retry the request".to_string(),
             code: ErrorCode::ImportStorage,
             retryable: true,
+            details: None,
+        }
+    }
+
+    /// Build a safe identity-decision conflict with optional structured context.
+    pub fn identity_conflict(message: impl Into<String>) -> Self {
+        Self {
+            status: StatusCode::CONFLICT,
+            message: message.into(),
+            code: ErrorCode::IdentityConflict,
+            retryable: false,
             details: None,
         }
     }
@@ -169,6 +183,18 @@ impl ApiError {
 
     /// Log a database failure with its request id and return a generic error.
     pub fn database(error: sqlx::Error) -> Self {
+        if error.as_database_error().is_some_and(|database| {
+            matches!(
+                database.message(),
+                "retired entity is not writable"
+                    | "merged entity cannot be deleted"
+                    | "merged entity type is immutable"
+            )
+        }) {
+            return Self::identity_conflict(
+                "Identity changed; resolve the current canonical ID before writing",
+            );
+        }
         let request_id = current_request_id();
         tracing::error!(%request_id, %error, "contacts database request failed");
         Self {
