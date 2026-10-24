@@ -18,6 +18,7 @@ import { and, count, desc, eq, gte, sql } from 'drizzle-orm';
 
 import { TransactionTagRuleNotFoundError } from '../errors.js';
 import { transactionTagRules } from '../schema.js';
+import { preservedEntityId, type EntityIdentities } from './entity-identity.js';
 import { assertTagRuleWritable } from './tag-rule-write-guards.js';
 
 import type { FinanceDb } from './internal.js';
@@ -141,7 +142,8 @@ function buildTagRuleUpdates(
 /**
  * Patch a tag rule. Throws `TransactionTagRuleNotFoundError` if missing, and
  * `MarkerFacetTagRuleError` / `PlaceholderEntityScopeError` for a patch that
- * would store a marker tag or a `temp:` scope.
+ * would store a marker tag or a `temp:` scope. Equivalent canonical scopes
+ * retain their historical stored id when an identity snapshot is supplied.
  *
  * An empty `input` is a no-op that still re-reads and returns the row, so
  * callers can use this as a "fetch with optional patch" without branching.
@@ -149,12 +151,16 @@ function buildTagRuleUpdates(
 export function updateTransactionTagRule(
   db: FinanceDb,
   id: string,
-  input: UpdateTransactionTagRuleInput
+  input: UpdateTransactionTagRuleInput,
+  identities?: EntityIdentities
 ): TransactionTagRuleRow {
-  getTransactionTagRule(db, id);
+  const current = getTransactionTagRule(db, id);
   assertTagRuleWritable(input);
 
-  const updates = buildTagRuleUpdates(input);
+  const updates = buildTagRuleUpdates({
+    ...input,
+    entityId: preservedEntityId(current.entityId, input.entityId, identities),
+  });
   if (Object.keys(updates).length > 0) {
     db.update(transactionTagRules).set(updates).where(eq(transactionTagRules.id, id)).run();
   }

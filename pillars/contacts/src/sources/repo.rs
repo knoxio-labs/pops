@@ -44,7 +44,8 @@ fn validate_key(value: &str) -> Result<(), SourceError> {
     Ok(())
 }
 
-/// Create or fetch an account by stable provider subject. A refresh may update only its label.
+/// Create or fetch an account by stable provider subject. A supplied label updates its label;
+/// omitting the optional label preserves the stored label.
 pub async fn create_or_get_account(
     pool: &SqlitePool,
     input: &SourceAccountInput,

@@ -13,16 +13,25 @@
  */
 import {
   commitPurchaseUpdate,
+  getPurchase,
   InventoryLinkClearFailedError,
   inventoryUnlinkTargets,
   planPurchaseUpdate,
 } from '../../db/index.js';
+import { canonicalMerchantId } from '../../db/services/canonical-merchants.js';
+import {
+  resolveMerchantIdentities,
+  type CanonicalMerchantResolver,
+} from '../contacts/canonical.js';
 import { purchaseErrorBody } from '../errors.js';
 import { createInventoryLinkClearer, type InventoryLinkClearer } from '../inventory/client.js';
+import { canonicalMerchantScope } from './canonical-merchant-scope.js';
 import { tryMapServiceError } from './error-mapping.js';
 import { toPurchaseDetailBody } from './serializers.js';
 
 import type { z } from 'zod';
+
+import type { ErrorBody } from '@pops/types';
 
 import type { UpdatePurchaseBodySchema } from '../../contract/rest-schemas.js';
 import type { PurchasesDb } from '../../db/index.js';
@@ -36,15 +45,57 @@ function notFound(id: string) {
   };
 }
 
+type MerchantEditResolution =
+  | { readonly ok: true; readonly input: UpdateBody }
+  | {
+      readonly ok: false;
+      readonly response: ReturnType<typeof notFound> | { status: 503; body: ErrorBody };
+    };
+
+async function resolveMerchantEdit(
+  db: PurchasesDb,
+  id: string,
+  body: UpdateBody,
+  resolve: CanonicalMerchantResolver
+): Promise<MerchantEditResolution> {
+  let input = body;
+  if (typeof body.merchantEntityId === 'string') {
+    const current = getPurchase(db, id);
+    if (current === undefined) return { ok: false, response: notFound(id) };
+    const historicalId = current.purchase.merchantEntityId;
+    if (historicalId !== null && historicalId !== body.merchantEntityId) {
+      const canonical = await canonicalMerchantScope(
+        db,
+        { merchant: { resolution: 'entity', entityId: body.merchantEntityId } },
+        resolve
+      );
+      if (!canonical.ok) return { ok: false, response: canonical.response };
+      const identities = canonical.scope.canonicalMerchants;
+      if (
+        canonicalMerchantId(historicalId, identities) ===
+        canonicalMerchantId(body.merchantEntityId, identities)
+      ) {
+        input = { ...body, merchantEntityId: historicalId };
+      }
+    }
+  }
+  return { ok: true, input };
+}
+
+/** Builds edit handlers that preserve historical ids when Contacts reports an equivalent merchant. */
 export function makePurchaseUpdateHandlers(
   db: PurchasesDb,
-  inventory: InventoryLinkClearer = createInventoryLinkClearer()
+  inventory: InventoryLinkClearer = createInventoryLinkClearer(),
+  resolve: CanonicalMerchantResolver = resolveMerchantIdentities
 ) {
   return {
     update: async ({ params, body }: { params: { id: string }; body: UpdateBody }) => {
+      const merchantEdit = await resolveMerchantEdit(db, params.id, body, resolve);
+      if (!merchantEdit.ok) return merchantEdit.response;
+      const input = merchantEdit.input;
       let plan;
       try {
-        plan = planPurchaseUpdate(db, params.id, body);
+        plan = planPurchaseUpdate(db, params.id, input);
       } catch (err) {
         const mapped = tryMapServiceError(err);
         if (mapped?.status === 400) return { status: 400 as const, body: mapped.body };
@@ -63,7 +114,7 @@ export function makePurchaseUpdateHandlers(
         }
       }
 
-      const detail = commitPurchaseUpdate(db, plan, body);
+      const detail = commitPurchaseUpdate(db, plan, input);
       return { status: 200 as const, body: toPurchaseDetailBody(detail) };
     },
   };

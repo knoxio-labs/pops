@@ -76,3 +76,11 @@ export {
   isConflict,
   isBadRequest,
 } from '../client/index.js';
+
+export { resolveCanonicalIds } from '../client/canonical-identities.js';
+export type {
+  CanonicalIdentity,
+  CanonicalIdentityBatch,
+  CanonicalIdentityOperation,
+  CanonicalIdentityOptions,
+} from '../client/canonical-identities.js';

@@ -327,6 +327,32 @@ describe('env gating', () => {
 });
 
 describe('deduplication and chunking', () => {
+  it('groups historical aliases together without rewriting their row identities', async () => {
+    tagsOnlyBatchWithAi.mockResolvedValue(reply({ tags: ['venue:supermarket'] }));
+    const results = [
+      makeRow({ description: 'PAYMENT', entityId: 'old-a', entityName: 'Store' }),
+      makeRow({ description: 'PAYMENT', entityId: 'old-b', entityName: 'Store' }),
+    ];
+    await resolveTagsForMatched({
+      db,
+      counters,
+      results,
+      context: {
+        ...makeContext(),
+        identities: new Map([
+          ['old-a', 'current'],
+          ['old-b', 'current'],
+        ]),
+      },
+    });
+    expect(callInputs(0)).toHaveLength(1);
+    expect(results.map((result) => rowOf(result).entity.entityId)).toEqual(['old-a', 'old-b']);
+    expect(results.map((result) => rowOf(result).suggestedTags?.[0]?.tag)).toEqual([
+      'venue:supermarket',
+      'venue:supermarket',
+    ]);
+  });
+
   it('costs one batch entry per distinct normalized descriptor, not one per row', async () => {
     tagsOnlyBatchWithAi.mockResolvedValue(
       reply(

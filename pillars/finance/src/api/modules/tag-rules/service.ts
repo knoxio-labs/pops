@@ -16,6 +16,7 @@ import {
   type TagRuleRejection,
   type TransactionTagRuleRow,
 } from '../../../db/index.js';
+import { type EntityIdentities } from '../../../db/services/entity-identity.js';
 import { parseStoredTags } from '../../../db/tag-facets.js';
 import { previewTagRuleChangeSet } from './preview.js';
 
@@ -73,30 +74,44 @@ export interface TagRuleChangeSetApplyResult {
   writes: TagRuleWriteCounts;
 }
 
-function applyOp(tx: FinanceDb, op: TagRuleChangeSetOp, writes: TagRuleWriteCounts): void {
+function applyOp(
+  tx: FinanceDb,
+  op: TagRuleChangeSetOp,
+  writes: TagRuleWriteCounts,
+  identities?: EntityIdentities
+): void {
   switch (op.op) {
     case 'add': {
-      const { outcome } = transactionTagRulesService.createOrReinforceTransactionTagRule(tx, {
-        descriptionPattern: op.data.descriptionPattern,
-        matchType: op.data.matchType,
-        entityId: op.data.entityId ?? null,
-        tags: op.data.tags,
-        confidence: op.data.confidence ?? 0.95,
-        isActive: op.data.isActive ?? true,
-        priority: op.data.priority ?? 0,
-      });
+      const { outcome } = transactionTagRulesService.createOrReinforceTransactionTagRule(
+        tx,
+        {
+          descriptionPattern: op.data.descriptionPattern,
+          matchType: op.data.matchType,
+          entityId: op.data.entityId ?? null,
+          tags: op.data.tags,
+          confidence: op.data.confidence ?? 0.95,
+          isActive: op.data.isActive ?? true,
+          priority: op.data.priority ?? 0,
+        },
+        identities
+      );
       if (outcome === 'inserted') writes.inserted++;
       else writes.reinforced++;
       return;
     }
     case 'edit':
-      transactionTagRulesService.updateTransactionTagRule(tx, op.id, {
-        entityId: op.data.entityId,
-        tags: op.data.tags,
-        confidence: op.data.confidence,
-        isActive: op.data.isActive,
-        priority: op.data.priority,
-      });
+      transactionTagRulesService.updateTransactionTagRule(
+        tx,
+        op.id,
+        {
+          entityId: op.data.entityId,
+          tags: op.data.tags,
+          confidence: op.data.confidence,
+          isActive: op.data.isActive,
+          priority: op.data.priority,
+        },
+        identities
+      );
       return;
     case 'disable':
       transactionTagRulesService.disableTransactionTagRule(tx, op.id);
@@ -108,11 +123,12 @@ function applyOp(tx: FinanceDb, op: TagRuleChangeSetOp, writes: TagRuleWriteCoun
 
 export function applyTagRuleChangeSet(
   db: FinanceDb,
-  changeSet: TagRuleChangeSet
+  changeSet: TagRuleChangeSet,
+  identities?: EntityIdentities
 ): TagRuleChangeSetApplyResult {
   const writes: TagRuleWriteCounts = { inserted: 0, reinforced: 0 };
   return db.transaction((tx) => {
-    for (const op of changeSet.ops) applyOp(tx, op, writes);
+    for (const op of changeSet.ops) applyOp(tx, op, writes, identities);
     return { rules: transactionTagRulesService.listTransactionTagRules(tx).map(toTagRule), writes };
   });
 }
@@ -120,6 +136,7 @@ export function applyTagRuleChangeSet(
 export function proposeTagRuleChangeSet(
   db: FinanceDb,
   args: {
+    identities?: EntityIdentities;
     signal: {
       descriptionPattern: string;
       matchType: 'exact' | 'contains' | 'regex';
@@ -150,6 +167,7 @@ export function proposeTagRuleChangeSet(
 
   const preview = previewTagRuleChangeSet(db, {
     changeSet,
+    identities: args.identities,
     transactions: args.transactions,
     maxPreviewItems: args.maxPreviewItems,
   });

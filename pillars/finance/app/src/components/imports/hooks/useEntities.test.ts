@@ -18,6 +18,9 @@ const mockEntitiesList = vi.fn();
 vi.mock('../../../contacts-api/index.js', () => ({
   entitiesLookup: (...args: unknown[]) => mockEntitiesLookup(...args),
   entitiesList: (...args: unknown[]) => mockEntitiesList(...args),
+  entitiesResolve: async ({ body }: { body: { ids: string[] } }) => ({
+    data: { data: body.ids.map((id) => ({ id, canonicalId: id })), revision: 1 },
+  }),
 }));
 
 function wrapper({ children }: { children: ReactNode }) {

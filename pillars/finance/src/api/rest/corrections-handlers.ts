@@ -9,6 +9,8 @@
  * `contract/rest-corrections.ts`.
  */
 import { type FinanceDb, transactionCorrectionsService } from '../../db/index.js';
+import { runEntityHttp } from '../contacts/identity-snapshot.js';
+import { type ContactsClient } from '../contacts/types.js';
 import {
   applyChangeSet as applyCorrectionChangeSet,
   classifyCorrectionMatch,
@@ -37,7 +39,7 @@ import type { financeCorrectionsContract } from '../../contract/rest-corrections
 
 type Req = ServerInferRequest<typeof financeCorrectionsContract>;
 
-export function makeCorrectionsHandlers(db: FinanceDb) {
+export function makeCorrectionsHandlers(db: FinanceDb, contacts: ContactsClient) {
   return {
     list: ({ query }: Req['list']) =>
       runHttp(() => {
@@ -85,9 +87,13 @@ export function makeCorrectionsHandlers(db: FinanceDb) {
       runHttp(() => ({ status: 200 as const, body: { data: ruleMatchPreview(db, body) } })),
 
     createOrUpdate: ({ body }: Req['createOrUpdate']) =>
-      runHttp(() => {
+      runEntityHttp(db, contacts, body, (identities) => {
         try {
-          const row = transactionCorrectionsService.createOrUpdateTransactionCorrection(db, body);
+          const row = transactionCorrectionsService.createOrUpdateTransactionCorrection(
+            db,
+            body,
+            identities
+          );
           return {
             status: 200 as const,
             body: { data: toCorrection(row), message: 'Correction saved' },
@@ -98,12 +104,13 @@ export function makeCorrectionsHandlers(db: FinanceDb) {
       }),
 
     update: ({ params, body }: Req['update']) =>
-      runHttp(() => {
+      runEntityHttp(db, contacts, body, (identities) => {
         try {
           const row = transactionCorrectionsService.updateTransactionCorrection(
             db,
             params.id,
-            body
+            body,
+            identities
           );
           return {
             status: 200 as const,
@@ -139,10 +146,11 @@ export function makeCorrectionsHandlers(db: FinanceDb) {
       }),
 
     applyExisting: ({ params, body }: Req['applyExisting']) =>
-      runHttp(() => {
+      runEntityHttp(db, contacts, body, (identities) => {
         try {
           const data = applyCorrectionRuleToExistingTransactions(db, params.id, {
             dryRun: body.dryRun,
+            identities,
           });
           return { status: 200 as const, body: { data } };
         } catch (err) {
@@ -194,14 +202,14 @@ export function makeCorrectionsHandlers(db: FinanceDb) {
       }),
 
     applyChangeSet: ({ body }: Req['applyChangeSet']) =>
-      runHttp(() => ({
+      runEntityHttp(db, contacts, body, (identities) => ({
         status: 200 as const,
         body: {
-          data: applyCorrectionChangeSet(db, body.changeSet).rows.map(toCorrection),
+          data: applyCorrectionChangeSet(db, body.changeSet, identities).rows.map(toCorrection),
           message: 'ChangeSet applied',
         },
       })),
 
-    ...makeCorrectionsAiHandlers(db),
+    ...makeCorrectionsAiHandlers(db, contacts),
   };
 }

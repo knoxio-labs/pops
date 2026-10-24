@@ -10,6 +10,7 @@ import {
   FEE_TAG_PREFIX,
 } from '../../../contract/transaction-classification.js';
 import { type FinanceDb } from '../../../db/index.js';
+import { type EntityIdentities } from '../../../db/services/entity-identity.js';
 import { formatImportError } from './format-error.js';
 import { buildImportSuggestedTags } from './tag-management.js';
 
@@ -86,6 +87,7 @@ export interface MatchedFromEntityArgs {
   /** Model-reported confidence, carried onto the entity for `matchType: 'ai'` only. */
   confidence?: number;
   knownTags: string[];
+  identities?: EntityIdentities;
   entityDefaultTags: ReadonlyMap<string, string[]>;
 }
 
@@ -115,6 +117,7 @@ export function buildFromEntityMatch(
     aiProvenance: args.aiProvenance,
     aiCategory: args.category ?? null,
     knownTags: args.knownTags,
+    identities: args.identities,
     entityDefaultTags: args.entityDefaultTags,
   });
   return {

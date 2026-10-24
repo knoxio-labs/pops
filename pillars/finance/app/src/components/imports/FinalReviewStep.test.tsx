@@ -3,6 +3,8 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { type ReactElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { referencedEntityIds } from '@pops/finance';
+
 // --- Store mock state ---
 
 const mockPrevStep = vi.fn();
@@ -493,3 +495,11 @@ describe('FinalReviewStep', () => {
     expect(mockGoToStep).not.toHaveBeenCalled();
   });
 });
+
+vi.mock('./hooks/useImportIdentities', () => ({
+  useImportIdentities: () => ({
+    identities: new Map(referencedEntityIds(storeState).map((id) => [id, id])),
+    status: 'ready',
+    retry: vi.fn(),
+  }),
+}));

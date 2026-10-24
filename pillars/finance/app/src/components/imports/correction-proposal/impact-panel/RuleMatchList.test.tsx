@@ -11,6 +11,8 @@ import type { ProcessedTransaction } from '../../../../store/import-store-types'
 import type { CorrectionRule } from '../../RulePicker';
 
 const correctionsRuleMatchPreview = vi.fn();
+const aliases = new Map<string, string>();
+let identitiesUnavailable = false;
 
 vi.mock('../../../../finance-api/index.js', () => ({
   correctionsRuleMatchPreview: (...args: unknown[]) => correctionsRuleMatchPreview(...args),
@@ -237,4 +239,63 @@ describe('RuleMatchList', () => {
     expect(await screen.findByTestId('rule-match-empty')).toBeInTheDocument();
     expect(screen.queryByTestId('rule-match-empty-session')).not.toBeInTheDocument();
   });
+});
+
+vi.mock('../../../../contacts-api/index.js', () => ({
+  entitiesResolve: async ({ body }: { body: { ids: string[] } }) =>
+    identitiesUnavailable
+      ? { error: { message: 'Unavailable' }, response: new Response(null, { status: 503 }) }
+      : {
+          data: {
+            data: body.ids.map((id) => ({ id, canonicalId: aliases.get(id) ?? id })),
+            revision: 1,
+          },
+        },
+}));
+
+it('does not label a retired alias as an entity change', async () => {
+  aliases.set('old-person', 'ent-rule');
+  mockPreview(
+    [
+      {
+        id: 'historical',
+        checksum: 'history',
+        date: '2026-01-01',
+        description: 'STARBUCKS HISTORICAL',
+        amount: -5,
+        entityId: 'old-person',
+        entityName: 'Starbucks',
+      },
+    ],
+    1
+  );
+  renderList(makeRule());
+  expect(await screen.findByText('entity matches')).toBeInTheDocument();
+  expect(screen.queryByText('entity changes')).not.toBeInTheDocument();
+});
+
+it('reports identity failure without asserting that matched entities differ', async () => {
+  identitiesUnavailable = true;
+  mockPreview(
+    [
+      {
+        id: 'historical',
+        checksum: 'history',
+        date: '2026-01-01',
+        description: 'STARBUCKS HISTORICAL',
+        amount: -5,
+        entityId: 'old-person',
+        entityName: 'Starbucks',
+      },
+    ],
+    1
+  );
+  renderList(makeRule());
+  expect(await screen.findByRole('alert')).toHaveTextContent('Contact identities unavailable');
+  expect(screen.queryByText('entity changes')).not.toBeInTheDocument();
+});
+
+beforeEach(() => {
+  aliases.clear();
+  identitiesUnavailable = false;
 });

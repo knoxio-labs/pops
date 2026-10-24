@@ -31,6 +31,7 @@ import { eq, inArray, isNotNull } from 'drizzle-orm';
 
 import { intoBatches } from '../../classify/batch.js';
 import { purchaseItems, purchaseProductAliases, purchaseProducts, purchases } from '../schema.js';
+import { canonicalProductScope, type CanonicalMerchants } from './canonical-merchants.js';
 import { expectRow } from './internal.js';
 import { isNewer, orderRank } from './order-rank.js';
 import { deleteOrphanedProducts } from './product-dictionary-writes.js';
@@ -46,6 +47,8 @@ import type { OrderRank } from './order-rank.js';
 const DEFAULT_BATCH_SIZE = 200;
 
 export interface ProposeProductsOptions {
+  /** Contacts snapshot resolved before entering this transaction. */
+  readonly canonicalMerchants?: CanonicalMerchants;
   /** Proposals minted per progress report. */
   readonly batchSize?: number;
   /** Called after each batch of proposals is minted, so a long run can report progress. */
@@ -102,14 +105,19 @@ export function proposeProducts(
 ): ProposalOutcome {
   return db.transaction((tx) => {
     const lines = scanLines(tx);
-    const observed = observeWordings(lines);
+    const observed = observeWordings(lines, options.canonicalMerchants);
     const existing = tx.select().from(purchaseProductAliases).all();
 
-    const retired = retireUnobserved(tx, existing, observed);
+    const retired = retireUnobserved(tx, existing, observed, options.canonicalMerchants);
     const held = new Set(
       existing
         .filter((alias) => !retired.has(alias.id))
-        .map((alias) => productLookupKey(alias.scopeKey, alias.normalisedName))
+        .map((alias) =>
+          productLookupKey(
+            canonicalProductScope(alias.scopeKey, options.canonicalMerchants),
+            alias.normalisedName
+          )
+        )
     );
 
     const toMint = [...observed.entries()]
@@ -171,14 +179,17 @@ function scanLines(db: PurchasesDb): readonly ScannedLine[] {
  * why this asks anyway, since as text such a value can outrank every real
  * date and hand one line's spelling to every entry it touches.
  */
-function observeWordings(lines: readonly ScannedLine[]): Map<string, ObservedWording> {
+function observeWordings(
+  lines: readonly ScannedLine[],
+  identities?: CanonicalMerchants
+): Map<string, ObservedWording> {
   const observed = new Map<string, ObservedWording>();
   for (const line of lines) {
-    const { identity } = identifyProduct(line);
+    const { identity } = identifyProduct(line, undefined, identities);
     if (identity.basis !== 'name') continue;
     const normalised = identity.normalisedName;
 
-    const scopeKey = productScopeKey(line);
+    const scopeKey = productScopeKey(line, identities);
     const key = productLookupKey(scopeKey, normalised);
     const rank = orderRank(line.orderedAt, line.id);
     const held = observed.get(key);
@@ -210,14 +221,17 @@ function observeWordings(lines: readonly ScannedLine[]): Map<string, ObservedWor
 function retireUnobserved(
   db: PurchasesDb,
   existing: readonly PurchaseProductAliasRow[],
-  observed: ReadonlyMap<string, ObservedWording>
+  observed: ReadonlyMap<string, ObservedWording>,
+  identities?: CanonicalMerchants
 ): ReadonlySet<string> {
   const named = namedProductIds(db);
   const stale = existing.filter(
     (alias) =>
       alias.confirmedAt === null &&
       !named.has(alias.productId) &&
-      !observed.has(productLookupKey(alias.scopeKey, alias.normalisedName))
+      !observed.has(
+        productLookupKey(canonicalProductScope(alias.scopeKey, identities), alias.normalisedName)
+      )
   );
   if (stale.length === 0) return new Set();
 

@@ -13,16 +13,12 @@
  * (`resolveTagsForMatched`, POPS-2596) then classifies the rows the ladder DID
  * resolve but left with no suggested tags.
  */
-import {
-  type FinanceDb,
-  importsService,
-  transactionCorrectionsService,
-} from '../../../db/index.js';
+import { type FinanceDb, importsService } from '../../../db/index.js';
 import { type ContactsClient } from '../../contacts/client.js';
 import { type PendingAiItem, resolvePendingAi } from './ai-batch-resolver.js';
-import { getPreAcceptThreshold } from './ai-categorizer-config.js';
 import { AiCircuitBreaker } from './ai-circuit-breaker.js';
 import { resolveTagsForMatched } from './ai-tags-resolver.js';
+import { buildProcessContext } from './process-context.js';
 import { buildFailure } from './process-transaction-helpers.js';
 import { classifyWithoutAi, type TransactionProcessResult } from './process-transaction.js';
 import {
@@ -35,7 +31,6 @@ import {
   type ProgressBatchItem,
   yieldToEventLoop,
 } from './processing-helpers.js';
-import { loadKnownTags, loadTagDescriptions } from './tag-management.js';
 import { createAiCounters } from './types.js';
 
 import type { updateProgress } from './progress-store.js';
@@ -218,30 +213,10 @@ export async function processImportCore(args: ProcessCoreInput): Promise<Process
   const { newTransactions, duplicates } = partitionByChecksum(db, transactions);
 
   onProgress?.({ currentStep: 'matching', processedCount: 0 });
-  const contactSet = await contacts.fetchAllEntities();
-  const { entityLookup, aliasMap: aliases } = importsService.buildEntityMaps(contactSet);
-  const entityDefaultTags = importsService.buildDefaultTagsByEntity(contactSet);
-  const knownTags = loadKnownTags(db);
-  const tagDescriptions = loadTagDescriptions(db);
-  const correctionRules = transactionCorrectionsService.listTransactionCorrections(db, {
-    limit: 50_000,
-    offset: 0,
-  }).rows;
-
+  const context = await buildProcessContext(db, contacts, importBatchId);
   const buckets = makeBuckets();
   buckets.skipped = buildSkippedBucket(duplicates);
-
   const counters = createAiCounters();
-  const context: ProcessContext = {
-    entityLookup,
-    aliases,
-    knownTags,
-    tagDescriptions,
-    importBatchId,
-    entityDefaultTags,
-    correctionRules,
-    preAcceptThreshold: getPreAcceptThreshold(db),
-  };
 
   const { errors } = await runProcessLoop({
     db,

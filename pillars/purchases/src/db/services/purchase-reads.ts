@@ -17,6 +17,7 @@ import {
   purchaseTags,
 } from '../schema.js';
 import { computeAccounting, type PurchaseAccounting } from './accounting.js';
+import { canonicalMerchantId, type CanonicalMerchants } from './canonical-merchants.js';
 import { nowIso, type PurchasesDb } from './internal.js';
 import { blankMerchantLabel, nameLabelCondition } from './merchant-identity.js';
 import { orderedAtWindow } from './ordered-at.js';
@@ -44,6 +45,8 @@ export {
  * smaller answer, it is a wrong one.
  */
 export interface PurchaseScopeFilter {
+  /** Complete Contacts snapshot resolved before entering synchronous reads. */
+  readonly canonicalMerchants?: CanonicalMerchants;
   readonly sources?: readonly string[];
   readonly statuses?: readonly PurchaseStatus[];
   /**
@@ -134,7 +137,9 @@ export function purchaseFilterConditions(
               .where(eq(purchaseItemUnits.inventoryItemUri, filter.inventoryItemUri))
           ),
         ]),
-    ...(filter.merchant === undefined ? [] : merchantConditions(filter.merchant)),
+    ...(filter.merchant === undefined
+      ? []
+      : merchantConditions(filter.merchant, filter.canonicalMerchants)),
   ];
 }
 
@@ -153,10 +158,24 @@ export function purchaseFilterConditions(
  * carrying the id is not obliged to also state the label, and the roll-up
  * takes its label from whichever of the group's orders is newest.
  */
-function merchantConditions(merchant: MerchantFilter): readonly SQL[] {
+function merchantConditions(
+  merchant: MerchantFilter,
+  identities?: CanonicalMerchants
+): readonly SQL[] {
   switch (merchant.resolution) {
     case 'entity':
-      return [eq(purchases.merchantEntityId, merchant.entityId)];
+      return [
+        inArray(
+          purchases.merchantEntityId,
+          identities === undefined
+            ? [merchant.entityId]
+            : [...identities.keys()].filter(
+                (id) =>
+                  canonicalMerchantId(id, identities) ===
+                  canonicalMerchantId(merchant.entityId, identities)
+              )
+        ),
+      ];
     case 'name':
       return [
         isNull(purchases.merchantEntityId),

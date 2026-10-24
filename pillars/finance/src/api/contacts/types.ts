@@ -55,6 +55,8 @@ export interface CreateOrFetchResult {
  * usage join / degradation paths are exercised without the network.
  */
 export interface ContactsClient {
+  /** Complete canonical mappings for requested historical ids; null is missing, failure throws 503. */
+  resolveEntityIds(ids: readonly string[]): Promise<ReadonlyMap<string, string | null>>;
   /**
    * The whole contact set (optionally filtered by `search`/`type`), paged out
    * of the contacts list endpoint. Empty when contacts is down.

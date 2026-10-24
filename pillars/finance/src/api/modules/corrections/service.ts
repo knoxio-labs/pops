@@ -1,3 +1,10 @@
+import { and, desc, eq } from 'drizzle-orm';
+
+import {
+  type FinanceDb,
+  transactionCorrections,
+  transactionCorrectionsService,
+} from '../../../db/index.js';
 /**
  * DB-injected correction-rule ChangeSet application.
  *
@@ -12,13 +19,7 @@
  * (→ 400, CF061/#3650) before anything is written — a tags-only row belongs in
  * `transaction_tag_rules`, not here.
  */
-import { and, desc, eq } from 'drizzle-orm';
-
-import {
-  type FinanceDb,
-  transactionCorrections,
-  transactionCorrectionsService,
-} from '../../../db/index.js';
+import { preservedEntityId, type EntityIdentities } from '../../../db/services/entity-identity.js';
 import { mergeTagsWithinFacetLimits, parseStoredTags } from '../../../db/tag-facets.js';
 import { NotFoundError } from '../../shared/errors.js';
 import {
@@ -28,6 +29,7 @@ import {
   assertPatternCompiles,
   normalisesToNothing,
 } from './add-op-guards.js';
+import { buildEditUpdates } from './edit-updates.js';
 
 import type { ChangeSet, ChangeSetOp } from '../../../contract/rest-corrections.js';
 import type { CorrectionRow } from './types.js';
@@ -135,11 +137,16 @@ function mergeAddOpTags(existingTags: string[], op: AddOp, existingId: string): 
  * why both come from the same op rather than one persisting while the other
  * resets.
  */
-function reinforceExistingCorrectionRule(tx: FinanceDb, existing: CorrectionRow, op: AddOp): void {
+function reinforceExistingCorrectionRule(
+  tx: FinanceDb,
+  existing: CorrectionRow,
+  op: AddOp,
+  identities?: EntityIdentities
+): void {
   const tags = mergeAddOpTags(parseStoredTags(existing.tags), op, existing.id);
   tx.update(transactionCorrections)
     .set({
-      entityId: op.data.entityId ?? null,
+      entityId: preservedEntityId(existing.entityId, op.data.entityId ?? null, identities),
       entityName: op.data.entityName ?? null,
       location: op.data.location ?? null,
       tags: JSON.stringify(tags),
@@ -178,7 +185,7 @@ function insertNewCorrectionRule(tx: FinanceDb, normalized: string, op: AddOp): 
  * {@link reinforceExistingCorrectionRule} for what a hit does to `tags`
  * versus the classification fields.
  */
-function applyAddOp(tx: FinanceDb, op: AddOp): CorrectionAddOutcome {
+function applyAddOp(tx: FinanceDb, op: AddOp, identities?: EntityIdentities): CorrectionAddOutcome {
   assertNotTagsOnly(op);
   assertEntityIdResolved(op.data.entityId);
   assertPatternCompiles(op);
@@ -188,7 +195,7 @@ function applyAddOp(tx: FinanceDb, op: AddOp): CorrectionAddOutcome {
   const existing = findExistingCorrectionByKey(tx, op.data.matchType, normalized);
 
   if (existing) {
-    reinforceExistingCorrectionRule(tx, existing, op);
+    reinforceExistingCorrectionRule(tx, existing, op, identities);
     return 'reinforced';
   }
 
@@ -196,22 +203,11 @@ function applyAddOp(tx: FinanceDb, op: AddOp): CorrectionAddOutcome {
   return 'inserted';
 }
 
-function buildEditUpdates(
-  op: Extract<ChangeSetOp, { op: 'edit' }>
-): Partial<typeof transactionCorrections.$inferInsert> {
-  const updates: Partial<typeof transactionCorrections.$inferInsert> = {};
-  if (op.data.entityId !== undefined) updates.entityId = op.data.entityId;
-  if (op.data.entityName !== undefined) updates.entityName = op.data.entityName;
-  if (op.data.location !== undefined) updates.location = op.data.location;
-  if (op.data.tags !== undefined) updates.tags = JSON.stringify(op.data.tags);
-  if (op.data.transactionType !== undefined) updates.transactionType = op.data.transactionType;
-  if (op.data.isActive !== undefined) updates.isActive = op.data.isActive;
-  if (op.data.confidence !== undefined) updates.confidence = op.data.confidence;
-  if (op.data.priority !== undefined) updates.priority = op.data.priority;
-  return updates;
-}
-
-function applyMutatingOp(tx: FinanceDb, op: Exclude<ChangeSetOp, { op: 'add' }>): void {
+function applyMutatingOp(
+  tx: FinanceDb,
+  op: Exclude<ChangeSetOp, { op: 'add' }>,
+  identities?: EntityIdentities
+): void {
   const existing = tx
     .select()
     .from(transactionCorrections)
@@ -222,7 +218,15 @@ function applyMutatingOp(tx: FinanceDb, op: Exclude<ChangeSetOp, { op: 'add' }>)
   if (op.op === 'edit') {
     assertEntityIdResolved(op.data.entityId);
     tx.update(transactionCorrections)
-      .set(buildEditUpdates(op))
+      .set(
+        buildEditUpdates({
+          ...op,
+          data: {
+            ...op.data,
+            entityId: preservedEntityId(existing.entityId, op.data.entityId, identities),
+          },
+        })
+      )
       .where(eq(transactionCorrections.id, op.id))
       .run();
     return;
@@ -255,7 +259,11 @@ export interface ApplyChangeSetResult {
  * rule against how many merged into one that already existed. Ops run in a
  * fixed order (add → edit → disable → remove).
  */
-export function applyChangeSet(db: FinanceDb, changeSet: ChangeSet): ApplyChangeSetResult {
+export function applyChangeSet(
+  db: FinanceDb,
+  changeSet: ChangeSet,
+  identities?: EntityIdentities
+): ApplyChangeSetResult {
   return db.transaction((tx) => {
     const order: Record<ChangeSetOp['op'], number> = { add: 1, edit: 2, disable: 3, remove: 4 };
     const ops = [...changeSet.ops].toSorted((a, b) => order[a.op] - order[b.op]);
@@ -263,11 +271,11 @@ export function applyChangeSet(db: FinanceDb, changeSet: ChangeSet): ApplyChange
     const writes: CorrectionRuleWriteCounts = { inserted: 0, reinforced: 0 };
     for (const op of ops) {
       if (op.op === 'add') {
-        const outcome = applyAddOp(tx, op);
+        const outcome = applyAddOp(tx, op, identities);
         if (outcome === 'inserted') writes.inserted++;
         else writes.reinforced++;
       } else {
-        applyMutatingOp(tx, op);
+        applyMutatingOp(tx, op, identities);
       }
     }
 

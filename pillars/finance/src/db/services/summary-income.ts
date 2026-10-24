@@ -1,3 +1,4 @@
+import { type EntityIdentities } from './entity-identity.js';
 /**
  * The income half of the summary, and the net it leaves against spend
  * (POPS-3955).
@@ -66,6 +67,7 @@ export interface IncomeQuery {
   previous: SummaryRange | null;
   months: readonly string[];
   topLimit: number;
+  identities?: EntityIdentities;
 }
 
 export function incomeSummary(db: FinanceDb, query: IncomeQuery): IncomeSummary {
@@ -87,6 +89,7 @@ export function incomeSummary(db: FinanceDb, query: IncomeQuery): IncomeSummary 
       range: query.range,
       totalCents: total.cents,
       limit: query.topLimit,
+      identities: query.identities,
     }).map(({ amount, ...entity }) => ({ ...entity, income: amount })),
   };
 }

@@ -5,18 +5,30 @@
  * any bucket move, status flip, type/entity change, or match-type change —
  * this drives the `affectedCount` returned to the FE.
  */
+import { entityIdentity, type EntityIdentities } from '../../../db/services/entity-identity.js';
+
 import type { ProcessedTransaction, SuggestedTag } from './types.js';
 
 export function transactionChanged(
   prev: ProcessedTransaction,
   next: ProcessedTransaction,
   prevBucket?: 'matched' | 'uncertain' | 'failed',
-  nextBucket?: 'matched' | 'uncertain' | 'failed'
+  options?:
+    | 'matched'
+    | 'uncertain'
+    | 'failed'
+    | { nextBucket?: 'matched' | 'uncertain' | 'failed'; identities?: EntityIdentities }
 ): boolean {
+  const { nextBucket, identities } =
+    typeof options === 'object' ? options : { nextBucket: options, identities: undefined };
   if (prevBucket && nextBucket && prevBucket !== nextBucket) return true;
   if (prev.status !== next.status) return true;
   if (prev.transactionType !== next.transactionType) return true;
-  if (prev.entity.entityId !== next.entity.entityId) return true;
+  if (
+    entityIdentity(prev.entity.entityId ?? null, identities) !==
+    entityIdentity(next.entity.entityId ?? null, identities)
+  )
+    return true;
   if (prev.entity.entityName !== next.entity.entityName) return true;
   return prev.entity.matchType !== next.entity.matchType;
 }
@@ -45,9 +57,15 @@ export function correctionApplicationChanged(
   prev: ProcessedTransaction,
   next: ProcessedTransaction,
   prevBucket?: 'matched' | 'uncertain' | 'failed',
-  nextBucket?: 'matched' | 'uncertain' | 'failed'
+  options?:
+    | 'matched'
+    | 'uncertain'
+    | 'failed'
+    | { nextBucket?: 'matched' | 'uncertain' | 'failed'; identities?: EntityIdentities }
 ): boolean {
-  if (transactionChanged(prev, next, prevBucket, nextBucket)) return true;
+  const { nextBucket, identities } =
+    typeof options === 'object' ? options : { nextBucket: options, identities: undefined };
+  if (transactionChanged(prev, next, prevBucket, { nextBucket, identities })) return true;
   if (prev.location !== next.location) return true;
   return tagFingerprint(prev.suggestedTags) !== tagFingerprint(next.suggestedTags);
 }
