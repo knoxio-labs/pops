@@ -3640,7 +3640,15 @@
           {
             "in": "query",
             "name": "code",
-            "required": true,
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "error",
+            "required": false,
             "schema": {
               "type": "string"
             }
@@ -3656,7 +3664,7 @@
         ],
         "responses": {
           "303": {
-            "description": "Google account connected; return to connections",
+            "description": "Return to connections with only a generic browser error code on failure",
             "headers": {
               "Location": {
                 "description": "Fixed shell connections route",
@@ -3665,6 +3673,16 @@
                 }
               }
             }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid or cancelled JSON callback"
           },
           "401": {
             "content": {
@@ -3685,9 +3703,19 @@
               }
             },
             "description": "Authorization changed or account mismatch"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Connections unavailable"
           }
         },
-        "summary": "Consume state before exchanging the callback code; human subject and account\nepoch must match the initiating authorization attempt. Successful browser\ncallbacks return to the fixed shell connections route without auth details.",
+        "summary": "Consume state before exchanging the callback code; human subject and account\nepoch must match the initiating authorization attempt. Successful browser\ncallbacks return to the fixed shell connections route without auth details.\nHTML failures return only a generic cancelled/failed code on that route;\nJSON clients retain the structured error response.",
         "tags": [
           "crate::providers::routes"
         ]
