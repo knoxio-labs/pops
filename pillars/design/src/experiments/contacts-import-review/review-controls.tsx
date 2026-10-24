@@ -4,80 +4,68 @@ import { Badge, Button } from '@pops/ui';
 
 import type { ContactImportRow } from '@/fixtures/contact-imports';
 
-/** Local review choice; Later leaves the source record unimported. */
-export type Choice = 'Merge' | 'Keep separate' | 'Later';
-/** Shared state keeps the two review layouts on identical decisions. */
-export interface ReviewModel {
-  selected: string;
-  candidate: string;
-  choices: Partial<Record<string, Choice>>;
-  select: (id: string) => void;
-  selectCandidate: (id: string, name: string) => void;
-  choose: (id: string, choice: Choice) => void;
-}
-/** Source and identity evidence, identical in both layouts. */
+import type { ReviewModel } from './review-model';
+
+/** Source evidence uses readable text without repeated status labels. */
 export function Evidence({ row }: { row: ContactImportRow }) {
   return (
     <div className="space-y-2">
-      <Badge variant="outline">{row.outcome}</Badge>
-      <p className="text-sm">{row.evidence}</p>
-      <p className="text-xs text-muted-foreground">
-        {row.source} · {row.email || row.phone || 'No contact details'}
+      <p className="text-base font-medium leading-6">{row.evidence}</p>
+      <p className="break-words text-base leading-6 text-foreground/85">
+        {row.email || row.phone || 'No contact details'}
       </p>
+      <p className="text-sm text-foreground/80">From {row.source}</p>
     </div>
   );
 }
-/** Candidate selection is explicit when more than one person shares a name. */
-export function Candidates({ row, model }: { row: ContactImportRow; model: ReviewModel }) {
-  return (
-    <div className="flex flex-col gap-2">
-      {row.candidates.length === 0 && (
-        <p>Create a new person. First names alone never merge automatically.</p>
-      )}
-      {row.candidates.map((name) => (
-        <Button
-          key={name}
-          variant={model.candidate === name ? 'secondary' : 'outline'}
-          className="h-auto min-h-11 w-full justify-start whitespace-normal break-all py-3 text-left"
-          onClick={() => model.selectCandidate(row.id, name)}
-        >
-          {name}
-        </Button>
-      ))}
-    </div>
-  );
-}
-/** Merging ambiguous candidates requires an explicit selected person. */
+
+/** Only selected contacts merge; other candidates retain their own decisions. */
 export function Decision({ row, model }: { row: ContactImportRow; model: ReviewModel }) {
-  if (row.outcome !== 'Review required') return <Badge variant="secondary">{row.outcome}</Badge>;
-  const canMerge =
-    row.candidates.length === 1 || (model.selected === row.id && model.candidate !== '');
+  if (row.outcome !== 'Review required')
+    return (
+      <Badge variant="secondary" className="text-sm">
+        {row.outcome}
+      </Badge>
+    );
+  const decisions = model.candidates[row.id] ?? {};
+  const selected = row.candidates.filter((candidate) => decisions[candidate.id] === 'merge').length;
+  const excluded = row.candidates.filter(
+    (candidate) => decisions[candidate.id] === 'different'
+  ).length;
+  const later = row.candidates.filter((candidate) => decisions[candidate.id] === 'later').length;
+  const pending = row.candidates.length - selected - excluded - later;
   const choice = model.choices[row.id];
   return (
-    <div className="space-y-2">
-      {choice && <p className="text-sm">Decision: {choice}</p>}
+    <div className="space-y-3">
+      <p className="text-base font-medium">
+        {selected > 0 ? `${selected + 1} contacts selected` : 'Select contacts to merge'}
+      </p>
+      <p className="text-sm leading-6 text-foreground/85">
+        {excluded} excluded · {later + pending} pending
+      </p>
+      {choice && (
+        <p role="status" className="text-base font-semibold">
+          {choice === 'Merge selected' ? `Merge only ${selected + 1} selected contacts` : choice}
+        </p>
+      )}
       <div className="flex flex-wrap gap-2">
-        <Button
-          variant={choice === 'Merge' ? 'default' : 'outline'}
-          disabled={!canMerge}
-          onClick={() => model.choose(row.id, 'Merge')}
-        >
-          Merge
+        <Button disabled={selected === 0} onClick={() => model.choose(row.id, 'Merge selected')}>
+          Merge selected{selected > 0 ? ` (${selected + 1})` : ''}
         </Button>
-        <Button
-          variant={choice === 'Keep separate' ? 'default' : 'outline'}
-          onClick={() => model.choose(row.id, 'Keep separate')}
-        >
-          Keep separate
-        </Button>
-        <Button
-          variant={choice === 'Later' ? 'secondary' : 'ghost'}
-          onClick={() => model.choose(row.id, 'Later')}
-        >
+        {excluded === row.candidates.length && (
+          <Button variant="outline" onClick={() => model.choose(row.id, 'Keep separate')}>
+            Save exclusions
+          </Button>
+        )}
+        <Button variant="ghost" onClick={() => model.choose(row.id, 'Later')}>
           <Clock className="size-4" />
-          Later
+          Review this contact later
         </Button>
       </div>
+      <p className="text-sm leading-6 text-foreground/85">
+        Unselected contacts stay separate. Exclusions and later reviews do not affect the selected
+        merge.
+      </p>
     </div>
   );
 }

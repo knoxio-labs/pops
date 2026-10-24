@@ -1,7 +1,14 @@
 name: Contact import review
 question: Is identity review clearer as a batch table or a focused comparison
   with a persistent queue?
-status: active
+status: decided
+chosen: compare
+decided: 2026-10-24
+rationale: >-
+  The user chose focused comparison for the production import-review screen after
+  reviewing the revised alternatives. Each candidate can be merged, marked as a
+  different person, or saved for later independently. Person-editor approval is
+  separate from this import-review decision.
 screen: contacts/import-review
 variants:
   table: Batch table + stacked editor
