@@ -144,10 +144,44 @@ pub async fn stage_page(
     requested_cursor: Option<&str>,
     page: &ProviderPage,
 ) -> Result<(), SyncError> {
+    stage_page_inner(pool, run_id, key, requested_cursor, page, None).await
+}
+
+/// Stage a worker result only while its durable claim is still current.
+pub async fn stage_page_claimed(
+    pool: &SqlitePool,
+    lease: &super::lease::RunLease,
+    key: &str,
+    requested_cursor: Option<&str>,
+    page: &ProviderPage,
+    now: i64,
+) -> Result<(), SyncError> {
+    stage_page_inner(
+        pool,
+        &lease.run_id,
+        key,
+        requested_cursor,
+        page,
+        Some((lease, now)),
+    )
+    .await
+}
+
+async fn stage_page_inner(
+    pool: &SqlitePool,
+    run_id: &str,
+    key: &str,
+    requested_cursor: Option<&str>,
+    page: &ProviderPage,
+    claim: Option<(&super::lease::RunLease, i64)>,
+) -> Result<(), SyncError> {
     if page.changes.len() > MAX_ROWS || page.seen_record_keys.len() > MAX_ROWS {
         return Err(SyncError::TooLarge);
     }
     let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+    if let Some((lease, now)) = claim {
+        super::lease::fence(&mut tx, lease, now).await?;
+    }
     let run = repo::running(&mut tx, run_id).await?;
     let collection = repo::collection(&run, key)?;
     if collection.complete || collection.continuation.as_deref() != requested_cursor {

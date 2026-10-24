@@ -434,6 +434,43 @@ describe('generate-nginx-conf', () => {
       expect(rendered).toContain('access_log /var/log/nginx/access.log pops_json;');
     });
 
+    it('removes query arguments only from Google OAuth callback access logs', () => {
+      expect(rendered).toContain('map $request_uri $pops_original_request_path {');
+      expect(rendered).toContain(
+        '~^(?<pops_request_path_without_args>[^?]*)\\? $pops_request_path_without_args;'
+      );
+      expect(rendered).toMatch(
+        /map \$uri \$pops_logged_request \{\s*default \$request;\s*\/contacts-api\/providers\/google\/callback "\$request_method \$pops_original_request_path \$server_protocol";\s*\/providers\/google\/callback "\$request_method \$pops_original_request_path \$server_protocol";\s*\}/
+      );
+      expect(rendered).toContain('"request":"$pops_logged_request"');
+      expect(rendered).not.toContain('"request":"$request"');
+    });
+
+    it.each([
+      [
+        '/contacts-api/providers/google/callback?code=fictional&state=fictional',
+        '/contacts-api/providers/google/callback',
+      ],
+      ['/providers/google/callback?error=access_denied', '/providers/google/callback'],
+      [
+        '/contacts-api/%70roviders/google/callback?code=fictional',
+        '/contacts-api/%70roviders/google/callback',
+      ],
+      ['/providers/google/callback?', '/providers/google/callback'],
+    ])(
+      'preserves the original callback path without arguments for %s',
+      (requestUri, expectedPath) => {
+        const pathMap = rendered.match(
+          /~(\^\(\?<pops_request_path_without_args>[^\n]+) \$pops_request_path_without_args;/
+        );
+        expect(pathMap).not.toBeNull();
+        const pathPattern = new RegExp(pathMap?.[1] ?? '(?!)');
+        expect(pathPattern.exec(requestUri)?.groups?.pops_request_path_without_args).toBe(
+          expectedPath
+        );
+      }
+    );
+
     it('forwards the effective request id from both server defaults and shared proxy directives', async () => {
       const commonProxySnippet = await readFile(COMMON_PROXY_SNIPPET_PATH, 'utf8');
       expect(rendered).toContain('proxy_set_header X-Request-Id $pops_request_id;');

@@ -8,6 +8,7 @@ import {
   personProfile,
   sourceAccount,
 } from './contacts-fixtures';
+import { providerOperation, providerStatus, providerAccounts } from './contacts-provider-fixtures';
 import { created, noContent, notFound, ok, page } from './respond';
 
 import type { MockHandler, MockHandlers } from '@pops/pillar-sdk/testing/api-mock';
@@ -102,6 +103,18 @@ export const contactsHandlers: MockHandlers = {
     ts: '2026-09-05T08:00:00.000Z',
     version: 'standalone',
   }),
+  'GET /providers/accounts': ok(providerAccounts),
+  'POST /providers/google/authorize': () => ({ status: 201 }),
+  'GET /providers/google/callback': () => ({ status: 303 }),
+  'POST /providers/icloud/accounts': created({
+    accountId: providerOperation.accountId,
+  }),
+  'DELETE /providers/accounts/{id}': noContent,
+  'POST /providers/accounts/{id}/sync': () => ({ status: 202, body: providerOperation }),
+  'GET /providers/sync/{id}': ok(providerStatus),
+  'POST /imports/files': created(importBatch),
+  'GET /imports/{id}': ok(importBatch),
+  'POST /imports/{id}/commit': ok(importReceipt),
   'GET /entities': listEntities,
   'POST /entities': created(mutation),
   'POST /entities/resolve': resolveIdentities,
@@ -149,10 +162,7 @@ export const contactsHandlers: MockHandlers = {
   'PUT /entities/{id}/poster': ok(mutation),
   'DELETE /entities/{id}/poster': ok(mutation),
   'POST /search': ok({ hits: [] }),
-  'POST /imports/files': created(importBatch),
-  'GET /imports/{id}': ok(importBatch),
   'GET /imports/{id}/review-proposals': ok(importReview),
-  'POST /imports/{id}/commit': ok(importReceipt),
   'POST /imports/{id}/review-decisions': ok(importReviewReceipt),
 };
 

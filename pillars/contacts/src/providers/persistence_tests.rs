@@ -304,3 +304,76 @@ async fn abandoned_expired_states_and_fenced_attempts_are_purged() {
         .unwrap();
     assert_eq!(count, 0);
 }
+
+#[tokio::test]
+async fn refresh_preserves_epoch_and_rejects_concurrent_stale_and_disconnected_values() {
+    let (pool, cipher, operator, account, epoch) = setup("google").await;
+    let old = secret();
+    let next = SecretBytes::new(vec![43; 25]).unwrap();
+    let later = SecretBytes::new(vec![44; 25]).unwrap();
+    let epoch = install_credential(&pool, &cipher, &operator, &account.id, epoch, &old)
+        .await
+        .unwrap();
+    refresh_credential(&pool, &cipher, &account.id, epoch, &old, &next)
+        .await
+        .unwrap();
+    let current = load_credential(&pool, &cipher, &account.id).await.unwrap();
+    assert_eq!(current.epoch, epoch);
+    assert_eq!(current.secret.expose(), next.expose());
+    assert_eq!(
+        refresh_credential(&pool, &cipher, &account.id, epoch, &old, &later).await,
+        Err(ProviderStoreError::StaleAccount)
+    );
+    assert_eq!(
+        load_credential(&pool, &cipher, &account.id)
+            .await
+            .unwrap()
+            .secret
+            .expose(),
+        next.expose()
+    );
+    disconnect_account(&pool, &operator, &account.id)
+        .await
+        .unwrap();
+    assert_eq!(
+        refresh_credential(&pool, &cipher, &account.id, epoch, &next, &later).await,
+        Err(ProviderStoreError::StaleAccount)
+    );
+}
+
+#[tokio::test]
+async fn refresh_leases_serialize_outbound_rotation_and_reject_late_results() {
+    let (pool, cipher, human, account, epoch) = setup("google").await;
+    let epoch = install_credential(&pool, &cipher, &human, &account.id, epoch, &secret())
+        .await
+        .unwrap();
+    let old = claim_refresh(&pool, &account.id, epoch, 100).await.unwrap();
+    assert!(matches!(
+        claim_refresh(&pool, &account.id, epoch, 399).await,
+        Err(ProviderStoreError::StaleAccount)
+    ));
+    let new = claim_refresh(&pool, &account.id, epoch, 400).await.unwrap();
+    let replacement = SecretBytes::new(vec![43; 25]).unwrap();
+    assert_eq!(
+        refresh_claimed(&pool, &cipher, &old, &secret(), &replacement, 400).await,
+        Err(ProviderStoreError::StaleAccount)
+    );
+    release_refresh(&pool, &old).await.unwrap();
+    assert!(matches!(
+        claim_refresh(&pool, &account.id, epoch, 401).await,
+        Err(ProviderStoreError::StaleAccount)
+    ));
+    refresh_claimed(&pool, &cipher, &new, &secret(), &replacement, 401)
+        .await
+        .unwrap();
+    release_refresh(&pool, &new).await.unwrap();
+    assert_eq!(
+        load_credential(&pool, &cipher, &account.id)
+            .await
+            .unwrap()
+            .secret
+            .expose(),
+        replacement.expose()
+    );
+    assert!(claim_refresh(&pool, &account.id, epoch, 402).await.is_ok());
+}

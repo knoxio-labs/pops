@@ -1,6 +1,7 @@
 //! Durable provider pages and account-wide all-or-nothing reconciliation.
 
 mod finalize;
+pub mod lease;
 mod model;
 mod repo;
 pub mod service;
@@ -17,4 +18,4 @@ pub use service::{
 #[cfg(test)]
 mod tests;
 
-pub use finalize::finalize_sync;
+pub use finalize::{finalize_claimed, finalize_sync};
