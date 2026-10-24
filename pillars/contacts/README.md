@@ -123,7 +123,10 @@ attempt and returns its browser URL in the `201` response `Location` header; the
 caller opens that URL after the request completes. A fetch never follows an
 authorization redirect across origins.
 `GET /providers/google/callback` consumes one-use operator-bound state before code
-exchange. Ordinary consent requests only `contacts.readonly`. Setting
+exchange. Successful callbacks return `303` to the fixed shell route
+`/contacts/connections`; failed callbacks return the structured error envelope.
+Neither response includes authorization details in a redirect. Ordinary consent
+requests only `contacts.readonly`. Setting
 `includeOtherContacts: true` on the authorization request explicitly adds
 `contacts.other.readonly`; the choice is saved in the one-use authorization state
 and installed account policy. A callback cannot broaden it. Other contacts use a
@@ -160,9 +163,9 @@ losing it requires reconnecting accounts. Set `CLOUDFLARE_ACCESS_TEAM_NAME`,
 
 Google additionally uses `infra/docker-compose.contacts-google.yml`,
 `secrets/contacts_google_client_secret`, `CONTACTS_GOOGLE_CLIENT_ID`, and an exact
-HTTPS `CONTACTS_GOOGLE_CALLBACK_URL` registered with Google. Callback paths are
-`/providers/google/callback` on a dedicated contacts origin or
-`/contacts-api/providers/google/callback` through shell. The shell access log
+HTTPS `CONTACTS_GOOGLE_CALLBACK_URL` registered with Google. Browser connections
+use the public shell origin and `/contacts-api/providers/google/callback` so the
+fixed success redirect returns to the connections screen. The shell access log
 removes callback query arguments; responses set `no-store` and `no-referrer`.
 The root key and OAuth client secret enter the container only as Docker secrets;
 provider passwords and refresh tokens are encrypted in the contacts database.

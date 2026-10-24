@@ -3655,15 +3655,16 @@
           }
         ],
         "responses": {
-          "200": {
-            "content": {
-              "application/json": {
+          "303": {
+            "description": "Google account connected; return to connections",
+            "headers": {
+              "Location": {
+                "description": "Fixed shell connections route",
                 "schema": {
-                  "$ref": "#/components/schemas/ProviderOperation"
+                  "type": "string"
                 }
               }
-            },
-            "description": "Google account connected"
+            }
           },
           "401": {
             "content": {
@@ -3686,7 +3687,7 @@
             "description": "Authorization changed or account mismatch"
           }
         },
-        "summary": "Consume state before exchanging the callback code; human subject and account\nepoch must match the initiating authorization attempt.",
+        "summary": "Consume state before exchanging the callback code; human subject and account\nepoch must match the initiating authorization attempt. Successful browser\ncallbacks return to the fixed shell connections route without auth details.",
         "tags": [
           "crate::providers::routes"
         ]

@@ -198,7 +198,30 @@ async fn callback_errors_are_not_cached_and_send_no_referrer() {
     assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
     assert_eq!(response.headers()["cache-control"], "no-store");
     assert_eq!(response.headers()["referrer-policy"], "no-referrer");
+    assert!(!response.headers().contains_key("location"));
     server.abort();
+}
+
+#[tokio::test]
+async fn callback_completion_redirects_only_success_to_the_fixed_connections_route() {
+    let response = callback_response(Ok("fictional-sensitive-account".into())).unwrap();
+    assert_eq!(response.status(), StatusCode::SEE_OTHER);
+    assert_eq!(response.headers()["location"], "/contacts/connections");
+    assert_eq!(response.headers()["cache-control"], "no-store");
+    assert_eq!(response.headers()["referrer-policy"], "no-referrer");
+    assert!(to_bytes(response.into_body(), 8192)
+        .await
+        .unwrap()
+        .is_empty());
+
+    let response = callback_response(Err(ProviderError::Conflict))
+        .unwrap_err()
+        .into_response();
+    assert_eq!(response.status(), StatusCode::CONFLICT);
+    assert!(!response.headers().contains_key("location"));
+    let body = to_bytes(response.into_body(), 8192).await.unwrap();
+    let error: Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(error["code"], "contacts.provider.conflict");
 }
 
 #[test]

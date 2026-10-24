@@ -269,8 +269,9 @@ fn authorization_response(
 }
 
 /// Consume state before exchanging the callback code; human subject and account
-/// epoch must match the initiating authorization attempt.
-#[utoipa::path(get,path="/providers/google/callback",operation_id="providers.google.callback",params(GoogleCallback),responses((status=200,description="Google account connected",body=ProviderOperation),(status=401,description="Human session required",body=crate::api::ErrorBody),(status=409,description="Authorization changed or account mismatch",body=crate::api::ErrorBody)))]
+/// epoch must match the initiating authorization attempt. Successful browser
+/// callbacks return to the fixed shell connections route without auth details.
+#[utoipa::path(get,path="/providers/google/callback",operation_id="providers.google.callback",params(GoogleCallback),responses((status=303,description="Google account connected; return to connections",headers(("Location"=String,description="Fixed shell connections route"))),(status=401,description="Human session required",body=crate::api::ErrorBody),(status=409,description="Authorization changed or account mismatch",body=crate::api::ErrorBody)))]
 pub async fn google_callback(
     State(state): State<AppState>,
     Extension(extension): Extension<ProviderExtension>,
@@ -280,7 +281,7 @@ pub async fn google_callback(
     let runtime = configured(extension)?;
     let human = human(&runtime, &headers).await?;
     let Query(body) = query.map_err(|_| ApiError::bad_request("Invalid authorization callback"))?;
-    let account_id = runtime
+    let result = runtime
         .finish_google(
             &state.pool,
             &human,
@@ -288,14 +289,18 @@ pub async fn google_callback(
             &body.code,
             super::runtime::now(),
         )
-        .await
-        .map_err(api)?;
+        .await;
+    callback_response(result)
+}
+
+fn callback_response(result: Result<String, ProviderError>) -> Result<Response, ApiError> {
+    result.map_err(api)?;
     Ok(private(
-        Json(ProviderOperation {
-            account_id,
-            run_id: None,
-        })
-        .into_response(),
+        (
+            StatusCode::SEE_OTHER,
+            [("location", "/contacts/connections")],
+        )
+            .into_response(),
     ))
 }
 
