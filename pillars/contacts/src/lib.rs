@@ -13,6 +13,7 @@ pub mod digest;
 pub mod entities;
 pub mod health;
 pub mod identity;
+pub mod imports;
 pub mod manifest;
 pub mod merges;
 pub mod openapi;
