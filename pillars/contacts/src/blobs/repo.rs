@@ -47,10 +47,11 @@ pub async fn get(pool: &SqlitePool, id: &str) -> Result<Option<BlobRow>, sqlx::E
         .await
 }
 
-/// Delete a blob by id. A no-op (not an error) if the id does not exist — the
+/// Delete an unreferenced blob by id. Retained member assets remain available after a selected asset is replaced.
+/// A no-op (not an error) if the id does not exist or is still referenced — the
 /// caller uses this for best-effort cleanup of a superseded or removed asset.
 pub async fn delete(pool: &SqlitePool, id: &str) -> Result<(), sqlx::Error> {
-    sqlx::query("DELETE FROM blobs WHERE id = ?1")
+    sqlx::query("DELETE FROM blobs WHERE id = ?1 AND NOT EXISTS(SELECT 1 FROM entities WHERE avatar_asset_id=?1 OR poster_asset_id=?1)")
         .bind(id)
         .execute(pool)
         .await?;
@@ -92,6 +93,47 @@ mod tests {
         delete(&pool, &id).await.expect("delete");
         assert!(get(&pool, &id).await.expect("get").is_none());
         delete(&pool, &id).await.expect("delete again is a no-op");
+    }
+
+    #[tokio::test]
+    async fn referenced_avatar_and_poster_survive_cleanup_until_their_last_reference_is_removed() {
+        let pool = pool().await;
+        let entity = crate::persons::repo::create_person(
+            &mut pool.acquire().await.expect("connection"),
+            "Asset owner",
+        )
+        .await
+        .expect("person");
+        let avatar = create(&pool, "image/png", b"avatar").await.expect("avatar");
+        let poster = create(&pool, "image/png", b"poster").await.expect("poster");
+        crate::entities::repo::set_asset_ids(
+            &pool,
+            &entity,
+            crate::entities::model::AssetIdPatch {
+                avatar_asset_id: Some(Some(avatar.clone())),
+                poster_asset_id: Some(Some(poster.clone())),
+            },
+        )
+        .await
+        .expect("references");
+        for id in [&avatar, &poster] {
+            delete(&pool, id).await.expect("referenced cleanup");
+            assert!(get(&pool, id).await.expect("retained blob").is_some());
+        }
+        crate::entities::repo::set_asset_ids(
+            &pool,
+            &entity,
+            crate::entities::model::AssetIdPatch {
+                avatar_asset_id: Some(None),
+                poster_asset_id: Some(None),
+            },
+        )
+        .await
+        .expect("remove references");
+        for id in [&avatar, &poster] {
+            delete(&pool, id).await.expect("unreferenced cleanup");
+            assert!(get(&pool, id).await.expect("removed blob").is_none());
+        }
     }
 
     #[tokio::test]

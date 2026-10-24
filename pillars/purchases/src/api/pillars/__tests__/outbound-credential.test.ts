@@ -168,7 +168,8 @@ function okBody(pathname: string): unknown {
   if (pathname === '/transactions') {
     return { data: [], pagination: { total: 0, limit: 500, offset: 0, hasMore: false } };
   }
-  if (pathname === '/entities') return { data: [{ id: 'contacts-1', name: 'Bunnings' }] };
+  if (pathname === '/entities')
+    return { data: [{ id: 'contacts-1', name: 'Bunnings', type: 'company' }] };
   if (pathname === '/items') return { data: { id: 'inv-1' }, message: 'created' };
   if (pathname === '/tags') {
     return {

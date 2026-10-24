@@ -21,6 +21,7 @@
 import { isOk, type CallResult, type PillarHandle } from '@pops/pillar-sdk/server';
 
 import { credentialRejectedMessage, UNAUTHORIZED_REASON } from '../pillars/outbound.js';
+import { ContactsPermanentError } from './errors.js';
 
 import type { ContactEntity, ListResponse } from './types.js';
 
@@ -39,6 +40,7 @@ export type ContactsReadRouter = {
     list: (input: {
       search?: string;
       type?: string;
+      excludePersons?: boolean;
       limit?: number;
       offset?: number;
     }) => Promise<ListResponse>;
@@ -116,7 +118,7 @@ export async function fetchOneEntity(
 
 export async function pageThroughEntities(
   handle: PillarHandle<ContactsReadRouter> | null,
-  query: { search?: string; type?: string },
+  query: { search?: string; type?: string; excludePersons?: boolean },
   maxPages: number
 ): Promise<ContactEntity[]> {
   // `credentialled()` already logged the no-key case once for this
@@ -128,6 +130,7 @@ export async function pageThroughEntities(
     const result = await handle.entities.list({
       search: query.search,
       type: query.type,
+      excludePersons: query.excludePersons,
       limit: PAGE_SIZE,
       offset: page * PAGE_SIZE,
     });
@@ -150,7 +153,9 @@ export async function pageThroughEntities(
  * Resolve a single contact by exact (case-insensitive) name. The list `search`
  * is a substring filter, so the exact match is re-checked client-side over the
  * matching page. Backs the fetch-first leg of create-or-fetch, returning the
- * existing contact for reuse before any create is attempted.
+ * existing contact for reuse before any create is attempted. Person lookups
+ * stay within people; other types share the merchant namespace. Ambiguous
+ * names or aliases fail permanently rather than choosing an arbitrary id.
  *
  * An alias counts as the entity's name: a descriptor that reads "Maccas" names
  * the contact that answers to it, and creating a second entity for the alias
@@ -159,13 +164,21 @@ export async function pageThroughEntities(
 export async function fetchByExactName(
   handle: PillarHandle<ContactsReadRouter>,
   name: string,
-  maxPages: number
+  maxPages: number,
+  type: string
 ): Promise<ContactEntity | null> {
-  const matches = await pageThroughEntities(handle, { search: name }, maxPages);
-  const target = name.toLowerCase();
-  return (
-    matches.find((e) => e.name.toLowerCase() === target) ??
-    matches.find((e) => e.aliases.some((alias) => alias.toLowerCase() === target)) ??
-    null
+  const query = type === 'person' ? { type } : { excludePersons: true };
+  const matches = (await pageThroughEntities(handle, { search: name, ...query }, maxPages)).filter(
+    (entity) => (entity.type === 'person') === (type === 'person')
   );
+  const target = name.toLowerCase();
+  const named = matches.filter((entity) => entity.name.toLowerCase() === target);
+  const candidates =
+    named.length > 0
+      ? named
+      : matches.filter((entity) => entity.aliases.some((alias) => alias.toLowerCase() === target));
+  if (new Set(candidates.map((entity) => entity.id)).size > 1) {
+    throw new ContactsPermanentError('ambiguous contact name');
+  }
+  return candidates[0] ?? null;
 }
