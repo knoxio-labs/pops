@@ -432,7 +432,7 @@ describe('label copies', () => {
     [GRINDER, 'Copies per item'],
     [BOX, 'Copies per box'],
   ])('prints 72 copies across three 24-label sheets for %s', async (id, label) => {
-    renderPage(`?ids=${id}&sheet=L7159`);
+    renderPage(`?ids=${id}&sheet=L7159&shows=code`);
     const input = await screen.findByRole('spinbutton', { name: label });
     fireEvent.change(input, { target: { value: '72' } });
     expect(await screen.findByText('72 labels on 3 sheets, from label 1')).toBeInTheDocument();
@@ -441,7 +441,7 @@ describe('label copies', () => {
     expect(screen.getByRole('button', { name: 'Print 72 labels' })).toBeEnabled();
   });
 
-  it.each(['', '0', '-1', '1.5'])(
+  it.each(['', '0', '-1', '1.5', '1001', '99999999'])(
     'keeps the last valid quantity while editing %s',
     async (value) => {
       renderPage(`?ids=${GRINDER}`);
@@ -453,6 +453,19 @@ describe('label copies', () => {
       expect(input).toHaveValue(5);
     }
   );
+
+  it('accounts for both kinds when limiting the job size', async () => {
+    renderPage(`?ids=${BOX},${GRINDER}`);
+    const boxes = await screen.findByRole('spinbutton', { name: 'Copies per box' });
+    const items = screen.getByRole('spinbutton', { name: 'Copies per item' });
+    expect(items).toHaveAttribute('max', '998');
+    fireEvent.change(boxes, { target: { value: '5' } });
+    expect(items).toHaveAttribute('max', '995');
+    fireEvent.change(items, { target: { value: '996' } });
+    expect(items).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByRole('alert')).toHaveTextContent('Enter a whole number from 1 to 995');
+    expect(printedCodes()).toHaveLength(6);
+  });
 
   it('allows clearing the quantity before entering a new one', async () => {
     renderPage(`?ids=${GRINDER}`);

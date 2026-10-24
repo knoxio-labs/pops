@@ -105,6 +105,11 @@ Other views keep field names. The shared `FieldIcon` component in `@pops/ui`
 renders these names synchronously for reuse, including `PackageOpenUp` for unpacking.
 Icon changes are presentation edits and remain available after publication.
 
+Label copies accept a positive whole number per item or box. Jobs paginate across
+sheets, with a 1,000-label total limit to bound the browser's live preview. The
+available copies account for both kinds in a mixed job. Invalid edits leave the
+last valid quantity in place and revert when the input loses focus.
+
 Labels with a QR and contents use a top header for the QR, name, code and fields
 when the sheet has room, with contents listed underneath. The planner chooses the
 fewest columns needed (up to three), keeping each column at least 40 mm wide.

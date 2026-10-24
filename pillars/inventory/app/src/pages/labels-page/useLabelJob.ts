@@ -43,7 +43,7 @@ import type {
 } from '@pops/inventory/labels';
 
 import type { LabelFragility } from './label-fragility';
-import type { PrintLabelEntry } from './plan-labels';
+import type { LabelPlanInput, PrintLabelEntry } from './plan-labels';
 
 /**
  * What happened after the browser's print dialog closed. Browsers do not
@@ -51,8 +51,11 @@ import type { PrintLabelEntry } from './plan-labels';
  */
 export type PrintOutcome = 'none' | 'asking' | 'printed' | 'cancelled';
 
-/** Why Print is off: nothing to print, an item still without a code, or labels too small for a QR. */
-export type PrintBlock = 'empty' | 'uncoded' | 'too-small' | 'loading' | null;
+/** Maximum expanded labels a browser job may preview and print. */
+export const MAX_JOB_LABELS = 1_000;
+
+/** Why printing is blocked by the selection, label fit, job size or pending reads. */
+export type PrintBlock = 'empty' | 'uncoded' | 'too-small' | 'too-many' | 'loading' | null;
 
 /** The job's starting choices, from the page's address and inventory settings. */
 export interface LabelJobSeed {
@@ -127,8 +130,24 @@ function useSheet(seed: LabelJobSeed) {
   };
 }
 
-function printBlock(labels: number, uncoded: number, tooSmall: boolean): PrintBlock {
-  if (tooSmall) return 'too-small';
+function planJob({ subjects, copies, ...options }: LabelPlanInput) {
+  const tooMany =
+    subjects.reduce((total, subject) => total + copies[subject.kind], 0) > MAX_JOB_LABELS;
+  return {
+    ...planLabels({ ...options, copies, subjects: tooMany ? [] : subjects }),
+    tooMany,
+  };
+}
+
+function printBlock(
+  labels: number,
+  uncoded: number,
+  plan: ReturnType<typeof planJob>,
+  readsPending?: boolean
+): PrintBlock {
+  if (readsPending) return 'loading';
+  if (plan.tooMany) return 'too-many';
+  if (plan.tooSmall) return 'too-small';
   if (labels === 0) return 'empty';
   return uncoded > 0 ? 'uncoded' : null;
 }
@@ -164,7 +183,7 @@ export function useLabelJob(subjects: PrintSubject[], seed: LabelJobSeed): Print
   const [copies, setCopiesState] = useState<CopiesByKind>(DEFAULT_COPIES);
   const [outcome, setOutcome] = useState<PrintOutcome>('none');
   const startAt = clampStartAt(sheet.requestedStart, layout);
-  const plan = planLabels({
+  const plan = planJob({
     subjects,
     fragileIds: fragile.fragileIds,
     fragility: seed.fragility,
@@ -176,9 +195,7 @@ export function useLabelJob(subjects: PrintSubject[], seed: LabelJobSeed): Print
   const labels = plan.entries;
   const uncoded = uncodedSubjects(subjects, labels);
   const nextStart = nextStartAt(labels.length, startAt, layout);
-  const block = seed.readsPending
-    ? 'loading'
-    : printBlock(labels.length, uncoded.length, plan.tooSmall);
+  const block = printBlock(labels.length, uncoded.length, plan, seed.readsPending);
 
   return {
     subjects,
