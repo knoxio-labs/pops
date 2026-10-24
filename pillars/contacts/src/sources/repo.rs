@@ -28,6 +28,7 @@ impl From<PersonError> for SourceError {
     fn from(value: PersonError) -> Self {
         match value {
             PersonError::NotFound => Self::NotFound,
+            PersonError::Retired(_) => Self::Conflict,
             PersonError::Invalid(message) => Self::Invalid(message),
             PersonError::Db(error) => Self::Db(error),
         }
@@ -73,7 +74,7 @@ pub async fn list_records(
     pool: &SqlitePool,
     entity_id: &str,
 ) -> Result<Vec<SourceRecord>, sqlx::Error> {
-    sqlx::query_as("SELECT id,account_id,collection_key,record_key,entity_id,display_name,given_name,additional_names,family_name,name_prefix,name_suffix,name_completeness,active,last_seen_at,revision FROM source_records WHERE entity_id=?1 ORDER BY account_id,collection_key,record_key")
+    sqlx::query_as("SELECT id,account_id,collection_key,record_key,entity_id,display_name,given_name,additional_names,family_name,name_prefix,name_suffix,name_completeness,active,last_seen_at,revision FROM source_records WHERE entity_id=COALESCE((SELECT canonical_id FROM entity_redirects WHERE member_id=?1),?1) OR entity_id IN (SELECT member_id FROM entity_redirects WHERE canonical_id=COALESCE((SELECT canonical_id FROM entity_redirects WHERE member_id=?1),?1)) ORDER BY account_id,collection_key,record_key")
         .bind(entity_id).fetch_all(pool).await
 }
 
@@ -140,7 +141,10 @@ pub async fn apply_record(
             record.id
         }
         Some(_) => return Err(SourceError::Conflict),
-        None => uuid::Uuid::new_v4().to_string(),
+        None => {
+            crate::persons::repo::require_writable_person(conn, &input.entity_id).await?;
+            uuid::Uuid::new_v4().to_string()
+        }
     };
     let now = now_rfc3339();
     sqlx::query("INSERT INTO source_records(id,account_id,collection_key,record_key,entity_id,display_name,given_name,additional_names,family_name,name_prefix,name_suffix,name_completeness,active,last_seen_at) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,1,?13) ON CONFLICT(account_id,collection_key,record_key) DO UPDATE SET display_name=excluded.display_name,given_name=excluded.given_name,additional_names=excluded.additional_names,family_name=excluded.family_name,name_prefix=excluded.name_prefix,name_suffix=excluded.name_suffix,name_completeness=excluded.name_completeness,active=1,last_seen_at=excluded.last_seen_at,revision=source_records.revision+1")
@@ -158,7 +162,7 @@ async fn refresh_points(
     source_id: &str,
     points: &[ContactPointInput],
 ) -> Result<(), SourceError> {
-    let mut prior: Vec<ContactPoint> = sqlx::query_as("SELECT id,entity_id,kind,value,normalized_value,label,country_code,source_record_id,active,preferred,created_at FROM contact_points WHERE source_record_id=?1 AND (active=1 OR preferred=1) ORDER BY preferred DESC,active DESC,created_at,id")
+    let mut prior: Vec<ContactPoint> = sqlx::query_as("SELECT id,entity_id,kind,value,normalized_value,label,country_code,source_record_id,active,preferred,created_at FROM contact_points WHERE source_record_id=?1 AND (active=1 OR preferred=1 OR EXISTS(SELECT 1 FROM merge_selections WHERE point_id=contact_points.id)) ORDER BY EXISTS(SELECT 1 FROM merge_selections WHERE point_id=contact_points.id) DESC,preferred DESC,active DESC,created_at,id")
         .bind(source_id).fetch_all(&mut *conn).await?;
     for point in points {
         let position = prior.iter().position(|old| {

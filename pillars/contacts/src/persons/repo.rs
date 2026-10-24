@@ -9,6 +9,7 @@ use crate::time::now_rfc3339;
 #[derive(Debug)]
 pub enum PersonError {
     NotFound,
+    Retired(String),
     Invalid(String),
     Db(sqlx::Error),
 }
@@ -30,6 +31,20 @@ pub async fn require_person(conn: &mut SqliteConnection, id: &str) -> Result<(),
         Some("person") => Ok(()),
         Some(_) => Err(PersonError::Invalid("Entity must be a person".to_string())),
     }
+}
+
+/// Require a current canonical person for local edits and new source links; recognized source refreshes retain their original owner.
+pub async fn require_writable_person(
+    conn: &mut SqliteConnection,
+    id: &str,
+) -> Result<(), PersonError> {
+    require_person(conn, id).await?;
+    if let Some(canonical) = crate::merges::repo::resolve_one(conn, id).await? {
+        if canonical != id {
+            return Err(PersonError::Retired(canonical));
+        }
+    }
+    Ok(())
 }
 
 /// Validate bounded structured name input. Display text cannot establish complete name evidence.
@@ -65,8 +80,31 @@ pub async fn get_profile(
     pool: &SqlitePool,
     id: &str,
 ) -> Result<Option<PersonProfile>, sqlx::Error> {
+    let mut tx = pool.begin().await?;
+    let profile = get_profile_in_transaction(&mut tx, id).await?;
+    tx.commit().await?;
+    Ok(profile)
+}
+
+/// Read the selected local or immutable imported profile within the caller's consistent snapshot.
+pub async fn get_profile_in_transaction(
+    conn: &mut SqliteConnection,
+    id: &str,
+) -> Result<Option<PersonProfile>, sqlx::Error> {
+    if let Some(profile) = crate::merges::projection::source_profile(conn, id).await? {
+        return Ok(Some(profile));
+    }
+    let owner = crate::merges::projection::profile_owner(conn, id).await?;
+    get_stored_profile(conn, &owner).await
+}
+
+/// Read one retained member's original local name inside the caller's snapshot, without canonical projection.
+pub async fn get_stored_profile(
+    conn: &mut SqliteConnection,
+    id: &str,
+) -> Result<Option<PersonProfile>, sqlx::Error> {
     let row: Option<(String,)> = sqlx::query_as("SELECT json_object('entityId', entity_id, 'name', json_object('givenName', given_name, 'additionalNames', additional_names, 'familyName', family_name, 'namePrefix', name_prefix, 'nameSuffix', name_suffix, 'completeness', name_completeness), 'updatedAt', updated_at) FROM person_profiles WHERE entity_id = ?1")
-        .bind(id).fetch_optional(pool).await?;
+        .bind(id).fetch_optional(conn).await?;
     row.map(|(json,)| {
         serde_json::from_str(&json).map_err(|error| sqlx::Error::Decode(Box::new(error)))
     })
@@ -81,7 +119,7 @@ pub async fn put_profile(
 ) -> Result<PersonProfile, PersonError> {
     validate_name(&name)?;
     let mut tx = pool.begin().await?;
-    require_person(&mut tx, id).await?;
+    require_writable_person(&mut tx, id).await?;
     let now = now_rfc3339();
     sqlx::query("INSERT INTO person_profiles(entity_id, given_name, additional_names, family_name, name_prefix, name_suffix, name_completeness, updated_at) VALUES(?1,?2,?3,?4,?5,?6,?7,?8) ON CONFLICT(entity_id) DO UPDATE SET given_name=excluded.given_name, additional_names=excluded.additional_names, family_name=excluded.family_name, name_prefix=excluded.name_prefix, name_suffix=excluded.name_suffix, name_completeness=excluded.name_completeness, updated_at=excluded.updated_at")
         .bind(id).bind(&name.given_name).bind(&name.additional_names).bind(&name.family_name).bind(&name.name_prefix).bind(&name.name_suffix).bind(name.completeness.as_str()).bind(&now).execute(&mut *tx).await?;
@@ -90,13 +128,14 @@ pub async fn put_profile(
         entity_id: id.to_string(),
         name,
         updated_at: now,
+        source_record_id: None,
+        source_observation_id: None,
     })
 }
 
-/// List all point observations, including inactive history and retained preferred selections.
+/// List current point observations plus explicit preferences retained after upstream removal.
 pub async fn list_points(pool: &SqlitePool, id: &str) -> Result<Vec<ContactPoint>, sqlx::Error> {
-    sqlx::query_as("SELECT id,entity_id,kind,value,normalized_value,label,country_code,source_record_id,active,preferred,created_at FROM contact_points WHERE entity_id=?1 ORDER BY created_at,id")
-        .bind(id).fetch_all(pool).await
+    crate::merges::projection::points(pool, id).await
 }
 
 /// Validate a point observation before any source refresh mutates stored data.
@@ -131,7 +170,11 @@ pub async fn insert_point(
     source_record_id: Option<&str>,
 ) -> Result<ContactPoint, PersonError> {
     validate_point(point)?;
-    require_person(conn, id).await?;
+    if source_record_id.is_none() {
+        require_writable_person(conn, id).await?;
+    } else {
+        require_person(conn, id).await?;
+    }
     let point_id = uuid::Uuid::new_v4().to_string();
     let normalized = match point.kind {
         super::model::ContactPointKind::Email => crate::identity::normalize_email(&point.value),
@@ -162,24 +205,10 @@ pub async fn insert_point(
 /// Select one point for a person/kind atomically. A point belonging to another person is never selected.
 pub async fn prefer_point(pool: &SqlitePool, id: &str, point_id: &str) -> Result<(), PersonError> {
     let mut tx = pool.begin().await?;
-    require_person(&mut tx, id).await?;
-    let kind: Option<String> =
-        sqlx::query_scalar("SELECT kind FROM contact_points WHERE id=?1 AND entity_id=?2")
-            .bind(point_id)
-            .bind(id)
-            .fetch_optional(&mut *tx)
-            .await?;
-    let kind = kind.ok_or(PersonError::NotFound)?;
-    sqlx::query("UPDATE contact_points SET preferred=0 WHERE entity_id=?1 AND kind=?2")
-        .bind(id)
-        .bind(kind)
-        .execute(&mut *tx)
-        .await?;
-    sqlx::query("UPDATE contact_points SET preferred=1 WHERE id=?1 AND entity_id=?2")
-        .bind(point_id)
-        .bind(id)
-        .execute(&mut *tx)
-        .await?;
+    require_writable_person(&mut tx, id).await?;
+    if !crate::merges::projection::prefer_point(&mut tx, id, point_id).await? {
+        return Err(PersonError::NotFound);
+    }
     tx.commit().await?;
     Ok(())
 }

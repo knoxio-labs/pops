@@ -7,7 +7,7 @@
 //! `last_edited_time` is bumped to the current instant on create and on any
 //! non-empty update, and ordering is case-insensitive by name.
 
-use sqlx::{Row, SqlitePool};
+use sqlx::{Row, SqliteConnection, SqlitePool};
 
 use super::colours::random_colour;
 use super::model::{
@@ -24,6 +24,7 @@ pub struct EntityNameRow {
     pub name: String,
     pub r#type: String,
     pub aliases: Option<String>,
+    pub matching_name: String,
 }
 
 /// Failure modes of a write that are NOT raw SQL errors.
@@ -91,38 +92,61 @@ pub async fn list_scoped(
     offset: i64,
 ) -> Result<(Vec<EntityRow>, i64), sqlx::Error> {
     let like = search.map(|s| format!("%{s}%"));
+    let mut tx = pool.begin().await?;
 
     let rows = sqlx::query_as::<_, EntityRow>(select_entities!(
-        "WHERE (?1 IS NULL OR name LIKE ?1 OR aliases LIKE ?1) AND (?2 IS NULL OR type = ?2) AND (?5 = 0 OR type <> 'person') \
-         ORDER BY name COLLATE UNICODE_NOCASE LIMIT ?3 OFFSET ?4"
+        "WHERE NOT EXISTS(SELECT 1 FROM entity_redirects WHERE member_id=entities.id) AND (?1 IS NULL OR (SELECT name FROM entity_identity_lookup WHERE id=entities.id) LIKE ?1 OR (SELECT aliases FROM entity_identity_lookup WHERE id=entities.id) LIKE ?1 OR name LIKE ?1 OR aliases LIKE ?1 OR EXISTS(SELECT 1 FROM entities m JOIN entity_redirects r ON r.member_id=m.id WHERE r.canonical_id=entities.id AND (m.name LIKE ?1 OR m.aliases LIKE ?1))) AND (?2 IS NULL OR type = ?2) AND (?5 = 0 OR type <> 'person') \
+         ORDER BY (SELECT name FROM entity_identity_lookup WHERE id=entities.id) COLLATE UNICODE_NOCASE LIMIT ?3 OFFSET ?4"
     ))
     .bind(like.as_deref())
     .bind(ty)
     .bind(limit)
     .bind(offset)
     .bind(exclude_persons)
-    .fetch_all(pool)
+    .fetch_all(&mut *tx)
     .await?;
 
     let total: i64 = sqlx::query(
         "SELECT COUNT(*) AS total FROM entities \
-         WHERE (?1 IS NULL OR name LIKE ?1 OR aliases LIKE ?1) AND (?2 IS NULL OR type = ?2) AND (?3 = 0 OR type <> 'person')",
+         WHERE NOT EXISTS(SELECT 1 FROM entity_redirects WHERE member_id=entities.id) AND (?1 IS NULL OR (SELECT name FROM entity_identity_lookup WHERE id=entities.id) LIKE ?1 OR (SELECT aliases FROM entity_identity_lookup WHERE id=entities.id) LIKE ?1 OR name LIKE ?1 OR aliases LIKE ?1 OR EXISTS(SELECT 1 FROM entities m JOIN entity_redirects r ON r.member_id=m.id WHERE r.canonical_id=entities.id AND (m.name LIKE ?1 OR m.aliases LIKE ?1))) AND (?2 IS NULL OR type = ?2) AND (?3 = 0 OR type <> 'person')",
     )
     .bind(like.as_deref())
     .bind(ty)
     .bind(exclude_persons)
-    .fetch_one(pool)
+    .fetch_one(&mut *tx)
     .await?
     .get("total");
 
-    Ok((rows, total))
+    let mut projected = Vec::with_capacity(rows.len());
+    for row in rows {
+        projected.push(crate::merges::projection::entity(&mut tx, row).await?);
+    }
+    tx.commit().await?;
+    Ok((projected, total))
 }
 
-/// Fetch one entity by id, or `None` if it does not exist.
+/// Fetch one canonical entity, resolving historical IDs and explicit field selections.
 pub async fn get(pool: &SqlitePool, id: &str) -> Result<Option<EntityRow>, sqlx::Error> {
+    let mut tx = pool.begin().await?;
+    let Some(canonical) = crate::merges::repo::resolve_one(&mut tx, id).await? else {
+        return Ok(None);
+    };
+    let row = match get_stored(&mut tx, &canonical).await? {
+        Some(row) => Some(crate::merges::projection::entity(&mut tx, row).await?),
+        None => None,
+    };
+    tx.commit().await?;
+    Ok(row)
+}
+
+/// Fetch an original retained row inside a transaction without canonical projection.
+pub async fn get_stored(
+    conn: &mut SqliteConnection,
+    id: &str,
+) -> Result<Option<EntityRow>, sqlx::Error> {
     sqlx::query_as::<_, EntityRow>(select_entities!("WHERE id = ?1"))
         .bind(id)
-        .fetch_optional(pool)
+        .fetch_optional(conn)
         .await
 }
 
@@ -319,10 +343,8 @@ pub async fn delete(pool: &SqlitePool, id: &str) -> Result<bool, sqlx::Error> {
 /// entity-usage rollup.
 pub async fn lookup_bulk(pool: &SqlitePool) -> Result<Vec<EntityLookupRow>, sqlx::Error> {
     sqlx::query_as::<_, EntityLookupRow>(
-        "SELECT id, name, type, aliases FROM entities ORDER BY name COLLATE UNICODE_NOCASE",
-    )
-    .fetch_all(pool)
-    .await
+        "SELECT id,name,type,aliases FROM entity_identity_lookup ORDER BY name COLLATE UNICODE_NOCASE",
+    ).fetch_all(pool).await
 }
 
 /// The same match-relevant columns as [`lookup_bulk`], narrowed to the given
@@ -349,7 +371,7 @@ pub async fn lookup_by_ids(
         .collect::<Vec<_>>()
         .join(", ");
     let sql = format!(
-        "SELECT id, name, type, aliases FROM entities WHERE id IN ({placeholders}) \
+        "SELECT id, name, type, aliases FROM entity_identity_lookup WHERE id IN (SELECT COALESCE(r.canonical_id,e.id) FROM entities e LEFT JOIN entity_redirects r ON r.member_id=e.id WHERE e.id IN ({placeholders})) \
          ORDER BY name COLLATE UNICODE_NOCASE"
     );
 
@@ -368,11 +390,8 @@ pub async fn search_candidates(
 ) -> Result<Vec<EntityNameRow>, sqlx::Error> {
     let like = format!("%{text}%");
     sqlx::query_as::<_, EntityNameRow>(
-        "SELECT id, name, type, aliases FROM entities WHERE name LIKE ?1",
-    )
-    .bind(like)
-    .fetch_all(pool)
-    .await
+        "SELECT p.id,p.name,p.type,p.aliases,CASE WHEN e.name LIKE ?1 THEN e.name ELSE p.name END AS matching_name FROM entities e LEFT JOIN entity_redirects r ON r.member_id=e.id JOIN entity_identity_lookup p ON p.id=COALESCE(r.canonical_id,e.id) WHERE e.name LIKE ?1 OR p.name LIKE ?1",
+    ).bind(like).fetch_all(pool).await
 }
 
 /// Map a write failure to a name [`RepoError::Conflict`] when it is the

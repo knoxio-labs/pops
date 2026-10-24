@@ -1,4 +1,11 @@
 import { CONTACT_ENTITIES } from '../fixtures/entities';
+import {
+  providerOperation,
+  providerStatus,
+  providerAccounts,
+  importBatch,
+  importReceipt,
+} from './contacts-provider-fixtures';
 import { created, noContent, notFound, ok, page } from './respond';
 
 import type { MockHandler, MockHandlers } from '@pops/pillar-sdk/testing/api-mock';
@@ -11,11 +18,12 @@ import type {
   EntitiesLookupResponses,
   EntityResponse,
   HealthResponse,
-  ProviderAccountStatus,
-  ProviderOperation,
-  ProviderRunStatus,
-  ImportBatch,
-  CommitReceipt,
+  IdentityGroup,
+  MergeResult,
+  ResolveResponse,
+  SeparateList,
+  SeparateResult,
+  UndoResult,
 } from '../../contacts-api/types.gen';
 
 /**
@@ -84,38 +92,33 @@ const sourceAccount: SourceAccountResponse = {
   },
 };
 
-const providerOperation: ProviderOperation = {
-  accountId: '00000000-0000-4000-8000-000000000010',
-  runId: '00000000-0000-4000-8000-000000000011',
+const resolveIdentities: MockHandler = ({ body }) => {
+  const ids =
+    typeof body === 'object' && body !== null && 'ids' in body && Array.isArray(body.ids)
+      ? body.ids.filter((id): id is string => typeof id === 'string')
+      : [];
+  const response: ResolveResponse = {
+    data: ids.map((id) => ({
+      id,
+      canonicalId: CONTACT_ENTITIES.some((entity) => entity.id === id) ? id : null,
+    })),
+    revision: 1,
+  };
+  return { body: response };
 };
-const providerStatus: ProviderRunStatus = {
-  ...providerOperation,
-  runId: '00000000-0000-4000-8000-000000000011',
-  status: 'completed',
-  totalCollections: 1,
-  completedCollections: 1,
-  batchIds: [],
+
+const identityGroup: MockHandler = ({ params }) => {
+  const entity = CONTACT_ENTITIES.find((entity) => entity.id === params['id']);
+  if (entity === undefined) return notFound('entity', 'contacts.resource.not_found');
+  const body: IdentityGroup = {
+    canonicalId: entity.id,
+    memberIds: [entity.id],
+    revision: 1,
+    selections: [],
+    members: [{ entity }],
+  };
+  return { body };
 };
-const providerAccounts: ProviderAccountStatus[] = [
-  {
-    accountId: providerOperation.accountId,
-    provider: 'google',
-    connected: true,
-    reauthorizationRequired: false,
-    includeOtherContacts: false,
-    latestRunId: providerStatus.runId,
-    previewRunId: providerStatus.runId,
-  },
-];
-const importBatch: ImportBatch = {
-  id: '00000000-0000-4000-8000-000000000012',
-  accountId: providerOperation.accountId,
-  collectionKey: 'contacts',
-  revision: 1,
-  rows: [],
-  createdAt: '2026-10-24T00:00:00Z',
-};
-const importReceipt: CommitReceipt = { batchId: importBatch.id, revision: 2, rows: [] };
 
 export const contactsHandlers: MockHandlers = {
   'GET /': ok('contacts'),
@@ -129,10 +132,10 @@ export const contactsHandlers: MockHandlers = {
   }),
   'GET /providers/accounts': ok(providerAccounts),
   'POST /providers/google/authorize': () => ({ status: 201 }),
-  'GET /providers/google/callback': ok<ProviderOperation>({
+  'GET /providers/google/callback': ok({
     accountId: providerOperation.accountId,
   }),
-  'POST /providers/icloud/accounts': created<ProviderOperation>({
+  'POST /providers/icloud/accounts': created({
     accountId: providerOperation.accountId,
   }),
   'DELETE /providers/accounts/{id}': noContent,
@@ -143,6 +146,26 @@ export const contactsHandlers: MockHandlers = {
   'POST /imports/{id}/commit': ok(importReceipt),
   'GET /entities': listEntities,
   'POST /entities': created(mutation),
+  'POST /entities/resolve': resolveIdentities,
+  'GET /merges/groups/{id}': identityGroup,
+  'POST /merges': ok<MergeResult>({
+    canonicalId: firstEntity?.id ?? '',
+    memberIds: [firstEntity?.id ?? ''],
+    operationId: 'merge-standalone',
+    revision: 2,
+  }),
+  'POST /merges/{id}/undo': ok<UndoResult>({
+    operationId: 'undo-standalone',
+    restoredIds: [firstEntity?.id ?? ''],
+    revision: 3,
+  }),
+  'GET /merges/keep-separate': ok<SeparateList>({ data: [], revision: 1 }),
+  'POST /merges/keep-separate': ok<SeparateResult>({
+    keepSeparate: true,
+    leftId: firstEntity?.id ?? '',
+    rightId: 'other-standalone',
+    revision: 2,
+  }),
   'POST /entities/lookup': ok<EntitiesLookupResponses[200]>({
     entities: CONTACT_ENTITIES.map(({ id, name, aliases, type }) => ({ id, name, aliases, type })),
     fetchedAt: '2026-09-05T08:00:00.000Z',

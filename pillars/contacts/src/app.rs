@@ -45,6 +45,7 @@ pub fn build_router_with_providers(
     state: AppState,
     providers: crate::providers::routes::ProviderExtension,
 ) -> Router {
+    let write_guard_state = state.clone();
     let scope_gate = ServiceAccountScopeGate::from_openapi(
         state.service_account_scope_verifier.clone(),
         &openapi_30_json(),
@@ -62,8 +63,13 @@ pub fn build_router_with_providers(
         .merge(crate::providers::routes::router())
         .merge(crate::persons::routes::router())
         .merge(crate::sources::routes::router())
+        .merge(crate::merges::routes::router())
         .layer(axum::Extension(providers))
         .with_state(state)
+        .layer(middleware::from_fn_with_state(
+            write_guard_state,
+            crate::merges::routes::guard_writes,
+        ))
         .layer(middleware::from_fn_with_state(
             scope_gate,
             enforce_service_account_scope,

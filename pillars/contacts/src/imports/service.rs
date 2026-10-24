@@ -60,6 +60,9 @@ impl From<PersonError> for ImportError {
     fn from(error: PersonError) -> Self {
         match error {
             PersonError::NotFound => Self::NotFound,
+            PersonError::Retired(_) => {
+                Self::Conflict("Person identity changed; resolve the current canonical ID")
+            }
             PersonError::Invalid(_) => Self::Invalid("Invalid person decision"),
             PersonError::Db(_) => Self::Storage,
         }
@@ -451,4 +454,18 @@ async fn apply_decision(
         source_record_id: Some(record.id),
         skipped: false,
     })
+}
+
+#[cfg(test)]
+mod identity_tests {
+    use super::*;
+
+    #[test]
+    fn retired_person_decisions_conflict_without_echoing_the_identity() {
+        let error = ImportError::from(PersonError::Retired("fictional-retired-id".into()));
+        assert!(matches!(
+            error,
+            ImportError::Conflict("Person identity changed; resolve the current canonical ID")
+        ));
+    }
 }
