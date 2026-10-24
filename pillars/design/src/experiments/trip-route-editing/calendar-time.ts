@@ -1,4 +1,4 @@
-import type { CalendarBooking } from './calendar-model';
+import type { CalendarBooking } from './calendar-types';
 
 /** Parses only explicit-offset ISO instants; invalid input produces NaN. */
 export function instant(value: string): number {

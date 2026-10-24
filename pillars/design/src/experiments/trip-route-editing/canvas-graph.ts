@@ -1,6 +1,6 @@
 import type { TripRecord } from '@/fixtures/trip-overview-model';
 
-import type { CaptureTarget } from './canvas-actions';
+import type { CaptureTarget } from './canvas-capture';
 import type { CanvasState, TransitLink } from './canvas-model';
 
 /** Generate a collision-free local identity without depending on collection lengths. */

@@ -9,23 +9,13 @@ import {
   wouldCycle,
 } from './canvas-graph';
 
-import type { TripDate, TripRecord } from '@/fixtures/trip-overview-model';
+import type { TripRecord } from '@/fixtures/trip-overview-model';
 import type { TripPlace } from '@/fixtures/trip-places';
 
+import type { CaptureKind, CaptureTarget } from './canvas-capture';
 import type { CanvasState } from './canvas-model';
 
-/** Typed capture chooses a record type; the name is reusable source data. */
-export type CaptureKind = 'city' | 'event' | 'idea' | 'stay' | 'transport' | 'rental' | 'section';
-/** Creation context identifies route position, visit, or alternative section. */
-export interface CaptureTarget {
-  after?: string;
-  visitId?: string;
-  sectionId?: string;
-  gapId?: string;
-  start?: TripDate;
-  end?: TripDate;
-  stayId?: string;
-}
+export type { CaptureKind, CaptureTarget } from './canvas-capture';
 
 function place(state: CanvasState, name: string): { places: TripPlace[]; id: string } {
   const found = state.places.find(
