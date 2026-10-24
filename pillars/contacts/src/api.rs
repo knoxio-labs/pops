@@ -40,6 +40,15 @@ pub enum ErrorCode {
     /// The registry could not verify presented service-account credentials.
     #[serde(rename = "contacts.auth.unavailable")]
     ServiceAccountUnavailable,
+    /// Provider connection configuration or transport/storage is unavailable.
+    #[serde(rename = "contacts.provider.unavailable")]
+    ProviderUnavailable,
+    /// Provider connection identity, epoch, authorization state or scan changed.
+    #[serde(rename = "contacts.provider.conflict")]
+    ProviderConflict,
+    /// The provider revoked or rejected a grant and requires human reconnection.
+    #[serde(rename = "contacts.provider.reauthorization_required")]
+    ProviderReauthorization,
     #[serde(rename = "contacts.internal")]
     Internal,
 }
@@ -67,6 +76,23 @@ pub struct ApiError {
 }
 
 impl ApiError {
+    /// Build a provider response from fixed safe classifications. Remote payloads,
+    /// credentials, query values and database diagnostics never enter this path.
+    pub fn provider(
+        status: StatusCode,
+        code: ErrorCode,
+        message: &'static str,
+        retryable: bool,
+    ) -> Self {
+        Self {
+            status,
+            code,
+            message: message.to_string(),
+            retryable,
+            details: None,
+        }
+    }
+
     /// Build an import conflict response without echoing imported data.
     pub fn import_conflict(message: &'static str) -> Self {
         Self {

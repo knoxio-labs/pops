@@ -336,3 +336,40 @@ async fn refresh_preserves_epoch_and_rejects_concurrent_stale_and_disconnected_v
         Err(ProviderStoreError::StaleAccount)
     );
 }
+
+#[tokio::test]
+async fn refresh_leases_serialize_outbound_rotation_and_reject_late_results() {
+    let (pool, cipher, human, account, epoch) = setup("google").await;
+    let epoch = install_credential(&pool, &cipher, &human, &account.id, epoch, &secret())
+        .await
+        .unwrap();
+    let old = claim_refresh(&pool, &account.id, epoch, 100).await.unwrap();
+    assert!(matches!(
+        claim_refresh(&pool, &account.id, epoch, 399).await,
+        Err(ProviderStoreError::StaleAccount)
+    ));
+    let new = claim_refresh(&pool, &account.id, epoch, 400).await.unwrap();
+    let replacement = SecretBytes::new(vec![43; 25]).unwrap();
+    assert_eq!(
+        refresh_claimed(&pool, &cipher, &old, &secret(), &replacement, 400).await,
+        Err(ProviderStoreError::StaleAccount)
+    );
+    release_refresh(&pool, &old).await.unwrap();
+    assert!(matches!(
+        claim_refresh(&pool, &account.id, epoch, 401).await,
+        Err(ProviderStoreError::StaleAccount)
+    ));
+    refresh_claimed(&pool, &cipher, &new, &secret(), &replacement, 401)
+        .await
+        .unwrap();
+    release_refresh(&pool, &new).await.unwrap();
+    assert_eq!(
+        load_credential(&pool, &cipher, &account.id)
+            .await
+            .unwrap()
+            .secret
+            .expose(),
+        replacement.expose()
+    );
+    assert!(claim_refresh(&pool, &account.id, epoch, 402).await.is_ok());
+}

@@ -15,6 +15,12 @@ pub trait RetryDelay: Send + Sync {
     fn wait(&self, duration: Duration) -> Pin<Box<dyn Future<Output = ()> + Send + '_>>;
 }
 
+impl<D: RetryDelay + ?Sized> RetryDelay for std::sync::Arc<D> {
+    fn wait(&self, duration: Duration) -> Pin<Box<dyn Future<Output = ()> + Send + '_>> {
+        self.as_ref().wait(duration)
+    }
+}
+
 /// Tokio-backed production retry timer.
 pub struct TokioDelay;
 impl RetryDelay for TokioDelay {

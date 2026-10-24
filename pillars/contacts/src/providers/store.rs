@@ -102,7 +102,7 @@ pub async fn install_credential(
         .encrypt(&provider, account_id, secret)
         .map_err(|_| ProviderStoreError::CredentialUnavailable)?;
     let mut transaction = pool.begin().await?;
-    let epoch: Option<i64> = sqlx::query_scalar("UPDATE provider_accounts SET credential=?1,connected=1,owner_subject=?2,epoch=epoch+1 WHERE account_id=?3 AND epoch=?4 RETURNING epoch")
+    let epoch: Option<i64> = sqlx::query_scalar("UPDATE provider_accounts SET credential=?1,connected=1,reauthorization_required=0,refresh_owner=NULL,refresh_until=0,owner_subject=?2,epoch=epoch+1 WHERE account_id=?3 AND epoch=?4 RETURNING epoch")
         .bind(encrypted).bind(operator.subject()).bind(account_id).bind(expected.0).fetch_optional(&mut *transaction).await?;
     let epoch = epoch.ok_or(ProviderStoreError::StaleAccount)?;
     sqlx::query("DELETE FROM provider_oauth_states WHERE account_id=?1")
@@ -164,7 +164,7 @@ pub async fn disconnect_account(
     account_id: &str,
 ) -> Result<(), ProviderStoreError> {
     let mut transaction = pool.begin().await?;
-    let affected = sqlx::query("UPDATE provider_accounts SET credential=NULL,connected=0,epoch=epoch+1 WHERE account_id=?1")
+    let affected = sqlx::query("UPDATE provider_accounts SET credential=NULL,connected=0,refresh_owner=NULL,refresh_until=0,epoch=epoch+1 WHERE account_id=?1")
         .bind(account_id).execute(&mut *transaction).await?.rows_affected();
     if affected == 0 {
         return Err(ProviderStoreError::InvalidAccount);
@@ -199,7 +199,20 @@ pub async fn refresh_credential(
     replacement: &SecretBytes,
 ) -> Result<(), ProviderStoreError> {
     let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
-    fence_account(&mut tx, account_id, expected).await?;
+    replace_refresh(&mut tx, cipher, account_id, expected, previous, replacement).await?;
+    tx.commit().await?;
+    Ok(())
+}
+
+async fn replace_refresh(
+    tx: &mut SqliteConnection,
+    cipher: &CredentialCipher,
+    account_id: &str,
+    expected: AccountEpoch,
+    previous: &SecretBytes,
+    replacement: &SecretBytes,
+) -> Result<(), ProviderStoreError> {
+    fence_account(&mut *tx, account_id, expected).await?;
     let (provider, encrypted): (String, Vec<u8>) =
         sqlx::query_as("SELECT provider,credential FROM provider_accounts WHERE account_id=?1")
             .bind(account_id)
@@ -221,6 +234,72 @@ pub async fn refresh_credential(
             .execute(&mut *tx)
             .await?;
     }
+    Ok(())
+}
+
+/// Exclusive, expiring permission to refresh an account's provider credential.
+/// A superseded lease cannot persist rotation from a late network response.
+pub struct RefreshLease {
+    account_id: String,
+    epoch: AccountEpoch,
+    owner: String,
+}
+
+/// Serialize outbound refresh requests before any provider can rotate a token.
+/// A stopped process's lease can be reclaimed after five minutes.
+pub async fn claim_refresh(
+    pool: &SqlitePool,
+    account_id: &str,
+    epoch: AccountEpoch,
+    now: i64,
+) -> Result<RefreshLease, ProviderStoreError> {
+    let owner = uuid::Uuid::new_v4().to_string();
+    let changed=sqlx::query("UPDATE provider_accounts SET refresh_owner=?1,refresh_until=?2 WHERE account_id=?3 AND epoch=?4 AND connected=1 AND refresh_until<=?5")
+        .bind(&owner).bind(now.saturating_add(300)).bind(account_id).bind(epoch.0).bind(now).execute(pool).await?.rows_affected();
+    if changed == 0 {
+        return Err(ProviderStoreError::StaleAccount);
+    }
+    Ok(RefreshLease {
+        account_id: account_id.to_string(),
+        epoch,
+        owner,
+    })
+}
+
+/// Release only this refresh claim, leaving a replacement owner's lease intact.
+pub async fn release_refresh(
+    pool: &SqlitePool,
+    lease: &RefreshLease,
+) -> Result<(), ProviderStoreError> {
+    sqlx::query("UPDATE provider_accounts SET refresh_owner=NULL,refresh_until=0 WHERE account_id=?1 AND epoch=?2 AND refresh_owner=?3")
+        .bind(&lease.account_id).bind(lease.epoch.0).bind(&lease.owner).execute(pool).await?;
+    Ok(())
+}
+
+/// Save a rotation only while both its connection epoch and refresh lease match.
+pub async fn refresh_claimed(
+    pool: &SqlitePool,
+    cipher: &CredentialCipher,
+    lease: &RefreshLease,
+    previous: &SecretBytes,
+    replacement: &SecretBytes,
+    now: i64,
+) -> Result<(), ProviderStoreError> {
+    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+    let valid:bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM provider_accounts WHERE account_id=?1 AND epoch=?2 AND connected=1 AND refresh_owner=?3 AND refresh_until>?4)")
+        .bind(&lease.account_id).bind(lease.epoch.0).bind(&lease.owner).bind(now).fetch_one(&mut *tx).await?;
+    if !valid {
+        return Err(ProviderStoreError::StaleAccount);
+    }
+    replace_refresh(
+        &mut tx,
+        cipher,
+        &lease.account_id,
+        lease.epoch,
+        previous,
+        replacement,
+    )
+    .await?;
     tx.commit().await?;
     Ok(())
 }

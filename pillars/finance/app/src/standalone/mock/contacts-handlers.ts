@@ -11,6 +11,11 @@ import type {
   EntitiesLookupResponses,
   EntityResponse,
   HealthResponse,
+  ProviderAccountStatus,
+  ProviderOperation,
+  ProviderRunStatus,
+  ImportBatch,
+  CommitReceipt,
 } from '../../contacts-api/types.gen';
 
 /**
@@ -79,6 +84,36 @@ const sourceAccount: SourceAccountResponse = {
   },
 };
 
+const providerOperation: ProviderOperation = {
+  accountId: '00000000-0000-4000-8000-000000000010',
+  runId: '00000000-0000-4000-8000-000000000011',
+};
+const providerStatus: ProviderRunStatus = {
+  ...providerOperation,
+  runId: '00000000-0000-4000-8000-000000000011',
+  status: 'completed',
+  totalCollections: 1,
+  completedCollections: 1,
+  batchIds: [],
+};
+const providerAccounts: ProviderAccountStatus[] = [
+  {
+    accountId: providerOperation.accountId,
+    provider: 'google',
+    connected: true,
+    reauthorizationRequired: false,
+  },
+];
+const importBatch: ImportBatch = {
+  id: '00000000-0000-4000-8000-000000000012',
+  accountId: providerOperation.accountId,
+  collectionKey: 'contacts',
+  revision: 1,
+  rows: [],
+  createdAt: '2026-10-24T00:00:00Z',
+};
+const importReceipt: CommitReceipt = { batchId: importBatch.id, revision: 2, rows: [] };
+
 export const contactsHandlers: MockHandlers = {
   'GET /': ok('contacts'),
   'GET /openapi': ok({}),
@@ -89,6 +124,20 @@ export const contactsHandlers: MockHandlers = {
     ts: '2026-09-05T08:00:00.000Z',
     version: 'standalone',
   }),
+  'GET /providers/accounts': ok(providerAccounts),
+  'POST /providers/google/authorize': () => ({ status: 303 }),
+  'GET /providers/google/callback': ok<ProviderOperation>({
+    accountId: providerOperation.accountId,
+  }),
+  'POST /providers/icloud/accounts': created<ProviderOperation>({
+    accountId: providerOperation.accountId,
+  }),
+  'DELETE /providers/accounts/{id}': noContent,
+  'POST /providers/accounts/{id}/sync': () => ({ status: 202, body: providerOperation }),
+  'GET /providers/sync/{id}': ok(providerStatus),
+  'POST /imports/files': created(importBatch),
+  'GET /imports/{id}': ok(importBatch),
+  'POST /imports/{id}/commit': ok(importReceipt),
   'GET /entities': listEntities,
   'POST /entities': created(mutation),
   'POST /entities/lookup': ok<EntitiesLookupResponses[200]>({

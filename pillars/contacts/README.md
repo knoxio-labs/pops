@@ -110,11 +110,43 @@ contains the complete current cached collection, including unchanged contacts
 that still need a person decision. A later successful scan invalidates earlier
 provider previews, including proposals without a linked person.
 
-Provider modules expose backend authorization, transport and scan primitives.
-Credential installation requires an explicitly verified human operator; encrypted
-credentials bind to the provider account, and disconnect/reconnect fences older
-callbacks, jobs and previews. Runtime routes and job scheduling must use these
-primitives together before offering an account connection flow.
+Provider management verifies an explicit human Cloudflare Access operator session;
+LAN requests, absent API keys and service tokens do not authorize credential
+administration. `GET /providers/accounts` returns connection state,
+`POST /providers/google/authorize` redirects to read-only Google consent, and
+`GET /providers/google/callback` consumes one-use operator-bound state before code
+exchange. `POST /providers/icloud/accounts` validates an app password against the
+actual CardDAV principal. Existing account IDs reconnect only the same provider
+subject; a mismatch changes neither the credential nor the account checkpoint.
+`DELETE /providers/accounts/{id}` erases credentials and fences older work while
+preserving canonical people, local observations and other account contributions.
+
+`POST /providers/accounts/{id}/sync` starts a durable scan, and
+`GET /providers/sync/{id}` exposes safe progress and import preview IDs. These two
+operations admit a verified operator or a registry-verified service account with
+`contacts.providers.sync` scope. The process resumes saved scans after restart and
+schedules connected accounts hourly. Expiring database leases reject old workers;
+refresh requests are serialized separately before token rotation, with both
+credential comparison and account-epoch checks before persistence. Transient
+requests have three attempts with bounded backoff; durable job retries stop after
+five operation failures. Revoked grants pause scheduling until reconnection.
+
+Connections are optional. Without a valid root-key secret and Access configuration,
+provider routes fail closed while ordinary contacts APIs continue. Production uses
+`infra/docker-compose.contacts-providers.yml` as an opt-in overlay on the base
+compose file. Provision `secrets/contacts_provider_root_key` with a random 32-byte
+key encoded as 64 hexadecimal characters. Back up that key separately from SQLite;
+losing it requires reconnecting accounts. Set `CLOUDFLARE_ACCESS_TEAM_NAME`,
+`CLOUDFLARE_ACCESS_AUD` and `POPS_OPERATOR_EMAILS` as non-secret configuration.
+
+Google additionally uses `infra/docker-compose.contacts-google.yml`,
+`secrets/contacts_google_client_secret`, `CONTACTS_GOOGLE_CLIENT_ID`, and an exact
+HTTPS `CONTACTS_GOOGLE_CALLBACK_URL` registered with Google. Callback paths are
+`/providers/google/callback` on a dedicated contacts origin or
+`/contacts-api/providers/google/callback` through shell. The shell access log
+removes callback query arguments; responses set `no-store` and `no-referrer`.
+The root key and OAuth client secret enter the container only as Docker secrets;
+provider passwords and refresh tokens are encrypted in the contacts database.
 
 Registration is outbound: on boot (when opted in) contacts POSTs its manifest to
 the registry, then heartbeats every 10s and deregisters on `SIGTERM`/`SIGINT`.

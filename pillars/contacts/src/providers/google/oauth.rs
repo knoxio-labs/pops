@@ -118,7 +118,10 @@ impl GoogleOAuthConfig {
             || callback.password().is_some()
             || callback.query().is_some()
             || callback.fragment().is_some()
-            || callback.path() != "/providers/google/callback"
+            || !matches!(
+                callback.path(),
+                "/providers/google/callback" | "/contacts-api/providers/google/callback"
+            )
         {
             return Err(GoogleError::InvalidConfiguration);
         }
@@ -295,7 +298,7 @@ fn text(secret: &SecretBytes) -> Result<&str, GoogleError> {
     std::str::from_utf8(secret.expose()).map_err(|_| GoogleError::InvalidResponse)
 }
 
-fn deserialize_secret<'de, D: serde::Deserializer<'de>>(
+pub(crate) fn deserialize_secret<'de, D: serde::Deserializer<'de>>(
     deserializer: D,
 ) -> Result<SecretBytes, D::Error> {
     let value = String::deserialize(deserializer)?;
