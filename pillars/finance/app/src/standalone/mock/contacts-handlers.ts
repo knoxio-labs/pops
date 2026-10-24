@@ -1,5 +1,12 @@
 import { CONTACT_ENTITIES } from '../fixtures/entities';
-import { created, notFound, ok, page } from './respond';
+import {
+  contactPoint,
+  importBatch,
+  importReceipt,
+  personProfile,
+  sourceAccount,
+} from './contacts-fixtures';
+import { created, noContent, notFound, ok, page } from './respond';
 
 import type { MockHandler, MockHandlers } from '@pops/pillar-sdk/testing/api-mock';
 
@@ -68,6 +75,17 @@ export const contactsHandlers: MockHandlers = {
   'GET /entities/{id}': entityById,
   'PATCH /entities/{id}': ok(mutation),
   'DELETE /entities/{id}': ok({ message: 'deleted' }),
+  'GET /entities/{id}/contact-points': ok({ data: [contactPoint.data] }),
+  'POST /entities/{id}/contact-points': created(contactPoint),
+  'PUT /entities/{id}/contact-points/{point_id}/preferred': noContent,
+  'GET /entities/{id}/person': ok(personProfile),
+  'PUT /entities/{id}/person': ok(personProfile),
+  'GET /entities/{id}/sources': ok({ data: [] }),
+  'GET /sources/accounts': ok({ data: [sourceAccount.data] }),
+  'POST /sources/accounts': ok(sourceAccount),
+  'POST /imports/files': created(importBatch),
+  'GET /imports/{id}': ok(importBatch),
+  'POST /imports/{id}/commit': ok(importReceipt),
   'GET /entities/{id}/addresses': ok({ data: [] }),
   'POST /entities/{id}/addresses': addressCreated,
   'GET /entities/{id}/avatar': () => notFound('avatar', 'contacts.resource.not_found'),
