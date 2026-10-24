@@ -57,7 +57,10 @@ unique person identifier, so consumers must reject ambiguous matches.
 
 Person profiles are explicit local structured-name overrides. Imported records
 retain their own display and structured names with an explicit completeness
-marker; display text alone does not establish complete-name evidence. Contact
+marker. File adapters qualify explicit nonblank given and family fields as
+complete while retaining additional names, prefixes and suffixes. CSV `Name` and
+vCard `FN` display text are never split into parts; given-only names do not
+qualify. Declared incomplete metadata remains incomplete. Contact
 points retain the original value and label. Conservative email and validated
 international phone keys are derived separately for matching. National phone
 values require an explicit known ISO `countryCode`; no country is inferred from
@@ -77,6 +80,33 @@ local values and local profiles survive, and preferred selections remain attache
 even when their source disappears. Each source record carries a monotonic revision
 for optimistic staging checks, with previous observation snapshots retained in
 `source_record_history`. These DTOs contain no authentication material.
+
+`POST /imports/files` accepts raw Google Contacts CSV or vCard 3.0/4.0 bytes,
+with `accountId`, `collectionKey`, `format` (`google_csv` or `vcard`) and an
+explicit `encoding` (`utf8`, `utf16_le`, `utf16_be`, `windows1252`; default
+`utf8`). Optional `phoneCountryCode` supplies explicit ISO country context for
+national phone values. Uploads and serialized previews are bounded to 5 MiB and
+10,000 rows. Malformed records remain in a durable preview with safe issue codes;
+staging never changes people or their observations.
+
+`GET /imports/{id}` returns the saved preview. `POST /imports/{id}/commit` accepts
+`revision`, `idempotencyKey`, and selected `decisions`, each shaped as
+`{ rowId, decision: { action, entityId? } }`. Actions are `create_person`,
+`link_person`, `update_source`, `deactivate_source` and `skip`. Every selected row
+must be valid for its action; the whole selection either commits or rolls back.
+Unselected rows remain pending for a later decision. Skipping processes an import
+row; it does not declare two people different. A target link is always explicit:
+similar display names, first names, email addresses or phone numbers do not choose
+an owner. Recognized source updates are distinct from choosing a person to link.
+
+Batch revision, source-record revision and provider-account epoch protect stale
+previews with `409`. Identical key/body retries return their persisted receipt
+before checking revision; reusing a key with different decisions returns `409`.
+File UIDs identify records within the selected account/collection. Without a UID,
+the key includes SHA-256 of the exact file bytes and the record ordinal, so replay
+identity is guaranteed only for the same file. Reordered or changed exports make
+new proposals. Providers use the same staging transaction after gathering a full
+scan, and explicit removals deactivate only the source's contributions.
 
 Registration is outbound: on boot (when opted in) contacts POSTs its manifest to
 the registry, then heartbeats every 10s and deregisters on `SIGTERM`/`SIGINT`.

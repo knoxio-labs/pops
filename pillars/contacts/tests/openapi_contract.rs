@@ -123,6 +123,8 @@ fn error_schema_is_the_adr_054_envelope_with_registered_codes() {
             "contacts.request.invalid",
             "contacts.resource.not_found",
             "contacts.entity.name_conflict",
+            "contacts.import.conflict",
+            "contacts.import.storage",
             "contacts.entity.identity_conflict",
             "contacts.auth.unauthorized",
             "contacts.auth.forbidden",
