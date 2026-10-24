@@ -105,6 +105,11 @@ Other views keep field names. The shared `FieldIcon` component in `@pops/ui`
 renders these names synchronously for reuse, including `PackageOpenUp` for unpacking.
 Icon changes are presentation edits and remain available after publication.
 
+Label copies accept a positive whole number per item or box. Jobs paginate across
+sheets, with a 1,000-label total limit to bound the browser's live preview. The
+available copies account for both kinds in a mixed job. Invalid edits leave the
+last valid quantity in place and revert when the input loses focus.
+
 Labels with a QR and contents use a top header for the QR, name, code and fields
 when the sheet has room, with contents listed underneath. The planner chooses the
 fewest columns needed (up to three), keeping each column at least 40 mm wide.
@@ -117,16 +122,23 @@ preview and printout; codes that cannot fit at the minimum size still wrap.
 
 Label handling warnings use the configured boolean field keyed `Fragile`
 (case-insensitive), including inherited catalogue fields. A true value on the
-selected item or any contained descendant adds the cracked-glass symbol; the
-same field is omitted from printed text so the warning appears once. Overrides
+selected item or any contained descendant adds the cracked-glass symbol only
+when its Fragile field is selected in Label shows; the same field is omitted
+from printed text so the warning appears once. Overrides
 and computed values share the label field-value reader. The manual print-job
-switch appears only when the selected item has no Fragile field and its contents
-do not already trigger the warning; it never edits inventory records.
+switch appears when the selected item has no selectable Fragile field, including
+untyped legacy items and containers whose contents are fragile; it never edits
+inventory records.
 
 QR, text and the handling symbol share one row; both symbols have the same size,
-up to 24 mm. Printing is blocked while the selected items, full paginated tree
-or catalogue are being refreshed, when a required read or computed Fragile value
-is unavailable, or when stock cannot fit the warning beside a readable QR.
+up to 24 mm. Selected-item reads must finish before printing. Catalogue reads and
+computed field values block printing only when fields are selected; full descendant
+reads and their Fragile evaluations are required only for a selected handling field.
+Direct contents reads are required for printed contents or explicit contents expansion.
+Optional reads may refresh or fail without blocking other label content. A required
+failure disables printing and stays visible beside the editable content controls, so
+removing that content can recover the job. Unavailable computed fields remain selectable.
+Stock must still fit the warning beside a readable QR.
 Contained inactive items participate in the handling warning without being added
 to the selected labels or direct contents list.
 
@@ -638,9 +650,14 @@ whatever happened to be in the process environment.
 the new item, its destination (`locationId` or `containerId`) and up to 500
 codes in use with their item, type and place (`src/api/sync/code-context.ts`),
 and offers the codes the model proposes after dropping any that are held,
-repeated, over 64 characters or off the requested stem. With no usable answer —
-no key, a rejected credential, a timeout, a non-2xx, or every code filtered out
-— deterministic numbering (`src/api/sync/codes.ts`) answers instead.
+repeated, over 64 characters, or that neither match the saved code pattern
+(rendered prefix, suffix and minimum numeric width) nor continue a code family
+the item's type already uses. An explicitly typed stem replaces both and keeps
+case-insensitive prefix matching. With no usable answer — no key, a rejected
+credential, a timeout, a non-2xx, or every code filtered out — deterministic
+numbering (`src/api/sync/codes.ts`) continues the type's best family (members in
+the destination container, then nearest location, then size), using the saved
+pattern only when the type has none.
 
 `src/api/pillars/service-account.ts`'s `INVENTORY_SERVICE_ACCOUNT_SCOPES`
 grants `ai.codes.suggest` for code suggestions and `finance.transactions.get`

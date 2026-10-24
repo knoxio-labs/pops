@@ -41,7 +41,7 @@ export const financeManifest: SettingsManifest = {
           default: FINANCE_AI_MODEL_DEFAULT,
           options: MODEL_SELECT_OPTIONS,
           description:
-            'Anthropic model used for categorisation. Sonnet 5.5 and Opus 5.5 are sent no sampling parameters and a low effort setting, with a 2000 token floor so thinking cannot use up the reply. Categorisation is a short lookup-shaped task, so the cheapest current model is the sensible default; a larger model costs more per imported row without matching entities much better.',
+            'Anthropic model used for categorisation. Every option is sent no sampling parameters and a low effort setting, with a 2000 token floor so thinking cannot use up the reply. Categorisation is a short lookup-shaped task, so the cheapest current model is the sensible default; a larger model costs more per imported row without matching entities much better.',
         },
         {
           key: AI_CATEGORIZER_MAX_TOKENS_KEY,
@@ -85,7 +85,7 @@ export const financeManifest: SettingsManifest = {
           type: 'number',
           default: '200',
           description:
-            'Ceiling on the reply for the two short corrections calls: analysing a correction into a rule (200 tokens) and interpreting rejection feedback (250). Revising a change set and generating rules keep their own fixed 2000 and ignore this setting. Under 50 the reply is truncated and discarded; above 250 has no effect. Sonnet 5.5 and Opus 5.5 are always given at least 2000 so thinking cannot use up the reply.',
+            'Ceiling on the reply for the two short corrections calls: analysing a correction into a rule (200 tokens) and interpreting rejection feedback (250). Revising a change set and generating rules keep their own fixed 2000 and ignore this setting. Under 50 the reply is truncated and discarded; above 250 has no effect. Every option is always given at least 2000 so thinking cannot use up the reply.',
           validation: {
             min: 50,
             max: 250,

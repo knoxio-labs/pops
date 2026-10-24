@@ -6,14 +6,14 @@
  * telemetry distinct from the web text path's `recipe-extract-web-llm`
  * (`../web-llm-extract.ts`).
  */
-import { callWithLogging } from '@pops/ai-telemetry';
+import { callWithLogging, thinkingBudgetParams } from '@pops/ai-telemetry';
 
 import { ANTHROPIC_PROVIDER, FOOD_DOMAIN, foodTelemetryDeps } from '../../ai/ai-telemetry-deps.js';
 import { extractedRecipeSchema, type ExtractedRecipe } from './extracted-recipe.js';
 
 import type { AnthropicLike, AnthropicMessage } from './anthropic-client.js';
 
-export const DEFAULT_TEXT_FALLBACK_MODEL = 'claude-haiku-4-5-20251001';
+export const DEFAULT_TEXT_FALLBACK_MODEL = 'claude-haiku-5-5';
 export const PROMPT_VERSION_TEXT_FALLBACK = 'web-llm-v1.0';
 export const TEXT_FALLBACK_OPERATION = 'recipe-extract-ig-text-fallback';
 export const MIN_CAPTION_LENGTH_FOR_FALLBACK = 30;
@@ -78,7 +78,7 @@ function callTextFallback(
       call: async () => {
         const message = await opts.client.messages.create({
           model,
-          max_tokens: MAX_TOKENS,
+          ...thinkingBudgetParams(model, MAX_TOKENS),
           system: SYSTEM_PROMPT,
           messages: [{ role: 'user', content: input.caption }],
         });

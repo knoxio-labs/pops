@@ -242,11 +242,18 @@ describe('processWithLlm', () => {
     expect(result.meta.stages['readability']).toMatchObject({ ok: true });
     expect(result.meta.stages['llm_extract']).toMatchObject({
       ok: true,
-      model: 'claude-haiku-4-5-20251001',
+      model: 'claude-haiku-5-5',
       prompt_version: 'web-llm-v1.0',
     });
     expect(result.meta.stages['dsl_build']).toMatchObject({ ok: true });
     expect(result.meta.total_cost_usd).toBeGreaterThan(0);
+
+    const request: unknown = vi.mocked(client.messages.create).mock.calls[0]?.[0];
+    expect(request).toMatchObject({
+      model: 'claude-haiku-5-5',
+      max_tokens: 2048,
+      output_config: { effort: 'low' },
+    });
 
     const record = await nextTelemetry();
     expect(telemetryRecords.length).toBe(1);

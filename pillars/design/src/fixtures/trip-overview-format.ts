@@ -16,18 +16,10 @@ function visitName(id: string, records: readonly TripRecord[]): string {
   return record ? tripPlaceName(record.placeId) : 'Location unavailable';
 }
 
-function relativeTiming(timing: TripCityTiming, records: readonly TripRecord[]): string {
-  const parts: string[] = [];
-  if (timing.afterVisitId) parts.push(`After ${visitName(timing.afterVisitId, records)}`);
-  if (timing.beforeVisitId)
-    parts.push(`${parts.length ? 'before' : 'Before'} ${visitName(timing.beforeVisitId, records)}`);
-  return parts.join(' · ');
-}
-
-/** Render date precision, duration or referenced route order without inventing bounds. */
-export function formatCityTiming(timing: TripCityTiming, records: readonly TripRecord[]): string {
+/** Render known dates and approximate timing; route position conveys undated order. */
+export function formatCityTiming(timing: TripCityTiming): string {
   if (timing.arrival || timing.departure)
-    return `${timing.arrival ? formatTripDate(timing.arrival) : 'Arrival unset'} → ${timing.departure ? formatTripDate(timing.departure) : 'Departure unset'}`;
+    return `${timing.arrival ? formatTripDate(timing.arrival) : ''} → ${timing.departure ? formatTripDate(timing.departure) : ''}`;
   if (timing.month) {
     const month = new Intl.DateTimeFormat('en-AU', { month: 'long', timeZone: 'UTC' }).format(
       new Date(Date.UTC(timing.month.year, timing.month.month - 1, 1))
@@ -37,11 +29,11 @@ export function formatCityTiming(timing: TripCityTiming, records: readonly TripR
       : '';
     return `${timing.month.part ?? 'Around'} ${month}${duration}`;
   }
-  return relativeTiming(timing, records) || 'Arrival unset → departure unset';
+  return '';
 }
 
 function scheduleLabel(record: TripRecord): string {
-  if (!record.schedule) return 'Date unset';
+  if (!record.schedule) return '';
   const { start, end, localTime } = record.schedule;
   const range =
     end && end !== start
@@ -81,7 +73,7 @@ export function presentTripRecord(
 ): TripOverviewItem {
   let when = scheduleLabel(record);
   if (record.kind === 'gap') when = formatRouteGap(record, records);
-  if (record.kind === 'city') when = formatCityTiming(record.timing ?? {}, records);
+  if (record.kind === 'city') when = formatCityTiming(record.timing ?? {});
   return {
     ...record,
     title: record.kind === 'gap' ? formatRouteGap(record, records) : recordTitle(record),

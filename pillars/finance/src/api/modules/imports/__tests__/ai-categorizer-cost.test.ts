@@ -6,7 +6,7 @@ import { computeCostUsd } from '../ai-categorizer-config.js';
 
 describe('computeCostUsd', () => {
   it.each([
-    ['claude-haiku-4-5-20251001', 6],
+    ['claude-haiku-5-5', 0.6],
     ['claude-sonnet-5-5', 12],
     ['claude-opus-5-5', 24],
   ])('prices %s at its own rates', (model, expected) => {
@@ -21,7 +21,7 @@ describe('computeCostUsd', () => {
   });
 
   it('estimates a model outside the list at the default rates', () => {
-    expect(computeCostUsd('claude-sonnet-4-6', 1_000_000, 1_000_000)).toBeCloseTo(6, 9);
+    expect(computeCostUsd('claude-sonnet-4-6', 1_000_000, 1_000_000)).toBeCloseTo(0.6, 9);
   });
 
   it('is zero for no tokens', () => {

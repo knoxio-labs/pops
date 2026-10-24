@@ -8,34 +8,57 @@ import { labelsPerSheet, MIN_QR_MM } from '@pops/inventory/labels';
  * standard A4 sheets whose die-cuts the page knows, and a sheet they miss is
  * measured once as the custom sheet.
  */
-import { NumberInput, Tabs, TabsList, TabsTrigger } from '@pops/ui';
+import { Alert, AlertDescription, AlertTitle, NumberInput } from '@pops/ui';
 
 import { LabelShowsPicker } from './label-shows-picker';
 import { OptionField } from './print-option-field';
 import { SheetChoice } from './print-sheet-choice';
+import { MAX_JOB_LABELS } from './useLabelJob';
 
 import type { LabelContent, PrintSubject } from '@pops/inventory/labels';
 
 import type { PrintJob } from './useLabelJob';
 
-const COPY_CHOICES = ['1', '2', '3', '4'] as const;
-
 function CopiesChoice({ job, kind }: { job: PrintJob; kind: PrintSubject['kind'] }) {
   const label = kind === 'container' ? 'Copies per box' : 'Copies per item';
+  const id = `print-copies-${kind}`;
+  const [editing, setEditing] = useState<string | null>(null);
+  const subjects = job.subjects.filter((subject) => subject.kind === kind).length;
+  const otherLabels = job.subjects.reduce(
+    (total, subject) => total + (subject.kind === kind ? 0 : job.copies[subject.kind]),
+    0
+  );
+  const maxCopies = Math.max(1, Math.floor((MAX_JOB_LABELS - otherLabels) / subjects));
+  const invalid =
+    editing !== null &&
+    (!Number.isSafeInteger(Number(editing)) || Number(editing) < 1 || Number(editing) > maxCopies);
   return (
-    <OptionField label={label}>
-      <Tabs
-        value={String(job.copies[kind])}
-        onValueChange={(value) => job.setCopies(kind, Number(value))}
-      >
-        <TabsList aria-label={label}>
-          {COPY_CHOICES.map((choice) => (
-            <TabsTrigger key={choice} value={choice}>
-              {choice}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
+    <OptionField label={label} htmlFor={id}>
+      <NumberInput
+        id={id}
+        value={editing ?? job.copies[kind]}
+        min={1}
+        max={maxCopies}
+        step={1}
+        enableDrag={false}
+        aria-invalid={invalid}
+        aria-describedby={invalid ? `${id}-error` : undefined}
+        onBlur={() => setEditing(null)}
+        onChange={(event) => {
+          const value = event.target.value;
+          setEditing(value);
+          const copies = Number(value);
+          if (Number.isSafeInteger(copies) && copies >= 1 && copies <= maxCopies) {
+            job.setCopies(kind, copies);
+          }
+        }}
+        containerClassName="w-40"
+      />
+      {invalid ? (
+        <p id={`${id}-error`} role="alert" className="text-xs text-destructive">
+          Enter a whole number from 1 to {maxCopies}. Jobs support up to {MAX_JOB_LABELS} labels.
+        </p>
+      ) : null}
     </OptionField>
   );
 }
@@ -45,10 +68,25 @@ function CopiesChoice({ job, kind }: { job: PrintJob; kind: PrintSubject['kind']
  * nothing: a QR smaller than its minimum is a label no phone reads.
  */
 export function SheetFitNotice({ job }: { job: PrintJob }) {
+  if (job.readError) {
+    return (
+      <Alert variant="destructive">
+        <AlertTitle>Could not prepare the selected label content</AlertTitle>
+        <AlertDescription>{job.readError.message}</AlertDescription>
+      </Alert>
+    );
+  }
+  if (job.block === 'too-many') {
+    return (
+      <p className="text-sm text-destructive" role="alert">
+        This job exceeds {MAX_JOB_LABELS} labels. Reduce copies or remove items to print.
+      </p>
+    );
+  }
   if (job.block === 'loading')
     return (
       <p className="text-sm text-muted-foreground" role="status">
-        Checking fragility in the selected items and their contents…
+        Loading the selected label content…
       </p>
     );
   if (job.block === 'too-small') {

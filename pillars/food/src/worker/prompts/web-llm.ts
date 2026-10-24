@@ -7,7 +7,7 @@
  * exact template that produced it.
  */
 export const PROMPT_VERSION_WEB_LLM = 'web-llm-v1.0';
-export const WEB_LLM_DEFAULT_MODEL = 'claude-haiku-4-5-20251001';
+export const WEB_LLM_DEFAULT_MODEL = 'claude-haiku-5-5';
 export const WEB_LLM_MAX_INPUT_CHARS = 15_000;
 export const WEB_LLM_MIN_READABLE_CHARS = 200;
 export const WEB_LLM_MAX_OUTPUT_TOKENS = 2_048;

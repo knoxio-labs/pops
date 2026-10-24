@@ -17,16 +17,15 @@
  */
 import Anthropic from '@anthropic-ai/sdk';
 
-import { callWithLogging, messageText } from '@pops/ai-telemetry';
+import { callWithLogging, messageText, thinkingBudgetParams } from '@pops/ai-telemetry';
 import { getBulk, setBulk } from '@pops/pillar-settings/service';
 
 import { type FinanceDb } from '../../../db/index.js';
-import { thinkingBudgetParams } from '../ai-model-request.js';
 import { withRateLimitRetry } from '../ai-retry.js';
 import { ANTHROPIC_PROVIDER, FINANCE_DOMAIN, financeTelemetryDeps } from '../ai-telemetry-deps.js';
 
 /** Default model for the corrections AI cluster, overridable via `FINANCE_CORRECTIONS_AI_MODEL`. */
-export const CORRECTIONS_DEFAULT_MODEL = 'claude-haiku-4-5-20251001';
+export const CORRECTIONS_DEFAULT_MODEL = 'claude-haiku-5-5';
 const DEFAULT_MODEL = CORRECTIONS_DEFAULT_MODEL;
 const CLIENT_TIMEOUT_MS = 60_000;
 

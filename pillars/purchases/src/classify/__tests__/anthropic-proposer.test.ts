@@ -109,7 +109,7 @@ describe('itemKindModel', () => {
     // Spelled out rather than compared to the constant: `itemKindModel() ===
     // DEFAULT_ITEM_KIND_MODEL` holds for any string, including one no
     // provider serves, and nothing else in this pillar ever calls the API.
-    expect(DEFAULT_ITEM_KIND_MODEL).toBe('claude-haiku-4-5');
+    expect(DEFAULT_ITEM_KIND_MODEL).toBe('claude-haiku-5-5');
     expect(itemKindModel()).toBe(DEFAULT_ITEM_KIND_MODEL);
   });
 
@@ -134,6 +134,33 @@ describe('propose', () => {
 
     const [request] = createMock.mock.calls[0] as [{ messages: { content: string }[] }];
     expect(request.messages[0]?.content).toContain('1. (amazon) Robot vacuum [asin B0ROBOTVAC]');
+  });
+
+  it('asks the Haiku 5.5 default for low effort, a 4000-token cap and no temperature', async () => {
+    captureReports();
+    createMock.mockResolvedValue(anthropicMessage('{"proposals":[]}'));
+
+    await createAnthropicItemKindProposer()?.propose(BATCH);
+
+    const [request] = createMock.mock.calls[0] as [Record<string, unknown>];
+    expect(request).toMatchObject({
+      model: 'claude-haiku-5-5',
+      max_tokens: 4000,
+      output_config: { effort: 'low' },
+    });
+    expect(request).not.toHaveProperty('temperature');
+  });
+
+  it('sends a Haiku 4.5 override its own cap and no effort', async () => {
+    process.env[MODEL_VAR] = 'claude-haiku-4-5';
+    captureReports();
+    createMock.mockResolvedValue(anthropicMessage('{"proposals":[]}'));
+
+    await createAnthropicItemKindProposer()?.propose(BATCH);
+
+    const [request] = createMock.mock.calls[0] as [Record<string, unknown>];
+    expect(request).toMatchObject({ model: 'claude-haiku-4-5', max_tokens: 4000 });
+    expect(request).not.toHaveProperty('output_config');
   });
 
   it("reports usage under its own operation, not the receipt reader's", async () => {

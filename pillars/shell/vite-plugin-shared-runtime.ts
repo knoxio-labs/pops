@@ -177,12 +177,29 @@ function importMapFor(
   );
 }
 
+/**
+ * The shared-runtime packages the dev server pre-bundles at startup.
+ *
+ * A loader-mounted pillar reaches them only through the facades the import map
+ * names, and Vite's dependency scanner never crawls those, so without this a
+ * package the shell's own graph does not import (`recharts`) is discovered on
+ * the first page that needs it. Vite then re-optimizes mid-session and reloads
+ * the page under whatever was running, which is what made the shell's
+ * loader-mounted e2e specs flaky on a cold cache. Workspace packages are left
+ * out because Vite serves linked packages as source and never pre-bundles them.
+ */
+function devPrebundleSpecifiers(): string[] {
+  return SHARED_RUNTIME_ENTRY_POINTS.map(({ specifier }) => specifier).filter(
+    (specifier) => !specifier.startsWith('@pops/')
+  );
+}
+
 export function sharedRuntimePlugin(): Plugin {
   return {
     name: 'pops-shared-runtime',
 
     config(_config, { command }) {
-      if (command !== 'build') return;
+      if (command !== 'build') return { optimizeDeps: { include: devPrebundleSpecifiers() } };
       return {
         build: {
           rollupOptions: {
@@ -323,6 +340,7 @@ function buildImports(bundle: Readonly<Record<string, unknown>>): Record<string,
 /** Exposed for `vite-plugin-shared-runtime.test.ts`; not part of the plugin. */
 export const sharedRuntimeInternals = {
   chunkNameFor,
+  devPrebundleSpecifiers,
   facadeSource,
   devUrlFor,
   buildImports,

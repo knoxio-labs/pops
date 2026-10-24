@@ -49,7 +49,9 @@ export function OverviewItemCard({
           <span className="text-base font-semibold leading-snug">{item.title}</span>
           <ArrowUpRight className="mt-1 size-4 shrink-0" aria-hidden />
         </span>
-        <span className="block text-sm font-medium leading-relaxed">{item.when}</span>
+        {item.when && (
+          <span className="block text-sm font-medium leading-relaxed">{item.when}</span>
+        )}
         <span className="flex flex-wrap items-center gap-2">
           {item.kind !== 'city' && <span className="text-sm text-foreground/80">{item.where}</span>}
           {item.kind !== 'city' && <OverviewItemStatus item={item} />}

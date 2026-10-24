@@ -46,10 +46,17 @@ function OverviewHeading({ onCapture }: { onCapture: () => void }) {
           </div>
           <p className="text-muted-foreground">{tripDateLabel(tripMetadata)}</p>
         </div>
-        <Button onClick={onCapture}>
-          <Plus className="size-4" aria-hidden />
-          Add
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild variant="outline">
+            <a target="_top" href="/design/x/trip-route-editing/direct/s/trips/route">
+              Route planner
+            </a>
+          </Button>
+          <Button onClick={onCapture}>
+            <Plus className="size-4" aria-hidden />
+            Add
+          </Button>
+        </div>
       </div>
     </header>
   );
