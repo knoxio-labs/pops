@@ -39,6 +39,8 @@ csv = { workspace = true }
 ical = { workspace = true }
 encoding_rs = { workspace = true }
 phonenumber = { workspace = true }
+ring = { workspace = true }
+zeroize = { workspace = true }
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["rt-multi-thread", "macros", "signal", "test-util"] }

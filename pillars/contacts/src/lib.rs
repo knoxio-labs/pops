@@ -17,6 +17,7 @@ pub mod imports;
 pub mod manifest;
 pub mod openapi;
 pub mod persons;
+pub mod providers;
 pub mod registry;
 pub mod search;
 pub mod service_account_scope;
