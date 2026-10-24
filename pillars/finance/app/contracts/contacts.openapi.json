@@ -56,6 +56,81 @@
         ],
         "type": "object"
       },
+      "AppliedSelection": {
+        "description": "Applied selections expose the retained provenance and exact immutable source observation.",
+        "oneOf": [
+          {
+            "properties": {
+              "entity_id": {
+                "type": "string"
+              },
+              "field": {
+                "$ref": "#/components/schemas/MergeField"
+              },
+              "kind": {
+                "enum": [
+                  "entity"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "field",
+              "entity_id",
+              "kind"
+            ],
+            "type": "object"
+          },
+          {
+            "properties": {
+              "field": {
+                "$ref": "#/components/schemas/SourceMergeField"
+              },
+              "kind": {
+                "enum": [
+                  "sourceRecord"
+                ],
+                "type": "string"
+              },
+              "source_observation_id": {
+                "type": "string"
+              },
+              "source_record_id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "field",
+              "source_record_id",
+              "source_observation_id",
+              "kind"
+            ],
+            "type": "object"
+          },
+          {
+            "properties": {
+              "kind": {
+                "enum": [
+                  "point"
+                ],
+                "type": "string"
+              },
+              "point_id": {
+                "type": "string"
+              },
+              "point_kind": {
+                "$ref": "#/components/schemas/ContactPointKind"
+              }
+            },
+            "required": [
+              "point_kind",
+              "point_id",
+              "kind"
+            ],
+            "type": "object"
+          }
+        ]
+      },
       "ContactPoint": {
         "description": "A local or imported point. `sourceRecordId: null` identifies an explicit local value.\nPreferred observations survive source refresh/deactivation, including their original value.",
         "properties": {
@@ -391,8 +466,6 @@
           "contacts.request.invalid",
           "contacts.resource.not_found",
           "contacts.entity.name_conflict",
-          "contacts.import.conflict",
-          "contacts.import.storage",
           "contacts.entity.identity_conflict",
           "contacts.auth.unauthorized",
           "contacts.auth.forbidden",
@@ -400,6 +473,81 @@
           "contacts.internal"
         ],
         "type": "string"
+      },
+      "FieldSelection": {
+        "description": "Explicit field provenance: a retained entity field or a source record's current immutable observation.",
+        "oneOf": [
+          {
+            "properties": {
+              "entity_id": {
+                "type": "string"
+              },
+              "field": {
+                "$ref": "#/components/schemas/MergeField"
+              },
+              "kind": {
+                "enum": [
+                  "entity"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "field",
+              "entity_id",
+              "kind"
+            ],
+            "type": "object"
+          },
+          {
+            "properties": {
+              "field": {
+                "$ref": "#/components/schemas/SourceMergeField"
+              },
+              "kind": {
+                "enum": [
+                  "sourceRecord"
+                ],
+                "type": "string"
+              },
+              "source_record_id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "field",
+              "source_record_id",
+              "kind"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "GroupMember": {
+        "description": "Original entity fields and local structured name used as auditable side-by-side merge evidence.",
+        "properties": {
+          "entity": {
+            "$ref": "#/components/schemas/Entity"
+          },
+          "personProfile": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PersonProfile"
+              },
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true,
+                "type": "object"
+              }
+            ]
+          }
+        },
+        "required": [
+          "entity"
+        ],
+        "type": "object"
       },
       "HealthResponse": {
         "description": "`GET /health` response body. Field-for-field identical to the TS pillar\nhealth envelope: `ok`, `status`, `pillar`, `version`, `ts` (an RFC 3339 /\nISO 8601 UTC timestamp, matching the TS `new Date().toISOString()`). The\nregistry health probe parses this shape across every pillar.",
@@ -426,6 +574,44 @@
           "pillar",
           "version",
           "ts"
+        ],
+        "type": "object"
+      },
+      "IdentityGroup": {
+        "description": "A canonical group and the directory-wide optimistic revision.",
+        "properties": {
+          "canonicalId": {
+            "type": "string"
+          },
+          "memberIds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/GroupMember"
+            },
+            "type": "array"
+          },
+          "revision": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "selections": {
+            "items": {
+              "$ref": "#/components/schemas/AppliedSelection"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "canonicalId",
+          "memberIds",
+          "revision",
+          "selections",
+          "members"
         ],
         "type": "object"
       },
@@ -479,786 +665,6 @@
           "contains"
         ],
         "type": "string"
-      },
-      "MessageResponse": {
-        "description": "Bare `{ message }` body returned by delete.",
-        "properties": {
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "message"
-        ],
-        "type": "object"
-      },
-      "NameCompleteness": {
-        "description": "Whether the source explicitly knows a name to be complete, incomplete, or unknown.",
-        "enum": [
-          "unknown",
-          "complete",
-          "incomplete"
-        ],
-        "type": "string"
-      },
-      "PaginationMeta": {
-        "description": "Pagination envelope returned by every list endpoint.",
-        "properties": {
-          "hasMore": {
-            "type": "boolean"
-          },
-          "limit": {
-            "format": "int64",
-            "type": "integer"
-          },
-          "offset": {
-            "format": "int64",
-            "type": "integer"
-          },
-          "total": {
-            "format": "int64",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "total",
-          "limit",
-          "offset",
-          "hasMore"
-        ],
-        "type": "object"
-      },
-      "PersonName": {
-        "additionalProperties": false,
-        "description": "A structured name; completeness is explicit and is never inferred from display text.",
-        "properties": {
-          "additionalNames": {
-            "nullable": true,
-            "type": "string"
-          },
-          "completeness": {
-            "$ref": "#/components/schemas/NameCompleteness"
-          },
-          "familyName": {
-            "nullable": true,
-            "type": "string"
-          },
-          "givenName": {
-            "nullable": true,
-            "type": "string"
-          },
-          "namePrefix": {
-            "nullable": true,
-            "type": "string"
-          },
-          "nameSuffix": {
-            "nullable": true,
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
-      "PersonProfile": {
-        "description": "Local name override, independent of imported source names and entity display names.",
-        "properties": {
-          "entityId": {
-            "type": "string"
-          },
-          "name": {
-            "$ref": "#/components/schemas/PersonName"
-          },
-          "updatedAt": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "entityId",
-          "name",
-          "updatedAt"
-        ],
-        "type": "object"
-      },
-      "PersonProfileResponse": {
-        "description": "Local profile response; `null` means no local name override exists.",
-        "properties": {
-          "data": {
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/PersonProfile"
-              },
-              {
-                "enum": [
-                  null
-                ],
-                "nullable": true,
-                "type": "object"
-              }
-            ]
-          }
-        },
-        "type": "object"
-      },
-      "SearchHit": {
-        "description": "One ranked search hit. `uri` is the canonical `pops:contacts/contact/<id>`.",
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/SearchHitData"
-          },
-          "matchField": {
-            "type": "string"
-          },
-          "matchType": {
-            "$ref": "#/components/schemas/MatchType"
-          },
-          "score": {
-            "format": "double",
-            "type": "number"
-          },
-          "uri": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "uri",
-          "score",
-          "matchField",
-          "matchType",
-          "data"
-        ],
-        "type": "object"
-      },
-      "SearchHitData": {
-        "properties": {
-          "aliases": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array"
-          },
-          "name": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "name",
-          "type",
-          "aliases"
-        ],
-        "type": "object"
-      },
-      "SearchQuery": {
-        "properties": {
-          "text": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "text"
-        ],
-        "type": "object"
-      },
-      "SearchRequest": {
-        "description": "`POST /search` request body. `query.text` is the term; `context` is\naccepted and ignored (parity with the orchestrator's wire shape).",
-        "properties": {
-          "context": {},
-          "query": {
-            "$ref": "#/components/schemas/SearchQuery"
-          }
-        },
-        "required": [
-          "query"
-        ],
-        "type": "object"
-      },
-      "SearchResponse": {
-        "description": "`POST /search` response body.",
-        "properties": {
-          "hits": {
-            "items": {
-              "$ref": "#/components/schemas/SearchHit"
-            },
-            "type": "array"
-          }
-        },
-        "required": [
-          "hits"
-        ],
-        "type": "object"
-      },
-      "SourceAccount": {
-        "description": "A provider account identity; `accountKey` is a stable provider subject, never a credential.",
-        "properties": {
-          "accountKey": {
-            "type": "string"
-          },
-          "createdAt": {
-            "type": "string"
-          },
-          "id": {
-            "type": "string"
-          },
-          "label": {
-            "nullable": true,
-            "type": "string"
-          },
-          "provider": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "provider",
-          "accountKey",
-          "createdAt"
-        ],
-        "type": "object"
-      },
-      "SourceAccountInput": {
-        "additionalProperties": false,
-        "description": "Register a stable account namespace. Changing a display label does not change account identity.",
-        "properties": {
-          "accountKey": {
-            "type": "string"
-          },
-          "label": {
-            "nullable": true,
-            "type": "string"
-          },
-          "provider": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "provider",
-          "accountKey"
-        ],
-        "type": "object"
-      },
-      "SourceAccountListResponse": {
-        "description": "Registered provider-account namespaces, without credentials.",
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/SourceAccount"
-            },
-            "type": "array"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "SourceAccountResponse": {
-        "description": "Stable account namespace resulting from create-or-fetch registration.",
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/SourceAccount"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "SourceRecord": {
-        "description": "One namespaced external contact record attached to a canonical person entity.",
-        "properties": {
-          "accountId": {
-            "type": "string"
-          },
-          "active": {
-            "type": "boolean"
-          },
-          "additionalNames": {
-            "nullable": true,
-            "type": "string"
-          },
-          "collectionKey": {
-            "type": "string"
-          },
-          "displayName": {
-            "nullable": true,
-            "type": "string"
-          },
-          "entityId": {
-            "type": "string"
-          },
-          "familyName": {
-            "nullable": true,
-            "type": "string"
-          },
-          "givenName": {
-            "nullable": true,
-            "type": "string"
-          },
-          "id": {
-            "type": "string"
-          },
-          "lastSeenAt": {
-            "type": "string"
-          },
-          "nameCompleteness": {
-            "type": "string"
-          },
-          "namePrefix": {
-            "nullable": true,
-            "type": "string"
-          },
-          "nameSuffix": {
-            "nullable": true,
-            "type": "string"
-          },
-          "recordKey": {
-            "type": "string"
-          },
-          "revision": {
-            "format": "int64",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "id",
-          "accountId",
-          "collectionKey",
-          "recordKey",
-          "entityId",
-          "nameCompleteness",
-          "active",
-          "lastSeenAt",
-          "revision"
-        ],
-        "type": "object"
-      },
-      "SourceRecordListResponse": {
-        "description": "Active and inactive external records linked to a person.",
-        "properties": {
-          "data": {
-            "items": {
-              "$ref": "#/components/schemas/SourceRecord"
-            },
-            "type": "array"
-          }
-        },
-        "required": [
-          "data"
-        ],
-        "type": "object"
-      },
-      "UpdateEntityBody": {
-        "description": "Body accepted by `PATCH /entities/:id`. Every field is optional; a present\nfield (even `null` for the nullable columns) is applied, an absent field is\nleft untouched. The nullable columns use `Option<Option<T>>` to tell\n\"absent\" (outer `None` — leave the column alone) apart from \"set to null\"\n(`Some(None)` — clear the column). serde collapses a JSON `null` into the\nouter `None` by default, so those fields deserialize through\n[`double_option`], which preserves the present-but-null case.\n\n`colour` has no field here either, for the same reason it has none on\n[`CreateEntityBody`]: a client may only reroll it, through the dedicated\n`POST /entities/:id/colour/reroll` route, never set it to an arbitrary\nstring via this generic PATCH.",
-        "properties": {
-          "abn": {
-            "nullable": true,
-            "type": "string"
-          },
-          "aliases": {
-            "items": {
-              "type": "string"
-            },
-            "nullable": true,
-            "type": "array"
-          },
-          "defaultTags": {
-            "items": {
-              "type": "string"
-            },
-            "nullable": true,
-            "type": "array"
-          },
-          "defaultTransactionType": {
-            "nullable": true,
-            "type": "string"
-          },
-          "name": {
-            "nullable": true,
-            "type": "string"
-          },
-          "notes": {
-            "nullable": true,
-            "type": "string"
-          },
-          "type": {
-            "nullable": true,
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
-      "CommitBatchInput": {
-        "additionalProperties": false,
-        "description": "A selected subset of a preview with optimistic concurrency and retry identity.",
-        "properties": {
-          "decisions": {
-            "items": {
-              "$ref": "#/components/schemas/RowDecision"
-            },
-            "type": "array"
-          },
-          "idempotencyKey": {
-            "type": "string"
-          },
-          "revision": {
-            "format": "int64",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "revision",
-          "idempotencyKey",
-          "decisions"
-        ],
-        "type": "object"
-      },
-      "CommitReceipt": {
-        "description": "Persisted receipt returned byte-equivalently on a retry with the same key and body.",
-        "properties": {
-          "batchId": {
-            "type": "string"
-          },
-          "revision": {
-            "format": "int64",
-            "type": "integer"
-          },
-          "rows": {
-            "items": {
-              "$ref": "#/components/schemas/CommittedRow"
-            },
-            "type": "array"
-          }
-        },
-        "required": [
-          "batchId",
-          "revision",
-          "rows"
-        ],
-        "type": "object"
-      },
-      "CommittedRow": {
-        "description": "The stable result of one selected row, also retained in the retry receipt.",
-        "properties": {
-          "entityId": {
-            "nullable": true,
-            "type": "string"
-          },
-          "rowId": {
-            "type": "string"
-          },
-          "skipped": {
-            "type": "boolean"
-          },
-          "sourceRecordId": {
-            "nullable": true,
-            "type": "string"
-          }
-        },
-        "required": [
-          "rowId",
-          "skipped"
-        ],
-        "type": "object"
-      },
-      "ImportBatch": {
-        "description": "A durable preview; its revision changes only after a successful selected-row commit.",
-        "properties": {
-          "accountId": {
-            "type": "string"
-          },
-          "collectionKey": {
-            "type": "string"
-          },
-          "createdAt": {
-            "type": "string"
-          },
-          "id": {
-            "type": "string"
-          },
-          "revision": {
-            "format": "int64",
-            "type": "integer"
-          },
-          "rows": {
-            "items": {
-              "$ref": "#/components/schemas/ImportRow"
-            },
-            "type": "array"
-          },
-          "sourceEpoch": {
-            "format": "int64",
-            "nullable": true,
-            "type": "integer"
-          }
-        },
-        "required": [
-          "id",
-          "accountId",
-          "collectionKey",
-          "revision",
-          "createdAt",
-          "rows"
-        ],
-        "type": "object"
-      },
-      "ImportPayload": {
-        "additionalProperties": false,
-        "description": "Source observations to propose; staging never changes the canonical directory.",
-        "properties": {
-          "displayName": {
-            "nullable": true,
-            "type": "string"
-          },
-          "name": {
-            "$ref": "#/components/schemas/PersonName"
-          },
-          "points": {
-            "items": {
-              "$ref": "#/components/schemas/ContactPointInput"
-            },
-            "type": "array"
-          }
-        },
-        "required": [
-          "name",
-          "points"
-        ],
-        "type": "object"
-      },
-      "ImportRow": {
-        "description": "Persisted preview with the source revision that must still match at commit time.",
-        "properties": {
-          "entityId": {
-            "nullable": true,
-            "type": "string"
-          },
-          "errors": {
-            "items": {
-              "$ref": "#/components/schemas/RowIssue"
-            },
-            "type": "array"
-          },
-          "id": {
-            "type": "string"
-          },
-          "ordinal": {
-            "format": "int64",
-            "type": "integer"
-          },
-          "payload": {
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/ImportPayload"
-              },
-              {
-                "enum": [
-                  null
-                ],
-                "nullable": true,
-                "type": "object"
-              }
-            ]
-          },
-          "processed": {
-            "type": "boolean"
-          },
-          "proposal": {
-            "$ref": "#/components/schemas/RowProposal"
-          },
-          "recordKey": {
-            "type": "string"
-          },
-          "removed": {
-            "type": "boolean"
-          },
-          "sourceRecordId": {
-            "nullable": true,
-            "type": "string"
-          },
-          "sourceRevision": {
-            "format": "int64",
-            "nullable": true,
-            "type": "integer"
-          }
-        },
-        "required": [
-          "id",
-          "ordinal",
-          "recordKey",
-          "removed",
-          "errors",
-          "proposal",
-          "processed"
-        ],
-        "type": "object"
-      },
-      "RowAction": {
-        "description": "An explicit decision for one pending row; linking never follows display-name similarity.",
-        "oneOf": [
-          {
-            "properties": {
-              "action": {
-                "enum": [
-                  "create_person"
-                ],
-                "type": "string"
-              }
-            },
-            "required": [
-              "action"
-            ],
-            "type": "object"
-          },
-          {
-            "properties": {
-              "action": {
-                "enum": [
-                  "link_person"
-                ],
-                "type": "string"
-              },
-              "entityId": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "entityId",
-              "action"
-            ],
-            "type": "object"
-          },
-          {
-            "properties": {
-              "action": {
-                "enum": [
-                  "update_source"
-                ],
-                "type": "string"
-              }
-            },
-            "required": [
-              "action"
-            ],
-            "type": "object"
-          },
-          {
-            "properties": {
-              "action": {
-                "enum": [
-                  "deactivate_source"
-                ],
-                "type": "string"
-              }
-            },
-            "required": [
-              "action"
-            ],
-            "type": "object"
-          },
-          {
-            "properties": {
-              "action": {
-                "enum": [
-                  "skip"
-                ],
-                "type": "string"
-              }
-            },
-            "required": [
-              "action"
-            ],
-            "type": "object"
-          }
-        ]
-      },
-      "RowDecision": {
-        "additionalProperties": false,
-        "description": "One row decision inside an atomic commit request.",
-        "properties": {
-          "decision": {
-            "$ref": "#/components/schemas/RowAction"
-          },
-          "rowId": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "rowId",
-          "decision"
-        ],
-        "type": "object"
-      },
-      "RowIssue": {
-        "description": "Sanitized validation failures retained alongside a preview row.",
-        "enum": [
-          "malformed_record",
-          "duplicate_source_key",
-          "invalid_record",
-          "invalid_removal"
-        ],
-        "type": "string"
-      },
-      "RowProposal": {
-        "description": "The only automatic proposals concern recognized source identity, never similar names.",
-        "enum": [
-          "new_source",
-          "update_source",
-          "deactivate_source",
-          "invalid"
-        ],
-        "type": "string"
-      },
-      "UploadEncoding": {
-        "description": "Explicit text decoding for file uploads.",
-        "enum": [
-          "utf8",
-          "utf16_le",
-          "utf16_be",
-          "windows1252"
-        ],
-        "type": "string"
-      },
-      "FieldSelection": {
-        "additionalProperties": false,
-        "description": "Select a scalar value belonging to a retained entity in the resulting group.",
-        "properties": {
-          "entityId": {
-            "type": "string"
-          },
-          "field": {
-            "$ref": "#/components/schemas/MergeField"
-          }
-        },
-        "required": [
-          "field",
-          "entityId"
-        ],
-        "type": "object"
-      },
-      "IdentityGroup": {
-        "description": "A canonical group and the directory-wide optimistic revision.",
-        "properties": {
-          "canonicalId": {
-            "type": "string"
-          },
-          "memberIds": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array"
-          },
-          "revision": {
-            "format": "int64",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "canonicalId",
-          "memberIds",
-          "revision"
-        ],
-        "type": "object"
       },
       "MergeBody": {
         "additionalProperties": false,
@@ -1348,6 +754,132 @@
         ],
         "type": "object"
       },
+      "MessageResponse": {
+        "description": "Bare `{ message }` body returned by delete.",
+        "properties": {
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "type": "object"
+      },
+      "NameCompleteness": {
+        "description": "Whether the source explicitly knows a name to be complete, incomplete, or unknown.",
+        "enum": [
+          "unknown",
+          "complete",
+          "incomplete"
+        ],
+        "type": "string"
+      },
+      "PaginationMeta": {
+        "description": "Pagination envelope returned by every list endpoint.",
+        "properties": {
+          "hasMore": {
+            "type": "boolean"
+          },
+          "limit": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "offset": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "total": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "limit",
+          "offset",
+          "hasMore"
+        ],
+        "type": "object"
+      },
+      "PersonName": {
+        "additionalProperties": false,
+        "description": "A structured name; completeness is explicit and is never inferred from display text.",
+        "properties": {
+          "additionalNames": {
+            "nullable": true,
+            "type": "string"
+          },
+          "completeness": {
+            "$ref": "#/components/schemas/NameCompleteness"
+          },
+          "familyName": {
+            "nullable": true,
+            "type": "string"
+          },
+          "givenName": {
+            "nullable": true,
+            "type": "string"
+          },
+          "namePrefix": {
+            "nullable": true,
+            "type": "string"
+          },
+          "nameSuffix": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "PersonProfile": {
+        "description": "Local name override, independent of imported source names and entity display names.",
+        "properties": {
+          "entityId": {
+            "type": "string"
+          },
+          "name": {
+            "$ref": "#/components/schemas/PersonName"
+          },
+          "sourceObservationId": {
+            "nullable": true,
+            "type": "string"
+          },
+          "sourceRecordId": {
+            "nullable": true,
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "entityId",
+          "name",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "PersonProfileResponse": {
+        "description": "Local profile response; `null` means no local name override exists.",
+        "properties": {
+          "data": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PersonProfile"
+              },
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true,
+                "type": "object"
+              }
+            ]
+          }
+        },
+        "type": "object"
+      },
       "ResolveBody": {
         "additionalProperties": false,
         "description": "Bounded IDs to resolve, preserving request order and repeated historical IDs.",
@@ -1396,7 +928,98 @@
           }
         },
         "required": [
-          "id"
+          "id",
+          "canonicalId"
+        ],
+        "type": "object"
+      },
+      "SearchHit": {
+        "description": "One ranked search hit. `uri` is the canonical `pops:contacts/contact/<id>`.",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/SearchHitData"
+          },
+          "matchField": {
+            "type": "string"
+          },
+          "matchType": {
+            "$ref": "#/components/schemas/MatchType"
+          },
+          "score": {
+            "format": "double",
+            "type": "number"
+          },
+          "uri": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "uri",
+          "score",
+          "matchField",
+          "matchType",
+          "data"
+        ],
+        "type": "object"
+      },
+      "SearchHitData": {
+        "properties": {
+          "aliases": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "type",
+          "aliases"
+        ],
+        "type": "object"
+      },
+      "SearchQuery": {
+        "properties": {
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "type": "object"
+      },
+      "SearchRequest": {
+        "description": "`POST /search` request body. `query.text` is the term; `context` is\naccepted and ignored (parity with the orchestrator's wire shape).",
+        "properties": {
+          "context": {},
+          "query": {
+            "$ref": "#/components/schemas/SearchQuery"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "type": "object"
+      },
+      "SearchResponse": {
+        "description": "`POST /search` response body.",
+        "properties": {
+          "hits": {
+            "items": {
+              "$ref": "#/components/schemas/SearchHit"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "hits"
         ],
         "type": "object"
       },
@@ -1495,6 +1118,174 @@
         ],
         "type": "object"
       },
+      "SourceAccount": {
+        "description": "A provider account identity; `accountKey` is a stable provider subject, never a credential.",
+        "properties": {
+          "accountKey": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "nullable": true,
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "provider",
+          "accountKey",
+          "createdAt"
+        ],
+        "type": "object"
+      },
+      "SourceAccountInput": {
+        "additionalProperties": false,
+        "description": "Register a stable account namespace. Changing a display label does not change account identity.",
+        "properties": {
+          "accountKey": {
+            "type": "string"
+          },
+          "label": {
+            "nullable": true,
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider",
+          "accountKey"
+        ],
+        "type": "object"
+      },
+      "SourceAccountListResponse": {
+        "description": "Registered provider-account namespaces, without credentials.",
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/SourceAccount"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "SourceAccountResponse": {
+        "description": "Stable account namespace resulting from create-or-fetch registration.",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/SourceAccount"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "SourceMergeField": {
+        "description": "Source name fields selectable from an immutable imported observation.",
+        "enum": [
+          "name",
+          "personProfile"
+        ],
+        "type": "string"
+      },
+      "SourceRecord": {
+        "description": "One namespaced external contact record attached to a canonical person entity.",
+        "properties": {
+          "accountId": {
+            "type": "string"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "additionalNames": {
+            "nullable": true,
+            "type": "string"
+          },
+          "collectionKey": {
+            "type": "string"
+          },
+          "displayName": {
+            "nullable": true,
+            "type": "string"
+          },
+          "entityId": {
+            "type": "string"
+          },
+          "familyName": {
+            "nullable": true,
+            "type": "string"
+          },
+          "givenName": {
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "lastSeenAt": {
+            "type": "string"
+          },
+          "nameCompleteness": {
+            "type": "string"
+          },
+          "namePrefix": {
+            "nullable": true,
+            "type": "string"
+          },
+          "nameSuffix": {
+            "nullable": true,
+            "type": "string"
+          },
+          "recordKey": {
+            "type": "string"
+          },
+          "revision": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "accountId",
+          "collectionKey",
+          "recordKey",
+          "entityId",
+          "nameCompleteness",
+          "active",
+          "lastSeenAt",
+          "revision"
+        ],
+        "type": "object"
+      },
+      "SourceRecordListResponse": {
+        "description": "Active and inactive external records linked to a person.",
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/SourceRecord"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
       "UndoBody": {
         "additionalProperties": false,
         "description": "Undo requires the exact untouched post-merge directory revision.",
@@ -1537,13 +1328,45 @@
         ],
         "type": "object"
       },
-      "UploadFormat": {
-        "description": "Supported export formats; the caller chooses explicitly rather than guessing from content.",
-        "enum": [
-          "google_csv",
-          "vcard"
-        ],
-        "type": "string"
+      "UpdateEntityBody": {
+        "description": "Body accepted by `PATCH /entities/:id`. Every field is optional; a present\nfield (even `null` for the nullable columns) is applied, an absent field is\nleft untouched. The nullable columns use `Option<Option<T>>` to tell\n\"absent\" (outer `None` — leave the column alone) apart from \"set to null\"\n(`Some(None)` — clear the column). serde collapses a JSON `null` into the\nouter `None` by default, so those fields deserialize through\n[`double_option`], which preserves the present-but-null case.\n\n`colour` has no field here either, for the same reason it has none on\n[`CreateEntityBody`]: a client may only reroll it, through the dedicated\n`POST /entities/:id/colour/reroll` route, never set it to an arbitrary\nstring via this generic PATCH.",
+        "properties": {
+          "abn": {
+            "nullable": true,
+            "type": "string"
+          },
+          "aliases": {
+            "items": {
+              "type": "string"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "defaultTags": {
+            "items": {
+              "type": "string"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "defaultTransactionType": {
+            "nullable": true,
+            "type": "string"
+          },
+          "name": {
+            "nullable": true,
+            "type": "string"
+          },
+          "notes": {
+            "nullable": true,
+            "type": "string"
+          },
+          "type": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
       }
     }
   },
@@ -1733,6 +1556,45 @@
         },
         "tags": [
           "crate::entities::routes"
+        ]
+      }
+    },
+    "/entities/resolve": {
+      "post": {
+        "operationId": "entities.resolve",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResolveResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Resolve every historical ID and report the snapshot revision for multi-batch consumers.",
+        "tags": [
+          "crate::merges::routes"
         ]
       }
     },
@@ -2638,360 +2500,6 @@
         ]
       }
     },
-    "/openapi": {
-      "get": {
-        "operationId": "openapi.get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "The contacts OpenAPI document"
-          }
-        },
-        "summary": "`GET /openapi` — serve the pinned 3.0.3 OpenAPI document.",
-        "tags": [
-          "crate::app"
-        ]
-      }
-    },
-    "/search": {
-      "post": {
-        "operationId": "search.search",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SearchRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SearchResponse"
-                }
-              }
-            },
-            "description": "Ranked contact hits"
-          }
-        },
-        "tags": [
-          "crate::search::routes"
-        ]
-      }
-    },
-    "/sources/accounts": {
-      "get": {
-        "operationId": "sources.accounts.list",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SourceAccountListResponse"
-                }
-              }
-            }
-          }
-        },
-        "summary": "List registered account identities without credential material.",
-        "tags": [
-          "crate::sources::routes"
-        ]
-      },
-      "post": {
-        "operationId": "sources.accounts.register",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SourceAccountInput"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SourceAccountResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Register or relabel an existing provider subject without changing its identity.",
-        "tags": [
-          "crate::sources::routes"
-        ]
-      }
-    },
-    "/imports/files": {
-      "post": {
-        "operationId": "imports.files.stage",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "accountId",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "collectionKey",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "format",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/UploadFormat"
-            }
-          },
-          {
-            "in": "query",
-            "name": "encoding",
-            "required": false,
-            "schema": {
-              "$ref": "#/components/schemas/UploadEncoding"
-            }
-          },
-          {
-            "in": "query",
-            "name": "phoneCountryCode",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/octet-stream": {
-              "schema": {
-                "description": "Raw export bytes; generated browser clients send a Blob or File without JSON encoding.",
-                "format": "binary",
-                "type": "string"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ImportBatch"
-                }
-              }
-            },
-            "description": "Persisted preview"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            },
-            "description": "Invalid upload"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            },
-            "description": "Unknown source account"
-          }
-        },
-        "summary": "Stage a raw export file; malformed records remain inspectable without directory writes.",
-        "tags": [
-          "crate::imports::routes"
-        ]
-      }
-    },
-    "/imports/{id}": {
-      "get": {
-        "operationId": "imports.get",
-        "parameters": [
-          {
-            "description": "Import batch id",
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ImportBatch"
-                }
-              }
-            },
-            "description": "Import preview"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            },
-            "description": "Unknown import"
-          }
-        },
-        "summary": "Read a durable preview after a partial commit or a process restart.",
-        "tags": [
-          "crate::imports::routes"
-        ]
-      }
-    },
-    "/imports/{id}/commit": {
-      "post": {
-        "operationId": "imports.commit",
-        "parameters": [
-          {
-            "description": "Import batch id",
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CommitBatchInput"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommitReceipt"
-                }
-              }
-            },
-            "description": "Stable commit receipt"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            },
-            "description": "Invalid row decisions"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            },
-            "description": "Unknown import or person"
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            },
-            "description": "Stale preview or conflicting retry"
-          }
-        },
-        "summary": "Apply selected decisions atomically, preserving a receipt for identical retries.",
-        "tags": [
-          "crate::imports::routes"
-        ]
-      }
-    },
-    "/entities/resolve": {
-      "post": {
-        "operationId": "entities.resolve",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ResolveBody"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResolveResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorBody"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Resolve every historical ID and report the snapshot revision for multi-batch consumers.",
-        "tags": [
-          "crate::merges::routes"
-        ]
-      }
-    },
     "/merges": {
       "post": {
         "operationId": "merges.merge",
@@ -3090,7 +2598,7 @@
     },
     "/merges/keep-separate": {
       "get": {
-        "operationId": "merges.separate_list",
+        "operationId": "merges.separations",
         "responses": {
           "200": {
             "content": {
@@ -3227,6 +2735,112 @@
         "summary": "Undo only an untouched merge. External references created after the merge remain unchanged.",
         "tags": [
           "crate::merges::routes"
+        ]
+      }
+    },
+    "/openapi": {
+      "get": {
+        "operationId": "openapi.get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "The contacts OpenAPI document"
+          }
+        },
+        "summary": "`GET /openapi` — serve the pinned 3.0.3 OpenAPI document.",
+        "tags": [
+          "crate::app"
+        ]
+      }
+    },
+    "/search": {
+      "post": {
+        "operationId": "search.search",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            },
+            "description": "Ranked contact hits"
+          }
+        },
+        "tags": [
+          "crate::search::routes"
+        ]
+      }
+    },
+    "/sources/accounts": {
+      "get": {
+        "operationId": "sources.accounts.list",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceAccountListResponse"
+                }
+              }
+            }
+          }
+        },
+        "summary": "List registered account identities without credential material.",
+        "tags": [
+          "crate::sources::routes"
+        ]
+      },
+      "post": {
+        "operationId": "sources.accounts.register",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SourceAccountInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceAccountResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Register or relabel an existing provider subject without changing its identity.",
+        "tags": [
+          "crate::sources::routes"
         ]
       }
     }

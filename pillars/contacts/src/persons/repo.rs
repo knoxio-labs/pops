@@ -81,10 +81,30 @@ pub async fn get_profile(
     id: &str,
 ) -> Result<Option<PersonProfile>, sqlx::Error> {
     let mut tx = pool.begin().await?;
-    let owner = crate::merges::projection::profile_owner(&mut tx, id).await?;
-    let row: Option<(String,)> = sqlx::query_as("SELECT json_object('entityId', entity_id, 'name', json_object('givenName', given_name, 'additionalNames', additional_names, 'familyName', family_name, 'namePrefix', name_prefix, 'nameSuffix', name_suffix, 'completeness', name_completeness), 'updatedAt', updated_at) FROM person_profiles WHERE entity_id = ?1")
-        .bind(owner).fetch_optional(&mut *tx).await?;
+    let profile = get_profile_in_transaction(&mut tx, id).await?;
     tx.commit().await?;
+    Ok(profile)
+}
+
+/// Read the selected local or immutable imported profile within the caller's consistent snapshot.
+pub async fn get_profile_in_transaction(
+    conn: &mut SqliteConnection,
+    id: &str,
+) -> Result<Option<PersonProfile>, sqlx::Error> {
+    if let Some(profile) = crate::merges::projection::source_profile(conn, id).await? {
+        return Ok(Some(profile));
+    }
+    let owner = crate::merges::projection::profile_owner(conn, id).await?;
+    get_stored_profile(conn, &owner).await
+}
+
+/// Read one retained member's original local name inside the caller's snapshot, without canonical projection.
+pub async fn get_stored_profile(
+    conn: &mut SqliteConnection,
+    id: &str,
+) -> Result<Option<PersonProfile>, sqlx::Error> {
+    let row: Option<(String,)> = sqlx::query_as("SELECT json_object('entityId', entity_id, 'name', json_object('givenName', given_name, 'additionalNames', additional_names, 'familyName', family_name, 'namePrefix', name_prefix, 'nameSuffix', name_suffix, 'completeness', name_completeness), 'updatedAt', updated_at) FROM person_profiles WHERE entity_id = ?1")
+        .bind(id).fetch_optional(conn).await?;
     row.map(|(json,)| {
         serde_json::from_str(&json).map_err(|error| sqlx::Error::Decode(Box::new(error)))
     })
@@ -108,10 +128,12 @@ pub async fn put_profile(
         entity_id: id.to_string(),
         name,
         updated_at: now,
+        source_record_id: None,
+        source_observation_id: None,
     })
 }
 
-/// List all point observations, including inactive history and retained preferred selections.
+/// List current point observations plus explicit preferences retained after upstream removal.
 pub async fn list_points(pool: &SqlitePool, id: &str) -> Result<Vec<ContactPoint>, sqlx::Error> {
     crate::merges::projection::points(pool, id).await
 }

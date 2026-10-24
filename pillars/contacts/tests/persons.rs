@@ -374,13 +374,14 @@ async fn source_refresh_and_deletion_keep_local_preferences_and_separate_namespa
     assert_eq!(initial.id, refreshed.id);
     assert_eq!(refreshed.revision, initial.revision + 1);
     let points = persons::list_points(&pool, &first).await.unwrap();
-    assert_eq!(points.len(), 3);
+    assert_eq!(points.len(), 2);
     assert!(points
         .iter()
         .any(|point| point.id == local.id && point.preferred && point.active));
-    assert!(points
-        .iter()
-        .any(|point| point.value == "old@example.test" && !point.active));
+    assert!(!points.iter().any(|point| point.value == "old@example.test"));
+    let retained: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM contact_points WHERE entity_id=?1 AND value='old@example.test' AND active=0)")
+        .bind(&first).fetch_one(&pool).await.unwrap();
+    assert!(retained);
     assert!(points
         .iter()
         .any(|point| point.value == "new@example.test" && point.active));

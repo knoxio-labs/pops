@@ -157,6 +157,65 @@ and selections only at the exact untouched post-merge revision. References writt
 in another pillar after a merge still name the chosen canonical UUID after undo;
 contacts cannot reconstruct an external writer's intended former member.
 
+## Canonical person identity and guarded undo
+
+A merge changes canonical membership, preserving every original entity, source,
+address and blob. The request names only the roots to merge; another plausible
+candidate is never included implicitly. The selected canonical root supplies
+scalar defaults. Explicit field references select a retained member's original
+value, and preferred point references select one group observation per kind.
+Selectors are tagged: `{kind: "entity", field: "name", entityId}` selects a
+retained entity; `{kind: "sourceRecord", field: "personProfile", sourceRecordId}`
+selects imported name evidence. Source selectors support only `name` and
+`personProfile` and pin the latest immutable observation when accepted. Later
+provider refreshes do not replace that choice. Group reads expose original member
+rows and applied references, including the pinned source observation ID.
+References outside the selected groups, missing points/profiles and repeated
+field selections reject the complete operation before it changes membership.
+
+Historical IDs resolve to the current canonical entity on reads. Lists, lookup
+and search expose canonical identities once; addresses, source records and
+contact points project the whole group while retaining their original owner IDs.
+Removed upstream points disappear from the current projection unless explicitly
+preferred; chosen values remain visible with `active: false` and `preferred: true`.
+All original point rows remain stored for provenance and undo.
+Ordinary writes through retired IDs and deletion of active merged members return 409. Recognized source refreshes retain their original member ownership and
+remain permitted. A new local edit or source link must target the canonical ID.
+
+`POST /entities/resolve` accepts at most 500 IDs and returns
+`{ data: [{ id, canonicalId }], revision }` in request order. Null means missing;
+a request failure means resolution is unavailable. Consumers resolve historical
+IDs before equality comparisons or aggregation. Multiple batches may be combined
+only when their revisions agree; on a change, discard the sweep and retry it.
+Legacy lookup returns one row per resolved canonical identity and is not a
+replacement for this mapping.
+
+Merge, undo and separation mutations carry an expected revision and idempotency
+key. Repeating a successful request returns its original receipt, including after
+later edits; reusing a key with another request conflicts. Audit records cannot be
+updated or deleted. A keep-separate decision expands both current groups into
+stable member pairs, so rejecting candidate C after merging A+B preserves both
+A-C and B-C. Other candidates remain unchanged. Revocation is an explicit new
+decision; source replay cannot clear a rejection.
+
+Undo is deliberately conservative: **any subsequent directory mutation**, even
+outside the group, blocks it. SQLite triggers fence entity, profile, point,
+source/history, address, asset, selection and separation changes. Identical source
+replay does not write or advance that revision. Undo restores previous membership
+and selections only at the exact untouched post-merge revision. References written
+in another pillar after a merge still name the chosen canonical UUID after undo;
+contacts cannot reconstruct an external writer's intended former member.
+
+The import reviewed-action service can compose `merge_in_transaction`,
+`decide_in_transaction`, and `select_in_transaction` inside one caller-owned
+`BEGIN IMMEDIATE` transaction. Any failure requires rolling back the complete
+action. Create the incoming person and source, record candidate-specific negative
+pairs, and merge last so its undo revision covers the entire directory change.
+Selecting an incoming imported structured profile requires no local profile copy
+and works without merging any existing candidate. Review projections can reuse
+`group_in_transaction`, `projection::entity`, `persons::repo::get_profile_in_transaction`, and
+`projection::points_in_transaction` in one consistent read snapshot.
+
 ## OpenAPI emit and cross-language consumption
 
 The committed JSON is generated, never hand-authored. The `emit-openapi` binary

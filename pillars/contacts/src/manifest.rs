@@ -40,7 +40,7 @@ pub fn build_contacts_manifest(version: &str) -> Value {
                 "contacts.entities.get",
                 "contacts.entities.resolve",
                 "contacts.merges.group",
-                "contacts.merges.separate_list",
+                "contacts.merges.separations",
                 "contacts.search.search",
             ],
             "mutations": [

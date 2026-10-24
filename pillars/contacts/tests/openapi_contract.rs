@@ -47,7 +47,7 @@ fn entities_and_search_operation_ids_are_dotted() {
         "merges.merge",
         "merges.undo",
         "merges.separate",
-        "merges.separate_list",
+        "merges.separations",
         "entities.upload_avatar",
         "entities.get_avatar",
         "entities.remove_avatar",
@@ -90,6 +90,18 @@ fn document_is_openapi_30() {
 }
 
 #[test]
+fn canonical_resolution_requires_an_explicit_nullable_mapping_value() {
+    let document = openapi_30_value();
+    let schema = &document["components"]["schemas"]["ResolvedIdentity"];
+    assert!(schema["required"]
+        .as_array()
+        .expect("required")
+        .iter()
+        .any(|field| field == "canonicalId"));
+    assert_eq!(schema["properties"]["canonicalId"]["nullable"], true);
+}
+
+#[test]
 fn error_schema_is_the_adr_054_envelope_with_registered_codes() {
     let doc = openapi_30_value();
     let schema = &doc["components"]["schemas"]["ErrorBody"];
@@ -111,8 +123,6 @@ fn error_schema_is_the_adr_054_envelope_with_registered_codes() {
             "contacts.request.invalid",
             "contacts.resource.not_found",
             "contacts.entity.name_conflict",
-            "contacts.import.conflict",
-            "contacts.import.storage",
             "contacts.entity.identity_conflict",
             "contacts.auth.unauthorized",
             "contacts.auth.forbidden",
