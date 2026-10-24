@@ -18,6 +18,8 @@ pub enum ProviderOrigin {
     GooglePeople,
     /// Apple's CardDAV discovery origin and numbered contacts shard origins.
     Icloud,
+    /// The fixed key path on a single-label Cloudflare Access team origin.
+    CloudflareAccessKeys,
 }
 
 /// Sanitized transport errors never retain a URL, response body or credential.
@@ -70,8 +72,16 @@ impl ProviderOrigin {
         let url = Url::parse(input).map_err(|_| TransportError::DisallowedTarget)?;
         let host = url.host_str().ok_or(TransportError::DisallowedTarget)?;
         let host_allowed = match self {
-            Self::GoogleToken => host == "oauth2.googleapis.com",
+            Self::GoogleToken => {
+                host == "oauth2.googleapis.com" && url.path() == "/token" && url.query().is_none()
+            }
             Self::GooglePeople => host == "people.googleapis.com",
+            Self::CloudflareAccessKeys => {
+                host.strip_suffix(".cloudflareaccess.com")
+                    .is_some_and(valid_team_name)
+                    && url.path() == "/cdn-cgi/access/certs"
+                    && url.query().is_none()
+            }
             Self::Icloud => {
                 host == "contacts.icloud.com"
                     || host == "carddav.icloud.com"
@@ -128,6 +138,16 @@ impl ProviderOrigin {
             .map_err(|_| TransportError::Unavailable)?;
         read_response(response).await
     }
+}
+
+pub(super) fn valid_team_name(team: &str) -> bool {
+    !team.is_empty()
+        && team.len() <= 63
+        && !team.starts_with('-')
+        && !team.ends_with('-')
+        && team
+            .bytes()
+            .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-')
 }
 
 fn pinned_client(host: &str, addresses: &[SocketAddr]) -> Result<reqwest::Client, TransportError> {

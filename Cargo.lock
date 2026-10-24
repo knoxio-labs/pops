@@ -229,6 +229,7 @@ name = "contacts"
 version = "0.1.0"
 dependencies = [
  "axum",
+ "base64",
  "csv",
  "encoding_rs",
  "http-body-util",
