@@ -29,8 +29,8 @@ export function Comparison({
     (candidate) => choices.candidates[candidate.id] === 'merge'
   );
   return (
-    <Card>
-      <CardContent className="space-y-6 pt-6">
+    <Card className="min-w-0">
+      <CardContent className="min-w-0 space-y-6 pt-6">
         <Incoming item={item} />
         <div className="space-y-3">
           <h3 className="text-lg font-semibold">{t('review.choose')}</h3>
@@ -76,10 +76,10 @@ function Incoming({ item }: { item: ReviewItem }) {
   return (
     <>
       <div>
-        <p className="text-sm text-foreground/85">
+        <p className="break-words text-sm text-foreground/85">
           {t('review.incoming', { source: item.source })}
         </p>
-        <h2 className="text-2xl font-semibold">{item.name || t('unnamedContact')}</h2>
+        <h2 className="break-words text-2xl font-semibold">{item.name || t('unnamedContact')}</h2>
         <Badge variant="outline">{t(item.status, { defaultValue: item.status })}</Badge>
       </div>
       <div className="space-y-2">

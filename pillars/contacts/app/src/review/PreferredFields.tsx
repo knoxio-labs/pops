@@ -101,6 +101,7 @@ export function PreferredFields({
     <div className="space-y-4">
       <h3 className="text-lg font-semibold">{t('review.preferred')}</h3>
       <Select
+        className="min-w-0"
         label={t('review.name')}
         options={fieldOptions(selected, 'name', defaultLabel, t)}
         value={nameValue ?? ''}
@@ -108,24 +109,48 @@ export function PreferredFields({
         onChange={(event) => onChange(selectField(choices, 'name', event.target.value))}
       />
       <Select
+        className="min-w-0"
         label={t('review.profile')}
         options={fieldOptions(selected, 'profile', defaultLabel, t)}
         value={profileValue ?? ''}
         disabled={disabled}
         onChange={(event) => onChange(selectField(choices, 'profile', event.target.value))}
       />
+      <PointChoices points={points} choices={choices} onChange={onChange} disabled={disabled} />
+    </div>
+  );
+}
+
+function PointChoices({
+  points,
+  choices,
+  onChange,
+  disabled,
+}: {
+  points: ReviewCandidate['points'];
+  choices: ReviewChoices;
+  onChange: (choices: ReviewChoices) => void;
+  disabled: boolean;
+}) {
+  const { t } = useTranslation('contacts');
+  return (
+    <>
       {points.map((point) => (
         <CheckboxInput
           key={point.id}
-          label={t('review.preferPoint', {
-            kind: t(`pointKinds.${point.kind}`, { defaultValue: point.kind }),
-            value: point.value,
-          })}
+          label={
+            <span className="break-all">
+              {t('review.preferPoint', {
+                kind: t(`pointKinds.${point.kind}`, { defaultValue: point.kind }),
+                value: point.value,
+              })}
+            </span>
+          }
           checked={choices.preferredPointIds.includes(point.id)}
           disabled={disabled}
           onCheckedChange={(checked) => onChange(preferPoint(choices, points, point, checked))}
         />
       ))}
-    </div>
+    </>
   );
 }

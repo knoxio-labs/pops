@@ -94,7 +94,7 @@ function Workspace({ snapshot, onRowsPage, onCandidatesPage, disabled, onSave }:
         disabled={disabled}
         onSelect={setSelectedId}
       />
-      <div className="space-y-4 lg:col-span-2">
+      <div className="min-w-0 space-y-4 lg:col-span-2">
         <Comparison
           item={item}
           onCandidatesPage={(offset) => onCandidatesPage(item.id, offset)}
