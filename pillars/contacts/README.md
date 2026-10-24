@@ -20,23 +20,28 @@ server and the `emit-openapi` bin share.
 
 The HTTP surface:
 
-| Path                                                 | What it serves                                                                                      |
-| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `/`                                                  | Stub root — a plain-text identity banner so `GET /` is not a 404.                                   |
-| `/entities`                                          | Contact CRUD + paginated/filtered list (`GET`/`POST`).                                              |
-| `/entities/{id}`                                     | Single-entity read/update/delete (`GET`/`PATCH`/`DELETE`).                                          |
-| `/entities/lookup`                                   | Bulk match-column lookup (`POST`) — resolve many names/ids in one call.                             |
-| `/entities/{id}/addresses`                           | An entity's addresses (`GET`/`POST`) — one row per branch (ADR-053).                                |
-| `/entities/{id}/avatar`                              | Avatar image upload (`PUT`, raw bytes + `Content-Type`) / serve (`GET`).                            |
-| `/entities/{id}/poster`                              | Poster image upload (`PUT`, raw bytes + `Content-Type`) / serve (`GET`).                            |
-| `/entities/{id}/person`                              | Local structured-name override (`GET`/`PUT`), independent of imported names.                        |
-| `/entities/{id}/contact-points`                      | Labeled local and source email/phone/social/URL observations (`GET`/`POST`).                        |
-| `/entities/{id}/contact-points/{point_id}/preferred` | Choose a preferred observation (`PUT`), scoped to its person and kind.                              |
-| `/entities/{id}/sources`                             | Active and inactive namespaced source links (`GET`).                                                |
-| `/sources/accounts`                                  | Stable provider account metadata (`GET`/`POST`); credentials are never accepted here.               |
-| `/search`                                            | The contacts slice of unified search (`POST`) — ranked name hits.                                   |
-| `/health`                                            | Fleet-standard liveness envelope.                                                                   |
-| `/openapi`                                           | The OpenAPI document, regenerated live from the same `src/openapi.rs` source as the committed copy. |
+| Path                                                 | What it serves                                                                                        |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `/`                                                  | Stub root — a plain-text identity banner so `GET /` is not a 404.                                     |
+| `/entities`                                          | Contact CRUD + paginated/filtered list (`GET`/`POST`).                                                |
+| `/entities/{id}`                                     | Single-entity read/update/delete (`GET`/`PATCH`/`DELETE`).                                            |
+| `/entities/lookup`                                   | Bulk match-column lookup (`POST`) — resolve many names/ids in one call.                               |
+| `/entities/resolve`                                  | Canonical-ID mapping with a snapshot revision (`POST`); preserves missing and repeated requested IDs. |
+| `/merges/groups/{id}`                                | Canonical root, retained members and optimistic directory revision (`GET`).                           |
+| `/merges`                                            | Explicit subset merge with validated field/point selections (`POST`).                                 |
+| `/merges/{id}/undo`                                  | Undo only an untouched merge (`POST`).                                                                |
+| `/merges/keep-separate`                              | Stable member-pair decisions (`GET`); explicitly set or revoke a decision (`POST`).                   |
+| `/entities/{id}/addresses`                           | An entity's addresses (`GET`/`POST`) — one row per branch (ADR-053).                                  |
+| `/entities/{id}/avatar`                              | Avatar image upload (`PUT`, raw bytes + `Content-Type`) / serve (`GET`).                              |
+| `/entities/{id}/poster`                              | Poster image upload (`PUT`, raw bytes + `Content-Type`) / serve (`GET`).                              |
+| `/entities/{id}/person`                              | Local structured-name override (`GET`/`PUT`), independent of imported names.                          |
+| `/entities/{id}/contact-points`                      | Labeled local and source email/phone/social/URL observations (`GET`/`POST`).                          |
+| `/entities/{id}/contact-points/{point_id}/preferred` | Choose a preferred observation (`PUT`), scoped to its person and kind.                                |
+| `/entities/{id}/sources`                             | Active and inactive namespaced source links (`GET`).                                                  |
+| `/sources/accounts`                                  | Stable provider account metadata (`GET`/`POST`); credentials are never accepted here.                 |
+| `/search`                                            | The contacts slice of unified search (`POST`) — ranked name hits.                                     |
+| `/health`                                            | Fleet-standard liveness envelope.                                                                     |
+| `/openapi`                                           | The OpenAPI document, regenerated live from the same `src/openapi.rs` source as the committed copy.   |
 
 Person entities retain the same fleet UUID identity as other entities. Multiple
 people may share a display name, including first-name-only records, and a person
@@ -80,6 +85,46 @@ an incoming `X-Request-Id` or mints one, then returns it in both the response
 header and error body. Database diagnostics are logged with that id; clients
 receive only `contacts.internal` and a generic message, never SQLite or `sqlx`
 error text.
+
+## Canonical person identity and guarded undo
+
+A merge changes canonical membership, preserving every original entity, source,
+address and blob. The request names only the roots to merge; another plausible
+candidate is never included implicitly. The selected canonical root supplies
+scalar defaults. Explicit field references select a retained member's original
+value, and preferred point references select one group observation per kind.
+References outside the selected groups, missing points/profiles and repeated
+field selections reject the complete operation before it changes membership.
+
+Historical IDs resolve to the current canonical entity on reads. Lists, lookup
+and search expose canonical identities once; addresses, source records and
+contact points project the whole group while retaining their original owner IDs.
+Ordinary writes through retired IDs and deletion of active merged members return 409. Recognized source refreshes retain their original member ownership and
+remain permitted. A new local edit or source link must target the canonical ID.
+
+`POST /entities/resolve` accepts at most 500 IDs and returns
+`{ data: [{ id, canonicalId }], revision }` in request order. Null means missing;
+a request failure means resolution is unavailable. Consumers resolve historical
+IDs before equality comparisons or aggregation. Multiple batches may be combined
+only when their revisions agree; on a change, discard the sweep and retry it.
+Legacy lookup returns one row per resolved canonical identity and is not a
+replacement for this mapping.
+
+Merge, undo and separation mutations carry an expected revision and idempotency
+key. Repeating a successful request returns its original receipt, including after
+later edits; reusing a key with another request conflicts. Audit records cannot be
+updated or deleted. A keep-separate decision expands both current groups into
+stable member pairs, so rejecting candidate C after merging A+B preserves both
+A-C and B-C. Other candidates remain unchanged. Revocation is an explicit new
+decision; source replay cannot clear a rejection.
+
+Undo is deliberately conservative: **any subsequent directory mutation**, even
+outside the group, blocks it. SQLite triggers fence entity, profile, point,
+source/history, address, asset, selection and separation changes. Identical source
+replay does not write or advance that revision. Undo restores previous membership
+and selections only at the exact untouched post-merge revision. References written
+in another pillar after a merge still name the chosen canonical UUID after undo;
+contacts cannot reconstruct an external writer's intended former member.
 
 ## OpenAPI emit and cross-language consumption
 

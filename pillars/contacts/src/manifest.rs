@@ -38,12 +38,18 @@ pub fn build_contacts_manifest(version: &str) -> Value {
             "queries": [
                 "contacts.entities.list",
                 "contacts.entities.get",
+                "contacts.entities.resolve",
+                "contacts.merges.group",
+                "contacts.merges.separate_list",
                 "contacts.search.search",
             ],
             "mutations": [
                 "contacts.entities.create",
                 "contacts.entities.update",
                 "contacts.entities.delete",
+                "contacts.merges.merge",
+                "contacts.merges.undo",
+                "contacts.merges.separate",
             ],
             "subscriptions": [],
         },

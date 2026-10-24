@@ -127,6 +127,10 @@ pub async fn prefer_point(
 pub(crate) fn person_error(error: PersonError, id: &str) -> ApiError {
     match error {
         PersonError::NotFound => ApiError::not_found("Person or contact point", id),
+        PersonError::Retired(canonical) => {
+            ApiError::identity_conflict("Entity ID is retired; use its canonical identity")
+                .with_details(serde_json::json!({"canonicalId": canonical}))
+        }
         PersonError::Invalid(message) => ApiError::bad_request(message),
         PersonError::Db(error) => ApiError::database(error),
     }

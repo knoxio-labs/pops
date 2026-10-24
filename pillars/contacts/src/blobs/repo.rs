@@ -47,10 +47,11 @@ pub async fn get(pool: &SqlitePool, id: &str) -> Result<Option<BlobRow>, sqlx::E
         .await
 }
 
-/// Delete a blob by id. A no-op (not an error) if the id does not exist — the
+/// Delete an unreferenced blob by id. Retained member assets remain available after a selected asset is replaced.
+/// A no-op (not an error) if the id does not exist or is still referenced — the
 /// caller uses this for best-effort cleanup of a superseded or removed asset.
 pub async fn delete(pool: &SqlitePool, id: &str) -> Result<(), sqlx::Error> {
-    sqlx::query("DELETE FROM blobs WHERE id = ?1")
+    sqlx::query("DELETE FROM blobs WHERE id = ?1 AND NOT EXISTS(SELECT 1 FROM entities WHERE avatar_asset_id=?1 OR poster_asset_id=?1)")
         .bind(id)
         .execute(pool)
         .await?;

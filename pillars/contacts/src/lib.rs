@@ -13,6 +13,7 @@ pub mod entities;
 pub mod health;
 pub mod identity;
 pub mod manifest;
+pub mod merges;
 pub mod openapi;
 pub mod persons;
 pub mod registry;
