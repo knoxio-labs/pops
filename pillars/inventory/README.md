@@ -117,8 +117,9 @@ preview and printout; codes that cannot fit at the minimum size still wrap.
 
 Label handling warnings use the configured boolean field keyed `Fragile`
 (case-insensitive), including inherited catalogue fields. A true value on the
-selected item or any contained descendant adds the cracked-glass symbol; the
-same field is omitted from printed text so the warning appears once. Overrides
+selected item or any contained descendant adds the cracked-glass symbol only
+when its Fragile field is selected in Label shows; the same field is omitted
+from printed text so the warning appears once. Overrides
 and computed values share the label field-value reader. The manual print-job
 switch appears only when the selected item has no Fragile field and its contents
 do not already trigger the warning; it never edits inventory records.
