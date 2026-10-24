@@ -56,6 +56,81 @@
         ],
         "type": "object"
       },
+      "AppliedSelection": {
+        "description": "Applied selections expose the retained provenance and exact immutable source observation.",
+        "oneOf": [
+          {
+            "properties": {
+              "entity_id": {
+                "type": "string"
+              },
+              "field": {
+                "$ref": "#/components/schemas/MergeField"
+              },
+              "kind": {
+                "enum": [
+                  "entity"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "field",
+              "entity_id",
+              "kind"
+            ],
+            "type": "object"
+          },
+          {
+            "properties": {
+              "field": {
+                "$ref": "#/components/schemas/SourceMergeField"
+              },
+              "kind": {
+                "enum": [
+                  "sourceRecord"
+                ],
+                "type": "string"
+              },
+              "source_observation_id": {
+                "type": "string"
+              },
+              "source_record_id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "field",
+              "source_record_id",
+              "source_observation_id",
+              "kind"
+            ],
+            "type": "object"
+          },
+          {
+            "properties": {
+              "kind": {
+                "enum": [
+                  "point"
+                ],
+                "type": "string"
+              },
+              "point_id": {
+                "type": "string"
+              },
+              "point_kind": {
+                "$ref": "#/components/schemas/ContactPointKind"
+              }
+            },
+            "required": [
+              "point_kind",
+              "point_id",
+              "kind"
+            ],
+            "type": "object"
+          }
+        ]
+      },
       "ContactPoint": {
         "description": "A local or imported point. `sourceRecordId: null` identifies an explicit local value.\nPreferred observations survive source refresh/deactivation, including their original value.",
         "properties": {
@@ -400,19 +475,77 @@
         "type": "string"
       },
       "FieldSelection": {
-        "additionalProperties": false,
-        "description": "Select a scalar value belonging to a retained entity in the resulting group.",
-        "properties": {
-          "entityId": {
-            "type": "string"
+        "description": "Explicit field provenance: a retained entity field or a source record's current immutable observation.",
+        "oneOf": [
+          {
+            "properties": {
+              "entity_id": {
+                "type": "string"
+              },
+              "field": {
+                "$ref": "#/components/schemas/MergeField"
+              },
+              "kind": {
+                "enum": [
+                  "entity"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "field",
+              "entity_id",
+              "kind"
+            ],
+            "type": "object"
           },
-          "field": {
-            "$ref": "#/components/schemas/MergeField"
+          {
+            "properties": {
+              "field": {
+                "$ref": "#/components/schemas/SourceMergeField"
+              },
+              "kind": {
+                "enum": [
+                  "sourceRecord"
+                ],
+                "type": "string"
+              },
+              "source_record_id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "field",
+              "source_record_id",
+              "kind"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "GroupMember": {
+        "description": "Original entity fields and local structured name used as auditable side-by-side merge evidence.",
+        "properties": {
+          "entity": {
+            "$ref": "#/components/schemas/Entity"
+          },
+          "personProfile": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PersonProfile"
+              },
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true,
+                "type": "object"
+              }
+            ]
           }
         },
         "required": [
-          "field",
-          "entityId"
+          "entity"
         ],
         "type": "object"
       },
@@ -456,15 +589,29 @@
             },
             "type": "array"
           },
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/GroupMember"
+            },
+            "type": "array"
+          },
           "revision": {
             "format": "int64",
             "type": "integer"
+          },
+          "selections": {
+            "items": {
+              "$ref": "#/components/schemas/AppliedSelection"
+            },
+            "type": "array"
           }
         },
         "required": [
           "canonicalId",
           "memberIds",
-          "revision"
+          "revision",
+          "selections",
+          "members"
         ],
         "type": "object"
       },
@@ -694,6 +841,14 @@
           "name": {
             "$ref": "#/components/schemas/PersonName"
           },
+          "sourceObservationId": {
+            "nullable": true,
+            "type": "string"
+          },
+          "sourceRecordId": {
+            "nullable": true,
+            "type": "string"
+          },
           "updatedAt": {
             "type": "string"
           }
@@ -773,7 +928,8 @@
           }
         },
         "required": [
-          "id"
+          "id",
+          "canonicalId"
         ],
         "type": "object"
       },
@@ -1037,6 +1193,14 @@
           "data"
         ],
         "type": "object"
+      },
+      "SourceMergeField": {
+        "description": "Source name fields selectable from an immutable imported observation.",
+        "enum": [
+          "name",
+          "personProfile"
+        ],
+        "type": "string"
       },
       "SourceRecord": {
         "description": "One namespaced external contact record attached to a canonical person entity.",
@@ -2434,7 +2598,7 @@
     },
     "/merges/keep-separate": {
       "get": {
-        "operationId": "merges.separate_list",
+        "operationId": "merges.separations",
         "responses": {
           "200": {
             "content": {

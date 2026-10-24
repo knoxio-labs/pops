@@ -93,6 +93,12 @@ address and blob. The request names only the roots to merge; another plausible
 candidate is never included implicitly. The selected canonical root supplies
 scalar defaults. Explicit field references select a retained member's original
 value, and preferred point references select one group observation per kind.
+Selectors are tagged: `{kind: "entity", field: "name", entityId}` selects a
+retained entity; `{kind: "sourceRecord", field: "personProfile", sourceRecordId}`
+selects imported name evidence. Source selectors support only `name` and
+`personProfile` and pin the latest immutable observation when accepted. Later
+provider refreshes do not replace that choice. Group reads expose original member
+rows and applied references, including the pinned source observation ID.
 References outside the selected groups, missing points/profiles and repeated
 field selections reject the complete operation before it changes membership.
 
@@ -289,3 +295,13 @@ run through `@pops/pillar-sdk`. The registry origin resolves
 registry records for contacts resolves `CONTACTS_SELF_BASE_URL` →
 `http://localhost:<port>`. A missing or broken registry never blocks boot:
 registration retries in the background while the server serves its surface.
+
+The import reviewed-action service can compose `merge_in_transaction`,
+`decide_in_transaction`, and `select_in_transaction` inside one caller-owned
+`BEGIN IMMEDIATE` transaction. Any failure requires rolling back the complete
+action. Create the incoming person and source, record candidate-specific negative
+pairs, and merge last so its undo revision covers the entire directory change.
+Selecting an incoming imported structured profile requires no local profile copy
+and works without merging any existing candidate. Review projections can reuse
+`group_in_transaction`, `projection::entity`, `persons::repo::get_profile`, and
+`projection::points_in_transaction` in one consistent read snapshot.

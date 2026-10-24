@@ -30,6 +30,27 @@ export type AddressMutation = {
 };
 
 /**
+ * Applied selections expose the retained provenance and exact immutable source observation.
+ */
+export type AppliedSelection =
+  | {
+      entity_id: string;
+      field: MergeField;
+      kind: 'entity';
+    }
+  | {
+      field: SourceMergeField;
+      kind: 'sourceRecord';
+      source_observation_id: string;
+      source_record_id: string;
+    }
+  | {
+      kind: 'point';
+      point_id: string;
+      point_kind: ContactPointKind;
+    };
+
+/**
  * A local or imported point. `sourceRecordId: null` identifies an explicit local value.
  * Preferred observations survive source refresh/deactivation, including their original value.
  */
@@ -187,11 +208,26 @@ export type ErrorCode =
   | 'contacts.internal';
 
 /**
- * Select a scalar value belonging to a retained entity in the resulting group.
+ * Explicit field provenance: a retained entity field or a source record's current immutable observation.
  */
-export type FieldSelection = {
-  entityId: string;
-  field: MergeField;
+export type FieldSelection =
+  | {
+      entity_id: string;
+      field: MergeField;
+      kind: 'entity';
+    }
+  | {
+      field: SourceMergeField;
+      kind: 'sourceRecord';
+      source_record_id: string;
+    };
+
+/**
+ * Original entity fields and local structured name used as auditable side-by-side merge evidence.
+ */
+export type GroupMember = {
+  entity: Entity;
+  personProfile?: PersonProfile | null;
 };
 
 /**
@@ -214,7 +250,9 @@ export type HealthResponse = {
 export type IdentityGroup = {
   canonicalId: string;
   memberIds: Array<string>;
+  members: Array<GroupMember>;
   revision: number;
+  selections: Array<AppliedSelection>;
 };
 
 /**
@@ -321,6 +359,8 @@ export type PersonName = {
 export type PersonProfile = {
   entityId: string;
   name: PersonName;
+  sourceObservationId?: string | null;
+  sourceRecordId?: string | null;
   updatedAt: string;
 };
 
@@ -350,7 +390,7 @@ export type ResolveResponse = {
  * A historical ID and its current canonical identity; null means the ID does not exist.
  */
 export type ResolvedIdentity = {
-  canonicalId?: string | null;
+  canonicalId: string | null;
   id: string;
 };
 
@@ -462,6 +502,11 @@ export type SourceAccountListResponse = {
 export type SourceAccountResponse = {
   data: SourceAccount;
 };
+
+/**
+ * Source name fields selectable from an immutable imported observation.
+ */
+export type SourceMergeField = 'name' | 'personProfile';
 
 /**
  * One namespaced external contact record attached to a canonical person entity.
@@ -1243,19 +1288,19 @@ export type MergesGroupResponses = {
 
 export type MergesGroupResponse = MergesGroupResponses[keyof MergesGroupResponses];
 
-export type MergesSeparateListData = {
+export type MergesSeparationsData = {
   body?: never;
   path?: never;
   query?: never;
   url: '/merges/keep-separate';
 };
 
-export type MergesSeparateListResponses = {
+export type MergesSeparationsResponses = {
   200: SeparateList;
 };
 
-export type MergesSeparateListResponse =
-  MergesSeparateListResponses[keyof MergesSeparateListResponses];
+export type MergesSeparationsResponse =
+  MergesSeparationsResponses[keyof MergesSeparationsResponses];
 
 export type MergesSeparateData = {
   body: SeparateBody;

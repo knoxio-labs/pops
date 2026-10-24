@@ -79,9 +79,9 @@ import type {
   MergesMergeResponses,
   MergesSeparateData,
   MergesSeparateErrors,
-  MergesSeparateListData,
-  MergesSeparateListResponses,
   MergesSeparateResponses,
+  MergesSeparationsData,
+  MergesSeparationsResponses,
   MergesUndoData,
   MergesUndoErrors,
   MergesUndoResponses,
@@ -451,10 +451,10 @@ export const mergesGroup = <ThrowOnError extends boolean = false>(
 /**
  * List stable member-pair decisions for conservative matching.
  */
-export const mergesSeparateList = <ThrowOnError extends boolean = false>(
-  options?: Options<MergesSeparateListData, ThrowOnError>
-): RequestResult<MergesSeparateListResponses, unknown, ThrowOnError> =>
-  (options?.client ?? client).get<MergesSeparateListResponses, unknown, ThrowOnError>({
+export const mergesSeparations = <ThrowOnError extends boolean = false>(
+  options?: Options<MergesSeparationsData, ThrowOnError>
+): RequestResult<MergesSeparationsResponses, unknown, ThrowOnError> =>
+  (options?.client ?? client).get<MergesSeparationsResponses, unknown, ThrowOnError>({
     url: '/merges/keep-separate',
     ...options,
   });

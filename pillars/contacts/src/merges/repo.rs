@@ -94,16 +94,40 @@ pub async fn members(
 /// Read a consistent canonical group and optimistic revision, accepting a historical ID.
 pub async fn group(pool: &SqlitePool, id: &str) -> Result<IdentityGroup, MergeError> {
     let mut tx = pool.begin().await?;
-    let revision = revision(&mut tx).await?;
-    let canonical_id = resolve_one(&mut tx, id)
+    let group = group_in_transaction(&mut tx, id).await?;
+    tx.commit().await?;
+    Ok(group)
+}
+
+/// Project original members and selected provenance within an existing directory snapshot.
+/// The caller owns transaction boundaries and can combine this with entity/profile/point projections.
+pub async fn group_in_transaction(
+    conn: &mut SqliteConnection,
+    id: &str,
+) -> Result<IdentityGroup, MergeError> {
+    let revision = revision(conn).await?;
+    let canonical_id = resolve_one(conn, id)
         .await?
         .ok_or_else(|| MergeError::NotFound(id.into()))?;
-    let member_ids = members(&mut tx, &canonical_id).await?;
-    tx.commit().await?;
+    let member_ids = members(conn, &canonical_id).await?;
+    let selections = crate::merges::projection::applied_selections(conn, &canonical_id).await?;
+    let mut original_members = Vec::with_capacity(member_ids.len());
+    for member in &member_ids {
+        let entity = crate::entities::repo::get_stored(conn, member)
+            .await?
+            .ok_or(sqlx::Error::RowNotFound)?;
+        let person_profile = crate::persons::repo::get_stored_profile(conn, member).await?;
+        original_members.push(super::model::GroupMember {
+            entity: entity.into(),
+            person_profile,
+        });
+    }
     Ok(IdentityGroup {
         canonical_id,
         member_ids,
         revision,
+        selections,
+        members: original_members,
     })
 }
 
@@ -149,7 +173,7 @@ pub async fn selections(
     conn: &mut SqliteConnection,
     id: &str,
 ) -> Result<Vec<SelectionRow>, sqlx::Error> {
-    sqlx::query_as("SELECT canonical_id,field,owner_entity_id,point_id FROM merge_selections WHERE canonical_id=?1 ORDER BY field")
+    sqlx::query_as("SELECT canonical_id,field,owner_entity_id,point_id,source_history_id FROM merge_selections WHERE canonical_id=?1 ORDER BY field")
         .bind(id).fetch_all(conn).await
 }
 
@@ -158,8 +182,9 @@ pub async fn put_selection(
     conn: &mut SqliteConnection,
     row: &SelectionRow,
 ) -> Result<(), sqlx::Error> {
-    sqlx::query("INSERT INTO merge_selections(canonical_id,field,owner_entity_id,point_id) VALUES(?1,?2,?3,?4) ON CONFLICT(canonical_id,field) DO UPDATE SET owner_entity_id=excluded.owner_entity_id,point_id=excluded.point_id")
+    sqlx::query("INSERT INTO merge_selections(canonical_id,field,owner_entity_id,point_id,source_history_id) VALUES(?1,?2,?3,?4,?5) ON CONFLICT(canonical_id,field) DO UPDATE SET owner_entity_id=excluded.owner_entity_id,point_id=excluded.point_id,source_history_id=excluded.source_history_id")
         .bind(&row.canonical_id).bind(&row.field).bind(&row.owner_entity_id).bind(&row.point_id)
+        .bind(&row.source_history_id)
         .execute(conn).await?;
     Ok(())
 }

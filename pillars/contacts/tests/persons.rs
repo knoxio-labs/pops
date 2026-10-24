@@ -535,3 +535,67 @@ async fn national_phones_need_explicit_known_country_context() {
         .any(|point| point.country_code.as_deref() == Some("AU")
             && point.normalized_value.as_deref() == Some("+61412345678")));
 }
+
+#[tokio::test]
+async fn source_metadata_refresh_reuses_surviving_preferred_observations() {
+    let (app, pool) = app().await;
+    let person = create(&app, "Alex", "person").await;
+    let account = sources::create_or_get_account(
+        &pool,
+        &SourceAccountInput {
+            provider: "google".to_string(),
+            account_key: "subject".to_string(),
+            label: None,
+        },
+    )
+    .await
+    .unwrap();
+    let mut input = SourceRecordInput {
+        account_id: account.id,
+        collection_key: "contacts".to_string(),
+        record_key: "record-1".to_string(),
+        entity_id: person.clone(),
+        display_name: Some("Alex".to_string()),
+        name: PersonName::default(),
+        points: vec![point("alex@example.test")],
+    };
+    let mut tx = pool.begin().await.unwrap();
+    let source = sources::apply_record(&mut tx, &input).await.unwrap();
+    tx.commit().await.unwrap();
+    let preferred = persons::list_points(&pool, &person)
+        .await
+        .unwrap()
+        .remove(0);
+    persons::prefer_point(&pool, &person, &preferred.id)
+        .await
+        .unwrap();
+    input.display_name = Some("Alex Smith".to_string());
+    let mut tx = pool.begin().await.unwrap();
+    sources::apply_record(&mut tx, &input).await.unwrap();
+    tx.commit().await.unwrap();
+    let points = persons::list_points(&pool, &person).await.unwrap();
+    assert_eq!(points.len(), 1);
+    assert_eq!(points[0].id, preferred.id);
+    assert!(points[0].active && points[0].preferred);
+    let mut tx = pool.begin().await.unwrap();
+    sources::deactivate_record(&mut tx, &source.id)
+        .await
+        .unwrap();
+    tx.commit().await.unwrap();
+    let mut tx = pool.begin().await.unwrap();
+    sources::apply_record(&mut tx, &input).await.unwrap();
+    tx.commit().await.unwrap();
+    let points = persons::list_points(&pool, &person).await.unwrap();
+    assert_eq!(points.len(), 1);
+    assert_eq!(points[0].id, preferred.id);
+    assert!(points[0].active && points[0].preferred);
+    input.points.clear();
+    let mut tx = pool.begin().await.unwrap();
+    sources::apply_record(&mut tx, &input).await.unwrap();
+    tx.commit().await.unwrap();
+    let points = persons::list_points(&pool, &person).await.unwrap();
+    assert_eq!(points.len(), 1);
+    assert_eq!(points[0].id, preferred.id);
+    assert!(!points[0].active);
+    assert!(points[0].preferred);
+}

@@ -15,6 +15,7 @@ pub struct ResolveBody {
 #[serde(rename_all = "camelCase")]
 pub struct ResolvedIdentity {
     pub id: String,
+    #[schema(required = true)]
     pub canonical_id: Option<String>,
 }
 
@@ -58,12 +59,74 @@ impl MergeField {
     }
 }
 
-/// Select a scalar value belonging to a retained entity in the resulting group.
+/// Source name fields selectable from an immutable imported observation.
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub enum SourceMergeField {
+    Name,
+    PersonProfile,
+}
+
+impl SourceMergeField {
+    /// The corresponding scalar projection field.
+    pub fn field(self) -> MergeField {
+        match self {
+            Self::Name => MergeField::Name,
+            Self::PersonProfile => MergeField::PersonProfile,
+        }
+    }
+}
+
+/// Explicit field provenance: a retained entity field or a source record's current immutable observation.
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub struct FieldSelection {
-    pub field: MergeField,
-    pub entity_id: String,
+#[serde(
+    tag = "kind",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase",
+    deny_unknown_fields
+)]
+pub enum FieldSelection {
+    Entity {
+        field: MergeField,
+        entity_id: String,
+    },
+    SourceRecord {
+        field: SourceMergeField,
+        source_record_id: String,
+    },
+}
+
+impl FieldSelection {
+    /// The scalar field replaced by this selection.
+    pub fn field(&self) -> MergeField {
+        match self {
+            Self::Entity { field, .. } => *field,
+            Self::SourceRecord { field, .. } => field.field(),
+        }
+    }
+}
+
+/// Applied selections expose the retained provenance and exact immutable source observation.
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[serde(
+    tag = "kind",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
+pub enum AppliedSelection {
+    Entity {
+        field: MergeField,
+        entity_id: String,
+    },
+    SourceRecord {
+        field: SourceMergeField,
+        source_record_id: String,
+        source_observation_id: String,
+    },
+    Point {
+        point_kind: crate::persons::model::ContactPointKind,
+        point_id: String,
+    },
 }
 
 /// Existing canonical groups to combine; member IDs must name their current roots.
@@ -103,12 +166,22 @@ pub struct SeparateBody {
 }
 
 /// A canonical group and the directory-wide optimistic revision.
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct IdentityGroup {
     pub canonical_id: String,
     pub member_ids: Vec<String>,
     pub revision: i64,
+    pub selections: Vec<AppliedSelection>,
+    pub members: Vec<GroupMember>,
+}
+
+/// Original entity fields and local structured name used as auditable side-by-side merge evidence.
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct GroupMember {
+    pub entity: crate::entities::model::Entity,
+    pub person_profile: Option<crate::persons::model::PersonProfile>,
 }
 
 /// The immutable result of a merge; retries return this original receipt.
@@ -163,6 +236,7 @@ pub struct SelectionRow {
     pub field: String,
     pub owner_entity_id: Option<String>,
     pub point_id: Option<String>,
+    pub source_history_id: Option<String>,
 }
 
 /// A retained member's previous redirect, omitted when it was a canonical root.
