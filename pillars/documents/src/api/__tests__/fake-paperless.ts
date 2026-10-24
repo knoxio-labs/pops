@@ -41,6 +41,8 @@ export interface FakePaperless {
   /** Every response's status when set, as if Paperless were failing. */
   failWith: number | null;
   honourRange: boolean;
+  /** Milliseconds every response waits, as a busy Paperless re-indexing on save does. */
+  delayMs?: number;
   close(): Promise<void>;
 }
 
@@ -214,10 +216,12 @@ export async function startFakePaperless(): Promise<FakePaperless> {
       }),
   };
   server.on('request', (req: IncomingMessage, res: ServerResponse) => {
-    route(fake, req, res).catch(() => {
-      if (!res.headersSent) res.writeHead(500);
-      res.end();
-    });
+    setTimeout(() => {
+      route(fake, req, res).catch(() => {
+        if (!res.headersSent) res.writeHead(500);
+        res.end();
+      });
+    }, fake.delayMs ?? 0);
   });
   return fake;
 }

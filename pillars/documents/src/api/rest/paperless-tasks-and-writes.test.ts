@@ -116,6 +116,18 @@ describe('PATCH /paperless/documents/:id', () => {
     expect(JSON.parse(fake.requests[0]?.body ?? '')).toEqual({ title: 'Kettle manual' });
   });
 
+  it(
+    'waits out a slow save rather than reporting Paperless unreachable',
+    { timeout: 20_000 },
+    async () => {
+      fake.delayMs = 6_000;
+
+      const res = await api().patch('/paperless/documents/7').send({ title: 'Kettle manual' });
+
+      expect(res.status).toBe(200);
+    }
+  );
+
   it('sends an empty object for an empty patch', async () => {
     const res = await api().patch('/paperless/documents/7').send({});
 
@@ -161,6 +173,18 @@ describe('DELETE /paperless/documents/:id', () => {
     expect(fake.requests[0]?.method).toBe('DELETE');
     expect(fake.requests[0]?.url).toBe('/api/documents/7/');
   });
+
+  it(
+    'waits out a slow delete rather than reporting Paperless unreachable',
+    { timeout: 20_000 },
+    async () => {
+      fake.delayMs = 6_000;
+
+      const res = await api().delete('/paperless/documents/7');
+
+      expect(res.status).toBe(204);
+    }
+  );
 
   it('404s only when Paperless says the document is gone', async () => {
     const missing = await api().delete('/paperless/documents/8');
