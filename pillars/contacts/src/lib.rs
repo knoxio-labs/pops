@@ -15,6 +15,7 @@ pub mod health;
 pub mod imports;
 pub mod identity;
 pub mod manifest;
+pub mod merges;
 pub mod openapi;
 pub mod persons;
 pub mod providers;

@@ -5,12 +5,20 @@ import type { MockHandler, MockHandlers } from '@pops/pillar-sdk/testing/api-moc
 
 import type {
   AddressMutation,
+  CommitReceipt,
   ContactPointResponse,
   PersonProfileResponse,
   SourceAccountResponse,
   EntitiesLookupResponses,
   EntityResponse,
   HealthResponse,
+  ImportBatch,
+  IdentityGroup,
+  MergeResult,
+  ResolveResponse,
+  SeparateList,
+  SeparateResult,
+  UndoResult,
 } from '../../contacts-api/types.gen';
 
 /**
@@ -38,6 +46,39 @@ const entityById: MockHandler = ({ params }) => {
 };
 
 const mutation = { data: firstEntity, message: 'ok' };
+
+const importBatch: ImportBatch = {
+  accountId: 'account-standalone',
+  collectionKey: 'contacts',
+  createdAt: '2026-09-05T08:00:00.000Z',
+  id: 'import-standalone',
+  revision: 1,
+  rows: [
+    {
+      errors: [],
+      id: 'import-row-standalone',
+      ordinal: 0,
+      payload: { displayName: 'Morgan Vale', name: {}, points: [] },
+      processed: false,
+      proposal: 'new_source',
+      recordKey: 'fixture-contact',
+      removed: false,
+    },
+  ],
+};
+
+const importReceipt: CommitReceipt = {
+  batchId: importBatch.id,
+  revision: 2,
+  rows: [
+    {
+      entityId: 'person-standalone',
+      rowId: 'import-row-standalone',
+      skipped: false,
+      sourceRecordId: 'source-standalone',
+    },
+  ],
+};
 
 const addressCreated: MockHandler = ({ params }) => {
   const body: AddressMutation = {
@@ -79,6 +120,34 @@ const sourceAccount: SourceAccountResponse = {
   },
 };
 
+const resolveIdentities: MockHandler = ({ body }) => {
+  const ids =
+    typeof body === 'object' && body !== null && 'ids' in body && Array.isArray(body.ids)
+      ? body.ids.filter((id): id is string => typeof id === 'string')
+      : [];
+  const response: ResolveResponse = {
+    data: ids.map((id) => ({
+      id,
+      canonicalId: CONTACT_ENTITIES.some((entity) => entity.id === id) ? id : null,
+    })),
+    revision: 1,
+  };
+  return { body: response };
+};
+
+const identityGroup: MockHandler = ({ params }) => {
+  const entity = CONTACT_ENTITIES.find((entity) => entity.id === params['id']);
+  if (entity === undefined) return notFound('entity', 'contacts.resource.not_found');
+  const body: IdentityGroup = {
+    canonicalId: entity.id,
+    memberIds: [entity.id],
+    revision: 1,
+    selections: [],
+    members: [{ entity }],
+  };
+  return { body };
+};
+
 export const contactsHandlers: MockHandlers = {
   'GET /': ok('contacts'),
   'GET /openapi': ok({}),
@@ -91,6 +160,26 @@ export const contactsHandlers: MockHandlers = {
   }),
   'GET /entities': listEntities,
   'POST /entities': created(mutation),
+  'POST /entities/resolve': resolveIdentities,
+  'GET /merges/groups/{id}': identityGroup,
+  'POST /merges': ok<MergeResult>({
+    canonicalId: firstEntity?.id ?? '',
+    memberIds: [firstEntity?.id ?? ''],
+    operationId: 'merge-standalone',
+    revision: 2,
+  }),
+  'POST /merges/{id}/undo': ok<UndoResult>({
+    operationId: 'undo-standalone',
+    restoredIds: [firstEntity?.id ?? ''],
+    revision: 3,
+  }),
+  'GET /merges/keep-separate': ok<SeparateList>({ data: [], revision: 1 }),
+  'POST /merges/keep-separate': ok<SeparateResult>({
+    keepSeparate: true,
+    leftId: firstEntity?.id ?? '',
+    rightId: 'other-standalone',
+    revision: 2,
+  }),
   'POST /entities/lookup': ok<EntitiesLookupResponses[200]>({
     entities: CONTACT_ENTITIES.map(({ id, name, aliases, type }) => ({ id, name, aliases, type })),
     fetchedAt: '2026-09-05T08:00:00.000Z',
@@ -116,6 +205,9 @@ export const contactsHandlers: MockHandlers = {
   'PUT /entities/{id}/poster': ok(mutation),
   'DELETE /entities/{id}/poster': ok(mutation),
   'POST /search': ok({ hits: [] }),
+  'POST /imports/files': created(importBatch),
+  'GET /imports/{id}': ok(importBatch),
+  'POST /imports/{id}/commit': ok(importReceipt),
 };
 
 /**

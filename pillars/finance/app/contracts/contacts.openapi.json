@@ -393,6 +393,7 @@
           "contacts.entity.name_conflict",
           "contacts.import.conflict",
           "contacts.import.storage",
+          "contacts.entity.identity_conflict",
           "contacts.auth.unauthorized",
           "contacts.auth.forbidden",
           "contacts.auth.unavailable",
@@ -1051,7 +1052,11 @@
                 "$ref": "#/components/schemas/ImportPayload"
               },
               {
-                "type": "null"
+                "enum": [
+                  null
+                ],
+                "nullable": true,
+                "type": "object"
               }
             ]
           },
@@ -1213,6 +1218,324 @@
           "windows1252"
         ],
         "type": "string"
+      },
+      "FieldSelection": {
+        "additionalProperties": false,
+        "description": "Select a scalar value belonging to a retained entity in the resulting group.",
+        "properties": {
+          "entityId": {
+            "type": "string"
+          },
+          "field": {
+            "$ref": "#/components/schemas/MergeField"
+          }
+        },
+        "required": [
+          "field",
+          "entityId"
+        ],
+        "type": "object"
+      },
+      "IdentityGroup": {
+        "description": "A canonical group and the directory-wide optimistic revision.",
+        "properties": {
+          "canonicalId": {
+            "type": "string"
+          },
+          "memberIds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "revision": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "canonicalId",
+          "memberIds",
+          "revision"
+        ],
+        "type": "object"
+      },
+      "MergeBody": {
+        "additionalProperties": false,
+        "description": "Existing canonical groups to combine; member IDs must name their current roots.\nRequested selections are validated before any redirect changes, never silently ignored.",
+        "properties": {
+          "canonicalId": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "string"
+          },
+          "expectedRevision": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "idempotencyKey": {
+            "type": "string"
+          },
+          "memberIds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "preferredPointIds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "selections": {
+            "items": {
+              "$ref": "#/components/schemas/FieldSelection"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "canonicalId",
+          "memberIds",
+          "expectedRevision",
+          "idempotencyKey",
+          "evidence"
+        ],
+        "type": "object"
+      },
+      "MergeField": {
+        "description": "Scalar fields that can select a retained member's value without overwriting it.",
+        "enum": [
+          "name",
+          "abn",
+          "aliases",
+          "defaultTransactionType",
+          "defaultTags",
+          "notes",
+          "avatarAssetId",
+          "posterAssetId",
+          "personProfile"
+        ],
+        "type": "string"
+      },
+      "MergeResult": {
+        "description": "The immutable result of a merge; retries return this original receipt.",
+        "properties": {
+          "canonicalId": {
+            "type": "string"
+          },
+          "memberIds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "operationId": {
+            "type": "string"
+          },
+          "revision": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "operationId",
+          "canonicalId",
+          "memberIds",
+          "revision"
+        ],
+        "type": "object"
+      },
+      "ResolveBody": {
+        "additionalProperties": false,
+        "description": "Bounded IDs to resolve, preserving request order and repeated historical IDs.",
+        "properties": {
+          "ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "ids"
+        ],
+        "type": "object"
+      },
+      "ResolveResponse": {
+        "description": "A consistent directory snapshot. Batches may be combined only at the same revision.",
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/ResolvedIdentity"
+            },
+            "type": "array"
+          },
+          "revision": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "data",
+          "revision"
+        ],
+        "type": "object"
+      },
+      "ResolvedIdentity": {
+        "description": "A historical ID and its current canonical identity; null means the ID does not exist.",
+        "properties": {
+          "canonicalId": {
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "SeparateBody": {
+        "additionalProperties": false,
+        "description": "Persist or revoke an explicit keep-separate decision for stable member IDs.",
+        "properties": {
+          "evidence": {
+            "type": "string"
+          },
+          "expectedRevision": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "idempotencyKey": {
+            "type": "string"
+          },
+          "keepSeparate": {
+            "type": "boolean"
+          },
+          "leftId": {
+            "type": "string"
+          },
+          "rightId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "leftId",
+          "rightId",
+          "keepSeparate",
+          "expectedRevision",
+          "idempotencyKey",
+          "evidence"
+        ],
+        "type": "object"
+      },
+      "SeparateList": {
+        "description": "All current separation decisions at a consistent directory revision.",
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/SeparatePair"
+            },
+            "type": "array"
+          },
+          "revision": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "data",
+          "revision"
+        ],
+        "type": "object"
+      },
+      "SeparatePair": {
+        "description": "A current stable-member pair preventing direct and indirect merges.",
+        "properties": {
+          "leftId": {
+            "type": "string"
+          },
+          "rightId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "leftId",
+          "rightId"
+        ],
+        "type": "object"
+      },
+      "SeparateResult": {
+        "description": "Result of an explicit separation decision.",
+        "properties": {
+          "keepSeparate": {
+            "type": "boolean"
+          },
+          "leftId": {
+            "type": "string"
+          },
+          "revision": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "rightId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "leftId",
+          "rightId",
+          "keepSeparate",
+          "revision"
+        ],
+        "type": "object"
+      },
+      "UndoBody": {
+        "additionalProperties": false,
+        "description": "Undo requires the exact untouched post-merge directory revision.",
+        "properties": {
+          "expectedRevision": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "idempotencyKey": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "expectedRevision",
+          "idempotencyKey"
+        ],
+        "type": "object"
+      },
+      "UndoResult": {
+        "description": "Undo restores directory membership. External references created after the merge remain unchanged.",
+        "properties": {
+          "operationId": {
+            "type": "string"
+          },
+          "restoredIds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "revision": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "operationId",
+          "restoredIds",
+          "revision"
+        ],
+        "type": "object"
       },
       "UploadFormat": {
         "description": "Supported export formats; the caller chooses explicitly rather than guessing from content.",
@@ -2627,6 +2950,283 @@
         "summary": "Apply selected decisions atomically, preserving a receipt for identical retries.",
         "tags": [
           "crate::imports::routes"
+        ]
+      }
+    },
+    "/entities/resolve": {
+      "post": {
+        "operationId": "entities.resolve",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResolveResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Resolve every historical ID and report the snapshot revision for multi-batch consumers.",
+        "tags": [
+          "crate::merges::routes"
+        ]
+      }
+    },
+    "/merges": {
+      "post": {
+        "operationId": "merges.merge",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MergeBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MergeResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Merge only selected groups with explicit field references and immutable retry receipts.",
+        "tags": [
+          "crate::merges::routes"
+        ]
+      }
+    },
+    "/merges/groups/{id}": {
+      "get": {
+        "operationId": "merges.group",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdentityGroup"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Read the current canonical group and the conservative directory-wide revision.",
+        "tags": [
+          "crate::merges::routes"
+        ]
+      }
+    },
+    "/merges/keep-separate": {
+      "get": {
+        "operationId": "merges.separate_list",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeparateList"
+                }
+              }
+            }
+          }
+        },
+        "summary": "List stable member-pair decisions for conservative matching.",
+        "tags": [
+          "crate::merges::routes"
+        ]
+      },
+      "post": {
+        "operationId": "merges.separate",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SeparateBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeparateResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Persist or revoke candidate-specific separation across the two selected groups.",
+        "tags": [
+          "crate::merges::routes"
+        ]
+      }
+    },
+    "/merges/{id}/undo": {
+      "post": {
+        "operationId": "merges.undo",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UndoBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UndoResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Undo only an untouched merge. External references created after the merge remain unchanged.",
+        "tags": [
+          "crate::merges::routes"
         ]
       }
     }
