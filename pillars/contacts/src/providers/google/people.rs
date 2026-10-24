@@ -1,7 +1,7 @@
 //! Fixed-parameter Google People pagination with seven-day checkpoint expiry.
 
 use super::oauth::{retry_after, GoogleError};
-use crate::imports::model::{ImportPayload, StageRowInput};
+use crate::imports::model::{qualify_structured_name, ImportPayload, StageRowInput};
 use crate::persons::model::{ContactPointInput, ContactPointKind, PersonName};
 use crate::providers::credentials::SecretBytes;
 use crate::providers::sync::{PageProgress, ProviderChange, ProviderPage};
@@ -372,7 +372,7 @@ fn map_person(person: Person) -> Result<ProviderChange, GoogleError> {
         }
         Some(ImportPayload {
             display_name,
-            name: profile,
+            name: qualify_structured_name(profile),
             points,
         })
     };
