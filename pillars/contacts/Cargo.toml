@@ -34,9 +34,9 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 uuid = { workspace = true }
 unicode-normalization = { workspace = true }
-csv = "1.4"
-ical = "0.11"
-encoding_rs = "0.8"
+csv = { workspace = true }
+ical = { workspace = true }
+encoding_rs = { workspace = true }
 rlibphonenumber = { workspace = true }
 
 [dev-dependencies]
