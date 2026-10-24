@@ -185,13 +185,21 @@ Pin a release with `POPS_IMAGE_TAG=sha-abc1234` (or `v1`, `main`, …) in `.env`
 
 ### Git worktrees
 
+Agents lease warm slots from a small pool instead of creating a worktree per task, so the Rust `target/` and `node_modules/` survive between tasks.
+
 ```bash
-BRANCH=feat/name mise worktree:create        # branches off main, copies files
-BRANCH=feat/name mise worktree:create:deps   # + installs deps (slower)
-BRANCH=feat/name mise worktree:remove
+BRANCH=feat/name mise worktree:acquire       # prints the slot path; cd into it
+BRANCH=feat/name mise worktree:acquire:deps  # + pnpm install
+SLOT=feat/name mise worktree:release         # slot name, path or branch; must be clean
+mise worktree:status                         # slots, branch, busy/free, dirty, target/ size
+mise worktree:gc                             # dry-run report; GC_ARGS=--apply to act
 ```
 
-These use Git directly, so they work on a fresh clone without a separately installed helper. The worktree lands at `../<branch-name>` relative to the repo root — e.g. from `/Users/joao/dev/personal/pops` → `/Users/joao/dev/personal/<branch-name>`. `worktree:create:deps` runs `pnpm install` in the new worktree. Manual cleanup: `git worktree remove ../<branch-name> && git branch -d <branch-name>`.
+`acquire` fetches `origin/main`, then reuses a free slot (clean, no live lease), reclaims one whose lease holder is dead, clean and older than the grace window, or creates a new one below the cap. Dirty slots are never touched; at the cap it fails and lists the busy ones. The branch is created from `origin/main`, or checked out if it already exists. Release after the PR is open or merged: it detaches HEAD at `origin/main` so the squash-merge flow can delete the branch. Never `git worktree add` per task.
+
+Slots are `pops-slot-N` beside the main checkout. Env: `POPS_WORKTREE_ROOT` (pool dir), `POPS_WORKTREE_MAX_SLOTS` (default 6), `POPS_WORKTREE_LEASE_GRACE_MS` (default 30 min), `POPS_WORKTREE_HOLDER_PID` (lease holder; defaults to the parent process, which is usually short-lived, so a long task should set it or rely on the grace window). `gc` only prunes `prunable` worktrees and deletes local branches merged into `origin/main`; branches whose upstream is gone are deleted only with `--apply --include-gone`, and a checked-out branch never is. Run `git fetch --prune` first for accurate "gone" results.
+
+`worktree:create`, `:create:deps` and `:remove` still work for a one-off worktree at `../<branch-name>`.
 
 ### Deployment
 
