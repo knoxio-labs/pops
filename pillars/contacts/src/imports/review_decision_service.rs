@@ -135,7 +135,11 @@ pub(crate) async fn apply_authorized(
     let defer_only = !input.later_entity_ids.is_empty()
         && input.merge_entity_ids.is_empty()
         && input.different_entity_ids.is_empty();
-    if defer_only && (!input.selections.is_empty() || !input.preferred_point_ids.is_empty()) {
+    if defer_only
+        && (!input.selections.is_empty()
+            || !input.preferred_point_ids.is_empty()
+            || !input.incoming_fields.is_empty())
+    {
         return Err(ImportError::Invalid(
             "Deferring candidates cannot change preferred values",
         ));
@@ -162,6 +166,29 @@ pub(crate) async fn apply_authorized(
         created = matches!(action, RowAction::CreatePerson);
     }
     let mut selections = input.selections.clone();
+    for field in &input.incoming_fields {
+        let payload = row.payload.as_ref().ok_or(ImportError::Invalid(
+            "Incoming field has no source evidence",
+        ))?;
+        let present = match field {
+            SourceMergeField::Name => payload
+                .display_name
+                .as_ref()
+                .is_some_and(|name| !name.trim().is_empty()),
+            SourceMergeField::PersonProfile => has_structured_name(&payload.name),
+        };
+        if !present {
+            return Err(ImportError::Invalid(
+                "Incoming field has no source evidence",
+            ));
+        }
+        selections.push(FieldSelection::SourceRecord {
+            field: *field,
+            source_record_id: source_record_id.clone().ok_or(ImportError::Invalid(
+                "Incoming field requires this row's source binding",
+            ))?,
+        });
+    }
     if created
         && preferred_canonical.is_none()
         && !selections
@@ -324,13 +351,27 @@ fn validate(input: &ReviewDecisionInput) -> Result<(), ImportError> {
         || input.merge_entity_ids.len() > 499
         || input.different_entity_ids.len() > 499
         || input.later_entity_ids.len() > 10_000
-        || input.selections.len() > 9
+        || input.selections.len() + input.incoming_fields.len() > 9
+        || input.incoming_fields.len() > 2
         || input.preferred_point_ids.len() > 4
         || (input.merge_entity_ids.len() + 1) * input.different_entity_ids.len() > 1000
     {
         return Err(ImportError::Invalid(
             "Review identifiers and selections must be bounded",
         ));
+    }
+    let mut fields = BTreeSet::new();
+    for field in input
+        .selections
+        .iter()
+        .map(FieldSelection::field)
+        .chain(input.incoming_fields.iter().map(|field| field.field()))
+    {
+        if !fields.insert(field) {
+            return Err(ImportError::Invalid(
+                "Select each preferred field at most once",
+            ));
+        }
     }
     let mut unique = BTreeSet::new();
     for id in input

@@ -54,6 +54,7 @@ pub fn build_router(state: AppState) -> Router {
         .merge(crate::imports::routes::router())
         .merge(crate::imports::review_decision_routes::router())
         .merge(crate::imports::review_routes::router())
+        .merge(crate::imports::ready_routes::router())
         .merge(crate::persons::routes::router())
         .merge(crate::sources::routes::router())
         .merge(crate::merges::routes::router())

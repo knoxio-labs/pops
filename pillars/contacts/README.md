@@ -127,7 +127,11 @@ a first incoming merge retains the selected existing root (the smallest authoriz
 ID when several are selected), while later decisions keep the row's current
 canonical group. Empty selectors preserve its scalar fields, structured profile
 and contact-point preferences; explicit validated field/point references replace
-them. The incoming source keeps its original retained owner independently of the
+them. Optional `incomingFields: ["name", "personProfile"]` explicitly replaces
+only those fields from this row's validated immutable source observation, including
+before its entity/source IDs exist. Missing evidence, duplicate/conflicting field
+selectors and field intent on a pure Later decision reject the complete action.
+The incoming source keeps its original retained owner independently of the
 canonical result. All ingestion, negative pairs, preferred-value
 selections, subset merge and retry receipt share one SQLite transaction. A failed
 selection rolls everything back. Empty candidate lists explicitly ingest an
@@ -175,6 +179,23 @@ header and error body. Database diagnostics are logged with that id; clients
 receive a stable error code and generic message, never SQLite or `sqlx` error
 text. Import persistence logs contain only a safe classification and request id,
 with `contacts.import.storage` returned to the caller.
+
+`POST /imports/{id}/apply-ready` accepts the review response's `batchRevision` and
+`directoryRevision`, its `ready.proposalRevision`, and an `idempotencyKey`.
+The server recomputes the entire batch against the directory and pending rows in
+other batches before writing. Only unambiguous exact email, valid phone or complete
+name matches, true new people and fresh recognized-source updates/removals apply.
+First-name-only evidence never links people; a genuinely new first-name-only person
+can still be created. Existing canonical preferred values remain the default.
+
+The global action leaves ambiguous, invalid, stale, explicit Later and previously
+ingested-but-unresolved rows untouched. Its ready proof also fences staging and
+decision changes in other batches. An identical retry returns its immutable batch
+receipt before any freshness checks; a changed body with the same key conflicts.
+All selected rows and receipts share one reserved write transaction, with a bounded
+expanded-write budget. Cross-batch classification stops automatic readiness when
+more than 10,000 external pending rows or 100 external batches would be needed;
+manual review remains available. Any late failure rolls the whole action back.
 
 ## Canonical person identity and guarded undo
 
