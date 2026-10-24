@@ -338,6 +338,12 @@ async fn source_refresh_and_deletion_keep_local_preferences_and_separate_namespa
     let mut tx = pool.begin().await.unwrap();
     let initial = sources::apply_record(&mut tx, &input).await.unwrap();
     tx.commit().await.unwrap();
+    let mut tx = pool.begin().await.unwrap();
+    let unchanged = sources::apply_record(&mut tx, &input).await.unwrap();
+    assert_eq!(unchanged.revision, initial.revision);
+    assert_eq!(unchanged.last_seen_at, initial.last_seen_at);
+    tx.commit().await.unwrap();
+    assert_eq!(persons::list_points(&pool, &first).await.unwrap().len(), 2);
     input.points = vec![point("new@example.test")];
     let mut tx = pool.begin().await.unwrap();
     let refreshed = sources::apply_record(&mut tx, &input).await.unwrap();
@@ -365,6 +371,7 @@ async fn source_refresh_and_deletion_keep_local_preferences_and_separate_namespa
             .as_deref(),
         Some("Local")
     );
+    assert!(points.iter().all(|point| point.normalized_value.is_some()));
     let imported = points
         .iter()
         .find(|point| point.value == "new@example.test")
@@ -491,4 +498,63 @@ async fn migration_keeps_existing_entity_ids_and_merchant_uniqueness() {
     .execute(&pool)
     .await
     .is_err());
+}
+
+#[tokio::test]
+async fn malformed_person_and_source_metadata_use_safe_error_envelopes() {
+    let (app, pool) = app().await;
+    let person = create(&app, "Alex", "person").await;
+    for (path, body) in [
+        (
+            format!("/entities/{person}/person"),
+            json!({"completeness":"guessed"}),
+        ),
+        (
+            format!("/entities/{person}/contact-points"),
+            json!({"kind":"unrecognized","value":"value"}),
+        ),
+        (
+            "/sources/accounts".to_string(),
+            json!({"provider":"google","accountKey":"subject","credential":"not accepted"}),
+        ),
+    ] {
+        let method = if path.ends_with("/person") {
+            "PUT"
+        } else {
+            "POST"
+        };
+        let (status, body) = send(&app, method, &path, body).await;
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        assert_eq!(body["code"], "contacts.request.invalid");
+        assert!(body["requestId"].is_string());
+        assert_eq!(body["retryable"], false);
+    }
+    assert!(sources::list_accounts(&pool).await.unwrap().is_empty());
+    assert!(persons::list_points(&pool, &person)
+        .await
+        .unwrap()
+        .is_empty());
+    let (status, _) = send(
+        &app,
+        "POST",
+        "/sources/accounts",
+        json!({"provider":" ","accountKey":"subject"}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    let mut tx = pool.begin().await.unwrap();
+    let input = SourceRecordInput {
+        account_id: "missing".to_string(),
+        collection_key: "addressbook".to_string(),
+        record_key: "record".to_string(),
+        entity_id: person,
+        name: PersonName::default(),
+        display_name: None,
+        points: Vec::new(),
+    };
+    assert!(matches!(
+        sources::apply_record(&mut tx, &input).await,
+        Err(sources::SourceError::NotFound)
+    ));
+    tx.rollback().await.unwrap();
 }
