@@ -1,104 +1,71 @@
-/**
- * SortableGrid — HTML5 drag-drop reorder grid.
- *
- * Domain-agnostic reorder mechanics. Consumers provide a `renderItem`
- * callback and an `onReorder` handler that receives the new array.
- */
-import { type ReactNode, useState } from 'react';
+import { type ReactNode } from 'react';
 
 import { cn } from '../lib/utils';
+import { useSortableDrag } from './SortableGrid.hook';
 
+/** Reorder stable, uniquely keyed items with a full-card native drag image and live preview. */
 export interface SortableGridProps<T> {
   items: T[];
+  /** Keys must stay stable across reorders and have unique string representations. */
   getKey: (item: T, index: number) => string | number;
   renderItem: (item: T, index: number, state: { isDragging: boolean }) => ReactNode;
   onReorder: (nextOrder: T[]) => void;
+  /** Observe live sorting without committing; null clears the preview after drop or cancellation. */
+  onPreviewOrderChange?: (nextOrder: T[] | null) => void;
   /** Tailwind grid classes. Default `grid-cols-3`. */
   columnsClassName?: string;
-  /** Disable drag-drop. */
   disabled?: boolean;
   className?: string;
 }
 
-function useSortableDrag<T>(
-  items: T[],
-  getKey: (item: T, index: number) => string | number,
-  onReorder: (next: T[]) => void,
-  disabled?: boolean
-) {
-  const [dragIndex, setDragIndex] = useState<number | null>(null);
-  const [overIndex, setOverIndex] = useState<number | null>(null);
-
-  const handleDragStart = (i: number) => (e: React.DragEvent<HTMLDivElement>) => {
-    if (disabled) return;
-    setDragIndex(i);
-    e.dataTransfer.effectAllowed = 'move';
-    const item = items[i];
-    if (item !== undefined) e.dataTransfer.setData('text/plain', String(getKey(item, i)));
-  };
-
-  const handleDragOver = (i: number) => (e: React.DragEvent<HTMLDivElement>) => {
-    if (disabled) return;
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    if (overIndex !== i) setOverIndex(i);
-  };
-
-  const handleDrop = (i: number) => (e: React.DragEvent<HTMLDivElement>) => {
-    if (disabled) return;
-    e.preventDefault();
-    if (dragIndex === null || dragIndex === i) {
-      setDragIndex(null);
-      setOverIndex(null);
-      return;
-    }
-    const next = items.slice();
-    const [moved] = next.splice(dragIndex, 1);
-    if (moved !== undefined) next.splice(i, 0, moved);
-    onReorder(next);
-    setDragIndex(null);
-    setOverIndex(null);
-  };
-
-  const handleDragEnd = () => {
-    setDragIndex(null);
-    setOverIndex(null);
-  };
-
-  return { dragIndex, overIndex, handleDragStart, handleDragOver, handleDrop, handleDragEnd };
-}
-
+/** Lift the full item, retain a dashed slot, and shift neighbours without committing until drop. */
 export function SortableGrid<T>({
   items,
   getKey,
   renderItem,
   onReorder,
+  onPreviewOrderChange,
   columnsClassName = 'grid-cols-3',
   disabled,
   className,
 }: SortableGridProps<T>) {
-  const drag = useSortableDrag(items, getKey, onReorder, disabled);
-
+  const keys = items.map(getKey);
+  if (new Set(keys.map(String)).size !== keys.length) {
+    throw new Error('SortableGrid requires unique item keys.');
+  }
+  function resolveOrder(next: Array<string | number>) {
+    return next.flatMap((key) => items.filter((item, index) => getKey(item, index) === key));
+  }
+  const drag = useSortableDrag(
+    keys,
+    (next) => onReorder(resolveOrder(next)),
+    disabled,
+    (next) => onPreviewOrderChange?.(next === null ? null : resolveOrder(next))
+  );
   return (
     <div className={cn('grid gap-3', columnsClassName, className)}>
-      {items.map((item, i) => {
-        const isDragging = drag.dragIndex === i;
-        const isOver = drag.overIndex === i && drag.dragIndex !== i;
+      {items.map((item, index) => {
+        const key = getKey(item, index);
+        const isDragging = drag.draggedKey === key;
         return (
           <div
-            key={getKey(item, i)}
+            key={key}
             draggable={!disabled}
-            onDragStart={drag.handleDragStart(i)}
-            onDragOver={drag.handleDragOver(i)}
-            onDrop={drag.handleDrop(i)}
-            onDragEnd={drag.handleDragEnd}
+            data-sortable-key={key}
+            data-sortable-placeholder={isDragging || undefined}
+            style={{ order: drag.order.indexOf(key) }}
+            onDragStart={(event) => drag.start(key, event)}
+            onDragOver={(event) => drag.over(key, event)}
+            onDrop={(event) => drag.drop(key, event)}
+            onDragEnd={drag.end}
             className={cn(
-              'transition-all',
-              isDragging && 'opacity-40',
-              isOver && 'ring-2 ring-ring ring-offset-2'
+              'rounded-xl border border-transparent transition-colors',
+              isDragging && 'border-dashed border-app-accent bg-muted/30'
             )}
           >
-            {renderItem(item, i, { isDragging })}
+            <div className={cn(isDragging && 'invisible pointer-events-none')}>
+              {renderItem(item, index, { isDragging })}
+            </div>
           </div>
         );
       })}
