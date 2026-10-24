@@ -554,6 +554,9 @@
           "contacts.auth.unauthorized",
           "contacts.auth.forbidden",
           "contacts.auth.unavailable",
+          "contacts.provider.unavailable",
+          "contacts.provider.conflict",
+          "contacts.provider.reauthorization_required",
           "contacts.internal"
         ],
         "type": "string"
@@ -607,6 +610,25 @@
           }
         ]
       },
+      "GoogleAuthorizeRequest": {
+        "additionalProperties": false,
+        "description": "A browser authorization request. Omit accountId only for a new connection.",
+        "properties": {
+          "accountId": {
+            "nullable": true,
+            "type": "string"
+          },
+          "includeOtherContacts": {
+            "description": "Separately opt in to Google's additional read-only Other contacts scope.",
+            "type": "boolean"
+          },
+          "label": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "GroupMember": {
         "description": "Original entity fields and local structured name used as auditable side-by-side merge evidence.",
         "properties": {
@@ -658,6 +680,32 @@
           "pillar",
           "version",
           "ts"
+        ],
+        "type": "object"
+      },
+      "IcloudConnectRequest": {
+        "additionalProperties": false,
+        "description": "App-password connection request. Password has no Debug/Serialize implementation.",
+        "properties": {
+          "accountId": {
+            "nullable": true,
+            "type": "string"
+          },
+          "label": {
+            "nullable": true,
+            "type": "string"
+          },
+          "password": {
+            "type": "string",
+            "writeOnly": true
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "username",
+          "password"
         ],
         "type": "object"
       },
@@ -1177,6 +1225,101 @@
           "source_removal"
         ],
         "type": "string"
+      },
+      "ProviderAccountStatus": {
+        "description": "A credential-free account status for management UI and automation.",
+        "properties": {
+          "accountId": {
+            "type": "string"
+          },
+          "connected": {
+            "type": "boolean"
+          },
+          "includeOtherContacts": {
+            "type": "boolean"
+          },
+          "latestRunId": {
+            "description": "Most recent run, including unfinished or failed worker attempts.",
+            "nullable": true,
+            "type": "string"
+          },
+          "previewRunId": {
+            "description": "Most recent successful scan whose preview IDs remain discoverable.",
+            "nullable": true,
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "reauthorizationRequired": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "accountId",
+          "provider",
+          "connected",
+          "reauthorizationRequired",
+          "includeOtherContacts"
+        ],
+        "type": "object"
+      },
+      "ProviderOperation": {
+        "description": "Saved operation identifier; credentials and opaque provider cursors are omitted.",
+        "properties": {
+          "accountId": {
+            "type": "string"
+          },
+          "runId": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "accountId"
+        ],
+        "type": "object"
+      },
+      "ProviderRunStatus": {
+        "description": "Safe durable scan progress. Returned previews use the shared import endpoints.",
+        "properties": {
+          "accountId": {
+            "type": "string"
+          },
+          "batchIds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "completedCollections": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "errorCode": {
+            "nullable": true,
+            "type": "string"
+          },
+          "runId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "totalCollections": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "runId",
+          "accountId",
+          "status",
+          "totalCollections",
+          "completedCollections",
+          "batchIds"
+        ],
+        "type": "object"
       },
       "ReadyBatchInput": {
         "additionalProperties": false,
@@ -4224,6 +4367,370 @@
         "summary": "`GET /openapi` — serve the pinned 3.0.3 OpenAPI document.",
         "tags": [
           "crate::app"
+        ]
+      }
+    },
+    "/providers/accounts": {
+      "get": {
+        "operationId": "providers.accounts.list",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProviderAccountStatus"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Connection states"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Human session required"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Connections unavailable"
+          }
+        },
+        "summary": "List connection states after verifying a human operator; never return secrets.",
+        "tags": [
+          "crate::providers::routes"
+        ]
+      }
+    },
+    "/providers/accounts/{id}": {
+      "delete": {
+        "operationId": "providers.accounts.disconnect",
+        "parameters": [
+          {
+            "description": "Source account UUID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Disconnected"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Human session required"
+          }
+        },
+        "summary": "Revoke credentials and fence callbacks, previews and in-flight provider results.",
+        "tags": [
+          "crate::providers::routes"
+        ]
+      }
+    },
+    "/providers/accounts/{id}/sync": {
+      "post": {
+        "operationId": "providers.sync.start",
+        "parameters": [
+          {
+            "description": "Source account UUID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderOperation"
+                }
+              }
+            },
+            "description": "Durable scan started"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Verified identity required"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Connection changed or scan already running"
+          }
+        },
+        "summary": "Queue a discovered account scan for a verified human or a registry-verified\nservice account admitted by this operation's outer scope gate.",
+        "tags": [
+          "crate::providers::routes"
+        ]
+      }
+    },
+    "/providers/google/authorize": {
+      "post": {
+        "operationId": "providers.google.authorize",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoogleAuthorizeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Authorization created; open the Location header URL",
+            "headers": {
+              "Location": {
+                "description": "One-use Google browser authorization URL",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Human session required"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Connections unavailable"
+          }
+        },
+        "summary": "Start one-use Google authorization under the verified operator identity.",
+        "tags": [
+          "crate::providers::routes"
+        ]
+      }
+    },
+    "/providers/google/callback": {
+      "get": {
+        "operationId": "providers.google.callback",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "code",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "error",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "state",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "303": {
+            "description": "Return to connections with only a generic browser error code on failure",
+            "headers": {
+              "Location": {
+                "description": "Fixed shell connections route",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid or cancelled JSON callback"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Human session required"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Authorization changed or account mismatch"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Connections unavailable"
+          }
+        },
+        "summary": "Consume state before exchanging the callback code; human subject and account\nepoch must match the initiating authorization attempt. Successful browser\ncallbacks return to the fixed shell connections route without auth details.\nHTML failures return only a generic cancelled/failed code on that route;\nJSON clients retain the structured error response.",
+        "tags": [
+          "crate::providers::routes"
+        ]
+      }
+    },
+    "/providers/icloud/accounts": {
+      "post": {
+        "operationId": "providers.icloud.connect",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IcloudConnectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderOperation"
+                }
+              }
+            },
+            "description": "iCloud account connected"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Human session required"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Principal mismatch or changed connection"
+          }
+        },
+        "summary": "Validate iCloud credentials and actual principal before encrypted installation.",
+        "tags": [
+          "crate::providers::routes"
+        ]
+      }
+    },
+    "/providers/sync/{id}": {
+      "get": {
+        "operationId": "providers.sync.get",
+        "parameters": [
+          {
+            "description": "Durable scan UUID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderRunStatus"
+                }
+              }
+            },
+            "description": "Scan progress"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Verified identity required"
+          }
+        },
+        "summary": "Read safe scan progress without exposing cursor, raw card or credential values.",
+        "tags": [
+          "crate::providers::routes"
         ]
       }
     },

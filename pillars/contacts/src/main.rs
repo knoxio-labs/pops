@@ -9,7 +9,7 @@
 use std::net::SocketAddr;
 use std::sync::Arc;
 
-use contacts::app::{build_router, AppState};
+use contacts::app::{build_router_with_providers, AppState};
 use contacts::config::Config;
 use contacts::db;
 use contacts::manifest::build_contacts_manifest;
@@ -34,6 +34,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing::info!(port = config.port, sqlite = %config.sqlite_path, "booting contacts pillar");
 
     let pool = db::connect(&config.database_url()).await?;
+    let providers = contacts::providers::runtime::ProviderRuntime::from_env().map(Arc::new);
+    let worker = providers
+        .as_ref()
+        .map(|runtime| Arc::clone(runtime).spawn(pool.clone()));
     let state = AppState {
         pool,
         version: config.version.clone(),
@@ -41,7 +45,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             config.registry_url.clone(),
         )?,
     };
-    let router = build_router(state);
+    let router = build_router_with_providers(state, providers);
 
     let lifecycle = maybe_spawn_registry(&config);
 
@@ -55,6 +59,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     axum::serve(listener, router)
         .with_graceful_shutdown(shutdown_signal())
         .await?;
+
+    if let Some(worker) = worker {
+        worker.abort();
+        let _ = worker.await;
+    }
 
     if let Some(handle) = lifecycle {
         handle.stop().await;

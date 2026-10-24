@@ -48,6 +48,12 @@ impl std::fmt::Display for TransportError {
 
 impl std::error::Error for TransportError {}
 
+impl<T: ProviderTransport + ?Sized> ProviderTransport for std::sync::Arc<T> {
+    fn send<'a>(&'a self, request: ProviderRequest<'a>) -> ProviderResponseFuture<'a> {
+        self.as_ref().send(request)
+    }
+}
+
 /// A bounded response without Debug/Serialize implementations; provider payloads
 /// may contain tokens or personal data and must not appear in diagnostics.
 pub struct ProviderResponse {

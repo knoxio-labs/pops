@@ -9,7 +9,27 @@ use sqlx::{SqliteConnection, SqlitePool};
 /// current import previews, and advance terminal checkpoints in one transaction.
 /// Canonical directory writes remain explicit shared import decisions.
 pub async fn finalize_sync(pool: &SqlitePool, id: &str) -> Result<Vec<ImportBatch>, SyncError> {
+    finalize_inner(pool, id, None).await
+}
+
+/// Finalize only while the worker claim remains current.
+pub async fn finalize_claimed(
+    pool: &SqlitePool,
+    lease: &super::lease::RunLease,
+    now: i64,
+) -> Result<Vec<ImportBatch>, SyncError> {
+    finalize_inner(pool, &lease.run_id, Some((lease, now))).await
+}
+
+async fn finalize_inner(
+    pool: &SqlitePool,
+    id: &str,
+    claim: Option<(&super::lease::RunLease, i64)>,
+) -> Result<Vec<ImportBatch>, SyncError> {
     let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+    if let Some((lease, now)) = claim {
+        super::lease::fence(&mut tx, lease, now).await?;
+    }
     let existing = repo::run(&mut tx, id).await?;
     if existing.status == "completed" {
         let ids: Vec<String> = sqlx::query_scalar("SELECT g.batch_id FROM provider_batch_guards g JOIN contact_import_batches b ON b.id=g.batch_id WHERE g.run_id=?1 ORDER BY b.collection_key")

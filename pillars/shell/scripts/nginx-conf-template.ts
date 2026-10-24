@@ -17,7 +17,18 @@ export const NGINX_CONF_HEAD = `map $http_x_request_id $pops_request_id {
     "" $request_id;
 }
 
-log_format pops_json escape=json '{"timestamp":"$time_iso8601","remoteAddress":"$remote_addr","request":"$request","status":$status,"bytesSent":$body_bytes_sent,"requestTime":$request_time,"upstreamAddress":"$upstream_addr","upstreamStatus":"$upstream_status","requestId":"$pops_request_id"}';
+map $request_uri $pops_original_request_path {
+    default $request_uri;
+    ~^(?<pops_request_path_without_args>[^?]*)\\? $pops_request_path_without_args;
+}
+
+map $uri $pops_logged_request {
+    default $request;
+    /contacts-api/providers/google/callback "$request_method $pops_original_request_path $server_protocol";
+    /providers/google/callback "$request_method $pops_original_request_path $server_protocol";
+}
+
+log_format pops_json escape=json '{"timestamp":"$time_iso8601","remoteAddress":"$remote_addr","request":"$pops_logged_request","status":$status,"bytesSent":$body_bytes_sent,"requestTime":$request_time,"upstreamAddress":"$upstream_addr","upstreamStatus":"$upstream_status","requestId":"$pops_request_id"}';
 `;
 
 /** Fixed server-context configuration that follows generated upstream groups. */
