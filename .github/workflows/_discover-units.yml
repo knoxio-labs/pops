@@ -162,7 +162,9 @@ jobs:
           # ALL. An unusable push base (above, `base` left empty) gets the
           # same treatment: no diff to trust means no unit can be safely
           # excluded either.
-          shared_root_pattern='^(pnpm-lock\.yaml|pnpm-workspace\.yaml|tsconfig\.base\.json|tsconfig\.build\.json|\.oxfmtrc\.json|\.oxlintrc\.json|mise\.toml|mise\.ci\.toml|Cargo\.toml|Cargo\.lock)$'
+          # The unit lane's own definition is part of every unit's receipt key,
+          # so a change to it re-validates every unit as well.
+          shared_root_pattern='^(pnpm-lock\.yaml|pnpm-workspace\.yaml|tsconfig\.base\.json|tsconfig\.build\.json|\.oxfmtrc\.json|\.oxlintrc\.json|mise\.toml|mise\.ci\.toml|Cargo\.toml|Cargo\.lock|\.github/workflows/unit-quality\.yml|\.github/workflows/_discover-units\.yml|\.github/actions/setup-mise/.*|scripts/ci/ci-receipts\.mjs|scripts/ci/select-affected-apps\.mjs|scripts/local-dev/fingerprint\.mjs|scripts/local-dev/repository-inputs\.mjs)$'
           if [ "${{ inputs.full-validation }}" = "true" ] || [ -z "$base" ] || echo "$diff" | grep -qE "$shared_root_pattern"; then
             if [ -z "$base" ]; then
               echo "No usable git base for this push's diff — building ALL units."

@@ -66,8 +66,10 @@ certified without reading them. Incremental compiler checking still runs. A fail
 during checking never creates a success receipt. Tests are not cached by this
 receipt. Concurrent checks in one worktree are refused. If a process is killed,
 verify its recorded PID has stopped before removing its reported lock directory.
-`--force` reruns checks; removing the ignored cache is also safe. CI does
-not reuse these local receipts.
+`--force` reruns checks; removing the ignored cache is also safe. CI never
+reads these local receipts; its unit lanes keep separate exact-input receipts
+that only CI runs can write, sharing this file-hashing code (see
+`.github/workflows/README.md`).
 
 The push hook refuses a dirty tree before validating the commit being pushed. It
 uses the same affected typecheck command and can reuse a preceding successful
