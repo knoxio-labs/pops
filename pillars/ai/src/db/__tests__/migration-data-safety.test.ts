@@ -198,7 +198,7 @@ describe('applying the rest of the journal to a populated ai database', () => {
     expect(count('ai_inference_log')).toBe(2);
     expect(count('ai_alert_rules')).toBe(1);
     expect(count('ai_alerts')).toBe(2);
-    expect(count('ai_model_pricing')).toBe(7);
+    expect(count('ai_model_pricing')).toBe(8);
     expect(count('ai_budgets')).toBe(1);
   });
 

@@ -112,16 +112,17 @@ describe('categorizeWithAi — live call (mocked SDK)', () => {
       model: string;
       max_tokens: number;
       temperature?: number;
+      output_config?: { effort: string };
     };
-    expect(req.model).toBe('claude-haiku-4-5-20251001');
-    expect(req.max_tokens).toBe(200);
-    // Closed-set classification: the same row must not be sampled two ways (POPS-3669).
-    expect(req.temperature).toBe(0);
+    expect(req.model).toBe('claude-haiku-5-5');
+    expect(req.max_tokens).toBe(2000);
+    expect(req.output_config).toEqual({ effort: 'low' });
+    expect(req).not.toHaveProperty('temperature');
 
     expect(out.result?.entityName).toBe('Woolworths');
     expect(out.result?.tags).toEqual(['venue:supermarket', 'contains:groceries']);
-    // cost = 100/1e6 * 1 + 20/1e6 * 5 = 0.0002
-    expect(out.usage?.costUsd).toBeCloseTo(0.0002, 9);
+    // cost = 100/1e6 * 0.1 + 20/1e6 * 0.5 = 0.00002
+    expect(out.usage?.costUsd).toBeCloseTo(0.00002, 9);
   });
 
   it('honours the model + maxTokens env overrides', async () => {
@@ -129,9 +130,15 @@ describe('categorizeWithAi — live call (mocked SDK)', () => {
     process.env['FINANCE_AI_CATEGORIZER_MAX_TOKENS'] = '512';
     createMock.mockResolvedValue(textResponse('{"entityName":"X","contains":[]}'));
     await categorizeWithAi({ description: 'X' }, undefined, VOCAB, { db });
-    const req = createMock.mock.calls[0]?.[0] as { model: string; max_tokens: number };
+    const req = createMock.mock.calls[0]?.[0] as {
+      model: string;
+      max_tokens: number;
+      temperature?: number;
+    };
     expect(req.model).toBe('claude-haiku-4-5');
     expect(req.max_tokens).toBe(512);
+    // Closed-set classification: the same row must not be sampled two ways (POPS-3669).
+    expect(req.temperature).toBe(0);
   });
 
   it('strips ```json fences before parsing', async () => {

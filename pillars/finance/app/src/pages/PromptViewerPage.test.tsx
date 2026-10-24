@@ -29,7 +29,7 @@ describe('PromptViewerPage', () => {
 
   it('shows model attribution for each prompt', () => {
     renderPage();
-    const modelBadges = screen.getAllByText('claude-haiku-4-5-20251001');
+    const modelBadges = screen.getAllByText('claude-haiku-5-5');
     expect(modelBadges).toHaveLength(5);
   });
 

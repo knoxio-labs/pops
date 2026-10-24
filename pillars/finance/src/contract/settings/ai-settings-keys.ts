@@ -11,7 +11,7 @@ export const AI_CATEGORIZER_PRE_ACCEPT_PERCENT_KEY =
 export const RULE_GEN_MODEL_KEY = 'finance.ruleGen.model';
 export const RULE_GEN_MAX_TOKENS_KEY = 'finance.ruleGen.maxTokens';
 
-export const FINANCE_AI_MODEL_DEFAULT = 'claude-haiku-4-5-20251001';
+export const FINANCE_AI_MODEL_DEFAULT = 'claude-haiku-5-5';
 
 /**
  * The models the two model settings offer, with the USD-per-million-token rates
@@ -21,9 +21,9 @@ export const FINANCE_AI_MODEL_DEFAULT = 'claude-haiku-4-5-20251001';
 export const FINANCE_AI_MODEL_OPTIONS = [
   {
     value: FINANCE_AI_MODEL_DEFAULT,
-    label: 'Claude Haiku 4.5',
-    inputCostPerMtok: 1,
-    outputCostPerMtok: 5,
+    label: 'Claude Haiku 5.5',
+    inputCostPerMtok: 0.1,
+    outputCostPerMtok: 0.5,
   },
   {
     value: 'claude-sonnet-5-5',

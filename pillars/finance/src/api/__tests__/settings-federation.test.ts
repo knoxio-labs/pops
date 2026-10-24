@@ -52,7 +52,7 @@ describe('finance federated /settings', () => {
     const byKey = new Map<string, string>(
       (res.body.data as { key: string; value: string }[]).map((row) => [row.key, row.value])
     );
-    expect(byKey.get('finance.aiCategorizer.model')).toBe('claude-haiku-4-5-20251001');
+    expect(byKey.get('finance.aiCategorizer.model')).toBe('claude-haiku-5-5');
     expect(byKey.get('finance.aiCategorizer.maxTokens')).toBe('200');
     expect(byKey.get('finance.defaultLimit')).toBe('50');
   });
