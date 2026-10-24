@@ -7,6 +7,12 @@ import ui from '@pops/locales/en-AU/ui.json';
 
 import contacts from './locales/en-AU.json';
 
+globalThis.ResizeObserver ??= class ResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+};
+
 void createInstance()
   .use(initReactI18next)
   .init({

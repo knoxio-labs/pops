@@ -24,6 +24,7 @@
     "@pops/ui": "workspace:*",
     "@tanstack/react-query": "5.102.8",
     "i18next": "^26.4.2",
+    "lucide-react": "^1.46.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-i18next": "^17.0.13",

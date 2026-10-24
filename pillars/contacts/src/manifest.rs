@@ -78,11 +78,15 @@ pub fn build_contacts_manifest(version: &str) -> Value {
         "nav": {
             "id": "contacts", "label": "Contacts", "labelKey": "contacts:nav.title",
             "icon": "contact-round", "color": "violet", "basePath": "/contacts", "order": 55,
-            "items": [{ "path": "", "label": "Import review", "labelKey": "contacts:nav.importReview", "icon": "contact-round" }]
+            "items": [
+                { "path": "", "label": "Import review", "labelKey": "contacts:nav.importReview", "icon": "contact-round" },
+                { "path": "connections", "label": "Connections", "labelKey": "contacts:nav.connections", "icon": "plug" }
+            ]
         },
         "pages": [
             { "path": "", "index": true, "bundleSlot": "contacts-import-review" },
-            { "path": "imports/:batchId", "bundleSlot": "contacts-import-review" }
+            { "path": "imports/:batchId", "bundleSlot": "contacts-import-review" },
+            { "path": "connections", "bundleSlot": "contacts-connections" }
         ],
         "healthcheck": { "path": "/health" },
     })

@@ -1,7 +1,8 @@
 {
   "nav": {
     "title": "Contacts",
-    "importReview": "Import review"
+    "importReview": "Import review",
+    "connections": "Connections"
   },
   "page": {
     "reviewTitle": "Contact import review",
@@ -137,6 +138,65 @@
     "missingQueue": "The incoming contact queue must be loaded before more candidate evidence.",
     "saveFailed": "The decision could not be saved.",
     "invalidChoices": "Invalid review choices.",
-    "stageFailed": "The export could not be read."
+    "stageFailed": "The export could not be read.",
+    "providerChanged": "The connection changed or the selected account does not match. Reload connections and reconnect the intended account."
+  },
+  "connections": {
+    "title": "Contact connections",
+    "description": "Connect your accounts, then review the people you bring into POPS.",
+    "providers": {
+      "google": "Google",
+      "icloud": "iCloud"
+    },
+    "open": "{{provider}}: {{state}}. Open connection",
+    "states": {
+      "connected": "Connected",
+      "disconnected": "Connect account",
+      "expired": "Reconnect required"
+    },
+    "messages": {
+      "connected": "Ready to prepare an import.",
+      "disconnected": "Connect to preview your contacts.",
+      "expired": "Access expired. Reconnect this account before preparing an import."
+    },
+    "connect": "Connect {{provider}}",
+    "manage": "{{provider}} connection",
+    "setupHint": "Allow read-only access to your contacts. Review matches before importing.",
+    "manageHint": "Manage your account and prepare the next contact import.",
+    "appleEmail": "Apple account email",
+    "password": "App-specific password",
+    "passwordHint": "Create an app-specific password in your Apple account settings to connect iCloud Contacts.",
+    "googleHint": "Choose your Google account in the next step and allow read-only access to its contacts.",
+    "otherContacts": "Include Other contacts",
+    "otherContactsHint": "Optional. Requests an additional read-only permission for people Google saved outside your main contacts.",
+    "otherIncluded": "Other contacts included",
+    "cancel": "Cancel",
+    "continueGoogle": "Continue with Google",
+    "connectIcloud": "Connect iCloud",
+    "disconnect": "Disconnect",
+    "prepare": "Prepare import",
+    "readOnly": "Connections are read only. Review new matches before applying an import.",
+    "retained": "Disconnecting retains imported contacts and their source history.",
+    "reload": "Reload connections",
+    "loading": "Loading connections",
+    "scanLoading": "Loading import progress…",
+    "latestScan": "Latest import preparation",
+    "previousPreview": "Previous completed preview",
+    "collections": "{{done}} of {{total}} address books",
+    "reviewPreview": "Review preview {{number}}",
+    "scanFailed": "Preparation failed. Your previous completed previews remain available. Reconnect if access has expired, or try preparing the import again.",
+    "noChanges": "No contact previews in this scan.",
+    "scanStates": {
+      "pending": "Waiting to prepare",
+      "running": "Preparing contacts",
+      "completed": "Preview ready",
+      "failed": "Preparation failed",
+      "cancelled": "Preparation cancelled",
+      "unknown": "Status unavailable"
+    },
+    "return": {
+      "cancelled": "Google connection was cancelled. Open the Google card to try again when you are ready.",
+      "failed": "Google connection could not be completed. Open the Google card to try again."
+    }
   }
 }

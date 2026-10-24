@@ -1,7 +1,8 @@
 {
   "nav": {
     "title": "Contatos",
-    "importReview": "Revisar importação"
+    "importReview": "Revisar importação",
+    "connections": "Conexões"
   },
   "page": {
     "reviewTitle": "Revisar importação de contatos",
@@ -137,6 +138,65 @@
     "missingQueue": "Carregue a fila de contatos recebidos antes de buscar mais evidências.",
     "saveFailed": "Não foi possível salvar a decisão.",
     "invalidChoices": "Escolhas de revisão inválidas.",
-    "stageFailed": "Não foi possível ler a exportação."
+    "stageFailed": "Não foi possível ler a exportação.",
+    "providerChanged": "A conexão mudou ou a conta selecionada não corresponde. Recarregue as conexões e reconecte a conta desejada."
+  },
+  "connections": {
+    "title": "Conexões de contatos",
+    "description": "Conecte suas contas e revise as pessoas que deseja trazer para o POPS.",
+    "providers": {
+      "google": "Google",
+      "icloud": "iCloud"
+    },
+    "open": "{{provider}}: {{state}}. Abrir conexão",
+    "states": {
+      "connected": "Conectado",
+      "disconnected": "Conectar conta",
+      "expired": "Reconexão necessária"
+    },
+    "messages": {
+      "connected": "Pronto para preparar uma importação.",
+      "disconnected": "Conecte para visualizar seus contatos.",
+      "expired": "O acesso expirou. Reconecte esta conta antes de preparar uma importação."
+    },
+    "connect": "Conectar {{provider}}",
+    "manage": "Conexão {{provider}}",
+    "setupHint": "Permita acesso somente de leitura aos seus contatos. Revise as correspondências antes de importar.",
+    "manageHint": "Gerencie sua conta e prepare a próxima importação de contatos.",
+    "appleEmail": "E-mail da conta Apple",
+    "password": "Senha específica de app",
+    "passwordHint": "Crie uma senha específica de app nas configurações da sua conta Apple para conectar os Contatos do iCloud.",
+    "googleHint": "Escolha sua conta Google na próxima etapa e permita acesso somente de leitura aos contatos.",
+    "otherContacts": "Incluir Outros contatos",
+    "otherContactsHint": "Opcional. Solicita uma permissão adicional somente de leitura para pessoas que o Google salvou fora dos seus contatos principais.",
+    "otherIncluded": "Outros contatos incluídos",
+    "cancel": "Cancelar",
+    "continueGoogle": "Continuar com Google",
+    "connectIcloud": "Conectar iCloud",
+    "disconnect": "Desconectar",
+    "prepare": "Preparar importação",
+    "readOnly": "As conexões são somente de leitura. Revise novas correspondências antes de aplicar uma importação.",
+    "retained": "A desconexão preserva os contatos importados e o histórico das origens.",
+    "reload": "Recarregar conexões",
+    "loading": "Carregando conexões",
+    "scanLoading": "Carregando o progresso da importação…",
+    "latestScan": "Preparação de importação mais recente",
+    "previousPreview": "Prévia concluída anterior",
+    "collections": "{{done}} de {{total}} catálogos de contatos",
+    "reviewPreview": "Revisar prévia {{number}}",
+    "scanFailed": "A preparação falhou. As prévias concluídas anteriores continuam disponíveis. Reconecte se o acesso expirou ou tente preparar a importação novamente.",
+    "noChanges": "Nenhuma prévia de contatos nesta busca.",
+    "scanStates": {
+      "pending": "Aguardando preparação",
+      "running": "Preparando contatos",
+      "completed": "Prévia pronta",
+      "failed": "Falha na preparação",
+      "cancelled": "Preparação cancelada",
+      "unknown": "Status indisponível"
+    },
+    "return": {
+      "cancelled": "A conexão com o Google foi cancelada. Abra o cartão Google para tentar novamente quando quiser.",
+      "failed": "Não foi possível concluir a conexão com o Google. Abra o cartão Google para tentar novamente."
+    }
   }
 }

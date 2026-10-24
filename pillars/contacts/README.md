@@ -32,6 +32,12 @@ server's complete-snapshot proof; pagination never reclassifies a subset in the
 browser. A conflict requires reloading evidence and choosing again. A network
 failure keeps the exact decision and idempotency key available for retry.
 
+Connections at `/contacts/connections` use the human-authorized provider routes.
+Google consent opens only after an explicit action; Other contacts requires a
+separate opt-in. iCloud app passwords are submitted only by the setup form and
+are never stored in browser query caches. The most recent scan and last completed
+preview remain separate, so a failed preparation does not hide a usable preview.
+
 ## Contract surface
 
 contacts has no ts-rest/zod contract because it is not TypeScript. Its wire

@@ -25,6 +25,12 @@
         "label": "Import review",
         "labelKey": "contacts:nav.importReview",
         "path": ""
+      },
+      {
+        "icon": "plug",
+        "label": "Connections",
+        "labelKey": "contacts:nav.connections",
+        "path": "connections"
       }
     ],
     "label": "Contacts",
@@ -40,6 +46,10 @@
     {
       "bundleSlot": "contacts-import-review",
       "path": "imports/:batchId"
+    },
+    {
+      "bundleSlot": "contacts-connections",
+      "path": "connections"
     }
   ],
   "pillar": "contacts",
