@@ -18,6 +18,7 @@ import {
   transactionCorrections,
   transactionCorrectionsService,
 } from '../../../db/index.js';
+import { type EntityIdentities } from '../../../db/services/entity-identity.js';
 import { ValidationError } from '../../shared/errors.js';
 import { interpretRejectionFeedback, loadLatestRejectedFeedback } from './ai-feedback.js';
 import { buildTargetRulesMap, type ChangeSetProposal, type CorrectionSignal } from './ai-types.js';
@@ -80,6 +81,7 @@ function describeRationale(
 }
 
 export interface ProposeArgs {
+  identities?: EntityIdentities;
   signal: CorrectionSignal;
   maxPreviewItems: number;
 }
@@ -115,6 +117,7 @@ export async function proposeChangeSetFromCorrectionSignal(
     : buildAddChangeSet(builderArgs);
 
   const impact = computeChangeSetImpact(db, {
+    identities: args.identities,
     changeSet,
     matchType,
     normalizedPattern,

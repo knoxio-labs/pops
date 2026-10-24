@@ -1,3 +1,5 @@
+import { isNotNull, sql } from 'drizzle-orm';
+
 /**
  * Entity-usage rollup — contacts enriched with their per-entity
  * `transactionCount`, computed by joining the live contact set against finance
@@ -9,12 +11,12 @@
  * abn, aliases, …) come from a per-request `pillar('contacts').entities.list`
  * fetch, NOT a local join. The fetched set is held only for the request.
  *
- * Contacts-down degrades gracefully: the injected client returns an empty set,
- * so the list renders empty rather than throwing.
+ * Identity-dependent reads require a complete canonical snapshot. Contacts
+ * failure produces an unavailable error instead of splitting historical aliases.
  */
-import { isNotNull, sql } from 'drizzle-orm';
-
+import { loadEntityIdentities } from '../../api/contacts/identity-snapshot.js';
 import { transactions } from '../schema.js';
+import { entityIdentity, type EntityIdentities } from './entity-identity.js';
 import { isPendingContactId } from './entity-precreate-outbox.js';
 import { type FinanceDb } from './internal.js';
 
@@ -49,7 +51,10 @@ export interface EntityUsageListResult {
  * being no other way a placeholder could ever surface through the wider
  * rollup.
  */
-export function transactionCountsByEntity(db: FinanceDb): Map<string, number> {
+export function transactionCountsByEntity(
+  db: FinanceDb,
+  identities?: EntityIdentities
+): Map<string, number> {
   const rows = db
     .select({
       entityId: transactions.entityId,
@@ -63,7 +68,8 @@ export function transactionCountsByEntity(db: FinanceDb): Map<string, number> {
   const counts = new Map<string, number>();
   for (const row of rows) {
     if (row.entityId !== null && !isPendingContactId(row.entityId)) {
-      counts.set(row.entityId, row.count);
+      const key = entityIdentity(row.entityId, identities);
+      if (key !== null) counts.set(key, (counts.get(key) ?? 0) + row.count);
     }
   }
   return counts;
@@ -86,7 +92,12 @@ export async function listEntityUsage(
   opts: ListEntityUsageOptions
 ): Promise<EntityUsageListResult> {
   const fetched = await contacts.fetchAllEntities({ search: opts.search, type: opts.type });
-  const counts = transactionCountsByEntity(db);
+  const identities = await loadEntityIdentities(
+    db,
+    contacts,
+    fetched.map((entity) => entity.id)
+  );
+  const counts = transactionCountsByEntity(db, identities);
 
   let joined: EntityUsageRow[] = fetched.map((entity) => ({
     ...entity,

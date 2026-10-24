@@ -22,6 +22,15 @@ const mockToastError = vi.fn();
 
 vi.mock('../../../../contacts-api/index.js', () => ({
   entitiesLookup: () => mockEntitiesLookup(),
+  entitiesResolve: async ({ body }: { body: { ids: string[] } }) => ({
+    data: {
+      data: body.ids.map((id) => ({
+        id,
+        canonicalId: ['ent-woolies', 'ent-netflix'].includes(id) ? id : null,
+      })),
+      revision: 1,
+    },
+  }),
 }));
 
 vi.mock('sonner', () => ({
@@ -30,7 +39,7 @@ vi.mock('sonner', () => ({
 
 function dbEntities(...names: Array<[id: string, name: string]>): LookupResponse {
   return {
-    entities: names.map(([id, name]) => ({ id, name, aliases: [] })),
+    entities: names.map(([id, name]) => ({ id, name, aliases: [], type: 'company' })),
     fetchedAt: '2026-01-01T00:00:00.000Z',
   };
 }

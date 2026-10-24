@@ -37,6 +37,15 @@ pub(crate) async fn openapi_document() -> impl IntoResponse {
 /// Build the contacts router with service-account scopes derived from OpenAPI
 /// operation IDs and registry verification applied to credentialled requests.
 pub fn build_router(state: AppState) -> Router {
+    build_router_with_providers(state, None)
+}
+
+/// Build the router with optional fail-closed provider management and sync services.
+pub fn build_router_with_providers(
+    state: AppState,
+    providers: crate::providers::routes::ProviderExtension,
+) -> Router {
+    let write_guard_state = state.clone();
     let scope_gate = ServiceAccountScopeGate::from_openapi(
         state.service_account_scope_verifier.clone(),
         &openapi_30_json(),
@@ -50,7 +59,21 @@ pub fn build_router(state: AppState) -> Router {
         .merge(crate::entities::router())
         .merge(crate::entities::addresses_routes::router())
         .merge(crate::search::router())
+        .merge(crate::imports::routes::router())
+        .merge(crate::imports::review_decision_routes::router())
+        .merge(crate::imports::review_routes::router())
+        .merge(crate::providers::routes::router())
+        .merge(crate::imports::ready_routes::router())
+        .merge(crate::persons::routes::router())
+        .merge(crate::sources::routes::router())
+        .merge(crate::merges::routes::router())
+        .layer(axum::Extension(providers))
         .with_state(state)
+        .layer(middleware::from_fn_with_state(
+            write_guard_state,
+            crate::merges::routes::guard_writes,
+        ))
+        .merge(crate::ui::router(crate::config::ui_assets_path()))
         .layer(middleware::from_fn_with_state(
             scope_gate,
             enforce_service_account_scope,

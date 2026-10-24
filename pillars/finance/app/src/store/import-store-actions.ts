@@ -18,6 +18,8 @@ import {
   type ProcessedTransaction,
 } from './import-store-types';
 
+import type { EntityIdentities } from '@pops/finance';
+
 type StoreSet = (
   partial: Partial<ImportStore> | ((state: ImportStore) => Partial<ImportStore>)
 ) => void;
@@ -91,14 +93,17 @@ export function buildPendingEntityActions(set: StoreSet, get: StoreGet) {
   return {
     addPendingEntity: (
       input: AddPendingEntityInput,
-      dbEntities: Array<{ name: string }> = []
+      dbEntities: Array<{ name: string; type: string }> = []
     ): PendingEntity => {
       const nameLower = input.name.toLowerCase();
       const state = get();
-      if (state.pendingEntities.some((e) => e.name.toLowerCase() === nameLower)) {
+      const matches = (entity: { name: string; type: string }) =>
+        (entity.type === 'person') === (input.type === 'person') &&
+        entity.name.toLowerCase() === nameLower;
+      if (state.pendingEntities.some(matches)) {
         throw new Error(`Entity with name "${input.name}" already exists in pending list`);
       }
-      if (dbEntities.some((e) => e.name.toLowerCase() === nameLower)) {
+      if (dbEntities.some(matches)) {
         throw new Error(`Entity with name "${input.name}" already exists in the database`);
       }
       const entity: PendingEntity = {
@@ -147,7 +152,8 @@ export function buildPendingTagRuleActions(set: StoreSet, get: StoreGet) {
      * rules that will actually be written.
      */
     addPendingTagRuleChangeSet: (
-      input: AddPendingTagRuleChangeSetInput
+      input: AddPendingTagRuleChangeSetInput,
+      identities?: EntityIdentities
     ): PendingTagRuleChangeSet => {
       const entry: PendingTagRuleChangeSet = {
         tempId: `temp:tagrules:${crypto.randomUUID()}`,
@@ -157,12 +163,14 @@ export function buildPendingTagRuleActions(set: StoreSet, get: StoreGet) {
         sourceChecksums: input.sourceChecksums,
         ...(input.acceptedNewTags ? { acceptedNewTags: input.acceptedNewTags } : {}),
       };
-      const key = pendingTagRuleKey(entry);
+      const key = pendingTagRuleKey(entry, identities);
       set((prev) => {
         const existing =
           key === null
             ? -1
-            : prev.pendingTagRuleChangeSets.findIndex((c) => pendingTagRuleKey(c) === key);
+            : prev.pendingTagRuleChangeSets.findIndex(
+                (c) => pendingTagRuleKey(c, identities) === key
+              );
         if (existing === -1) {
           return { pendingTagRuleChangeSets: [...prev.pendingTagRuleChangeSets, entry] };
         }

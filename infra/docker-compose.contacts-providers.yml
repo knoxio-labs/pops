@@ -1,0 +1,13 @@
+services:
+  contacts-api:
+    secrets:
+      - contacts_provider_root_key
+    environment:
+      CONTACTS_PROVIDER_ROOT_KEY_FILE: /run/secrets/contacts_provider_root_key
+      CLOUDFLARE_ACCESS_TEAM_NAME: ${CLOUDFLARE_ACCESS_TEAM_NAME:-}
+      CLOUDFLARE_ACCESS_AUD: ${CLOUDFLARE_ACCESS_AUD:-}
+      POPS_OPERATOR_EMAILS: ${POPS_OPERATOR_EMAILS:-}
+
+secrets:
+  contacts_provider_root_key:
+    file: ../secrets/contacts_provider_root_key

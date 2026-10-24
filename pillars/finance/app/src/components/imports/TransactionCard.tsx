@@ -11,6 +11,7 @@ import {
 } from './transaction-card/CardChrome';
 import { EntitySection, ReadonlyEntitySummary } from './transaction-card/EntitySection';
 
+import type { EntityIdentities } from '@pops/finance';
 import type { ProcessedTransaction } from '@pops/finance';
 
 import type { TransactionType } from '../../lib/transaction-type';
@@ -36,6 +37,7 @@ interface TransactionCardProps {
   ) => void;
   onEdit?: (transaction: ProcessedTransaction) => void;
   entities?: Array<{ id: string; name: string }>;
+  identities?: EntityIdentities;
   entityVerification?: EntityVerification;
   readonly?: boolean;
   showMatchType?: boolean;
@@ -53,6 +55,7 @@ export function TransactionCard({
   onLeaveUnassigned,
   onEdit,
   entities,
+  identities,
   entityVerification,
   readonly = false,
   showMatchType = false,
@@ -83,6 +86,7 @@ export function TransactionCard({
       <FieldGrid transaction={transaction} />
       {!readonly && (
         <EntitySection
+          identities={identities}
           transaction={transaction}
           entities={entities}
           entityVerification={entityVerification}

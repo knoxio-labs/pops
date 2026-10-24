@@ -21,6 +21,7 @@ import { makeTaggedHandlers } from './tagged-handlers.js';
 
 import type { OpenedPurchasesDb } from '../../db/index.js';
 import type { ReceiptVision } from '../../ingest/receipt/vision.js';
+import type { CanonicalMerchantResolver } from '../contacts/canonical.js';
 import type { MerchantResolver } from '../contacts/merchant.js';
 import type { SharedTagCacheRefreshOutcome } from '../cron/refresh-shared-tags.js';
 import type { FinanceTransactionLookup, FinanceTransactionSearch } from '../finance/client.js';
@@ -45,18 +46,29 @@ export function makePurchasesRestHandlers(deps: {
   vision: ReceiptVision | null;
   /** Names the merchant against contacts. Injectable so tests stay offline. */
   merchant?: MerchantResolver;
+  /** Resolves historical merchant ids against Contacts before identity comparisons. */
+  canonicalMerchants?: CanonicalMerchantResolver;
   /** Creates the asset an accepted proposal names. Injectable so tests stay offline. */
   inventoryAssets?: InventoryAssetCreator;
   /** Clears inventory's own pointer when an edit unlinks a line (POPS-4268). Injectable so tests stay offline. */
   inventoryLinkClearer?: InventoryLinkClearer;
 }): ReturnType<typeof server.router<typeof purchasesContract>> {
   return server.router(purchasesContract, {
-    analytics: makeAnalyticsHandlers(deps.purchasesDb.db),
-    product: makeProductHandlers(deps.purchasesDb.db),
+    analytics: makeAnalyticsHandlers(deps.purchasesDb.db, deps.canonicalMerchants),
+    product: makeProductHandlers(deps.purchasesDb.db, deps.canonicalMerchants),
     purchase: {
-      ...makePurchaseHandlers(deps.purchasesDb.db, deps.onIngest, deps.merchant),
+      ...makePurchaseHandlers(
+        deps.purchasesDb.db,
+        deps.onIngest,
+        deps.merchant,
+        deps.canonicalMerchants
+      ),
       ...makeInventoryItemHandlers(deps.purchasesDb.db, deps.inventoryAssets),
-      ...makePurchaseUpdateHandlers(deps.purchasesDb.db, deps.inventoryLinkClearer),
+      ...makePurchaseUpdateHandlers(
+        deps.purchasesDb.db,
+        deps.inventoryLinkClearer,
+        deps.canonicalMerchants
+      ),
     },
     receipt: makeReceiptHandlers(deps.purchasesDb.db, deps.vision, deps.onIngest, deps.merchant),
     reconcile: makeReconcileHandlers(

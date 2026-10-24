@@ -56,6 +56,279 @@
         ],
         "type": "object"
       },
+      "AppliedSelection": {
+        "description": "Applied selections expose the retained provenance and exact immutable source observation.",
+        "oneOf": [
+          {
+            "properties": {
+              "entityId": {
+                "type": "string"
+              },
+              "field": {
+                "$ref": "#/components/schemas/MergeField"
+              },
+              "kind": {
+                "enum": [
+                  "entity"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "field",
+              "entityId",
+              "kind"
+            ],
+            "type": "object"
+          },
+          {
+            "properties": {
+              "field": {
+                "$ref": "#/components/schemas/SourceMergeField"
+              },
+              "kind": {
+                "enum": [
+                  "sourceRecord"
+                ],
+                "type": "string"
+              },
+              "sourceObservationId": {
+                "type": "string"
+              },
+              "sourceRecordId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "field",
+              "sourceRecordId",
+              "sourceObservationId",
+              "kind"
+            ],
+            "type": "object"
+          },
+          {
+            "properties": {
+              "kind": {
+                "enum": [
+                  "point"
+                ],
+                "type": "string"
+              },
+              "pointId": {
+                "type": "string"
+              },
+              "pointKind": {
+                "$ref": "#/components/schemas/ContactPointKind"
+              }
+            },
+            "required": [
+              "pointKind",
+              "pointId",
+              "kind"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "CandidateDecision": {
+        "description": "The last explicit decision about a stable candidate identity for an import row.",
+        "enum": [
+          "merged",
+          "different",
+          "later"
+        ],
+        "type": "string"
+      },
+      "CommitBatchInput": {
+        "additionalProperties": false,
+        "description": "A selected subset of a preview with optimistic concurrency and retry identity.",
+        "properties": {
+          "decisions": {
+            "items": {
+              "$ref": "#/components/schemas/RowDecision"
+            },
+            "type": "array"
+          },
+          "idempotencyKey": {
+            "type": "string"
+          },
+          "revision": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "revision",
+          "idempotencyKey",
+          "decisions"
+        ],
+        "type": "object"
+      },
+      "CommitReceipt": {
+        "description": "Persisted receipt returned byte-equivalently on a retry with the same key and body.",
+        "properties": {
+          "batchId": {
+            "type": "string"
+          },
+          "revision": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/CommittedRow"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "batchId",
+          "revision",
+          "rows"
+        ],
+        "type": "object"
+      },
+      "CommittedRow": {
+        "description": "The stable result of one selected row, also retained in the retry receipt.",
+        "properties": {
+          "entityId": {
+            "nullable": true,
+            "type": "string"
+          },
+          "rowId": {
+            "type": "string"
+          },
+          "skipped": {
+            "type": "boolean"
+          },
+          "sourceRecordId": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "rowId",
+          "skipped"
+        ],
+        "type": "object"
+      },
+      "ContactPoint": {
+        "description": "A local or imported point. `sourceRecordId: null` identifies an explicit local value.\nPreferred observations survive source refresh/deactivation, including their original value.",
+        "properties": {
+          "active": {
+            "type": "boolean"
+          },
+          "countryCode": {
+            "description": "Explicit ISO country context for national phone normalization; absent never implies a locale.",
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "entityId": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "label": {
+            "nullable": true,
+            "type": "string"
+          },
+          "normalizedValue": {
+            "nullable": true,
+            "type": "string"
+          },
+          "preferred": {
+            "type": "boolean"
+          },
+          "sourceRecordId": {
+            "nullable": true,
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "entityId",
+          "kind",
+          "value",
+          "active",
+          "preferred",
+          "createdAt"
+        ],
+        "type": "object"
+      },
+      "ContactPointInput": {
+        "additionalProperties": false,
+        "description": "A point observation. Normalized match keys are computed by the server, never accepted as input.",
+        "properties": {
+          "countryCode": {
+            "description": "Explicit ISO country context for national phone normalization; absent never implies a locale.",
+            "nullable": true,
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/ContactPointKind"
+          },
+          "label": {
+            "nullable": true,
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "value"
+        ],
+        "type": "object"
+      },
+      "ContactPointKind": {
+        "description": "A contact point's semantic kind; shared values never identify one person by themselves.",
+        "enum": [
+          "email",
+          "phone",
+          "social",
+          "url"
+        ],
+        "type": "string"
+      },
+      "ContactPointListResponse": {
+        "description": "Contact point observations, including inactive audit values and preferred selections.",
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/ContactPoint"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "ContactPointResponse": {
+        "description": "A newly added explicit local point.",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ContactPoint"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
       "CreateAddressBody": {
         "description": "Body accepted by `POST /entities/:id/addresses`.",
         "properties": {
@@ -203,11 +476,15 @@
           },
           "name": {
             "type": "string"
+          },
+          "type": {
+            "type": "string"
           }
         },
         "required": [
           "id",
           "name",
+          "type",
           "aliases"
         ],
         "type": "object"
@@ -271,12 +548,112 @@
           "contacts.request.invalid",
           "contacts.resource.not_found",
           "contacts.entity.name_conflict",
+          "contacts.import.conflict",
+          "contacts.import.storage",
+          "contacts.entity.identity_conflict",
           "contacts.auth.unauthorized",
           "contacts.auth.forbidden",
           "contacts.auth.unavailable",
+          "contacts.provider.unavailable",
+          "contacts.provider.conflict",
+          "contacts.provider.reauthorization_required",
           "contacts.internal"
         ],
         "type": "string"
+      },
+      "FieldSelection": {
+        "description": "Explicit field provenance: a retained entity field or a source record's current immutable observation.",
+        "oneOf": [
+          {
+            "properties": {
+              "entityId": {
+                "type": "string"
+              },
+              "field": {
+                "$ref": "#/components/schemas/MergeField"
+              },
+              "kind": {
+                "enum": [
+                  "entity"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "field",
+              "entityId",
+              "kind"
+            ],
+            "type": "object"
+          },
+          {
+            "properties": {
+              "field": {
+                "$ref": "#/components/schemas/SourceMergeField"
+              },
+              "kind": {
+                "enum": [
+                  "sourceRecord"
+                ],
+                "type": "string"
+              },
+              "sourceRecordId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "field",
+              "sourceRecordId",
+              "kind"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "GoogleAuthorizeRequest": {
+        "additionalProperties": false,
+        "description": "A browser authorization request. Omit accountId only for a new connection.",
+        "properties": {
+          "accountId": {
+            "nullable": true,
+            "type": "string"
+          },
+          "includeOtherContacts": {
+            "description": "Separately opt in to Google's additional read-only Other contacts scope.",
+            "type": "boolean"
+          },
+          "label": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "GroupMember": {
+        "description": "Original entity fields and local structured name used as auditable side-by-side merge evidence.",
+        "properties": {
+          "entity": {
+            "$ref": "#/components/schemas/Entity"
+          },
+          "personProfile": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PersonProfile"
+              },
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true,
+                "type": "object"
+              }
+            ]
+          }
+        },
+        "required": [
+          "entity"
+        ],
+        "type": "object"
       },
       "HealthResponse": {
         "description": "`GET /health` response body. Field-for-field identical to the TS pillar\nhealth envelope: `ok`, `status`, `pillar`, `version`, `ts` (an RFC 3339 /\nISO 8601 UTC timestamp, matching the TS `new Date().toISOString()`). The\nregistry health probe parses this shape across every pillar.",
@@ -306,9 +683,269 @@
         ],
         "type": "object"
       },
+      "IcloudConnectRequest": {
+        "additionalProperties": false,
+        "description": "App-password connection request. Password has no Debug/Serialize implementation.",
+        "properties": {
+          "accountId": {
+            "nullable": true,
+            "type": "string"
+          },
+          "label": {
+            "nullable": true,
+            "type": "string"
+          },
+          "password": {
+            "type": "string",
+            "writeOnly": true
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "username",
+          "password"
+        ],
+        "type": "object"
+      },
+      "IdentityGroup": {
+        "description": "A canonical group and the directory-wide optimistic revision.",
+        "properties": {
+          "canonicalId": {
+            "type": "string"
+          },
+          "memberIds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/GroupMember"
+            },
+            "type": "array"
+          },
+          "revision": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "selections": {
+            "items": {
+              "$ref": "#/components/schemas/AppliedSelection"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "canonicalId",
+          "memberIds",
+          "revision",
+          "selections",
+          "members"
+        ],
+        "type": "object"
+      },
+      "ImportBatch": {
+        "description": "A durable preview; its revision changes only after a successful selected-row commit.",
+        "properties": {
+          "accountId": {
+            "type": "string"
+          },
+          "collectionKey": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "revision": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/ImportRow"
+            },
+            "type": "array"
+          },
+          "sourceEpoch": {
+            "format": "int64",
+            "nullable": true,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "accountId",
+          "collectionKey",
+          "revision",
+          "createdAt",
+          "rows"
+        ],
+        "type": "object"
+      },
+      "ImportPayload": {
+        "additionalProperties": false,
+        "description": "Source observations to propose; staging never changes the canonical directory.",
+        "properties": {
+          "displayName": {
+            "nullable": true,
+            "type": "string"
+          },
+          "name": {
+            "$ref": "#/components/schemas/PersonName"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/ContactPointInput"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "points"
+        ],
+        "type": "object"
+      },
+      "ImportReview": {
+        "description": "One coherent read of a durable import batch and the complete eligible directory.",
+        "properties": {
+          "batchId": {
+            "type": "string"
+          },
+          "batchRevision": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/ReviewCounts"
+          },
+          "directoryRevision": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "limit": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "offset": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "proposalRevision": {
+            "type": "string"
+          },
+          "ready": {
+            "$ref": "#/components/schemas/ReadySummary"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewRow"
+            },
+            "type": "array"
+          },
+          "source": {
+            "$ref": "#/components/schemas/ReviewSource"
+          },
+          "totalRows": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "batchId",
+          "batchRevision",
+          "directoryRevision",
+          "proposalRevision",
+          "source",
+          "totalRows",
+          "offset",
+          "limit",
+          "counts",
+          "ready",
+          "rows"
+        ],
+        "type": "object"
+      },
+      "ImportRow": {
+        "description": "Persisted preview with the source revision that must still match at commit time.",
+        "properties": {
+          "entityId": {
+            "nullable": true,
+            "type": "string"
+          },
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/RowIssue"
+            },
+            "type": "array"
+          },
+          "id": {
+            "type": "string"
+          },
+          "ordinal": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "payload": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ImportPayload"
+              },
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true,
+                "type": "object"
+              }
+            ]
+          },
+          "processed": {
+            "type": "boolean"
+          },
+          "proposal": {
+            "$ref": "#/components/schemas/RowProposal"
+          },
+          "recordKey": {
+            "type": "string"
+          },
+          "removed": {
+            "type": "boolean"
+          },
+          "sourceRecordId": {
+            "nullable": true,
+            "type": "string"
+          },
+          "sourceRevision": {
+            "format": "int64",
+            "nullable": true,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "ordinal",
+          "recordKey",
+          "removed",
+          "errors",
+          "proposal",
+          "processed"
+        ],
+        "type": "object"
+      },
       "LookupBody": {
         "description": "`POST /entities/lookup` body. `fields` is reserved for a future field\nselector. `ids`, when present and non-empty, narrows the match set to\nthose ids (POPS-3925) instead of the whole contact set; omitted or empty\nkeeps the original \"answer everything\" behaviour existing callers rely on.",
         "properties": {
+          "excludePersons": {
+            "description": "Exclude persons only for explicitly merchant-scoped consumers.",
+            "type": "boolean"
+          },
           "fields": {
             "items": {
               "type": "string"
@@ -353,6 +990,94 @@
         ],
         "type": "string"
       },
+      "MergeBody": {
+        "additionalProperties": false,
+        "description": "Existing canonical groups to combine; member IDs must name their current roots.\nRequested selections are validated before any redirect changes, never silently ignored.",
+        "properties": {
+          "canonicalId": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "string"
+          },
+          "expectedRevision": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "idempotencyKey": {
+            "type": "string"
+          },
+          "memberIds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "preferredPointIds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "selections": {
+            "items": {
+              "$ref": "#/components/schemas/FieldSelection"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "canonicalId",
+          "memberIds",
+          "expectedRevision",
+          "idempotencyKey",
+          "evidence"
+        ],
+        "type": "object"
+      },
+      "MergeField": {
+        "description": "Scalar fields that can select a retained member's value without overwriting it.",
+        "enum": [
+          "name",
+          "abn",
+          "aliases",
+          "defaultTransactionType",
+          "defaultTags",
+          "notes",
+          "avatarAssetId",
+          "posterAssetId",
+          "personProfile"
+        ],
+        "type": "string"
+      },
+      "MergeResult": {
+        "description": "The immutable result of a merge; retries return this original receipt.",
+        "properties": {
+          "canonicalId": {
+            "type": "string"
+          },
+          "memberIds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "operationId": {
+            "type": "string"
+          },
+          "revision": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "operationId",
+          "canonicalId",
+          "memberIds",
+          "revision"
+        ],
+        "type": "object"
+      },
       "MessageResponse": {
         "description": "Bare `{ message }` body returned by delete.",
         "properties": {
@@ -364,6 +1089,15 @@
           "message"
         ],
         "type": "object"
+      },
+      "NameCompleteness": {
+        "description": "Whether the source explicitly knows a name to be complete, incomplete, or unknown.",
+        "enum": [
+          "unknown",
+          "complete",
+          "incomplete"
+        ],
+        "type": "string"
       },
       "PaginationMeta": {
         "description": "Pagination envelope returned by every list endpoint.",
@@ -391,6 +1125,946 @@
           "hasMore"
         ],
         "type": "object"
+      },
+      "PersonName": {
+        "additionalProperties": false,
+        "description": "A structured name; completeness is explicit and is never inferred from display text.",
+        "properties": {
+          "additionalNames": {
+            "nullable": true,
+            "type": "string"
+          },
+          "completeness": {
+            "$ref": "#/components/schemas/NameCompleteness"
+          },
+          "familyName": {
+            "nullable": true,
+            "type": "string"
+          },
+          "givenName": {
+            "nullable": true,
+            "type": "string"
+          },
+          "namePrefix": {
+            "nullable": true,
+            "type": "string"
+          },
+          "nameSuffix": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "PersonProfile": {
+        "description": "Local name override, independent of imported source names and entity display names.",
+        "properties": {
+          "entityId": {
+            "type": "string"
+          },
+          "name": {
+            "$ref": "#/components/schemas/PersonName"
+          },
+          "sourceObservationId": {
+            "nullable": true,
+            "type": "string"
+          },
+          "sourceRecordId": {
+            "nullable": true,
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "entityId",
+          "name",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "PersonProfileResponse": {
+        "description": "Local profile response; `null` means no local name override exists.",
+        "properties": {
+          "data": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PersonProfile"
+              },
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true,
+                "type": "object"
+              }
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "ProposalReason": {
+        "description": "Stable machine-readable explanations; display-only names never supply complete-name evidence.",
+        "enum": [
+          "source_identity",
+          "email",
+          "phone",
+          "complete_name",
+          "new_person",
+          "conflicting_source_bindings",
+          "shared_identifier",
+          "conflicting_signals",
+          "ambiguous_name",
+          "incomplete_name",
+          "keep_separate",
+          "batch_collision",
+          "batch_match",
+          "invalid_record",
+          "stale_source",
+          "source_removal"
+        ],
+        "type": "string"
+      },
+      "ProviderAccountStatus": {
+        "description": "A credential-free account status for management UI and automation.",
+        "properties": {
+          "accountId": {
+            "type": "string"
+          },
+          "connected": {
+            "type": "boolean"
+          },
+          "includeOtherContacts": {
+            "type": "boolean"
+          },
+          "latestRunId": {
+            "description": "Most recent run, including unfinished or failed worker attempts.",
+            "nullable": true,
+            "type": "string"
+          },
+          "previewRunId": {
+            "description": "Most recent successful scan whose preview IDs remain discoverable.",
+            "nullable": true,
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "reauthorizationRequired": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "accountId",
+          "provider",
+          "connected",
+          "reauthorizationRequired",
+          "includeOtherContacts"
+        ],
+        "type": "object"
+      },
+      "ProviderOperation": {
+        "description": "Saved operation identifier; credentials and opaque provider cursors are omitted.",
+        "properties": {
+          "accountId": {
+            "type": "string"
+          },
+          "runId": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "accountId"
+        ],
+        "type": "object"
+      },
+      "ProviderRunStatus": {
+        "description": "Safe durable scan progress. Returned previews use the shared import endpoints.",
+        "properties": {
+          "accountId": {
+            "type": "string"
+          },
+          "batchIds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "completedCollections": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "errorCode": {
+            "nullable": true,
+            "type": "string"
+          },
+          "runId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "totalCollections": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "runId",
+          "accountId",
+          "status",
+          "totalCollections",
+          "completedCollections",
+          "batchIds"
+        ],
+        "type": "object"
+      },
+      "ReadyBatchInput": {
+        "additionalProperties": false,
+        "description": "Apply only server-resolved rows from the exact complete ready snapshot, never client-picked targets.",
+        "properties": {
+          "batchRevision": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "directoryRevision": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "idempotencyKey": {
+            "type": "string"
+          },
+          "proposalRevision": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "batchRevision",
+          "directoryRevision",
+          "proposalRevision",
+          "idempotencyKey"
+        ],
+        "type": "object"
+      },
+      "ReadyBatchReceipt": {
+        "description": "One transaction's exact retry result. Held/review-required rows and their prior choices stay untouched.",
+        "properties": {
+          "alreadyProcessed": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "batchId": {
+            "type": "string"
+          },
+          "batchRevision": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "deferred": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "directoryRevision": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "reviewRequired": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewDecisionReceipt"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "batchId",
+          "batchRevision",
+          "directoryRevision",
+          "rows",
+          "deferred",
+          "reviewRequired",
+          "alreadyProcessed"
+        ],
+        "type": "object"
+      },
+      "ReadySummary": {
+        "description": "Complete-batch eligibility, independent of row/candidate pagination.\nThis proposalRevision includes pending evidence from other batches and differs from paging proofs.",
+        "properties": {
+          "alreadyProcessed": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "automaticMerges": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "deferred": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "eligibleRows": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "newPeople": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "proposalRevision": {
+            "type": "string"
+          },
+          "reviewRequired": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "sourceRemovals": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "sourceUpdates": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "proposalRevision",
+          "eligibleRows",
+          "automaticMerges",
+          "newPeople",
+          "sourceUpdates",
+          "sourceRemovals",
+          "deferred",
+          "reviewRequired",
+          "alreadyProcessed"
+        ],
+        "type": "object"
+      },
+      "ResolveBody": {
+        "additionalProperties": false,
+        "description": "Bounded IDs to resolve, preserving request order and repeated historical IDs.",
+        "properties": {
+          "ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "ids"
+        ],
+        "type": "object"
+      },
+      "ResolveResponse": {
+        "description": "A consistent directory snapshot. Batches may be combined only at the same revision.",
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/ResolvedIdentity"
+            },
+            "type": "array"
+          },
+          "revision": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "data",
+          "revision"
+        ],
+        "type": "object"
+      },
+      "ResolvedIdentity": {
+        "description": "A historical ID and its current canonical identity; null means the ID does not exist.",
+        "properties": {
+          "canonicalId": {
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "canonicalId"
+        ],
+        "type": "object"
+      },
+      "ReviewCandidate": {
+        "description": "A real canonical person or persisted incoming row, never a fabricated person identity.\nExactly one of `entityId` and `rowId` is populated; row targets cannot be merged yet.",
+        "properties": {
+          "entityId": {
+            "nullable": true,
+            "type": "string"
+          },
+          "keepSeparate": {
+            "type": "boolean"
+          },
+          "localName": {
+            "type": "string"
+          },
+          "localPersonProfile": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PersonProfile"
+              },
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true,
+                "type": "object"
+              }
+            ]
+          },
+          "memberIds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "name": {
+            "type": "string"
+          },
+          "personProfile": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PersonProfile"
+              },
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true,
+                "type": "object"
+              }
+            ]
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewPoint"
+            },
+            "type": "array"
+          },
+          "reasons": {
+            "items": {
+              "$ref": "#/components/schemas/ProposalReason"
+            },
+            "type": "array"
+          },
+          "rowId": {
+            "nullable": true,
+            "type": "string"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewSource"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "entityId",
+          "rowId",
+          "memberIds",
+          "name",
+          "localName",
+          "personProfile",
+          "localPersonProfile",
+          "points",
+          "sources",
+          "reasons",
+          "keepSeparate"
+        ],
+        "type": "object"
+      },
+      "ReviewClassification": {
+        "description": "Whether evidence permits an automatic match, requires a decision, or identifies a new person.",
+        "enum": [
+          "automatic",
+          "review",
+          "new"
+        ],
+        "type": "string"
+      },
+      "ReviewCounts": {
+        "description": "Complete-batch classification totals, independent of either evidence page.",
+        "properties": {
+          "automatic": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "invalid": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "new": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "review": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "automatic",
+          "review",
+          "new",
+          "invalid"
+        ],
+        "type": "object"
+      },
+      "ReviewDecisionInput": {
+        "additionalProperties": false,
+        "description": "A fresh row proposal and explicit candidate choices. Omitted candidates remain pending.\nEmpty candidate lists explicitly ingest the row without declaring candidate identity.",
+        "properties": {
+          "batchRevision": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "differentEntityIds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "directoryRevision": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "idempotencyKey": {
+            "type": "string"
+          },
+          "incomingFields": {
+            "description": "Explicit replacements from this row's validated immutable source observation.",
+            "items": {
+              "$ref": "#/components/schemas/SourceMergeField"
+            },
+            "type": "array"
+          },
+          "laterEntityIds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "mergeEntityIds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "preferredPointIds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "proposalRevision": {
+            "type": "string"
+          },
+          "rowId": {
+            "type": "string"
+          },
+          "selections": {
+            "items": {
+              "$ref": "#/components/schemas/FieldSelection"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "batchRevision",
+          "directoryRevision",
+          "proposalRevision",
+          "rowId",
+          "idempotencyKey"
+        ],
+        "type": "object"
+      },
+      "ReviewDecisionReceipt": {
+        "description": "Immutable receipt for the entire reviewed action, including ingestion, decisions and subset merge.\nA pure defer can leave entityId null. Pending candidates stay independently reviewable.",
+        "properties": {
+          "batchId": {
+            "type": "string"
+          },
+          "batchRevision": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "directoryRevision": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "entityId": {
+            "nullable": true,
+            "type": "string"
+          },
+          "operationId": {
+            "nullable": true,
+            "type": "string"
+          },
+          "pendingEntityIds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "processed": {
+            "type": "boolean"
+          },
+          "rowId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "batchId",
+          "rowId",
+          "batchRevision",
+          "directoryRevision",
+          "entityId",
+          "operationId",
+          "pendingEntityIds",
+          "processed"
+        ],
+        "type": "object"
+      },
+      "ReviewPoint": {
+        "description": "A retained original point or unmaterialized import observation; original values stay intact.",
+        "properties": {
+          "active": {
+            "type": "boolean"
+          },
+          "countryCode": {
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "nullable": true,
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "label": {
+            "nullable": true,
+            "type": "string"
+          },
+          "normalizedValue": {
+            "nullable": true,
+            "type": "string"
+          },
+          "ownerEntityId": {
+            "nullable": true,
+            "type": "string"
+          },
+          "preferred": {
+            "type": "boolean"
+          },
+          "sourceRecordId": {
+            "nullable": true,
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ownerEntityId",
+          "kind",
+          "value",
+          "normalizedValue",
+          "label",
+          "countryCode",
+          "sourceRecordId",
+          "active",
+          "preferred"
+        ],
+        "type": "object"
+      },
+      "ReviewRow": {
+        "description": "A staged observation with real evidence and an opaque revision for this exact proposal.",
+        "properties": {
+          "candidateLimit": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "candidateOffset": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "candidateTotal": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewCandidate"
+            },
+            "type": "array"
+          },
+          "candidatesTruncated": {
+            "type": "boolean"
+          },
+          "classification": {
+            "$ref": "#/components/schemas/ReviewClassification"
+          },
+          "decisions": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/CandidateDecision"
+            },
+            "propertyNames": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "entityId": {
+            "nullable": true,
+            "type": "string"
+          },
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/RowIssue"
+            },
+            "type": "array"
+          },
+          "incoming": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ImportPayload"
+              },
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true,
+                "type": "object"
+              }
+            ]
+          },
+          "ownerEntityId": {
+            "nullable": true,
+            "type": "string"
+          },
+          "processed": {
+            "type": "boolean"
+          },
+          "proposal": {
+            "$ref": "#/components/schemas/RowProposal"
+          },
+          "proposalRevision": {
+            "type": "string"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/ProposalReason"
+          },
+          "rowId": {
+            "type": "string"
+          },
+          "sourceRecordId": {
+            "nullable": true,
+            "type": "string"
+          },
+          "staleSource": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "rowId",
+          "incoming",
+          "processed",
+          "entityId",
+          "ownerEntityId",
+          "sourceRecordId",
+          "proposal",
+          "errors",
+          "classification",
+          "reason",
+          "proposalRevision",
+          "staleSource",
+          "decisions",
+          "candidateTotal",
+          "candidateOffset",
+          "candidateLimit",
+          "candidatesTruncated",
+          "candidates"
+        ],
+        "type": "object"
+      },
+      "ReviewSource": {
+        "description": "Credential-free source provenance, retaining the original owner of merged observations.",
+        "properties": {
+          "accountId": {
+            "type": "string"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "displayName": {
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "nullable": true,
+            "type": "string"
+          },
+          "label": {
+            "nullable": true,
+            "type": "string"
+          },
+          "name": {
+            "$ref": "#/components/schemas/PersonName"
+          },
+          "ownerEntityId": {
+            "nullable": true,
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "revision": {
+            "format": "int64",
+            "nullable": true,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "accountId",
+          "ownerEntityId",
+          "provider",
+          "label",
+          "displayName",
+          "name",
+          "active",
+          "revision"
+        ],
+        "type": "object"
+      },
+      "RowAction": {
+        "description": "An explicit decision for one pending row; linking never follows display-name similarity.",
+        "oneOf": [
+          {
+            "properties": {
+              "action": {
+                "enum": [
+                  "create_person"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "action"
+            ],
+            "type": "object"
+          },
+          {
+            "properties": {
+              "action": {
+                "enum": [
+                  "link_person"
+                ],
+                "type": "string"
+              },
+              "entityId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "entityId",
+              "action"
+            ],
+            "type": "object"
+          },
+          {
+            "properties": {
+              "action": {
+                "enum": [
+                  "update_source"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "action"
+            ],
+            "type": "object"
+          },
+          {
+            "properties": {
+              "action": {
+                "enum": [
+                  "deactivate_source"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "action"
+            ],
+            "type": "object"
+          },
+          {
+            "properties": {
+              "action": {
+                "enum": [
+                  "skip"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "action"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "RowDecision": {
+        "additionalProperties": false,
+        "description": "One row decision inside an atomic commit request.",
+        "properties": {
+          "decision": {
+            "$ref": "#/components/schemas/RowAction"
+          },
+          "rowId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "rowId",
+          "decision"
+        ],
+        "type": "object"
+      },
+      "RowIssue": {
+        "description": "Sanitized validation failures retained alongside a preview row.",
+        "enum": [
+          "malformed_record",
+          "duplicate_source_key",
+          "invalid_record",
+          "invalid_removal"
+        ],
+        "type": "string"
+      },
+      "RowProposal": {
+        "description": "The only automatic proposals concern recognized source identity, never similar names.",
+        "enum": [
+          "new_source",
+          "update_source",
+          "deactivate_source",
+          "invalid"
+        ],
+        "type": "string"
       },
       "SearchHit": {
         "description": "One ranked search hit. `uri` is the canonical `pops:contacts/contact/<id>`.",
@@ -482,6 +2156,311 @@
         ],
         "type": "object"
       },
+      "SeparateBody": {
+        "additionalProperties": false,
+        "description": "Persist or revoke an explicit keep-separate decision for stable member IDs.",
+        "properties": {
+          "evidence": {
+            "type": "string"
+          },
+          "expectedRevision": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "idempotencyKey": {
+            "type": "string"
+          },
+          "keepSeparate": {
+            "type": "boolean"
+          },
+          "leftId": {
+            "type": "string"
+          },
+          "rightId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "leftId",
+          "rightId",
+          "keepSeparate",
+          "expectedRevision",
+          "idempotencyKey",
+          "evidence"
+        ],
+        "type": "object"
+      },
+      "SeparateList": {
+        "description": "All current separation decisions at a consistent directory revision.",
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/SeparatePair"
+            },
+            "type": "array"
+          },
+          "revision": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "data",
+          "revision"
+        ],
+        "type": "object"
+      },
+      "SeparatePair": {
+        "description": "A current stable-member pair preventing direct and indirect merges.",
+        "properties": {
+          "leftId": {
+            "type": "string"
+          },
+          "rightId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "leftId",
+          "rightId"
+        ],
+        "type": "object"
+      },
+      "SeparateResult": {
+        "description": "Result of an explicit separation decision.",
+        "properties": {
+          "keepSeparate": {
+            "type": "boolean"
+          },
+          "leftId": {
+            "type": "string"
+          },
+          "revision": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "rightId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "leftId",
+          "rightId",
+          "keepSeparate",
+          "revision"
+        ],
+        "type": "object"
+      },
+      "SourceAccount": {
+        "description": "A provider account identity; `accountKey` is a stable provider subject, never a credential.",
+        "properties": {
+          "accountKey": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "nullable": true,
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "provider",
+          "accountKey",
+          "createdAt"
+        ],
+        "type": "object"
+      },
+      "SourceAccountInput": {
+        "additionalProperties": false,
+        "description": "Register a stable account namespace. Changing a display label does not change account identity.",
+        "properties": {
+          "accountKey": {
+            "type": "string"
+          },
+          "label": {
+            "nullable": true,
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider",
+          "accountKey"
+        ],
+        "type": "object"
+      },
+      "SourceAccountListResponse": {
+        "description": "Registered provider-account namespaces, without credentials.",
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/SourceAccount"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "SourceAccountResponse": {
+        "description": "Stable account namespace resulting from create-or-fetch registration.",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/SourceAccount"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "SourceMergeField": {
+        "description": "Source name fields selectable from an immutable imported observation.",
+        "enum": [
+          "name",
+          "personProfile"
+        ],
+        "type": "string"
+      },
+      "SourceRecord": {
+        "description": "One namespaced external contact record attached to a canonical person entity.",
+        "properties": {
+          "accountId": {
+            "type": "string"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "additionalNames": {
+            "nullable": true,
+            "type": "string"
+          },
+          "collectionKey": {
+            "type": "string"
+          },
+          "displayName": {
+            "nullable": true,
+            "type": "string"
+          },
+          "entityId": {
+            "type": "string"
+          },
+          "familyName": {
+            "nullable": true,
+            "type": "string"
+          },
+          "givenName": {
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "lastSeenAt": {
+            "type": "string"
+          },
+          "nameCompleteness": {
+            "type": "string"
+          },
+          "namePrefix": {
+            "nullable": true,
+            "type": "string"
+          },
+          "nameSuffix": {
+            "nullable": true,
+            "type": "string"
+          },
+          "recordKey": {
+            "type": "string"
+          },
+          "revision": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "accountId",
+          "collectionKey",
+          "recordKey",
+          "entityId",
+          "nameCompleteness",
+          "active",
+          "lastSeenAt",
+          "revision"
+        ],
+        "type": "object"
+      },
+      "SourceRecordListResponse": {
+        "description": "Active and inactive external records linked to a person.",
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/SourceRecord"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "UndoBody": {
+        "additionalProperties": false,
+        "description": "Undo requires the exact untouched post-merge directory revision.",
+        "properties": {
+          "expectedRevision": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "idempotencyKey": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "expectedRevision",
+          "idempotencyKey"
+        ],
+        "type": "object"
+      },
+      "UndoResult": {
+        "description": "Undo restores directory membership. External references created after the merge remain unchanged.",
+        "properties": {
+          "operationId": {
+            "type": "string"
+          },
+          "restoredIds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "revision": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "operationId",
+          "restoredIds",
+          "revision"
+        ],
+        "type": "object"
+      },
       "UpdateEntityBody": {
         "description": "Body accepted by `PATCH /entities/:id`. Every field is optional; a present\nfield (even `null` for the nullable columns) is applied, an absent field is\nleft untouched. The nullable columns use `Option<Option<T>>` to tell\n\"absent\" (outer `None` — leave the column alone) apart from \"set to null\"\n(`Some(None)` — clear the column). serde collapses a JSON `null` into the\nouter `None` by default, so those fields deserialize through\n[`double_option`], which preserves the present-but-null case.\n\n`colour` has no field here either, for the same reason it has none on\n[`CreateEntityBody`]: a client may only reroll it, through the dedicated\n`POST /entities/:id/colour/reroll` route, never set it to an arbitrary\nstring via this generic PATCH.",
         "properties": {
@@ -521,6 +2500,24 @@
           }
         },
         "type": "object"
+      },
+      "UploadEncoding": {
+        "description": "Explicit text decoding for file uploads.",
+        "enum": [
+          "utf8",
+          "utf16_le",
+          "utf16_be",
+          "windows1252"
+        ],
+        "type": "string"
+      },
+      "UploadFormat": {
+        "description": "Supported export formats; the caller chooses explicitly rather than guessing from content.",
+        "enum": [
+          "google_csv",
+          "vcard"
+        ],
+        "type": "string"
       }
     }
   },
@@ -560,6 +2557,15 @@
       "get": {
         "operationId": "entities.list",
         "parameters": [
+          {
+            "in": "query",
+            "name": "excludePersons",
+            "required": false,
+            "schema": {
+              "nullable": true,
+              "type": "boolean"
+            }
+          },
           {
             "in": "query",
             "name": "search",
@@ -701,6 +2707,45 @@
         },
         "tags": [
           "crate::entities::routes"
+        ]
+      }
+    },
+    "/entities/resolve": {
+      "post": {
+        "operationId": "entities.resolve",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResolveResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Resolve every historical ID and report the snapshot revision for multi-batch consumers.",
+        "tags": [
+          "crate::merges::routes"
         ]
       }
     },
@@ -1132,6 +3177,264 @@
         ]
       }
     },
+    "/entities/{id}/contact-points": {
+      "get": {
+        "operationId": "entities.points.list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactPointListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Read all local and source points, with their provenance and preference flags.",
+        "tags": [
+          "crate::persons::routes"
+        ]
+      },
+      "post": {
+        "operationId": "entities.points.create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactPointInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactPointResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Add an explicit local contact point; source association is never client supplied here.",
+        "tags": [
+          "crate::persons::routes"
+        ]
+      }
+    },
+    "/entities/{id}/contact-points/{point_id}/preferred": {
+      "put": {
+        "operationId": "entities.points.prefer",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "point_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Preference selected"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Set a local preference independently of whether the source observation is still active.",
+        "tags": [
+          "crate::persons::routes"
+        ]
+      }
+    },
+    "/entities/{id}/person": {
+      "get": {
+        "operationId": "entities.person.get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonProfileResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Read the independently maintained local person profile.",
+        "tags": [
+          "crate::persons::routes"
+        ]
+      },
+      "put": {
+        "operationId": "entities.person.put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersonName"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonProfileResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Replace the local structured name without changing imported name observations.",
+        "tags": [
+          "crate::persons::routes"
+        ]
+      }
+    },
     "/entities/{id}/poster": {
       "delete": {
         "operationId": "entities.remove_poster",
@@ -1279,6 +3582,54 @@
         ]
       }
     },
+    "/entities/{id}/sources": {
+      "get": {
+        "operationId": "entities.sources.list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceRecordListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        },
+        "summary": "List provenance for one canonical person, including inactive sources.",
+        "tags": [
+          "crate::sources::routes"
+        ]
+      }
+    },
     "/health": {
       "get": {
         "operationId": "health.get",
@@ -1300,6 +3651,706 @@
         ]
       }
     },
+    "/imports/files": {
+      "post": {
+        "operationId": "imports.files.stage",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "accountId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "collectionKey",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "format",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/UploadFormat"
+            }
+          },
+          {
+            "in": "query",
+            "name": "encoding",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/UploadEncoding"
+            }
+          },
+          {
+            "in": "query",
+            "name": "phoneCountryCode",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "description": "Raw export bytes; generated browser clients send a Blob or File without JSON encoding.",
+                "format": "binary",
+                "type": "string"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportBatch"
+                }
+              }
+            },
+            "description": "Persisted preview"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid upload"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unknown source account"
+          }
+        },
+        "summary": "Stage a raw export file; malformed records remain inspectable without directory writes.",
+        "tags": [
+          "crate::imports::routes"
+        ]
+      }
+    },
+    "/imports/{id}": {
+      "get": {
+        "operationId": "imports.get",
+        "parameters": [
+          {
+            "description": "Import batch id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportBatch"
+                }
+              }
+            },
+            "description": "Import preview"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unknown import"
+          }
+        },
+        "summary": "Read a durable preview after a partial commit or a process restart.",
+        "tags": [
+          "crate::imports::routes"
+        ]
+      }
+    },
+    "/imports/{id}/apply-ready": {
+      "post": {
+        "operationId": "imports.ready.apply",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReadyBatchInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadyBatchReceipt"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Apply only complete-snapshot ready rows; every late failure rolls back the whole action.",
+        "tags": [
+          "crate::imports::ready_routes"
+        ]
+      }
+    },
+    "/imports/{id}/commit": {
+      "post": {
+        "operationId": "imports.commit",
+        "parameters": [
+          {
+            "description": "Import batch id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommitBatchInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommitReceipt"
+                }
+              }
+            },
+            "description": "Stable commit receipt"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid row decisions"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unknown import or person"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Stale preview or conflicting retry"
+          }
+        },
+        "summary": "Apply selected decisions atomically, preserving a receipt for identical retries.",
+        "tags": [
+          "crate::imports::routes"
+        ]
+      }
+    },
+    "/imports/{id}/review-decisions": {
+      "post": {
+        "operationId": "imports.review.decide",
+        "parameters": [
+          {
+            "description": "Import batch id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewDecisionInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewDecisionReceipt"
+                }
+              }
+            },
+            "description": "Atomic reviewed-row receipt"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid review choices"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unknown import resource"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Stale review or conflicting decision"
+          }
+        },
+        "summary": "Apply only explicitly selected candidates atomically; exact retries return the stored receipt.",
+        "tags": [
+          "crate::imports::review_decision_routes"
+        ]
+      }
+    },
+    "/imports/{id}/review-proposals": {
+      "get": {
+        "operationId": "imports.review.proposals",
+        "parameters": [
+          {
+            "description": "Import batch id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "candidateRowId",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "candidateOffset",
+            "required": false,
+            "schema": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "candidateLimit",
+            "required": false,
+            "schema": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "proposalRevision",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportReview"
+                }
+              }
+            },
+            "description": "Coherent import review page"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid review pagination"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unknown import or row"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Review snapshot changed"
+          }
+        },
+        "summary": "Read bounded evidence pages from complete-batch classification, rejecting stale page proofs.",
+        "tags": [
+          "crate::imports::review_routes"
+        ]
+      }
+    },
+    "/merges": {
+      "post": {
+        "operationId": "merges.merge",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MergeBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MergeResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Merge only selected groups with explicit field references and immutable retry receipts.",
+        "tags": [
+          "crate::merges::routes"
+        ]
+      }
+    },
+    "/merges/groups/{id}": {
+      "get": {
+        "operationId": "merges.group",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdentityGroup"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Read the current canonical group and the conservative directory-wide revision.",
+        "tags": [
+          "crate::merges::routes"
+        ]
+      }
+    },
+    "/merges/keep-separate": {
+      "get": {
+        "operationId": "merges.separations",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeparateList"
+                }
+              }
+            }
+          }
+        },
+        "summary": "List stable member-pair decisions for conservative matching.",
+        "tags": [
+          "crate::merges::routes"
+        ]
+      },
+      "post": {
+        "operationId": "merges.separate",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SeparateBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeparateResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Persist or revoke candidate-specific separation across the two selected groups.",
+        "tags": [
+          "crate::merges::routes"
+        ]
+      }
+    },
+    "/merges/{id}/undo": {
+      "post": {
+        "operationId": "merges.undo",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UndoBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UndoResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Undo only an untouched merge. External references created after the merge remain unchanged.",
+        "tags": [
+          "crate::merges::routes"
+        ]
+      }
+    },
     "/openapi": {
       "get": {
         "operationId": "openapi.get",
@@ -1316,6 +4367,370 @@
         "summary": "`GET /openapi` — serve the pinned 3.0.3 OpenAPI document.",
         "tags": [
           "crate::app"
+        ]
+      }
+    },
+    "/providers/accounts": {
+      "get": {
+        "operationId": "providers.accounts.list",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProviderAccountStatus"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Connection states"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Human session required"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Connections unavailable"
+          }
+        },
+        "summary": "List connection states after verifying a human operator; never return secrets.",
+        "tags": [
+          "crate::providers::routes"
+        ]
+      }
+    },
+    "/providers/accounts/{id}": {
+      "delete": {
+        "operationId": "providers.accounts.disconnect",
+        "parameters": [
+          {
+            "description": "Source account UUID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Disconnected"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Human session required"
+          }
+        },
+        "summary": "Revoke credentials and fence callbacks, previews and in-flight provider results.",
+        "tags": [
+          "crate::providers::routes"
+        ]
+      }
+    },
+    "/providers/accounts/{id}/sync": {
+      "post": {
+        "operationId": "providers.sync.start",
+        "parameters": [
+          {
+            "description": "Source account UUID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderOperation"
+                }
+              }
+            },
+            "description": "Durable scan started"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Verified identity required"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Connection changed or scan already running"
+          }
+        },
+        "summary": "Queue a discovered account scan for a verified human or a registry-verified\nservice account admitted by this operation's outer scope gate.",
+        "tags": [
+          "crate::providers::routes"
+        ]
+      }
+    },
+    "/providers/google/authorize": {
+      "post": {
+        "operationId": "providers.google.authorize",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoogleAuthorizeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Authorization created; open the Location header URL",
+            "headers": {
+              "Location": {
+                "description": "One-use Google browser authorization URL",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Human session required"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Connections unavailable"
+          }
+        },
+        "summary": "Start one-use Google authorization under the verified operator identity.",
+        "tags": [
+          "crate::providers::routes"
+        ]
+      }
+    },
+    "/providers/google/callback": {
+      "get": {
+        "operationId": "providers.google.callback",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "code",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "error",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "state",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "303": {
+            "description": "Return to connections with only a generic browser error code on failure",
+            "headers": {
+              "Location": {
+                "description": "Fixed shell connections route",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Invalid or cancelled JSON callback"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Human session required"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Authorization changed or account mismatch"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Connections unavailable"
+          }
+        },
+        "summary": "Consume state before exchanging the callback code; human subject and account\nepoch must match the initiating authorization attempt. Successful browser\ncallbacks return to the fixed shell connections route without auth details.\nHTML failures return only a generic cancelled/failed code on that route;\nJSON clients retain the structured error response.",
+        "tags": [
+          "crate::providers::routes"
+        ]
+      }
+    },
+    "/providers/icloud/accounts": {
+      "post": {
+        "operationId": "providers.icloud.connect",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IcloudConnectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderOperation"
+                }
+              }
+            },
+            "description": "iCloud account connected"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Human session required"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Principal mismatch or changed connection"
+          }
+        },
+        "summary": "Validate iCloud credentials and actual principal before encrypted installation.",
+        "tags": [
+          "crate::providers::routes"
+        ]
+      }
+    },
+    "/providers/sync/{id}": {
+      "get": {
+        "operationId": "providers.sync.get",
+        "parameters": [
+          {
+            "description": "Durable scan UUID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderRunStatus"
+                }
+              }
+            },
+            "description": "Scan progress"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Verified identity required"
+          }
+        },
+        "summary": "Read safe scan progress without exposing cursor, raw card or credential values.",
+        "tags": [
+          "crate::providers::routes"
         ]
       }
     },
@@ -1346,6 +4761,63 @@
         },
         "tags": [
           "crate::search::routes"
+        ]
+      }
+    },
+    "/sources/accounts": {
+      "get": {
+        "operationId": "sources.accounts.list",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceAccountListResponse"
+                }
+              }
+            }
+          }
+        },
+        "summary": "List registered account identities without credential material.",
+        "tags": [
+          "crate::sources::routes"
+        ]
+      },
+      "post": {
+        "operationId": "sources.accounts.register",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SourceAccountInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceAccountResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Register or relabel an existing provider subject without changing its identity.",
+        "tags": [
+          "crate::sources::routes"
         ]
       }
     }

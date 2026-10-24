@@ -154,11 +154,9 @@ describe('entityUsage — transactionCount rollup over the live contact set', ()
     expect(data[0]).toMatchObject({ avatarAssetId: null, colour: null });
   });
 
-  it('degrades to an empty list when contacts is unavailable', async () => {
+  it('reports unavailable instead of dropping historical entity counts', async () => {
     const down = makeContactsFake({ unavailable: true });
-    const { data, pagination } = await client(down).entityUsage.list();
-    expect(data).toEqual([]);
-    expect(pagination.total).toBe(0);
+    await expect(client(down).entityUsage.list()).rejects.toMatchObject({ status: 503 });
   });
 
   it('excludes entity_precreate_outbox pending placeholders from the transaction-count rollup', () => {

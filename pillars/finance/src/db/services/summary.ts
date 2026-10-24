@@ -11,6 +11,7 @@ import {
   DEFAULT_SUMMARY_WINDOW,
   type SummaryWindowKey,
 } from '../../contract/summary-windows.js';
+import { type EntityIdentities } from './entity-identity.js';
 import {
   earliestTransactionDate,
   spendByAccount,
@@ -53,6 +54,8 @@ import {
 import type { FinanceDb } from './internal.js';
 
 export interface SummaryOptions {
+  /** Canonical snapshot for all entity aggregation paths. */
+  identities?: EntityIdentities;
   window?: SummaryWindowKey;
   /** Rows returned in the tag, entity and cost-of-credit breakdowns. */
   topLimit?: number;
@@ -107,6 +110,7 @@ function trendMonths(db: FinanceDb, window: ResolvedSummaryWindow): string[] {
 export function financeSummary(db: FinanceDb, options: SummaryOptions = {}): FinanceSummary {
   const window = resolveSummaryWindow(options.window ?? DEFAULT_SUMMARY_WINDOW, options.now);
   const topLimit = options.topLimit ?? DEFAULT_SUMMARY_TOP_LIMIT;
+  const identities = options.identities;
   const range: SummaryRange = { start: window.start, end: window.end };
   const months = trendMonths(db, window);
 
@@ -114,7 +118,13 @@ export function financeSummary(db: FinanceDb, options: SummaryOptions = {}): Fin
   const previousTotal = window.previous === null ? null : totalSpend(db, window.previous);
   const byAccount = spendByAccount(db, range, total.cents);
   const byMonth = spendByMonth(db, range, months);
-  const income = incomeSummary(db, { range, previous: window.previous, months, topLimit });
+  const income = incomeSummary(db, {
+    range,
+    previous: window.previous,
+    months,
+    topLimit,
+    identities,
+  });
   const costOfCredit = costOfCreditSummary(db, {
     range,
     previous: window.previous,
@@ -137,14 +147,14 @@ export function financeSummary(db: FinanceDb, options: SummaryOptions = {}): Fin
     byAccount,
     byMonth,
     byTag: spendByTag(db, range, total.cents, topLimit),
-    byEntity: spendByEntity(db, range, total.cents, topLimit),
+    byEntity: spendByEntity(db, range, total.cents, { limit: topLimit, identities }),
     income,
     costOfCredit,
     net: netSummary({ total, previousTotal, byMonth }, income),
     inference: {
       largestCharge: largestCharge(db, range),
-      concentration: concentration(db, range, total.cents),
-      recurringSubscriptions: recurringSubscriptions(db, range),
+      concentration: concentration(db, range, total.cents, identities),
+      recurringSubscriptions: recurringSubscriptions(db, range, identities),
       foreign: foreignSpend(db, range),
     },
   };

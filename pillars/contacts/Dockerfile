@@ -12,6 +12,18 @@
 # are embedded into the binary at compile time via `sqlx::migrate!`, so the
 # runtime image needs neither the migrations directory nor sqlx-cli.
 
+FROM node:24-slim AS ui-builder
+WORKDIR /app
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json .oxfmtrc.json ./
+COPY libs ./libs
+COPY scripts ./scripts
+COPY pillars/contacts/app ./pillars/contacts/app
+COPY pillars/contacts/openapi ./pillars/contacts/openapi
+RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+    corepack enable && pnpm install --frozen-lockfile --filter "@pops/app-contacts..." --ignore-scripts
+RUN pnpm --filter @pops/types build && pnpm --filter @pops/pillar-sdk build
+RUN pnpm --filter @pops/app-contacts generate:contacts-client && pnpm --filter @pops/app-contacts build
+
 FROM rust:1.98.1-slim-bookworm AS builder
 WORKDIR /build
 
@@ -77,6 +89,8 @@ RUN apt-get update \
     && chown -R contacts:contacts /data
 
 COPY --from=builder /build/target/release/contacts /app/contacts
+COPY --from=ui-builder /app/pillars/contacts/app/dist/remote /app/ui
+ENV CONTACTS_UI_PATH=/app/ui
 
 # Watchtower injects the git SHA as BUILD_VERSION; the binary coerces a
 # non-semver value to 0.0.0-sha.<7> for the manifest.

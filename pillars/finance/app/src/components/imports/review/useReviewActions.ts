@@ -1,4 +1,7 @@
 import { useCallback } from 'react';
+import { toast } from 'sonner';
+
+import { entityIdentity, preservedEntityId, type EntityIdentities } from '@pops/finance';
 
 import { promptToLearn } from '../hooks/learn-prompt';
 import { replaceByChecksum } from '../hooks/local-tx-reconcile';
@@ -22,6 +25,7 @@ type GenerateProposal = (args: {
 }) => Promise<void>;
 
 export interface MoveArgs {
+  identities?: EntityIdentities;
   transaction: ProcessedTransaction;
   /** Omitted, with `entityName`, for `matchType: 'none'`: the row has no merchant. */
   entityId?: string;
@@ -59,7 +63,14 @@ export function moveOneToMatched(prev: LocalTxState, args: MoveArgs): LocalTxSta
   const { transaction, entityId, entityName, matchType, transactionType } = args;
   return replaceByChecksum(prev, transaction.checksum, 'matched', () => ({
     ...transaction,
-    entity: { entityId, entityName, matchType, confidence: matchType === 'none' ? undefined : 1 },
+    entity: {
+      entityId:
+        preservedEntityId(transaction.entity.entityId ?? null, entityId, args.identities) ??
+        undefined,
+      entityName,
+      matchType,
+      confidence: matchType === 'none' ? undefined : 1,
+    },
     status: 'matched' as const,
     transactionType: transactionType ?? transaction.transactionType,
     error: undefined,
@@ -78,11 +89,14 @@ export function moveOneToMatched(prev: LocalTxState, args: MoveArgs): LocalTxSta
  */
 export function overridesAutomaticMatch(
   transaction: ProcessedTransaction,
-  entityId: string
+  entityId: string,
+  identities?: EntityIdentities
 ): boolean {
   const match = transaction.entity;
   if (!match || match.matchType === 'manual' || match.matchType === 'none') return false;
-  return match.entityId !== entityId;
+  return (
+    entityIdentity(match.entityId ?? null, identities) !== entityIdentity(entityId, identities)
+  );
 }
 
 /** The proposal seed every assignment path builds from its triggering row. */
@@ -97,6 +111,7 @@ function proposalArgs(transaction: ProcessedTransaction, entityId: string, entit
 }
 
 interface UseReviewActionsArgs {
+  identities?: EntityIdentities;
   setLocalTransactions: Dispatch<SetStateAction<LocalTxState>>;
   findSimilar: (t: ProcessedTransaction) => ProcessedTransaction[];
   generateProposal: GenerateProposal;
@@ -111,13 +126,14 @@ interface UseReviewActionsArgs {
 
 type BulkArgs = Pick<
   UseReviewActionsArgs,
-  'setLocalTransactions' | 'generateProposal' | 'recomputeForEntity'
+  'setLocalTransactions' | 'generateProposal' | 'recomputeForEntity' | 'identities'
 >;
 
 function useHandleBulkEntitySelect({
   setLocalTransactions,
   generateProposal,
   recomputeForEntity,
+  identities,
 }: BulkArgs) {
   return useCallback(
     (
@@ -127,11 +143,16 @@ function useHandleBulkEntitySelect({
       transactionType?: TransactionType
     ) => {
       if (transactions.length === 0) return;
+      if (!identities) {
+        toast.error('Contact identities are unavailable; retry before assigning.');
+        return;
+      }
       setLocalTransactions((prev) => {
         let updated = prev;
         for (const t of transactions) {
           updated = moveOneToMatched(updated, {
             transaction: t,
+            identities,
             entityId,
             entityName,
             matchType: 'manual',
@@ -147,7 +168,7 @@ function useHandleBulkEntitySelect({
       const firstTx = transactions[0];
       if (firstTx) void generateProposal(proposalArgs(firstTx, entityId, entityName));
     },
-    [generateProposal, recomputeForEntity, setLocalTransactions]
+    [generateProposal, recomputeForEntity, setLocalTransactions, identities]
   );
 }
 
@@ -156,6 +177,7 @@ function useHandleEntitySelect({
   findSimilar,
   generateProposal,
   recomputeForEntity,
+  identities,
 }: UseReviewActionsArgs) {
   return useCallback(
     (
@@ -164,10 +186,15 @@ function useHandleEntitySelect({
       entityName: string,
       transactionType?: TransactionType
     ) => {
+      if (!identities) {
+        toast.error('Contact identities are unavailable; retry before assigning.');
+        return;
+      }
       const similar = findSimilar(transaction);
       setLocalTransactions((prev) =>
         moveOneToMatched(prev, {
           transaction,
+          identities,
           entityId,
           entityName,
           matchType: 'manual',
@@ -176,7 +203,12 @@ function useHandleEntitySelect({
       );
       void recomputeForEntity([transaction], entityId);
       const propose = () => generateProposal(proposalArgs(transaction, entityId, entityName));
-      if (overridesAutomaticMatch(transaction, entityId) || similar.length > 0) {
+      if (
+        entityIdentity(transaction.entity?.entityId ?? null, identities) ===
+        entityIdentity(entityId, identities)
+      )
+        return;
+      if (overridesAutomaticMatch(transaction, entityId, identities) || similar.length > 0) {
         void propose();
         return;
       }
@@ -184,10 +216,9 @@ function useHandleEntitySelect({
       // there is nothing to learn. The bucket move above still runs: accepting
       // an AI suggestion that already resolved to an entity id comes through
       // here, and that row has to leave `uncertain`.
-      if (transaction.entity?.entityId === entityId) return;
       promptToLearn(() => void propose());
     },
-    [findSimilar, generateProposal, recomputeForEntity, setLocalTransactions]
+    [findSimilar, generateProposal, recomputeForEntity, setLocalTransactions, identities]
   );
 }
 

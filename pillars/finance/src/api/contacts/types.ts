@@ -55,6 +55,8 @@ export interface CreateOrFetchResult {
  * usage join / degradation paths are exercised without the network.
  */
 export interface ContactsClient {
+  /** Complete canonical mappings for requested historical ids; null is missing, failure throws 503. */
+  resolveEntityIds(ids: readonly string[]): Promise<ReadonlyMap<string, string | null>>;
   /**
    * The whole contact set (optionally filtered by `search`/`type`), paged out
    * of the contacts list endpoint. Empty when contacts is down.
@@ -84,7 +86,8 @@ export interface ContactsClient {
    * Resolve a contact for `name`, creating it only when absent. Fetches by
    * (case-insensitive) name FIRST, creates when none matches, and tolerates a
    * 409 from a racing concurrent create by re-fetching. `created` reports
-   * whether THIS call inserted a new contact. Never resolves silently on
+   * whether THIS call inserted a new contact. Person names resolve only people;
+   * other types exclude people. Ambiguous matches fail permanently. Never resolves silently on
    * failure: a TRANSIENT failure (contacts unreachable / mid-recovery /
    * rate-limited) throws {@link ContactsUnavailableError}; a PERMANENT one
    * (malformed request, auth, contract mismatch, an unrecognised refusal)

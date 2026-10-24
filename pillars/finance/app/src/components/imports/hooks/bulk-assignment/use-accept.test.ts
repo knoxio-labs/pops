@@ -41,8 +41,42 @@ beforeEach(() => {
 });
 
 describe('useAcceptAll (CF014)', () => {
+  it('preserves an explicit person id when their name is shared', async () => {
+    const people: EntityLookup[] = [
+      { id: 'one', name: 'Alex Smith', type: 'person', aliases: [] },
+      { id: 'two', name: 'Alex Smith', type: 'person', aliases: [] },
+    ];
+    const tx = makeProcessed('person', {
+      entity: { entityId: 'two', entityName: 'Alex Smith', matchType: 'manual' },
+    });
+    const { result } = renderHook(() => {
+      const [state, setState] = useState<LocalTxState>(emptyState({ uncertain: [tx] }));
+      const acceptAll = useAcceptAll({
+        identities: new Map([
+          ['one', 'one'],
+          ['two', 'two'],
+          ['ent-bunnings', 'ent-bunnings'],
+        ]),
+        entities: people,
+        dbEntities: people,
+        addPendingEntity: useImportStore.getState().addPendingEntity,
+        setLocalTransactions: setState,
+        generateProposal: vi.fn().mockResolvedValue(undefined),
+        recomputeForEntity: vi.fn().mockResolvedValue(undefined),
+      });
+      return { state, acceptAll };
+    });
+    await act(async () => {
+      await result.current.acceptAll([tx]);
+    });
+    expect(result.current.state.matched[0]?.entity?.entityId).toBe('two');
+    expect(useImportStore.getState().pendingEntities).toEqual([]);
+  });
+
   it('replaces the existing matched card in place instead of appending a duplicate', async () => {
-    const dbEntities: EntityLookup[] = [{ id: 'ent-bunnings', name: 'Bunnings', aliases: [] }];
+    const dbEntities: EntityLookup[] = [
+      { id: 'ent-bunnings', name: 'Bunnings', aliases: [], type: 'company' },
+    ];
 
     const alreadyMatched = makeProcessed('bunnings', {
       status: 'matched',
@@ -57,6 +91,11 @@ describe('useAcceptAll (CF014)', () => {
     const { result } = renderHook(() => {
       const [state, setState] = useState<LocalTxState>(emptyState({ matched: [alreadyMatched] }));
       const acceptAll = useAcceptAll({
+        identities: new Map([
+          ['one', 'one'],
+          ['two', 'two'],
+          ['ent-bunnings', 'ent-bunnings'],
+        ]),
         entities: dbEntities,
         addPendingEntity: useImportStore.getState().addPendingEntity,
         dbEntities,

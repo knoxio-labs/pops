@@ -1,15 +1,18 @@
 import { useCallback } from 'react';
 import { toast } from 'sonner';
 
-import { entityAnswersTo } from '../../entity-existence';
+import { resolveSuggestedMerchant } from '../../entity-existence';
 import { type LocalTxState, moveToMatched, pluralize, type UseBulkAssignmentArgs } from './types';
 
 import type { Dispatch, SetStateAction } from 'react';
+
+import type { EntityIdentities } from '@pops/finance';
 
 import type { ProcessedTransaction } from '../../../../store/importStore';
 import type { useEntities } from '../useEntities';
 
 interface AcceptAllArgs {
+  identities?: ReturnType<typeof useEntities>['identities'];
   entities: ReturnType<typeof useEntities>['entities'];
   addPendingEntity: ReturnType<typeof useEntities>['addPendingEntity'];
   dbEntities: ReturnType<typeof useEntities>['dbEntities'];
@@ -24,11 +27,20 @@ function resolveEntityId(
   addPendingEntity: AcceptAllArgs['addPendingEntity'],
   dbEntities: AcceptAllArgs['dbEntities']
 ): string {
-  const target = entityName.toLowerCase();
-  const existing = entities?.find((e) => entityAnswersTo(e, target))?.id;
+  const existing = entities ? resolveSuggestedMerchant(entities, entityName)?.id : undefined;
   if (existing) return existing;
   const pending = addPendingEntity({ name: entityName, type: 'company' }, dbEntities);
   return pending.tempId;
+}
+
+function canAcceptGroup(
+  identities: EntityIdentities | undefined,
+  transactions: readonly ProcessedTransaction[]
+): identities is EntityIdentities {
+  if (transactions.length === 0) return false;
+  if (identities) return true;
+  toast.error('Contact identities are unavailable; retry before assigning.');
+  return false;
 }
 
 /**
@@ -40,6 +52,7 @@ function resolveEntityId(
 export function useAcceptAll(args: AcceptAllArgs) {
   const {
     entities,
+    identities,
     addPendingEntity,
     dbEntities,
     setLocalTransactions,
@@ -48,7 +61,7 @@ export function useAcceptAll(args: AcceptAllArgs) {
   } = args;
   return useCallback(
     async (transactions: ProcessedTransaction[]) => {
-      if (transactions.length === 0) return;
+      if (!canAcceptGroup(identities, transactions)) return;
       const firstTx = transactions[0];
       const entityName = firstTx?.entity?.entityName;
       if (!firstTx || !entityName) {
@@ -56,8 +69,12 @@ export function useAcceptAll(args: AcceptAllArgs) {
         return;
       }
       try {
-        const entityId = resolveEntityId(entityName, entities, addPendingEntity, dbEntities);
-        setLocalTransactions((prev) => moveToMatched(prev, transactions, { entityId, entityName }));
+        const entityId =
+          firstTx.entity?.entityId ??
+          resolveEntityId(entityName, entities, addPendingEntity, dbEntities);
+        setLocalTransactions((prev) =>
+          moveToMatched(prev, transactions, { entityId, entityName, identities })
+        );
         void recomputeForEntity(transactions, entityId);
         toast.success(`Accepted ${pluralize(transactions.length)} as "${entityName}"`);
         void generateProposal({
@@ -75,6 +92,7 @@ export function useAcceptAll(args: AcceptAllArgs) {
     },
     [
       entities,
+      identities,
       addPendingEntity,
       dbEntities,
       setLocalTransactions,
@@ -96,8 +114,13 @@ export function useAcceptAiSuggestion(args: {
       if (!transaction.entity?.entityName) return;
       let entityId = transaction.entity.entityId;
       if (!entityId && entities) {
-        const target = transaction.entity.entityName.toLowerCase();
-        const matching = entities.find((e) => entityAnswersTo(e, target));
+        let matching;
+        try {
+          matching = resolveSuggestedMerchant(entities, transaction.entity.entityName);
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : 'Ambiguous merchant name');
+          return;
+        }
         if (matching) entityId = matching.id;
       }
       if (!entityId) {

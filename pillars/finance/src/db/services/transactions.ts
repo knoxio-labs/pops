@@ -34,6 +34,7 @@ import { assertNoFeeTagsOnNonFeeType } from '../fee-tag-guard.js';
 import { transactions } from '../schema.js';
 import { parseStoredTags } from '../tag-facets.js';
 import { getAccount } from './accounts.js';
+import { preservedEntityId, type EntityIdentities } from './entity-identity.js';
 import { applyVocabularyUsageDelta } from './tag-vocabulary.js';
 import {
   recordTransactionEvent,
@@ -162,12 +163,20 @@ export function updateTransaction(
   db: FinanceDb,
   id: string,
   input: UpdateTransactionInput,
-  actor?: TransactionActor
+  options?: TransactionActor | { actor?: TransactionActor; identities?: EntityIdentities }
 ): TransactionRow {
+  const context =
+    options !== undefined && 'kind' in options
+      ? { actor: options, identities: undefined }
+      : options;
+  const { actor, identities } = context ?? {};
   const stored = getTransaction(db, id);
   assertPatchStaysCoherent(stored, input);
 
-  const updates = buildTransactionUpdates(db, input);
+  const updates = buildTransactionUpdates(db, {
+    ...input,
+    entityId: preservedEntityId(stored.entityId, input.entityId, identities),
+  });
   if (Object.keys(updates).length > 0) {
     updates.lastEditedTime = new Date().toISOString();
     db.transaction((tx) => {

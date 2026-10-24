@@ -43,12 +43,16 @@ test.describe('cerebrum — mounted by the runtime loader', () => {
   // kind most easily dropped from the page list, and the kind whose absence
   // shows up as a 404 rather than as anything visibly broken.
   test('an engram detail deep link mounts', async ({ page }) => {
-    await stubEngramDetail(page, 'some-engram-id');
-    await page.goto('/cerebrum/engrams/some-engram-id');
+    const engramId = 'eng_20261024_0800_loader-smoke';
+    await stubEngramDetail(page, engramId);
+    const request = page.waitForRequest(/\/cerebrum-api\/engrams\/eng_20261024_0800_loader-smoke$/);
+    await page.goto(`/cerebrum/engrams/${engramId}`);
+    expect((await request).method()).toBe('GET');
 
-    await expect(page).toHaveURL(/\/cerebrum\/engrams\/some-engram-id/);
+    await expect(page).toHaveURL(/\/cerebrum\/engrams\/eng_20261024_0800_loader-smoke$/);
     await expect(page.getByTestId('external-pillar-load-error')).toHaveCount(0);
     await expect(page.getByRole('heading', { name: 'Some engram' })).toBeVisible();
+    await expect(page.getByText('Some body.', { exact: true })).toBeVisible();
     await expect(page.getByRole('heading', { name: /not found|404/i })).toHaveCount(0);
   });
 

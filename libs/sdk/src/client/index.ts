@@ -37,3 +37,11 @@ export {
   type ApiResult,
   type UnwrapOptions,
 } from '../api-error.js';
+
+export { resolveCanonicalIds } from './canonical-identities.js';
+export type {
+  CanonicalIdentity,
+  CanonicalIdentityBatch,
+  CanonicalIdentityOperation,
+  CanonicalIdentityOptions,
+} from './canonical-identities.js';

@@ -25,6 +25,15 @@ pub enum ErrorCode {
     NotFound,
     #[serde(rename = "contacts.entity.name_conflict")]
     NameConflict,
+    /// A stale import preview or a retry key reused with different decisions.
+    #[serde(rename = "contacts.import.conflict")]
+    ImportConflict,
+    /// Import persistence failed without exposing the underlying observations.
+    #[serde(rename = "contacts.import.storage")]
+    ImportStorage,
+    /// Stale, retired or incompatible identity decisions.
+    #[serde(rename = "contacts.entity.identity_conflict")]
+    IdentityConflict,
     /// Missing, unknown, or revoked service-account credentials.
     #[serde(rename = "contacts.auth.unauthorized")]
     ServiceAccountUnauthorized,
@@ -34,6 +43,15 @@ pub enum ErrorCode {
     /// The registry could not verify presented service-account credentials.
     #[serde(rename = "contacts.auth.unavailable")]
     ServiceAccountUnavailable,
+    /// Provider connection configuration or transport/storage is unavailable.
+    #[serde(rename = "contacts.provider.unavailable")]
+    ProviderUnavailable,
+    /// Provider connection identity, epoch, authorization state or scan changed.
+    #[serde(rename = "contacts.provider.conflict")]
+    ProviderConflict,
+    /// The provider revoked or rejected a grant and requires human reconnection.
+    #[serde(rename = "contacts.provider.reauthorization_required")]
+    ProviderReauthorization,
     #[serde(rename = "contacts.internal")]
     Internal,
 }
@@ -61,6 +79,58 @@ pub struct ApiError {
 }
 
 impl ApiError {
+    /// Build an import conflict response without echoing imported data.
+    pub fn import_conflict(message: &'static str) -> Self {
+        Self {
+            status: StatusCode::CONFLICT,
+            message: message.to_string(),
+            code: ErrorCode::ImportConflict,
+            retryable: false,
+            details: None,
+        }
+    }
+
+    /// Report an import storage failure using only a safe classification and request id.
+    pub fn import_storage() -> Self {
+        let request_id = current_request_id();
+        tracing::error!(%request_id, classification = "import_storage", "contacts import persistence failed");
+        Self {
+            status: StatusCode::INTERNAL_SERVER_ERROR,
+            message: "Import could not be saved; retry the request".to_string(),
+            code: ErrorCode::ImportStorage,
+            retryable: true,
+            details: None,
+        }
+    }
+
+    /// Build a provider response from fixed safe classifications. Remote payloads,
+    /// credentials, query values and database diagnostics never enter this path.
+    pub fn provider(
+        status: StatusCode,
+        code: ErrorCode,
+        message: &'static str,
+        retryable: bool,
+    ) -> Self {
+        Self {
+            status,
+            code,
+            message: message.to_string(),
+            retryable,
+            details: None,
+        }
+    }
+
+    /// Build a safe identity-decision conflict with optional structured context.
+    pub fn identity_conflict(message: impl Into<String>) -> Self {
+        Self {
+            status: StatusCode::CONFLICT,
+            message: message.into(),
+            code: ErrorCode::IdentityConflict,
+            retryable: false,
+            details: None,
+        }
+    }
+
     /// Build a resource-not-found response.
     pub fn not_found(resource: &str, id: &str) -> Self {
         Self {
@@ -139,6 +209,19 @@ impl ApiError {
 
     /// Log a database failure with its request id and return a generic error.
     pub fn database(error: sqlx::Error) -> Self {
+        if error.as_database_error().is_some_and(|database| {
+            matches!(
+                database.message(),
+                "retired entity is not writable"
+                    | "merged entity cannot be deleted"
+                    | "merged entity type is immutable"
+                    | "identity decisions must be cleared before deletion"
+            )
+        }) {
+            return Self::identity_conflict(
+                "Identity changed; resolve the current canonical ID before writing",
+            );
+        }
         let request_id = current_request_id();
         tracing::error!(%request_id, %error, "contacts database request failed");
         Self {

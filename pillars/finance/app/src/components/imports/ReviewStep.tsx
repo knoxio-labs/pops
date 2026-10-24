@@ -1,7 +1,7 @@
 import { useImportStore } from '../../store/importStore';
+import { CanonicalIdentityNotice } from './CanonicalIdentityNotice';
 import { LiveArrivalsBanner } from './live/LiveArrivalsBanner';
 import { DroppedRowsNotice } from './review/DroppedRowsNotice';
-import { EntityLookupUnavailableNotice } from './review/EntityLookupUnavailableNotice';
 import { ReviewFooter, ReviewHeader } from './review/ReviewChrome';
 import { ReviewDialogs } from './review/ReviewDialogs';
 import { ReviewTabs } from './review/ReviewTabs';
@@ -59,11 +59,10 @@ export function ReviewStep() {
         setBrowseOpen={proposal.setBrowseOpen}
       />
       <ReviewWarnings warnings={processedTransactions.warnings} />
-      {bulk.entityVerification === 'unavailable' && (
-        <EntityLookupUnavailableNotice onRetry={() => void bulk.retryEntityLookup()} />
-      )}
+      <CanonicalIdentityNotice status={bulk.entityVerification} retry={bulk.retryEntityLookup} />
       <DroppedRowsNotice dropped={commit.dropped} onShowDropped={review.showBlockedRows} />
       <ReviewTabs
+        identities={bulk.identities}
         activeTab={review.activeTab}
         onTabChange={review.handleTabChange}
         localTransactions={review.localTransactions}
@@ -94,6 +93,7 @@ export function ReviewStep() {
         onBack={() => goToStep(2)}
         onContinue={commit.continueToTagReview}
         isRecomputingTags={isRecomputingTags}
+        canContinue={review.identityStatus === 'ready'}
       />
     </div>
   );

@@ -48,6 +48,7 @@ import {
   transactionTagRulesService,
   transactions,
 } from '../../../db/index.js';
+import { entityIdentity, type EntityIdentities } from '../../../db/services/entity-identity.js';
 import { mergeTagsWithinFacetLimits, parseStoredTags } from '../../../db/tag-facets.js';
 
 import type { MatchableDescription } from '../../../contract/pattern-match.js';
@@ -117,9 +118,14 @@ interface RuleScope {
 function ruleMatchesTransaction(
   rule: RuleScope,
   txn: BatchTxn,
-  description: MatchableDescription
+  description: MatchableDescription,
+  identities?: EntityIdentities
 ): boolean {
-  if (rule.entityId && rule.entityId !== txn.entityId) return false;
+  if (
+    rule.entityId &&
+    entityIdentity(rule.entityId, identities) !== entityIdentity(txn.entityId, identities)
+  )
+    return false;
   return transactionCorrectionsService.patternMatchesDescription(
     rule.descriptionPattern,
     rule.matchType,
@@ -162,7 +168,7 @@ export interface TagRuleRetroactiveResult {
 export function applyTagRuleToExistingTransactions(
   db: FinanceDb,
   ruleId: string,
-  options: { dryRun?: boolean } = {}
+  options: { dryRun?: boolean; identities?: EntityIdentities } = {}
 ): TagRuleRetroactiveResult {
   const dryRun = options.dryRun ?? false;
   const result: TagRuleRetroactiveResult = {
@@ -190,7 +196,7 @@ export function applyTagRuleToExistingTransactions(
 
     for (const txn of batch) {
       const matchable = describeForMatching(txn.description);
-      if (!ruleMatchesTransaction(scope, txn, matchable)) continue;
+      if (!ruleMatchesTransaction(scope, txn, matchable, options.identities)) continue;
 
       result.matched++;
 

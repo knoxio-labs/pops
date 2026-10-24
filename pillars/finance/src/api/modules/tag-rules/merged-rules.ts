@@ -18,6 +18,12 @@
  * a rule narrowing its own tag list as adding nothing.
  */
 import { transactionCorrectionsService, transactionTagRulesService } from '../../../db/index.js';
+import {
+  EntityIdentityConflictError,
+  entityIdentity,
+  preservedEntityId,
+  type EntityIdentities,
+} from '../../../db/services/entity-identity.js';
 import { parseStoredTags } from '../../../db/tag-facets.js';
 
 import type {
@@ -46,10 +52,14 @@ export function loadPersistedTagRules(db: FinanceDb): InMemoryTagRule[] {
   }));
 }
 
-function withEdit(rule: InMemoryTagRule, data: TagRuleUpdate): InMemoryTagRule {
+function withEdit(
+  rule: InMemoryTagRule,
+  data: TagRuleUpdate,
+  identities?: EntityIdentities
+): InMemoryTagRule {
   return {
     ...rule,
-    entityId: data.entityId === undefined ? rule.entityId : (data.entityId ?? null),
+    entityId: preservedEntityId(rule.entityId, data.entityId, identities) ?? null,
     tags: data.tags ?? rule.tags,
     confidence: data.confidence ?? rule.confidence,
     isActive: data.isActive ?? rule.isActive,
@@ -59,17 +69,33 @@ function withEdit(rule: InMemoryTagRule, data: TagRuleUpdate): InMemoryTagRule {
 
 type AddOp = Extract<TagRuleChangeSetOp, { op: 'add' }>;
 
-function isReinforcementTarget(rule: InMemoryTagRule, op: AddOp, pattern: string): boolean {
+function isReinforcementTarget(
+  rule: InMemoryTagRule,
+  op: AddOp,
+  pattern: string,
+  identities?: EntityIdentities
+): boolean {
   return (
     rule.matchType === op.data.matchType &&
     rule.descriptionPattern === pattern &&
-    rule.entityId === (op.data.entityId ?? null)
+    entityIdentity(rule.entityId, identities) ===
+      entityIdentity(op.data.entityId ?? null, identities)
   );
 }
 
-function applyAdd(rules: InMemoryTagRule[], op: AddOp, index: number): InMemoryTagRule[] {
+function applyAdd(
+  rules: InMemoryTagRule[],
+  op: AddOp,
+  index: number,
+  identities?: EntityIdentities
+): InMemoryTagRule[] {
   const pattern = normalizePatternForStorage(op.data.descriptionPattern, op.data.matchType);
-  const existing = rules.find((rule) => isReinforcementTarget(rule, op, pattern));
+  const candidates = rules.filter((rule) => isReinforcementTarget(rule, op, pattern, identities));
+  if (identities !== undefined && candidates.length > 1)
+    throw new EntityIdentityConflictError(
+      'Multiple tag rules share a canonical identity; resolve their scopes before reinforcing'
+    );
+  const existing = candidates[0];
   if (existing) {
     return rules.map((rule) =>
       rule === existing
@@ -101,13 +127,14 @@ function applyAdd(rules: InMemoryTagRule[], op: AddOp, index: number): InMemoryT
 function applyOp(
   rules: InMemoryTagRule[],
   op: TagRuleChangeSetOp,
-  index: number
+  index: number,
+  identities?: EntityIdentities
 ): InMemoryTagRule[] {
   switch (op.op) {
     case 'add':
-      return applyAdd(rules, op, index);
+      return applyAdd(rules, op, index, identities);
     case 'edit':
-      return rules.map((rule) => (rule.id === op.id ? withEdit(rule, op.data) : rule));
+      return rules.map((rule) => (rule.id === op.id ? withEdit(rule, op.data, identities) : rule));
     case 'disable':
       return rules.map((rule) => (rule.id === op.id ? { ...rule, isActive: false } : rule));
     case 'remove':
@@ -121,9 +148,11 @@ function applyOp(
  */
 export function mergeChangeSetOverRules(
   persisted: readonly InMemoryTagRule[],
-  changeSet: TagRuleChangeSet
+  changeSet: TagRuleChangeSet,
+  identities?: EntityIdentities
 ): InMemoryTagRule[] {
   let merged = [...persisted];
-  for (const [index, op] of changeSet.ops.entries()) merged = applyOp(merged, op, index);
+  for (const [index, op] of changeSet.ops.entries())
+    merged = applyOp(merged, op, index, identities);
   return merged;
 }

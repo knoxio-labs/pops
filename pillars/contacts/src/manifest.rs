@@ -38,12 +38,18 @@ pub fn build_contacts_manifest(version: &str) -> Value {
             "queries": [
                 "contacts.entities.list",
                 "contacts.entities.get",
+                "contacts.entities.resolve",
+                "contacts.merges.group",
+                "contacts.merges.separations",
                 "contacts.search.search",
             ],
             "mutations": [
                 "contacts.entities.create",
                 "contacts.entities.update",
                 "contacts.entities.delete",
+                "contacts.merges.merge",
+                "contacts.merges.undo",
+                "contacts.merges.separate",
             ],
             "subscriptions": [],
         },
@@ -67,8 +73,20 @@ pub fn build_contacts_manifest(version: &str) -> Value {
         "uri": { "types": ["contacts/contact"] },
         "consumedSettings": { "keys": [] },
         "settings": { "manifests": [] },
+        "assetsBaseUrl": "/contacts-api/ui/contacts.js",
+        "stylesheetUrl": "/contacts-api/ui/contacts.css",
+        "nav": {
+            "id": "contacts", "label": "Contacts", "labelKey": "contacts:nav.title",
+            "icon": "contact-round", "color": "violet", "basePath": "/contacts", "order": 55,
+            "items": [
+                { "path": "", "label": "Import review", "labelKey": "contacts:nav.importReview", "icon": "contact-round" },
+                { "path": "connections", "label": "Connections", "labelKey": "contacts:nav.connections", "icon": "plug" }
+            ]
+        },
         "pages": [
-            { "path": "", "index": true, "bundleSlot": "contacts-list" }
+            { "path": "", "index": true, "bundleSlot": "contacts-import-review" },
+            { "path": "imports/:batchId", "bundleSlot": "contacts-import-review" },
+            { "path": "connections", "bundleSlot": "contacts-connections" }
         ],
         "healthcheck": { "path": "/health" },
     })
@@ -141,6 +159,24 @@ mod tests {
         assert_eq!(manifest["settings"]["manifests"], json!([]));
         assert_eq!(manifest["consumedSettings"]["keys"], json!([]));
         assert_eq!(manifest["ai"]["tools"], json!([]));
+    }
+
+    #[test]
+    fn remote_app_links_use_the_existing_contacts_proxy() {
+        let manifest = build_contacts_manifest("0.0.0-dev");
+        assert_eq!(
+            manifest["assetsBaseUrl"],
+            json!("/contacts-api/ui/contacts.js")
+        );
+        assert_eq!(
+            manifest["stylesheetUrl"],
+            json!("/contacts-api/ui/contacts.css")
+        );
+        assert_eq!(manifest["nav"]["basePath"], json!("/contacts"));
+        assert_eq!(
+            manifest["pages"][0]["bundleSlot"],
+            json!("contacts-import-review")
+        );
     }
 
     #[test]

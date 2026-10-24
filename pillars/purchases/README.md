@@ -94,7 +94,7 @@ Two things it deliberately does not do:
 - **It does not add currencies together.** Groups are keyed on merchant _and_ currency, and `totals` carries one entry per currency rather than one grand total. There is no meaningful sum across currencies, and returning one would look authoritative.
 - **It takes no `limit`.** A roll-up over the first 500 of 748 orders is not a smaller answer, it is a wrong one, and nothing in the response would say which it was. The period is the only bound.
 
-Merchant attribution is reported three ways, because the pillar has two different things called a merchant: `entity` (grouped on a resolved `contacts` entity id, the operative identity), `name` (grouped on the label, because no entity was ever attached), and `unattributed` (the order names no merchant). Today every export-ingested order lands under `name` — no export adapter sets an id, only receipt ingest does (POPS-1852). Collapsing the three would report a string match as an identity, and orders naming no merchant would vanish from a total that claims to describe them.
+Merchant attribution is reported three ways, because the pillar has two different things called a merchant: `entity` (grouped on the current canonical `contacts` entity id, the operative identity), `name` (grouped on the label, because no entity was ever attached), and `unattributed` (the order names no merchant). Today every export-ingested order lands under `name` — no export adapter sets an id, only receipt ingest does (POPS-1852). Collapsing the three would report a string match as an identity, and orders naming no merchant would vanish from a total that claims to describe them.
 
 **A group can be opened.** `GET /purchases` takes the same three — `merchantEntityId`, `merchantEntityName`, `merchantUnattributed` — plus `currency`, off the same scope vocabulary the roll-up derives its own query from, so the same parameters select the same orders in both. A row saying "Bunnings, 12 orders, $1,041.20 of which $151.20 is unexplained" is where a reader forms the question `GET /purchases/:id` answers, and naming an unexplained figure nobody can then chase is a weaker version of hiding it.
 
@@ -195,7 +195,9 @@ A proposal runs out of band — `pnpm propose:kinds`, never inside an adapter, s
 
 **`position` is not cosmetic.** Ids are random UUIDs and every row written in one ingest shares a `createdAt` to the second, so without an explicit position the read order of lines, deliveries and charges is genuinely non-deterministic — a 100-line grocery receipt would render shuffled, and the deterministic candidate ordering the reconciliation engine needs for re-derivation to be safe would not hold.
 
-**`merchantEntityId` is operative; `merchantEntityName` is only its label.** Entities live in `contacts` and are read live, and no mirror table exists — the same invariant finance carries on `transaction_corrections` (`pillars/finance/src/db/schema/corrections.ts`). Receipt ingest resolves a merchant name against `contacts` once, at write time, and stores the id it got back; no read path resolves by name. **Export ingest resolves nothing**, so the operative column is null for the whole Amazon bundle and the spend roll-up groups those orders by label, reporting `resolution: 'name'` rather than claiming an identity they do not have (POPS-1852).
+**`merchantEntityId` is operative; `merchantEntityName` is only its label.** Entities live in `contacts`. Identity-sensitive reads resolve every stored historical id through `entities.resolve` before grouping or filtering; canonical merchant filters include orders carrying any retired alias. Stored foreign ids and dictionary scope keys remain historical, and no mirror table exists — the same invariant finance carries on `transaction_corrections` (`pillars/finance/src/db/schema/corrections.ts`). Receipt ingest resolves a merchant name against non-person `contacts` once, at write time, declining ambiguous matches, and stores the id it got back; no read path resolves by name. **Export ingest resolves nothing**, so the operative column is null for the whole Amazon bundle and the spend roll-up groups those orders by label, reporting `resolution: 'name'` rather than claiming an identity they do not have (POPS-1852).
+
+Merchant identity lookup failures return `503` on aggregate reads, entity-filtered order reads, merchant-changing edits and product proposals; classification and the proposal CLI abort before writing. An edit that sends an equivalent canonical id preserves the stored historical id and does not count as a merchant change on a locked purchase. Missing entities remain isolated by historical id. Product dictionary lookup canonicalizes historical scopes without rewriting or retiring confirmed assertions; conflicting confirmed products under one canonical scope are refused rather than arbitrarily selected.
 
 **`merchantAddressId` mirrors `merchantEntityId`'s posture, one level down.** It names the branch this purchase was made at — a `contacts` `entity_addresses` row, no FK, resolved server-side only when a reviewer already sent one — and `merchantAddressName` is the printed address kept verbatim beside it, the same way `merchantEntityName` is kept beside `merchantEntityId`. Nothing resolves a printed address string to a branch automatically; that is deliberately out of scope (ADR-053).
 
@@ -292,13 +294,14 @@ This is not a weaker gate, and it is no longer untested. The whole mechanism is 
 
 ## Who it calls, and as whom
 
-The mirror of the section above, and the half with a production failure mode. purchases makes seven outbound cross-pillar calls, all through `pillar()` from `@pops/pillar-sdk/server`, which attaches the pillar's service-account key as `X-API-Key`:
+The mirror of the section above, and the half with a production failure mode. purchases makes eight outbound cross-pillar calls, all through `pillar()` from `@pops/pillar-sdk/server`, which attaches the pillar's service-account key as `X-API-Key`:
 
 | Leg                                       | Call                | Scope needed           | Where                           |
 | ----------------------------------------- | ------------------- | ---------------------- | ------------------------------- |
 | reconciliation candidates + manual search | `transactions.list` | `finance.transactions` | `src/api/finance/client.ts`     |
 | soft-URI check, inventory                 | `items.get`         | `inventory.items`      | `src/api/cron/pillar-lookup.ts` |
 | soft-URI check, documents                 | `paperless.get`     | `documents.paperless`  | `src/api/cron/pillar-lookup.ts` |
+| canonical merchant identities             | `entities.resolve`  | `contacts.entities`    | `src/api/contacts/canonical.ts` |
 | receipt merchant resolution               | `entities.list`     | `contacts.entities`    | `src/api/contacts/merchant.ts`  |
 | accepted proposal → asset                 | `items.create`      | `inventory.items`      | `src/api/inventory/client.ts`   |
 | edit removes a linked line                | `items.update`      | `inventory.items`      | `src/api/inventory/client.ts`   |
@@ -308,7 +311,7 @@ The refresh runs at boot and every 24 hours by default; `PURCHASES_SHARED_TAG_RE
 
 If an assignment names a tag missing from the local cache, Purchases runs one bounded refresh and retries once. A failed refresh or a tag still absent from the refreshed cache keeps the existing `400` unknown-tag response.
 
-**Five of those seven read. The other two write**, and they are the only calls in this pillar that change data another pillar owns — see [the fan-out](#the-inventory-fan-out) for why the first sits here rather than in the browser, and what that costs. The two inventory writes reuse the `inventory.items` scope already needed by the cron read; the tags refresh adds its own `tags.tags` scope.
+**Six of those eight read. The other two write**, and they are the only calls in this pillar that change data another pillar owns — see [the fan-out](#the-inventory-fan-out) for why the first sits here rather than in the browser, and what that costs. The two inventory writes reuse the `inventory.items` scope already needed by the cron read; the tags refresh adds its own `tags.tags` scope.
 
 The grant is those five scopes and nothing wider; `src/api/pillars/service-account.ts` is its source of truth and a test pins the list. Scopes are dotted and match by prefix, so `finance.transactions` reaches `transactions.list` and not `budgets.list`. Minting the account is an operator step against the registry's `userOnly` admin surface — the same runbook as [`pillars/bfm/README.md`](../bfm/README.md#provisioning-the-service-account), with `"name":"purchases"` and these scopes — and the plaintext goes in the Docker secret described by [`infra/secrets.example/purchases/README.md`](../../infra/secrets.example/purchases/README.md).
 

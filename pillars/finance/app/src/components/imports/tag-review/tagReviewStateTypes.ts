@@ -13,6 +13,8 @@ import type { TagRuleDialogState } from './useTagRuleDialog';
 export type { PreviewTransaction };
 
 export interface UseTagReviewStateOutput {
+  identityStatus: 'ready' | 'checking' | 'unavailable';
+  retryIdentities: () => Promise<unknown>;
   confirmedTransactions: ConfirmedTransaction[];
   groups: ConfirmedGroup[];
   availableTags: string[];

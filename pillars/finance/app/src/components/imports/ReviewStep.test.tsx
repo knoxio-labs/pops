@@ -3,6 +3,8 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { type ReactElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { referencedEntityIds } from '@pops/finance';
+
 // --- Mock setup ---
 
 const mockAnalyzeCorrectionMutateAsync = vi.fn();
@@ -35,6 +37,9 @@ vi.mock('../../finance-api/index.js', () => ({
 // (mocked above) and the proposal dialog itself is stubbed below.
 vi.mock('../../contacts-api/index.js', () => ({
   entitiesLookup: (...args: unknown[]) => mockEntitiesQuery(...args),
+  entitiesResolve: async ({ body }: { body: { ids: string[] } }) => ({
+    data: { data: body.ids.map((id) => ({ id, canonicalId: id })), revision: 1 },
+  }),
 }));
 
 const mockToastSuccess = vi.fn();
@@ -1276,3 +1281,17 @@ describe('ReviewStep — leaving a row unassigned (POPS-3748)', () => {
     expect(screen.getByText('Continue to Tag Review (1)').closest('button')).not.toBeDisabled();
   });
 });
+
+vi.mock('./hooks/useImportIdentities', () => ({
+  useImportIdentities: (extra: readonly string[] = []) => ({
+    identities: new Map(
+      [
+        ...['ent-1', 'ent-2', 'ent-3', 'ent-9', 'ent-apple'],
+        ...referencedEntityIds(mockProcessedTransactions),
+        ...extra,
+      ].map((id) => [id, id])
+    ),
+    status: 'ready',
+    retry: vi.fn(),
+  }),
+}));

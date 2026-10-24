@@ -20,7 +20,7 @@
  * create — so a retry after a rolled-back finance transaction reuses the
  * contact. The fetch-first step gives a clean `created: false` reuse and a
  * stable id without depending on a 409 round-trip; contacts itself enforces
- * name uniqueness case-INSENSITIVELY (`WHERE name COLLATE NOCASE = ?`), so the
+ * non-person name uniqueness case-insensitively, so the
  * 409 fallback is the backstop for a genuine concurrent insert. A `create`
  * failure that ISN'T a 409 is split into two error kinds so a caller can react
  * differently: `unavailable`/`degraded`/`rate-limited` throw
@@ -58,6 +58,7 @@ import {
   pageThroughEntities,
 } from './entity-fetch.js';
 import { ContactsPermanentError, ContactsUnavailableError } from './errors.js';
+import { resolveContactIdentities } from './identity.js';
 
 import type { KnownTagSet } from '../../db/services/tag-vocabulary.js';
 import type {
@@ -95,9 +96,13 @@ export type ContactsRouter = {
     list: (input: {
       search?: string;
       type?: string;
+      excludePersons?: boolean;
       limit?: number;
       offset?: number;
     }) => Promise<ListResponse>;
+    resolve: (input: {
+      ids: string[];
+    }) => Promise<{ data: { id: string; canonicalId: string | null }[]; revision: number }>;
     get: (input: { id: string }) => Promise<{ data: ContactEntity }>;
     create: (input: {
       name: string;
@@ -143,6 +148,10 @@ export function createContactsClient(
       return pageThroughEntities(handleFactory(), query, maxPages);
     },
 
+    resolveEntityIds(ids: readonly string[]) {
+      return resolveContactIdentities(handleFactory(), ids);
+    },
+
     async fetchEntityDefaultTags(entityId: string): Promise<string[]> {
       return (await fetchOneEntity(handleFactory(), entityId))?.defaultTags ?? [];
     },
@@ -162,7 +171,7 @@ export function createContactsClient(
       if (handle === null) {
         throw new ContactsUnavailableError(NO_CREDENTIAL_REASON);
       }
-      const preexisting = await fetchByExactName(handle, name, maxPages);
+      const preexisting = await fetchByExactName(handle, name, maxPages, type);
       if (preexisting) return { id: preexisting.id, name: preexisting.name, created: false };
 
       const created = await handle.entities.create({ name, type });
@@ -170,7 +179,7 @@ export function createContactsClient(
         return { id: created.value.data.id, name: created.value.data.name, created: true };
       }
       if (created.kind === 'conflict') {
-        const raced = await fetchByExactName(handle, name, maxPages);
+        const raced = await fetchByExactName(handle, name, maxPages, type);
         if (raced) return { id: raced.id, name: raced.name, created: false };
         throw new ContactsUnavailableError(`409 for "${name}" but no existing contact found`);
       }

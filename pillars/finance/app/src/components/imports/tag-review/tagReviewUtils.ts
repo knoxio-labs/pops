@@ -1,16 +1,23 @@
+import { entityIdentity, type EntityIdentities } from '@pops/finance';
+
 import type { ConfirmedTransaction, SuggestedTag } from '@pops/finance';
 
 /** Group of confirmed transactions sharing the same entity */
 export interface ConfirmedGroup {
+  identityKey: string;
   entityName: string;
   transactions: ConfirmedTransaction[];
 }
 
-/** Group confirmed transactions by entity name, sorting alphabetically */
-export function groupByEntity(transactions: ConfirmedTransaction[]): ConfirmedGroup[] {
+/** Group by canonical identity, preserving homonyms as separate groups and every historical row id. */
+export function groupByEntity(
+  transactions: ConfirmedTransaction[],
+  identities?: EntityIdentities
+): ConfirmedGroup[] {
   const map = new Map<string, ConfirmedTransaction[]>();
   for (const t of transactions) {
-    const key = t.entityName ?? 'No Entity';
+    const key =
+      entityIdentity(t.entityId ?? null, identities) ?? `unassigned:${t.entityName ?? 'No Entity'}`;
     const existing = map.get(key);
     if (existing) {
       existing.push(t);
@@ -19,8 +26,12 @@ export function groupByEntity(transactions: ConfirmedTransaction[]): ConfirmedGr
     }
   }
   return [...map.entries()]
-    .toSorted(([a], [b]) => a.localeCompare(b))
-    .map(([entityName, txns]) => ({ entityName, transactions: txns }));
+    .map(([identityKey, txns]) => ({
+      identityKey,
+      entityName: txns[0]?.entityName ?? 'No Entity',
+      transactions: txns,
+    }))
+    .toSorted((a, b) => a.entityName.localeCompare(b.entityName));
 }
 
 /** Union of all distinct tags across an array of tag lists */

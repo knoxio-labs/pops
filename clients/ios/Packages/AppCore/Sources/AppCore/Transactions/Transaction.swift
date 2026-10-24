@@ -1,5 +1,3 @@
-import Foundation
-
 /// One row of the transactions list, in the app's own vocabulary rather than
 /// the wire's. A feature is written against this type and never against a
 /// generated one, which is what lets the contract move without a feature

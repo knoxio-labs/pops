@@ -124,7 +124,7 @@ export function rankProductPurchases(
   filter: ProductLeaderboardFilter = {}
 ): ProductLeaderboard {
   const lines = selectScopedLines(db, filter);
-  const dictionary = loadProductDictionary(db);
+  const dictionary = loadProductDictionary(db, filter.canonicalMerchants);
 
   const buckets = new Map<string, ProductBucket>();
   const coverage: CoverageTally = {
@@ -146,7 +146,8 @@ export function rankProductPurchases(
         merchantEntityId: line.merchantEntityId,
         merchantEntityName: line.merchantEntityName,
       },
-      dictionary
+      dictionary,
+      filter.canonicalMerchants
     );
     countCoverage(coverage, identity);
 
@@ -156,7 +157,7 @@ export function rankProductPurchases(
     const bucket = existing ?? startBucket(ranked, identity);
     if (existing === undefined) buckets.set(key, bucket);
     accumulate(bucket, ranked, identity, line.pricedByMeasure);
-    noteMerchant(bucket, line);
+    noteMerchant(bucket, line, filter.canonicalMerchants);
   }
 
   const minOrderCount = filter.minOrderCount ?? 1;

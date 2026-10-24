@@ -1,5 +1,6 @@
 import type {
   ChangeSet,
+  EntityIdentities,
   CommitResult,
   ConfirmedTransaction,
   ImportWarning,
@@ -152,7 +153,7 @@ export interface ImportStore {
 
   addPendingEntity: (
     input: AddPendingEntityInput,
-    dbEntities?: Array<{ name: string }>
+    dbEntities?: Array<{ name: string; type: string }>
   ) => PendingEntity;
   listPendingEntities: () => PendingEntity[];
   removePendingEntity: (tempId: string) => void;
@@ -161,7 +162,10 @@ export interface ImportStore {
   listPendingChangeSets: () => PendingChangeSet[];
   removePendingChangeSet: (tempId: string) => void;
 
-  addPendingTagRuleChangeSet: (input: AddPendingTagRuleChangeSetInput) => PendingTagRuleChangeSet;
+  addPendingTagRuleChangeSet: (
+    input: AddPendingTagRuleChangeSetInput,
+    identities?: EntityIdentities
+  ) => PendingTagRuleChangeSet;
   listPendingTagRuleChangeSets: () => PendingTagRuleChangeSet[];
   removePendingTagRuleChangeSet: (tempId: string) => void;
 

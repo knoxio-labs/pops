@@ -156,6 +156,7 @@ libs/overlay-ego/src/ego-api/
 pillars/ai/app/src/ai-api/
 pillars/bfm/app/src/bfm-api/
 pillars/cerebrum/app/src/cerebrum-api/
+pillars/contacts/app/src/contacts-api/
 pillars/finance/app/src/contacts-api/
 pillars/finance/app/src/finance-api/
 pillars/finance/app/src/purchases-api/
