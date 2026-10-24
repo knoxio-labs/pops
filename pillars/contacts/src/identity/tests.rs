@@ -264,6 +264,27 @@ fn local_email_case_and_unicode_changes_never_create_automatic_matches() {
 }
 
 #[test]
+fn repeated_batch_source_keys_cannot_impersonate_persisted_bindings() {
+    let mut incoming = record("incoming", "", "", "", "");
+    incoming.source = SourceIdentity::new("provider", "stable-key");
+    let mut other = incoming.clone();
+    other.id = "other".into();
+    let mut batch_candidate = candidate("batch-other", other);
+    batch_candidate.origin = CandidateOrigin::Batch;
+    assert_eq!(
+        classify(&incoming, &[batch_candidate.clone()], &[]),
+        expected_review(ReviewReason::BatchCollision, &["batch-other"])
+    );
+    let existing = candidate("person", incoming.clone());
+    assert_eq!(
+        classify(&incoming, &[existing, batch_candidate], &[]),
+        IdentityOutcome::RecognizedSource {
+            entity_id: "person".into()
+        }
+    );
+}
+
+#[test]
 fn batch_bridge_is_never_automatically_merged_from_either_end() {
     let left = record("left", "", "", "a@example.com", "");
     let bridge = record("bridge", "", "", "a@example.com", "+61412345678");

@@ -14,22 +14,31 @@ pub fn classify(
     decisions: &[KeepSeparate],
 ) -> IdentityOutcome {
     let groups = groups_without_self(incoming, candidates);
-    let bound: BTreeSet<_> = groups
-        .iter()
-        .filter(|(_, records)| {
-            incoming.source.as_ref().is_some_and(|source| {
-                records
-                    .iter()
-                    .any(|record| record.source.as_ref() == Some(source))
+    let source_matches = |origin| -> BTreeSet<String> {
+        candidates
+            .iter()
+            .filter(|candidate| candidate.origin == origin)
+            .filter(|candidate| {
+                incoming.source.as_ref().is_some_and(|source| {
+                    candidate.records.iter().any(|record| {
+                        (origin == CandidateOrigin::Existing || record.id != incoming.id)
+                            && record.source.as_ref() == Some(source)
+                    })
+                })
             })
-        })
-        .map(|(id, _)| id.clone())
-        .collect();
+            .map(|candidate| candidate.entity_id.clone())
+            .collect()
+    };
+    let bound = source_matches(CandidateOrigin::Existing);
     if bound.len() > 1 {
         return review(ReviewReason::ConflictingSourceBindings, bound);
     }
     if let Some(entity_id) = bound.into_iter().next() {
         return IdentityOutcome::RecognizedSource { entity_id };
+    }
+    let repeated_source = source_matches(CandidateOrigin::Batch);
+    if !repeated_source.is_empty() {
+        return review(ReviewReason::BatchCollision, repeated_source);
     }
 
     let mut matches: BTreeMap<String, BTreeSet<MatchReason>> = BTreeMap::new();
