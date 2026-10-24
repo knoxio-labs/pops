@@ -8,8 +8,57 @@
  * of two exports of this app; it now ships inside the pillar's bundle and is
  * resolved by slot.
  */
+import { z } from 'zod';
+
 import { expect, test } from './fixtures/pillar-rest-guard';
-import { stubShellBoot } from './helpers/pillar-rest';
+import { fulfilWith, stubShellBoot } from './helpers/pillar-rest';
+
+/** Mirrors Cerebrum's `rest-schemas.ts` engram and `rest-engrams.ts` GET response. */
+const EngramDetailResponseSchema = z
+  .object({
+    engram: z
+      .object({
+        id: z.string().min(1),
+        type: z.string().min(1),
+        scopes: z.array(z.string()),
+        tags: z.array(z.string()),
+        links: z.array(z.string()),
+        created: z.string(),
+        modified: z.string(),
+        source: z.string(),
+        status: z.enum(['active', 'archived', 'consolidated', 'stale']),
+        template: z.string().nullable(),
+        title: z.string(),
+        filePath: z.string(),
+        contentHash: z.string(),
+        wordCount: z.number().int(),
+        customFields: z.record(z.string(), z.unknown()),
+      })
+      .strict(),
+    body: z.string(),
+  })
+  .strict();
+
+const ENGRAM_DETAIL: z.infer<typeof EngramDetailResponseSchema> = {
+  engram: {
+    id: 'eng_20261024_0800_loader-smoke',
+    type: 'note',
+    scopes: ['work'],
+    tags: [],
+    links: [],
+    created: '2026-10-24T08:00:00.000Z',
+    modified: '2026-10-24T08:00:00.000Z',
+    source: 'manual',
+    status: 'active',
+    template: null,
+    title: 'Runtime loader fixture',
+    filePath: 'notes/loader-smoke.md',
+    contentHash: 'loader-smoke-fixture',
+    wordCount: 4,
+    customFields: {},
+  },
+  body: 'A fictional loader fixture.',
+};
 
 test.describe('cerebrum — mounted by the runtime loader', () => {
   let errors: string[] = [];
@@ -40,9 +89,23 @@ test.describe('cerebrum — mounted by the runtime loader', () => {
   // kind most easily dropped from the page list, and the kind whose absence
   // shows up as a 404 rather than as anything visibly broken.
   test('an engram detail deep link mounts', async ({ page }) => {
-    await page.goto('/cerebrum/engrams/some-engram-id');
+    const respond = fulfilWith(
+      200,
+      EngramDetailResponseSchema,
+      ENGRAM_DETAIL,
+      'cerebrum engram detail'
+    );
+    await page.route(/\/cerebrum-api\/engrams\/eng_20261024_0800_loader-smoke$/, (route) => {
+      expect(route.request().method()).toBe('GET');
+      return respond(route);
+    });
+    await page.goto(`/cerebrum/engrams/${ENGRAM_DETAIL.engram.id}`);
 
-    await expect(page).toHaveURL(/\/cerebrum\/engrams\/some-engram-id/);
+    await expect(page).toHaveURL(/\/cerebrum\/engrams\/eng_20261024_0800_loader-smoke$/);
+    await expect(
+      page.getByRole('heading', { level: 2, name: ENGRAM_DETAIL.engram.title })
+    ).toBeVisible();
+    await expect(page.getByText(ENGRAM_DETAIL.body, { exact: true })).toBeVisible();
     await expect(page.getByTestId('external-pillar-load-error')).toHaveCount(0);
     await expect(page.getByRole('heading', { name: /not found|404/i })).toHaveCount(0);
   });
