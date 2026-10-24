@@ -61,7 +61,7 @@
         "oneOf": [
           {
             "properties": {
-              "entity_id": {
+              "entityId": {
                 "type": "string"
               },
               "field": {
@@ -76,7 +76,7 @@
             },
             "required": [
               "field",
-              "entity_id",
+              "entityId",
               "kind"
             ],
             "type": "object"
@@ -92,17 +92,17 @@
                 ],
                 "type": "string"
               },
-              "source_observation_id": {
+              "sourceObservationId": {
                 "type": "string"
               },
-              "source_record_id": {
+              "sourceRecordId": {
                 "type": "string"
               }
             },
             "required": [
               "field",
-              "source_record_id",
-              "source_observation_id",
+              "sourceRecordId",
+              "sourceObservationId",
               "kind"
             ],
             "type": "object"
@@ -115,16 +115,16 @@
                 ],
                 "type": "string"
               },
-              "point_id": {
+              "pointId": {
                 "type": "string"
               },
-              "point_kind": {
+              "pointKind": {
                 "$ref": "#/components/schemas/ContactPointKind"
               }
             },
             "required": [
-              "point_kind",
-              "point_id",
+              "pointKind",
+              "pointId",
               "kind"
             ],
             "type": "object"
@@ -563,7 +563,7 @@
         "oneOf": [
           {
             "properties": {
-              "entity_id": {
+              "entityId": {
                 "type": "string"
               },
               "field": {
@@ -578,7 +578,7 @@
             },
             "required": [
               "field",
-              "entity_id",
+              "entityId",
               "kind"
             ],
             "type": "object"
@@ -594,13 +594,13 @@
                 ],
                 "type": "string"
               },
-              "source_record_id": {
+              "sourceRecordId": {
                 "type": "string"
               }
             },
             "required": [
               "field",
-              "source_record_id",
+              "sourceRecordId",
               "kind"
             ],
             "type": "object"
