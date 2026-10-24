@@ -5,6 +5,8 @@ import { ArrowDown, ArrowUp, Pencil, Plus } from 'lucide-react';
 
 import { Badge, Button, cn } from '@pops/ui';
 
+import { outsideVisit } from './constraints';
+
 import type { TripRecord } from '@/fixtures/trip-overview-model';
 
 import type { PlannerState } from './model';
@@ -153,12 +155,4 @@ function RowActions({
       </Button>
     </div>
   );
-}
-
-function outsideVisit(visit: TripRecord, child: TripRecord): boolean {
-  const schedule = child.schedule;
-  if (!schedule || child.kind === 'transport') return false;
-  const timing = visit.timing;
-  if (timing?.arrival && schedule.start < timing.arrival) return true;
-  return Boolean(timing?.departure && (schedule.end ?? schedule.start) > timing.departure);
 }

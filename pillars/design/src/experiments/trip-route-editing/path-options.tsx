@@ -3,6 +3,8 @@ import { Check } from 'lucide-react';
 
 import { Badge, Button } from '@pops/ui';
 
+import { DirectFields } from './direct-fields';
+import { DirectItems } from './direct-items';
 import { VisitLinks } from './route-row';
 
 import type { TripRecord } from '@/fixtures/trip-overview-model';
@@ -15,11 +17,13 @@ export function PathOptions({
   state,
   onChoose,
   onEdit,
+  direct = false,
 }: {
   gap: TripRecord;
   state: PlannerState;
   onChoose: (id: string) => void;
   onEdit: (record: TripRecord) => void;
+  direct?: boolean;
 }) {
   const display = presentTripRecord(gap, state.records);
   const options = state.records.filter((r) => gap.optionIds?.includes(r.id));
@@ -41,6 +45,7 @@ export function PathOptions({
             chosen={state.choices[gap.id] === option.id}
             onChoose={() => onChoose(option.id)}
             onEdit={onEdit}
+            direct={direct}
           />
         ))}
       </div>
@@ -54,19 +59,32 @@ function PathOption({
   chosen,
   onChoose,
   onEdit,
+  direct = false,
 }: {
   option: TripRecord;
   state: PlannerState;
   chosen: boolean;
   onChoose: () => void;
   onEdit: (record: TripRecord) => void;
+  direct?: boolean;
 }) {
   const display = presentTripRecord(option, state.records);
   return (
     <div className="space-y-3 rounded-lg border border-dashed bg-card p-3">
-      <h3 className="font-semibold">{display.title}</h3>
-      {display.when && <p className="text-sm">{display.when}</p>}
-      <VisitLinks record={option} records={state.records} />
+      {direct ? (
+        <DirectFields record={option} onChange={onEdit} />
+      ) : (
+        <>
+          <h3 className="font-semibold">{display.title}</h3>
+          {display.when && <p className="text-sm">{display.when}</p>}
+        </>
+      )}
+      {direct ? (
+        <DirectItems visit={option} records={state.records} />
+      ) : (
+        <VisitLinks record={option} records={state.records} />
+      )}
+
       <Button
         variant={chosen ? 'secondary' : 'outline'}
         className="w-full"
@@ -76,9 +94,11 @@ function PathOption({
         {chosen && <Check className="size-4" aria-hidden />}
         {chosen ? 'In working route' : 'Use this path'}
       </Button>
-      <Button variant="ghost" className="w-full" onClick={() => onEdit(option)}>
-        Edit timing
-      </Button>
+      {!direct && (
+        <Button variant="ghost" className="w-full" onClick={() => onEdit(option)}>
+          Edit timing
+        </Button>
+      )}
     </div>
   );
 }

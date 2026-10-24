@@ -48,7 +48,7 @@ function OverviewHeading({ onCapture }: { onCapture: () => void }) {
         </div>
         <div className="flex flex-wrap gap-2">
           <Button asChild variant="outline">
-            <a target="_top" href="/design/x/trip-route-editing/inline/s/trips/route">
+            <a target="_top" href="/design/x/trip-route-editing/direct/s/trips/route">
               Route planner
             </a>
           </Button>

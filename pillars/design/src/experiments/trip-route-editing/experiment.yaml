@@ -6,3 +6,4 @@ frame: web
 variants:
   inline: Edit each visit directly within the route
   side-editor: Edit the selected visit in a separate panel
+  direct: Drag visits and edit directly with hover insertion

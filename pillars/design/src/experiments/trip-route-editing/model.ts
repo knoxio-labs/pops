@@ -89,3 +89,30 @@ function withOrder(state: PlannerState, order: string[]): PlannerState {
   });
   return { ...state, records, order };
 }
+
+/** Accept a drag result only when it contains exactly the current route visits. */
+export function reorderRoute(state: PlannerState, order: string[]): PlannerState {
+  if (
+    order.length !== state.order.length ||
+    new Set(order).size !== order.length ||
+    order.some((id) => !state.order.includes(id))
+  )
+    return state;
+  return withOrder(state, order);
+}
+
+/** Move an item between visits without rewriting its purchase, location or dates. */
+export function assignItem(state: PlannerState, itemId: string, visitId: string): PlannerState {
+  const item = state.records.find((r) => r.id === itemId);
+  const visit = state.records.find((r) => r.id === visitId);
+  if (!item?.visitId || visit?.kind !== 'city') return state;
+  return updateVisit(state, { ...item, visitId });
+}
+
+/** Remove a visit from this route while retaining its records for undo. */
+export function removeVisit(state: PlannerState, id: string): PlannerState {
+  return withOrder(
+    state,
+    state.order.filter((candidate) => candidate !== id)
+  );
+}

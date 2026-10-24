@@ -45,12 +45,14 @@ export function TimingFields({
         <div className="grid gap-4 sm:grid-cols-2">
           <TextInput
             label="Arrival"
+            className="min-w-0 w-full"
             type="date"
             defaultValue={timing.arrival ?? ''}
             onInput={(e) => onChange({ ...timing, arrival: calendarDate(e.currentTarget.value) })}
           />
           <TextInput
             label="Departure"
+            className="min-w-0 w-full"
             type="date"
             defaultValue={timing.departure ?? ''}
             onInput={(e) => onChange({ ...timing, departure: calendarDate(e.currentTarget.value) })}
@@ -75,6 +77,7 @@ function ApproximateFields({
     <div className="space-y-4">
       <TextInput
         label="Month"
+        className="min-w-0 w-full"
         type="month"
         value={month ? `${month.year}-${String(month.month).padStart(2, '0')}` : ''}
         onInput={(e) => onChange({ ...timing, month: calendarMonth(e.currentTarget.value) })}
