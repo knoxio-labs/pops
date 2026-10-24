@@ -373,3 +373,49 @@ fn rejections_follow_incoming_entity_members_without_a_matching_observation_id()
         expected_review(ReviewReason::KeepSeparate, &["target"])
     );
 }
+
+#[test]
+fn signal_evidence_reports_all_exact_reasons_without_deciding_uniqueness() {
+    let left = record("left", "Jane", "Doe", "jane@example.test", "+61412345678");
+    let right = record("right", "Jane", "Doe", "jane@example.test", "+61412345678");
+    assert_eq!(
+        matching_signals(&left, &right)
+            .into_iter()
+            .collect::<Vec<_>>(),
+        vec![
+            MatchReason::Email,
+            MatchReason::Phone,
+            MatchReason::CompleteName
+        ]
+    );
+}
+
+#[test]
+fn ingested_observations_exclude_own_group_but_preserve_its_historical_rejections() {
+    let incoming = record("own", "Jane", "Doe", "jane@example.test", "");
+    let mut own = candidate("own", incoming.clone());
+    own.member_ids.push("prior-own".into());
+    let other = candidate(
+        "other",
+        record("existing", "Jane", "Doe", "jane@example.test", ""),
+    );
+    let candidates = [own, other];
+    assert_eq!(
+        classify_after_ingestion(&incoming, &candidates, &[]),
+        IdentityOutcome::AutoMatch {
+            entity_id: "other".into(),
+            reason: MatchReason::Email
+        }
+    );
+    assert_eq!(
+        classify_after_ingestion(
+            &incoming,
+            &candidates,
+            &[KeepSeparate {
+                left_id: "prior-own".into(),
+                right_id: "other".into()
+            }]
+        ),
+        expected_review(ReviewReason::KeepSeparate, &["other"])
+    );
+}

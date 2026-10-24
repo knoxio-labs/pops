@@ -13,10 +13,30 @@ pub fn classify(
     candidates: &[IdentityCandidate],
     decisions: &[KeepSeparate],
 ) -> IdentityOutcome {
-    let groups = groups_without_self(incoming, candidates);
+    classify_inner(incoming, candidates, decisions, false)
+}
+
+/// Classifies an already-ingested observation whose ID is its verified current canonical person ID.
+/// Its own group is omitted from matching while historical members still enforce keep-separate.
+pub fn classify_after_ingestion(
+    incoming: &IdentityRecord,
+    candidates: &[IdentityCandidate],
+    decisions: &[KeepSeparate],
+) -> IdentityOutcome {
+    classify_inner(incoming, candidates, decisions, true)
+}
+
+fn classify_inner(
+    incoming: &IdentityRecord,
+    candidates: &[IdentityCandidate],
+    decisions: &[KeepSeparate],
+    ingested: bool,
+) -> IdentityOutcome {
+    let groups = groups_without_self(incoming, candidates, ingested);
     let source_matches = |origin| -> BTreeSet<String> {
         candidates
             .iter()
+            .filter(|candidate| !ingested || candidate.entity_id != incoming.id)
             .filter(|candidate| candidate.origin == origin)
             .filter(|candidate| {
                 incoming.source.as_ref().is_some_and(|source| {
@@ -45,7 +65,7 @@ pub fn classify(
     let mut weak = BTreeSet::new();
     for (id, records) in &groups {
         for record in records {
-            let reasons = strong_matches(incoming, record);
+            let reasons = matching_signals(incoming, record);
             if !reasons.is_empty() {
                 matches.entry(id.clone()).or_default().extend(reasons);
             } else if same_display_name(incoming, record) {
@@ -100,7 +120,7 @@ pub fn classify(
                     matched_records.iter().any(|matched| {
                         records
                             .iter()
-                            .any(|record| !strong_matches(matched, record).is_empty())
+                            .any(|record| !matching_signals(matched, record).is_empty())
                     })
                 })
         })
@@ -121,9 +141,13 @@ pub fn classify(
 fn groups_without_self<'a>(
     incoming: &IdentityRecord,
     candidates: &'a [IdentityCandidate],
+    ingested: bool,
 ) -> BTreeMap<String, Vec<&'a IdentityRecord>> {
     let mut groups: BTreeMap<String, Vec<&IdentityRecord>> = BTreeMap::new();
     for candidate in candidates {
+        if ingested && candidate.entity_id == incoming.id {
+            continue;
+        }
         let records: Vec<_> = candidate
             .records
             .iter()
@@ -141,7 +165,9 @@ fn groups_without_self<'a>(
     groups
 }
 
-fn strong_matches(left: &IdentityRecord, right: &IdentityRecord) -> BTreeSet<MatchReason> {
+/// Returns every exact eligible signal shared by two observations, without deciding identity.
+/// Call classification against the complete candidate set before treating any signal as unambiguous.
+pub fn matching_signals(left: &IdentityRecord, right: &IdentityRecord) -> BTreeSet<MatchReason> {
     let mut reasons = BTreeSet::new();
     if left.emails.iter().any(|email| right.emails.contains(email)) {
         reasons.insert(MatchReason::Email);

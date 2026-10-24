@@ -4,7 +4,7 @@ mod matcher;
 mod model;
 pub mod normalize;
 
-pub use matcher::classify;
+pub use matcher::{classify, classify_after_ingestion, matching_signals};
 pub use model::{
     CandidateOrigin, CompleteName, E164Phone, IdentityCandidate, IdentityOutcome, IdentityRecord,
     KeepSeparate, MatchReason, NameEvidence, NormalizedEmail, ReviewReason, SourceIdentity,
