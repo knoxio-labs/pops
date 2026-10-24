@@ -1,3 +1,4 @@
+import { tripItemTier } from '@/fixtures/trip-overview-model';
 import { useState } from 'react';
 
 import { Badge, Button, Sheet, TextInput } from '@pops/ui';
@@ -15,9 +16,7 @@ function ItemDetails({
     <div className="space-y-6">
       <div className="flex flex-wrap gap-2">
         <Badge variant="secondary">{item.intention}</Badge>
-        <Badge variant={item.arrangement === 'Booked' ? 'default' : 'outline'}>
-          {item.arrangement}
-        </Badge>
+        <Badge variant="outline">{tripItemTier(item)}</Badge>
       </div>
       <dl className="space-y-4 text-sm">
         <div>
@@ -29,12 +28,11 @@ function ItemDetails({
           <dd className="mt-1 font-medium">{item.when}</dd>
         </div>
       </dl>
-      <p className="text-sm leading-relaxed">{item.notes}</p>
+      {item.notes && <p className="text-sm leading-relaxed">{item.notes}</p>}
       <div className="space-y-3 rounded-xl border bg-muted/30 p-4">
         <h3 className="font-medium">Plan status</h3>
         <p className="text-sm text-muted-foreground">
-          Putting this in the plan does not book it or change other dates. You can keep alternatives
-          alongside it.
+          Adding this to the plan does not mark it purchased or change its dates.
         </p>
         <Button
           variant="outline"
