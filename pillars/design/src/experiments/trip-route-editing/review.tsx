@@ -25,38 +25,43 @@ export function PlannerReview({ layout }: { layout: 'inline' | 'side-editor' | '
           </Button>
         ))}
       </nav>
-      <details>
-        <summary className="min-h-11 cursor-pointer py-3 text-sm font-medium">
-          Proposals and questions
-        </summary>
-        <div className="space-y-3 pb-3 text-sm">
-          <p>
-            Direct editing uses draggable visits, hover insertion and immediate field changes. Drag
-            events and stays between cities. Undo reverses edits. Earlier form layouts remain for
-            comparison.
-          </p>
-          <ol className="list-decimal space-y-2 pl-5">
-            <li>Does direct editing give you enough freedom without losing the route order?</li>
-            <li>
-              Can you rearrange visits and move events between them without breaking your flow?
-            </li>
-            <li>Should choosing a path retain the alternatives in this position?</li>
-            <li>Does a side trip belong nested under its base city?</li>
-          </ol>
-          <p>
-            Try editing Curitiba, moving a visit, choosing January's path, adding a return visit and
-            adding a side trip. Purchases keep their dates; editing a visit can flag arrangements
-            outside its bounds. Drag grips also support Alt + arrow keys. Hover insertion is
-            available on keyboard focus and touch. Empty, repeat-visit and nested-trip states are
-            available.
-          </p>
-          <p>
-            Data: place picker → place ID; date/month controls → calendar values; duration → numeric
-            weeks; order → visit IDs; side trip → parent visit ID; path selection → gap/option IDs.
-            Labels, date ranges and conflicts are deterministic. No LLM or backend storage.
-          </p>
-        </div>
-      </details>
+      <ReviewDetails />
     </aside>
+  );
+}
+
+function ReviewDetails() {
+  return (
+    <details>
+      <summary className="min-h-11 cursor-pointer py-3 text-sm font-medium">
+        Proposals and questions
+      </summary>
+      <div className="space-y-3 pb-3 text-sm">
+        <p>
+          Direct editing uses draggable visits, hover insertion and immediate field changes. Drag
+          events and stays between cities. Undo reverses edits. Earlier form layouts remain for
+          comparison.
+        </p>
+        <ol className="list-decimal space-y-2 pl-5">
+          <li>Does direct editing give you enough freedom without losing the route order?</li>
+          <li>Can you rearrange visits and move events between them without breaking your flow?</li>
+          <li>Can you build and move alternative sections without choosing a fixed path?</li>
+          <li>Does a side trip belong nested under its base city?</li>
+        </ol>
+        <p>
+          Try editing Curitiba, moving a visit, adding an alternative section, adding a return visit
+          and adding a side trip. Purchases keep their dates; editing a visit can flag arrangements
+          outside its bounds. Hover insertion is available on keyboard focus and touch. Empty,
+          repeat-visit and nested-trip states are available.
+        </p>
+        <p>
+          Data: place input → reusable place ID; date/month controls → calendar values; duration →
+          numeric weeks; order → visit IDs; side trip → parent visit ID; alternative sections →
+          ordered card IDs. Labels, date ranges and conflicts are deterministic. Prototype state is
+          local. Generated annotations would be saved with their source version and reused until the
+          source changes or you request a refresh; rendering cards does not generate text.
+        </p>
+      </div>
+    </details>
   );
 }
