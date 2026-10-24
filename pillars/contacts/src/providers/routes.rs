@@ -48,10 +48,14 @@ pub struct GoogleAuthorizeRequest {
 #[derive(Deserialize, ToSchema, utoipa::IntoParams)]
 #[into_params(parameter_in=Query)]
 pub struct GoogleCallback {
-    #[serde(deserialize_with = "super::google::oauth::deserialize_secret")]
-    #[schema(value_type=String)]
-    #[param(value_type=String)]
-    pub code: SecretBytes,
+    #[serde(
+        default,
+        deserialize_with = "super::google::oauth::deserialize_optional_secret"
+    )]
+    #[schema(value_type=Option<String>)]
+    #[param(value_type=Option<String>)]
+    pub code: Option<SecretBytes>,
+    pub error: Option<String>,
     #[serde(deserialize_with = "super::google::oauth::deserialize_secret")]
     #[schema(value_type=String)]
     #[param(value_type=String)]
@@ -271,36 +275,107 @@ fn authorization_response(
 /// Consume state before exchanging the callback code; human subject and account
 /// epoch must match the initiating authorization attempt. Successful browser
 /// callbacks return to the fixed shell connections route without auth details.
-#[utoipa::path(get,path="/providers/google/callback",operation_id="providers.google.callback",params(GoogleCallback),responses((status=303,description="Google account connected; return to connections",headers(("Location"=String,description="Fixed shell connections route"))),(status=401,description="Human session required",body=crate::api::ErrorBody),(status=409,description="Authorization changed or account mismatch",body=crate::api::ErrorBody)))]
+/// HTML failures return only a generic cancelled/failed code on that route;
+/// JSON clients retain the structured error response.
+#[utoipa::path(get,path="/providers/google/callback",operation_id="providers.google.callback",params(GoogleCallback),responses((status=303,description="Return to connections with only a generic browser error code on failure",headers(("Location"=String,description="Fixed shell connections route"))),(status=400,description="Invalid or cancelled JSON callback",body=crate::api::ErrorBody),(status=401,description="Human session required",body=crate::api::ErrorBody),(status=409,description="Authorization changed or account mismatch",body=crate::api::ErrorBody),(status=503,description="Connections unavailable",body=crate::api::ErrorBody)))]
 pub async fn google_callback(
     State(state): State<AppState>,
     Extension(extension): Extension<ProviderExtension>,
     headers: HeaderMap,
     query: Result<Query<GoogleCallback>, axum::extract::rejection::QueryRejection>,
 ) -> Result<Response, ApiError> {
-    let runtime = configured(extension)?;
-    let human = human(&runtime, &headers).await?;
-    let Query(body) = query.map_err(|_| ApiError::bad_request("Invalid authorization callback"))?;
-    let result = runtime
-        .finish_google(
-            &state.pool,
-            &human,
-            &body.state,
-            &body.code,
-            super::runtime::now(),
-        )
-        .await;
-    callback_response(result)
+    let browser = browser_callback(&headers);
+    let result = complete_callback(&state, extension, &headers, query).await;
+    callback_response(result, browser)
 }
 
-fn callback_response(result: Result<String, ProviderError>) -> Result<Response, ApiError> {
-    result.map_err(api)?;
+enum CallbackOutcome {
+    Connected,
+    Cancelled,
+}
+
+async fn complete_callback(
+    state: &AppState,
+    extension: ProviderExtension,
+    headers: &HeaderMap,
+    query: Result<Query<GoogleCallback>, axum::extract::rejection::QueryRejection>,
+) -> Result<CallbackOutcome, ApiError> {
+    let runtime = configured(extension)?;
+    let human = human(&runtime, headers).await?;
+    let Query(body) = query.map_err(|_| ApiError::bad_request("Invalid authorization callback"))?;
+    complete_authorized_callback(&runtime, &state.pool, &human, body, super::runtime::now()).await
+}
+
+async fn complete_authorized_callback(
+    runtime: &ProviderRuntime,
+    pool: &sqlx::SqlitePool,
+    human: &HumanIdentity,
+    body: GoogleCallback,
+    now: i64,
+) -> Result<CallbackOutcome, ApiError> {
+    match (body.code, body.error) {
+        (Some(code), None) => {
+            runtime
+                .finish_google(pool, human, &body.state, &code, now)
+                .await
+                .map_err(api)?;
+            Ok(CallbackOutcome::Connected)
+        }
+        (None, Some(error)) => {
+            runtime
+                .cancel_google(pool, human, &body.state, now)
+                .await
+                .map_err(api)?;
+            if error == "access_denied" {
+                Ok(CallbackOutcome::Cancelled)
+            } else {
+                Err(ApiError::bad_request("Google authorization failed"))
+            }
+        }
+        _ => Err(ApiError::bad_request("Invalid authorization callback")),
+    }
+}
+
+fn browser_callback(headers: &HeaderMap) -> bool {
+    headers
+        .get(axum::http::header::ACCEPT)
+        .and_then(|value| value.to_str().ok())
+        .is_some_and(|accept| {
+            accept.split(',').any(|entry| {
+                let mut parts = entry.split(';');
+                parts
+                    .next()
+                    .is_some_and(|kind| kind.trim().eq_ignore_ascii_case("text/html"))
+                    && parts.all(|parameter| {
+                        let Some((name, value)) = parameter.trim().split_once('=') else {
+                            return true;
+                        };
+                        !name.eq_ignore_ascii_case("q")
+                            || value
+                                .parse::<f32>()
+                                .is_ok_and(|quality| quality > 0.0 && quality <= 1.0)
+                    })
+            })
+        })
+}
+
+fn callback_response(
+    result: Result<CallbackOutcome, ApiError>,
+    browser: bool,
+) -> Result<Response, ApiError> {
+    let location = match result {
+        Ok(CallbackOutcome::Connected) => "/contacts/connections",
+        Ok(CallbackOutcome::Cancelled) if browser => {
+            "/contacts/connections?connectionError=cancelled"
+        }
+        Err(_) if browser => "/contacts/connections?connectionError=failed",
+        Ok(CallbackOutcome::Cancelled) => {
+            return Err(ApiError::bad_request("Google authorization cancelled"))
+        }
+        Err(error) => return Err(error),
+    };
     Ok(private(
-        (
-            StatusCode::SEE_OTHER,
-            [("location", "/contacts/connections")],
-        )
-            .into_response(),
+        (StatusCode::SEE_OTHER, [("location", location)]).into_response(),
     ))
 }
 

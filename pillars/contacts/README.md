@@ -186,8 +186,12 @@ caller opens that URL after the request completes. A fetch never follows an
 authorization redirect across origins.
 `GET /providers/google/callback` consumes one-use operator-bound state before code
 exchange. Successful callbacks return `303` to the fixed shell route
-`/contacts/connections`; failed callbacks return the structured error envelope.
-Neither response includes authorization details in a redirect. Ordinary consent
+`/contacts/connections`. Browser callbacks accepting `text/html` return cancelled
+consent to `?connectionError=cancelled` and other failures to
+`?connectionError=failed` on that same fixed route. JSON clients retain structured
+errors. Denial consumes valid one-use state without installing credentials;
+expired, replayed or mismatched state remains a failure. No callback redirect
+includes authorization details or provider error text. Ordinary consent
 requests only `contacts.readonly`. Setting
 `includeOtherContacts: true` on the authorization request explicitly adds
 `contacts.other.readonly`; the choice is saved in the one-use authorization state

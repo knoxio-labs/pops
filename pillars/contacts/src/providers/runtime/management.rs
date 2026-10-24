@@ -13,6 +13,19 @@ use crate::sources::repo::create_or_get_account;
 use sqlx::SqlitePool;
 
 impl ProviderRuntime {
+    /// Consume denied consent using the same human, expiry and epoch fences as
+    /// code exchange. Denial never installs credentials or contacts the provider.
+    pub async fn cancel_google(
+        &self,
+        pool: &SqlitePool,
+        human: &HumanIdentity,
+        state: &SecretBytes,
+        now: i64,
+    ) -> Result<(), ProviderError> {
+        consume_authorization(pool, &self.cipher, human, state, now).await?;
+        Ok(())
+    }
+
     /// Begin browser authorization for an existing Google account, or a new
     /// provisional account whose real subject is bound only after code exchange.
     pub async fn begin_google(

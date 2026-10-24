@@ -360,7 +360,8 @@ pub(crate) fn deserialize_secret<'de, D: serde::Deserializer<'de>>(
         .map_err(|_| serde::de::Error::custom("invalid bounded credential"))
 }
 
-fn deserialize_optional_secret<'de, D: serde::Deserializer<'de>>(
+/// Deserialize an optional bounded credential without diagnostic formatting.
+pub(crate) fn deserialize_optional_secret<'de, D: serde::Deserializer<'de>>(
     deserializer: D,
 ) -> Result<Option<SecretBytes>, D::Error> {
     Option::<String>::deserialize(deserializer)?
