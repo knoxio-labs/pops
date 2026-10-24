@@ -229,11 +229,11 @@ describe('RepairSheet', () => {
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Use code T03' }));
 
-    await waitFor(() => expect(mocks.setCode).toHaveBeenCalledWith('item-case-parts-code', 'T03'));
+    expect(await screen.findByText('Code set to T03.')).toBeInTheDocument();
+    expect(mocks.setCode).toHaveBeenCalledWith('item-case-parts-code', 'T03');
     expect(mocks.showUndoToast).toHaveBeenCalledWith(
       expect.objectContaining({ concept: 'code', message: 'Code set to T03' })
     );
-    expect(screen.getByText('Code set to T03.')).toBeInTheDocument();
     expect(
       screen.getByText(
         'The change is saved in the web app. The device will finish this case on its next sync.'
