@@ -46,7 +46,8 @@ export interface CorrectionChangeSetPhaseResult {
 export function applyChangeSetsPhase(
   tx: FinanceDb,
   payload: CommitPayload,
-  tempIdMap: Map<string, string>
+  tempIdMap: Map<string, string>,
+  identities?: EntityIdentities
 ): CorrectionChangeSetPhaseResult {
   const counts: RuleApplyCounts = { add: 0, edit: 0, disable: 0, remove: 0 };
   const writes: CorrectionRuleWriteCounts = { inserted: 0, reinforced: 0 };
@@ -55,7 +56,7 @@ export function applyChangeSetsPhase(
     const resolved = resolveChangeSetTempIds(cs, tempIdMap);
     const sanitized = dropUnusableAddOps(resolved);
     if (sanitized.ops.length === 0) continue;
-    const applied = applyChangeSet(tx, sanitized);
+    const applied = applyChangeSet(tx, sanitized, identities);
     for (const op of sanitized.ops) counts[op.op]++;
     writes.inserted += applied.writes.inserted;
     writes.reinforced += applied.writes.reinforced;

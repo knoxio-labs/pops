@@ -29,7 +29,7 @@ export function applyCommitPhases(
   const { tagPlan, liveDraft, identities } = prepared;
   enqueueOutboxCandidatesPhase(tx, outboxCandidates);
   applyCommitTagVocabulary(tx, tagPlan);
-  const correctionPhase = applyChangeSetsPhase(tx, payload, tempIdMap);
+  const correctionPhase = applyChangeSetsPhase(tx, payload, tempIdMap, identities);
   const tagRulePhase = applyTagRuleChangeSetsPhase(
     tx,
     tagPlan.tagRuleChangeSets,

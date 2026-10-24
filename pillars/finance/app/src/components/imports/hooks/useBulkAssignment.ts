@@ -8,6 +8,22 @@ import { useEntities } from './useEntities';
 
 import type { ProcessedTransaction } from '../../../store/importStore';
 
+function useCreateDialogState() {
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState<ProcessedTransaction | null>(null);
+  const handleCreateEntity = useCallback((transaction: ProcessedTransaction) => {
+    setSelectedTransaction(transaction);
+    setShowCreateDialog(true);
+  }, []);
+  return {
+    showCreateDialog,
+    setShowCreateDialog,
+    selectedTransaction,
+    setSelectedTransaction,
+    handleCreateEntity,
+  };
+}
+
 /**
  * Manages bulk assignment operations: accept-all, create-and-assign-all,
  * entity creation, and the EntityCreateDialog state for the ReviewStep.
@@ -20,16 +36,16 @@ export function useBulkAssignment(args: UseBulkAssignmentArgs) {
     generateProposal,
     recomputeForEntity,
   } = args;
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [selectedTransaction, setSelectedTransaction] = useState<ProcessedTransaction | null>(null);
+  const dialog = useCreateDialogState();
 
-  const { entities, dbEntities, addPendingEntity, entityVerification, retryEntityLookup } =
-    useEntities();
-
-  const handleCreateEntity = useCallback((transaction: ProcessedTransaction) => {
-    setSelectedTransaction(transaction);
-    setShowCreateDialog(true);
-  }, []);
+  const {
+    entities,
+    identities,
+    dbEntities,
+    addPendingEntity,
+    entityVerification,
+    retryEntityLookup,
+  } = useEntities(args.identityIds);
 
   const { handleCreateAndAssignAll, handleCreateEntityWithName } = useCreateEntity({
     addPendingEntity,
@@ -43,11 +59,12 @@ export function useBulkAssignment(args: UseBulkAssignmentArgs) {
   const handleAcceptAiSuggestion = useAcceptAiSuggestion({
     entities,
     handleEntitySelect,
-    handleCreateEntity,
+    handleCreateEntity: dialog.handleCreateEntity,
     openRuleProposalDialog,
   });
 
   const handleAcceptAll = useAcceptAll({
+    identities,
     entities,
     addPendingEntity,
     dbEntities,
@@ -57,21 +74,18 @@ export function useBulkAssignment(args: UseBulkAssignmentArgs) {
   });
 
   const handleEntityCreated = useEntityCreated({
-    selectedTransaction,
-    setSelectedTransaction,
+    selectedTransaction: dialog.selectedTransaction,
+    setSelectedTransaction: dialog.setSelectedTransaction,
     handleEntitySelect,
   });
 
   return {
-    showCreateDialog,
-    setShowCreateDialog,
-    selectedTransaction,
-    setSelectedTransaction,
+    ...dialog,
     entities,
+    identities,
     dbEntities,
     entityVerification,
     retryEntityLookup,
-    handleCreateEntity,
     handleCreateEntityWithName,
     handleAcceptAiSuggestion,
     handleAcceptAll,

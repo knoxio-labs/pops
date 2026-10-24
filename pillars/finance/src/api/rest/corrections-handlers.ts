@@ -87,9 +87,13 @@ export function makeCorrectionsHandlers(db: FinanceDb, contacts: ContactsClient)
       runHttp(() => ({ status: 200 as const, body: { data: ruleMatchPreview(db, body) } })),
 
     createOrUpdate: ({ body }: Req['createOrUpdate']) =>
-      runHttp(() => {
+      runEntityHttp(db, contacts, body, (identities) => {
         try {
-          const row = transactionCorrectionsService.createOrUpdateTransactionCorrection(db, body);
+          const row = transactionCorrectionsService.createOrUpdateTransactionCorrection(
+            db,
+            body,
+            identities
+          );
           return {
             status: 200 as const,
             body: { data: toCorrection(row), message: 'Correction saved' },
@@ -100,12 +104,13 @@ export function makeCorrectionsHandlers(db: FinanceDb, contacts: ContactsClient)
       }),
 
     update: ({ params, body }: Req['update']) =>
-      runHttp(() => {
+      runEntityHttp(db, contacts, body, (identities) => {
         try {
           const row = transactionCorrectionsService.updateTransactionCorrection(
             db,
             params.id,
-            body
+            body,
+            identities
           );
           return {
             status: 200 as const,
@@ -197,10 +202,10 @@ export function makeCorrectionsHandlers(db: FinanceDb, contacts: ContactsClient)
       }),
 
     applyChangeSet: ({ body }: Req['applyChangeSet']) =>
-      runHttp(() => ({
+      runEntityHttp(db, contacts, body, (identities) => ({
         status: 200 as const,
         body: {
-          data: applyCorrectionChangeSet(db, body.changeSet).rows.map(toCorrection),
+          data: applyCorrectionChangeSet(db, body.changeSet, identities).rows.map(toCorrection),
           message: 'ChangeSet applied',
         },
       })),

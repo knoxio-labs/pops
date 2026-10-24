@@ -1,3 +1,5 @@
+import { entityIdentity, type EntityIdentities } from '@pops/finance';
+
 import type { ConfirmedTransaction, TagRuleChangeSet } from '@pops/finance';
 
 // From the leaf types module rather than the store barrel: the store's actions
@@ -100,13 +102,14 @@ export function reconcilePendingTagRule(
  * through the step that stages it.
  */
 export function pendingTagRuleKey(
-  entry: Pick<PendingTagRuleChangeSet, 'changeSet'>
+  entry: Pick<PendingTagRuleChangeSet, 'changeSet'>,
+  identities?: EntityIdentities
 ): string | null {
   const first = entry.changeSet.ops[0];
   if (first === undefined || first.op !== 'add') return null;
   return JSON.stringify([
     first.data.descriptionPattern,
     first.data.matchType,
-    first.data.entityId ?? null,
+    entityIdentity(first.data.entityId ?? null, identities),
   ]);
 }

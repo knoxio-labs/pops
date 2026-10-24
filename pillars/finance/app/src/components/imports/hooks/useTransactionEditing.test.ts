@@ -7,6 +7,11 @@ import { useTransactionEditing } from './useTransactionEditing';
 import type { ProcessedTransaction } from '../../../store/importStore';
 import type { LocalTxState } from './local-tx-reconcile';
 
+const identities = new Map([
+  ['ent-1', 'ent-1'],
+  ['ent-2', 'ent-2'],
+]);
+
 const toastMock = vi.hoisted(() => ({ success: vi.fn(), info: vi.fn(), error: vi.fn() }));
 vi.mock('sonner', () => ({ toast: toastMock }));
 
@@ -40,7 +45,12 @@ function setup() {
   const generateProposal = vi.fn().mockResolvedValue(undefined);
   const recomputeForEntity = vi.fn().mockResolvedValue(undefined);
   const { result } = renderHook(() =>
-    useTransactionEditing({ setLocalTransactions, generateProposal, recomputeForEntity })
+    useTransactionEditing({
+      identities,
+      setLocalTransactions,
+      generateProposal,
+      recomputeForEntity,
+    })
   );
   return { result, setLocalTransactions, generateProposal, recomputeForEntity };
 }
@@ -251,5 +261,26 @@ describe('useTransactionEditing — entity-optional bucket routing (#3757 nit 4)
     expect(next.matched).toHaveLength(0);
     expect(next.uncertain).toHaveLength(1);
     expect(next.uncertain[0]).toMatchObject({ transactionType: 'purchase', status: 'uncertain' });
+  });
+});
+
+describe('canonical identity availability', () => {
+  it('leaves an inline edit untouched while canonical identity resolution is unavailable', () => {
+    const setLocalTransactions = vi.fn();
+    const generateProposal = vi.fn();
+    const { result } = renderHook(() =>
+      useTransactionEditing({
+        identities: undefined,
+        setLocalTransactions,
+        generateProposal,
+        recomputeForEntity: vi.fn(),
+      })
+    );
+    act(() => result.current.handleSaveEdit(makeTransaction(), { description: 'Changed' }));
+    expect(setLocalTransactions).not.toHaveBeenCalled();
+    expect(generateProposal).not.toHaveBeenCalled();
+    expect(toastMock.error).toHaveBeenCalledWith(
+      expect.stringContaining('identities are unavailable')
+    );
   });
 });

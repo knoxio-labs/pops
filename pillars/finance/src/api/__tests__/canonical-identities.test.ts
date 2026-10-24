@@ -10,6 +10,7 @@ import {
   resolveAccountIdByName,
   transactionsService,
   transactionTagRulesService,
+  transactionCorrectionsService,
   type OpenedFinanceDb,
 } from '../../db/index.js';
 import { accounts } from '../../db/schema.js';
@@ -310,6 +311,33 @@ describe('canonical contact identities across finance HTTP operations', () => {
     expect(transactionTagRulesService.getTransactionTagRule(financeDb.db, rule.id).entityId).toBe(
       'old-a'
     );
+  });
+
+  it('preserves historical correction outcomes on equivalent patches and reinforcement', async () => {
+    const rule = transactionCorrectionsService.createOrUpdateTransactionCorrection(financeDb.db, {
+      descriptionPattern: 'CANONICAL CAFE',
+      matchType: 'contains',
+      entityId: 'old-a',
+      entityName: 'Cafe',
+    });
+    const api = client();
+    await api.corrections.update(rule.id, { entityId: 'current' });
+    await api.corrections.createOrUpdate({
+      descriptionPattern: rule.descriptionPattern,
+      matchType: rule.matchType,
+      entityId: 'current',
+      entityName: 'Cafe',
+    });
+    await api.corrections.applyChangeSet({
+      changeSet: {
+        source: 'test',
+        reason: 'Test equivalent edit',
+        ops: [{ op: 'edit', id: rule.id, data: { entityId: 'current' } }],
+      },
+    });
+    expect(
+      transactionCorrectionsService.getTransactionCorrection(financeDb.db, rule.id).entityId
+    ).toBe('old-a');
   });
 
   it('returns unavailable and leaves mutations untouched when identity resolution fails', async () => {

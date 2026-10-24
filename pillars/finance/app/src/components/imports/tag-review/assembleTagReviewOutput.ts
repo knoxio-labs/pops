@@ -23,7 +23,9 @@ interface AssembleOutputArgs {
 }
 
 /** Shapes the step's public API out of the pieces `useTagReviewState` gathers. */
-export function assembleTagReviewOutput(args: AssembleOutputArgs): UseTagReviewStateOutput {
+export function assembleTagReviewOutput(
+  args: AssembleOutputArgs
+): Omit<UseTagReviewStateOutput, 'identityStatus' | 'retryIdentities'> {
   const { confirmedTransactions, groups, availableTags, facets, vocabularyTags } = args;
   const { localTags, suggestedTagMeta } = args;
   const {

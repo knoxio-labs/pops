@@ -1,6 +1,8 @@
 import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
 
+import { entityIdentity, preservedEntityId, type EntityIdentities } from '@pops/finance';
+
 import { requiresEntity } from '../../../lib/transaction-type';
 import { promptToLearn } from './learn-prompt';
 import { bucketOfChecksum, replaceByChecksum } from './local-tx-reconcile';
@@ -21,6 +23,7 @@ type GenerateProposal = (args: {
 }) => Promise<void>;
 
 interface UseTransactionEditingArgs {
+  identities?: EntityIdentities;
   setLocalTransactions: Dispatch<SetStateAction<LocalTxState>>;
   generateProposal: GenerateProposal;
   recomputeForEntity: RecomputeForEntity;
@@ -30,19 +33,25 @@ const COMPARABLE_FIELDS = ['description', 'amount', 'location', 'transactionType
 
 function detectEntityChange(
   transaction: ProcessedTransaction,
-  editedFields: Partial<ProcessedTransaction>
+  editedFields: Partial<ProcessedTransaction>,
+  identities?: EntityIdentities
 ): boolean {
-  return 'entity' in editedFields && editedFields.entity?.entityId !== transaction.entity?.entityId;
+  return (
+    'entity' in editedFields &&
+    entityIdentity(editedFields.entity?.entityId ?? null, identities) !==
+      entityIdentity(transaction.entity?.entityId ?? null, identities)
+  );
 }
 
 function detectChange(
   transaction: ProcessedTransaction,
-  editedFields: Partial<ProcessedTransaction>
+  editedFields: Partial<ProcessedTransaction>,
+  identities?: EntityIdentities
 ): boolean {
   const fieldChanged = COMPARABLE_FIELDS.some(
     (field) => field in editedFields && editedFields[field] !== transaction[field]
   );
-  return fieldChanged || detectEntityChange(transaction, editedFields);
+  return fieldChanged || detectEntityChange(transaction, editedFields, identities);
 }
 
 function pickValue<T>(edited: T | undefined, original: T | undefined, fallback: T): T {
@@ -112,18 +121,44 @@ function showLearnToast(invokeRetry: () => void): void {
  */
 function repointedEntityId(
   transaction: ProcessedTransaction,
-  editedFields: Partial<ProcessedTransaction>
+  editedFields: Partial<ProcessedTransaction>,
+  identities?: EntityIdentities
 ): string | null {
   const nextEntityId = editedFields.entity?.entityId;
-  if (!nextEntityId || nextEntityId === transaction.entity?.entityId) return null;
+  if (
+    !nextEntityId ||
+    entityIdentity(nextEntityId, identities) ===
+      entityIdentity(transaction.entity?.entityId ?? null, identities)
+  )
+    return null;
   return nextEntityId;
 }
 
 interface SaveEditDeps {
+  identities?: EntityIdentities;
   setLocalTransactions: Dispatch<SetStateAction<LocalTxState>>;
   setEditingTransaction: Dispatch<SetStateAction<ProcessedTransaction | null>>;
   generateProposal: GenerateProposal;
   recomputeForEntity: RecomputeForEntity;
+}
+
+function editedTransaction(
+  transaction: ProcessedTransaction,
+  editedFields: Partial<ProcessedTransaction>,
+  identities: EntityIdentities
+): ProcessedTransaction {
+  const entity = editedFields.entity
+    ? {
+        ...editedFields.entity,
+        entityId:
+          preservedEntityId(
+            transaction.entity.entityId ?? null,
+            editedFields.entity.entityId,
+            identities
+          ) ?? undefined,
+      }
+    : transaction.entity;
+  return { ...transaction, ...editedFields, entity, manuallyEdited: true };
 }
 
 function buildSaveEdit(deps: SaveEditDeps) {
@@ -132,20 +167,20 @@ function buildSaveEdit(deps: SaveEditDeps) {
     editedFields: Partial<ProcessedTransaction>,
     shouldLearn = false
   ): void => {
+    if (!deps.identities) {
+      toast.error('Contact identities are unavailable; retry before editing.');
+      return;
+    }
     const isRuleMatched =
       Boolean(transaction.ruleProvenance) || transaction.entity?.matchType === 'learned';
-    const hasChanges = detectChange(transaction, editedFields);
-    const entityChanged = detectEntityChange(transaction, editedFields);
+    const hasChanges = detectChange(transaction, editedFields, deps.identities);
+    const entityChanged = detectEntityChange(transaction, editedFields, deps.identities);
 
-    const updatedTx: ProcessedTransaction = {
-      ...transaction,
-      ...editedFields,
-      manuallyEdited: true,
-    };
+    const updatedTx = editedTransaction(transaction, editedFields, deps.identities);
     deps.setLocalTransactions((prev) => applyEditToBucket(prev, transaction, updatedTx));
     deps.setEditingTransaction(null);
 
-    const repointedTo = repointedEntityId(transaction, editedFields);
+    const repointedTo = repointedEntityId(transaction, editedFields, deps.identities);
     if (repointedTo) void deps.recomputeForEntity([updatedTx], repointedTo);
 
     if (isRuleMatched && entityChanged) {
@@ -170,6 +205,7 @@ function buildSaveEdit(deps: SaveEditDeps) {
  * Manages transaction editing state and save/cancel handlers for the ReviewStep.
  */
 export function useTransactionEditing({
+  identities,
   setLocalTransactions,
   generateProposal,
   recomputeForEntity,
@@ -187,12 +223,13 @@ export function useTransactionEditing({
       shouldLearn = false
     ) =>
       buildSaveEdit({
+        identities,
         setLocalTransactions,
         setEditingTransaction,
         generateProposal,
         recomputeForEntity,
       })(transaction, editedFields, shouldLearn),
-    [setLocalTransactions, generateProposal, recomputeForEntity]
+    [setLocalTransactions, generateProposal, recomputeForEntity, identities]
   );
 
   const handleCancelEdit = useCallback(() => setEditingTransaction(null), []);

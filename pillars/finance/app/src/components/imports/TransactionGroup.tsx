@@ -8,6 +8,7 @@ import { BulkEntitySelector } from './transaction-group/BulkEntitySelector';
 import { GroupHeader } from './transaction-group/GroupHeader';
 import { TransactionCard } from './TransactionCard';
 
+import type { EntityIdentities } from '@pops/finance';
 import type { ProcessedTransaction } from '@pops/finance';
 
 import type { TransactionType } from '../../lib/transaction-type';
@@ -49,6 +50,7 @@ interface TransactionGroupProps {
   ) => void;
   onCancelEdit?: () => void;
   entities?: Array<{ id: string; name: string }>;
+  identities?: EntityIdentities;
   entityVerification?: EntityVerification;
   variant?: GroupVariant;
 }
@@ -64,6 +66,7 @@ interface TransactionListProps {
   onLeaveUnassigned: TransactionGroupProps['onLeaveUnassigned'];
   onEdit: TransactionGroupProps['onEdit'];
   entities?: TransactionGroupProps['entities'];
+  identities?: EntityIdentities;
   entityVerification: EntityVerification;
   variant: GroupVariant;
 }
@@ -80,10 +83,11 @@ function TransactionList(props: TransactionListProps) {
   } = props;
   return (
     <div className="p-4 space-y-3 border-t border-border">
-      {group.transactions.map((transaction, idx) =>
+      {group.transactions.map((transaction) =>
         editingTransaction === transaction && onSaveEdit && onCancelEdit ? (
           <EditableTransactionCard
-            key={idx}
+            identities={props.identities}
+            key={transaction.checksum}
             transaction={transaction}
             onSave={onSaveEdit}
             onCancel={onCancelEdit}
@@ -91,7 +95,8 @@ function TransactionList(props: TransactionListProps) {
           />
         ) : (
           <TransactionCard
-            key={idx}
+            identities={props.identities}
+            key={transaction.checksum}
             transaction={transaction}
             onEntitySelect={props.onEntitySelect}
             onCreateEntityWithName={props.onCreateEntityWithName}
@@ -147,6 +152,7 @@ export function TransactionGroup(props: TransactionGroupProps) {
         )}
         <CollapsibleContent>
           <TransactionList
+            identities={props.identities}
             group={group}
             editingTransaction={props.editingTransaction}
             onSaveEdit={props.onSaveEdit}

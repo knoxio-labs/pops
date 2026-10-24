@@ -6,10 +6,13 @@ import { type LocalTxState, moveToMatched, pluralize, type UseBulkAssignmentArgs
 
 import type { Dispatch, SetStateAction } from 'react';
 
+import type { EntityIdentities } from '@pops/finance';
+
 import type { ProcessedTransaction } from '../../../../store/importStore';
 import type { useEntities } from '../useEntities';
 
 interface AcceptAllArgs {
+  identities?: ReturnType<typeof useEntities>['identities'];
   entities: ReturnType<typeof useEntities>['entities'];
   addPendingEntity: ReturnType<typeof useEntities>['addPendingEntity'];
   dbEntities: ReturnType<typeof useEntities>['dbEntities'];
@@ -30,6 +33,16 @@ function resolveEntityId(
   return pending.tempId;
 }
 
+function canAcceptGroup(
+  identities: EntityIdentities | undefined,
+  transactions: readonly ProcessedTransaction[]
+): identities is EntityIdentities {
+  if (transactions.length === 0) return false;
+  if (identities) return true;
+  toast.error('Contact identities are unavailable; retry before assigning.');
+  return false;
+}
+
 /**
  * Bulk-accept assigns the AI-suggested entity to every transaction in the
  * group and then opens the Correction Proposal dialog seeded from the first
@@ -39,6 +52,7 @@ function resolveEntityId(
 export function useAcceptAll(args: AcceptAllArgs) {
   const {
     entities,
+    identities,
     addPendingEntity,
     dbEntities,
     setLocalTransactions,
@@ -47,7 +61,7 @@ export function useAcceptAll(args: AcceptAllArgs) {
   } = args;
   return useCallback(
     async (transactions: ProcessedTransaction[]) => {
-      if (transactions.length === 0) return;
+      if (!canAcceptGroup(identities, transactions)) return;
       const firstTx = transactions[0];
       const entityName = firstTx?.entity?.entityName;
       if (!firstTx || !entityName) {
@@ -58,7 +72,9 @@ export function useAcceptAll(args: AcceptAllArgs) {
         const entityId =
           firstTx.entity?.entityId ??
           resolveEntityId(entityName, entities, addPendingEntity, dbEntities);
-        setLocalTransactions((prev) => moveToMatched(prev, transactions, { entityId, entityName }));
+        setLocalTransactions((prev) =>
+          moveToMatched(prev, transactions, { entityId, entityName, identities })
+        );
         void recomputeForEntity(transactions, entityId);
         toast.success(`Accepted ${pluralize(transactions.length)} as "${entityName}"`);
         void generateProposal({
@@ -76,6 +92,7 @@ export function useAcceptAll(args: AcceptAllArgs) {
     },
     [
       entities,
+      identities,
       addPendingEntity,
       dbEntities,
       setLocalTransactions,

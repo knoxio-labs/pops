@@ -88,7 +88,9 @@ describe('groupTransactionsByEntity — order', () => {
   it('orders by entity name alone when asked, ignoring size and AI guesses', () => {
     const named = [
       ...rows,
-      makeTransaction('d', 'ADOBE', { entity: { ...learned, entityName: 'adobe' } }),
+      makeTransaction('d', 'ADOBE', {
+        entity: { ...learned, entityId: 'adobe', entityName: 'adobe' },
+      }),
     ];
     expect(groupTransactionsByEntity(named, 'name').map((g) => g.entityName)).toEqual([
       'adobe',
@@ -99,7 +101,9 @@ describe('groupTransactionsByEntity — order', () => {
 
   it('orders digits in entity names numerically', () => {
     const numbered = ['Store 10', 'Store 2'].map((entityName, i) =>
-      makeTransaction(String(i), entityName, { entity: { ...learned, entityName } })
+      makeTransaction(String(i), entityName, {
+        entity: { ...learned, entityId: `store-${i}`, entityName },
+      })
     );
     expect(groupTransactionsByEntity(numbered, 'name').map((g) => g.entityName)).toEqual([
       'Store 2',
