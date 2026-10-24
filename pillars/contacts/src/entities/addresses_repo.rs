@@ -16,7 +16,7 @@ use super::addresses_model::{AddressRow, CreateAddressBody};
 pub async fn list_for_entity(pool: &SqlitePool, entity_id: &str) -> sqlx::Result<Vec<AddressRow>> {
     sqlx::query_as::<_, AddressRow>(
         "SELECT id, entity_id, value, last_edited_time FROM entity_addresses \
-         WHERE entity_id = ?1 ORDER BY last_edited_time ASC",
+         WHERE entity_id = COALESCE((SELECT canonical_id FROM entity_redirects WHERE member_id=?1),?1) OR entity_id IN (SELECT member_id FROM entity_redirects WHERE canonical_id=COALESCE((SELECT canonical_id FROM entity_redirects WHERE member_id=?1),?1)) ORDER BY last_edited_time ASC",
     )
     .bind(entity_id)
     .fetch_all(pool)

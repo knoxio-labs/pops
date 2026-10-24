@@ -180,10 +180,19 @@ export type ErrorCode =
   | 'contacts.request.invalid'
   | 'contacts.resource.not_found'
   | 'contacts.entity.name_conflict'
+  | 'contacts.entity.identity_conflict'
   | 'contacts.auth.unauthorized'
   | 'contacts.auth.forbidden'
   | 'contacts.auth.unavailable'
   | 'contacts.internal';
+
+/**
+ * Select a scalar value belonging to a retained entity in the resulting group.
+ */
+export type FieldSelection = {
+  entityId: string;
+  field: MergeField;
+};
 
 /**
  * `GET /health` response body. Field-for-field identical to the TS pillar
@@ -197,6 +206,15 @@ export type HealthResponse = {
   status: string;
   ts: string;
   version: string;
+};
+
+/**
+ * A canonical group and the directory-wide optimistic revision.
+ */
+export type IdentityGroup = {
+  canonicalId: string;
+  memberIds: Array<string>;
+  revision: number;
 };
 
 /**
@@ -224,6 +242,44 @@ export type LookupResponse = {
 };
 
 export type MatchType = 'exact' | 'prefix' | 'contains';
+
+/**
+ * Existing canonical groups to combine; member IDs must name their current roots.
+ * Requested selections are validated before any redirect changes, never silently ignored.
+ */
+export type MergeBody = {
+  canonicalId: string;
+  evidence: string;
+  expectedRevision: number;
+  idempotencyKey: string;
+  memberIds: Array<string>;
+  preferredPointIds?: Array<string>;
+  selections?: Array<FieldSelection>;
+};
+
+/**
+ * Scalar fields that can select a retained member's value without overwriting it.
+ */
+export type MergeField =
+  | 'name'
+  | 'abn'
+  | 'aliases'
+  | 'defaultTransactionType'
+  | 'defaultTags'
+  | 'notes'
+  | 'avatarAssetId'
+  | 'posterAssetId'
+  | 'personProfile';
+
+/**
+ * The immutable result of a merge; retries return this original receipt.
+ */
+export type MergeResult = {
+  canonicalId: string;
+  memberIds: Array<string>;
+  operationId: string;
+  revision: number;
+};
 
 /**
  * Bare `{ message }` body returned by delete.
@@ -272,7 +328,30 @@ export type PersonProfile = {
  * Local profile response; `null` means no local name override exists.
  */
 export type PersonProfileResponse = {
-  data?: PersonProfile | unknown;
+  data?: PersonProfile | null;
+};
+
+/**
+ * Bounded IDs to resolve, preserving request order and repeated historical IDs.
+ */
+export type ResolveBody = {
+  ids: Array<string>;
+};
+
+/**
+ * A consistent directory snapshot. Batches may be combined only at the same revision.
+ */
+export type ResolveResponse = {
+  data: Array<ResolvedIdentity>;
+  revision: number;
+};
+
+/**
+ * A historical ID and its current canonical identity; null means the ID does not exist.
+ */
+export type ResolvedIdentity = {
+  canonicalId?: string | null;
+  id: string;
 };
 
 /**
@@ -310,6 +389,44 @@ export type SearchRequest = {
  */
 export type SearchResponse = {
   hits: Array<SearchHit>;
+};
+
+/**
+ * Persist or revoke an explicit keep-separate decision for stable member IDs.
+ */
+export type SeparateBody = {
+  evidence: string;
+  expectedRevision: number;
+  idempotencyKey: string;
+  keepSeparate: boolean;
+  leftId: string;
+  rightId: string;
+};
+
+/**
+ * All current separation decisions at a consistent directory revision.
+ */
+export type SeparateList = {
+  data: Array<SeparatePair>;
+  revision: number;
+};
+
+/**
+ * A current stable-member pair preventing direct and indirect merges.
+ */
+export type SeparatePair = {
+  leftId: string;
+  rightId: string;
+};
+
+/**
+ * Result of an explicit separation decision.
+ */
+export type SeparateResult = {
+  keepSeparate: boolean;
+  leftId: string;
+  revision: number;
+  rightId: string;
 };
 
 /**
@@ -372,6 +489,23 @@ export type SourceRecord = {
  */
 export type SourceRecordListResponse = {
   data: Array<SourceRecord>;
+};
+
+/**
+ * Undo requires the exact untouched post-merge directory revision.
+ */
+export type UndoBody = {
+  expectedRevision: number;
+  idempotencyKey: string;
+};
+
+/**
+ * Undo restores directory membership. External references created after the merge remain unchanged.
+ */
+export type UndoResult = {
+  operationId: string;
+  restoredIds: Array<string>;
+  revision: number;
 };
 
 /**
@@ -489,6 +623,25 @@ export type EntitiesLookupResponses = {
 };
 
 export type EntitiesLookupResponse = EntitiesLookupResponses[keyof EntitiesLookupResponses];
+
+export type EntitiesResolveData = {
+  body: ResolveBody;
+  path?: never;
+  query?: never;
+  url: '/entities/resolve';
+};
+
+export type EntitiesResolveErrors = {
+  400: ErrorBody;
+};
+
+export type EntitiesResolveError = EntitiesResolveErrors[keyof EntitiesResolveErrors];
+
+export type EntitiesResolveResponses = {
+  200: ResolveResponse;
+};
+
+export type EntitiesResolveResponse = EntitiesResolveResponses[keyof EntitiesResolveResponses];
 
 export type EntitiesDeleteData = {
   body?: never;
@@ -1047,6 +1200,106 @@ export type HealthGetResponses = {
 };
 
 export type HealthGetResponse = HealthGetResponses[keyof HealthGetResponses];
+
+export type MergesMergeData = {
+  body: MergeBody;
+  path?: never;
+  query?: never;
+  url: '/merges';
+};
+
+export type MergesMergeErrors = {
+  400: ErrorBody;
+  404: ErrorBody;
+  409: ErrorBody;
+};
+
+export type MergesMergeError = MergesMergeErrors[keyof MergesMergeErrors];
+
+export type MergesMergeResponses = {
+  200: MergeResult;
+};
+
+export type MergesMergeResponse = MergesMergeResponses[keyof MergesMergeResponses];
+
+export type MergesGroupData = {
+  body?: never;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/merges/groups/{id}';
+};
+
+export type MergesGroupErrors = {
+  404: ErrorBody;
+};
+
+export type MergesGroupError = MergesGroupErrors[keyof MergesGroupErrors];
+
+export type MergesGroupResponses = {
+  200: IdentityGroup;
+};
+
+export type MergesGroupResponse = MergesGroupResponses[keyof MergesGroupResponses];
+
+export type MergesSeparateListData = {
+  body?: never;
+  path?: never;
+  query?: never;
+  url: '/merges/keep-separate';
+};
+
+export type MergesSeparateListResponses = {
+  200: SeparateList;
+};
+
+export type MergesSeparateListResponse =
+  MergesSeparateListResponses[keyof MergesSeparateListResponses];
+
+export type MergesSeparateData = {
+  body: SeparateBody;
+  path?: never;
+  query?: never;
+  url: '/merges/keep-separate';
+};
+
+export type MergesSeparateErrors = {
+  400: ErrorBody;
+  404: ErrorBody;
+  409: ErrorBody;
+};
+
+export type MergesSeparateError = MergesSeparateErrors[keyof MergesSeparateErrors];
+
+export type MergesSeparateResponses = {
+  200: SeparateResult;
+};
+
+export type MergesSeparateResponse = MergesSeparateResponses[keyof MergesSeparateResponses];
+
+export type MergesUndoData = {
+  body: UndoBody;
+  path: {
+    id: string;
+  };
+  query?: never;
+  url: '/merges/{id}/undo';
+};
+
+export type MergesUndoErrors = {
+  400: ErrorBody;
+  404: ErrorBody;
+  409: ErrorBody;
+};
+
+export type MergesUndoError = MergesUndoErrors[keyof MergesUndoErrors];
+
+export type MergesUndoResponses = {
+  200: UndoResult;
+};
+
+export type MergesUndoResponse = MergesUndoResponses[keyof MergesUndoResponses];
 
 export type OpenapiGetData = {
   body?: never;

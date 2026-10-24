@@ -54,6 +54,9 @@ import type {
   EntitiesRerollColourData,
   EntitiesRerollColourErrors,
   EntitiesRerollColourResponses,
+  EntitiesResolveData,
+  EntitiesResolveErrors,
+  EntitiesResolveResponses,
   EntitiesSourcesListData,
   EntitiesSourcesListErrors,
   EntitiesSourcesListResponses,
@@ -68,6 +71,20 @@ import type {
   EntitiesUploadPosterResponses,
   HealthGetData,
   HealthGetResponses,
+  MergesGroupData,
+  MergesGroupErrors,
+  MergesGroupResponses,
+  MergesMergeData,
+  MergesMergeErrors,
+  MergesMergeResponses,
+  MergesSeparateData,
+  MergesSeparateErrors,
+  MergesSeparateListData,
+  MergesSeparateListResponses,
+  MergesSeparateResponses,
+  MergesUndoData,
+  MergesUndoErrors,
+  MergesUndoResponses,
   OpenapiGetData,
   OpenapiGetResponses,
   RootGetData,
@@ -136,6 +153,21 @@ export const entitiesLookup = <ThrowOnError extends boolean = false>(
 ): RequestResult<EntitiesLookupResponses, EntitiesLookupErrors, ThrowOnError> =>
   (options.client ?? client).post<EntitiesLookupResponses, EntitiesLookupErrors, ThrowOnError>({
     url: '/entities/lookup',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Resolve every historical ID and report the snapshot revision for multi-batch consumers.
+ */
+export const entitiesResolve = <ThrowOnError extends boolean = false>(
+  options: Options<EntitiesResolveData, ThrowOnError>
+): RequestResult<EntitiesResolveResponses, EntitiesResolveErrors, ThrowOnError> =>
+  (options.client ?? client).post<EntitiesResolveResponses, EntitiesResolveErrors, ThrowOnError>({
+    url: '/entities/resolve',
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -388,6 +420,73 @@ export const healthGet = <ThrowOnError extends boolean = false>(
   (options?.client ?? client).get<HealthGetResponses, unknown, ThrowOnError>({
     url: '/health',
     ...options,
+  });
+
+/**
+ * Merge only selected groups with explicit field references and immutable retry receipts.
+ */
+export const mergesMerge = <ThrowOnError extends boolean = false>(
+  options: Options<MergesMergeData, ThrowOnError>
+): RequestResult<MergesMergeResponses, MergesMergeErrors, ThrowOnError> =>
+  (options.client ?? client).post<MergesMergeResponses, MergesMergeErrors, ThrowOnError>({
+    url: '/merges',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Read the current canonical group and the conservative directory-wide revision.
+ */
+export const mergesGroup = <ThrowOnError extends boolean = false>(
+  options: Options<MergesGroupData, ThrowOnError>
+): RequestResult<MergesGroupResponses, MergesGroupErrors, ThrowOnError> =>
+  (options.client ?? client).get<MergesGroupResponses, MergesGroupErrors, ThrowOnError>({
+    url: '/merges/groups/{id}',
+    ...options,
+  });
+
+/**
+ * List stable member-pair decisions for conservative matching.
+ */
+export const mergesSeparateList = <ThrowOnError extends boolean = false>(
+  options?: Options<MergesSeparateListData, ThrowOnError>
+): RequestResult<MergesSeparateListResponses, unknown, ThrowOnError> =>
+  (options?.client ?? client).get<MergesSeparateListResponses, unknown, ThrowOnError>({
+    url: '/merges/keep-separate',
+    ...options,
+  });
+
+/**
+ * Persist or revoke candidate-specific separation across the two selected groups.
+ */
+export const mergesSeparate = <ThrowOnError extends boolean = false>(
+  options: Options<MergesSeparateData, ThrowOnError>
+): RequestResult<MergesSeparateResponses, MergesSeparateErrors, ThrowOnError> =>
+  (options.client ?? client).post<MergesSeparateResponses, MergesSeparateErrors, ThrowOnError>({
+    url: '/merges/keep-separate',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Undo only an untouched merge. External references created after the merge remain unchanged.
+ */
+export const mergesUndo = <ThrowOnError extends boolean = false>(
+  options: Options<MergesUndoData, ThrowOnError>
+): RequestResult<MergesUndoResponses, MergesUndoErrors, ThrowOnError> =>
+  (options.client ?? client).post<MergesUndoResponses, MergesUndoErrors, ThrowOnError>({
+    url: '/merges/{id}/undo',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
   });
 
 /**
