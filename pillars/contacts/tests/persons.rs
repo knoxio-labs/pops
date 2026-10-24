@@ -696,6 +696,28 @@ async fn source_http_routes_preserve_account_labels_and_show_inactive_person_lin
             .0,
         StatusCode::NOT_FOUND
     );
+    assert_eq!(
+        send(&app, "DELETE", &format!("/entities/{person}"), Value::Null)
+            .await
+            .0,
+        StatusCode::OK
+    );
+    assert!(sources::list_records(&pool, &person)
+        .await
+        .unwrap()
+        .is_empty());
+    assert!(persons::list_points(&pool, &person)
+        .await
+        .unwrap()
+        .is_empty());
+    let retained_history: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM source_record_history WHERE source_record_id=?1")
+            .bind(record.id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert_eq!(retained_history, 0);
+    assert_eq!(sources::list_accounts(&pool).await.unwrap().len(), 1);
 }
 
 #[test]
@@ -733,4 +755,68 @@ fn observation_validation_checks_byte_and_collection_boundaries() {
     assert!(sources::validate_record(&record).is_err());
     record.collection_key = " ".to_string();
     assert!(sources::validate_record(&record).is_err());
+}
+
+#[tokio::test]
+async fn source_metadata_refresh_reuses_surviving_preferred_observations() {
+    let (app, pool) = app().await;
+    let person = create(&app, "Alex", "person").await;
+    let account = sources::create_or_get_account(
+        &pool,
+        &SourceAccountInput {
+            provider: "google".to_string(),
+            account_key: "subject".to_string(),
+            label: None,
+        },
+    )
+    .await
+    .unwrap();
+    let mut input = SourceRecordInput {
+        account_id: account.id,
+        collection_key: "contacts".to_string(),
+        record_key: "record-1".to_string(),
+        entity_id: person.clone(),
+        display_name: Some("Alex".to_string()),
+        name: PersonName::default(),
+        points: vec![point("alex@example.test")],
+    };
+    let mut tx = pool.begin().await.unwrap();
+    let source = sources::apply_record(&mut tx, &input).await.unwrap();
+    tx.commit().await.unwrap();
+    let preferred = persons::list_points(&pool, &person)
+        .await
+        .unwrap()
+        .remove(0);
+    persons::prefer_point(&pool, &person, &preferred.id)
+        .await
+        .unwrap();
+    input.display_name = Some("Alex Smith".to_string());
+    let mut tx = pool.begin().await.unwrap();
+    sources::apply_record(&mut tx, &input).await.unwrap();
+    tx.commit().await.unwrap();
+    let points = persons::list_points(&pool, &person).await.unwrap();
+    assert_eq!(points.len(), 1);
+    assert_eq!(points[0].id, preferred.id);
+    assert!(points[0].active && points[0].preferred);
+    let mut tx = pool.begin().await.unwrap();
+    sources::deactivate_record(&mut tx, &source.id)
+        .await
+        .unwrap();
+    tx.commit().await.unwrap();
+    let mut tx = pool.begin().await.unwrap();
+    sources::apply_record(&mut tx, &input).await.unwrap();
+    tx.commit().await.unwrap();
+    let points = persons::list_points(&pool, &person).await.unwrap();
+    assert_eq!(points.len(), 1);
+    assert_eq!(points[0].id, preferred.id);
+    assert!(points[0].active && points[0].preferred);
+    input.points.clear();
+    let mut tx = pool.begin().await.unwrap();
+    sources::apply_record(&mut tx, &input).await.unwrap();
+    tx.commit().await.unwrap();
+    let points = persons::list_points(&pool, &person).await.unwrap();
+    assert_eq!(points.len(), 1);
+    assert_eq!(points[0].id, preferred.id);
+    assert!(!points[0].active);
+    assert!(points[0].preferred);
 }
