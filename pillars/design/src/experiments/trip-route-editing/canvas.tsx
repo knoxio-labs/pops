@@ -11,9 +11,9 @@ import { canvasCalendar, canvasTimingRules } from './canvas-calendar';
 import { CanvasContext, canvasDragType, useCanvas } from './canvas-context';
 import { CanvasInsert } from './canvas-insert';
 import { initialCanvas } from './canvas-model';
-import { CanvasNode } from './canvas-node';
+import { RentalSections } from './canvas-rentals';
+import { RouteTimelineItem } from './canvas-timeline';
 import { CanvasToolbar } from './canvas-toolbar';
-import { MissingTransit, RentalSections } from './canvas-transit';
 import { PlannerReview } from './review';
 
 import type { CanvasState } from './canvas-model';
@@ -177,14 +177,7 @@ function RouteCards() {
             )
           )
         }
-        renderItem={(record, index) => (
-          <div>
-            <CanvasNode record={record} index={index} />
-            <RentalSections visitId={record.id} />
-            <MissingTransit from={record.id} />
-            <CanvasInsert label={`Insert after stop ${index + 1}`} target={{ after: record.id }} />
-          </div>
-        )}
+        renderItem={(record, index) => <RouteTimelineItem record={record} index={index} />}
       />
     </div>
   );

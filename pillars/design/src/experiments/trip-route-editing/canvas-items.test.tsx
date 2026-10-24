@@ -15,7 +15,7 @@ import type { CanvasActions } from './canvas-context';
 import type { CanvasState } from './canvas-model';
 
 vi.mock('./canvas-booking-times', () => ({
-  BookingTimes: () => null,
+  BookingTimes: () => <span>Booking time editor</span>,
   BookingFindings: () => null,
 }));
 vi.mock('./canvas-transit', () => ({ TransitCard: () => <div>Transport</div> }));
@@ -122,6 +122,28 @@ describe('Canvas activities', () => {
     expect(screen.getByLabelText('Activity name')).toHaveValue(early.title);
     expect(screen.getByLabelText('Accommodation name')).toHaveValue('Root hotel');
     expect(screen.queryByLabelText('City / region')).toBeNull();
+  });
+
+  it('uses compact transparent activity fields and reserves the accent for purchased facts', () => {
+    const { container, unmount } = mount(<ActivityCard item={early} />);
+    const card = container.querySelector(`[data-canvas-id="${early.id}"]`);
+    expect(card).toHaveClass('min-h-11');
+    expect(card).not.toHaveClass('p-3', 'bg-card', 'border-l-app-accent');
+    const input = screen.getByLabelText('Activity name');
+    expect(input).toHaveClass('text-sm', 'font-medium');
+    expect(input.parentElement).toHaveClass('bg-transparent', 'px-0');
+    expect(screen.queryByText('Booking time editor')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Edit dates for Early event' }));
+    expect(screen.getByText('Booking time editor')).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Edit dates for Early event' })).toHaveClass(
+      'text-muted-foreground'
+    );
+    unmount();
+    const purchased = { ...early, purchase: 'Purchased' as const };
+    const view = mount(<ActivityCard item={purchased} />);
+    expect(view.container.querySelector(`[data-canvas-id="${early.id}"]`)).toHaveClass(
+      'border-l-app-accent'
+    );
   });
 
   it('edits an activity title without changing its location, dates or purchase facts', () => {

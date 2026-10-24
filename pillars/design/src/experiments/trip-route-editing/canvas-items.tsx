@@ -3,10 +3,10 @@ import { isPurchasedArrangement, tripItemTier } from '@/fixtures/trip-overview-m
 import { GripVertical } from 'lucide-react';
 import { useState } from 'react';
 
-import { Badge, SortableGrid, cn } from '@pops/ui';
+import { SortableGrid, cn } from '@pops/ui';
 
 import { ActivityFields } from './canvas-activity-fields';
-import { BookingFindings, BookingTimes } from './canvas-booking-times';
+import { BookingFindings } from './canvas-booking-times';
 import { useCanvas, canvasDragType } from './canvas-context';
 import { outsideVisit } from './constraints';
 
@@ -74,6 +74,7 @@ export function CanvasItemGroup({
         items={ordered}
         getKey={(r) => r.id}
         columnsClassName="grid-cols-1"
+        className="gap-0"
         onPreviewOrderChange={setPreview}
         onReorder={(next) =>
           canvas.change({
@@ -124,23 +125,22 @@ export function ActivityCard({
       data-canvas-id={item.id}
       aria-label={`Drag ${display.title}`}
       className={cn(
-        'group/item rounded-lg border bg-card p-3',
-        paid ? 'border-l-4 border-l-app-accent' : 'border-dashed',
+        'group/item min-h-11 border-l-2 border-transparent pl-2',
+        paid && 'border-l-app-accent',
         messages.length > 0 && 'border-destructive bg-destructive/10'
       )}
     >
-      <div className="flex items-start gap-2">
+      <div className="flex min-h-11 items-center gap-2">
         <GripVertical
-          className="mt-1 size-4 shrink-0 cursor-grab text-muted-foreground opacity-0 group-hover/item:opacity-100 group-focus-within/item:opacity-100 pointer-coarse:opacity-100"
+          className="size-3.5 shrink-0 cursor-grab text-muted-foreground opacity-0 group-hover/item:opacity-100 group-focus-within/item:opacity-100 pointer-coarse:opacity-100"
           aria-hidden
         />
         <ActivityFields item={item} />
-        <Badge variant={paid ? 'default' : 'outline'}>{tripItemTier(item)}</Badge>
+        <span className="shrink-0 text-xs text-muted-foreground">{tripItemTier(item)}</span>
       </div>
-      <BookingTimes recordId={item.id} />
       <BookingFindings recordId={item.id} />
       {messages.map((message) => (
-        <p key={message} className="mt-2 text-sm font-medium text-foreground">
+        <p key={message} className="pb-1 pl-5 text-sm text-destructive">
           {message}
         </p>
       ))}

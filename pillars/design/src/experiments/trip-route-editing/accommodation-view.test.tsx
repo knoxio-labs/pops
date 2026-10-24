@@ -114,18 +114,37 @@ describe('AccommodationView', () => {
     };
     const view = render(<StaySource record={changed} />);
     expect(screen.getByRole('group', { name: 'Changed hotel' }).className).toContain(
-      'border-solid'
+      'border-l-app-accent'
     );
+    fireEvent.click(screen.getByRole('button', { name: 'Edit accommodation Changed hotel' }));
     expect(screen.getByLabelText('Check-in').getAttribute('value')).toBe('2028-01-02');
     view.rerender(<StaySource record={stay} />);
     expect(screen.getByLabelText('Accommodation name').getAttribute('value')).toBe('First hotel');
     expect(screen.getByLabelText('Check-in').getAttribute('value')).toBe('2028-01-01');
     expect(screen.getByLabelText('Check-out').getAttribute('value')).toBe('2028-01-03');
-    expect(screen.getByRole('group', { name: 'First hotel' }).className).toContain('border-dashed');
+    expect(screen.getByRole('group', { name: 'First hotel' }).className).not.toContain(
+      'border-l-app-accent'
+    );
     view.rerender(<StaySource record={changed} dragged={changed.id} />);
     const dragged = screen.getByRole('group', { name: 'Changed hotel' });
     expect(dragged.className).toContain('border-dashed');
     expect(dragged.querySelector('.invisible')).not.toBeNull();
+  });
+
+  it('keeps stay facts visible in a compact row and opens forms only for editing', () => {
+    mount([stay]);
+    const card = screen.getByRole('group', { name: 'First hotel' });
+    expect(card.className).toContain('min-h-11');
+    expect(card.className).not.toContain('p-3');
+    expect(card.className).not.toContain('rounded-lg');
+    expect(screen.getByText('First hotel')).toBeDefined();
+    expect(screen.getByText('1 Jan → 3 Jan')).toBeDefined();
+    expect(screen.getByText('Booked')).toBeDefined();
+    expect(screen.queryByLabelText('Check-in')).toBeNull();
+    expect(screen.queryByLabelText('Accommodation name')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Edit accommodation First hotel' }));
+    expect(screen.getByLabelText('Accommodation name').getAttribute('value')).toBe('First hotel');
+    expect(screen.getByLabelText('Check-in').getAttribute('value')).toBe('2028-01-01');
   });
 
   it('retains home-place activities while hiding lodging status', () => {
@@ -185,6 +204,7 @@ describe('AccommodationView', () => {
   it('updates arrangement and purchase only through explicit source controls', () => {
     const { changes } = mount([{ ...stay, arrangement: 'Not arranged' }]);
     expect(screen.getAllByText('Accommodation needed')).toHaveLength(2);
+    fireEvent.click(screen.getByRole('button', { name: 'Edit accommodation First hotel' }));
     fireEvent.click(screen.getByRole('button', { name: 'Accommodation arrangement' }));
     fireEvent.click(screen.getByRole('button', { name: 'Booked' }));
     fireEvent.keyDown(document, { key: 'Escape' });
@@ -218,9 +238,8 @@ describe('AccommodationView', () => {
       schedule: { start: '2028-01-04', end: '2028-01-05' },
     };
     mount([stay, second]);
-    expect(
-      screen.getAllByLabelText('Accommodation name').map((input) => input.getAttribute('value'))
-    ).toEqual(['First hotel', 'Second hotel']);
+    expect(screen.getByRole('button', { name: 'Edit accommodation First hotel' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Edit accommodation Second hotel' })).toBeDefined();
     expect(screen.getByText('Accommodation needed')).toBeDefined();
     expect(screen.getByRole('button', { name: 'Add accommodation' })).toBeDefined();
     expect(screen.getByText('3 Jan → 4 Jan')).toBeDefined();
@@ -228,6 +247,7 @@ describe('AccommodationView', () => {
 
   it('writes source title and dates and shows invalid chronology', () => {
     const { changes } = mount([stay]);
+    fireEvent.click(screen.getByRole('button', { name: 'Edit accommodation First hotel' }));
     fireEvent.blur(screen.getByLabelText('Accommodation name'), {
       target: { value: 'Renamed hotel' },
     });
@@ -272,7 +292,7 @@ describe('AccommodationView', () => {
 describe('accommodation visit conflicts', () => {
   it('keeps partially intersecting stays visible and flags their wrong date and location', () => {
     mount([{ ...stay, placeId: 'curitiba', schedule: { start: '2027-12-31', end: '2028-01-03' } }]);
-    expect(screen.getByDisplayValue('First hotel')).toBeDefined();
+    expect(screen.getByText('First hotel')).toBeDefined();
     expect(screen.getByText('Accommodation outside visit dates')).toBeDefined();
     expect(screen.getByText('Accommodation in a different location')).toBeDefined();
   });

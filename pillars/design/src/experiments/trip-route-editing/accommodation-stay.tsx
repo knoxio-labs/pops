@@ -1,3 +1,4 @@
+import { formatTripDate } from '@/fixtures/trip-overview-format';
 import { BedDouble, GripVertical } from 'lucide-react';
 import { useState } from 'react';
 
@@ -94,15 +95,54 @@ export function hasInvalidStayDates(stay: TripRecord): boolean {
   );
 }
 
-/** A whole movable accommodation card edits only its own source facts and explicit status choices. */
-export function AccommodationStay({ stay }: { stay: TripRecord }) {
-  const canvas = useCanvas();
-  const { state, change } = canvas;
+function StayEditor({ stay }: { stay: TripRecord }) {
+  const { state, change } = useCanvas();
   const update = (record: TripRecord): void =>
     change({
       ...state,
       records: state.records.map((item) => (item.id === stay.id ? record : item)),
     });
+  return (
+    <div className="space-y-3">
+      <TextInput
+        key={stay.title ?? ''}
+        aria-label="Accommodation name"
+        defaultValue={stay.title ?? ''}
+        onBlur={(event) => update({ ...stay, title: event.currentTarget.value })}
+      />
+      <p className="text-xs text-muted-foreground">
+        {state.places.find((place) => place.id === stay.placeId)?.name}
+      </p>
+      <StayDates stay={stay} update={update} />
+      <StayStatus stay={stay} update={update} />
+    </div>
+  );
+}
+
+function StaySummary({ stay }: { stay: TripRecord }) {
+  const schedule = stay.schedule;
+  return (
+    <span className="flex min-w-0 flex-wrap items-center gap-x-3 text-sm">
+      <BedDouble className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+      <span className="font-medium">{stay.title}</span>
+      {schedule && (
+        <span className="font-normal text-muted-foreground">
+          {formatTripDate(schedule.start)}
+          {schedule.end && ` → ${formatTripDate(schedule.end)}`}
+        </span>
+      )}
+      <span className="text-xs font-normal text-muted-foreground">{stay.arrangement}</span>
+      {stay.purchase && (
+        <span className="text-xs font-normal text-muted-foreground">{stay.purchase}</span>
+      )}
+    </span>
+  );
+}
+
+/** Compact movable stay summary exposes source name, dates and status; editing stays explicit. */
+export function AccommodationStay({ stay }: { stay: TripRecord }) {
+  const canvas = useCanvas();
+  const invalid = hasInvalidStayDates(stay);
   return (
     <div
       data-canvas-id={stay.id}
@@ -110,41 +150,44 @@ export function AccommodationStay({ stay }: { stay: TripRecord }) {
       role="group"
       aria-label={stay.title ?? 'Accommodation'}
       className={cn(
-        'group/stay space-y-2 rounded-lg border p-3',
-        stay.purchase === 'Purchased'
-          ? 'border-solid border-l-4 border-l-app-accent'
-          : 'border-dashed',
-        canvas.dragged === stay.id && 'border-dashed'
+        'group/stay min-h-11 border-l-2 border-transparent pl-2',
+        stay.purchase === 'Purchased' && 'border-l-app-accent',
+        invalid && 'border-destructive bg-destructive/10',
+        canvas.dragged === stay.id && 'border border-dashed border-app-accent'
       )}
       onDragStart={(event) => event.stopPropagation()}
       onDragEnd={(event) => event.stopPropagation()}
     >
-      <div className={cn('space-y-2', canvas.dragged === stay.id && 'invisible')}>
-        <div className="flex items-center gap-2">
-          <GripVertical
-            className="size-4 shrink-0 cursor-grab opacity-0 group-hover/stay:opacity-100 group-focus-within/stay:opacity-100 pointer-coarse:opacity-100"
-            aria-hidden
-          />
-          <TextInput
-            key={stay.title ?? ''}
-            aria-label="Accommodation name"
-            variant="ghost"
-            defaultValue={stay.title ?? ''}
-            onBlur={(event) => update({ ...stay, title: event.currentTarget.value })}
-          />
-        </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <BedDouble className="size-4" aria-hidden />
-          <span>{state.places.find((place) => place.id === stay.placeId)?.name}</span>
-        </div>
-        <StayStatus stay={stay} update={update} />
-        <StayDates stay={stay} update={update} />
-        {hasInvalidStayDates(stay) && (
-          <p role="alert" className="text-sm text-foreground">
-            Check accommodation dates
-          </p>
+      <div
+        className={cn(
+          'flex min-h-11 items-center gap-2',
+          canvas.dragged === stay.id && 'invisible'
         )}
+      >
+        <GripVertical
+          className="size-3.5 shrink-0 cursor-grab text-muted-foreground opacity-0 group-hover/stay:opacity-100 group-focus-within/stay:opacity-100 pointer-coarse:opacity-100"
+          aria-hidden
+        />
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              aria-label={`Edit accommodation ${stay.title ?? ''}`.trim()}
+              variant="ghost"
+              className="min-h-11 min-w-0 flex-1 justify-start whitespace-normal px-0 text-left"
+            >
+              <StaySummary stay={stay} />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-80">
+            <StayEditor stay={stay} />
+          </PopoverContent>
+        </Popover>
       </div>
+      {invalid && (
+        <p role="alert" className="pb-1 pl-5 text-sm text-destructive">
+          Check accommodation dates
+        </p>
+      )}
     </div>
   );
 }

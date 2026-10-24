@@ -43,7 +43,8 @@ function periodActivities(
 }
 
 function PeriodDates({ period }: { period: AccommodationPeriod }) {
-  if (!period.start && !period.end) return null;
+  if ((!period.start && !period.end) || (period.missing && (!period.start || !period.end)))
+    return null;
   return (
     <div className="text-xs text-muted-foreground">
       {period.start && formatTripDate(period.start)}
@@ -65,20 +66,14 @@ function PeriodView({ visit, period }: { visit: TripRecord; period: Accommodatio
   const items = periodActivities(period, state, visit.id);
   const stayId = period.stays.length === 1 ? period.stays[0]?.id : undefined;
   return (
-    <section
-      className={cn(
-        'space-y-3 rounded-lg border p-3',
-        period.missing && 'border-warning',
-        invalid && 'border-destructive'
-      )}
-    >
-      <PeriodDates period={period} />
+    <section className={cn('space-y-0.5', invalid && 'border-l-2 border-destructive pl-2')}>
+      {period.stays.length === 0 && <PeriodDates period={period} />}
       <PeriodWarnings visit={visit} period={period} />
       {period.stays.map((stay) => (
         <AccommodationStay key={stay.id} stay={stay} />
       ))}
       {period.missing && (
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex min-h-11 items-center justify-between gap-2">
           <span className="text-sm text-foreground">Accommodation needed</span>
           <CanvasInsert
             target={{ visitId: visit.id, start: period.start, end: period.end }}
@@ -110,7 +105,7 @@ function PeriodWarnings({ visit, period }: { visit: TripRecord; period: Accommod
       : []),
   ];
   return messages.map((message) => (
-    <p key={message} role="alert" className="flex items-center gap-2 text-sm text-foreground">
+    <p key={message} role="alert" className="flex items-center gap-2 text-sm text-destructive">
       <TriangleAlert className="size-4" aria-hidden />
       {message}
     </p>
@@ -124,10 +119,12 @@ export function AccommodationView({ visit }: { visit: TripRecord }) {
     const items = state.records.filter(
       (record) => record.visitId === visit.id && ['event', 'idea', 'person'].includes(record.kind)
     );
-    return <CanvasItemGroup visit={visit} items={items} containerId={`home:${visit.id}`} />;
+    return items.length ? (
+      <CanvasItemGroup visit={visit} items={items} containerId={`home:${visit.id}`} />
+    ) : null;
   }
   return (
-    <div className="space-y-3">
+    <div className="space-y-2 border-l pl-3">
       {accommodationPeriods(visit, state.records).map((period) => (
         <PeriodView key={period.id} visit={visit} period={period} />
       ))}

@@ -23,11 +23,13 @@ export function CanvasInsert({
   label,
   defaultKind = 'city',
   line = true,
+  slotLabel,
 }: {
   target: CaptureTarget;
   label: string;
   defaultKind?: CaptureKind;
   line?: boolean;
+  slotLabel?: string;
 }) {
   const canvas = useCanvas();
   const [open, setOpen] = useState(false);
@@ -35,7 +37,7 @@ export function CanvasInsert({
     <div
       className={cn(
         'group/insert relative flex items-center justify-center',
-        line ? 'my-3 min-h-14' : 'min-h-11'
+        line ? 'min-h-11' : 'size-11 shrink-0'
       )}
       onDragOver={(e) => {
         if (e.dataTransfer.types.includes(canvasDragType)) {
@@ -52,16 +54,18 @@ export function CanvasInsert({
         }
       }}
     >
-      {line && <div aria-hidden className="absolute inset-x-0 top-1/2 border-t border-dashed" />}
+      {line && !slotLabel && (
+        <div aria-hidden className="absolute inset-x-0 top-1/2 border-t border-dashed" />
+      )}
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
             aria-label={label}
             title={label}
             variant="outline"
-            className="relative z-10 size-11 min-h-11 min-w-11 rounded-full bg-background p-0 opacity-0 group-hover/insert:opacity-100 group-focus-within/insert:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100"
+            className={insertButtonClasses(slotLabel)}
           >
-            <Plus className="size-4" aria-hidden />
+            {slotLabel ?? <Plus className="size-4" aria-hidden />}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-80 space-y-3">
@@ -116,5 +120,14 @@ function CaptureForm({
         Add
       </Button>
     </>
+  );
+}
+
+function insertButtonClasses(slotLabel?: string) {
+  return cn(
+    'relative z-10 min-h-11 min-w-11 bg-background',
+    slotLabel
+      ? 'w-full rounded-lg border-dashed bg-transparent px-3 text-sm font-normal text-muted-foreground'
+      : 'size-11 rounded-full p-0 opacity-0 group-hover/insert:opacity-100 group-focus-within/insert:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100'
   );
 }
