@@ -1,5 +1,5 @@
-import enAU from './locales/en-AU.json';
-import ptBR from './locales/pt-BR.json';
+import enAU from './en-AU.json';
+import ptBR from './pt-BR.json';
 
 import type { RemotePillarI18n } from '@pops/pillar-sdk';
 
