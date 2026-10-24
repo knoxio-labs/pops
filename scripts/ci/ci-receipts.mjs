@@ -64,7 +64,7 @@ export const LANES = Object.freeze({
     workflow: '.github/workflows/app-quality.yml',
     language: 'ts',
     checks: ['codegen', 'typecheck', 'build', 'test'],
-    tools: ['scripts/ci/check-generated-clients.mjs'],
+    tools: ['scripts/codegen/generate.mjs'],
   },
 });
 

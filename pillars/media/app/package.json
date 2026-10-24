@@ -14,7 +14,7 @@
     "test:coverage": "node ../../../scripts/require-built-graph.mjs && vitest run --coverage",
     "test:watch": "vitest",
     "typecheck": "node ../../../scripts/require-built-graph.mjs && tsc --noEmit",
-    "generate:media-client": "openapi-ts && oxfmt --write src/media-api"
+    "generate:media-client": "openapi-ts -o src/media-api"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
