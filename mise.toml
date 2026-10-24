@@ -21,6 +21,8 @@ activate_aggressive = true
 node = "24.19.0"
 pnpm = "11.20.0"
 rust = "1.97.1"
+# The syntax-aware merge driver .gitattributes names; scripts/git/README.md.
+"aqua:codeberg.org/mergiraf/mergiraf" = "0.20.0"
 
 [env]
 # Add common environment variables here if needed

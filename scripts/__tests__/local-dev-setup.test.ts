@@ -53,6 +53,12 @@ describe('local setup', { timeout: 60_000 }, () => {
             `mise trust ${join(root, 'pillars/example/mise.toml')}`,
           ]);
       }
+      const driver = spawnSync('git', ['config', '--local', '--get', 'merge.mergiraf.driver'], {
+        cwd: root,
+        env,
+        encoding: 'utf8',
+      });
+      expect(driver.stdout.trim() !== '').toBe(failure === 'none');
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
