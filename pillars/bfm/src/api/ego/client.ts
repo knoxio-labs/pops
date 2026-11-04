@@ -30,10 +30,9 @@ type EgoRouter = {
       search?: string;
     }) => Promise<unknown>;
     getConversation: (input: { id: string }) => Promise<unknown>;
-    decideActionBatch: (input: {
-      params: { batchId: string };
-      body: MobileEgoBatchDecisionBody;
-    }) => Promise<unknown>;
+    decideActionBatch: (
+      input: { batchId: string } & MobileEgoBatchDecisionBody
+    ) => Promise<unknown>;
   };
 };
 
@@ -100,7 +99,7 @@ async function decideBatch(
   decision: MobileEgoBatchDecisionBody
 ): Promise<GatewayOutcome<MobileEgoBatchOutcome>> {
   const response = await gateway.call<EgoRouter, unknown>(EGO_PILLAR_ID, (handle) =>
-    handle.ego.decideActionBatch({ params: { batchId }, body: decision })
+    handle.ego.decideActionBatch({ batchId, ...decision })
   );
   return isGatewayOk(response) ? { kind: 'ok', value: { batchId } } : response;
 }

@@ -1,7 +1,14 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { __resetSharedOpenApiCache, __resetSharedPillarClient } from '@pops/pillar-sdk/client';
+import {
+  __resetServerPillarCache,
+  __resetServerSdkConfig,
+  configureServerSdk,
+} from '@pops/pillar-sdk/server';
 import { fakePillarHandle } from '@pops/pillar-sdk/testing';
 
+import { sdkWireFactory } from '../../__tests__/sdk-wire.js';
 import { createPillarGateway } from '../../pillars/gateway.js';
 import { createMobileEgoClient } from '../client.js';
 
@@ -12,8 +19,10 @@ import type { PillarHandleFactory } from '../../pillars/gateway.js';
 type ListInput = { limit?: number; offset?: number; search?: string };
 type GetInput = { id: string };
 type DecideInput = {
-  params: { batchId: string };
-  body: { approve: string[]; reject: string[]; alwaysAllow: string[] };
+  batchId: string;
+  approve: string[];
+  reject: string[];
+  alwaysAllow: string[];
 };
 type EgoRoutes = {
   listConversations: (input: ListInput) => Promise<CallResult<unknown>>;
@@ -233,7 +242,7 @@ describe('MobileEgoClient.decideBatch', () => {
       kind: 'ok',
       value: { batchId: 'batch-1' },
     });
-    expect(calls).toEqual([{ params: { batchId: 'batch-1' }, body: decision }]);
+    expect(calls).toEqual([{ batchId: 'batch-1', ...decision }]);
   });
 
   it.each([
@@ -245,5 +254,44 @@ describe('MobileEgoClient.decideBatch', () => {
     await expect(
       client.decideBatch('batch-1', { approve: [], reject: [], alwaysAllow: [] })
     ).resolves.toMatchObject({ kind, status, pillar: 'cerebrum' });
+  });
+});
+
+describe('MobileEgoClient.decideBatch — on the wire', () => {
+  beforeEach(() => {
+    configureServerSdk({ apiKey: 'pops_sa_test_key' });
+  });
+
+  afterEach(() => {
+    __resetServerSdkConfig();
+    __resetServerPillarCache();
+    __resetSharedPillarClient();
+    __resetSharedOpenApiCache();
+  });
+
+  it('puts the batch id in the path and only the decision lists in the body', async () => {
+    const { factory, requests } = sdkWireFactory(
+      'cerebrum',
+      [
+        {
+          operationId: 'ego.decideActionBatch',
+          method: 'post',
+          path: '/ego/action-batches/{batchId}/decide',
+          hasBody: true,
+        },
+      ],
+      () => ({ status: 200, body: { ok: true } })
+    );
+    const decision = { approve: ['action-1'], reject: [], alwaysAllow: ['tool-name'] };
+
+    const outcome = await createMobileEgoClient(createPillarGateway(factory)).decideBatch(
+      'batch-1',
+      decision
+    );
+
+    expect(requests).toEqual([
+      { method: 'POST', url: '/ego/action-batches/batch-1/decide', body: decision },
+    ]);
+    expect(outcome).toEqual({ kind: 'ok', value: { batchId: 'batch-1' } });
   });
 });
