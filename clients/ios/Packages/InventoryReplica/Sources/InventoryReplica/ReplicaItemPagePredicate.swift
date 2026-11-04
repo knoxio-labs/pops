@@ -156,7 +156,9 @@ internal struct ReplicaItemPagePredicate {
 
     private mutating func appendSearch(_ text: String?) {
         guard let text else { return }
-        clauses.append("item.rowid IN (SELECT rowid FROM item_fts WHERE item_fts MATCH ?)")
+        clauses.append(
+            "item.rowid IN (SELECT rowid FROM item_fts WHERE "
+                + "\(ReplicaSearchIndex.matchClause(for: text)))")
         arguments += ReplicaSearchIndex.matchValues(for: text)
     }
 }

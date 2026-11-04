@@ -32,6 +32,22 @@ internal struct ReplicaPageQueryTests {
         #expect(next.nextCursor == nil)
     }
 
+    @Test(
+        "a query shorter than one trigram still answers from the item index",
+        arguments: [("t", Set(["tt"])), ("Tt", Set(["tt"])), ("ox", Set(["box"]))])
+    func shortSearchPage(text: String, expected: Set<String>) throws {
+        let replica = try Fixture.downloaded(items: [
+            Fixture.item("tt", name: "Tt adapter"),
+            Fixture.item("box", name: "Box"),
+        ])
+        let query = InventorySearchPageQuery(
+            text: text, includeLocations: false, page: InventoryPageRequest(limit: 10))
+
+        let page = try replica.read(.searchPage(query))
+
+        #expect(Set(page.rows.map(\.id)) == expected)
+    }
+
     @Test("mixed item and place pages preserve one stable rank boundary")
     func mixedSearchPageBoundary() throws {
         let locations = [
