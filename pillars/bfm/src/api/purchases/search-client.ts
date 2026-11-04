@@ -46,14 +46,12 @@ export type PurchasesTagVocabularyRouter = {
 export type PurchasesSearchRouter = {
   search: {
     search: (input: {
-      body: {
-        query: {
-          text: string;
-          filters?: readonly { field: string; operator: string; value: string }[];
-          kind?: 'purchases' | 'lines';
-          cursor?: string;
-          limit?: number;
-        };
+      query: {
+        text: string;
+        filters?: readonly { field: string; operator: string; value: string }[];
+        kind?: 'purchases' | 'lines';
+        cursor?: string;
+        limit?: number;
       };
     }) => Promise<unknown>;
   };
@@ -103,14 +101,12 @@ export async function search(
     PURCHASES_PILLAR_ID,
     (handle) =>
       handle.search.search({
-        body: {
-          query: {
-            text: request.q,
-            filters: searchFilters(request),
-            ...(request.kind === undefined || request.kind === 'any' ? {} : { kind: request.kind }),
-            ...(request.cursor === undefined ? {} : { cursor: request.cursor }),
-            ...(request.limit === undefined ? {} : { limit: request.limit }),
-          },
+        query: {
+          text: request.q,
+          filters: searchFilters(request),
+          ...(request.kind === undefined || request.kind === 'any' ? {} : { kind: request.kind }),
+          ...(request.cursor === undefined ? {} : { cursor: request.cursor }),
+          ...(request.limit === undefined ? {} : { limit: request.limit }),
         },
       })
   );

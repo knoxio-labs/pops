@@ -1,11 +1,18 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 /**
  * The search half of the purchases leg: what bfm sends to `purchases`' own
  * `POST /search`, and what it makes of what comes back.
  */
+import { __resetSharedOpenApiCache, __resetSharedPillarClient } from '@pops/pillar-sdk/client';
+import {
+  __resetServerPillarCache,
+  __resetServerSdkConfig,
+  configureServerSdk,
+} from '@pops/pillar-sdk/server';
 import { fakePillarHandle } from '@pops/pillar-sdk/testing';
 
+import { sdkWireFactory } from '../../__tests__/sdk-wire.js';
 import { createPillarGateway, isGatewayOk } from '../../pillars/gateway.js';
 import { createMobilePurchasesClient } from '../client.js';
 
@@ -14,14 +21,12 @@ import type { CallResult } from '@pops/pillar-sdk/server';
 import type { PillarHandleFactory } from '../../pillars/gateway.js';
 
 interface SearchCall {
-  readonly body: {
-    readonly query: {
-      readonly text: string;
-      readonly filters?: unknown;
-      readonly kind?: string;
-      readonly cursor?: string;
-      readonly limit?: number;
-    };
+  readonly query: {
+    readonly text: string;
+    readonly filters?: unknown;
+    readonly kind?: string;
+    readonly cursor?: string;
+    readonly limit?: number;
   };
 }
 
@@ -184,9 +189,7 @@ describe('search — forwarding filters', () => {
       status: 'linked',
     });
 
-    expect(sent?.body.query.filters).toEqual([
-      { field: 'status', operator: 'eq', value: 'linked' },
-    ]);
+    expect(sent?.query.filters).toEqual([{ field: 'status', operator: 'eq', value: 'linked' }]);
   });
 
   it('sends every chosen tag as its own eq filter', async () => {
@@ -196,7 +199,7 @@ describe('search — forwarding filters', () => {
       tags: ['snack', 'drink'],
     });
 
-    expect(sent?.body.query.filters).toEqual([
+    expect(sent?.query.filters).toEqual([
       { field: 'tags', operator: 'eq', value: 'snack' },
       { field: 'tags', operator: 'eq', value: 'drink' },
     ]);
@@ -206,14 +209,14 @@ describe('search — forwarding filters', () => {
     let sent: SearchCall | undefined;
     await clientOver(factoryOver([], (call) => (sent = call))).search({ q: 'bunnings' });
 
-    expect(sent?.body.query.filters).toBeUndefined();
+    expect(sent?.query.filters).toBeUndefined();
   });
 
   it('sends the query text unchanged', async () => {
     let sent: SearchCall | undefined;
     await clientOver(factoryOver([], (call) => (sent = call))).search({ q: 'bunnings warehouse' });
 
-    expect(sent?.body.query.text).toBe('bunnings warehouse');
+    expect(sent?.query.text).toBe('bunnings warehouse');
   });
 
   it('forwards kind, cursor, and page size to the ranked purchases query', async () => {
@@ -225,7 +228,7 @@ describe('search — forwarding filters', () => {
       limit: 17,
     });
 
-    expect(sent?.body.query).toMatchObject({
+    expect(sent?.query).toMatchObject({
       text: 'bunnings',
       kind: 'lines',
       cursor: 'opaque-cursor',
@@ -257,5 +260,33 @@ describe('tagVocabulary', () => {
     const outcome = await clientOver(factory).tagVocabulary({ limit: 25 });
 
     expect(isGatewayOk(outcome)).toBe(false);
+  });
+});
+
+describe('search — on the wire', () => {
+  beforeEach(() => {
+    configureServerSdk({ apiKey: 'pops_sa_test_key' });
+  });
+
+  afterEach(() => {
+    __resetServerSdkConfig();
+    __resetServerPillarCache();
+    __resetSharedPillarClient();
+    __resetSharedOpenApiCache();
+  });
+
+  it('sends purchases the query as the top-level body, as its POST /search reads it', async () => {
+    const { factory, requests } = sdkWireFactory(
+      'purchases',
+      [{ operationId: 'search.search', method: 'post', path: '/search', hasBody: true }],
+      () => ({ status: 200, body: { hits: [ORDER_HIT], nextCursor: null, totalCount: 1 } })
+    );
+
+    const outcome = await clientOver(factory).search({ q: 'lamp', limit: 20 });
+
+    expect(requests).toEqual([
+      { method: 'POST', url: '/search', body: { query: { text: 'lamp', limit: 20 } } },
+    ]);
+    expect(isGatewayOk(outcome)).toBe(true);
   });
 });
