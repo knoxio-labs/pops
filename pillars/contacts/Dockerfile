@@ -24,7 +24,7 @@ RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
 RUN pnpm --filter @pops/types build && pnpm --filter @pops/pillar-sdk build
 RUN pnpm --filter @pops/app-contacts generate:contacts-client && pnpm --filter @pops/app-contacts build
 
-FROM rust:1.98.1-slim-bookworm AS builder
+FROM rust:1.99.0-slim-bookworm AS builder
 WORKDIR /build
 
 # System deps for the build: rustls pulls its own crypto (no OpenSSL), so only
