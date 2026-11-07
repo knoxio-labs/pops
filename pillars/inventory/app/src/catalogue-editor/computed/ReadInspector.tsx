@@ -6,21 +6,12 @@ import {
   referenceTargets,
   resolveRead,
   EXPRESSION_LIMITS,
-  valueTypeLabel,
 } from '@pops/inventory/expression';
-import {
-  Badge,
-  Button,
-  Label,
-  SelectContent,
-  SelectItem,
-  SelectPrimitive,
-  SelectTrigger,
-  SelectValue,
-} from '@pops/ui';
+import { Badge, Button, Label } from '@pops/ui';
 
-import { chooseReadField, fittingFields, followReference, unfollowFrom } from './builder-actions';
+import { followReference, unfollowFrom } from './builder-actions';
 import { useBuilder } from './BuilderContext';
+import { FieldPicker } from './FieldPicker';
 import { HopLimitNotice } from './HopLimitNotice';
 
 import type { ResolvedRead, ExpressionField, ReadNode } from '@pops/inventory/expression';
@@ -113,46 +104,6 @@ function ReferencePath({ resolved }: { resolved: ResolvedRead }) {
   );
 }
 
-function FieldPicker({ resolved, node }: { resolved: ResolvedRead; node: ReadNode }) {
-  const builder = useBuilder();
-  const expected = builder.slots.get(builder.selectedPath);
-  const fields = resolved.ownerType.fields.filter((field) => field.archived !== true);
-  const fitting = fittingFields(fields, expected);
-  const options = [
-    ...(resolved.field !== undefined && !fitting.includes(resolved.field) ? [resolved.field] : []),
-    ...fitting,
-  ];
-  return (
-    <div className="space-y-2">
-      <Label htmlFor="read-field">Field on {resolved.ownerType.label}</Label>
-      <SelectPrimitive
-        value={node.fieldId}
-        onValueChange={(fieldId) => {
-          if (fieldId !== '')
-            builder.change(chooseReadField(builder.root, builder.selectedPath, fieldId));
-        }}
-      >
-        <SelectTrigger id="read-field" className="min-h-11 w-full">
-          <SelectValue placeholder="Choose a field" />
-        </SelectTrigger>
-        <SelectContent>
-          {options.map((field) => (
-            <SelectItem key={field.id} value={field.id}>
-              {field.label}
-              {field.storage === 'computed' && ' (computed)'}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </SelectPrimitive>
-      <p className="text-xs text-muted-foreground">
-        {fitting.length} of {fields.length} fields fit
-        {expected === undefined ? '' : ` ${valueTypeLabel(expected)}`}. Fields holding many values
-        cannot be read.
-      </p>
-    </div>
-  );
-}
-
 /**
  * Edits a read: the chain of item references it follows (at most two) and the
  * field it lands on. Only fields that fit the slot are offered.
@@ -181,7 +132,11 @@ export function ReadInspector({ node }: { node: ReadNode }) {
           />
         )}
       </div>
-      <FieldPicker resolved={resolved} node={node} />
+      <FieldPicker
+        fields={resolved.ownerType.fields}
+        fieldId={node.fieldId}
+        label={`Field on ${resolved.ownerType.label}`}
+      />
     </div>
   );
 }

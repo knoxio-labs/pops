@@ -14,10 +14,15 @@ export function renderComputedField(
     readonly volume?: Partial<CatalogueField>;
     readonly environment?: Partial<ComputedFieldEnvironment>;
     readonly isNew?: boolean;
+    readonly partsTypeIds?: readonly string[];
   } = {}
 ) {
-  const types = catalogueTypes(options.volume);
-  const box = types[0];
+  const types = catalogueTypes(options.volume).map((candidate) =>
+    options.partsTypeIds?.includes(candidate.id) === true
+      ? { ...candidate, capabilities: ['parts'] }
+      : candidate
+  );
+  const box = types.find((candidate) => candidate.id === 'box');
   if (box === undefined) throw new Error('fixture has no box type');
   const volume = box.fields.find((candidate) => candidate.id === 'volume');
   const onOperation = vi.fn<(operation: CatalogueOperation) => void>();

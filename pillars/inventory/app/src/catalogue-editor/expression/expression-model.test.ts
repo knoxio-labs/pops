@@ -12,10 +12,12 @@ import {
   fieldFitsSlot,
   needsDimensionalUnits,
   slotTypes,
+  usesAssemblyRead,
   expressionStats,
   issueBelongsTo,
   issueNodePath,
   nodeAt,
+  nodeChildren,
   outlineRows,
   parentPath,
 } from '@pops/inventory/expression';
@@ -35,7 +37,12 @@ import {
 import { savedExpressionVersion } from './expression-version';
 import { expressionContext, fromWire, toWire } from './wire';
 
-import type { ExpressionNode, ReadNode, OperationInfo } from '@pops/inventory/expression';
+import type {
+  ExpressionNode,
+  ReadNode,
+  OperationInfo,
+  ValueType,
+} from '@pops/inventory/expression';
 
 const context = expressionContext(catalogueTypes(), 'box', 'volume');
 
@@ -409,5 +416,65 @@ describe('expression version', () => {
     expect(savedExpressionVersion(1, context, product, { kind: 'measurement', unit: 'cm²' })).toBe(
       2
     );
+  });
+});
+
+describe('assembly reads', () => {
+  const assembly: ExpressionNode = { op: 'assembly_read', fieldId: 'count' };
+  const withAssembly = {
+    ...context,
+    assemblyFields: [
+      { id: 'count', label: 'Count', kind: 'integer', cardinality: 'one', storage: 'stored' },
+    ],
+  } as const;
+  const integer: ValueType = { kind: 'integer' };
+
+  it('is a leaf and is detected anywhere in the tree', () => {
+    const nested: ExpressionNode = { op: 'coalesce', values: [read('count'), assembly] };
+
+    expect(nodeChildren(assembly)).toEqual([]);
+    expect(usesAssemblyRead(nested)).toBe(true);
+    expect(usesAssemblyRead(read('count'))).toBe(false);
+  });
+
+  it('reads back as the assembly field and counts as a dependency', () => {
+    expect(formula(withAssembly, assembly)).toBe('Assembly › Count');
+    expect(formula(context, assembly)).toBe('Assembly › Unknown field');
+    expect(staticDependencies(withAssembly, assembly)).toEqual([
+      { key: 'Assembly:count', typeLabel: 'Assembly', fieldLabel: 'Count', via: [] },
+    ]);
+  });
+
+  it('types a slot beside it from the assembly field', () => {
+    const types = slotTypes(
+      withAssembly,
+      { op: 'less_than', left: assembly, right: EMPTY },
+      {
+        kind: 'boolean',
+      }
+    );
+
+    expect(types.get('expression.right')).toEqual(integer);
+  });
+
+  it('lands issues on the field and op paths on the node', () => {
+    expect(issueBelongsTo('expression.fieldId', 'expression')).toBe(true);
+    expect(issueNodePath(assembly, 'expression.fieldId')).toBe('expression');
+  });
+
+  it('is offered in the values group', () => {
+    expect(OPERATIONS.find((info) => info.op === 'assembly_read')?.group).toBe('values');
+  });
+
+  it.each([
+    ['a new field', null, 3],
+    ['a version-1 field', 1, 3],
+    ['a version-3 field', 3, 3],
+  ])('saves %s with an assembly read as version 3', (_, stored, expected) => {
+    expect(savedExpressionVersion(stored, withAssembly, assembly, integer)).toBe(expected);
+  });
+
+  it('returns a stored version-3 field to version 2 once it stops reading the assembly', () => {
+    expect(savedExpressionVersion(3, withAssembly, read('count'), integer)).toBe(2);
   });
 });

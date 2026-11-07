@@ -36,8 +36,8 @@ describe('validateCatalogueExpressions', () => {
     );
 
     expect(expression?.dependencies).toEqual([
-      { typeId: 'type', fieldId: 'count', via: [] },
-      { typeId: 'type', fieldId: 'price', via: [] },
+      { typeId: 'type', fieldId: 'count', via: [], throughAssembly: false },
+      { typeId: 'type', fieldId: 'price', via: [], throughAssembly: false },
     ]);
     expect(expression?.resultType).toEqual({ kind: 'decimal', fixedUnit: null });
   });
@@ -78,6 +78,7 @@ describe('validateCatalogueExpressions', () => {
       typeId: 'target-b',
       fieldId: 'amount',
       via: ['owner', 'next'],
+      throughAssembly: false,
     });
   });
 
@@ -251,5 +252,101 @@ describe('validateCatalogueExpressions', () => {
     expect(buildExpressionDependencyGraph(expressions).get('type:second')).toEqual(
       new Set(['type:first'])
     );
+  });
+
+  describe('assembly reads', () => {
+    function onAssembly(id: string, expression: unknown, typeId = 'kit') {
+      return expressionField({
+        expressionJson: JSON.stringify(expression),
+        expressionVersion: 3,
+        id,
+        key: id,
+        label: id,
+        storage: 'computed',
+        typeId,
+        kind: 'enum',
+        allowOverride: true,
+      });
+    }
+
+    function assemblyType(id: string, fields: Parameters<typeof expressionType>[1]) {
+      return { ...expressionType(id, fields), capabilities: ['parts'] };
+    }
+
+    const selfRead = { op: 'assembly_read', fieldId: 'availability' };
+
+    it('lets a field read itself on the assembly without counting it as a cycle', () => {
+      const catalogue = expressionCatalogue([
+        assemblyType('kit', [onAssembly('availability', selfRead)]),
+      ]);
+
+      const [expression] = validateCatalogueExpressions(catalogue);
+
+      expect(expression?.dependencies).toEqual([
+        { typeId: 'kit', fieldId: 'availability', via: [], throughAssembly: true },
+      ]);
+      expect(expression?.resultType).toEqual({ kind: 'enum', fixedUnit: null });
+      const expressions = validateCatalogueExpressions(catalogue);
+      expect(buildExpressionDependencyGraph(expressions).get('kit:availability')).toEqual(
+        new Set(['kit:availability'])
+      );
+      expect(
+        buildExpressionDependencyGraph(expressions, { withinItems: true }).get('kit:availability')
+      ).toEqual(new Set());
+    });
+
+    it('keeps an in-item edge to a field it also reads on the assembly, so the cycle shows', () => {
+      const expression = {
+        op: 'coalesce',
+        values: [{ op: 'assembly_read', fieldId: 'mirror' }, read('mirror')],
+      };
+      const catalogue = expressionCatalogue([
+        assemblyType('kit', [
+          onAssembly('availability', expression),
+          onAssembly('mirror', read('availability')),
+        ]),
+      ]);
+
+      expect(() => validateCatalogueExpressions(catalogue)).toThrowError(
+        expect.objectContaining({ code: 'expression_cycle' })
+      );
+    });
+
+    it('requires the field on every type that can be an assembly', () => {
+      const catalogue = expressionCatalogue([
+        assemblyType('kit', [onAssembly('availability', selfRead)]),
+        assemblyType('rig', [expressionField({ id: 'other', key: 'other', typeId: 'rig' })]),
+      ]);
+
+      expect(() => validateCatalogueExpressions(catalogue)).toThrowError(
+        expect.objectContaining({ code: 'expression_field_unknown', path: 'expression.fieldId' })
+      );
+    });
+
+    it('rejects an assembly read when no type grants parts', () => {
+      const catalogue = expressionCatalogue([
+        expressionType('kit', [onAssembly('availability', selfRead)]),
+      ]);
+
+      expect(() => validateCatalogueExpressions(catalogue)).toThrowError(
+        expect.objectContaining({ code: 'expression_assembly_unavailable' })
+      );
+    });
+
+    it('types the read against the field on every assembly type', () => {
+      const catalogue = expressionCatalogue([
+        assemblyType('kit', [
+          expressionField({ id: 'label', key: 'label', kind: 'enum', typeId: 'kit' }),
+          onAssembly('availability', { op: 'assembly_read', fieldId: 'label' }),
+        ]),
+        assemblyType('rig', [
+          expressionField({ id: 'label', key: 'label', kind: 'short_text', typeId: 'rig' }),
+        ]),
+      ]);
+
+      expect(() => validateCatalogueExpressions(catalogue)).toThrowError(
+        expect.objectContaining({ code: 'expression_type_mismatch' })
+      );
+    });
   });
 });

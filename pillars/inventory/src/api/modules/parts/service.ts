@@ -1,7 +1,9 @@
 import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
 
+import { invalidateComputedItem } from '../../../catalogue/computed-value-runtime-cache.js';
 import { loadPublishedCatalogue, PARTS_CAPABILITY } from '../../../catalogue/index.js';
 import { itemParts, items, locations, type InventoryDb } from '../../../db/index.js';
+import { refreshAfterAssemblyLinkChange } from '../../../domain/commands/computed-dependents.js';
 import { ConflictError, NotFoundError } from '../../shared/errors.js';
 
 /** The deepest assembly chain the cycle check walks before refusing. */
@@ -185,10 +187,14 @@ export function addPart(
   }
   if (current === null) {
     assertNoCycle(db, assemblyItemId, partItemId);
-    db.insert(itemParts)
-      .values({ partItemId, assemblyItemId })
-      .onConflictDoUpdate({ target: itemParts.partItemId, set: { assemblyItemId } })
-      .run();
+    db.transaction((tx) => {
+      tx.insert(itemParts)
+        .values({ partItemId, assemblyItemId })
+        .onConflictDoUpdate({ target: itemParts.partItemId, set: { assemblyItemId } })
+        .run();
+      refreshAfterAssemblyLinkChange(tx, partItemId);
+    });
+    invalidateComputedItem(db, partItemId);
   }
   return getItemParts(db, assemblyItemId);
 }
@@ -200,12 +206,18 @@ export function removePart(
   partItemId: string
 ): ItemPartsView {
   liveItem(db, assemblyItemId);
-  const removed = db
-    .delete(itemParts)
-    .where(and(eq(itemParts.partItemId, partItemId), eq(itemParts.assemblyItemId, assemblyItemId)))
-    .run();
-  if (removed.changes === 0) {
-    throw new NotFoundError('Item part', `${assemblyItemId}/${partItemId}`);
-  }
+  db.transaction((tx) => {
+    const removed = tx
+      .delete(itemParts)
+      .where(
+        and(eq(itemParts.partItemId, partItemId), eq(itemParts.assemblyItemId, assemblyItemId))
+      )
+      .run();
+    if (removed.changes === 0) {
+      throw new NotFoundError('Item part', `${assemblyItemId}/${partItemId}`);
+    }
+    refreshAfterAssemblyLinkChange(tx, partItemId);
+  });
+  invalidateComputedItem(db, partItemId);
   return getItemParts(db, assemblyItemId);
 }

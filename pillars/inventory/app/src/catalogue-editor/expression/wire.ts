@@ -1,4 +1,4 @@
-import { descendantIds, effectiveFields } from '../../lib/type-tree';
+import { descendantIds, effectiveCapabilities, effectiveFields } from '../../lib/type-tree';
 import { decimalPlacesFromPresentation } from '../decimal-places';
 import { EMPTY } from './edit';
 
@@ -42,6 +42,8 @@ export function toWire(node: ExpressionNode): ExpressionV1 | null {
       return { op: 'literal', value: node.value };
     case 'read':
       return { op: 'read', path: [...node.path], fieldId: node.fieldId };
+    case 'assembly_read':
+      return { op: 'assembly_read', fieldId: node.fieldId };
     case 'negate':
     case 'not': {
       const value = toWire(node.value);
@@ -75,6 +77,8 @@ export function fromWire(value: unknown): ExpressionNode {
       return { op: 'literal', value: value.value };
     case 'read':
       return { op: 'read', path: [...value.path], fieldId: value.fieldId };
+    case 'assembly_read':
+      return { op: 'assembly_read', fieldId: value.fieldId };
     case 'negate':
     case 'not':
       return { op: value.op, value: fromWire(value.value) };
@@ -119,9 +123,32 @@ function expressionField(field: CatalogueField, types: readonly CatalogueType[])
   };
 }
 
+const PARTS_CAPABILITY = 'parts';
+
+function sameShape(left: ExpressionField, right: ExpressionField): boolean {
+  return (
+    left.kind === right.kind && left.unit === right.unit && left.cardinality === right.cardinality
+  );
+}
+
+function assemblyFields(types: readonly CatalogueType[]): readonly ExpressionField[] {
+  const assemblies = types
+    .filter((type) => effectiveCapabilities(types, type.id).includes(PARTS_CAPABILITY))
+    .map((type) => effectiveFields(types, type.id).map((field) => expressionField(field, types)));
+  const [first, ...others] = assemblies;
+  if (first === undefined) return [];
+  return first.filter((field) =>
+    others.every((fields) =>
+      fields.some((candidate) => candidate.id === field.id && sameShape(candidate, field))
+    )
+  );
+}
+
 /**
  * The builder's view of the draft catalogue. The field being edited is left
- * out of its own type, since a field that reads itself is a cycle.
+ * out of its own type, since a field that reads itself is a cycle, but not out
+ * of the assembly fields: through an assembly it reads the same field on
+ * another item, which is how a part inherits from its assembly.
  */
 export function expressionContext(
   types: readonly CatalogueType[],
@@ -130,6 +157,7 @@ export function expressionContext(
 ): ExpressionContext {
   return {
     ownerTypeId,
+    assemblyFields: assemblyFields(types),
     types: types.map((type) => ({
       id: type.id,
       label: type.label,

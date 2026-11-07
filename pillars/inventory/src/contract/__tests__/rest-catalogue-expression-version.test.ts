@@ -21,12 +21,12 @@ describe('put_field expressionVersion', () => {
     expect([...CatalogueExpressionVersionSchema.values]).toEqual(EXPRESSION_VERSIONS);
   });
 
-  it('accepts 1, 2, null and an absent version', () => {
-    for (const version of [1, 2, null, undefined]) expect(putField(version).success).toBe(true);
+  it('accepts 1, 2, 3, null and an absent version', () => {
+    for (const version of [1, 2, 3, null, undefined]) expect(putField(version).success).toBe(true);
   });
 
   it('rejects a version the server does not store', () => {
-    for (const version of [0, 3, 1.5, '2']) expect(putField(version).success).toBe(false);
+    for (const version of [0, 4, 1.5, '2']) expect(putField(version).success).toBe(false);
   });
 
   it('describes what each version means', () => {

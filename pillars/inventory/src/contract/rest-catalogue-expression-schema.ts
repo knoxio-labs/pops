@@ -52,6 +52,7 @@ export const PrimitiveWireValueSchema = z.union([
 export type ExpressionV1Shape =
   | { readonly op: 'literal'; readonly value: z.infer<typeof PrimitiveWireValueSchema> }
   | { readonly op: 'read'; readonly path: readonly string[]; readonly fieldId: string }
+  | { readonly op: 'assembly_read'; readonly fieldId: string }
   | { readonly op: (typeof EXPRESSION_UNARY_OPS)[number]; readonly value: ExpressionV1Shape }
   | {
       readonly op: (typeof EXPRESSION_BINARY_OPS)[number];
@@ -77,9 +78,9 @@ export type ExpressionV1Shape =
  * can read the grammar off the published contract instead of reaching into
  * `expression-parser.ts`'s private `UNARY_OPS`/`BINARY_OPS`/
  * `MAX_REFERENCE_HOPS`. Mirrors `expression-types.ts`'s `ExpressionV1` union:
- * a literal, a same-item or bounded reference read, a unary op, a binary op,
- * an `if`, or a `coalesce` of two or more expressions. No other syntax — no
- * arbitrary JS/SQL.
+ * a literal, a same-item or bounded reference read, a read on the item's
+ * assembly (version 3), a unary op, a binary op, an `if`, or a `coalesce` of
+ * two or more expressions. No other syntax — no arbitrary JS/SQL.
  *
  * Recursive, so it follows `LocationTreeNodeSchema`'s `z.lazy` +
  * `.meta({ id })` pattern (`rest-locations.ts`) — the pillar's existing
@@ -97,6 +98,15 @@ export const ExpressionV1Schema: z.ZodType<ExpressionV1Shape> = z
           fieldId: z.uuid(),
         })
         .strict(),
+      z
+        .object({ op: z.literal('assembly_read'), fieldId: z.uuid() })
+        .strict()
+        .describe(
+          "Expression version 3 only: the field's value on the assembly this item is a part " +
+            'of, unavailable when it is not a part. Reading a computed field evaluates it on ' +
+            'the assembly in turn, so a field that reads itself inherits up the assembly chain. ' +
+            'Only the server evaluates it; phones show the server value.'
+        ),
       z.object({ op: z.enum(EXPRESSION_UNARY_OPS), value: ExpressionV1Schema }).strict(),
       z
         .object({
@@ -120,11 +130,13 @@ export const ExpressionV1Schema: z.ZodType<ExpressionV1Shape> = z
 
 /** The expression versions a `put_field` may store (the server's `EXPRESSION_VERSIONS`). */
 export const CatalogueExpressionVersionSchema = z
-  .literal([1, 2])
+  .literal([1, 2, 3])
   .describe(
     "How a computed field's expression is evaluated. 1: measurements combine only in one " +
       'fixed unit and decimals compare by spelling (3.0 ≠ 3). 2: measurements of one dimension ' +
       'convert (cm + mm), measurement × and ÷ measurement derive units (cm × cm is cm²), the ' +
       "result converts into the field's fixedUnit, and equal compares decimals by value " +
-      '(1.5 × 2 = 3). Required with an expression on a computed field; null on a stored field.'
+      '(1.5 × 2 = 3). 3: as 2, and assembly_read reads a field on the assembly the item is a ' +
+      'part of; only the server evaluates version 3. Required with an expression on a computed ' +
+      'field; null on a stored field.'
   );
