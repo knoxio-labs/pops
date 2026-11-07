@@ -266,6 +266,23 @@
           },
           {
             "additionalProperties": false,
+            "description": "Expression version 3 only: the field's value on the assembly this item is a part of, unavailable when it is not a part. Reading a computed field evaluates it on the assembly in turn, so a field that reads itself inherits up the assembly chain. Only the server evaluates it; phones show the server value.",
+            "properties": {
+              "fieldId": {
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                "type": "string"
+              },
+              "op": {
+                "enum": ["assembly_read"],
+                "type": "string"
+              }
+            },
+            "required": ["op", "fieldId"],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
             "properties": {
               "op": {
                 "enum": ["negate", "not"],
@@ -13290,8 +13307,8 @@
                               "nullable": true
                             },
                             "expressionVersion": {
-                              "description": "How a computed field's expression is evaluated. 1: measurements combine only in one fixed unit and decimals compare by spelling (3.0 ≠ 3). 2: measurements of one dimension convert (cm + mm), measurement × and ÷ measurement derive units (cm × cm is cm²), the result converts into the field's fixedUnit, and equal compares decimals by value (1.5 × 2 = 3). Required with an expression on a computed field; null on a stored field.",
-                              "enum": [1, 2, null],
+                              "description": "How a computed field's expression is evaluated. 1: measurements combine only in one fixed unit and decimals compare by spelling (3.0 ≠ 3). 2: measurements of one dimension convert (cm + mm), measurement × and ÷ measurement derive units (cm × cm is cm²), the result converts into the field's fixedUnit, and equal compares decimals by value (1.5 × 2 = 3). 3: as 2, and assembly_read reads a field on the assembly the item is a part of; only the server evaluates version 3. Required with an expression on a computed field; null on a stored field.",
+                              "enum": [1, 2, 3, null],
                               "nullable": true,
                               "type": "number"
                             },
@@ -14853,8 +14870,8 @@
                               "nullable": true
                             },
                             "expressionVersion": {
-                              "description": "How a computed field's expression is evaluated. 1: measurements combine only in one fixed unit and decimals compare by spelling (3.0 ≠ 3). 2: measurements of one dimension convert (cm + mm), measurement × and ÷ measurement derive units (cm × cm is cm²), the result converts into the field's fixedUnit, and equal compares decimals by value (1.5 × 2 = 3). Required with an expression on a computed field; null on a stored field.",
-                              "enum": [1, 2, null],
+                              "description": "How a computed field's expression is evaluated. 1: measurements combine only in one fixed unit and decimals compare by spelling (3.0 ≠ 3). 2: measurements of one dimension convert (cm + mm), measurement × and ÷ measurement derive units (cm × cm is cm²), the result converts into the field's fixedUnit, and equal compares decimals by value (1.5 × 2 = 3). 3: as 2, and assembly_read reads a field on the assembly the item is a part of; only the server evaluates version 3. Required with an expression on a computed field; null on a stored field.",
+                              "enum": [1, 2, 3, null],
                               "nullable": true,
                               "type": "number"
                             },
@@ -15547,8 +15564,8 @@
                               "nullable": true
                             },
                             "expressionVersion": {
-                              "description": "How a computed field's expression is evaluated. 1: measurements combine only in one fixed unit and decimals compare by spelling (3.0 ≠ 3). 2: measurements of one dimension convert (cm + mm), measurement × and ÷ measurement derive units (cm × cm is cm²), the result converts into the field's fixedUnit, and equal compares decimals by value (1.5 × 2 = 3). Required with an expression on a computed field; null on a stored field.",
-                              "enum": [1, 2, null],
+                              "description": "How a computed field's expression is evaluated. 1: measurements combine only in one fixed unit and decimals compare by spelling (3.0 ≠ 3). 2: measurements of one dimension convert (cm + mm), measurement × and ÷ measurement derive units (cm × cm is cm²), the result converts into the field's fixedUnit, and equal compares decimals by value (1.5 × 2 = 3). 3: as 2, and assembly_read reads a field on the assembly the item is a part of; only the server evaluates version 3. Required with an expression on a computed field; null on a stored field.",
+                              "enum": [1, 2, 3, null],
                               "nullable": true,
                               "type": "number"
                             },
@@ -17173,8 +17190,8 @@
                               "nullable": true
                             },
                             "expressionVersion": {
-                              "description": "How a computed field's expression is evaluated. 1: measurements combine only in one fixed unit and decimals compare by spelling (3.0 ≠ 3). 2: measurements of one dimension convert (cm + mm), measurement × and ÷ measurement derive units (cm × cm is cm²), the result converts into the field's fixedUnit, and equal compares decimals by value (1.5 × 2 = 3). Required with an expression on a computed field; null on a stored field.",
-                              "enum": [1, 2, null],
+                              "description": "How a computed field's expression is evaluated. 1: measurements combine only in one fixed unit and decimals compare by spelling (3.0 ≠ 3). 2: measurements of one dimension convert (cm + mm), measurement × and ÷ measurement derive units (cm × cm is cm²), the result converts into the field's fixedUnit, and equal compares decimals by value (1.5 × 2 = 3). 3: as 2, and assembly_read reads a field on the assembly the item is a part of; only the server evaluates version 3. Required with an expression on a computed field; null on a stored field.",
+                              "enum": [1, 2, 3, null],
                               "nullable": true,
                               "type": "number"
                             },

@@ -4,6 +4,12 @@ import type { PrimitiveKind, PrimitiveWireValue } from './value-types.js';
 export type ExpressionV1 =
   | { readonly op: 'literal'; readonly value: PrimitiveWireValue }
   | { readonly op: 'read'; readonly path: readonly string[]; readonly fieldId: string }
+  /**
+   * Version 3: `fieldId`'s effective value on the assembly the item is a part
+   * of. Reading a computed field there evaluates it on the assembly in turn,
+   * so a field that reads itself this way inherits up the whole assembly chain.
+   */
+  | { readonly op: 'assembly_read'; readonly fieldId: string }
   | { readonly op: 'negate' | 'not'; readonly value: ExpressionV1 }
   | {
       readonly op:
@@ -42,6 +48,11 @@ export interface ExpressionFieldKey {
 /** One static dependency declared by a validated expression. */
 export interface ExpressionDependency extends ExpressionFieldKey {
   readonly via: readonly string[];
+  /**
+   * Read on the item's assembly rather than along `via`. The assembly relation
+   * is acyclic at runtime, so these edges never form a definition cycle.
+   */
+  readonly throughAssembly: boolean;
 }
 
 /** A parsed and type-checked computed-field expression. */
@@ -117,6 +128,8 @@ export interface ExpressionSnapshot {
     | { readonly state: 'resolved'; readonly item: ExpressionSnapshotItem }
     | { readonly state: 'unresolved' | 'missing' | 'deleted' };
   readonly readField: (itemId: string, fieldId: string) => SnapshotFieldValue | undefined;
+  /** The live assembly `itemId` is a part of, or null when it is not a part. */
+  readonly readAssembly: (itemId: string) => string | null;
 }
 
 /** Raw deterministic expression outcome before wire-level error degradation. */

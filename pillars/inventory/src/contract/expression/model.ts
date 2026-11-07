@@ -47,7 +47,8 @@ export type LiteralValue =
   | { readonly targetKind: 'item' | 'location'; readonly targetId: string };
 
 /**
- * Expression v1 with `coalesce`, plus the editor-only `empty` slot a draft
+ * Expression v1 with `coalesce` and, under expression version 3,
+ * `assembly_read` (a field of the assembly the item is a part of), plus the editor-only `empty` slot a draft
  * holds while it is being built. `empty` never reaches the server: saving is
  * refused while one remains. `if` names its branches `thenBranch` and
  * `elseBranch` here; the wire and the issue paths call them `then` and `else`.
@@ -56,6 +57,7 @@ export type ExpressionNode =
   | { readonly op: 'empty' }
   | { readonly op: 'literal'; readonly value: LiteralValue }
   | { readonly op: 'read'; readonly path: readonly string[]; readonly fieldId: string }
+  | { readonly op: 'assembly_read'; readonly fieldId: string }
   | { readonly op: 'negate' | 'not'; readonly value: ExpressionNode }
   | { readonly op: BinaryOp; readonly left: ExpressionNode; readonly right: ExpressionNode }
   | {
@@ -71,6 +73,9 @@ export type NodeOp = ExpressionNode['op'];
 
 /** A read node. */
 export type ReadNode = Extract<ExpressionNode, { op: 'read' }>;
+
+/** An assembly read node. */
+export type AssemblyReadNode = Extract<ExpressionNode, { op: 'assembly_read' }>;
 
 /** A catalogue field as the expression builder needs to see it. */
 export interface ExpressionField {
@@ -102,6 +107,12 @@ export interface ExpressionType {
 export interface ExpressionContext {
   readonly types: readonly ExpressionType[];
   readonly ownerTypeId: string;
+  /**
+   * The fields an assembly read may name: those every type granting the
+   * `parts` capability has, with one agreed kind, unit and cardinality. Absent
+   * when the catalogue has none, which leaves the operation unplaceable.
+   */
+  readonly assemblyFields?: readonly ExpressionField[];
 }
 
 /** Hard bounds enforced by the server parser and validator. */

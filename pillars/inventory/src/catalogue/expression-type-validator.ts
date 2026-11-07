@@ -1,6 +1,6 @@
 import { combineUnits, formatUnitTerm, termDimension } from '../contract/measurement-units.js';
 import { inferLiteralType } from './expression-literal-validator.js';
-import { inferReadType } from './expression-read-validator.js';
+import { inferAssemblyReadType, inferReadType } from './expression-read-validator.js';
 import {
   expressionFail,
   expressionType,
@@ -129,6 +129,7 @@ export function inferExpressionType(
   let result: ExpressionValueType;
   if (node.op === 'literal') result = inferLiteralType(node, expected, path, context.dimensional);
   else if (node.op === 'read') result = inferReadType(node, context, path);
+  else if (node.op === 'assembly_read') result = inferAssemblyReadType(node, context, path);
   else if ('value' in node) {
     if (node.op === 'not') {
       inferExpressionType(node.value, context, `${path}.value`, expressionType('boolean'));

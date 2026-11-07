@@ -65,6 +65,10 @@ export function placedNode(
     const field = fittingFields(owner?.fields ?? [], expected)[0];
     return field === undefined ? null : { op: 'read', path: [], fieldId: field.id };
   }
+  if (op === 'assembly_read') {
+    const field = fittingFields(context.assemblyFields ?? [], expected)[0];
+    return field === undefined ? null : { op: 'assembly_read', fieldId: field.id };
+  }
   if (op === 'literal') {
     const value = defaultLiteral(expected, choiceField);
     return value === null ? null : { op: 'literal', value };
@@ -154,13 +158,15 @@ export function unfollowFrom(
   });
 }
 
-/** Points the read at `path` at another field on the type it stands on. */
+/** Points the read or assembly read at `path` at another field on the type it stands on. */
 export function chooseReadField(
   root: ExpressionNode,
   path: string,
   fieldId: string
 ): ExpressionNode {
-  return updateRead(root, path, (node) => ({ ...node, fieldId }));
+  return updateAt(root, path, (node) =>
+    node.op === 'read' || node.op === 'assembly_read' ? { ...node, fieldId } : node
+  );
 }
 
 /** Sets the fixed value at `path`. */

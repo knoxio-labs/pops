@@ -14639,8 +14639,8 @@
       }
     },
     {
-      "name": "expression version 3 is rejected",
-      "expressionVersion": 3,
+      "name": "an unknown expression version is rejected",
+      "expressionVersion": 4,
       "expression": {
         "op": "literal",
         "value": "1"

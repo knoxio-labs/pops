@@ -5,7 +5,11 @@ import { evaluateExpression } from '../expression-evaluator.js';
 import { ExpressionValidationError } from '../expression-types.js';
 import { expressionSnapshot, validatedExpression } from './expression-test-fixtures.js';
 
-import type { ExpressionSnapshotItem, SnapshotFieldValue } from '../expression-types.js';
+import type {
+  ExpressionSnapshot,
+  ExpressionSnapshotItem,
+  SnapshotFieldValue,
+} from '../expression-types.js';
 import type { PrimitiveWireValue } from '../value-types.js';
 
 function value(value: PrimitiveWireValue, revision = 1): SnapshotFieldValue {
@@ -370,17 +374,135 @@ describe('evaluateExpression', () => {
   });
 });
 
+describe('assembly_read', () => {
+  const availability = 'availability';
+  const inUse = { optionId: '00000000-0000-4000-8000-0000000000a1' };
+  const enumType = { kind: 'enum' as const, fixedUnit: null };
+
+  function thing(
+    id: string,
+    fields: Record<string, SnapshotFieldValue> = {},
+    revision = 1
+  ): [string, { state: 'resolved'; item: ExpressionSnapshotItem }] {
+    return [
+      id,
+      { state: 'resolved', item: { id, revision, fields: new Map(Object.entries(fields)) } },
+    ];
+  }
+
+  it('reads the field on the assembly and records that item and revision', () => {
+    const snapshot = expressionSnapshot(
+      new Map([
+        thing('part'),
+        thing('kit', { [availability]: { state: 'value', value: inUse, revision: 4 } }, 4),
+      ]),
+      'part',
+      new Map([['part', 'kit']])
+    );
+
+    expect(
+      evaluateExpression(
+        validatedExpression({ op: 'assembly_read', fieldId: availability }, enumType, 3),
+        snapshot
+      )
+    ).toEqual({
+      state: 'value',
+      value: inUse,
+      dependencies: [{ itemId: 'kit', fieldId: availability, revision: 4 }],
+    });
+  });
+
+  it('is unavailable on the item itself when it is not a part', () => {
+    const snapshot = expressionSnapshot(new Map([thing('part')]), 'part');
+
+    expect(
+      evaluateExpression(
+        validatedExpression({ op: 'assembly_read', fieldId: availability }, enumType, 3),
+        snapshot
+      )
+    ).toEqual({
+      state: 'unavailable',
+      reason: 'missing_dependency',
+      fieldId: availability,
+      traversedItemIds: ['part'],
+      missingInputs: [{ reason: 'missing_dependency', fieldId: availability, itemId: 'part' }],
+      dependencies: [],
+    });
+  });
+
+  it('reports a deleted assembly by its own state', () => {
+    const snapshot = expressionSnapshot(
+      new Map<string, ReturnType<ExpressionSnapshot['readItem']>>([
+        thing('part'),
+        ['kit', { state: 'deleted' }],
+      ]),
+      'part',
+      new Map([['part', 'kit']])
+    );
+
+    expect(
+      evaluateExpression(
+        validatedExpression({ op: 'assembly_read', fieldId: availability }, enumType, 3),
+        snapshot
+      )
+    ).toMatchObject({
+      state: 'unavailable',
+      reason: 'reference_deleted',
+      traversedItemIds: ['part', 'kit'],
+    });
+  });
+
+  it('falls back from an absent own value to the assembly inside coalesce', () => {
+    const own = 'own';
+    const expression = validatedExpression(
+      {
+        op: 'coalesce',
+        values: [
+          { op: 'read', path: [], fieldId: own },
+          { op: 'assembly_read', fieldId: availability },
+        ],
+      },
+      enumType,
+      3
+    );
+    const items = new Map([
+      thing('part'),
+      thing('kit', { [availability]: { state: 'value', value: inUse, revision: 2 } }, 2),
+    ]);
+    const assemblies = new Map([['part', 'kit']]);
+
+    expect(
+      evaluateExpression(expression, expressionSnapshot(items, 'part', assemblies))
+    ).toMatchObject({
+      state: 'value',
+      value: inUse,
+    });
+    const loose = { optionId: '00000000-0000-4000-8000-0000000000a2' };
+    const withOwn = new Map([
+      ...items,
+      thing('part', { [own]: { state: 'value', value: loose, revision: 1 } }),
+    ]);
+    expect(
+      evaluateExpression(expression, expressionSnapshot(withOwn, 'part', assemblies))
+    ).toMatchObject({
+      state: 'value',
+      value: loose,
+    });
+  });
+});
+
 describe('evaluateComputedValue', () => {
   it('returns an allowed override without reading dependencies', () => {
     const readItem = vi.fn(() => ({ state: 'missing' as const }));
     const readField = vi.fn();
+    const readAssembly = vi.fn(() => null);
     const effective = evaluateComputedValue({
       allowOverride: true,
       catalogueRevision: 12,
       expression: validatedExpression({ op: 'read', path: [], fieldId: 'missing' }),
       fieldId: 'total',
       override: { state: 'value', value: '50.000' },
-      snapshot: { rootItemId: 'root', readItem, readField },
+      snapshot: { rootItemId: 'root', readItem, readField, readAssembly },
     });
 
     expect(effective).toEqual({
@@ -390,6 +512,7 @@ describe('evaluateComputedValue', () => {
     });
     expect(readItem).not.toHaveBeenCalled();
     expect(readField).not.toHaveBeenCalled();
+    expect(readAssembly).not.toHaveBeenCalled();
   });
 
   it('rejects a forbidden override and resumes computation when it is absent', () => {

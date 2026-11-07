@@ -11,11 +11,13 @@
  * and takes its whole world through arguments.
  */
 export {
+  assemblyReadLabel,
   findType,
   isFollowable,
   ownerType,
   readLabel,
   referenceTargets,
+  resolveAssemblyRead,
   resolveRead,
 } from './catalogue-lookup.js';
 export type { ResolvedHop, ResolvedRead } from './catalogue-lookup.js';
@@ -23,6 +25,7 @@ export { comparedChoiceField, formatLiteral, formula, staticDependencies } from 
 export type { StaticDependency } from './formula.js';
 export { EXPRESSION_LIMITS, isNumericKind, isTextKind, valueTypeLabel } from './model.js';
 export type {
+  AssemblyReadNode,
   BinaryOp,
   ExpressionContext,
   ExpressionField,
@@ -49,5 +52,6 @@ export {
   nodeChildren,
   outlineRows,
   parentPath,
+  usesAssemblyRead,
 } from './tree.js';
 export type { ExpressionStats, NodeChild, OutlineRow } from './tree.js';

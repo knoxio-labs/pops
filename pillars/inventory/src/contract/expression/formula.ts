@@ -1,4 +1,10 @@
-import { ownerType, readLabel, resolveRead } from './catalogue-lookup.js';
+import {
+  assemblyReadLabel,
+  ownerType,
+  readLabel,
+  resolveAssemblyRead,
+  resolveRead,
+} from './catalogue-lookup.js';
 import { outlineRows } from './tree.js';
 
 import type { ExpressionContext, ExpressionField, ExpressionNode, LiteralValue } from './model.js';
@@ -10,6 +16,8 @@ export interface StaticDependency {
   readonly fieldLabel: string;
   readonly via: readonly string[];
 }
+
+const ASSEMBLY_TYPE_LABEL = 'Assembly';
 
 const DECIMAL_TEXT = /^-?\d+(\.\d+)?$/u;
 
@@ -38,6 +46,10 @@ function wrap(text: string, node: ExpressionNode): string {
   return INFIX[node.op] === undefined ? text : `(${text})`;
 }
 
+function isFieldRead(node: ExpressionNode): boolean {
+  return node.op === 'read' || node.op === 'assembly_read';
+}
+
 /**
  * The field a literal under `parent` names its choice from: for an equality,
  * the read on the other side. Anywhere else a literal has no choice field.
@@ -47,8 +59,9 @@ export function comparedChoiceField(
   parent: ExpressionNode | undefined
 ): ExpressionField | undefined {
   if (parent?.op !== 'equal') return undefined;
-  const partner = parent.left.op === 'read' ? parent.left : parent.right;
-  return partner.op === 'read' ? resolveRead(context, partner).field : undefined;
+  const partner = isFieldRead(parent.left) ? parent.left : parent.right;
+  if (partner.op === 'read') return resolveRead(context, partner).field;
+  return partner.op === 'assembly_read' ? resolveAssemblyRead(context, partner) : undefined;
 }
 
 /**
@@ -69,6 +82,8 @@ export function formula(
       return formatLiteral(node.value, choiceField);
     case 'read':
       return readLabel(context, node);
+    case 'assembly_read':
+      return assemblyReadLabel(context, node);
     case 'negate':
       return `−${part(node.value)}`;
     case 'not':
@@ -98,6 +113,11 @@ export function staticDependencies(
     if (!unique.has(key)) unique.set(key, { key, typeLabel, fieldLabel: field.label, via });
   };
   for (const row of outlineRows(root)) {
+    if (row.node.op === 'assembly_read') {
+      const field = resolveAssemblyRead(context, row.node);
+      if (field !== undefined) add(ASSEMBLY_TYPE_LABEL, field, []);
+      continue;
+    }
     if (row.node.op !== 'read') continue;
     const resolved = resolveRead(context, row.node);
     let typeLabel = ownerType(context).label;

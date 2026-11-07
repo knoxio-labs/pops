@@ -89,7 +89,7 @@ const ELSE_KEY = 'else' as const;
  *
  * Mirrors `pillars/inventory/src/catalogue/expression-types.ts`'s
  * `ExpressionV1` union: a literal, a same-item or bounded (max 2 hops)
- * reference read, a unary `negate`/`not`, a binary arithmetic/comparison/
+ * reference read, a read on the item's assembly (version 3), a unary `negate`/`not`, a binary arithmetic/comparison/
  * boolean op, an `if`, or a `coalesce`. No other syntax — no arbitrary JS/SQL.
  */
 export const expressionSchemaDefs = {
@@ -97,7 +97,10 @@ export const expressionSchemaDefs = {
     description:
       "Computed-field expression (v1). One of: {op:'literal', value} a constant; " +
       "{op:'read', path, fieldId} reads fieldId on the item reached by following " +
-      "path (own item when path is [], at most 2 reference hops); {op:'negate'|'not', value} " +
+      "path (own item when path is [], at most 2 reference hops); {op:'assembly_read', fieldId} " +
+      'reads fieldId on the assembly this item is a part of (expressionVersion 3 only; ' +
+      'a computed field reading itself this way inherits up the assembly chain); ' +
+      "{op:'negate'|'not', value} " +
       "a unary op; {op:'add'|'subtract'|'multiply'|'divide'|'concat'|'equal'|'less_than'|'and'|'or', " +
       "left, right} a binary op; {op:'if', condition, then, else}; " +
       "{op:'coalesce', values} the first of two or more expressions that has a value. " +
@@ -124,6 +127,12 @@ export const expressionSchemaDefs = {
           fieldId: uuid,
         },
         required: ['op', 'path', 'fieldId'],
+      },
+      {
+        type: 'object',
+        additionalProperties: false,
+        properties: { op: { const: 'assembly_read' }, fieldId: uuid },
+        required: ['op', 'fieldId'],
       },
       {
         type: 'object',

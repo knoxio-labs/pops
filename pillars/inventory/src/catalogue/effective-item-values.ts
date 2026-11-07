@@ -86,6 +86,7 @@ export class EffectiveValueReader {
         return { state: 'resolved', item: record.item };
       },
       readField: (itemId, fieldId) => this.snapshotField(itemId, fieldId),
+      readAssembly: (itemId) => this.#rows.assembly(itemId),
     };
   }
 

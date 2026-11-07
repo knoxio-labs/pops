@@ -1,5 +1,6 @@
 import { operationInfo, issueNodePath, nodeAt } from '@pops/inventory/expression';
 
+import { AssemblyReadInspector } from './AssemblyReadInspector';
 import { useBuilder } from './BuilderContext';
 import { CoalesceInputs, InputList, OperationSwitch } from './InspectorBranches';
 import { IssueAlert, NodeHeader } from './InspectorParts';
@@ -15,6 +16,7 @@ function InspectorBody({ node }: { node: ExpressionNode }) {
   if (node.op === 'empty' || panel === 'insert') return <OperationPalette mode="insert" />;
   if (panel === 'wrap') return <OperationPalette mode="wrap" />;
   if (node.op === 'read') return <ReadInspector node={node} />;
+  if (node.op === 'assembly_read') return <AssemblyReadInspector node={node} />;
   if (node.op === 'literal') return <LiteralInspector value={node.value} />;
   if (node.op === 'coalesce') return <CoalesceInputs node={node} />;
   return (

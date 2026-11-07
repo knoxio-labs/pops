@@ -4,7 +4,10 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-import { EXPRESSION_V1_OPS } from '../../catalogue/expression-parser.js';
+import {
+  EXPRESSION_SERVER_ONLY_OPS,
+  EXPRESSION_V1_OPS,
+} from '../../catalogue/expression-parser.js';
 import { PRIMITIVE_KINDS } from '../../catalogue/value-types.js';
 import { buildExpressionVectors } from '../sync/computed-vectors/build.js';
 
@@ -49,6 +52,12 @@ describe('expression vectors', () => {
     const covered = new Set(vectors.flatMap((vector) => evaluated(vector)?.ops ?? []));
     for (const op of EXPRESSION_V1_OPS)
       expect(covered.has(op), `no vector evaluates ${op}`).toBe(true);
+  });
+
+  it('never asks a client to evaluate a server-only op', () => {
+    const covered = new Set(vectors.flatMap((vector) => evaluated(vector)?.ops ?? []));
+    for (const op of EXPRESSION_SERVER_ONLY_OPS)
+      expect(covered.has(op), `a vector evaluates server-only ${op}`).toBe(false);
   });
 
   it('produces an ok value of every primitive kind', () => {

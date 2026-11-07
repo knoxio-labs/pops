@@ -28,6 +28,7 @@ export function nodeChildren(node: ExpressionNode): readonly NodeChild[] {
     case 'empty':
     case 'literal':
     case 'read':
+    case 'assembly_read':
       return [];
     case 'negate':
     case 'not':
@@ -121,4 +122,9 @@ export function expressionStats(root: ExpressionNode): ExpressionStats {
     ...rows.map((row) => (row.node.op === 'read' ? row.node.path.length : 0))
   );
   return { nodes: rows.length - emptySlots, emptySlots, deepestHops };
+}
+
+/** Whether the tree reads from an assembly, which only expression version 3 accepts. */
+export function usesAssemblyRead(root: ExpressionNode): boolean {
+  return outlineRows(root).some((row) => row.node.op === 'assembly_read');
 }
