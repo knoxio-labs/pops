@@ -95,10 +95,11 @@ export function validatedExpression(
   };
 }
 
-/** Creates a snapshot backed by immutable in-memory test items. */
+/** Creates a snapshot backed by immutable in-memory test items and part→assembly links. */
 export function expressionSnapshot(
   items: ReadonlyMap<string, ReturnType<ExpressionSnapshot['readItem']>>,
-  rootItemId = 'root'
+  rootItemId = 'root',
+  assemblies: ReadonlyMap<string, string> = new Map()
 ): ExpressionSnapshot {
   return {
     rootItemId,
@@ -107,5 +108,6 @@ export function expressionSnapshot(
       const item = items.get(itemId);
       return item?.state === 'resolved' ? item.item.fields.get(fieldId) : undefined;
     },
+    readAssembly: (itemId) => assemblies.get(itemId) ?? null,
   };
 }

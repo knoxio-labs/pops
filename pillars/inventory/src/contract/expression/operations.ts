@@ -29,6 +29,14 @@ export const OPERATIONS: readonly OperationInfo[] = [
     returns: 'same',
   },
   {
+    op: 'assembly_read',
+    label: 'Field on assembly',
+    symbol: 'ab↑',
+    group: 'values',
+    hint: 'Read a field from the item this is a part of',
+    returns: 'same',
+  },
+  {
     op: 'literal',
     label: 'Fixed value',
     symbol: '1',

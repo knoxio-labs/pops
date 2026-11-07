@@ -4,7 +4,7 @@ import { evaluateCoalesce } from './expression-coalesce.js';
 import { comparesDecimals } from './expression-decimal-operands.js';
 import { convertToFixedUnit } from './expression-dimensional.js';
 import { errorEvaluation, uniqueEvaluatedDependencies } from './expression-evaluation-shared.js';
-import { evaluateRead } from './expression-reader.js';
+import { evaluateAssemblyRead, evaluateRead } from './expression-reader.js';
 import { canonicalExpressionResult } from './expression-result.js';
 
 import type { ArithmeticResult } from './expression-arithmetic.js';
@@ -91,6 +91,7 @@ function evaluateNode(expression: ExpressionV1, scope: EvaluationScope): Express
   if (expression.op === 'literal')
     return { state: 'value', value: expression.value, dependencies: [] };
   if (expression.op === 'read') return evaluateRead(expression, scope.snapshot);
+  if (expression.op === 'assembly_read') return evaluateAssemblyRead(expression, scope.snapshot);
   if ('value' in expression) return evaluateUnary(expression, scope);
   if (expression.op === 'if') return evaluateConditional(expression, scope);
   if (expression.op === 'coalesce')

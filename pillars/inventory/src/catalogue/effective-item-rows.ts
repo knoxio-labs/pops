@@ -1,6 +1,6 @@
-import { inArray } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 
-import { items } from '../db/schema.js';
+import { itemParts, items } from '../db/schema.js';
 import { ItemValueReader } from './item-value-reader.js';
 import { readIdBatches } from './read-id-batches.js';
 
@@ -20,6 +20,7 @@ export interface SnapshotItemRecord {
 export class EffectiveItemRows {
   readonly #items = new Map<string, SnapshotItemRecord | null>();
   readonly #values = new Map<string, readonly ReadItemFieldValue[]>();
+  readonly #assemblies = new Map<string, string | null>();
 
   constructor(
     private readonly db: CommandDb,
@@ -72,6 +73,24 @@ export class EffectiveItemRows {
   item(itemId: string): SnapshotItemRecord | null {
     this.preload([itemId]);
     return this.#items.get(itemId) ?? null;
+  }
+
+  /**
+   * The assembly `itemId` is a part of, deleted or not, or null. A deleted
+   * assembly is still named so a read reports it deleted and its restore
+   * reaches the parts that read it.
+   */
+  assembly(itemId: string): string | null {
+    const cached = this.#assemblies.get(itemId);
+    if (cached !== undefined) return cached;
+    const assemblyItemId =
+      this.db
+        .select({ assemblyItemId: itemParts.assemblyItemId })
+        .from(itemParts)
+        .where(eq(itemParts.partItemId, itemId))
+        .get()?.assemblyItemId ?? null;
+    this.#assemblies.set(itemId, assemblyItemId);
+    return assemblyItemId;
   }
 
   values(itemId: string): readonly ReadItemFieldValue[] {

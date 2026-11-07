@@ -147,7 +147,7 @@ describe('inventory MCP schema fidelity', () => {
       property(property(mcpPutField, 'properties'), 'expressionVersion'),
       'enum'
     );
-    expect(producerVersions).toEqual([1, 2, null]);
+    expect(producerVersions).toEqual([1, 2, 3, null]);
     expect(mcpVersions).toEqual(producerVersions);
   });
 

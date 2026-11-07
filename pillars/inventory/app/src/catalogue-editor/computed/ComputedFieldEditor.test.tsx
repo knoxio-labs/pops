@@ -476,3 +476,43 @@ describe('computed literal typing', () => {
     expect(input).toHaveValue('12.50');
   });
 });
+
+describe('reading from the assembly', () => {
+  it('places the first fitting field of the assembly and saves under version 3', () => {
+    const { onOperation } = renderComputedField({ volume: TEXT, partsTypeIds: ['box'] });
+
+    pick('Field on assembly');
+    save();
+
+    expect(savedExpression(onOperation)).toEqual({ op: 'assembly_read', fieldId: 'label' });
+    expect(onOperation).toHaveBeenLastCalledWith(expect.objectContaining({ expressionVersion: 3 }));
+  });
+
+  it('lets a computed field read itself on the assembly', async () => {
+    const { onOperation } = renderComputedField({ volume: TEXT, partsTypeIds: ['box'] });
+
+    pick('Field on assembly');
+    await chooseOption(screen.getByLabelText('Field on the assembly'), 'Volume (computed)');
+    save();
+
+    expect(savedExpression(onOperation)).toEqual({ op: 'assembly_read', fieldId: 'volume' });
+  });
+
+  it('does not offer the operation when no type grants parts', () => {
+    renderComputedField({ volume: TEXT });
+
+    const palette = screen.getByRole('region', { name: 'Choose an operation' });
+    expect(within(palette).queryByRole('button', { name: 'Field on assembly' })).toBeNull();
+  });
+
+  it('keeps a stored version-3 field without an assembly read on version 2', () => {
+    const { onOperation } = renderComputedField({
+      volume: { ...TEXT, expressionVersion: 3, expression: read('label') },
+      partsTypeIds: ['box'],
+    });
+
+    save();
+
+    expect(onOperation).toHaveBeenLastCalledWith(expect.objectContaining({ expressionVersion: 2 }));
+  });
+});

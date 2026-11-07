@@ -95,6 +95,7 @@ function snapshot(items: readonly VectorItem[]): ExpressionSnapshot {
       const value = entry.fields.find((candidate) => candidate.fieldId === fieldId);
       return value === undefined ? undefined : snapshotField(value);
     },
+    readAssembly: () => null,
   };
 }
 

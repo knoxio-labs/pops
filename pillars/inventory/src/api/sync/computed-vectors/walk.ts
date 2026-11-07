@@ -7,7 +7,7 @@ import type { PrimitiveKind } from '../../../catalogue/value-types.js';
 import type { ExpressionVectorCase } from './fixture.js';
 
 function children(node: ExpressionV1): readonly ExpressionV1[] {
-  if (node.op === 'literal' || node.op === 'read') return [];
+  if (node.op === 'literal' || node.op === 'read' || node.op === 'assembly_read') return [];
   if (node.op === 'coalesce') return node.values;
   if ('value' in node) return [node.value];
   if (node.op === 'if') return [node.condition, node.thenBranch, node.elseBranch];
@@ -21,7 +21,7 @@ function collectOps(node: ExpressionV1, found: Set<ExpressionV1['op']>): Set<Exp
 }
 
 function readFieldIds(node: ExpressionV1, found: Set<string>): Set<string> {
-  if (node.op === 'read') found.add(node.fieldId);
+  if (node.op === 'read' || node.op === 'assembly_read') found.add(node.fieldId);
   for (const child of children(node)) readFieldIds(child, found);
   return found;
 }

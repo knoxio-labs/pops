@@ -11,16 +11,22 @@ export function expressionFieldKey(field: ExpressionFieldKey): string {
   return `${field.typeId}:${field.fieldId}`;
 }
 
-/** Builds the declared type/field dependency graph for computed definitions. */
+/**
+ * Builds the declared type/field dependency graph for computed definitions.
+ * `withinItems` leaves out reads through the assembly relation: those always
+ * move up an acyclic chain of items, so they cannot cycle at runtime even when
+ * a definition reads itself, and the cycle check uses that graph.
+ */
 export function buildExpressionDependencyGraph(
-  expressions: readonly ValidatedExpression[]
+  expressions: readonly ValidatedExpression[],
+  { withinItems = false }: { readonly withinItems?: boolean } = {}
 ): ReadonlyMap<string, ReadonlySet<string>> {
   const graph = new Map<string, ReadonlySet<string>>();
   for (const expression of expressions) {
-    graph.set(
-      expressionFieldKey(expression.field),
-      new Set(expression.dependencies.map(expressionFieldKey))
-    );
+    const dependencies = withinItems
+      ? expression.dependencies.filter((dependency) => !dependency.throughAssembly)
+      : expression.dependencies;
+    graph.set(expressionFieldKey(expression.field), new Set(dependencies.map(expressionFieldKey)));
   }
   return graph;
 }
@@ -84,16 +90,20 @@ export function collectInvalidatedExpressions(
   return invalidated;
 }
 
-/** Removes duplicate static dependencies while retaining deterministic order. */
+/**
+ * Removes duplicate static dependencies while retaining deterministic order.
+ * A field read both on the item and on its assembly is kept once for each.
+ */
 export function uniqueExpressionDependencies(
   dependencies: readonly ExpressionDependency[]
 ): readonly ExpressionDependency[] {
   const unique = new Map<string, ExpressionDependency>();
+  const key = (dependency: ExpressionDependency): string =>
+    `${expressionFieldKey(dependency)}:${dependency.throughAssembly ? 'assembly' : 'item'}`;
   for (const dependency of dependencies.toSorted((left, right) =>
     left.via.join('/').localeCompare(right.via.join('/'))
   ))
-    if (!unique.has(expressionFieldKey(dependency)))
-      unique.set(expressionFieldKey(dependency), dependency);
+    if (!unique.has(key(dependency))) unique.set(key(dependency), dependency);
   return [...unique.values()].toSorted((left, right) => {
     return expressionFieldKey(left).localeCompare(expressionFieldKey(right));
   });

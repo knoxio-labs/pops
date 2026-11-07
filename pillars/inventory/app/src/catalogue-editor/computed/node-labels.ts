@@ -1,4 +1,5 @@
 import {
+  assemblyReadLabel,
   readLabel,
   comparedChoiceField,
   formatLiteral,
@@ -28,6 +29,7 @@ export function nodeTitle(
 ): string {
   if (node.op === 'empty') return 'Choose a value';
   if (node.op === 'read') return readLabel(context, node);
+  if (node.op === 'assembly_read') return assemblyReadLabel(context, node);
   if (node.op === 'literal') return formatLiteral(node.value, choiceField);
   return operationInfo(node.op).label;
 }
