@@ -1,0 +1,8 @@
+name: Event detail
+question: Should event details lead, or sit inside their route context?
+status: active
+screen: trips/event
+frame: web
+variants:
+  details: Event details lead with route effects beneath
+  route: Event editor sits inside its visit and surrounding route
