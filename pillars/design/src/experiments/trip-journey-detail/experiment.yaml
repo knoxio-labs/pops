@@ -1,0 +1,8 @@
+name: Journey detail
+question: Start with transport legs or the timeline around departure and arrival?
+status: active
+screen: trips/journey
+frame: web
+variants:
+  legs: Editable transport legs with nearby context available on demand
+  window: Nearby source bookings around the same editable journey legs
