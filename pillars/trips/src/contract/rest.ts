@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import { ErrorBodySchema } from '@pops/types';
 
+import { journeysContract, journeyLegsContract } from './journeys.js';
 import {
   CreatePlaceBody,
   CreateTripBody,
@@ -26,6 +27,8 @@ const VisitList = z.object({ visits: z.array(VisitSchema) });
 /** Trips-owned source metadata and route identity contract; ordering never rewrites dates. */
 export const tripsContract = c.router(
   {
+    journeys: journeysContract,
+    journeyLegs: journeyLegsContract,
     trips: c.router({
       list: {
         method: 'GET',

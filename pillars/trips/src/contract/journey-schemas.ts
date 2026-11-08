@@ -1,0 +1,111 @@
+import { z } from 'zod';
+
+import { CalendarDateSchema, SourceLinkSchema } from './schemas.js';
+
+const Id = z.number().int().positive();
+const Text = z.string().refine((value) => value.trim().length > 0, 'Expected nonblank source text');
+const LocalClock = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?$/u)
+  .refine(
+    (value) => CalendarDateSchema.safeParse(value.slice(0, 10)).success,
+    'Invalid calendar date'
+  )
+  .refine((value) => z.iso.time().safeParse(value.slice(11)).success, 'Invalid local clock');
+const TimeZone = z.string().refine((value) => {
+  if (!value || /^[+-]/u.test(value)) return false;
+  try {
+    new Intl.DateTimeFormat('en', { timeZone: value }).format(0);
+    return true;
+  } catch {
+    return false;
+  }
+}, 'Expected a supported IANA time zone');
+
+/** Independent endpoint source facts; an absent location, clock or zone stays unknown. */
+export const JourneyEndpointSchema = z.object({
+  placeId: Id.optional(),
+  sourceLabel: z.string().optional(),
+  sourceLinks: z.array(SourceLinkSchema).optional(),
+  local: LocalClock.optional(),
+  timeZone: TimeZone.optional(),
+});
+
+/** Explicit user thresholds in physical minutes; missing thresholds have no default. */
+export const JourneyBuffersSchema = z.object({
+  minimumConnectionMinutes: z.number().nonnegative().optional(),
+  airportBufferMinutes: z.number().nonnegative().optional(),
+});
+
+const JourneyFields = {
+  name: Text.nullable().optional(),
+  reference: z.string().nullable().optional(),
+  notes: z.string().optional(),
+  sourceLinks: z.array(SourceLinkSchema).optional(),
+  buffers: JourneyBuffersSchema.optional(),
+};
+const LegFields = {
+  mode: Text.nullable().optional(),
+  from: JourneyEndpointSchema.optional(),
+  to: JourneyEndpointSchema.optional(),
+  intention: z.enum(['In plan', 'Considering', 'Alternative']).nullable().optional(),
+  arrangement: z.enum(['Booked', 'Agreed', 'Not arranged', 'Not needed']).nullable().optional(),
+  purchase: z.literal('Purchased').nullable().optional(),
+  operator: z.string().nullable().optional(),
+  service: z.string().nullable().optional(),
+  reference: z.string().nullable().optional(),
+  notes: z.string().optional(),
+  sourceLinks: z.array(SourceLinkSchema).optional(),
+};
+const Audit = { createdAt: z.iso.datetime(), updatedAt: z.iso.datetime() };
+
+/** Source metadata of one trip-owned journey, independent of route visits. */
+export const JourneySchema = z.object({
+  id: Id,
+  tripId: Id,
+  ...JourneyFields,
+  name: Text.nullable(),
+  reference: z.string().nullable(),
+  notes: z.string(),
+  sourceLinks: z.array(SourceLinkSchema),
+  buffers: JourneyBuffersSchema,
+  ...Audit,
+});
+
+/** A stable ordered source leg; purchase never changes its intention or arrangement. */
+export const JourneyLegSchema = z.object({
+  id: Id,
+  journeyId: Id,
+  ...LegFields,
+  mode: Text.nullable(),
+  from: JourneyEndpointSchema,
+  to: JourneyEndpointSchema,
+  intention: LegFields.intention.unwrap(),
+  arrangement: LegFields.arrangement.unwrap(),
+  purchase: LegFields.purchase.unwrap(),
+  operator: z.string().nullable(),
+  service: z.string().nullable(),
+  reference: z.string().nullable(),
+  notes: z.string(),
+  sourceLinks: z.array(SourceLinkSchema),
+  ...Audit,
+});
+
+/** Journey creation and patch input; omission retains fields, null clears nullable text. */
+export const JourneyInputSchema = z.object(JourneyFields);
+/** Leg creation and patch input; supplied endpoints replace complete endpoint values. */
+export const JourneyLegInputSchema = z.object(LegFields);
+/** Complete ordered membership, containing every existing leg exactly once. */
+export const ReorderJourneyLegsBody = z.object({ legIds: z.array(Id) });
+/** A persisted journey source record. */
+export type Journey = z.infer<typeof JourneySchema>;
+/** A persisted ordered leg source record. */
+export type JourneyLeg = z.infer<typeof JourneyLegSchema>;
+/** Explicit source endpoint facts, without a derived instant. */
+export type JourneyEndpoint = z.infer<typeof JourneyEndpointSchema>;
+/** Configured source thresholds, without implicit defaults. */
+export type JourneyBuffers = z.infer<typeof JourneyBuffersSchema>;
+/** Fields accepted by journey creation and patch operations. */
+export type JourneyInput = z.infer<typeof JourneyInputSchema>;
+/** Fields accepted by leg creation and patch operations. */
+export type JourneyLegInput = z.infer<typeof JourneyLegInputSchema>;
