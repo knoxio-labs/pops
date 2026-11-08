@@ -4,6 +4,7 @@ import { Button, Textarea, TextInput } from '@pops/ui';
 
 import { CaptureAttachments } from './attachments';
 import { CaptureDates } from './dates';
+import { CaptureFileChips } from './file-chips';
 import { CaptureKinds } from './kinds';
 import { captureLabel, safeCaptureLink } from './model';
 import { CaptureVisit } from './references';
@@ -34,6 +35,7 @@ export function CaptureEditor({
       />
       <CaptureKinds value={item.kind} onChange={(kind) => change({ ...item, kind })} />
       <CaptureText item={item} change={change} />
+      <CaptureFileChips files={item.files} onChange={(files) => change({ ...item, files })} />
       <CaptureURL item={item} change={change} />
       <div className="flex flex-wrap items-center gap-2">
         <div className="min-w-0 flex-1 sm:max-w-80">
