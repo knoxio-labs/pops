@@ -8,7 +8,7 @@ import { useCanvas } from './canvas-context';
 import { CanvasInsert } from './canvas-insert';
 import { CanvasItemGroup } from './canvas-items';
 import { outsideVisit } from './constraints';
-import { accommodationPeriods } from './lodging-periods';
+import { accommodationPeriods, keyedAccommodationPeriods } from './lodging-periods';
 
 import type { TripRecord } from '@/fixtures/trip-overview-model';
 
@@ -54,32 +54,42 @@ function PeriodDates({ period }: { period: AccommodationPeriod }) {
   );
 }
 
-function PeriodView({ visit, period }: { visit: TripRecord; period: AccommodationPeriod }) {
+/** A stay interval retains its activities and missing coverage in route or visit timelines. */
+export function AccommodationPeriodView({
+  visit,
+  period,
+  datesInRail = false,
+}: {
+  visit: TripRecord;
+  period: AccommodationPeriod;
+  datesInRail?: boolean;
+}) {
   const { state } = useCanvas();
-  const invalid =
-    period.overlap ||
-    period.conflict === true ||
-    period.stays.some(
-      (stay) =>
-        hasInvalidStayDates(stay) || outsideVisit(visit, stay) || stay.placeId !== visit.placeId
-    );
+  const invalid = invalidPeriod(visit, period);
   const items = periodActivities(period, state, visit.id);
   const stayId = period.stays.length === 1 ? period.stays[0]?.id : undefined;
   return (
     <section className={cn('space-y-0.5', invalid && 'border-l-2 border-destructive pl-2')}>
-      {period.stays.length === 0 && <PeriodDates period={period} />}
+      {!datesInRail && period.stays.length === 0 && <PeriodDates period={period} />}
       <PeriodWarnings visit={visit} period={period} />
       {period.stays.map((stay) => (
-        <AccommodationStay key={stay.id} stay={stay} />
+        <AccommodationStay
+          key={stay.id}
+          stay={stay}
+          showDates={showStayDates(stay, period, datesInRail)}
+        />
       ))}
       {period.missing && (
-        <div className="flex min-h-11 items-center justify-between gap-2">
-          <span className="text-sm text-foreground">Accommodation needed</span>
+        <div
+          className={datesInRail ? 'min-h-11' : 'flex min-h-11 items-center justify-between gap-2'}
+        >
+          {!datesInRail && <span className="text-sm text-foreground">Accommodation needed</span>}
           <CanvasInsert
             target={{ visitId: visit.id, start: period.start, end: period.end }}
             label="Add accommodation"
             defaultKind="stay"
-            line={false}
+            line={datesInRail}
+            slotLabel={datesInRail ? 'Accommodation' : undefined}
           />
         </div>
       )}
@@ -125,9 +135,30 @@ export function AccommodationView({ visit }: { visit: TripRecord }) {
   }
   return (
     <div className="space-y-2 border-l pl-3">
-      {accommodationPeriods(visit, state.records).map((period) => (
-        <PeriodView key={period.id} visit={visit} period={period} />
-      ))}
+      {keyedAccommodationPeriods(accommodationPeriods(visit, state.records)).map(
+        ({ key, period }) => (
+          <AccommodationPeriodView key={key} visit={visit} period={period} />
+        )
+      )}
     </div>
+  );
+}
+
+function showStayDates(
+  stay: TripRecord,
+  period: AccommodationPeriod,
+  datesInRail: boolean
+): boolean {
+  return !datesInRail || stay.schedule?.start !== period.start || stay.schedule?.end !== period.end;
+}
+
+function invalidPeriod(visit: TripRecord, period: AccommodationPeriod): boolean {
+  return (
+    period.overlap ||
+    period.conflict === true ||
+    period.stays.some(
+      (stay) =>
+        hasInvalidStayDates(stay) || outsideVisit(visit, stay) || stay.placeId !== visit.placeId
+    )
   );
 }

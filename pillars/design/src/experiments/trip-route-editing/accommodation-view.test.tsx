@@ -207,7 +207,10 @@ describe('AccommodationView', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Edit accommodation First hotel' }));
     fireEvent.click(screen.getByRole('button', { name: 'Accommodation arrangement' }));
     fireEvent.click(screen.getByRole('button', { name: 'Booked' }));
-    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.getByRole('button', { name: 'Accommodation arrangement' })).toHaveTextContent(
+      'Booked'
+    );
+    expect(screen.queryByRole('button', { name: 'Not arranged' })).not.toBeInTheDocument();
     expect(
       changes.mock.lastCall?.[0].records.find((item) => item.id === stay.id)?.arrangement
     ).toBe('Booked');

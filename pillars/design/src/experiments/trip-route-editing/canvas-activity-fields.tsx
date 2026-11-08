@@ -17,20 +17,22 @@ export function ActivityFields({ item }: { item: TripRecord }) {
     <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3">
       <div className="min-w-32 flex-1">
         <TextInput
-          aria-label={item.kind === 'stay' ? 'Accommodation name' : 'Activity name'}
+          aria-label={activityNameLabel(item)}
           variant="ghost"
           key={display.title}
           defaultValue={display.title}
           className="text-sm font-medium md:text-sm"
           containerClassName="bg-transparent px-0"
-          onBlur={(event) =>
+          onBlur={(event) => {
+            const title = event.currentTarget.value;
+            if (title === display.title) return;
             change({
               ...state,
               records: state.records.map((record) =>
-                record.id === item.id ? { ...record, title: event.currentTarget.value } : record
+                record.id === item.id ? { ...record, title } : record
               ),
-            })
-          }
+            });
+          }}
           onKeyDown={(event) => {
             if (event.key === 'Enter') event.currentTarget.blur();
           }}
@@ -82,4 +84,9 @@ function ActivityTiming({ item, title, when }: { item: TripRecord; title: string
       </PopoverContent>
     </Popover>
   );
+}
+
+function activityNameLabel(item: TripRecord): string {
+  if (item.kind === 'stay') return 'Accommodation name';
+  return item.kind === 'person' ? 'Person name' : 'Activity name';
 }

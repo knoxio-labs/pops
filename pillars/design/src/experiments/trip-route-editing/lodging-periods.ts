@@ -176,3 +176,22 @@ export function accommodationPeriods(
   }
   return periods;
 }
+
+/** Stable render identity follows stay membership so editing a boundary keeps its editor open. */
+export function keyedAccommodationPeriods(
+  periods: AccommodationPeriod[]
+): { key: string; period: AccommodationPeriod }[] {
+  const counts = new Map<string, number>();
+  return periods.map((period) => {
+    const signature =
+      period.stays.length > 0
+        ? period.stays
+            .map((stay) => stay.id)
+            .toSorted()
+            .join('|')
+        : [period.missing, period.conflict].join(':');
+    const occurrence = counts.get(signature) ?? 0;
+    counts.set(signature, occurrence + 1);
+    return { key: `${signature}:${occurrence}`, period };
+  });
+}

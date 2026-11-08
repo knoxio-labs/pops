@@ -1,0 +1,8 @@
+name: City / visit workspace
+question: Is a visit easier to organise by accommodation periods or by day?
+status: active
+screen: trips/visit
+frame: web
+variants:
+  periods: Group activities within accommodation periods
+  days: Group arrangements and activities by calendar day
