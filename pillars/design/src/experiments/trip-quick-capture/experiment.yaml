@@ -1,0 +1,8 @@
+name: Quick capture
+question: Should quick capture start with content or an explicit item type?
+status: active
+screen: trips/capture
+frame: web
+variants:
+  text: Capture text immediately and classify when useful
+  type: Choose an explicit type before entering the source
