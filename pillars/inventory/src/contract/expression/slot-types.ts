@@ -4,7 +4,7 @@ import {
   sameDimension,
   unitDimension,
 } from '../measurement-units.js';
-import { resolveRead } from './catalogue-lookup.js';
+import { resolveAssemblyRead, resolveRead } from './catalogue-lookup.js';
 import { isNumericKind } from './model.js';
 import { ROOT_PATH, nodeChildren } from './tree.js';
 
@@ -41,6 +41,16 @@ function isProduct(
   return node.op === 'multiply' || node.op === 'divide';
 }
 
+function readType(
+  context: ExpressionContext,
+  node: Extract<ExpressionNode, { op: 'read' | 'assembly_read' }>
+): SlotType | undefined {
+  const field =
+    node.op === 'read' ? resolveRead(context, node).field : resolveAssemblyRead(context, node);
+  if (field === undefined) return undefined;
+  return field.unit === undefined ? { kind: field.kind } : { kind: field.kind, unit: field.unit };
+}
+
 /**
  * The type a node carries on its own, inferred bottom-up: a read or literal's
  * type, or, for a chain of measurement products and quotients (Inventory
@@ -48,11 +58,7 @@ function isProduct(
  * else, which falls back to the top-down `expected` type.
  */
 function ownType(context: ExpressionContext, node: ExpressionNode): SlotType | undefined {
-  if (node.op === 'read') {
-    const { field } = resolveRead(context, node);
-    if (field === undefined) return undefined;
-    return field.unit === undefined ? { kind: field.kind } : { kind: field.kind, unit: field.unit };
-  }
+  if (node.op === 'read' || node.op === 'assembly_read') return readType(context, node);
   if (node.op === 'literal') return literalType(node.value);
   if (isProduct(node)) {
     const left = ownType(context, node.left);

@@ -75,3 +75,27 @@ export function resendComputedDependents(
   reindexItems(db, dependents);
   return dependents;
 }
+
+/**
+ * After `partItemId` joined or left an assembly, refresh the reverse-dependency
+ * rows of it and of everything that read it and rewrite their search entries,
+ * in the caller's transaction. The caller then drops the part's cached values
+ * through its own handle after commit (`invalidateComputedItem`), as
+ * `runMutation` does: the cache is per handle, and dropping the part's entries
+ * drops every entry that read it. No event is written, so the change feed does
+ * not re-send them. Returns the dependents refreshed besides the part, capped
+ * at `limit`.
+ */
+export function refreshAfterAssemblyLinkChange(
+  db: CommandDb,
+  partItemId: string,
+  limit: number = DEFAULT_COMPUTED_DEPENDENT_LIMIT
+): readonly string[] {
+  const catalogue = loadPublishedCatalogue(db);
+  if (catalogue === null || !hasComputedFields(catalogue)) return [];
+  refreshComputedDependencies(db, catalogue, [partItemId]);
+  const dependents = readComputedDependents(db, [partItemId], limit);
+  refreshComputedDependencies(db, catalogue, dependents);
+  reindexItems(db, [partItemId, ...dependents]);
+  return dependents;
+}

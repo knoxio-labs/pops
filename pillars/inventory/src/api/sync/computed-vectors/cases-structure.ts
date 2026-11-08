@@ -54,8 +54,8 @@ export const STRUCTURE_CASES: readonly ExpressionVectorCase[] = [
     kind: 'decimal',
   },
   {
-    name: 'expression version 3 is rejected',
-    expressionVersion: 3,
+    name: 'an unknown expression version is rejected',
+    expressionVersion: 4,
     expression: lit('1'),
     kind: 'decimal',
   },

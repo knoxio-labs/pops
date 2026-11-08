@@ -129,3 +129,40 @@ export function evaluateRead(
     dependencies: uniqueEvaluatedDependencies(dependencies),
   };
 }
+
+/**
+ * Reads `fieldId` on the assembly the root item is a part of. An item that is
+ * not a part has nothing to read there: the read is unavailable on the root,
+ * as an absent field is, so `coalesce` can fall back.
+ */
+export function evaluateAssemblyRead(
+  expression: Extract<ExpressionV1, { op: 'assembly_read' }>,
+  snapshot: ExpressionSnapshot
+): ExpressionEvaluation {
+  const rootItemId = snapshot.rootItemId;
+  const assemblyItemId = snapshot.readAssembly(rootItemId);
+  if (assemblyItemId === null) {
+    const reason = 'missing_dependency';
+    return unavailableEvaluation(
+      {
+        reason,
+        fieldId: expression.fieldId,
+        traversedItemIds: [rootItemId],
+        missingInputs: [{ reason, fieldId: expression.fieldId, itemId: rootItemId }],
+      },
+      []
+    );
+  }
+  const dependencies: EvaluatedDependency[] = [];
+  const step = readField(snapshot, expression.fieldId, {
+    itemId: assemblyItemId,
+    traversedItemIds: [rootItemId, assemblyItemId],
+    dependencies,
+  });
+  if (step.state === 'stopped') return step.evaluation;
+  return {
+    state: 'value',
+    value: step.value,
+    dependencies: uniqueEvaluatedDependencies(dependencies),
+  };
+}

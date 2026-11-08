@@ -13,6 +13,7 @@ interface PendingDependency {
 function expressionReads(node: ExpressionV1): readonly Extract<ExpressionV1, { op: 'read' }>[] {
   switch (node.op) {
     case 'literal':
+    case 'assembly_read':
       return [];
     case 'read':
       return [node];
@@ -81,8 +82,8 @@ class DependencyPreloader {
 
 /**
  * Preloads declared computed dependencies breadth-first across all roots.
- * Only stored reference paths are followed here; computed references retain
- * lazy evaluation, including their override and unavailable-value semantics.
+ * Only stored reference paths are followed here; computed references and
+ * assembly reads retain lazy evaluation, including their override and unavailable-value semantics.
  * Raw rows remain unparsed until the owning item's evaluation handles errors.
  */
 export function preloadEffectiveDependencies(

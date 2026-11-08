@@ -6,7 +6,12 @@ import type { BinaryOp, ExpressionNode, NodeOp } from '@pops/inventory/expressio
 export const EMPTY: ExpressionNode = { op: 'empty' };
 
 /** Operations that wrap an existing node rather than fill a slot on their own. */
-export type WrappingOp = Exclude<NodeOp, 'empty' | 'literal' | 'read'>;
+export type WrappingOp = Exclude<NodeOp, 'empty' | 'literal' | 'read' | 'assembly_read'>;
+
+/** Whether an operation wraps an existing node, as opposed to being a leaf. */
+export function isWrappingOp(op: NodeOp): op is WrappingOp {
+  return op !== 'empty' && op !== 'literal' && op !== 'read' && op !== 'assembly_read';
+}
 
 type Update = (child: ExpressionNode) => ExpressionNode;
 
@@ -44,6 +49,7 @@ function mapChild(node: ExpressionNode, segment: string, update: Update): Expres
     case 'empty':
     case 'literal':
     case 'read':
+    case 'assembly_read':
       return node;
     default:
       if (segment === 'left') return { ...node, left: update(node.left) };

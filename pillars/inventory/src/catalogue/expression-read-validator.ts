@@ -1,3 +1,4 @@
+import { PARTS_CAPABILITY } from './capabilities.js';
 import {
   expressionFail,
   expressionValueType,
@@ -57,6 +58,7 @@ function traverse(
         typeId: currentType.id,
         fieldId: reference.id,
         via: node.path.slice(0, index),
+        throughAssembly: false,
       });
       for (const target of targetTypes(reference, context, `${path}.path.${index}`))
         nextTypes.set(target.id, target);
@@ -64,6 +66,20 @@ function traverse(
     currentTypes = [...nextTypes.values()];
   }
   return currentTypes;
+}
+
+function readFieldsType(
+  fields: readonly PersistedItemTypeField[],
+  context: ExpressionValidationContext,
+  path: string
+): ExpressionValueType {
+  const first = fields[0] ?? expressionFail(path, 'expression_type_unknown', 'has no target type');
+  const result = expressionValueType(first);
+  for (const field of fields.slice(1))
+    requireExpressionType(expressionValueType(field), result, path, context.dimensional);
+  if (fields.some((field) => field.cardinality !== 'one'))
+    expressionFail(path, 'expression_many_read', 'may only read one-cardinality fields');
+  return result;
 }
 
 /** Resolves a read against every statically possible target type. */
@@ -74,14 +90,40 @@ export function inferReadType(
 ): ExpressionValueType {
   const fields = traverse(node, context, path).map((type) => {
     const field = findField(type, node.fieldId, `${path}.fieldId`);
-    context.dependencies.push({ typeId: type.id, fieldId: field.id, via: node.path });
+    context.dependencies.push({
+      typeId: type.id,
+      fieldId: field.id,
+      via: node.path,
+      throughAssembly: false,
+    });
     return field;
   });
-  const first = fields[0] ?? expressionFail(path, 'expression_type_unknown', 'has no target type');
-  const result = expressionValueType(first);
-  for (const field of fields.slice(1))
-    requireExpressionType(expressionValueType(field), result, path, context.dimensional);
-  if (fields.some((field) => field.cardinality !== 'one'))
-    expressionFail(path, 'expression_many_read', 'may only read one-cardinality fields');
-  return result;
+  return readFieldsType(fields, context, path);
+}
+
+/**
+ * Resolves an assembly read against every type that grants `parts`, since
+ * any of them can be the assembly. The field must exist on each.
+ */
+export function inferAssemblyReadType(
+  node: Extract<ExpressionV1, { op: 'assembly_read' }>,
+  context: ExpressionValidationContext,
+  path: string
+): ExpressionValueType {
+  const assemblyTypes = context.catalogue.types.filter((type) =>
+    type.effectiveCapabilities.includes(PARTS_CAPABILITY)
+  );
+  if (assemblyTypes.length === 0)
+    expressionFail(path, 'expression_assembly_unavailable', 'no type grants the parts capability');
+  const fields = assemblyTypes.map((type) => {
+    const field = findField(type, node.fieldId, `${path}.fieldId`);
+    context.dependencies.push({
+      typeId: type.id,
+      fieldId: field.id,
+      via: [],
+      throughAssembly: true,
+    });
+    return field;
+  });
+  return readFieldsType(fields, context, path);
 }

@@ -1,4 +1,10 @@
-import type { ExpressionContext, ExpressionField, ExpressionType, ReadNode } from './model.js';
+import type {
+  AssemblyReadNode,
+  ExpressionContext,
+  ExpressionField,
+  ExpressionType,
+  ReadNode,
+} from './model.js';
 
 /** One followed reference in a read path, and the type it lands on. */
 export interface ResolvedHop {
@@ -94,4 +100,17 @@ export function readLabel(context: ExpressionContext, node: ReadNode): string {
     ...resolved.hops.map((hop) => hop.field.label),
     resolved.field?.label ?? 'Unknown field',
   ].join(' › ');
+}
+
+/** The field an assembly read names, or undefined when no assembly type shares it. */
+export function resolveAssemblyRead(
+  context: ExpressionContext,
+  node: AssemblyReadNode
+): ExpressionField | undefined {
+  return context.assemblyFields?.find((candidate) => candidate.id === node.fieldId);
+}
+
+/** "Assembly › Availability" style label for an assembly read. */
+export function assemblyReadLabel(context: ExpressionContext, node: AssemblyReadNode): string {
+  return `Assembly › ${resolveAssemblyRead(context, node)?.label ?? 'Unknown field'}`;
 }

@@ -97,6 +97,6 @@ export function validateCatalogueExpressions(
       .filter((field) => field.storage === 'computed')
       .map((field) => validateFieldExpression(catalogue, ownerType, field, fieldKinds))
   );
-  assertAcyclicExpressionGraph(buildExpressionDependencyGraph(expressions));
+  assertAcyclicExpressionGraph(buildExpressionDependencyGraph(expressions, { withinItems: true }));
   return expressions;
 }

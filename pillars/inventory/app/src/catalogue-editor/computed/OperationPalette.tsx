@@ -8,6 +8,7 @@ import {
 } from '@pops/inventory/expression';
 import { Button, Collapsible, CollapsibleContent, CollapsibleTrigger } from '@pops/ui';
 
+import { isWrappingOp } from '../expression/edit';
 import { place, placedNode, wrap } from './builder-actions';
 import { useBuilder } from './BuilderContext';
 import { choiceFieldAt, nodeTitle, slotDescription } from './node-labels';
@@ -65,9 +66,7 @@ function usePaletteChoices(mode: PaletteMode) {
   const { context, root, slots, selectedPath } = useBuilder();
   const expected = slots.get(selectedPath);
   const choiceField = choiceFieldAt(context, root, selectedPath);
-  const candidates = OPERATIONS.filter(
-    (info) => mode === 'insert' || (info.op !== 'read' && info.op !== 'literal')
-  );
+  const candidates = OPERATIONS.filter((info) => mode === 'insert' || isWrappingOp(info.op));
   const reasons = candidates.map((info) => {
     const typed = expected === undefined ? null : operationBlockedReason(info, expected);
     const unplaceable =
@@ -94,7 +93,7 @@ export function OperationPalette({ mode }: { mode: PaletteMode }) {
   const target =
     mode === 'insert' ? slotDescription(root, selectedPath) : nodeTitle(context, selected);
   const pick = (info: OperationInfo) => {
-    if (mode === 'wrap' && info.op !== 'read' && info.op !== 'literal') {
+    if (mode === 'wrap' && isWrappingOp(info.op)) {
       const wrapped = wrap(root, selectedPath, info.op);
       builder.change(wrapped.root, wrapped.selected);
       return;
