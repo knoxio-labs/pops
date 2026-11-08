@@ -1,6 +1,9 @@
 name: Alternatives comparison
 question: Compare complete paths first, or inspect changes to the working route first?
-status: active
+status: decided
+chosen: paths
+decided: 2026-11-08
+rationale: The reviewer selected complete paths stacked vertically and approved proceeding to the next prototype.
 screen: trips/alternatives
 frame: web
 variants:
