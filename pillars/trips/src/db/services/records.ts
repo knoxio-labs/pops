@@ -1,7 +1,7 @@
 import { and, asc, eq } from 'drizzle-orm';
 
-import { PlaceSchema, TripSchema, VisitSchema } from '../contract/schemas.js';
-import { places, trips, visits } from './schema.js';
+import { PlaceSchema, TripSchema, VisitSchema } from '../../contract/schemas.js';
+import { places, trips, visits } from '../schema.js';
 
 import type {
   Place,
@@ -12,8 +12,8 @@ import type {
   TripInput,
   VisitInput,
   VisitUpdate,
-} from '../contract/schemas.js';
-import type { TripsDb } from './index.js';
+} from '../../contract/schemas.js';
+import type { TripsDb } from '../index.js';
 
 /** A missing owned reference or invalid complete route permutation. */
 export class TripsServiceError extends Error {

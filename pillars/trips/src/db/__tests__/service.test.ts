@@ -20,7 +20,7 @@ import {
   updatePlace,
   updateTrip,
   updateVisit,
-} from '../service.js';
+} from '../services/records.js';
 
 let opened: OpenedTripsDb;
 let directory: string;

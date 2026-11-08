@@ -38,13 +38,18 @@ describe('Trips source contracts', () => {
     expect(CreateTripBody.parse({})).toEqual({});
   });
 
+  it('accepts zero duration and the upper month boundary without borrowing editor limits', () => {
+    const timing = { month: { year: 2028, month: 12 }, duration: { min: 0, max: 0, unit: 'days' } };
+    expect(VisitTimingSchema.parse(timing)).toEqual(timing);
+  });
+
   it.each([
     { month: { year: 2028, month: 0 } },
     { month: { year: 2028, month: 13 } },
     { month: { year: 2028, month: 1.5 } },
     { month: { year: 2028.5, month: 1 } },
     { duration: { min: 3, max: 2, unit: 'days' } },
-    { duration: { min: 0, max: 2, unit: 'days' } },
+    { duration: { min: -1, max: 2, unit: 'days' } },
     { duration: { min: 1, max: 2, unit: 'months' } },
   ])('rejects malformed approximate timing %j', (timing) => {
     expect(VisitTimingSchema.safeParse(timing).success).toBe(false);

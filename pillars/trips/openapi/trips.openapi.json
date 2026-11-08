@@ -1056,12 +1056,10 @@
                                 "additionalProperties": false,
                                 "properties": {
                                   "max": {
-                                    "exclusiveMinimum": true,
                                     "minimum": 0,
                                     "type": "number"
                                   },
                                   "min": {
-                                    "exclusiveMinimum": true,
                                     "minimum": 0,
                                     "type": "number"
                                   },
@@ -1244,12 +1242,10 @@
                                 "additionalProperties": false,
                                 "properties": {
                                   "max": {
-                                    "exclusiveMinimum": true,
                                     "minimum": 0,
                                     "type": "number"
                                   },
                                   "min": {
-                                    "exclusiveMinimum": true,
                                     "minimum": 0,
                                     "type": "number"
                                   },
@@ -1414,12 +1410,10 @@
                         "additionalProperties": false,
                         "properties": {
                           "max": {
-                            "exclusiveMinimum": true,
                             "minimum": 0,
                             "type": "number"
                           },
                           "min": {
-                            "exclusiveMinimum": true,
                             "minimum": 0,
                             "type": "number"
                           },
@@ -1532,12 +1526,10 @@
                           "additionalProperties": false,
                           "properties": {
                             "max": {
-                              "exclusiveMinimum": true,
                               "minimum": 0,
                               "type": "number"
                             },
                             "min": {
-                              "exclusiveMinimum": true,
                               "minimum": 0,
                               "type": "number"
                             },
@@ -1721,12 +1713,10 @@
                           "additionalProperties": false,
                           "properties": {
                             "max": {
-                              "exclusiveMinimum": true,
                               "minimum": 0,
                               "type": "number"
                             },
                             "min": {
-                              "exclusiveMinimum": true,
                               "minimum": 0,
                               "type": "number"
                             },
@@ -1896,12 +1886,10 @@
                         "additionalProperties": false,
                         "properties": {
                           "max": {
-                            "exclusiveMinimum": true,
                             "minimum": 0,
                             "type": "number"
                           },
                           "min": {
-                            "exclusiveMinimum": true,
                             "minimum": 0,
                             "type": "number"
                           },
@@ -2013,12 +2001,10 @@
                           "additionalProperties": false,
                           "properties": {
                             "max": {
-                              "exclusiveMinimum": true,
                               "minimum": 0,
                               "type": "number"
                             },
                             "min": {
-                              "exclusiveMinimum": true,
                               "minimum": 0,
                               "type": "number"
                             },

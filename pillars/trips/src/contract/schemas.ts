@@ -32,8 +32,8 @@ export const VisitTimingSchema = z.object({
     .optional(),
   duration: z
     .object({
-      min: z.number().positive(),
-      max: z.number().positive(),
+      min: z.number().nonnegative(),
+      max: z.number().nonnegative(),
       unit: z.enum(['days', 'weeks']),
     })
     .refine((value) => value.max >= value.min, 'Maximum duration must not precede minimum')

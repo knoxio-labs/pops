@@ -13,7 +13,8 @@ visit facts. A new visit appends to that trip's route.
 
 Visit timing supports independent arrival/departure calendar dates, approximate
 year/month/early-middle-late precision and a numeric min/max duration in days or
-weeks. Missing timing remains unknown. Valid but contradictory dates are retained
+weeks. Durations are non-negative, including zero for a same-day visit; the
+maximum must not precede the minimum. Missing timing remains unknown. Valid but contradictory dates are retained
 for later conflict presentation. No date is inferred from route position or a
 different visit. A timing update replaces the complete timing value; `{}` clears
 it. Omitted metadata fields retain their values; `null` clears an optional name.

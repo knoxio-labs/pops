@@ -1,3 +1,4 @@
+import { trips } from '../db/schema.js';
 import { getPillarRegistry } from './pillars/registry.js';
 
 import type { PillarRegistryEntry } from '@pops/types';
@@ -32,7 +33,7 @@ export function makeRequestHandler(deps: TripsApiDeps): {
 } {
   return {
     health(): HealthResponse {
-      deps.tripsDb.raw.prepare('SELECT 1').get();
+      deps.tripsDb.db.select({ id: trips.id }).from(trips).limit(1).get();
       return {
         ok: true,
         status: 'ok',

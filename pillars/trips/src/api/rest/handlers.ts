@@ -16,7 +16,7 @@ import {
   updatePlace,
   updateTrip,
   updateVisit,
-} from '../../db/service.js';
+} from '../../db/services/records.js';
 import { tripsErrors } from '../errors.js';
 
 import type { TripsApiDeps } from '../handlers.js';
