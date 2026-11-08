@@ -1,9 +1,9 @@
 import { and, asc, eq } from 'drizzle-orm';
 
 import { JourneySchema } from '../../contract/journey-schemas.js';
-import { journeys, journeyLegs } from '../schema.js';
+import { journeys, journeyLegs, journeyGroupMembers } from '../schema.js';
 import { getTrip } from './records.js';
-import { requireOwnedRecord } from './source-record.js';
+import { requireOwnedRecord, TripsServiceError } from './source-record.js';
 
 import type { Journey, JourneyInput } from '../../contract/journey-schemas.js';
 import type { TripsDb } from '../index.js';
@@ -76,6 +76,15 @@ export function deleteJourney(db: TripsDb, tripId: number, id: number): void {
   db.transaction(
     (tx) => {
       getJourney(tx, tripId, id);
+      if (
+        tx
+          .select({ groupId: journeyGroupMembers.groupId })
+          .from(journeyGroupMembers)
+          .where(eq(journeyGroupMembers.journeyId, id))
+          .limit(1)
+          .get()
+      )
+        throw new TripsServiceError('journey_grouped');
       tx.delete(journeyLegs).where(eq(journeyLegs.journeyId, id)).run();
       tx.delete(journeys)
         .where(and(eq(journeys.tripId, tripId), eq(journeys.id, id)))

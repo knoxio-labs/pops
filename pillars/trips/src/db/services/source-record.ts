@@ -1,6 +1,8 @@
-/** A missing owned reference or invalid complete source-record permutation. */
+/** Domain failures for owned records, ordering and grouping preconditions. */
 export class TripsServiceError extends Error {
-  constructor(readonly code: 'not_found' | 'order_invalid') {
+  constructor(
+    readonly code: 'not_found' | 'order_invalid' | 'revision_conflict' | 'journey_grouped'
+  ) {
     super(code);
     this.name = 'TripsServiceError';
   }

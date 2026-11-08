@@ -2,6 +2,7 @@ import { once } from 'node:events';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { JourneyGroupSchema } from '../../contract/journey-groups.js';
 import { JourneySchema, JourneyLegSchema } from '../../contract/journey-schemas.js';
 import { PlaceSchema, TripSchema, VisitSchema } from '../../contract/schemas.js';
 import { openTripsDb, type OpenedTripsDb } from '../../db/index.js';
@@ -17,6 +18,7 @@ const testScopes = new Map<string, string[]>([
   ['scoped', ['trips']],
   ['journeys-only', ['trips.journeys']],
   ['legs-only', ['trips.journeyLegs']],
+  ['groups-only', ['trips.journeyGroups']],
 ]);
 
 beforeEach(async () => {
@@ -306,6 +308,172 @@ describe('Journey HTTP source contract', () => {
       paths: {
         '/trips/{tripId}/journeys/{journeyId}/leg-order': {
           put: { operationId: 'journeyLegs.reorder' },
+        },
+      },
+    });
+  });
+});
+
+describe('Journey alternatives HTTP contract', () => {
+  it('adopts explicit sources, previews without selecting, retains source facts and reverses selection', async () => {
+    const trip = TripSchema.parse(await (await call('/trips', 'POST', {})).json());
+    const sourceBase = `/trips/${trip.id}/journeys`;
+    const current = JourneySchema.parse(
+      await (
+        await call(sourceBase, 'POST', {
+          reference: 'Original source',
+          buffers: { minimumConnectionMinutes: 137 },
+          sourceLinks: [{ uri: 'pops:documents/document/42' }],
+        })
+      ).json()
+    );
+    const leg = JourneyLegSchema.parse(
+      await (
+        await call(`${sourceBase}/${current.id}/legs`, 'POST', {
+          purchase: 'Purchased',
+          arrangement: 'Agreed',
+          from: { local: '2028-03-12T02:30', timeZone: 'America/Chicago' },
+        })
+      ).json()
+    );
+    const alternative = JourneySchema.parse(await (await call(sourceBase, 'POST', {})).json());
+    const base = `/trips/${trip.id}/journey-groups`;
+    const response = await call(base, 'POST', {
+      currentJourneyId: current.id,
+      alternativeJourneyIds: [alternative.id],
+    });
+    expect(response.status).toBe(201);
+    const group = JourneyGroupSchema.parse(await response.json());
+    const path = `${base}/${group.id}`;
+    expect(await (await call(path)).json()).toEqual(group);
+    expect(await (await call(base)).json()).toEqual({ groups: [group] });
+    expect(await (await call(`${sourceBase}/${alternative.id}`)).json()).toEqual(alternative);
+    const selectedResponse = await call(`${path}/selection`, 'PUT', {
+      expectedRevision: 0,
+      journeyId: alternative.id,
+    });
+    expect(selectedResponse.status).toBe(200);
+    const selected = JourneyGroupSchema.parse(await selectedResponse.json());
+    expect(selected).toMatchObject({
+      currentJourneyId: alternative.id,
+      alternativeJourneyIds: [current.id],
+      revision: 1,
+    });
+    expect(
+      await (
+        await call(`${path}/selection`, 'PUT', { expectedRevision: 1, journeyId: alternative.id })
+      ).json()
+    ).toEqual(selected);
+    const restored = await call(`${path}/selection`, 'PUT', {
+      expectedRevision: 1,
+      journeyId: current.id,
+    });
+    expect(await restored.json()).toMatchObject({
+      currentJourneyId: current.id,
+      alternativeJourneyIds: [alternative.id],
+      revision: 2,
+    });
+    expect(await (await call(`${sourceBase}/${current.id}`)).json()).toEqual(current);
+    expect(await (await call(`${sourceBase}/${current.id}/legs`)).json()).toEqual({ legs: [leg] });
+    const blankResponse = await call(`${path}/alternatives`, 'POST', { expectedRevision: 2 });
+    expect(blankResponse.status).toBe(201);
+    const blank: unknown = await blankResponse.json();
+    expect(blank).toMatchObject({
+      group: {
+        currentJourneyId: current.id,
+        alternativeJourneyIds: [alternative.id, expect.any(Number)],
+        revision: 3,
+      },
+      journey: {
+        buffers: current.buffers,
+        name: null,
+        reference: null,
+        sourceLinks: [],
+        notes: '',
+      },
+    });
+    expect((await call(`${sourceBase}/${current.id}`, 'DELETE')).status).toBe(409);
+    expect((await call(path, 'DELETE', { expectedRevision: 3 })).status).toBe(204);
+    expect((await call(path)).status).toBe(404);
+    expect(await (await call(`${sourceBase}/${current.id}`)).json()).toEqual(current);
+    expect(await (await call(`${sourceBase}/${current.id}/legs`)).json()).toEqual({ legs: [leg] });
+  });
+
+  it('enforces group scopes, validates explicit inputs and returns stable stale/missing-member errors without mutation', async () => {
+    const trip = TripSchema.parse(await (await call('/trips', 'POST', {})).json());
+    const otherTrip = TripSchema.parse(await (await call('/trips', 'POST', {})).json());
+    const sourceBase = `/trips/${trip.id}/journeys`;
+    const current = JourneySchema.parse(await (await call(sourceBase, 'POST', {})).json());
+    const alternative = JourneySchema.parse(await (await call(sourceBase, 'POST', {})).json());
+    const foreign = JourneySchema.parse(
+      await (await call(`/trips/${otherTrip.id}/journeys`, 'POST', {})).json()
+    );
+    const base = `/trips/${trip.id}/journey-groups`;
+    expect((await call(base, 'GET', undefined, null)).status).toBe(401);
+    expect((await call(base, 'GET', undefined, 'rejected')).status).toBe(401);
+    expect((await call(base, 'GET', undefined, 'journeys-only')).status).toBe(403);
+    expect((await call(base, 'GET', undefined, 'groups-only')).status).toBe(200);
+    expect((await call(sourceBase, 'GET', undefined, 'groups-only')).status).toBe(403);
+    for (const body of [
+      {},
+      { currentJourneyId: current.id, alternativeJourneyIds: [current.id] },
+      { currentJourneyId: current.id, alternativeJourneyIds: [alternative.id, alternative.id] },
+    ]) {
+      const response = await call(base, 'POST', body);
+      expect(response.status).toBe(400);
+      expect(await response.json()).toMatchObject({
+        code: 'trips.request.invalid',
+        details: { issues: expect.any(Array) },
+      });
+    }
+    expect((await call(base, 'POST', { currentJourneyId: foreign.id })).status).toBe(404);
+    const group = JourneyGroupSchema.parse(
+      await (
+        await call(base, 'POST', {
+          currentJourneyId: current.id,
+          alternativeJourneyIds: [alternative.id],
+        })
+      ).json()
+    );
+    const path = `${base}/${group.id}`;
+    for (const journeyId of [99999, foreign.id])
+      expect(
+        (await call(`${path}/selection`, 'PUT', { expectedRevision: 0, journeyId })).status
+      ).toBe(404);
+    expect((await call(`${path}/selection`, 'PUT', { journeyId: alternative.id })).status).toBe(
+      400
+    );
+    expect((await call(`${path}/alternatives`, 'POST', { expectedRevision: -1 })).status).toBe(400);
+    expect((await call(path, 'DELETE', {})).status).toBe(400);
+    const stale = await call(`${path}/selection`, 'PUT', {
+      expectedRevision: 1,
+      journeyId: alternative.id,
+    });
+    expect(stale.status).toBe(409);
+    expect(await stale.json()).toMatchObject({
+      code: 'trips.group.revision_conflict',
+      retryable: false,
+      requestId: expect.any(String),
+    });
+    expect((await call(`${path}/alternatives`, 'POST', { expectedRevision: 1 })).status).toBe(409);
+    expect((await call(path, 'DELETE', { expectedRevision: 1 })).status).toBe(409);
+    expect((await call(`/trips/${otherTrip.id}/journey-groups/${group.id}`)).status).toBe(404);
+    expect(
+      (
+        await call(`/trips/${otherTrip.id}/journey-groups/${group.id}/selection`, 'PUT', {
+          expectedRevision: 0,
+          journeyId: foreign.id,
+        })
+      ).status
+    ).toBe(404);
+    expect(await (await call(path)).json()).toEqual(group);
+    expect(await (await call(sourceBase)).json()).toEqual({ journeys: [current, alternative] });
+    const spec: unknown = await (await call('/openapi')).json();
+    expect(spec).toMatchObject({
+      openapi: '3.0.2',
+      paths: {
+        '/trips/{tripId}/journey-groups/{id}/selection': {
+          put: { operationId: 'journeyGroups.select', responses: { '409': expect.any(Object) } },
         },
       },
     });

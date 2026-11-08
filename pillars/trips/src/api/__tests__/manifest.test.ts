@@ -13,8 +13,16 @@ describe('Trips manifest', () => {
       version: '1.2.3',
       tag: 'contract-trips@v1.2.3',
     });
-    expect(manifest.routes.queries).toHaveLength(10);
+    expect(manifest.routes.queries).toHaveLength(12);
     expect(manifest.routes.mutations).toContain('trips.visits.reorder');
+    expect(manifest.routes.mutations).toEqual(
+      expect.arrayContaining([
+        'trips.journeyGroups.create',
+        'trips.journeyGroups.addBlank',
+        'trips.journeyGroups.select',
+        'trips.journeyGroups.delete',
+      ])
+    );
     expect(manifest.uri.types).toEqual([]);
   });
 });

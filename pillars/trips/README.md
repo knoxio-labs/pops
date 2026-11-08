@@ -30,8 +30,9 @@ reference, notes, source links and optional configured buffers. Under a journey,
 `GET/POST .../:journeyId/legs` and `GET/PATCH/DELETE .../:journeyId/legs/:id` manage
 stable source legs. `PUT .../:journeyId/leg-order` accepts complete `legIds`
 membership, with the same atomic source-preserving ordering rule as visits.
-Deleting a journey removes its own legs atomically; neither deletion cancels an
-external booking.
+Deleting an ungrouped journey removes its own legs atomically; grouped sources
+return `409` until their grouping is explicitly removed. Neither deletion cancels
+an external booking.
 
 Each endpoint independently retains an optional existing `placeId`, source label
 and links, local calendar wallclock, and explicit supported IANA zone. Place data
@@ -53,8 +54,40 @@ buffers are nonnegative physical minutes, including zero and fractions; missing
 thresholds have no defaults. A supplied buffers object replaces its complete
 configuration and `{}` clears it. Source links may remain unavailable remotely.
 
+Journey groups explicitly associate existing source records without changing them.
+`GET/POST /trips/:tripId/journey-groups` list or create groups; creation requires
+`currentJourneyId` and optional distinct `alternativeJourneyIds` belonging to the
+same trip. `GET .../:id` previews ordered source identities; use the existing
+journey and leg read routes for source content. Reads never select. Journeys may
+be members of multiple groups, with independent selections and alternative order.
+The underlying journey list continues to include every source record.
+
+`POST .../:id/alternatives` creates a separate blank journey that copies only the
+current source's explicit buffer configuration. It copies no name, reference,
+notes, links or legs and selects no places or documents. Existing places and
+external Documents identities remain reusable through their source owners;
+groups create no catalogues. Subsequent edits to either source stay independent.
+
+`PUT .../:id/selection` explicitly selects a member `journeyId`. The previous
+current becomes an alternative in the selected slot; other alternative positions
+are retained. Selection changes only grouping metadata, preserving every journey
+and leg identity, source value and timestamp. Selecting the former current again
+reverses that selection without replacing source records or cancelling bookings.
+
+Adding a blank alternative, selecting, and `DELETE .../:id` require the read
+`expectedRevision`. A stale revision returns `409`; unknown groups, nonmembers
+and foreign-trip identities return `404` without mutation. Successful membership
+or selection changes advance the group revision. Selecting the same current at
+the matching revision is an unchanged response. Source edits do not advance group
+revisions: they remain edits to those independently owned records. Mutations are
+atomic SQLite transactions. Deleting a group removes only its membership and
+selection metadata, retaining all source journeys and legs, including shared
+memberships in other groups. Explicit source journey deletion returns `409`
+while any group membership remains.
+
 Domain routes require their projected service-account scope: `trips.trips`,
-`trips.places`, `trips.visits`, `trips.journeys` or `trips.journeyLegs`; a `trips` grant covers all domains. Discovery and
+`trips.places`, `trips.visits`, `trips.journeys`, `trips.journeyLegs` or
+`trips.journeyGroups`; a `trips` grant covers all domains. Discovery and
 health probes remain open. The pillar has no frontend application.
 
 Run `mise exec -- pnpm --filter @pops/trips dev`. `PORT` defaults to 3018;

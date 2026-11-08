@@ -16,6 +16,7 @@ import {
   updateTrip,
   updateVisit,
 } from '../../db/services/records.js';
+import { makeJourneyGroupHandlers } from './journey-groups.js';
 import { makeJourneyHandlers, makeJourneyLegHandlers } from './journeys.js';
 import { withTripsErrors } from './with-errors.js';
 
@@ -29,6 +30,7 @@ export function makeTripsRestHandlers(
 ): ReturnType<typeof server.router<typeof tripsContract>> {
   const db = deps.tripsDb.db;
   return server.router(tripsContract, {
+    journeyGroups: makeJourneyGroupHandlers(db),
     journeys: makeJourneyHandlers(db),
     journeyLegs: makeJourneyLegHandlers(db),
     trips: {
