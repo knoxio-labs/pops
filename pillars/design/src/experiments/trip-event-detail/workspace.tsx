@@ -63,7 +63,7 @@ function EventContent({ layout }: { layout: 'details' | 'route' }) {
     <article
       aria-label="Event details"
       className={cn(
-        'space-y-3 rounded-xl border bg-card p-3',
+        'space-y-3 rounded-xl border border-foreground/25 bg-muted/60 p-3 shadow-sm',
         isPurchasedArrangement(event) ? 'border-l-4 border-l-app-accent' : 'border-dashed'
       )}
     >
@@ -87,8 +87,8 @@ function EventClockSummary() {
   const { startTime, endTime, timeZone } = data.metadata;
   if (!startTime && !endTime) return null;
   return (
-    <p className="flex items-center gap-2 text-sm text-muted-foreground">
-      <Clock className="size-4" aria-hidden />
+    <p className="flex items-center gap-2 text-sm text-foreground/90">
+      <Clock className="size-4 text-app-accent" aria-hidden />
       {startTime}
       {startTime && endTime && ' → '}
       {endTime}

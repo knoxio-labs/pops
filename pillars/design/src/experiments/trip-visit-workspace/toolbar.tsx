@@ -18,12 +18,17 @@ export function VisitToolbar({
 }) {
   return (
     <div
-      className="flex flex-wrap items-center gap-2 border-b pb-3"
+      className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-muted p-2"
       role="group"
       aria-label="Visit granularity"
     >
       <Button
         variant={day === null ? 'secondary' : 'ghost'}
+        className={
+          day === null
+            ? 'border border-app-accent/50 bg-app-accent/15 font-semibold text-foreground shadow-sm'
+            : undefined
+        }
         aria-pressed={day === null}
         onClick={() => setDay(null)}
       >
@@ -31,11 +36,16 @@ export function VisitToolbar({
       </Button>
       <Button
         variant={day !== null ? 'secondary' : 'ghost'}
+        className={
+          day !== null
+            ? 'border border-app-accent/50 bg-app-accent/15 font-semibold text-foreground shadow-sm'
+            : undefined
+        }
         aria-pressed={day !== null}
         disabled={day === null && days.length === 0}
         onClick={() => setDay(day ?? days[0] ?? null)}
       >
-        <CalendarDays className="size-4" aria-hidden />
+        <CalendarDays className="size-4 text-app-accent" aria-hidden />
         Day
       </Button>
       {day && <DayNavigation day={day} days={days} setDay={setDay} />}

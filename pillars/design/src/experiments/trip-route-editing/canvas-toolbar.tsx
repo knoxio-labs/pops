@@ -9,6 +9,9 @@ import type { DateRangeValue } from '@pops/ui';
 /** Presentation scale controls change projection, never the underlying route or bookings. */
 export type CanvasScale = 'cities' | 'bookings' | 'days' | 'hours';
 
+const selectedScaleClass =
+  'border border-app-accent/50 bg-app-accent/15 font-semibold text-foreground';
+
 /** Date range and flight-window shortcuts are generated from the current booking records. */
 export function CanvasToolbar({
   scale,
@@ -33,6 +36,7 @@ export function CanvasToolbar({
           <Button
             key={mode}
             variant={scale === mode ? 'secondary' : 'ghost'}
+            className={scale === mode ? selectedScaleClass : undefined}
             aria-pressed={scale === mode}
             onClick={() => setScale(mode)}
           >

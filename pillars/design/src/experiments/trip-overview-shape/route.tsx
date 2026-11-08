@@ -17,7 +17,7 @@ function RouteStop({
   const related = items.filter((candidate) => candidate.visitId === item.id);
   return (
     <article
-      className="space-y-4 rounded-xl border border-dashed bg-muted/30 p-4"
+      className="space-y-4 rounded-xl border border-dashed border-foreground/30 bg-muted/60 p-4 shadow-sm"
       data-constraint="soft"
     >
       <button
@@ -27,14 +27,16 @@ function RouteStop({
       >
         <span className="space-y-2">
           <span className="block text-2xl font-bold tracking-tight">{item.where}</span>
-          {item.when && <span className="block text-base font-semibold">{item.when}</span>}
+          {item.when && (
+            <span className="block text-base font-semibold text-foreground/90">{item.when}</span>
+          )}
         </span>
         <span className="flex items-center gap-3">
-          <ArrowUpRight className="size-4 shrink-0" aria-hidden />
+          <ArrowUpRight className="size-4 shrink-0 text-app-accent" aria-hidden />
         </span>
       </button>
       {related.length > 0 && (
-        <div className="space-y-3 border-t pt-4">
+        <div className="space-y-3 border-t border-foreground/15 pt-4">
           {related.map((record) => (
             <OverviewItemCard key={record.id} item={record} onSelect={onSelect} />
           ))}

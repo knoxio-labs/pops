@@ -56,7 +56,10 @@ export function CanvasInsert({
       }}
     >
       {line && !slotLabel && (
-        <div aria-hidden className="absolute inset-x-0 top-1/2 border-t border-dashed" />
+        <div
+          aria-hidden
+          className="absolute inset-x-0 top-1/2 border-t border-dotted border-app-accent/50"
+        />
       )}
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
@@ -128,7 +131,7 @@ function insertButtonClasses(slotLabel?: string) {
   return cn(
     'relative z-10 min-h-11 min-w-11 bg-background',
     slotLabel
-      ? 'w-full rounded-lg border-dashed bg-transparent px-3 text-sm font-normal text-muted-foreground'
-      : 'size-11 rounded-full p-0 opacity-0 group-hover/insert:opacity-100 group-focus-within/insert:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100'
+      ? 'w-full rounded-lg border-dashed border-app-accent/50 bg-app-accent/10 px-3 text-sm font-semibold text-foreground hover:bg-app-accent/20'
+      : 'size-11 rounded-full border-app-accent/40 p-0 text-app-accent opacity-0 group-hover/insert:opacity-100 group-focus-within/insert:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100'
   );
 }

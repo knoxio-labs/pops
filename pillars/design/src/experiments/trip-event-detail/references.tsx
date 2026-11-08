@@ -18,11 +18,11 @@ import type { EventReference } from './model';
 /** References are selected identities; venue and organiser creation adds one reusable local record. */
 export function EventReferences() {
   return (
-    <section className="space-y-1 border-y py-2" aria-label="Event references">
+    <section className="space-y-1 border-b border-foreground/15 pb-3" aria-label="Event references">
       <ReferenceField kind="venue" label="Venue" />
       <ReferenceField kind="contact" label="Organiser" />
       <div className="flex items-start gap-2">
-        <Link2 className="mt-3 size-4 shrink-0 text-muted-foreground" aria-hidden />
+        <Link2 className="mt-3 size-4 shrink-0 text-app-accent" aria-hidden />
         <div className="min-w-0 flex-1">
           <EventLinkField
             field="sourceUrl"
@@ -52,7 +52,7 @@ function ReferenceField({ kind, label }: { kind: 'venue' | 'contact'; label: str
             aria-label={`Edit ${label.toLowerCase()}`}
             className="min-h-11 justify-start px-0"
           >
-            <Icon className="size-4 text-muted-foreground" aria-hidden />
+            <Icon className="size-4 text-app-accent" aria-hidden />
             {selected?.name ?? (id ? `${label} unavailable` : `Add ${label.toLowerCase()}`)}
           </Button>
         </PopoverTrigger>
@@ -61,9 +61,7 @@ function ReferenceField({ kind, label }: { kind: 'venue' | 'contact'; label: str
           {selected && <ReferenceFields reference={selected} />}
         </PopoverContent>
       </Popover>
-      {selected?.address && (
-        <p className="pl-6 text-xs text-muted-foreground">{selected.address}</p>
-      )}
+      {selected?.address && <p className="pl-6 text-sm text-foreground/80">{selected.address}</p>}
     </div>
   );
 }

@@ -30,7 +30,9 @@ export function TransitCard({
       aria-label={record.title ?? display.title}
       className={cn(
         'group/transit space-y-2 rounded-xl border bg-card p-3',
-        isPurchasedArrangement(record) ? 'border-l-4 border-l-app-accent' : 'border-dashed',
+        isPurchasedArrangement(record)
+          ? 'border-l-4 border-l-app-accent bg-app-accent/10'
+          : 'border-dashed border-app-accent/40',
         issues.length > 0 && 'border-destructive bg-destructive/10'
       )}
     >
@@ -39,7 +41,7 @@ export function TransitCard({
           className="size-4 cursor-grab opacity-0 group-hover/transit:opacity-100 group-focus-within/transit:opacity-100"
           aria-hidden
         />
-        {!datesInRail && <Plane className="size-5" aria-hidden />}
+        {!datesInRail && <Plane className="size-5 text-app-accent" aria-hidden />}
         <div className="min-w-0 flex-1">
           <TransportName record={record} />
         </div>
@@ -49,7 +51,7 @@ export function TransitCard({
         <TransportEditor record={record} />
       </div>
       {!datesInRail && display.when && (
-        <p className="text-sm text-muted-foreground">{display.when}</p>
+        <p className="text-sm font-medium text-foreground">{display.when}</p>
       )}
 
       <BookingFindings recordId={record.id} />

@@ -91,7 +91,10 @@ export function VisitDays({
   const { state } = useCanvas();
   const projection = visitDay(state, visit, day);
   return (
-    <section aria-label={`Plan for ${formatTripDate(day)}`}>
+    <section
+      className="rounded-xl border border-border bg-muted/30 p-3"
+      aria-label={`Plan for ${formatTripDate(day)}`}
+    >
       {visit.timing?.arrival === day && (
         <VisitTransport visit={visit} boundary="arrival" missingOnly />
       )}

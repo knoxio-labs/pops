@@ -20,10 +20,10 @@ export function EventTickets({ event }: { event: TripRecord }) {
     'Not needed',
   ];
   return (
-    <section className="space-y-2" aria-label="Tickets">
+    <section className="space-y-2 rounded-lg bg-background/50 p-2" aria-label="Tickets">
       <div className="flex flex-wrap items-center gap-2">
-        <Ticket className="size-4 text-muted-foreground" aria-hidden />
-        <h2 className="text-sm font-medium">Tickets</h2>
+        <Ticket className="size-4 text-app-accent" aria-hidden />
+        <h2 className="text-sm font-semibold">Tickets</h2>
         <div className="w-40">
           <Select
             aria-label="Ticket arrangement"

@@ -27,7 +27,10 @@ export function VisitPeriods({ visit }: { visit: TripRecord }) {
   const periods = accommodationPeriods(visit, state.records);
   const rentals = state.rentals.some((r) => r.from === visit.id || r.to === visit.id);
   return (
-    <div aria-label="Accommodation timeline">
+    <div
+      className="rounded-xl border border-border bg-muted/30 px-3 py-2 sm:px-4"
+      aria-label="Accommodation timeline"
+    >
       <VisitTransport visit={visit} boundary="arrival" />
       {rentals && (
         <TimelineRow icon={CarFront}>
@@ -53,13 +56,15 @@ function TimelineRow({
 }) {
   return (
     <div className="flex gap-5">
-      <aside className="relative w-20 shrink-0 border-r border-dotted pr-6 pt-3 text-right text-xs text-muted-foreground sm:w-28">
-        <span className="absolute -right-4 top-2 flex size-8 items-center justify-center rounded-full border bg-background">
+      <aside className="relative w-20 shrink-0 border-r-2 border-dotted border-app-accent/50 pr-6 pt-4 text-right text-xs font-semibold text-foreground sm:w-28">
+        <span className="absolute -right-4 top-3 flex size-8 items-center justify-center rounded-full border border-app-accent bg-app-accent text-app-accent-foreground shadow-sm">
           <Icon className="size-4" aria-hidden />
         </span>
         {date}
       </aside>
-      <div className="min-w-0 flex-1 border-b py-2">{children}</div>
+      <div className="my-2 min-w-0 flex-1 rounded-lg border border-foreground/25 bg-card p-3 shadow-sm">
+        {children}
+      </div>
     </div>
   );
 }
@@ -119,9 +124,11 @@ function TransportDate({
   const stamp = transportStamp(state, record, boundary);
   return (
     <>
-      <span className="block">{boundary === 'arrival' ? 'Arrival' : 'Departure'}</span>
+      <span className="mb-1 block font-normal text-muted-foreground">
+        {boundary === 'arrival' ? 'Arrival' : 'Departure'}
+      </span>
       {isTripDate(stamp.date) && formatTripDate(stamp.date)}
-      {stamp.time && <span className="block tabular-nums">{stamp.time}</span>}
+      {stamp.time && <span className="mt-1 block tabular-nums">{stamp.time}</span>}
     </>
   );
 }
@@ -164,7 +171,7 @@ function PeriodDates({ period }: { period: AccommodationPeriod }) {
   return (
     <>
       {period.start && formatTripDate(period.start)}
-      {period.start && period.end && <span className="block">↓</span>}
+      {period.start && period.end && <span className="block text-app-accent">↓</span>}
       {period.end && formatTripDate(period.end)}
     </>
   );

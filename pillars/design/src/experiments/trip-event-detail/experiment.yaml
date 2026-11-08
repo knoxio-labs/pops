@@ -1,6 +1,9 @@
 name: Event detail
 question: Should event details lead, or sit inside their route context?
-status: active
+status: decided
+chosen: route
+decided: 2026-11-08
+rationale: The reviewer selected the event within its surrounding cities and approved proceeding to the next prototype.
 screen: trips/event
 frame: web
 variants:
