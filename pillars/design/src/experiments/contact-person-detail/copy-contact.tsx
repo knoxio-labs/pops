@@ -4,12 +4,18 @@ import { useState } from 'react';
 import { Button } from '@pops/ui';
 
 /** Copy an explicit contact value only on user action; clipboard denial stays visible. */
-export function CopyContact({ value }: { value: string }) {
+export function CopyContact({
+  value,
+  label = 'Copy contact value',
+}: {
+  value: string;
+  label?: string;
+}) {
   const [status, setStatus] = useState('');
   return (
     <div className="flex items-center gap-1">
       <Button
-        aria-label="Copy contact value"
+        aria-label={label}
         variant="ghost"
         disabled={!value}
         onClick={() => {

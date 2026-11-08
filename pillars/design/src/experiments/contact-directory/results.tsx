@@ -5,6 +5,7 @@ import { Badge, Button, SearchResultItem } from '@pops/ui';
 
 import { useDirectory } from './context';
 import { DirectoryDetails } from './details';
+import { DirectoryIdentity } from './identity';
 import { directoryKinds, groupContacts, visibleContacts } from './model';
 
 import type { DirectoryContact } from './model';
@@ -15,34 +16,44 @@ function ContactRow({ contact }: { contact: DirectoryContact }) {
   const Icon = selected ? ChevronUp : ChevronDown;
   const cities = [...new Set(contact.addresses.map((address) => address.city).filter(Boolean))];
   return (
-    <li
-      className={`overflow-hidden rounded-lg border bg-muted/60 ${selected ? 'border-app-accent/60' : 'border-foreground/25'}`}
-    >
+    <li className="overflow-hidden rounded-xl border border-foreground/25 bg-muted/40">
       <Button
         aria-label={`Details for ${contact.name}`}
         aria-expanded={selected}
         variant="ghost"
-        className="h-auto min-h-11 w-full justify-start px-3 py-3 text-left"
+        className={`relative h-auto min-h-11 w-full whitespace-normal ${selected ? 'block px-4 py-6 text-center' : 'justify-start px-3 py-3 text-left'}`}
         onClick={() => change({ ...state, selectedId: selected ? null : contact.id })}
       >
-        <SearchResultItem
-          className="min-w-0 flex-1"
-          leading={
-            <EntityAvatar
-              entity={contact.legacy ?? { id: contact.id, name: contact.name, type: contact.kind }}
+        {selected ? (
+          <>
+            <DirectoryIdentity contact={contact} />
+            <ChevronUp
+              className="absolute right-3 top-3 size-4 text-muted-foreground"
+              aria-hidden
             />
-          }
-          title={contact.name}
-          meta={[cities.join(', '), contact.aliases.join(', ')]}
-          trailing={
-            <span className="flex items-center gap-2">
-              <Badge variant="outline">
-                {directoryKinds.find((item) => item.kind === contact.kind)?.label}
-              </Badge>
-              <Icon className="size-4 text-muted-foreground" />
-            </span>
-          }
-        />
+          </>
+        ) : (
+          <SearchResultItem
+            className="min-w-0 flex-1"
+            leading={
+              <EntityAvatar
+                entity={
+                  contact.legacy ?? { id: contact.id, name: contact.name, type: contact.kind }
+                }
+              />
+            }
+            title={contact.name}
+            meta={[cities.join(', '), contact.aliases.join(', ')]}
+            trailing={
+              <span className="flex items-center gap-2">
+                <Badge variant="outline">
+                  {directoryKinds.find((item) => item.kind === contact.kind)?.label}
+                </Badge>
+                <Icon className="size-4 text-muted-foreground" />
+              </span>
+            }
+          />
+        )}
       </Button>
       {selected && <DirectoryDetails contact={contact} />}
     </li>
