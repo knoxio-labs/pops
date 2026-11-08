@@ -14,14 +14,14 @@ export function VisitArrangements() {
   return (
     <section aria-label="Related arrangements" className="space-y-2 border-t pt-3">
       <h2 className="text-sm font-semibold">In this visit</h2>
-      <div className="divide-y">
+      <div className="space-y-2">
         {stays.map((stay) => (
           <div
             key={stay.id}
-            className={`flex flex-wrap items-center gap-2 py-2 text-sm ${stay.status === 'Purchased' ? 'border-l-2 border-app-accent pl-3' : 'pl-3'}`}
+            className={`flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border px-3 py-2 text-sm ${stay.status === 'Purchased' ? 'border-foreground/30' : 'border-dashed border-foreground/30'}`}
           >
             <BedDouble className="size-4 text-app-accent" aria-hidden />
-            <span className="font-medium">{stay.title}</span>
+            <span className="min-w-0 flex-1 font-medium">{stay.title}</span>
             <span className="text-muted-foreground">
               {visitDateLabel(stay.from)} → {visitDateLabel(stay.to)}
             </span>
@@ -31,9 +31,12 @@ export function VisitArrangements() {
           </div>
         ))}
         {events.map((event) => (
-          <div key={event.id} className="flex flex-wrap items-center gap-2 py-2 pl-3 text-sm">
+          <div
+            key={event.id}
+            className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-dashed border-foreground/30 px-3 py-2 text-sm"
+          >
             <Ticket className="size-4 text-app-accent" aria-hidden />
-            <span className="font-medium">{event.title}</span>
+            <span className="min-w-0 flex-1 font-medium">{event.title}</span>
             <span className="text-muted-foreground">{visitDateLabel(event.date)}</span>
           </div>
         ))}
