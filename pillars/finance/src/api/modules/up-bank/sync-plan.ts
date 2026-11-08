@@ -13,7 +13,12 @@ import {
 } from '../../../db/index.js';
 import { requireNamedSecret } from '../../secrets.js';
 import { toParsedTransaction, type MappedUpTransaction } from './map-transaction.js';
-import { createUpBankClient, type UpAccount, type UpBankClient } from './up-api.js';
+import {
+  createUpBankClient,
+  type UpAccount,
+  type UpBankClient,
+  type UpTransaction,
+} from './up-api.js';
 
 import type { AccountKind } from '../../../contract/account-kind.js';
 
@@ -62,6 +67,12 @@ export interface SettleableRow {
 export interface UpSyncPlan {
   account: { id: string; name: string; currency: string; kind: AccountKind };
   upAccount: UpAccount;
+  /**
+   * The most recent Up stamp this pass saw: the newest fetched row's, else
+   * the account's own. It carries the customer's current UTC offset, which
+   * is what dates the reported balance.
+   */
+  latestStamp: string;
   /** Everything Up returned for the widened fetch, before any filtering. */
   fetched: number;
   /**
@@ -129,6 +140,15 @@ function resolveClient(
   };
 }
 
+function latestStampOf(raw: readonly UpTransaction[], upAccount: UpAccount): string {
+  let latest = upAccount.attributes.createdAt;
+  for (const txn of raw) {
+    if (Date.parse(txn.attributes.createdAt) > Date.parse(latest))
+      latest = txn.attributes.createdAt;
+  }
+  return latest;
+}
+
 /** Fetch and map the range without writing anything. */
 export async function planUpSync(db: FinanceDb, args: UpSyncArgs): Promise<UpSyncPlan> {
   const account = accountsService.getAccount(db, args.accountId);
@@ -169,6 +189,7 @@ export async function planUpSync(db: FinanceDb, args: UpSyncArgs): Promise<UpSyn
   return {
     account: { id: account.id, name: account.name, currency: account.currency, kind: account.kind },
     upAccount,
+    latestStamp: latestStampOf(raw, upAccount),
     fetched: raw.length,
     outsideRange: raw.length - mapped.length,
     newRows,

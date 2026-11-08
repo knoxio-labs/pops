@@ -40,8 +40,18 @@ import {
   type FinanceDb,
 } from '../../../db/index.js';
 import { requireNamedSecret } from '../../secrets.js';
-import { dropStagedRow, settleStagedRow, stageMappedRows } from '../import-drafts/live-draft.js';
-import { toParsedTransaction, upChecksum, type MappedUpTransaction } from './map-transaction.js';
+import {
+  dropStagedRow,
+  settleStagedRow,
+  stageMappedRows,
+  type ReportedBalanceReading,
+} from '../import-drafts/live-draft.js';
+import {
+  toParsedTransaction,
+  upChecksum,
+  upStampAt,
+  type MappedUpTransaction,
+} from './map-transaction.js';
 import {
   createUpBankClient,
   UpBankApiError,
@@ -78,6 +88,8 @@ export type UpWebhookIngest = (event: UpWebhookEvent) => Promise<UpWebhookOutcom
 export interface UpWebhookIngestDeps {
   /** A client for the token under `secretRef`; tests inject one, production reads the secret. */
   clientFor?: (secretRef: string) => UpBankClient;
+  /** The clock the reported balance is stamped with; tests pin it. */
+  now?: () => Date;
 }
 
 const INGESTED_EVENTS = new Set(['TRANSACTION_CREATED', 'TRANSACTION_SETTLED']);
@@ -113,7 +125,7 @@ async function writeRow(
   { db, contacts }: IngestContext,
   target: { accountId: string; accountName: string },
   mapped: MappedUpTransaction,
-  balanceCents: number | null
+  balance: ReportedBalanceReading
 ): Promise<UpWebhookOutcome> {
   const { accountId } = target;
   const existing = importsService
@@ -137,7 +149,7 @@ async function writeRow(
         : { kind: 'already-staged', accountId };
     }
   }
-  const staged = await stageMappedRows({ db, contacts, target, rows: [mapped], balanceCents });
+  const staged = await stageMappedRows({ db, contacts, target, rows: [mapped], balance });
   if (staged.staged === 0) return { kind: 'already-staged', accountId };
   return { kind: 'staged', accountId, draftId: staged.draftId, created: staged.created };
 }
@@ -180,6 +192,7 @@ interface IngestContext {
   db: FinanceDb;
   contacts: ContactsClient;
   clientFor: (secretRef: string) => UpBankClient;
+  now: () => Date;
 }
 
 /** Build the ingest for one pillar process; each event resolves to what it did. */
@@ -188,7 +201,12 @@ export function makeUpWebhookIngest(
   contacts: ContactsClient,
   deps: UpWebhookIngestDeps = {}
 ): UpWebhookIngest {
-  const ctx: IngestContext = { db, contacts, clientFor: deps.clientFor ?? defaultClientFor };
+  const ctx: IngestContext = {
+    db,
+    contacts,
+    clientFor: deps.clientFor ?? defaultClientFor,
+    now: deps.now ?? (() => new Date()),
+  };
   const serialised = serialisedBy();
   return (event) => {
     if (event.transactionId === undefined) {
@@ -232,6 +250,9 @@ async function ingestTransaction(
   const mapped = toParsedTransaction(txn, { accountId: account.id, accountLabel: account.name });
   // The balance Up reports with the newest row rides on the draft and becomes
   // the checkpoint when it is committed (POPS-3335); one extra read per delivery.
-  const balanceCents = (await client.getAccount(upAccountId)).attributes.balance.valueInBaseUnits;
-  return writeRow(ctx, { accountId: account.id, accountName: account.name }, mapped, balanceCents);
+  const balance = {
+    cents: (await client.getAccount(upAccountId)).attributes.balance.valueInBaseUnits,
+    reportedAt: upStampAt(ctx.now(), txn.attributes.createdAt),
+  };
+  return writeRow(ctx, { accountId: account.id, accountName: account.name }, mapped, balance);
 }

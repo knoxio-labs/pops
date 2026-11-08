@@ -28,6 +28,8 @@ import {
 
 import type { FinanceDb } from '../../../../db/services/internal.js';
 
+const REPORTED_AT = '2026-09-05T16:40:00+10:00';
+
 let db: FinanceDb;
 let accountId: string;
 const contacts = makeContactsFake();
@@ -55,7 +57,7 @@ describe('stageMappedRows', () => {
       contacts,
       target: target(),
       rows: [mapped('a')],
-      balanceCents: 100,
+      balance: { cents: 100, reportedAt: REPORTED_AT },
     });
     expect(first).toMatchObject({ staged: 1, alreadyStaged: 0, alreadyInLedger: 0, created: true });
 
@@ -64,7 +66,7 @@ describe('stageMappedRows', () => {
       contacts,
       target: target(),
       rows: [mapped('a'), mapped('b', -200)],
-      balanceCents: 150,
+      balance: { cents: 150, reportedAt: '2026-09-06T08:00:00+10:00' },
     });
     expect(second).toMatchObject({
       draftId: first.draftId,
@@ -74,7 +76,12 @@ describe('stageMappedRows', () => {
     });
 
     const draft = getImportDraft(db, first.draftId);
-    expect(draft).toMatchObject({ rowCount: 2, balanceReportedCents: 150, state: 'live' });
+    expect(draft).toMatchObject({
+      rowCount: 2,
+      balanceReportedCents: 150,
+      balanceReportedAt: '2026-09-06T08:00:00+10:00',
+      state: 'live',
+    });
     const payload = readLiveDraftPayload(draft!);
     expect(payload.parsedTransactions.map((t) => t.amount)).toEqual([-10, -2]);
     expect(payload.parsedTransactionsFingerprint).toBe(fingerprintOf(payload.parsedTransactions));
@@ -107,7 +114,7 @@ describe('stageMappedRows', () => {
       contacts,
       target: target(),
       rows: [mapped('a')],
-      balanceCents: 100,
+      balance: { cents: 100, reportedAt: REPORTED_AT },
     });
     expect(result).toMatchObject({ staged: 0, alreadyInLedger: 1, created: false, draftId: '' });
     expect(listImportDrafts(db, { accountId })).toEqual([]);
@@ -119,16 +126,19 @@ describe('stageMappedRows', () => {
       contacts,
       target: target(),
       rows: [mapped('a')],
-      balanceCents: 100,
+      balance: { cents: 100, reportedAt: REPORTED_AT },
     });
     await stageMappedRows({
       db,
       contacts,
       target: target(),
       rows: [mapped('b')],
-      balanceCents: null,
+      balance: null,
     });
-    expect(getImportDraft(db, first.draftId)?.balanceReportedCents).toBe(100);
+    expect(getImportDraft(db, first.draftId)).toMatchObject({
+      balanceReportedCents: 100,
+      balanceReportedAt: REPORTED_AT,
+    });
   });
 
   it("lets a correction rule's type beat the mapper's income default on a credit", async () => {
@@ -148,7 +158,7 @@ describe('stageMappedRows', () => {
       contacts,
       target: target(),
       rows: [credit('ruled', 'Andrew Borg'), credit('unruled', 'Salary')],
-      balanceCents: 100,
+      balance: { cents: 100, reportedAt: REPORTED_AT },
     });
 
     const { matched, uncertain, failed } = readLiveDraftPayload(
@@ -184,7 +194,7 @@ describe('stageMappedRows', () => {
           { accountId, accountLabel: 'Up Everyday' }
         ),
       ],
-      balanceCents: 100,
+      balance: { cents: 100, reportedAt: REPORTED_AT },
     });
 
     const { matched, uncertain, failed } = readLiveDraftPayload(
@@ -203,7 +213,7 @@ describe('stageMappedRows', () => {
       contacts,
       target: target(),
       rows: [mapped('a')],
-      balanceCents: 100,
+      balance: { cents: 100, reportedAt: REPORTED_AT },
     });
     claimImportDraft(db, first.draftId, 'tab-a');
     const next = await stageMappedRows({
@@ -211,7 +221,7 @@ describe('stageMappedRows', () => {
       contacts,
       target: target(),
       rows: [mapped('b')],
-      balanceCents: 100,
+      balance: { cents: 100, reportedAt: REPORTED_AT },
     });
     expect(next.created).toBe(true);
     expect(next.draftId).not.toBe(first.draftId);
@@ -226,7 +236,7 @@ describe('settleStagedRow and dropStagedRow', () => {
       contacts,
       target: target(),
       rows: [mapped('h', -1_000, 'HELD'), mapped('k', -500)],
-      balanceCents: 100,
+      balance: { cents: 100, reportedAt: REPORTED_AT },
     });
 
     const settled = toParsedTransaction(
@@ -269,7 +279,7 @@ describe('settleStagedRow and dropStagedRow', () => {
       contacts,
       target: target(),
       rows: [mapped('a')],
-      balanceCents: 100,
+      balance: { cents: 100, reportedAt: REPORTED_AT },
     });
     claimImportDraft(db, draftId, 'tab-a');
     expect(settleStagedRow(db, accountId, mapped('a'))).toBe('open');
@@ -283,7 +293,7 @@ describe('settleStagedRow and dropStagedRow', () => {
       contacts,
       target: target(),
       rows: [mapped('h', -1_000, 'HELD')],
-      balanceCents: 100,
+      balance: { cents: 100, reportedAt: REPORTED_AT },
     });
     claimImportDraft(db, draftId, 'tab-a');
     db.run(

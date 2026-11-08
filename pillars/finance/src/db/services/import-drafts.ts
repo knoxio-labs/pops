@@ -38,6 +38,7 @@ export interface ImportDraftCounts {
   dateFrom: string | null;
   dateTo: string | null;
   balanceReportedCents?: number | null;
+  balanceReportedAt?: string | null;
 }
 
 /** Fields accepted by {@link createImportDraft}. */
@@ -106,6 +107,7 @@ export function createImportDraft(
       dateFrom: input.dateFrom,
       dateTo: input.dateTo,
       balanceReportedCents: input.balanceReportedCents ?? null,
+      balanceReportedAt: input.balanceReportedAt ?? null,
       processSessionId: input.processSessionId ?? null,
       savedAt: now.toISOString(),
     })
@@ -183,6 +185,8 @@ export function writeImportDraft(
         input.balanceReportedCents === undefined
           ? draft.balanceReportedCents
           : input.balanceReportedCents,
+      balanceReportedAt:
+        input.balanceReportedAt === undefined ? draft.balanceReportedAt : input.balanceReportedAt,
       processSessionId:
         input.processSessionId === undefined ? draft.processSessionId : input.processSessionId,
       shapeVersion: IMPORT_DRAFT_SHAPE_VERSION,

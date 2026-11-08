@@ -37,6 +37,24 @@ export function upLocalDate(stamp: string): string {
   return stamp.slice(0, 10);
 }
 
+const STAMP_OFFSET = /[+-]\d{2}:\d{2}$/;
+
+/**
+ * `at` written as an ISO stamp in the UTC offset `offsetFrom` carries, so
+ * {@link upLocalDate} reads the customer's calendar date off it the same way
+ * it reads a row's. `offsetFrom` is any Up stamp; one ending in `Z` or in no
+ * offset at all is read as UTC.
+ */
+export function upStampAt(at: Date, offsetFrom: string): string {
+  const match = STAMP_OFFSET.exec(offsetFrom);
+  if (match === null) return `${at.toISOString().slice(0, 19)}Z`;
+  const offset = match[0];
+  const magnitude = Number(offset.slice(1, 3)) * 60 + Number(offset.slice(4, 6));
+  const offsetMinutes = offset.startsWith('-') ? -magnitude : magnitude;
+  const local = new Date(at.getTime() + offsetMinutes * 60_000);
+  return `${local.toISOString().slice(0, 19)}${offset}`;
+}
+
 /**
  * What an unattended import may assert about a row's type.
  *
