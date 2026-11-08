@@ -1,6 +1,9 @@
 name: Decision detail
 question: Choose from options first, or inspect affected plans before choosing?
-status: active
+status: decided
+chosen: options
+decided: 2026-11-08
+rationale: Joao selected Options first to compare choices with their notes and linked plans, then approved with next.
 frame: web
 screen: trips/decision
 variants:
