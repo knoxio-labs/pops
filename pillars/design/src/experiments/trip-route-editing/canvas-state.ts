@@ -45,13 +45,13 @@ export function useCanvasActions(
   return actions;
 }
 
-/** Keep a local snapshot history; undo restores the source graph across every projection. */
-export function useRouteState(initial: () => CanvasState) {
-  const [route, setRoute] = useState<{ state: CanvasState; history: CanvasState[] }>(() => ({
+/** Keep a local snapshot history; undo restores source data across every projection. */
+export function useRouteState<T extends object>(initial: () => T) {
+  const [route, setRoute] = useState<{ state: T; history: T[] }>(() => ({
     state: initial(),
     history: [],
   }));
-  const change = useCallback((next: CanvasState) => {
+  const change = useCallback((next: T) => {
     setRoute((previous) =>
       next === previous.state
         ? previous
