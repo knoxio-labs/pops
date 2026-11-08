@@ -1,6 +1,9 @@
 name: Person detail
 question: Should contact details or trip plans lead the person workspace?
-status: active
+status: decided
+chosen: details
+decided: 2026-11-08
+rationale: The reviewer selected contact methods and addresses before trip availability and plans, then approved proceeding to quick capture.
 screen: contacts/person
 frame: web
 variants:
