@@ -135,6 +135,26 @@ describe('TagEditor', () => {
     `);
   });
 
+  it('shows the strongest matching facet before weaker substring matches', () => {
+    render(
+      <TagEditor
+        currentTags={['contains:food', 'occasion:out']}
+        availableTags={['contains:food', 'occasion:out', 'fee:interest', 'venue:restaurant']}
+        onSave={vi.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Edit tags/i }));
+    fireEvent.change(screen.getByPlaceholderText(/Type to add a tag/i), {
+      target: { value: 'rest' },
+    });
+
+    const suggestions = screen
+      .getAllByRole('button', { name: /^Add / })
+      .map((button) => button.getAttribute('aria-label'));
+    expect(suggestions).toEqual(['Add Venue: Restaurant', 'Add Fee: Interest']);
+  });
+
   it('reuses the faceted tag when the user types the label the suggestions show', async () => {
     const onSave = vi.fn();
     render(<TagEditor currentTags={[]} availableTags={['venue:bar']} onSave={onSave} />);

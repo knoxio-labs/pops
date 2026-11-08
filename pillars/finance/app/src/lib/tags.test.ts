@@ -135,6 +135,15 @@ describe('groupTagsByFacet', () => {
     expect(groups[0]?.tags.map((tag) => tag.value)).toEqual(['pub', 'bar', 'cafe']);
   });
 
+  it('can keep facet buckets in the order their first matching tag appears', () => {
+    const groups = groupTagsByFacet(
+      ['Legacy', 'venue:restaurant', 'fee:interest', 'venue:bar'],
+      'appearance'
+    );
+    expect(groups.map((group) => group.label)).toEqual(['Other', 'Venue', 'Fee']);
+    expect(groups[1]?.tags.map((tag) => tag.value)).toEqual(['restaurant', 'bar']);
+  });
+
   it('omits the unfaceted bucket when every tag is faceted', () => {
     const groups = groupTagsByFacet(['venue:bar']);
     expect(groups).toHaveLength(1);

@@ -115,31 +115,37 @@ export function describeTag(raw: string, context?: string): TagPresentation {
 /**
  * Bucket tags by axis for grouped rendering.
  *
- * Axes are ordered alphabetically with the unfaceted bucket last, so the same
- * axis lands in the same position on every row and in every list. Order
- * within a bucket is preserved, leaving whatever ranking the caller supplied
- * (autocomplete relevance, stored order) intact.
+ * Axes are ordered alphabetically with the unfaceted bucket last by default,
+ * so the same axis lands in the same position on every row and in every list.
+ * `appearance` keeps groups in the order their first tag appears, for ranked
+ * lists where grouping must not hide the strongest match. Order within a
+ * bucket is always preserved.
  */
-export function groupTagsByFacet(tags: string[]): TagFacetGroup[] {
-  const buckets = new Map<string, ParsedTag[]>();
-  const unfaceted: ParsedTag[] = [];
+export function groupTagsByFacet(
+  tags: string[],
+  facetOrder: 'alphabetical' | 'appearance' = 'alphabetical'
+): TagFacetGroup[] {
+  const buckets = new Map<string | null, ParsedTag[]>();
   for (const raw of tags) {
     const parsed = parseTag(raw);
-    if (parsed.facet === null) {
-      unfaceted.push(parsed);
-      continue;
-    }
     const bucket = buckets.get(parsed.facet);
     if (bucket) bucket.push(parsed);
     else buckets.set(parsed.facet, [parsed]);
   }
-  const groups: TagFacetGroup[] = [...buckets.entries()]
-    .toSorted(([a], [b]) => a.localeCompare(b))
-    .map(([facet, bucketTags]) => ({ facet, label: formatFacet(facet), tags: bucketTags }));
-  if (unfaceted.length > 0) {
-    groups.push({ facet: null, label: UNFACETED_LABEL, tags: unfaceted });
-  }
-  return groups;
+  const entries = [...buckets.entries()];
+  const orderedEntries =
+    facetOrder === 'alphabetical'
+      ? entries.toSorted(([a], [b]) => {
+          if (a === null) return b === null ? 0 : 1;
+          if (b === null) return -1;
+          return a.localeCompare(b);
+        })
+      : entries;
+  return orderedEntries.map(([facet, bucketTags]) => ({
+    facet,
+    label: formatFacet(facet),
+    tags: bucketTags,
+  }));
 }
 
 /**
