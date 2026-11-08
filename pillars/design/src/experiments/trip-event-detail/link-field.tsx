@@ -38,7 +38,7 @@ export function EventLinkField({
         error={value && !link ? 'Use an HTTP or HTTPS URL' : undefined}
       />
       {link && (
-        <Button asChild variant="ghost" size="icon">
+        <Button asChild variant="ghost" size="icon" aria-label={openLabel}>
           <a href={link} target="_blank" rel="noreferrer" aria-label={openLabel}>
             <ExternalLink className="size-4" aria-hidden />
           </a>
