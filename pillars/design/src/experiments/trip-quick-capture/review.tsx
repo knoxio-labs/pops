@@ -32,7 +32,7 @@ export function CaptureReview({ layout }: { layout: 'text' | 'type' }) {
           </ol>
           <p>
             Try pasting a link, attaching files, capturing a note, then changing its type, title,
-            visit and dates. Capture uses ⌘/Ctrl + Enter. Undo affects captured rows; the current
+            visit and dates. Capture uses ⌘ or Ctrl + Enter. Undo affects captured rows; the current
             draft stays intact.
           </p>
           <p>
