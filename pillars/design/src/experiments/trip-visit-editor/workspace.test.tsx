@@ -33,7 +33,7 @@ describe('visit editing save behaviours', () => {
     render(<VisitWorkspace mode="draft" />);
     fireEvent.click(screen.getByRole('button', { name: 'Add visit after São Paulo' }));
     expect(screen.getByRole('heading', { name: 'Add visit' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Add visit', exact: true })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^Add visit$/ })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Discard' }));
     expect(screen.getByRole('heading', { name: 'Edit visit' })).toBeInTheDocument();
   });
