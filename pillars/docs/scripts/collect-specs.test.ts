@@ -37,6 +37,7 @@ const EXPECTED_PILLARS = [
   'purchases',
   'registry',
   'tags',
+  'trips',
 ] as const;
 
 describe('collect-specs', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {

@@ -79,6 +79,7 @@ describe('PILLARS', () => {
       'barcode',
       'design',
       'tags',
+      'trips',
     ]);
   });
 

@@ -210,6 +210,7 @@ describe('KnownPillarId', () => {
         'barcode',
         'design',
         'tags',
+        'trips',
       ]
     >();
   });

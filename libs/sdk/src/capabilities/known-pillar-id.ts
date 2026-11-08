@@ -43,6 +43,7 @@ export const PILLARS = [
   'barcode',
   'design',
   'tags',
+  'trips',
 ] as const;
 
 /**

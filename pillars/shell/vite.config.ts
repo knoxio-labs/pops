@@ -94,6 +94,7 @@ export default defineConfig({
       '/bfm-api': createDevApiProxy('http://localhost:3014', '/bfm-api'),
       '/barcode-api': createDevApiProxy('http://localhost:3016', '/barcode-api'),
       '/tags-api': createDevApiProxy('http://localhost:3017', '/tags-api'),
+      '/trips-api': createDevApiProxy('http://localhost:3018', '/trips-api'),
       // The design playground's comment API. The shell itself never calls it —
       // the playground does — but nginx routes the prefix, and the drift test
       // holds this file to routing every prefix nginx does.

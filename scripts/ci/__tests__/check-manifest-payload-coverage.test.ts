@@ -71,6 +71,7 @@ const EXPECTED_BUILDERS = [
   'purchases:buildPurchasesManifest',
   'registry:buildRegistryManifest',
   'tags:buildTagsManifest',
+  'trips:buildTripsManifest',
   'shell:buildShellManifest',
 ];
 

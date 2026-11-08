@@ -1,0 +1,8 @@
+dbs:
+  - path: /data/sqlite/trips.db
+    replicas:
+      - url: ${TRIPS_LITESTREAM_REPLICA_URL}
+        sync-interval: 1s
+        retention: 24h
+        snapshot-interval: 1h
+        validation-interval: 12h
