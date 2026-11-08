@@ -1,6 +1,9 @@
 name: Trip creation and settings
 question: Create with minimal input first, or expose all trip settings at creation?
-status: active
+status: decided
+chosen: full
+decided: 2026-11-08
+rationale: Joao approved All fields with a plain When subtitle and no route context in creation.
 frame: web
 screen: trips/settings
 variants:
