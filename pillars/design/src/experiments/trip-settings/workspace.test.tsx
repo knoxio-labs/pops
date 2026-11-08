@@ -24,19 +24,19 @@ describe('trip creation and settings', () => {
     'keeps %s as source subtitle text without interpreting dates',
     (when) => {
       render(<SettingsWorkspace layout="full" scenario="existing" />);
-      const route = screen.getByRole('region', { name: 'Route dates' }).textContent;
       fireEvent.change(screen.getByLabelText('When'), { target: { value: when } });
       expect(screen.getByLabelText('Trip subtitle')).toHaveTextContent(when);
       fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
       expect(screen.getByText('Saved')).toBeInTheDocument();
       expect(screen.getByLabelText('When')).toHaveValue(when);
-      expect(screen.getByRole('region', { name: 'Route dates' }).textContent).toBe(route);
+      expect(screen.queryByRole('region', { name: 'Route dates' })).not.toBeInTheDocument();
       expect(screen.queryByRole('region', { name: 'Settings issues' })).not.toBeInTheDocument();
     }
   );
 
   it('saves, discards and undoes subtitle edits independently of the name', () => {
     render(<SettingsWorkspace layout="full" scenario="season" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Create trip' }));
     fireEvent.change(screen.getByLabelText('When'), { target: { value: 'Around July' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
     fireEvent.change(screen.getByLabelText('When'), { target: { value: '' } });
@@ -49,21 +49,24 @@ describe('trip creation and settings', () => {
     expect(screen.getByLabelText('Trip subtitle')).toHaveTextContent('Around July');
   });
 
-  it('leaves unknown outer bounds open instead of substituting inner dated stops', () => {
-    render(<SettingsWorkspace layout="full" scenario="open-route" />);
-    const section = screen.getByRole('region', { name: 'Route dates' });
-    expect(section.querySelector('p')).not.toBeInTheDocument();
-    expect(section).toHaveTextContent('From stops and journeys');
-  });
+  it.each(['month', 'season', 'arbitrary-when'] as const)(
+    'starts the %s example as creation without a route',
+    (scenario) => {
+      render(<SettingsWorkspace layout="full" scenario={scenario} />);
+      expect(screen.getByRole('heading', { name: 'New trip' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Create trip' })).toBeEnabled();
+      expect(screen.queryByRole('region', { name: 'Route dates' })).not.toBeInTheDocument();
+      expect(screen.queryByText('From stops and journeys')).not.toBeInTheDocument();
+    }
+  );
 
   it('excludes descendants from parent selection and preserves route and When values', () => {
-    render(<SettingsWorkspace layout="full" scenario="season" />);
-    const route = screen.getByRole('region', { name: 'Route dates' }).textContent;
+    render(<SettingsWorkspace layout="full" scenario="existing" />);
     const when = screen.getByLabelText('When').getAttribute('value');
     fireEvent.click(screen.getByRole('combobox', { name: 'Parent trip' }));
     expect(screen.queryByRole('option', { name: 'Olinda' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('option', { name: 'South America' }));
-    expect(screen.getByRole('region', { name: 'Route dates' }).textContent).toBe(route);
+    expect(screen.queryByRole('region', { name: 'Route dates' })).not.toBeInTheDocument();
     expect(screen.getByLabelText('When')).toHaveValue(when);
     fireEvent.click(screen.getByRole('button', { name: 'Remove parent trip' }));
     fireEvent.click(screen.getByRole('button', { name: 'Undo' }));

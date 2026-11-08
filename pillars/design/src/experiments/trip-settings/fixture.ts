@@ -84,17 +84,23 @@ export function initialSettings(scenario: SettingsScenario = 'default'): Setting
   if (scenario === 'month')
     return {
       ...state,
-      trip: { ...state.trip, when: 'Around July' },
+      trip: { ...state.trip, id: 'draft-trip', when: 'Around July' },
+      saved: null,
+      route: [],
     };
   if (scenario === 'season')
     return {
       ...state,
-      trip: { ...state.trip, when: 'Summer 2027–28' },
+      trip: { ...state.trip, id: 'draft-trip', when: 'Summer 2027–28' },
+      saved: null,
+      route: [],
     };
   if (scenario === 'arbitrary-when')
     return {
       ...state,
-      trip: { ...state.trip, when: 'After the exams, if possible' },
+      trip: { ...state.trip, id: 'draft-trip', when: 'After the exams, if possible' },
+      saved: null,
+      route: [],
     };
   if (scenario === 'missing-reference')
     return {

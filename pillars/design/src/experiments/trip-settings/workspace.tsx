@@ -11,7 +11,6 @@ import { initialSettings } from './fixture';
 import { SettingsHeading, SettingsActions, SettingsIssues } from './form-parts';
 import { settingsFindings, saveSettings } from './model';
 import { SettingsReview } from './review';
-import { RouteDates } from './route-dates';
 
 import type { SettingsScenario } from './fixture';
 
@@ -88,7 +87,6 @@ function OptionalFields() {
     <div className="space-y-4">
       <NameField />
       <WhenField />
-      <RouteDates />
       <TagField />
       <ParentField />
       <details>
