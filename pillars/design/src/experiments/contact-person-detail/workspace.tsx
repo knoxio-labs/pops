@@ -63,7 +63,7 @@ function PersonReview({ layout }: { layout: 'details' | 'plans' }) {
   return (
     <aside className="space-y-2 border-b bg-muted px-5 py-3">
       <div className="flex flex-wrap items-center gap-3">
-        <Badge variant="outline">C02 · Review</Badge>
+        <Badge variant="outline">C02 · Approved</Badge>
         <span className="text-xs text-muted-foreground">
           Fictional data · local edits reset on reload
         </span>
