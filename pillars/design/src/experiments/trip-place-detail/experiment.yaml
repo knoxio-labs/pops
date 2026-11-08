@@ -1,0 +1,8 @@
+name: Place and idea detail
+question: Start with the idea details or keep the idea within its route context?
+status: active
+frame: web
+screen: trips/place
+variants:
+  details: Idea details with route context available on demand
+  route: The idea editor within its selected visit
