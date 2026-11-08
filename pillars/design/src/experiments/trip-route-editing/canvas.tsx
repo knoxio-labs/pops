@@ -1,17 +1,18 @@
 import { tripDisplayName, tripMetadata } from '@/fixtures/trip-metadata';
 import { RotateCcw } from 'lucide-react';
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { Button, SortableGrid } from '@pops/ui';
 
 import { flightWindow, timingFindings } from './calendar-model';
 import { CalendarView } from './calendar-view';
-import { captureCard, moveCard, reorderCards } from './canvas-actions';
+import { reorderCards } from './canvas-actions';
 import { canvasCalendar, canvasTimingRules } from './canvas-calendar';
 import { CanvasContext, canvasDragType, useCanvas } from './canvas-context';
 import { CanvasInsert } from './canvas-insert';
 import { initialCanvas } from './canvas-model';
 import { RentalSections } from './canvas-rentals';
+import { useCanvasActions, useRouteState } from './canvas-state';
 import { RouteTimelineItem } from './canvas-timeline';
 import { CanvasToolbar } from './canvas-toolbar';
 import { PlannerReview } from './review';
@@ -22,7 +23,7 @@ import type { PlannerScenario } from './model';
 
 /** One editable source graph projects into city, booking, day-range and flight-window views. */
 export function PlannerCanvas({ scenario = 'default' }: { scenario?: PlannerScenario }) {
-  const route = useRouteState(scenario);
+  const route = useRouteState(() => initialCanvas(scenario));
   const { state, change } = route;
   const [scale, setScale] = useState<CanvasScale>('bookings');
   const [range, setRange] = useState(() => initialRange(state));
@@ -55,46 +56,6 @@ export function PlannerCanvas({ scenario = 'default' }: { scenario?: PlannerScen
       </main>
     </CanvasContext.Provider>
   );
-}
-
-function useCanvasActions(
-  state: CanvasState,
-  change: (next: CanvasState) => void,
-  showDetails: boolean
-) {
-  const [dragged, setDragged] = useState<string | null>(null);
-  const [hoverVisit, setHoverVisit] = useState<string | null>(null);
-  const [previewOrder, setPreviewOrder] = useState<string[] | null>(null);
-  const preview = useMemo(
-    () => (previewOrder ? { ...state, order: previewOrder } : state),
-    [state, previewOrder]
-  );
-  const actions = useMemo(
-    () => ({
-      state,
-      preview,
-      showDetails,
-      change,
-      dragged,
-      setDragged,
-      hoverVisit,
-      setHoverVisit,
-      previewOrder: setPreviewOrder,
-      add: (
-        kind: Parameters<typeof captureCard>[1],
-        title: string,
-        target: Parameters<typeof captureCard>[3]
-      ) => change(captureCard(state, kind, title, target)),
-      move: (id: string, target: Parameters<typeof moveCard>[2]) => {
-        change(moveCard(state, id, target));
-        setDragged(null);
-        setHoverVisit(null);
-        setPreviewOrder(null);
-      },
-    }),
-    [state, preview, showDetails, change, dragged, hoverVisit]
-  );
-  return actions;
 }
 
 function initialRange(state: CanvasState) {
@@ -132,27 +93,6 @@ function CanvasHeader({ canUndo, undo }: { canUndo: boolean; undo: () => void })
       </Button>
     </header>
   );
-}
-
-function useRouteState(scenario: PlannerScenario) {
-  const [route, setRoute] = useState<{ state: CanvasState; history: CanvasState[] }>(() => ({
-    state: initialCanvas(scenario),
-    history: [],
-  }));
-  const change = useCallback((next: CanvasState) => {
-    setRoute((previous) =>
-      next === previous.state
-        ? previous
-        : { state: next, history: [...previous.history, previous.state] }
-    );
-  }, []);
-  const undo = useCallback(() => {
-    setRoute((previous) => {
-      const state = previous.history.at(-1);
-      return state ? { state, history: previous.history.slice(0, -1) } : previous;
-    });
-  }, []);
-  return { state: route.state, change, undo, canUndo: route.history.length > 0 };
 }
 
 function RouteCards() {

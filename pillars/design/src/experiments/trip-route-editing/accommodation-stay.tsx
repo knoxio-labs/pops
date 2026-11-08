@@ -8,6 +8,7 @@ import { useCanvas } from './canvas-context';
 import { isTripDate } from './lodging-periods';
 
 import type { TripRecord } from '@/fixtures/trip-overview-model';
+import type { DragEvent } from 'react';
 
 function StayDates({ stay, update }: { stay: TripRecord; update: (record: TripRecord) => void }) {
   const [pendingEnd, setPendingEnd] = useState(stay.schedule?.end);
@@ -45,6 +46,7 @@ function StayDates({ stay, update }: { stay: TripRecord; update: (record: TripRe
 }
 
 function StayStatus({ stay, update }: { stay: TripRecord; update: (record: TripRecord) => void }) {
+  const [open, setOpen] = useState(false);
   const arrangements: TripRecord['arrangement'][] = [
     'Not arranged',
     'Agreed',
@@ -53,7 +55,7 @@ function StayStatus({ stay, update }: { stay: TripRecord; update: (record: TripR
   ];
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <Popover>
+      <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button aria-label="Accommodation arrangement" variant="outline" className="min-h-11">
             {stay.arrangement}
@@ -64,7 +66,10 @@ function StayStatus({ stay, update }: { stay: TripRecord; update: (record: TripR
             <Button
               key={arrangement}
               variant={arrangement === stay.arrangement ? 'secondary' : 'ghost'}
-              onClick={() => update({ ...stay, arrangement })}
+              onClick={() => {
+                update({ ...stay, arrangement });
+                setOpen(false);
+              }}
             >
               {arrangement}
             </Button>
@@ -119,13 +124,13 @@ function StayEditor({ stay }: { stay: TripRecord }) {
   );
 }
 
-function StaySummary({ stay }: { stay: TripRecord }) {
+function StaySummary({ stay, showDates }: { stay: TripRecord; showDates: boolean }) {
   const schedule = stay.schedule;
   return (
     <span className="flex min-w-0 flex-wrap items-center gap-x-3 text-sm">
       <BedDouble className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
       <span className="font-medium">{stay.title}</span>
-      {schedule && (
+      {showDates && schedule && (
         <span className="font-normal text-muted-foreground">
           {formatTripDate(schedule.start)}
           {schedule.end && ` → ${formatTripDate(schedule.end)}`}
@@ -139,14 +144,22 @@ function StaySummary({ stay }: { stay: TripRecord }) {
   );
 }
 
-/** Compact movable stay summary exposes source name, dates and status; editing stays explicit. */
-export function AccommodationStay({ stay }: { stay: TripRecord }) {
+/** Compact stay editor; standaloneDrag=false delegates dragging to its containing sortable row. */
+export function AccommodationStay({
+  stay,
+  showDates = true,
+  standaloneDrag = true,
+}: {
+  stay: TripRecord;
+  showDates?: boolean;
+  standaloneDrag?: boolean;
+}) {
   const canvas = useCanvas();
   const invalid = hasInvalidStayDates(stay);
   return (
     <div
       data-canvas-id={stay.id}
-      draggable
+      draggable={standaloneDrag}
       role="group"
       aria-label={stay.title ?? 'Accommodation'}
       className={cn(
@@ -155,8 +168,8 @@ export function AccommodationStay({ stay }: { stay: TripRecord }) {
         invalid && 'border-destructive bg-destructive/10',
         canvas.dragged === stay.id && 'border border-dashed border-app-accent'
       )}
-      onDragStart={(event) => event.stopPropagation()}
-      onDragEnd={(event) => event.stopPropagation()}
+      onDragStart={standaloneDrag ? stopDragPropagation : undefined}
+      onDragEnd={standaloneDrag ? stopDragPropagation : undefined}
     >
       <div
         className={cn(
@@ -175,7 +188,7 @@ export function AccommodationStay({ stay }: { stay: TripRecord }) {
               variant="ghost"
               className="min-h-11 min-w-0 flex-1 justify-start whitespace-normal px-0 text-left"
             >
-              <StaySummary stay={stay} />
+              <StaySummary stay={stay} showDates={showDates} />
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-80">
@@ -190,4 +203,8 @@ export function AccommodationStay({ stay }: { stay: TripRecord }) {
       )}
     </div>
   );
+}
+
+function stopDragPropagation(event: DragEvent<HTMLDivElement>) {
+  event.stopPropagation();
 }

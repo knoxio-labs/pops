@@ -11,6 +11,7 @@ const kinds: { id: CaptureKind; label: string }[] = [
   { id: 'city', label: 'City / region' },
   { id: 'idea', label: 'Activity / idea' },
   { id: 'event', label: 'Event' },
+  { id: 'person', label: 'Person' },
   { id: 'stay', label: 'Accommodation' },
   { id: 'transport', label: 'Transport' },
   { id: 'rental', label: 'Car rental' },

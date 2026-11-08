@@ -64,7 +64,8 @@ function RentalDates({ rental, update }: RentalEditorProps) {
   );
 }
 
-function RentalEditor({ rental, update }: RentalEditorProps) {
+/** Edit source rental dates, visit endpoints and purchase status in the shared planner. */
+export function RentalEditor({ rental, update }: RentalEditorProps) {
   const statuses: RentalPeriod['status'][] = ['Considering', 'Reserved', 'Purchased'];
   return (
     <Popover>
@@ -169,7 +170,7 @@ export function RentalSections({ visitId }: { visitId: string }) {
   const { state } = useCanvas();
   return state.rentals.flatMap((rental) => {
     const pickup = rental.from === visitId || (visitId === '' && !knownVisit(state, rental.from));
-    const returning = visitId !== '' && rental.to === visitId;
+    const returning = visitId !== '' && rental.to === visitId && rental.from !== visitId;
     return [
       pickup && <RentalPickup key={`${rental.id}:pickup`} rental={rental} />,
       returning && <RentalReturn key={`${rental.id}:return`} rental={rental} />,
