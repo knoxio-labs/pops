@@ -9,9 +9,9 @@
  * (CP025/#3656): the deterministic ladder (`classifyWithoutAi`) resolves each
  * row synchronously, and every row that falls through to the AI stage is
  * deferred to `resolvePendingAi`, which folds them into shared batched Claude
- * calls instead of one round-trip per row. A third, separately gated pass
- * (`resolveTagsForMatched`, POPS-2596) then classifies the rows the ladder DID
- * resolve but left with no suggested tags.
+ * calls instead of one round-trip per row. A third pass (`resolveTagsForMatched`,
+ * POPS-2596) fills classified tags on deterministic spend matches that the
+ * ladder resolved, including rows that already carry tags from rules.
  */
 import { type FinanceDb, importsService } from '../../../db/index.js';
 import { type ContactsClient } from '../../contacts/client.js';

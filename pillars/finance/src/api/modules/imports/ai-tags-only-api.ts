@@ -1,3 +1,4 @@
+import { isClassifiedTagFacet, parseTagFacet } from '../../../db/tag-facets.js';
 /**
  * The tag-only prompt (POPS-2596): classify rows whose merchant the
  * deterministic ladder already resolved.
@@ -38,12 +39,14 @@ import type { AiCallUsage, CategorizerInput } from './ai-categorizer-types.js';
 
 export const TAGS_ONLY_OPERATION = 'imports.tags_only';
 
-/** One row to classify: the allowlisted transaction fields plus the entity the ladder resolved it to. */
+/** Data sent to classify a merchant-known transaction using allowlisted fields. */
 export interface TagsOnlyInput {
   entityName: string;
   input: CategorizerInput;
   /** The type the ladder resolved the row to — always a spend type on this pass (POPS-3678). */
   transactionType?: string;
+  /** Classified tags already assigned by a correction, tag rule or entity default. */
+  existingTags?: string[];
   /**
    * The distinct classified tag sets on this merchant's earlier committed
    * transactions (POPS-3673), bounded by `loadPriorTagSets`. Absent when the
@@ -55,10 +58,20 @@ export interface TagsOnlyInput {
 const PRIOR_TAGS_RULE =
   '- "Previously tagged" lists how earlier transactions from the same merchant were tagged. It is precedent, not a constraint: classify each transaction on its own evidence, because a merchant can change what it sells.';
 
+const EXISTING_TAGS_RULE =
+  '- "Already assigned" tags are fixed for this transaction. Do not return them again or suggest a conflicting value on a single-valued facet. Fill other facets when the transaction supports them; for multi-valued facets, return only additional supported values.';
+
 function renderPriorTagSets(sets: readonly (readonly string[])[] | undefined): string {
   if (sets === undefined || sets.length === 0) return '';
   const rendered = sets.map((tags) => `[${tags.map(sanitizePromptField).join(', ')}]`);
   return ` | Previously tagged: ${rendered.join('; ')}`;
+}
+
+function renderExistingTags(tags: readonly string[] | undefined): string {
+  if (tags === undefined || tags.length === 0) return '';
+  const classified = tags.filter((tag) => isClassifiedTagFacet(parseTagFacet(tag).facet));
+  if (classified.length === 0) return '';
+  return ` | Already assigned: [${classified.map(sanitizePromptField).join(', ')}]`;
 }
 
 /** One row's classification. No `entityName` — the merchant was given, not guessed. */
@@ -102,12 +115,15 @@ export function buildTagsOnlyPrompt(
 ): string {
   const lines = inputs
     .map(
-      ({ entityName, input, transactionType, priorTagSets }, i) =>
-        `${i + 1}. ${buildMatchedTransactionData(entityName, input, transactionType).replaceAll('\n', ' | ')}${renderPriorTagSets(priorTagSets)}`
+      ({ entityName, input, transactionType, priorTagSets, existingTags }, i) =>
+        `${i + 1}. ${buildMatchedTransactionData(entityName, input, transactionType).replaceAll('\n', ' | ')}${renderExistingTags(existingTags)}${renderPriorTagSets(priorTagSets)}`
     )
     .join('\n');
   const facets = closedFacetOptions(knownTags, tagDescriptions);
   const hasPriors = inputs.some(({ priorTagSets }) => (priorTagSets?.length ?? 0) > 0);
+  const hasExistingTags = inputs.some(({ existingTags }) =>
+    existingTags?.some((tag) => isClassifiedTagFacet(parseTagFacet(tag).facet))
+  );
 
   return `Given these ${inputs.length} bank transactions, each already identified as the merchant named on its line, classify each one on the tag axes below. The merchant is given — do not revise it.
 
@@ -120,7 +136,7 @@ ${closedFacetFields(facets)}
 
 Reply with a JSON array of exactly ${inputs.length} objects, one per transaction. Each object carries the number of the line it answers as "n": [{"n": 1, ${closedFacetReplyShape(facets)}, "confidence": 0.0-1.0}, ...]
 
-${TAGS_RULES}${hasPriors ? `\n${PRIOR_TAGS_RULE}` : ''}
+${TAGS_RULES}${hasExistingTags ? `\n${EXISTING_TAGS_RULE}` : ''}${hasPriors ? `\n${PRIOR_TAGS_RULE}` : ''}
 
 confidence rules:
 ${tagConfidenceRule('confidence')}

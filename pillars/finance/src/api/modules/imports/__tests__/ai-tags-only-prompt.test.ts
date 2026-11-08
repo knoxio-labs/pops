@@ -38,13 +38,26 @@ describe('tag-only prompt', () => {
     expect(prompt).toContain('"contains": ["..."]');
     // The confidence is in the tags (POPS-3671), so there is no merchant to rate.
     expect(prompt).toContain('"confidence": 0.0-1.0');
-    expect(prompt).toContain('confidence (0.0-1.0) is your confidence that every tag you returned');
+    expect(prompt).toContain(
+      'Confidence controls pre-acceptance, not whether you should return a reasonable candidate'
+    );
     expect(prompt).not.toContain('entityName');
     expect(prompt).not.toContain('tagConfidence');
   });
 
   it('carries the shared closed-set rules rather than a second copy of them', () => {
     expect(buildTagsOnlyPrompt([ROW], VOCAB)).toContain(TAGS_RULES);
+  });
+
+  it('passes classified existing tags as fixed context and excludes marker tags', () => {
+    const prompt = buildTagsOnlyPrompt(
+      [{ ...ROW, existingTags: ['contains:groceries', 'person:private'] }],
+      VOCAB
+    );
+
+    expect(prompt).toContain('Already assigned: [contains:groceries]');
+    expect(prompt).toContain('Do not return them again or suggest a conflicting value');
+    expect(prompt).not.toContain('person:private');
   });
 
   it('sanitizes a merchant name carrying newlines into one prompt line', () => {
@@ -69,7 +82,7 @@ describe('tag-only prompt', () => {
   });
 
   it('has a prompt version distinct from the categorize prompts', () => {
-    expect(PROMPT_VERSION_TAGS_ONLY).toBe('tags-v3.4');
+    expect(PROMPT_VERSION_TAGS_ONLY).toBe('tags-v3.5');
   });
 });
 

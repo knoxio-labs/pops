@@ -36,7 +36,12 @@ describe('the prompts ask for a confidence in the tags', () => {
       buildBatchPrompt([{ description: 'WOOLWORTHS' }], VOCAB),
     ]) {
       expect(prompt).toContain('"confidence": 0.0-1.0, "tagConfidence": 0.0-1.0');
-      expect(prompt).toContain('tagConfidence (0.0-1.0) is your confidence that every tag');
+      expect(prompt).toContain(
+        'tagConfidence (0.0-1.0) is your confidence that every tag you returned is a useful and correct suggestion'
+      );
+      expect(prompt).toContain(
+        'Confidence controls pre-acceptance, not whether you should return a reasonable candidate.'
+      );
     }
   });
 
@@ -48,6 +53,9 @@ describe('the prompts ask for a confidence in the tags', () => {
 
     expect(prompt).toContain('"confidence": 0.0-1.0');
     expect(prompt).not.toContain('tagConfidence');
+    expect(prompt).toContain(
+      'Confidence controls pre-acceptance, not whether you should return a reasonable candidate.'
+    );
   });
 });
 

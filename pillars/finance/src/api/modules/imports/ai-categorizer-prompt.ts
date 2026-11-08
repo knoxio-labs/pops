@@ -13,10 +13,10 @@ import type { CategorizerInput } from './ai-categorizer-types.js';
  * — bump on every prompt-shape change so accept/reject quality is joinable
  * per prompt revision.
  */
-export const PROMPT_VERSION_CATEGORIZE = 'categorize-v4.3';
+export const PROMPT_VERSION_CATEGORIZE = 'categorize-v4.4';
 
 /** Versioned telemetry tag for the batched categorizer prompt (CF096/#3671). */
-export const PROMPT_VERSION_CATEGORIZE_BATCH = 'categorize-batch-v4.3';
+export const PROMPT_VERSION_CATEGORIZE_BATCH = 'categorize-batch-v4.4';
 
 /**
  * Versioned telemetry tag for the tag-only prompt (POPS-2596) — the shape that
@@ -24,7 +24,7 @@ export const PROMPT_VERSION_CATEGORIZE_BATCH = 'categorize-batch-v4.3';
  * categorize versions so this path's cost and its accept/reject quality are
  * readable on their own rather than folded into entity categorization.
  */
-export const PROMPT_VERSION_TAGS_ONLY = 'tags-v3.4';
+export const PROMPT_VERSION_TAGS_ONLY = 'tags-v3.5';
 
 /**
  * Render the allowlisted transaction fields as the prompt's "Transaction data"
@@ -85,14 +85,14 @@ export const ENTITY_NAME_RULES = `entityName rules:
  * the true answer on every offered axis was null.
  */
 export const AXIS_OPTIONALITY =
-  'Classify on an axis only where a listed value is actually true of the transaction. Leave every other axis null (or [] for a list axis): an empty axis is a correct answer, not a gap to fill.';
+  'Return the best-supported listed values as suggestions. A reasonable inference from a clear merchant or transaction description is useful even when it is not certain; report that uncertainty in confidence. Leave an axis empty (null for a single-valued field, [] for a list field) only when no listed value is reasonably supported. Do not fill every axis just to avoid an empty answer.';
 
 export const TAGS_RULES = `tag rules:
 - Each tag field above is a closed set. Choose only from the values listed for that field.
 - Where a value is followed by a description, that description is its definition. Classify against it, not against what the word suggests on its own.
 - The fields ask three different questions and a transaction often answers only some of them: occasion is the social setting the money was spent in, venue is what kind of place it was spent at, and contains is what was actually bought. Do not restate one field's answer in another.
 - A value that is not listed is not available. If nothing listed fits a field, return null (or [] for a list field) — do NOT invent a value, coin a near-synonym, or return a value from a different field's list.
-- Choose the most specific listed value that is true of the transaction, and omit a field you would only be guessing at. Omitting is a correct answer rather than a failure: routine provisioning — a grocery run, a fuel stop, a subscription — genuinely has no occasion, and leaving the field null is right where picking the nearest value is wrong.`;
+- Use a clearly identified merchant's well-known business type as evidence, alongside the transaction details and any prior tags. Include a useful, evidence-backed candidate even when it is an inference; lower confidence when the evidence is incomplete instead of omitting a plausible tag solely because certainty is not absolute. Do not infer from an ambiguous merchant name. Leave a field empty only when no listed value is reasonably supported. Routine provisioning — a grocery run, a fuel stop, a subscription — genuinely has no occasion, and leaving the field null is right where picking the nearest value is wrong.`;
 
 /**
  * What a tag confidence means (POPS-3671). Shared by every shape that asks for
@@ -101,7 +101,7 @@ export const TAGS_RULES = `tag rules:
  * calls it `confidence`.
  */
 export function tagConfidenceRule(field: string): string {
-  return `- ${field} (0.0-1.0) is your confidence that every tag you returned is true of the transaction. 1.0 only when the transaction leaves no doubt; lower it for each tag you inferred rather than read; an answer with no tags at all can still be confident.`;
+  return `- ${field} (0.0-1.0) is your confidence that every tag you returned is a useful and correct suggestion for the transaction. 1.0 only when the evidence leaves no doubt; lower it when a tag is inferred. Confidence controls pre-acceptance, not whether you should return a reasonable candidate.`;
 }
 
 export const CONFIDENCE_RULES = `confidence rules:

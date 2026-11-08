@@ -77,7 +77,7 @@ function makeRow(spec: RowSpec): TransactionProcessResult {
   return { [spec.bucket ?? 'matched']: row, batchStatus: 'success' } as TransactionProcessResult;
 }
 
-/** A tag-poor Woolworths row — the exact case the ticket exists for. */
+/** A Woolworths row with no classified tags. */
 function tagPoorRow(description = 'WOOLWORTHS 2246'): TransactionProcessResult {
   return makeRow({ description, entityId: 'woolies', entityName: 'Woolworths' });
 }
@@ -92,7 +92,7 @@ function makeContext(): ProcessContext {
   return {
     entityLookup: new Map(),
     aliases: new Map(),
-    knownTags: ['venue:supermarket', 'contains:groceries'],
+    knownTags: ['venue:supermarket', 'venue:cafe', 'contains:groceries'],
     tagDescriptions: new Map<string, string>(),
     importBatchId: 'batch-1',
     entityDefaultTags: new Map(),
@@ -219,7 +219,10 @@ describe('trigger predicate', () => {
     ]);
   });
 
-  it('leaves a row that already carries rule tags alone', async () => {
+  it('adds missing facets without replacing or duplicating rule tags', async () => {
+    tagsOnlyBatchWithAi.mockResolvedValue(
+      reply({ tags: ['venue:supermarket', 'contains:groceries'] })
+    );
     const results = [
       makeRow({
         description: 'WOOLWORTHS 2246',
@@ -231,9 +234,32 @@ describe('trigger predicate', () => {
 
     await resolve(results);
 
-    expect(tagsOnlyBatchWithAi).not.toHaveBeenCalled();
+    expect(tagsOnlyBatchWithAi).toHaveBeenCalledTimes(1);
+    expect(callInputs(0)[0]?.existingTags).toEqual(['contains:groceries']);
     expect(rowOf(results[0]!).suggestedTags).toEqual([
       { tag: 'contains:groceries', source: 'rule', pattern: 'WOOLWORTHS' },
+      { tag: 'venue:supermarket', source: 'ai', preAccept: false },
+    ]);
+  });
+
+  it('does not append a conflicting AI value on a single-valued facet', async () => {
+    tagsOnlyBatchWithAi.mockResolvedValue(
+      reply({ tags: ['venue:supermarket', 'contains:groceries'] })
+    );
+    const results = [
+      makeRow({
+        description: 'WOOLWORTHS 2246',
+        entityId: 'woolies',
+        entityName: 'Woolworths',
+        suggestedTags: [{ tag: 'venue:cafe', source: 'rule', pattern: 'WOOLWORTHS' }],
+      }),
+    ];
+
+    await resolve(results);
+
+    expect(rowOf(results[0]!).suggestedTags).toEqual([
+      { tag: 'venue:cafe', source: 'rule', pattern: 'WOOLWORTHS' },
+      { tag: 'contains:groceries', source: 'ai', preAccept: false },
     ]);
   });
 
@@ -305,14 +331,25 @@ describe('trigger predicate', () => {
 });
 
 describe('env gating', () => {
-  it('makes no call when only the categorizer is enabled', async () => {
+  it('runs by default when the main categorizer is enabled', async () => {
     delete process.env['FINANCE_AI_CATEGORIZER_TAGS_FOR_MATCHED'];
+    tagsOnlyBatchWithAi.mockResolvedValue(reply({ tags: ['venue:supermarket'] }));
     const results = [tagPoorRow()];
 
     await resolve(results);
 
+    expect(tagsOnlyBatchWithAi).toHaveBeenCalledTimes(1);
+    expect(rowOf(results[0]!).suggestedTags).toEqual([
+      { tag: 'venue:supermarket', source: 'ai', preAccept: false },
+    ]);
+  });
+
+  it('honours an explicit opt-out for matched-row tag classification', async () => {
+    process.env['FINANCE_AI_CATEGORIZER_TAGS_FOR_MATCHED'] = 'false';
+
+    await resolve([tagPoorRow()]);
+
     expect(tagsOnlyBatchWithAi).not.toHaveBeenCalled();
-    expect(rowOf(results[0]!).suggestedTags).toEqual([]);
     expect(counters).toEqual(createAiCounters());
   });
 
@@ -407,6 +444,34 @@ describe('deduplication and chunking', () => {
     ]);
 
     expect(callInputs(0).map((i) => i.entityName)).toEqual(['Alpha', 'Beta']);
+  });
+
+  it('keeps rows with different assigned facets in separate prompt entries', async () => {
+    tagsOnlyBatchWithAi.mockResolvedValue(
+      reply({ tags: ['venue:supermarket'] }, { tags: ['venue:cafe'] })
+    );
+    const results = [
+      makeRow({
+        description: 'PAYMENT',
+        entityId: 'store',
+        entityName: 'Store',
+        suggestedTags: [{ tag: 'contains:groceries', source: 'rule', pattern: 'PAYMENT' }],
+      }),
+      makeRow({
+        description: 'PAYMENT',
+        entityId: 'store',
+        entityName: 'Store',
+        suggestedTags: [{ tag: 'venue:cafe', source: 'rule', pattern: 'PAYMENT' }],
+      }),
+    ];
+
+    await resolve(results);
+
+    expect(callInputs(0)).toHaveLength(2);
+    expect(callInputs(0).map(({ existingTags }) => existingTags)).toEqual([
+      ['contains:groceries'],
+      ['venue:cafe'],
+    ]);
   });
 
   it('chunks distinct descriptors at the configured batch size', async () => {
