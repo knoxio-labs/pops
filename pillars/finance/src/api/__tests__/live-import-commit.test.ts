@@ -393,6 +393,28 @@ describe("dating a live draft's reported balance", () => {
     }
   });
 
+  it.each([
+    ['00:20 local', '2026-09-15T14:20:00.000Z'],
+    ['23:40 local', '2026-09-16T13:40:00.000Z'],
+  ])(
+    'mints nothing for a reading at %s, where a stale offset could change the day',
+    async (_label, syncedAt) => {
+      const accountId = await upAccountId();
+
+      await syncAndCommit(accountId, [salary], 453_767, syncedAt);
+
+      expect(checkpointsFor(accountId)).toEqual([]);
+    }
+  );
+
+  it('mints at 01:00 local, the edge of that window', async () => {
+    const accountId = await upAccountId();
+
+    await syncAndCommit(accountId, [salary], 453_767, '2026-09-15T15:00:00.000Z');
+
+    expect(checkpointsFor(accountId)).toEqual([{ asOf: '2026-09-15', balanceCents: 453_767 }]);
+  });
+
   it('mints nothing for a draft staged before readings carried a time', async () => {
     const { draftId } = await stageLiveDraft();
     financeDb.raw

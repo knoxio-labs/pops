@@ -52,6 +52,10 @@ export function liveDraftOf(
  * The close of the last day over when the balance was read, or undefined
  * when the ledger already holds a row dated after the reading's day: the
  * reading predates it and says nothing about any close.
+ *
+ * Also undefined within an hour of local midnight. The reading's offset is
+ * borrowed from an Up stamp that can predate a daylight-saving change, so
+ * it can be an hour out, and that near midnight is a different day.
  */
 export function closeBeforeReading(
   tx: FinanceDb,
@@ -59,6 +63,8 @@ export function closeBeforeReading(
   reading: { cents: number; reportedAt: string }
 ): { asOf: string; balanceCents: number } | undefined {
   const readOn = reading.reportedAt.slice(0, 10);
+  const timeOfDay = reading.reportedAt.slice(11, 16);
+  if (timeOfDay < '01:00' || timeOfDay >= '23:00') return undefined;
   if (hasTransactionAfter(tx, accountId, readOn)) return undefined;
   const asOf = dayBefore(readOn);
   const readDayCents = sumThrough(tx, accountId, readOn) - sumThrough(tx, accountId, asOf);

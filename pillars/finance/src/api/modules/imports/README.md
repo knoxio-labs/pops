@@ -87,8 +87,9 @@ Three things about the wire that no single file states:
   `api` batch, mints `balance_reported_cents` as an `import` checkpoint, and
   deletes the draft, all inside the one transaction. The checkpoint is dated
   to the day before `balance_reported_at`'s calendar date, the last day over
-  when the balance was read, at the balance less that day's rows. A commit
-  that fails leaves the draft to be resumed.
+  when the balance was read, at the balance less that day's rows. A reading
+  within an hour of local midnight mints nothing, since its borrowed offset
+  can be an hour out. A commit that fails leaves the draft to be resumed.
 - **A live draft belongs to the bank until a person claims it.** Claiming
   turns it `saved`, so the Up path never writes into a draft someone has open;
   what arrives afterwards collects in a new live draft for the account. The
