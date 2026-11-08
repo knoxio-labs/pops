@@ -183,6 +183,8 @@ describe('syncUpAccount', () => {
       dateFrom: '2026-09-02',
       dateTo: '2026-09-04',
       balanceReportedCents: 48_800,
+      // The pass's own instant, in the offset the newest row carries.
+      balanceReportedAt: '2026-09-06T11:02:03+10:00',
       ownerToken: null,
     });
     const payload = readLiveDraftPayload(draft!);

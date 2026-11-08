@@ -5,6 +5,7 @@ import {
   toParsedTransaction,
   upChecksum,
   upLocalDate,
+  upStampAt,
 } from '../map-transaction.js';
 import { upTransaction } from './fixtures.js';
 
@@ -42,6 +43,28 @@ describe('upChecksum', () => {
 describe('upLocalDate', () => {
   it("takes the calendar date in the stamp's own offset, not UTC", () => {
     expect(upLocalDate('2026-09-01T00:30:00+10:00')).toBe('2026-09-01');
+  });
+});
+
+describe('upStampAt', () => {
+  const at = new Date('2026-09-15T06:40:20.214Z');
+
+  it("writes the instant in the other stamp's offset", () => {
+    expect(upStampAt(at, '2026-09-01T09:30:00+10:00')).toBe('2026-09-15T16:40:20+10:00');
+  });
+
+  it('rolls the calendar date when the offset crosses midnight', () => {
+    const lateUtc = new Date('2026-11-07T14:30:00.000Z');
+    expect(upLocalDate(upStampAt(lateUtc, '2026-11-01T08:00:00+11:00'))).toBe('2026-11-08');
+  });
+
+  it('subtracts a negative offset', () => {
+    expect(upStampAt(at, '2026-09-01T09:30:00-03:30')).toBe('2026-09-15T03:10:20-03:30');
+  });
+
+  it('reads a stamp with no offset as UTC', () => {
+    expect(upStampAt(at, '2026-09-01T09:30:00Z')).toBe('2026-09-15T06:40:20Z');
+    expect(upStampAt(at, '2026-09-01T09:30:00')).toBe('2026-09-15T06:40:20Z');
   });
 });
 

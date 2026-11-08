@@ -176,14 +176,14 @@ export interface ReportedBalance {
   accountId: string;
   /** Already ledger-signed: a provider reports the account's balance, not a statement column. */
   balanceCents: number;
-  /** The date of the newest row the balance was reported with. */
+  /** The day this balance closed; see `closeBeforeReading` in `commit-live-draft.ts`. */
   asOf: string;
 }
 
 /**
- * Mint the checkpoint a live draft carried (finance ADR-005, POPS-3335): the
- * balance Up reported with its newest row, dated to that row, once the rows
- * are in the ledger. Skipped when that account and day already have one.
+ * Mint the checkpoint a live draft carried (finance ADR-005, POPS-3335),
+ * once the rows are in the ledger. Skipped when that account and day already
+ * have one.
  */
 export function mintReportedBalanceCheckpoint(
   tx: FinanceDb,

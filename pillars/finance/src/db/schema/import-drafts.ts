@@ -49,6 +49,12 @@ export const importDrafts = sqliteTable(
     dateTo: text('date_to'),
     /** Live only: the balance the provider reported with the newest row. */
     balanceReportedCents: integer('balance_reported_cents'),
+    /**
+     * Live only: the instant that balance was read, in the customer's own UTC
+     * offset, so its first ten characters are their calendar date. Written
+     * with the balance and never without it.
+     */
+    balanceReportedAt: text('balance_reported_at'),
     /** The `import_sessions` row whose result the Process step can reuse; FK-less because sessions expire. */
     processSessionId: text('process_session_id'),
     ownerToken: text('owner_token'),

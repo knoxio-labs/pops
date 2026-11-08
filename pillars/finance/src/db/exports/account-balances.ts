@@ -15,7 +15,9 @@ export { transactionCountsFor } from '../services/account-transaction-count.js';
 export {
   checkpointDelta,
   dayBefore,
+  hasTransactionAfter,
   isAccountInconsistent,
+  sumThrough,
   today,
   type AccountBalance,
   type BalanceAnchor,

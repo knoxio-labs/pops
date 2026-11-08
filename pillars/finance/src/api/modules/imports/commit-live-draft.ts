@@ -1,12 +1,26 @@
 /**
  * What a commit does when it finishes a draft the bank filled (finance
- * ADR-005, POPS-3335): the balance the provider reported with the newest
- * row becomes an `import` checkpoint dated to that row, and the batch is
- * recorded as the provider's rather than a file's. Both happen inside the
- * commit's own transaction, so a rejected commit leaves the draft, the
- * checkpoint and the batch alike untouched.
+ * ADR-005, POPS-3335): the balance the provider reported becomes an
+ * `import` checkpoint, and the batch is recorded as the provider's rather
+ * than a file's. Both happen inside the commit's own transaction, so a
+ * rejected commit leaves the draft, the checkpoint and the batch alike
+ * untouched.
+ *
+ * A checkpoint is a day's closing balance, and the reported balance is what
+ * the account held at one instant. The last day fully over at that instant
+ * is the one before the reading's, so that is the day the checkpoint is
+ * dated to, at the reading less every ledger row dated the reading's own
+ * day. Dating it to the newest row instead recorded a mid-afternoon reading
+ * as that day's close, and every later checkpoint disagreed with it by the
+ * rows that followed.
  */
-import { importDraftsService, type FinanceDb } from '../../../db/index.js';
+import {
+  dayBefore,
+  hasTransactionAfter,
+  importDraftsService,
+  sumThrough,
+  type FinanceDb,
+} from '../../../db/index.js';
 import { UP_MAPPER_VERSION } from '../up-bank/map-transaction.js';
 import { mintReportedBalanceCheckpoint } from './commit-checkpoint.js';
 
@@ -17,6 +31,7 @@ import type { CommitCheckpoint } from './types.js';
 export interface LiveDraftContext {
   accountId: string;
   balanceReportedCents: number | null;
+  balanceReportedAt: string | null;
 }
 
 export function liveDraftOf(
@@ -26,15 +41,28 @@ export function liveDraftOf(
   if (draftId === undefined) return undefined;
   const draft = importDraftsService.getImportDraft(db, draftId);
   if (draft === undefined || draft.sourceKind !== 'live') return undefined;
-  return { accountId: draft.accountId, balanceReportedCents: draft.balanceReportedCents };
+  return {
+    accountId: draft.accountId,
+    balanceReportedCents: draft.balanceReportedCents,
+    balanceReportedAt: draft.balanceReportedAt,
+  };
 }
 
-function newestDateFor(inserted: readonly InsertedRow[], accountId: string): string | undefined {
-  return inserted
-    .filter((row) => row.accountId === accountId)
-    .map((row) => row.date)
-    .toSorted()
-    .at(-1);
+/**
+ * The close of the last day over when the balance was read, or undefined
+ * when the ledger already holds a row dated after the reading's day: the
+ * reading predates it and says nothing about any close.
+ */
+export function closeBeforeReading(
+  tx: FinanceDb,
+  accountId: string,
+  reading: { cents: number; reportedAt: string }
+): { asOf: string; balanceCents: number } | undefined {
+  const readOn = reading.reportedAt.slice(0, 10);
+  if (hasTransactionAfter(tx, accountId, readOn)) return undefined;
+  const asOf = dayBefore(readOn);
+  const readDayCents = sumThrough(tx, accountId, readOn) - sumThrough(tx, accountId, asOf);
+  return { asOf, balanceCents: reading.cents - readDayCents };
 }
 
 interface InsertedRow {
@@ -53,14 +81,15 @@ export interface LiveDraftCommitArgs {
 /** Mint the reported balance for a live draft, appending to the commit's own lists. */
 export function commitLiveDraftPhase(tx: FinanceDb, args: LiveDraftCommitArgs): void {
   const { liveDraft } = args;
-  if (liveDraft?.balanceReportedCents == null) return;
-  const asOf = newestDateFor(args.inserted, liveDraft.accountId);
-  if (asOf === undefined) return;
-  const minted = mintReportedBalanceCheckpoint(
-    tx,
-    { accountId: liveDraft.accountId, balanceCents: liveDraft.balanceReportedCents, asOf },
-    args.commitKey
-  );
+  if (liveDraft?.balanceReportedCents == null || liveDraft.balanceReportedAt === null) return;
+  const accountId = liveDraft.accountId;
+  if (!args.inserted.some((row) => row.accountId === accountId)) return;
+  const close = closeBeforeReading(tx, accountId, {
+    cents: liveDraft.balanceReportedCents,
+    reportedAt: liveDraft.balanceReportedAt,
+  });
+  if (close === undefined) return;
+  const minted = mintReportedBalanceCheckpoint(tx, { accountId, ...close }, args.commitKey);
   if (minted === undefined) return;
   args.checkpoints.push(minted.checkpoint);
   if (minted.warning) args.warnings.push(minted.warning);

@@ -526,6 +526,13 @@
       "when": 1791333600000,
       "tag": "0123_shared_account_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
+      "when": 1794130000000,
+      "tag": "0124_import_draft_balance_reported_at",
+      "breakpoints": true
     }
   ]
 }

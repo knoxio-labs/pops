@@ -60,8 +60,11 @@ function configure(
   });
 }
 
+const DELIVERED_AT = new Date('2026-09-05T03:15:00.000Z');
+
 function ingestWith(clients: Record<string, UpBankClient>): UpWebhookIngest {
   return makeUpWebhookIngest(db, makeContactsFake(), {
+    now: () => DELIVERED_AT,
     clientFor: (secretRef) => {
       const client = clients[secretRef];
       if (!client) throw new Error(`no client for ${secretRef}`);
@@ -132,6 +135,7 @@ describe('makeUpWebhookIngest', () => {
       unresolvedCount: 1,
       dateFrom: '2026-09-05',
       balanceReportedCents: 48_800,
+      balanceReportedAt: '2026-09-05T13:15:00+10:00',
     });
     const payload = readLiveDraftPayload(draft!);
     expect(payload.parsedTransactions.map((t) => [t.date, t.amount])).toEqual([

@@ -22,7 +22,7 @@
  * Every figure here is ledger-signed: positive is money held, negative is
  * money owed, for assets and liabilities alike.
  */
-import { and, eq, lte, sum } from 'drizzle-orm';
+import { and, eq, gt, lte, sum } from 'drizzle-orm';
 
 import { transactions } from '../schema.js';
 import {
@@ -97,6 +97,17 @@ export function sumThrough(db: FinanceDb, accountId: string, date: string): numb
     .where(and(eq(transactions.accountId, accountId), lte(transactions.date, date)))
     .get();
   return Number(row?.total ?? 0);
+}
+
+/** Whether the account holds any transaction dated after `date`. */
+export function hasTransactionAfter(db: FinanceDb, accountId: string, date: string): boolean {
+  const row = db
+    .select({ id: transactions.id })
+    .from(transactions)
+    .where(and(eq(transactions.accountId, accountId), gt(transactions.date, date)))
+    .limit(1)
+    .get();
+  return row !== undefined;
 }
 
 export function toAnchor(checkpoint: AccountCheckpointRow): BalanceAnchor {

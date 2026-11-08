@@ -4,10 +4,10 @@
  *
  * The write half of {@link planUpSync}: run the new rows through the same
  * process → commit pipeline a file import uses, settle the held ones in
- * place, and mint an `import` checkpoint from the account's API balance dated
- * the day of the sync — not the newest row's date, because the balance is
- * what Up says the account holds NOW, and a range that ends last month says
- * nothing about today.
+ * place, and stage the account's API balance with the instant it was read.
+ * The balance is what Up says the account holds now, not at the close of the
+ * newest row's day; the commit turns it into a checkpoint
+ * (`imports/commit-live-draft.ts`).
  *
  * A sync that finds nothing new still writes a batch with zero rows: for an
  * API source, "checked, nothing new" is the fact worth recording, and it is
@@ -15,6 +15,7 @@
  */
 import { accountImportConfigService, type FinanceDb } from '../../../db/index.js';
 import { stageMappedRows } from '../import-drafts/live-draft.js';
+import { upStampAt } from './map-transaction.js';
 import { planUpSync, type UpSyncArgs } from './sync-plan.js';
 import { settleMappedRows } from './write-rows.js';
 
@@ -65,16 +66,20 @@ export async function syncUpAccount(
   contacts: ContactsClient,
   args: UpSyncArgs
 ): Promise<UpSyncResult> {
+  const syncedAt = args.syncedAt ?? new Date();
   const plan = await planUpSync(db, args);
   const staged = await stageMappedRows({
     db,
     contacts,
     target: { accountId: plan.account.id, accountName: plan.account.name },
     rows: plan.newRows,
-    balanceCents: plan.upAccount.attributes.balance.valueInBaseUnits,
+    balance: {
+      cents: plan.upAccount.attributes.balance.valueInBaseUnits,
+      reportedAt: upStampAt(syncedAt, plan.latestStamp),
+    },
   });
   const { settled, refused } = settleMappedRows(db, plan.settleable);
-  accountImportConfigService.markSynced(db, plan.account.id, args.syncedAt ?? new Date());
+  accountImportConfigService.markSynced(db, plan.account.id, syncedAt);
 
   return {
     accountId: plan.account.id,

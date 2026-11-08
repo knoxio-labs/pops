@@ -56,16 +56,23 @@ export interface StagedRows {
   warnings: LiveDraftPayload['processedTransactions']['warnings'];
 }
 
+/** A balance the provider reported, and when it was read. */
+export interface ReportedBalanceReading {
+  cents: number;
+  /** The read instant in the customer's own UTC offset; see `upStampAt`. */
+  reportedAt: string;
+}
+
 interface LiveDraftWrite {
   existing: ImportDraftRow | undefined;
   target: LiveDraftTarget;
   payload: LiveDraftPayload;
-  balanceCents: number | null;
+  balance: ReportedBalanceReading | null;
 }
 
 function writeLiveDraft(
   db: FinanceDb,
-  { existing, target, payload, balanceCents }: LiveDraftWrite
+  { existing, target, payload, balance }: LiveDraftWrite
 ): ImportDraftRow {
   const counts = countsOf(payload);
   const body = { payload: JSON.stringify(payload), ...counts };
@@ -76,12 +83,15 @@ function writeLiveDraft(
       sourceKind: 'live',
       state: 'live',
       provider: 'up',
-      balanceReportedCents: balanceCents,
+      balanceReportedCents: balance?.cents ?? null,
+      balanceReportedAt: balance?.reportedAt ?? null,
     });
   }
   return importDraftsService.writeImportDraft(db, existing.id, {
     ...body,
-    ...(balanceCents === null ? {} : { balanceReportedCents: balanceCents }),
+    ...(balance === null
+      ? {}
+      : { balanceReportedCents: balance.cents, balanceReportedAt: balance.reportedAt }),
   });
 }
 
@@ -91,7 +101,7 @@ export interface StageInput {
   target: LiveDraftTarget;
   rows: readonly MappedUpTransaction[];
   /** The balance the provider reported with these rows; null keeps what the draft had. */
-  balanceCents: number | null;
+  balance: ReportedBalanceReading | null;
 }
 
 interface Classified {
@@ -163,7 +173,7 @@ async function classifyInto(
  * the next one.
  */
 export async function stageMappedRows(input: StageInput): Promise<StagedRows> {
-  const { db, target, rows, balanceCents } = input;
+  const { db, target, rows, balance } = input;
   const existing = importDraftsService.liveDraftFor(db, target.accountId);
   const payload =
     existing === undefined ? emptyLiveDraftPayload(target) : readLiveDraftPayload(existing);
@@ -179,7 +189,7 @@ export async function stageMappedRows(input: StageInput): Promise<StagedRows> {
       ? { payload, alreadyInLedger: 0 }
       : await classifyInto(input, payload, fresh, existing?.id ?? `live:${target.accountId}`);
   const staged = classified.payload.parsedTransactions.length - payload.parsedTransactions.length;
-  const nothingToWrite = staged === 0 && (existing === undefined || balanceCents === null);
+  const nothingToWrite = staged === 0 && (existing === undefined || balance === null);
   if (nothingToWrite) {
     return {
       draftId: existing?.id ?? '',
@@ -190,7 +200,7 @@ export async function stageMappedRows(input: StageInput): Promise<StagedRows> {
       warnings: undefined,
     };
   }
-  const row = writeLiveDraft(db, { existing, target, payload: classified.payload, balanceCents });
+  const row = writeLiveDraft(db, { existing, target, payload: classified.payload, balance });
   return {
     draftId: row.id,
     staged,

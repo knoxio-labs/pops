@@ -1899,6 +1899,7 @@ describe('imports.commitImport — commit idempotency (#3640/#3642)', () => {
       dateFrom: '2026-09-02',
       dateTo: '2026-09-04',
       balanceReportedCents: 61_215,
+      balanceReportedAt: '2026-09-05T08:00:00+10:00',
     });
 
     const result = await c.imports.commitImport({
