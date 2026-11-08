@@ -1,0 +1,8 @@
+name: Trip creation and settings
+question: Create with minimal input first, or expose all trip settings at creation?
+status: active
+frame: web
+screen: trips/settings
+variants:
+  quick: Minimal creation with optional settings revealed on demand
+  full: All trip settings available before creation
