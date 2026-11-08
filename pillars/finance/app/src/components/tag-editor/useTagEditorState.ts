@@ -165,11 +165,14 @@ function useTagActions({ s, currentTags, onSave, onSuggest }: ActionsArgs) {
 export function useTagEditorState(props: TagEditorProps) {
   const { currentTags, onSave, onSuggest, availableTags = [], facets = [] } = props;
   const s = useCoreState(currentTags);
-  // Relevance picks the shortlist, then facet grouping fixes its order, so
-  // what Tab completes is always what the panel shows first.
-  const filtered = orderTagsByFacet(
-    rankTagSuggestions(s.inputValue, availableTags, s.tags).slice(0, SUGGESTION_LIMIT)
-  ).map((parsed) => parsed.raw);
+  const rankedSuggestions = rankTagSuggestions(s.inputValue, availableTags, s.tags).slice(
+    0,
+    SUGGESTION_LIMIT
+  );
+  const filtered =
+    s.inputValue === ''
+      ? orderTagsByFacet(rankedSuggestions).map((parsed) => parsed.raw)
+      : rankedSuggestions;
   const creation =
     resolveTypedTag(s.inputValue, availableTags) === undefined
       ? planTagCreation(s.inputValue, facets)

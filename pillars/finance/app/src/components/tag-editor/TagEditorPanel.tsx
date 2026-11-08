@@ -98,24 +98,28 @@ function SuggestionButton({ tag, onAddTag }: { tag: string; onAddTag: (tag: stri
 
 function Suggestions({
   filtered,
+  inputValue,
   onAddTag,
 }: {
   filtered: string[];
+  inputValue: string;
   onAddTag: (tag: string) => void;
 }) {
   if (filtered.length === 0) return null;
   return (
     <div className="space-y-1.5">
-      {groupTagsByFacet(filtered).map((group) => (
-        <div key={group.label} className="space-y-1">
-          <FacetHeading>{group.label}</FacetHeading>
-          <div className="flex flex-wrap gap-2">
-            {group.tags.map((parsed) => (
-              <SuggestionButton key={parsed.raw} tag={parsed.raw} onAddTag={onAddTag} />
-            ))}
+      {groupTagsByFacet(filtered, inputValue === '' ? 'alphabetical' : 'appearance').map(
+        (group) => (
+          <div key={group.label} className="space-y-1">
+            <FacetHeading>{group.label}</FacetHeading>
+            <div className="flex flex-wrap gap-2">
+              {group.tags.map((parsed) => (
+                <SuggestionButton key={parsed.raw} tag={parsed.raw} onAddTag={onAddTag} />
+              ))}
+            </div>
           </div>
-        </div>
-      ))}
+        )
+      )}
     </div>
   );
 }
@@ -191,7 +195,7 @@ export function TagEditorPanel({
         autoFocus
       />
       <TagCreationRow creation={creation} onAddTag={onAddTag} />
-      <Suggestions filtered={filtered} onAddTag={onAddTag} />
+      <Suggestions filtered={filtered} inputValue={inputValue} onAddTag={onAddTag} />
       <PanelActions
         isSaving={isSaving}
         isSuggesting={isSuggesting}
