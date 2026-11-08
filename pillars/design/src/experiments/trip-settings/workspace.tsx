@@ -6,7 +6,7 @@ import { Button } from '@pops/ui';
 import { useRouteState } from '../trip-route-editing/canvas-state';
 import { TagField, ParentField } from './associations';
 import { SettingsContext, useSettings } from './context';
-import { DestinationField, NameField, DateFields, NotesField } from './fields';
+import { DestinationField, NameField, WhenField, NotesField } from './fields';
 import { initialSettings } from './fixture';
 import { SettingsHeading, SettingsActions, SettingsIssues } from './form-parts';
 import { settingsFindings, saveSettings } from './model';
@@ -86,7 +86,7 @@ function OptionalFields() {
   return (
     <div className="space-y-4">
       <NameField />
-      <DateFields />
+      <WhenField />
       <TagField />
       <ParentField />
       <details>

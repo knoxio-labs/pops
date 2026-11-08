@@ -26,20 +26,19 @@ export function SettingsReview({ layout }: { layout: 'quick' | 'full' }) {
             creating.
           </p>
           <ol className="list-decimal space-y-1 pl-5">
-            <li>Start with a destination or see all settings immediately?</li>
-            <li>Are the generated name, shared tag and optional parent trip clear?</li>
+            <li>All fields selected. Does the When subtitle capture your timing intention?</li>
+            <li>Does creation show only the information you need to start?</li>
           </ol>
           <p>
-            Try a completely blank trip, a custom name, open-ended or reversed dates, a different
-            shared tag, a nested trip, unlinking and undo. Parent and tag selection never copy
-            dates, bookings or membership. Creating or saving changes a local snapshot only.
+            Try a blank trip, a custom name, arbitrary When text, a different tag, nesting,
+            unlinking and undo. Parent and tag selection never copy dates, bookings or membership.
           </p>
           <p>
-            Name, destination and notes are user text. Dates and catalogue identities are explicit
-            fields. The displayed title formats destination and a valid start year unless a custom
-            name is present. Findings and eligible parents are deterministic. Tags and trips are
-            separate reusable records; removing an association preserves the catalogue. No network
-            writes, geocoding, inferred dates or LLM calls.
+            Name, destination, When and notes are user text. When is the verbatim trip subtitle and
+            is never parsed into dates. Creation has no route dates or route context; those belong
+            to the plan. No independently entered trip date fields. Catalogue selections and
+            findings are deterministic. Unlinking preserves reusable records. Local snapshots only;
+            no network writes, geocoding or LLM calls.
           </p>
         </div>
       </details>

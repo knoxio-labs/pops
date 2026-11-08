@@ -155,15 +155,16 @@ describe('persisted fields and generated text', () => {
   });
 });
 
-describe('generated trip identity', () => {
-  it('uses the optional user name or the selected country and year', async () => {
-    const { tripDisplayName, tripDateLabel, tripMetadata } = await import('./trip-metadata');
-    expect(tripDisplayName(tripMetadata)).toBe('Brazil · 2027');
+describe('trip identity and subtitle', () => {
+  it('formats a custom name or country without parsing the When source or duplicating route dates', async () => {
+    const { tripDisplayName, tripMetadata } = await import('./trip-metadata');
+    expect(tripDisplayName(tripMetadata)).toBe('Brazil');
     expect(tripDisplayName({ ...tripMetadata, name: '  My trip  ' })).toBe('My trip');
-    expect(tripDisplayName({ ...tripMetadata, name: '   ' })).toBe('Brazil · 2027');
-    expect(tripDateLabel(tripMetadata)).toBe('24 Nov 2027');
-    expect(tripDateLabel({ ...tripMetadata, returnDate: '2028-03-05' })).toBe(
-      '24 Nov 2027 → 5 Mar'
+    expect(tripDisplayName({ ...tripMetadata, name: '   ', when: 'Around July 2030' })).toBe(
+      'Brazil'
     );
+    expect(tripMetadata.when).toBe('Summer 2027–28');
+    expect(tripMetadata).not.toHaveProperty('departureDate');
+    expect(tripMetadata).not.toHaveProperty('returnDate');
   });
 });

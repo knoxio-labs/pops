@@ -6,7 +6,10 @@ export type SettingsScenario =
   | 'existing'
   | 'empty'
   | 'nested'
-  | 'reversed-dates'
+  | 'month'
+  | 'season'
+  | 'open-route'
+  | 'arbitrary-when'
   | 'missing-reference';
 
 function brazilSettings(): SettingsState {
@@ -14,8 +17,7 @@ function brazilSettings(): SettingsState {
     id: 'trip-brazil',
     name: '',
     destination: 'Brazil',
-    start: '2027-11-24',
-    end: '',
+    when: '',
     tagId: 'travel-brazil',
     parentId: '',
     notes: '',
@@ -33,6 +35,24 @@ function brazilSettings(): SettingsState {
       { id: 'travel-brazil', name: 'Travel / Brazil' },
       { id: 'travel', name: 'Travel' },
     ],
+    route: [
+      {
+        id: 'journey-syd-gru',
+        title: 'Sydney → São Paulo',
+        kind: 'journey',
+        start: '2027-11-24',
+        end: '2027-11-25',
+      },
+      { id: 'visit-sp', title: 'São Paulo', kind: 'visit', start: '2027-11-25', end: '' },
+      {
+        id: 'visit-rio',
+        title: 'Rio de Janeiro',
+        kind: 'visit',
+        start: '2028-02-05',
+        end: '2028-02-13',
+      },
+      { id: 'journey-return', title: 'Return journey', kind: 'journey', start: '', end: '' },
+    ],
     saved: { ...trip },
   };
 }
@@ -41,7 +61,7 @@ function brazilSettings(): SettingsState {
 export function initialSettings(scenario: SettingsScenario = 'default'): SettingsState {
   const state = brazilSettings();
   if (scenario === 'default')
-    return { ...state, trip: { ...state.trip, id: 'draft-trip' }, saved: null };
+    return { ...state, trip: { ...state.trip, id: 'draft-trip' }, saved: null, route: [] };
   if (scenario === 'empty')
     return {
       ...state,
@@ -49,24 +69,52 @@ export function initialSettings(scenario: SettingsScenario = 'default'): Setting
         id: 'trip-new',
         name: '',
         destination: '',
-        start: '',
-        end: '',
+        when: '',
         tagId: '',
         parentId: '',
         notes: '',
       },
       saved: null,
+      route: [],
     };
   if (scenario === 'nested') {
     const trip = { ...state.trip, parentId: 'trip-south-america' };
     return { ...state, trip, saved: { ...trip } };
   }
-  if (scenario === 'reversed-dates')
-    return { ...state, trip: { ...state.trip, end: '2027-11-23' } };
+  if (scenario === 'month')
+    return {
+      ...state,
+      trip: { ...state.trip, id: 'draft-trip', when: 'Around July' },
+      saved: null,
+      route: [],
+    };
+  if (scenario === 'season')
+    return {
+      ...state,
+      trip: { ...state.trip, id: 'draft-trip', when: 'Summer 2027–28' },
+      saved: null,
+      route: [],
+    };
+  if (scenario === 'arbitrary-when')
+    return {
+      ...state,
+      trip: { ...state.trip, id: 'draft-trip', when: 'After the exams, if possible' },
+      saved: null,
+      route: [],
+    };
   if (scenario === 'missing-reference')
     return {
       ...state,
       trip: { ...state.trip, tagId: 'removed-tag', parentId: 'removed-trip' },
+    };
+  if (scenario === 'open-route')
+    return {
+      ...state,
+      route: state.route.map((record, index) => ({
+        ...record,
+        start: index === 0 ? '' : record.start,
+        end: index === state.route.length - 1 ? '' : record.end,
+      })),
     };
   return state;
 }

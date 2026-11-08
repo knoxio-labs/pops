@@ -1,4 +1,4 @@
-import { tripMetadata, tripDisplayName, tripDateLabel } from '@/fixtures/trip-metadata';
+import { tripMetadata, tripDisplayName } from '@/fixtures/trip-metadata';
 import { tripOverviewItems } from '@/fixtures/trip-overview';
 import { filterTripItems, isPurchasedArrangement } from '@/fixtures/trip-overview-model';
 import { ArrowDown, Compass, Inbox, Plus } from 'lucide-react';
@@ -44,7 +44,11 @@ function OverviewHeading({ onCapture }: { onCapture: () => void }) {
             </h1>
             <Badge variant="outline">{tripMetadata.stage}</Badge>
           </div>
-          <p className="font-medium text-foreground/90">{tripDateLabel(tripMetadata)}</p>
+          {tripMetadata.when && (
+            <p className="whitespace-pre-wrap font-medium text-foreground/90">
+              {tripMetadata.when}
+            </p>
+          )}
         </div>
         <div className="flex flex-wrap gap-2">
           <Button asChild variant="outline">

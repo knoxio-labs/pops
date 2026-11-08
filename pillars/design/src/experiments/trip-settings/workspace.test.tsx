@@ -5,50 +5,69 @@ import { SettingsWorkspace } from './workspace';
 
 describe('trip creation and settings', () => {
   it.each(['quick', 'full'] as const)(
-    'creates a blank trip without optional inputs in %s',
+    'creates a blank trip without a When value or duplicate date inputs in %s',
     (layout) => {
       render(<SettingsWorkspace layout={layout} scenario="empty" />);
-      expect(screen.getByRole('button', { name: 'Create trip' })).toBeEnabled();
       fireEvent.click(screen.getByRole('button', { name: 'Create trip' }));
-      expect(screen.getByRole('heading', { name: 'Trip settings' })).toBeInTheDocument();
       expect(screen.getByText('Saved')).toBeInTheDocument();
-      expect(screen.getByLabelText('Name')).toHaveValue('');
-      expect(screen.getByLabelText('Start')).toHaveValue('');
-      expect(screen.getByLabelText('End')).toHaveValue('');
-      expect(screen.getByRole('combobox', { name: 'Shared tag' })).toHaveTextContent('Choose tag');
-      expect(screen.getByRole('combobox', { name: 'Parent trip' })).toHaveTextContent(
-        'Choose trip'
-      );
+      expect(screen.getByLabelText('When')).toHaveValue('');
+      expect(screen.queryByLabelText('Start')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('End')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Month')).not.toBeInTheDocument();
+      expect(screen.queryByRole('combobox', { name: 'Planning window' })).not.toBeInTheDocument();
       fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
       expect(screen.getByRole('button', { name: 'Create trip' })).toBeEnabled();
     }
   );
 
-  it('exposes full settings after quick creation and restores saved values on discard', () => {
-    render(<SettingsWorkspace layout="quick" />);
-    expect(screen.getByText('More options').closest('details')).not.toHaveAttribute('open');
+  it.each(['Summer', 'Around July', 'After graduation, perhaps', '夏 2028?'])(
+    'keeps %s as source subtitle text without interpreting dates',
+    (when) => {
+      render(<SettingsWorkspace layout="full" scenario="existing" />);
+      fireEvent.change(screen.getByLabelText('When'), { target: { value: when } });
+      expect(screen.getByLabelText('Trip subtitle')).toHaveTextContent(when);
+      fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+      expect(screen.getByText('Saved')).toBeInTheDocument();
+      expect(screen.getByLabelText('When')).toHaveValue(when);
+      expect(screen.queryByRole('region', { name: 'Route dates' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('region', { name: 'Settings issues' })).not.toBeInTheDocument();
+    }
+  );
+
+  it('saves, discards and undoes subtitle edits independently of the name', () => {
+    render(<SettingsWorkspace layout="full" scenario="season" />);
     fireEvent.click(screen.getByRole('button', { name: 'Create trip' }));
-    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Brazil with family' } });
-    expect(screen.getByText('Brazil with family', { selector: 'p' })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('When'), { target: { value: 'Around July' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
-    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Unsaved edit' } });
+    fireEvent.change(screen.getByLabelText('When'), { target: { value: '' } });
+    expect(screen.queryByLabelText('Trip subtitle')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Discard changes' }));
-    expect(screen.getByLabelText('Name')).toHaveValue('Brazil with family');
-    fireEvent.change(screen.getByLabelText('Name'), { target: { value: '' } });
-    expect(screen.getByText('Brazil · 2027', { selector: 'p' })).toBeInTheDocument();
+    expect(screen.getByLabelText('When')).toHaveValue('Around July');
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Family visits' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(screen.getByLabelText('Name')).toHaveValue('');
+    expect(screen.getByLabelText('Trip subtitle')).toHaveTextContent('Around July');
   });
 
-  it('does not borrow dates or tag identity when changing parent', () => {
+  it.each(['month', 'season', 'arbitrary-when'] as const)(
+    'starts the %s example as creation without a route',
+    (scenario) => {
+      render(<SettingsWorkspace layout="full" scenario={scenario} />);
+      expect(screen.getByRole('heading', { name: 'New trip' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Create trip' })).toBeEnabled();
+      expect(screen.queryByRole('region', { name: 'Route dates' })).not.toBeInTheDocument();
+      expect(screen.queryByText('From stops and journeys')).not.toBeInTheDocument();
+    }
+  );
+
+  it('excludes descendants from parent selection and preserves route and When values', () => {
     render(<SettingsWorkspace layout="full" scenario="existing" />);
+    const when = screen.getByLabelText('When').getAttribute('value');
     fireEvent.click(screen.getByRole('combobox', { name: 'Parent trip' }));
     expect(screen.queryByRole('option', { name: 'Olinda' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('option', { name: 'Rio weekend' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('option', { name: 'South America' }));
-    expect(screen.getByLabelText('Start')).toHaveValue('2027-11-24');
-    expect(screen.getByLabelText('End')).toHaveValue('');
-    expect(screen.getByRole('combobox', { name: 'Shared tag' })).toHaveTextContent(
-      'Travel / Brazil'
-    );
+    expect(screen.queryByRole('region', { name: 'Route dates' })).not.toBeInTheDocument();
+    expect(screen.getByLabelText('When')).toHaveValue(when);
     fireEvent.click(screen.getByRole('button', { name: 'Remove parent trip' }));
     fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
     expect(screen.getByRole('combobox', { name: 'Parent trip' })).toHaveTextContent(
@@ -56,20 +75,7 @@ describe('trip creation and settings', () => {
     );
   });
 
-  it('blocks a reversed range without clamping either date', () => {
-    render(<SettingsWorkspace layout="full" scenario="reversed-dates" />);
-    expect(screen.getByRole('region', { name: 'Settings issues' })).toHaveTextContent(
-      'end date is before'
-    );
-    expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
-    expect(screen.getByLabelText('End')).toHaveValue('2027-11-23');
-    fireEvent.change(screen.getByLabelText('End'), { target: { value: '' } });
-    expect(screen.queryByRole('region', { name: 'Settings issues' })).not.toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('Start'), { target: { value: '' } });
-    expect(screen.getByRole('button', { name: 'Save changes' })).toBeEnabled();
-  });
-
-  it('clears missing optional references and preserves the reusable catalogue', () => {
+  it('clears missing optional references without deleting reusable tags', () => {
     render(<SettingsWorkspace layout="full" scenario="missing-reference" />);
     expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Unlink shared tag' }));
