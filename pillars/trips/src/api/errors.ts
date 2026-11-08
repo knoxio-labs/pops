@@ -5,13 +5,14 @@ export const tripsErrors = defineErrors('trips', {
   not_found: {
     area: 'record',
     status: 404,
-    message: 'The requested trip, place or visit was not found.',
+    message: 'The requested trip, place, visit, journey or leg was not found.',
     retryable: false,
   },
   order_invalid: {
     area: 'route',
     status: 400,
-    message: 'Route order must contain every visit in this trip exactly once.',
+    message:
+      'Order must contain every existing member of the selected route or journey exactly once.',
     retryable: false,
   },
 });

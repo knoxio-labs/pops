@@ -2,6 +2,7 @@ import { once } from 'node:events';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { JourneySchema, JourneyLegSchema } from '../../contract/journey-schemas.js';
 import { PlaceSchema, TripSchema, VisitSchema } from '../../contract/schemas.js';
 import { openTripsDb, type OpenedTripsDb } from '../../db/index.js';
 import { createTripsApiApp } from '../app.js';
@@ -12,6 +13,11 @@ import type { Server } from 'node:http';
 let opened: OpenedTripsDb;
 let server: Server;
 let origin: string;
+const testScopes = new Map<string, string[]>([
+  ['scoped', ['trips']],
+  ['journeys-only', ['trips.journeys']],
+  ['legs-only', ['trips.journeyLegs']],
+]);
 
 beforeEach(async () => {
   opened = openTripsDb(':memory:');
@@ -27,7 +33,7 @@ beforeEach(async () => {
             principal: {
               id: 'test',
               name: 'test',
-              scopes: key === 'scoped' ? ['trips'] : ['trips.trips'],
+              scopes: testScopes.get(key) ?? ['trips.trips'],
             },
           },
   }).listen(0, '127.0.0.1');
@@ -151,5 +157,157 @@ describe('Trips HTTP contract', () => {
       expect((await call(path)).status).toBe(404);
     expect((await call('/trips/invalid')).status).toBe(400);
     expect(await (await call(`/trips/${trip.id}/visits`)).json()).toEqual({ visits: [] });
+  });
+});
+
+describe('Journey HTTP source contract', () => {
+  it('persists empty/partial journeys and separate source facts, explicitly reorders and clears, then removes records', async () => {
+    const trip = TripSchema.parse(await (await call('/trips', 'POST', {})).json());
+    const base = `/trips/${trip.id}/journeys`;
+    const created = await call(base, 'POST', {
+      buffers: { minimumConnectionMinutes: 0.5 },
+      sourceLinks: [{ uri: 'pops:documents/document/unavailable' }],
+    });
+    expect(created.status).toBe(201);
+    const journey = JourneySchema.parse(await created.json());
+    expect(journey).toMatchObject({
+      name: null,
+      reference: null,
+      buffers: { minimumConnectionMinutes: 0.5 },
+    });
+    const legs = `${base}/${journey.id}/legs`;
+    const firstResponse = await call(legs, 'POST', {
+      mode: 'User source mode',
+      from: {
+        local: '2028-11-05T01:30',
+        timeZone: 'America/Chicago',
+        sourceLabel: 'Source airport',
+      },
+      to: { local: '2028-03-12T02:30', timeZone: 'America/Chicago' },
+      arrangement: 'Agreed',
+      intention: 'Alternative',
+      purchase: 'Purchased',
+      reference: 'SOURCE',
+    });
+    expect(firstResponse.status).toBe(201);
+    const first = JourneyLegSchema.parse(await firstResponse.json());
+    const second = JourneyLegSchema.parse(await (await call(legs, 'POST', {})).json());
+    expect(second).toMatchObject({
+      mode: null,
+      from: {},
+      to: {},
+      arrangement: null,
+      purchase: null,
+    });
+    expect(
+      await (
+        await call(`${base}/${journey.id}/leg-order`, 'PUT', { legIds: [second.id, first.id] })
+      ).json()
+    ).toEqual({ legs: [second, first] });
+    expect(await (await call(`${legs}/${first.id}`)).json()).toEqual(first);
+    const patch = await call(`${legs}/${first.id}`, 'PATCH', { from: {}, purchase: null });
+    expect(patch.status).toBe(200);
+    expect(await patch.json()).toMatchObject({
+      from: {},
+      to: first.to,
+      purchase: null,
+      arrangement: 'Agreed',
+      intention: 'Alternative',
+      reference: 'SOURCE',
+    });
+    expect(
+      (await call(`${base}/${journey.id}`, 'PATCH', { buffers: {}, name: 'Named journey' })).status
+    ).toBe(200);
+    expect(await (await call(`${base}/${journey.id}`)).json()).toMatchObject({
+      name: 'Named journey',
+      buffers: {},
+      sourceLinks: journey.sourceLinks,
+    });
+    expect(await (await call(base)).json()).toMatchObject({ journeys: [{ id: journey.id }] });
+    expect(await (await call(legs)).json()).toMatchObject({
+      legs: [{ id: second.id }, { id: first.id }],
+    });
+    expect((await call(`${legs}/${second.id}`, 'DELETE')).status).toBe(204);
+    expect((await call(`${legs}/${second.id}`)).status).toBe(404);
+    expect((await call(`${base}/${journey.id}`, 'DELETE')).status).toBe(204);
+    expect((await call(`${base}/${journey.id}`)).status).toBe(404);
+    expect((await call(legs)).status).toBe(404);
+  });
+
+  it('enforces scoped authentication, owned references and complete permutations without source mutation', async () => {
+    const trip = TripSchema.parse(await (await call('/trips', 'POST', {})).json());
+    const other = TripSchema.parse(await (await call('/trips', 'POST', {})).json());
+    const base = `/trips/${trip.id}/journeys`;
+    expect((await call(base, 'GET', undefined, null)).status).toBe(401);
+    expect((await call(base, 'GET', undefined, 'trips-only')).status).toBe(403);
+    const journey = JourneySchema.parse(await (await call(base, 'POST', {})).json());
+    const legs = `${base}/${journey.id}/legs`;
+    expect((await call(legs, 'GET', undefined, 'trips-only')).status).toBe(403);
+    expect((await call(base, 'GET', undefined, 'journeys-only')).status).toBe(200);
+    expect((await call(legs, 'GET', undefined, 'journeys-only')).status).toBe(403);
+    expect((await call(legs, 'GET', undefined, 'legs-only')).status).toBe(200);
+    expect((await call(base, 'GET', undefined, 'legs-only')).status).toBe(403);
+    const first = JourneyLegSchema.parse(
+      await (await call(legs, 'POST', { purchase: 'Purchased' })).json()
+    );
+    const missingPlace = await call(legs, 'POST', { from: { placeId: 99999 } });
+    expect(missingPlace.status).toBe(404);
+    const badOrder = await call(`${base}/${journey.id}/leg-order`, 'PUT', {
+      legIds: [first.id, first.id],
+    });
+    expect(badOrder.status).toBe(400);
+    expect(await badOrder.json()).toMatchObject({
+      code: 'trips.route.order_invalid',
+      retryable: false,
+    });
+    for (const path of [
+      `/trips/${other.id}/journeys/${journey.id}`,
+      `/trips/${other.id}/journeys/${journey.id}/legs`,
+      `${legs}/99999`,
+      '/trips/99999/journeys',
+    ])
+      expect((await call(path)).status).toBe(404);
+    expect((await call(`/trips/${other.id}/journeys/${journey.id}`, 'DELETE')).status).toBe(404);
+    expect(
+      (
+        await call(`/trips/${other.id}/journeys/${journey.id}/legs/${first.id}`, 'PATCH', {
+          purchase: null,
+        })
+      ).status
+    ).toBe(404);
+    expect(await (await call(legs)).json()).toEqual({ legs: [first] });
+  });
+
+  it('rejects malformed typed source facts with the stable validation envelope', async () => {
+    const trip = TripSchema.parse(await (await call('/trips', 'POST', {})).json());
+    const base = `/trips/${trip.id}/journeys`;
+    const journey = JourneySchema.parse(await (await call(base, 'POST', {})).json());
+    for (const body of [
+      { mode: ' ' },
+      { arrangement: 'Reserved' },
+      { purchase: true },
+      { from: { local: '2028-02-30T10:00' } },
+      { to: { timeZone: 'Missing/Zone' } },
+      { sourceLinks: [{ uri: 'javascript:alert(1)' }] },
+    ]) {
+      const response = await call(`${base}/${journey.id}/legs`, 'POST', body);
+      expect(response.status).toBe(400);
+      expect(await response.json()).toMatchObject({
+        code: 'trips.request.invalid',
+        retryable: false,
+        requestId: expect.any(String),
+        details: { issues: expect.any(Array) },
+      });
+    }
+    expect((await call(base, 'POST', { buffers: { airportBufferMinutes: -1 } })).status).toBe(400);
+    const spec: unknown = await (await call('/openapi')).json();
+    expect(spec).toMatchObject({
+      openapi: '3.0.2',
+      paths: {
+        '/trips/{tripId}/journeys/{journeyId}/leg-order': {
+          put: { operationId: 'journeyLegs.reorder' },
+        },
+      },
+    });
   });
 });

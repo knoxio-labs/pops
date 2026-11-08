@@ -2,6 +2,7 @@ import { and, asc, eq } from 'drizzle-orm';
 
 import { PlaceSchema, TripSchema, VisitSchema } from '../../contract/schemas.js';
 import { places, trips, visits } from '../schema.js';
+import { requireOwnedRecord, TripsServiceError } from './source-record.js';
 
 import type {
   Place,
@@ -15,19 +16,6 @@ import type {
 } from '../../contract/schemas.js';
 import type { TripsDb } from '../index.js';
 
-/** A missing owned reference or invalid complete route permutation. */
-export class TripsServiceError extends Error {
-  constructor(readonly code: 'not_found' | 'order_invalid') {
-    super(code);
-    this.name = 'TripsServiceError';
-  }
-}
-
-function required<T>(value: T | undefined): T {
-  if (value === undefined) throw new TripsServiceError('not_found');
-  return value;
-}
-
 /** Read trips in creation order without deriving a name or timing. */
 export function listTrips(db: TripsDb): Trip[] {
   return db
@@ -40,18 +28,20 @@ export function listTrips(db: TripsDb): Trip[] {
 
 /** Read one trip, failing when its identity does not exist. */
 export function getTrip(db: TripsDb, id: number): Trip {
-  return TripSchema.parse(required(db.select().from(trips).where(eq(trips.id, id)).get()));
+  return TripSchema.parse(
+    requireOwnedRecord(db.select().from(trips).where(eq(trips.id, id)).get())
+  );
 }
 
 /** Persist explicit trip metadata; an unnamed trip retains a null name. */
 export function createTrip(db: TripsDb, input: TripInput): Trip {
-  return TripSchema.parse(required(db.insert(trips).values(input).returning().get()));
+  return TripSchema.parse(requireOwnedRecord(db.insert(trips).values(input).returning().get()));
 }
 
 /** Patch only supplied trip fields. */
 export function updateTrip(db: TripsDb, id: number, input: TripInput): Trip {
   return TripSchema.parse(
-    required(
+    requireOwnedRecord(
       db
         .update(trips)
         .set({ ...input, updatedAt: new Date().toISOString() })
@@ -74,18 +64,20 @@ export function listPlaces(db: TripsDb): Place[] {
 
 /** Resolve an explicit place identity. */
 export function getPlace(db: TripsDb, id: number): Place {
-  return PlaceSchema.parse(required(db.select().from(places).where(eq(places.id, id)).get()));
+  return PlaceSchema.parse(
+    requireOwnedRecord(db.select().from(places).where(eq(places.id, id)).get())
+  );
 }
 
 /** Create a reusable place without guessing whether similarly named places are identical. */
 export function createPlace(db: TripsDb, input: PlaceInput): Place {
-  return PlaceSchema.parse(required(db.insert(places).values(input).returning().get()));
+  return PlaceSchema.parse(requireOwnedRecord(db.insert(places).values(input).returning().get()));
 }
 
 /** Patch a place while retaining every visit's reference to its identity. */
 export function updatePlace(db: TripsDb, id: number, input: PlaceUpdate): Place {
   return PlaceSchema.parse(
-    required(
+    requireOwnedRecord(
       db
         .update(places)
         .set({ ...input, updatedAt: new Date().toISOString() })
@@ -111,7 +103,7 @@ export function listVisits(db: TripsDb, tripId: number): Visit[] {
 /** Read a visit only within its owning trip. */
 export function getVisit(db: TripsDb, tripId: number, id: number): Visit {
   return VisitSchema.parse(
-    required(
+    requireOwnedRecord(
       db
         .select()
         .from(visits)
@@ -128,7 +120,7 @@ export function createVisit(db: TripsDb, tripId: number, input: VisitInput): Vis
       const current = listVisits(tx, tripId);
       getPlace(tx, input.placeId);
       return VisitSchema.parse(
-        required(
+        requireOwnedRecord(
           tx
             .insert(visits)
             .values({ ...input, tripId, position: current.length })
@@ -148,7 +140,7 @@ export function updateVisit(db: TripsDb, tripId: number, id: number, input: Visi
       getVisit(tx, tripId, id);
       if (input.placeId !== undefined) getPlace(tx, input.placeId);
       return VisitSchema.parse(
-        required(
+        requireOwnedRecord(
           tx
             .update(visits)
             .set({ ...input, updatedAt: new Date().toISOString() })

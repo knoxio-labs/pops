@@ -13,7 +13,7 @@ describe('Trips manifest', () => {
       version: '1.2.3',
       tag: 'contract-trips@v1.2.3',
     });
-    expect(manifest.routes.queries).toHaveLength(6);
+    expect(manifest.routes.queries).toHaveLength(10);
     expect(manifest.routes.mutations).toContain('trips.visits.reorder');
     expect(manifest.uri.types).toEqual([]);
   });

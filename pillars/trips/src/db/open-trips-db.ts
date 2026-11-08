@@ -17,7 +17,7 @@ export type TripsDb = BetterSQLite3Database<typeof schema>;
 
 /** Handles returned after opening and migrating the trips database. */
 export interface OpenedTripsDb {
-  /** Drizzle handle for trip, place and visit queries. */
+  /** Drizzle handle for this pillar’s owned source records. */
   readonly db: TripsDb;
   /** Raw SQLite handle used by health probes and shutdown. */
   readonly raw: Database.Database;

@@ -11,6 +11,10 @@ export function buildTripsManifest(version: string): ManifestPayload {
     contract: { package: '@pops/trips', version, tag: `contract-trips@v${version}` },
     routes: {
       queries: [
+        'trips.journeys.list',
+        'trips.journeys.get',
+        'trips.journeyLegs.list',
+        'trips.journeyLegs.get',
         'trips.trips.list',
         'trips.trips.get',
         'trips.places.list',
@@ -19,6 +23,13 @@ export function buildTripsManifest(version: string): ManifestPayload {
         'trips.visits.get',
       ],
       mutations: [
+        'trips.journeys.create',
+        'trips.journeys.update',
+        'trips.journeys.delete',
+        'trips.journeyLegs.create',
+        'trips.journeyLegs.update',
+        'trips.journeyLegs.delete',
+        'trips.journeyLegs.reorder',
         'trips.trips.create',
         'trips.trips.update',
         'trips.places.create',

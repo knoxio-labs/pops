@@ -8,6 +8,13 @@
       "when": 1794132451879,
       "tag": "0000_trips_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1794138846473,
+      "tag": "0001_journey_sources",
+      "breakpoints": true
     }
   ]
 }
