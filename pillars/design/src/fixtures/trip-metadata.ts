@@ -1,14 +1,9 @@
-import { formatTripDate } from './trip-overview-format';
-
-import type { TripDate } from './trip-overview-model';
-
-/** Trip-level values; a user name is optional and dates are calendar values. */
+/** Trip-level identity and source subtitle; calendar dates belong to route records. */
 export interface TripMetadata {
   id: string;
   name?: string;
   countryCode: string;
-  departureDate: TripDate;
-  returnDate?: TripDate;
+  when?: string;
   stage: 'Planning' | 'Underway' | 'Past';
 }
 
@@ -16,21 +11,13 @@ export interface TripMetadata {
 export const tripMetadata: TripMetadata = {
   id: 'sample-brazil',
   countryCode: 'BR',
-  departureDate: '2027-11-24',
+  when: 'Summer 2027–28',
   stage: 'Planning',
 };
 
-/** Prefer the user name; otherwise generate destination and departure year deterministically. */
+/** Prefer a custom name, otherwise format the selected country without parsing the subtitle. */
 export function tripDisplayName(trip: TripMetadata): string {
   const country =
     new Intl.DisplayNames('en-AU', { type: 'region' }).of(trip.countryCode) ?? trip.countryCode;
-  const name = trip.name?.trim();
-  if (name) return name;
-  return `${country} · ${trip.departureDate.slice(0, 4)}`;
-}
-
-/** Format trip bounds without inferring a return date from the last wanted event. */
-export function tripDateLabel(trip: TripMetadata): string {
-  const departure = `${formatTripDate(trip.departureDate)} ${trip.departureDate.slice(0, 4)}`;
-  return trip.returnDate ? `${departure} → ${formatTripDate(trip.returnDate)}` : departure;
+  return trip.name?.trim() || country;
 }

@@ -3,58 +3,40 @@ import { describe, expect, it } from 'vitest';
 import { initialSettings } from './fixture';
 import { eligibleParents, saveSettings, settingsFindings, settingsTitle } from './model';
 
-describe('settings titles', () => {
-  it('uses the custom name until cleared, then the destination and valid start year', () => {
-    const state = initialSettings();
-    expect(settingsTitle(state.trip)).toBe('Brazil · 2027');
+describe('settings timing text', () => {
+  it('keeps the title independent of When and route years', () => {
+    const state = initialSettings('existing');
+    state.trip.when = 'Summer 2027–28';
+    expect(settingsTitle(state.trip)).toBe('Brazil');
     state.trip.name = '  Family visit  ';
     expect(settingsTitle(state.trip)).toBe('Family visit');
-    state.trip.name = '  ';
-    expect(settingsTitle(state.trip)).toBe('Brazil · 2027');
+    state.trip.name = ' ';
+    expect(settingsTitle(state.trip)).toBe('Brazil');
+    state.trip.destination = '';
+    expect(settingsTitle(state.trip)).toBe('Trip');
+    expect(state.trip).not.toHaveProperty('start');
+    expect(state.trip).not.toHaveProperty('end');
+    expect(state.trip).not.toHaveProperty('planningWindow');
   });
 
-  it.each(['', '2027-02-29', '2028-02-30', '2028-1-01', 'unknown'])(
-    'does not infer a year for absent or invalid start %s',
-    (start) => {
-      const state = initialSettings('nested');
-      state.trip.start = start;
-      state.trip.end = '2029-02-10';
-      expect(settingsTitle(state.trip)).toBe('Brazil');
+  it.each(['', 'Summer', 'Around July', '2028-13', '  After exams?  ', 'July\nmaybe August'])(
+    'saves arbitrary When text verbatim: %s',
+    (when) => {
+      const state = initialSettings('existing');
+      state.trip.when = when;
+      const original = structuredClone(state);
+      expect(settingsFindings(state)).toEqual([]);
+      const saved = saveSettings(state);
+      expect(saved.saved?.when).toBe(when);
+      expect(state).toEqual(original);
+      expect(saved.route).toEqual(original.route);
+      expect(settingsTitle(saved.trip)).toBe('Brazil');
     }
   );
-
-  it('uses a generic title without a destination and accepts real leap dates', () => {
-    const state = initialSettings('empty');
-    state.trip.start = '2028-02-29';
-    expect(settingsTitle(state.trip)).toBe('Trip');
-    state.trip.destination = '  Anywhere  ';
-    expect(settingsTitle(state.trip)).toBe('Anywhere · 2028');
-    expect(settingsFindings(state)).toEqual([]);
-  });
 });
 
-describe('settings validation', () => {
-  it('allows independent optional dates including the same start and end date', () => {
-    const state = initialSettings('empty');
-    state.trip.end = '2028-02-29';
-    expect(settingsFindings(state)).toEqual([]);
-    state.trip.start = '2028-02-29';
-    expect(settingsFindings(state)).toEqual([]);
-    state.trip.end = '';
-    expect(settingsFindings(state)).toEqual([]);
-  });
-
-  it('reports invalid dates without comparing invalid source strings', () => {
-    const state = initialSettings('empty');
-    state.trip.start = '2028-02-30';
-    state.trip.end = '2027-02-29';
-    expect(settingsFindings(state).map(({ id }) => id)).toEqual(['invalid-start', 'invalid-end']);
-    expect(settingsFindings(initialSettings('reversed-dates')).map(({ id }) => id)).toEqual([
-      'reversed-dates',
-    ]);
-  });
-
-  it('reports missing selected references without changing source catalogues', () => {
+describe('settings references', () => {
+  it('reports missing selected references without changing catalogues', () => {
     const state = initialSettings('missing-reference');
     const original = structuredClone(state);
     expect(settingsFindings(state).map(({ id }) => id)).toEqual(['missing-tag', 'missing-parent']);
@@ -62,20 +44,14 @@ describe('settings validation', () => {
     expect(state).toEqual(original);
   });
 
-  it('rejects self and descendant parents while retaining every source entry', () => {
+  it('excludes self and descendants as parents and terminates cyclic source traversal', () => {
     const state = initialSettings('existing');
-    const original = structuredClone(state);
     expect(eligibleParents(state).map(({ id }) => id)).toEqual(['trip-south-america']);
     for (const parentId of ['trip-brazil', 'trip-olinda', 'trip-rio-weekend']) {
       const invalid = { ...state, trip: { ...state.trip, parentId } };
       expect(settingsFindings(invalid).map(({ id }) => id)).toEqual(['parent-cycle']);
       expect(saveSettings(invalid)).toBe(invalid);
     }
-    expect(state).toEqual(original);
-  });
-
-  it('terminates traversal through a pre-existing catalogue cycle', () => {
-    const state = initialSettings('existing');
     state.trips = [
       { id: 'trip-brazil', name: 'Brazil', parentId: 'child' },
       { id: 'child', name: 'Child', parentId: 'trip-brazil' },
@@ -85,51 +61,55 @@ describe('settings validation', () => {
   });
 });
 
-describe('saving settings', () => {
-  it('starts creation with an unsaved Brazil draft and supplies existing settings separately', () => {
+describe('settings snapshots', () => {
+  it('starts a new trip without route dates or any mandatory optional values', () => {
     const draft = initialSettings();
     expect(draft.trip.id).toBe('draft-trip');
-    expect(draft.trips.some(({ id }) => id === draft.trip.id)).toBe(false);
     expect(draft.saved).toBeNull();
-    const existing = initialSettings('existing');
-    expect(existing.saved).toEqual(existing.trip);
-    expect(existing.saved).not.toBe(existing.trip);
-  });
-
-  it('saves a new trip with all optional fields empty and creates no reference data', () => {
+    expect(draft.route).toEqual([]);
     const state = initialSettings('empty');
     state.tags = [];
     state.trips = [];
+    expect(settingsFindings(state)).toEqual([]);
+    expect(saveSettings(state).saved).toEqual(state.trip);
+  });
+
+  it('saves nested planning independently of invalid or reversed route source dates', () => {
+    const state = initialSettings('nested');
+    state.route = [
+      { id: 'invalid', title: 'Visit', kind: 'visit', start: '2028-02-30', end: '' },
+      { id: 'reversed', title: 'Journey', kind: 'journey', start: '2028-07-02', end: '2028-07-01' },
+    ];
     const original = structuredClone(state);
     const saved = saveSettings(state);
     expect(saved.saved).toEqual(state.trip);
-    expect(saved.saved).not.toBe(state.trip);
-    expect(saved.tags).toBe(state.tags);
+    expect(saved.route).toBe(state.route);
     expect(saved.trips).toBe(state.trips);
+    expect(saved.tags).toBe(state.tags);
     expect(state).toEqual(original);
-    saved.trip.notes = 'Changed draft';
-    expect(saved.saved?.notes).toBe('');
   });
 
-  it('saves a nested trip with unknown dates without inferring parent bounds', () => {
-    const state = initialSettings('empty');
-    state.trip.parentId = 'trip-brazil';
+  it('clones saved settings and never mutates route or catalogue sources', () => {
+    const state = initialSettings('season');
+    const original = structuredClone(state);
     const saved = saveSettings(state);
-    expect(saved.saved).toEqual(state.trip);
-    expect(saved.saved?.start).toBe('');
-    state.trip.start = '2040-01-01';
-    expect(settingsFindings(state)).toEqual([]);
+    expect(saved.saved).not.toBe(state.trip);
+    expect(state).toEqual(original);
+    state.trip.when = 'Edited';
+    expect(saved.saved?.when).toBe('Summer 2027–28');
+    expect(saved.route).toEqual(original.route);
+    expect(saved.tags).toEqual(original.tags);
+    expect(saved.trips).toEqual(original.trips);
   });
 
-  it('produces independent fixture drafts, saved snapshots and catalogues', () => {
+  it('creates independent fixture drafts, saved settings and route arrays', () => {
     const state = initialSettings('existing');
     const original = structuredClone(state);
-    state.trip.notes = 'Draft notes';
-    if (state.saved) state.saved.destination = 'Edited saved snapshot';
-    const tag = state.tags[0];
-    if (tag) tag.name = 'Edited tag';
-    const parent = state.trips[0];
-    if (parent) parent.name = 'Edited parent';
+    state.trip.when = 'Edited draft';
+    expect(state.saved?.when).toBe('');
+    if (state.saved) state.saved.when = 'Edited saved';
+    const record = state.route[0];
+    if (record) record.start = '';
     expect(initialSettings('existing')).toEqual(original);
   });
 });

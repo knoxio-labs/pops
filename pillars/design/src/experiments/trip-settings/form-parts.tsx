@@ -16,7 +16,15 @@ export function SettingsHeading({ pristine }: { pristine: boolean }) {
           <Settings2 className="size-5 text-app-accent" aria-hidden />
           {created ? 'Trip settings' : 'New trip'}
         </h1>
-        <p className="mt-2 text-sm text-muted-foreground">{settingsTitle(state.trip)}</p>
+        <p className="mt-2 font-medium">{settingsTitle(state.trip)}</p>
+        {state.trip.when && (
+          <p
+            className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground"
+            aria-label="Trip subtitle"
+          >
+            {state.trip.when}
+          </p>
+        )}
       </div>
       {pristine && (
         <Badge variant="outline" className="gap-1 border-app-accent text-app-accent">

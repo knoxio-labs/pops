@@ -1,12 +1,13 @@
-import { isTripDate } from '../trip-route-editing/lodging-periods';
+import type { RouteTiming } from './timing-model';
+
+export { routeSummary } from './timing-model';
 
 /** Editable fictional trip settings; empty strings represent unknown optional values. */
 export interface TripSettings {
   id: string;
   name: string;
   destination: string;
-  start: string;
-  end: string;
+  when: string;
   tagId: string;
   parentId: string;
   notes: string;
@@ -17,6 +18,7 @@ export interface SettingsState {
   trip: TripSettings;
   trips: { id: string; name: string; parentId: string }[];
   tags: { id: string; name: string }[];
+  route: RouteTiming[];
   saved: TripSettings | null;
 }
 
@@ -26,12 +28,10 @@ export interface SettingsFinding {
   message: string;
 }
 
-/** Use a custom name, otherwise the destination and valid start year; never borrow other dates. */
+/** Use a custom name or destination; timing text and route dates never contribute to the title. */
 export function settingsTitle(trip: TripSettings): string {
   if (trip.name.trim()) return trip.name.trim();
-  const destination = trip.destination.trim();
-  if (!destination) return 'Trip';
-  return isTripDate(trip.start) ? `${destination} · ${trip.start.slice(0, 4)}` : destination;
+  return trip.destination.trim() || 'Trip';
 }
 
 function descendantIds(state: SettingsState): Set<string> {
@@ -55,16 +55,10 @@ export function eligibleParents(state: SettingsState): SettingsState['trips'] {
   return state.trips.filter((trip) => !excluded.has(trip.id));
 }
 
-/** Validate only captured dates and selected references; parent dates do not constrain child dates. */
+/** Validate selected references independently of free timing text and route dates. */
 export function settingsFindings(state: SettingsState): SettingsFinding[] {
   const findings: SettingsFinding[] = [];
   const { trip } = state;
-  for (const field of ['start', 'end'] as const) {
-    if (trip[field] && !isTripDate(trip[field]))
-      findings.push({ id: `invalid-${field}`, message: `Enter a valid ${field} date.` });
-  }
-  if (isTripDate(trip.start) && isTripDate(trip.end) && trip.end < trip.start)
-    findings.push({ id: 'reversed-dates', message: 'The end date is before the start date.' });
   if (trip.tagId && !state.tags.some((tag) => tag.id === trip.tagId))
     findings.push({
       id: 'missing-tag',

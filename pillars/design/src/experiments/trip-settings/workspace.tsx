@@ -6,11 +6,12 @@ import { Button } from '@pops/ui';
 import { useRouteState } from '../trip-route-editing/canvas-state';
 import { TagField, ParentField } from './associations';
 import { SettingsContext, useSettings } from './context';
-import { DestinationField, NameField, DateFields, NotesField } from './fields';
+import { DestinationField, NameField, WhenField, NotesField } from './fields';
 import { initialSettings } from './fixture';
 import { SettingsHeading, SettingsActions, SettingsIssues } from './form-parts';
 import { settingsFindings, saveSettings } from './model';
 import { SettingsReview } from './review';
+import { RouteDates } from './route-dates';
 
 import type { SettingsScenario } from './fixture';
 
@@ -86,7 +87,8 @@ function OptionalFields() {
   return (
     <div className="space-y-4">
       <NameField />
-      <DateFields />
+      <WhenField />
+      <RouteDates />
       <TagField />
       <ParentField />
       <details>
