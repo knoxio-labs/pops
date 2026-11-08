@@ -37,7 +37,9 @@ export function JourneyReview({ layout }: { layout: 'legs' | 'window' }) {
             different transport mode, linking a document and undoing. Each leg has independent
             purchase status; a new leg is not purchased. Location selection supplies its stored
             zone, which remains editable. Arbitrary new locations can be added in the picker. Source
-            clock edits commit on leaving the field.
+            clock edits commit on leaving the field. Alternatives are editable independently;
+            choosing Use journey retains the previous journey, including purchases, as an option.
+            Add option starts without bookings or selected documents. Selection shares undo.
           </p>
           <p>
             Labels are source data or deterministic formatting. Clock calculations reuse the route
