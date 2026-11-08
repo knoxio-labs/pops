@@ -67,7 +67,9 @@ export function DocumentWorkspace({
               value={target?.id ?? ''}
               placeholder="Choose a trip or item"
               options={state.targets.map((item) => ({ value: item.id, label: item.label }))}
-              onChange={(id) => change(setDocumentTarget(state, id))}
+              onChange={(id) => {
+                if (typeof id === 'string') change(setDocumentTarget(state, id));
+              }}
             />
             {!target && (
               <p role="alert" className="text-sm text-destructive">
