@@ -1,6 +1,9 @@
 name: Document attachment and linking
 question: Attach documents inline, or open a searchable picker?
-status: active
+status: decided
+chosen: picker
+decided: 2026-11-09
+rationale: Joao chose Picker beside file upload as a square dashed Choose existing button, under Add files with Upload a file, then approved with good next.
 frame: web
 screen: trips/document-link
 variants:

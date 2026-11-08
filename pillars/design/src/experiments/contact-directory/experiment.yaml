@@ -1,0 +1,9 @@
+name: Contacts directory
+question: Search one combined contact list, or separate people and businesses
+  into sections?
+status: active
+frame: web
+screen: contacts/directory
+variants:
+  combined: One alphabetical list across all contact types
+  grouped: Vertical sections by existing contact type
