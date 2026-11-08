@@ -1,0 +1,8 @@
+name: Alternatives comparison
+question: Compare complete paths first, or inspect changes to the working route first?
+status: active
+screen: trips/alternatives
+frame: web
+variants:
+  paths: Stacked complete paths with an expandable impact preview
+  changes: A chosen candidate with changes and affected arrangements first

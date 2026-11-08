@@ -1,6 +1,9 @@
 name: Quick capture
 question: Should quick capture start with content or an explicit item type?
-status: active
+status: decided
+chosen: text
+decided: 2026-11-08
+rationale: The reviewer selected text first to capture immediately and classify later, and approved moving on after the destination-picker refinement. Attachment chips are a follow-up visual refinement.
 screen: trips/capture
 frame: web
 variants:
