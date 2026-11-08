@@ -1,6 +1,9 @@
 name: Place and idea detail
 question: Start with the idea details or keep the idea within its route context?
-status: active
+status: decided
+chosen: route
+decided: 2026-11-08
+rationale: Joao delegated the layout choice; In route retains the city context used for events and stays. Approved with next.
 frame: web
 screen: trips/place
 variants:
