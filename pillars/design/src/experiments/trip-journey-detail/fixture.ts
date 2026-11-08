@@ -97,7 +97,7 @@ function legs(scenario: JourneyScenario): JourneyLeg[] {
 /** Returns independent fictional 2028 source data; none of these records represent real bookings. */
 export function initialJourney(scenario: JourneyScenario): JourneyState {
   const arrivalDay = scenario === 'overnight' ? '2028-01-17' : '2028-01-16';
-  return {
+  const state: JourneyState = {
     legs: scenario === 'empty' ? [] : legs(scenario),
     locations: [
       { id: 'syd', name: 'Sydney Airport', code: 'SYD', timeZone: 'Australia/Sydney' },
@@ -141,6 +141,9 @@ export function initialJourney(scenario: JourneyScenario): JourneyState {
       },
     ],
   };
+  return scenario === 'empty'
+    ? { ...state, documentIds: [], reference: '', notes: '', context: [] }
+    : state;
 }
 
 /** Authoritative mode choices for this local prototype. */

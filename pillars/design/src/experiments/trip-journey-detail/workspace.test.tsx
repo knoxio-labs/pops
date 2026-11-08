@@ -105,4 +105,12 @@ describe('journey editing', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
     expect(screen.getByLabelText('Departure time · leg 1')).toHaveValue('2028-01-15T10:00');
   });
+  it('starts an empty journey without silently selecting documents or inventing a booking reference', () => {
+    render(<JourneyWorkspace layout="legs" scenario="empty" />);
+    expect(screen.queryByRole('article')).not.toBeInTheDocument();
+    expect(screen.queryByText('Fictional itinerary.pdf')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText('References and timing'));
+    expect(screen.getByLabelText('Journey reference')).toHaveValue('');
+    expect(screen.getByLabelText('Journey notes')).toHaveValue('');
+  });
 });
