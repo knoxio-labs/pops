@@ -1,9 +1,10 @@
-import { ChevronDown, Paperclip, Trash2 } from 'lucide-react';
+import { ChevronDown, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
 import { Button } from '@pops/ui';
 
 import { CaptureEditor } from './editor';
+import { CaptureFileChips } from './file-chips';
 import { captureIcons } from './kinds';
 import { captureLabel } from './model';
 import { captureVisitLabel } from './references';
@@ -77,13 +78,8 @@ function CaptureRow({
       </div>
       <div className="flex flex-wrap items-center gap-x-3 pl-11 text-xs text-foreground/80">
         <span>{captureVisitLabel(item.visitId)}</span>
-        {item.files.length > 0 && (
-          <span className="flex items-center gap-1">
-            <Paperclip className="size-3" aria-hidden />
-            {item.files.map((file) => file.name).join(' · ')}
-          </span>
-        )}
       </div>
+      {!open && <CaptureFileChips files={item.files} />}
       {open && <CaptureEditor item={item} change={change} />}
     </article>
   );

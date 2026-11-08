@@ -3,6 +3,7 @@ import { ArrowDownToLine, Link2 } from 'lucide-react';
 import { Button, Textarea, TextInput } from '@pops/ui';
 
 import { CaptureAttachments } from './attachments';
+import { CaptureFileChips } from './file-chips';
 import { CaptureKinds } from './kinds';
 import { candidateLink, hasCapture, safeCaptureLink } from './model';
 import { CaptureVisit } from './references';
@@ -53,14 +54,10 @@ export function CaptureComposer({
               />
             </div>
           </div>
+          <CaptureFileChips files={draft.files} onChange={(files) => change({ ...draft, files })} />
           {layout === 'text' && kinds}
           <CaptureSource draft={draft} change={change} />
           <CaptureActions draft={draft} change={change} capture={capture} enabled={enabled} />
-          {draft.files.length > 0 && (
-            <p className="text-xs text-foreground/80">
-              {draft.files.map((file) => file.name).join(' · ')}
-            </p>
-          )}
         </>
       )}
     </section>
