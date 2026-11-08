@@ -1,0 +1,8 @@
+name: City visit editor
+question: Apply visit edits immediately with Undo, or save a draft?
+status: active
+frame: web
+screen: trips/visit-edit
+variants:
+  direct: Apply field changes immediately with Undo
+  draft: Edit a draft and save explicitly
