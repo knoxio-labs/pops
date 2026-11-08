@@ -13,20 +13,26 @@ import { DocumentSelector } from './selector';
 
 import type { DocumentLinkingScenario } from './fixture';
 
-function FileCapture() {
+function FileCapture({ layout }: { layout: 'inline' | 'picker' }) {
   const { state, change } = useDocuments();
   return (
-    <section aria-label="New files" className="space-y-3 border-t pt-4">
+    <section aria-label="Add files" className="space-y-3 border-t pt-4">
       <h2 className="flex items-center gap-2 text-sm font-semibold">
         <Paperclip className="size-4 text-app-accent" />
-        New files
+        Add files
       </h2>
-      <FileUpload
-        multiple
-        prompt="Choose or drop files"
-        acceptHint={null}
-        onFilesSelected={(files) => change(addDocumentFiles(state, files))}
-      />
+      <div className="flex items-start gap-3">
+        <div className="min-w-0 flex-1">
+          {' '}
+          <FileUpload
+            multiple
+            prompt="Upload a file"
+            acceptHint={null}
+            onFilesSelected={(files) => change(addDocumentFiles(state, files))}
+          />
+        </div>
+        {layout === 'picker' && <DocumentSelector layout="picker" />}
+      </div>
       {state.files.length > 0 && (
         <div className="space-y-2">
           <p className="text-xs text-muted-foreground">Selected files · not uploaded</p>
@@ -78,8 +84,8 @@ export function DocumentWorkspace({
             )}
           </div>
           <LinkedDocuments />
-          <DocumentSelector layout={layout} />
-          <FileCapture />
+          {layout === 'inline' && <DocumentSelector layout="inline" />}
+          <FileCapture layout={layout} />
         </article>
       </main>
     </DocumentContext>

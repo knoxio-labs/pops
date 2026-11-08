@@ -34,14 +34,17 @@ export function DocumentSelector({ layout }: { layout: 'inline' | 'picker' }) {
     return (
       <SearchPickerDialog
         trigger={
-          <Button variant="outline">
-            <Search className="size-4" />
-            Choose documents
+          <Button
+            variant="outline"
+            className="size-32 shrink-0 flex-col gap-2 whitespace-normal rounded-md border-2 border-dashed border-foreground/30 bg-background px-3 text-sm"
+          >
+            <Search className="size-8 text-muted-foreground" />
+            Choose existing
           </Button>
         }
         open={open}
         onOpenChange={setOpen}
-        title="Choose documents"
+        title="Choose existing"
         searchPlaceholder="Search documents"
         search={state.query}
         onSearchChange={(query) => change({ ...state, query })}
