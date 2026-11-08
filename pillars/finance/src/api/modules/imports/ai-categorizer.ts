@@ -193,10 +193,10 @@ export async function categorizeBatchWithAi(
  * to `inputs.length` distinct descriptors, with the entity **given** in the
  * prompt rather than asked for.
  *
- * Gated on `isAiCategorizerEnabled` alone here; the narrower
- * `FINANCE_AI_CATEGORIZER_TAGS_FOR_MATCHED` gate belongs to the caller
- * (`ai-tags-resolver.ts`), which is also where the trigger predicate and the
- * shared circuit breaker live.
+ * Gated on `isAiCategorizerEnabled` alone here; the optional
+ * `FINANCE_AI_CATEGORIZER_TAGS_FOR_MATCHED=false` opt-out belongs to the
+ * caller (`ai-tags-resolver.ts`), which is also where the trigger predicate
+ * and shared circuit breaker live.
  */
 export async function tagsOnlyBatchWithAi(
   inputs: TagsOnlyInput[],

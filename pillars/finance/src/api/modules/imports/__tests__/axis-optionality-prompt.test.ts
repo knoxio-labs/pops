@@ -37,7 +37,7 @@ describe.each(PROMPTS)('%s prompt — axis framing', (_name, build) => {
     expect(prompt).not.toContain('classify EACH one');
   });
 
-  it('states that an empty axis is correct before the transaction and the axis list', () => {
+  it('asks for supported inferences and leaves unsupported axes empty before the transaction and axis list', () => {
     const prompt = build();
     const permission = prompt.indexOf(AXIS_OPTIONALITY);
 
@@ -62,5 +62,7 @@ describe('AXIS_OPTIONALITY', () => {
   it('names both empty forms, so a list axis is not answered with null', () => {
     expect(AXIS_OPTIONALITY).toContain('null');
     expect(AXIS_OPTIONALITY).toContain('[]');
+    expect(AXIS_OPTIONALITY).toContain('A reasonable inference');
+    expect(AXIS_OPTIONALITY).toContain('report that uncertainty in confidence');
   });
 });

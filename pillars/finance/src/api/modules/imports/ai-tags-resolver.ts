@@ -8,34 +8,37 @@
  * resolved perfectly never reached the model, so it arrived at Tag Review with
  * whatever a rule or an entity default happened to supply — often nothing —
  * while a row nothing could identify came back tagged. This pass splits them:
- * it runs after `resolvePendingAi`, over the rows that resolved and came out
- * tag-poor, asking only for the classification with the merchant given.
+ * it runs after `resolvePendingAi`, over deterministic spend rows that can use
+ * more classified tags, asking only for tags with the merchant given.
  *
- * Deliberately narrow, because it adds spend to the common path rather than
- * the rare one:
+ * Deliberately bounded to classified spend rows:
  *
- *  - its own env gate, `FINANCE_AI_CATEGORIZER_TAGS_FOR_MATCHED`, default off,
- *    on top of `FINANCE_AI_CATEGORIZER_ENABLED`;
- *  - only rows with **no** suggested tags at all. A row already carrying rule
- *    or entity tags is left alone — a rule the user wrote is not the model's to
- *    second-guess, and topping one up would spend on rows that are not the gap;
+ *  - it runs whenever `FINANCE_AI_CATEGORIZER_ENABLED` is on; set
+ *    `FINANCE_AI_CATEGORIZER_TAGS_FOR_MATCHED=false` to opt out of its common-path calls;
+ *  - already assigned classified tags are shown as fixed context. The model
+ *    fills other facets, and its additions cannot replace or conflict with a
+ *    single-valued rule or entity tag;
  *  - only rows resolved *deterministically*. A row the AI itself resolved was
  *    asked this question in the same run and declined it;
  *  - only rows whose type counts as spend. `venue:`/`occasion:`/`contains:`
  *    describe money spent ON something, so those are the rows POPS-2607's
  *    coverage measurement counts as addressable; a transfer, a fee or an
  *    undecided credit is not a gap this can close;
- *  - one batch entry per distinct (entity, normalized descriptor) pair, so
- *    twelve Woolworths rows cost one entry rather than twelve.
+ *  - one batch entry per distinct entity, normalized descriptor and assigned
+ *    classified tag set, so equivalent rows share a request.
  *
- * Every failure degrades to "no tags", never to a failed or re-bucketed row: an
- * open circuit breaker, a rate-limited provider, a malformed reply and a
- * disabled flag all leave the row exactly as the ladder left it.
+ * Every failure degrades to "no additional tags", never to a failed or
+ * re-bucketed row: existing tags and row status stay as the ladder left them.
  */
 import { isSpendType } from '../../../contract/corrections-constants.js';
 import { normalizeDescription } from '../../../contract/index.js';
 import { tagVocabularyService, type FinanceDb } from '../../../db/index.js';
 import { entityIdentity, type EntityIdentities } from '../../../db/services/entity-identity.js';
+import {
+  exceedsFacetCardinality,
+  isClassifiedTagFacet,
+  parseTagFacet,
+} from '../../../db/tag-facets.js';
 import { buildAiSuggestedTags } from '../tag-suggester/index.js';
 import { AiCategorizationError } from './ai-categorizer-error.js';
 import {
@@ -53,17 +56,18 @@ import type { TagsOnlyInput } from './ai-categorizer.js';
 import type { TransactionProcessResult } from './process-transaction.js';
 import type { AiCounters, ProcessContext, ProcessedTransaction } from './types.js';
 
+/** Inputs for the tag-completion pass over deterministic spend matches. */
 export interface ResolveTagsForMatchedArgs {
   db: FinanceDb;
   context: ProcessContext;
   counters: AiCounters;
-  /** The settled rows, indexed by position in the caller's list; tag-poor ones are filled in place. */
+  /** The settled rows, indexed by position in the caller's list; eligible rows are filled in place. */
   results: (TransactionProcessResult | undefined)[];
   /** Shared with `resolvePendingAi`, so a provider that rate-limited the entity pass stops this one too. */
   breaker?: AiCircuitBreaker;
 }
 
-/** One distinct (entity, normalized descriptor) pair and every row that shares it. */
+/** One entity, normalized descriptor and assigned tag set, with its matching rows. */
 interface TagGroup {
   request: TagsOnlyInput;
   rows: ProcessedTransaction[];
@@ -81,24 +85,50 @@ function classifiedRow(result: TransactionProcessResult | undefined): ProcessedT
  * tags is one the model has already declined to classify, and asking again in
  * the same run buys nothing.
  */
-function isTagPoorSpendMatch(row: ProcessedTransaction): boolean {
+function isEligibleForTagCompletion(row: ProcessedTransaction): boolean {
   const { entityId, entityName, matchType } = row.entity;
   if (entityId === undefined || entityId === '' || matchType === 'ai') return false;
   if (entityName === undefined || entityName === '') return false;
   if (row.transactionType === undefined || !isSpendType(row.transactionType)) return false;
-  return (row.suggestedTags?.length ?? 0) === 0;
+  return true;
+}
+
+function classifiedTags(row: ProcessedTransaction): string[] {
+  return (row.suggestedTags ?? [])
+    .map(({ tag }) => tag)
+    .filter((tag) => isClassifiedTagFacet(parseTagFacet(tag).facet))
+    .toSorted();
+}
+
+function appendAiSuggestions(
+  row: ProcessedTransaction,
+  suggestions: ReturnType<typeof buildAiSuggestedTags>
+): void {
+  const existingSuggestions = row.suggestedTags ?? [];
+  const seen = new Set(
+    existingSuggestions.map(({ tag }) => tagVocabularyService.normalizeTagForComparison(tag))
+  );
+  const accepted: typeof suggestions = [];
+  for (const suggestion of suggestions) {
+    const normalized = tagVocabularyService.normalizeTagForComparison(suggestion.tag);
+    if (seen.has(normalized)) continue;
+    const existingTags = [...existingSuggestions, ...accepted].map(({ tag }) => tag);
+    if (exceedsFacetCardinality(existingTags, suggestion.tag)) continue;
+    seen.add(normalized);
+    accepted.push(suggestion);
+  }
+  if (accepted.length > 0) row.suggestedTags = [...existingSuggestions, ...accepted];
 }
 
 /**
- * Collapse the tag-poor rows onto one request each.
+ * Collapse rows with the same entity, descriptor and assigned classified tags
+ * onto one request each.
  *
- * Keyed on the entity as well as the descriptor: bank descriptors repeat
- * heavily within one import, which is the saving, but two rows sharing a
- * normalized descriptor can still have resolved to different entities (an alias
- * on one, a correction rule on the other) and a prompt naming only the first
- * one's merchant would be asking about a transaction it is not showing.
+ * Entity, descriptor and assigned tags define the prompt context: repeated
+ * rows share a request, while rows with different deterministic tag decisions
+ * receive separate requests.
  */
-function groupTagPoorRows(
+function groupTagCompletionRows(
   results: (TransactionProcessResult | undefined)[],
   priorTagSetsOf: (entityId: string) => string[][],
   identities?: EntityIdentities
@@ -106,10 +136,15 @@ function groupTagPoorRows(
   const groups = new Map<string, TagGroup>();
   for (const result of results) {
     const row = classifiedRow(result);
-    if (!row || !isTagPoorSpendMatch(row)) continue;
+    if (!row || !isEligibleForTagCompletion(row)) continue;
     const entityId = row.entity.entityId ?? '';
     const canonicalId = entityIdentity(entityId, identities);
-    const key = `${canonicalId}\t${normalizeDescription(row.description)}`;
+    const existingTags = classifiedTags(row);
+    const key = JSON.stringify([
+      canonicalId,
+      normalizeDescription(row.description),
+      existingTags.map((tag) => tagVocabularyService.normalizeTagForComparison(tag)).toSorted(),
+    ]);
     const existing = groups.get(key);
     if (existing) {
       existing.rows.push(row);
@@ -121,6 +156,7 @@ function groupTagPoorRows(
         entityName: row.entity.entityName ?? '',
         input: toCategorizerInput(row),
         ...(row.transactionType === undefined ? {} : { transactionType: row.transactionType }),
+        ...(existingTags.length > 0 ? { existingTags } : {}),
         ...(priorTagSets.length > 0 ? { priorTagSets } : {}),
       },
       rows: [row],
@@ -181,22 +217,22 @@ async function resolveChunk(args: ChunkArgs): Promise<void> {
       confidence: entry.confidence,
       preAcceptThreshold: context.preAcceptThreshold,
     });
-    // A fresh array per row: the rows in a group are distinct transactions and
-    // the wizard edits their suggestions independently.
-    for (const row of group.rows) row.suggestedTags = suggested.map((tag) => ({ ...tag }));
+    for (const row of group.rows)
+      appendAiSuggestions(
+        row,
+        suggested.map((tag) => ({ ...tag }))
+      );
   });
 }
 
 /**
- * Fill in AI tags for the tag-poor deterministically-matched rows in
- * `results`. A no-op — no call, no counter movement — whenever either gate is
- * off or nothing is tag-poor, so a run with the flag off is identical to one
- * from before this pass existed.
+ * Add AI suggestions to deterministic spend matches. Existing suggestions stay
+ * in place and take priority; explicit opt-out or disabled AI makes this a no-op.
  */
 export async function resolveTagsForMatched(args: ResolveTagsForMatchedArgs): Promise<void> {
   if (!isTagsForMatchedEnabled() || !isAiCategorizerEnabled()) return;
 
-  const groups = groupTagPoorRows(
+  const groups = groupTagCompletionRows(
     args.results,
     createPriorTagSetLoader(args.db, args.context.identities),
     args.context.identities

@@ -115,4 +115,12 @@ describe('TAGS_RULES', () => {
     expect(TAGS_RULES).toMatch(/closed set/);
     expect(TAGS_RULES.toLowerCase()).not.toContain('you may suggest');
   });
+
+  it('asks for evidence-backed candidates and lower confidence instead of omission', () => {
+    expect(TAGS_RULES).toContain(
+      'Include a useful, evidence-backed candidate even when it is an inference'
+    );
+    expect(TAGS_RULES).toContain('lower confidence');
+    expect(TAGS_RULES).toContain('Do not infer from an ambiguous merchant name');
+  });
 });

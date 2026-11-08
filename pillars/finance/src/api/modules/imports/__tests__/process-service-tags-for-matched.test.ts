@@ -4,8 +4,7 @@
  *
  * The unit tests own the predicate; what only this tier can show is that the
  * pass is wired in at all, that it sees rows the deterministic ladder settled
- * (which never reach the AI resolver), and that the flag being off leaves the
- * run byte-identical to one from before the pass existed.
+ * (which never reach the AI resolver), and that its explicit opt-out works.
  */
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -78,17 +77,7 @@ afterEach(() => {
 });
 
 describe('tag-only pass through processImportCore', () => {
-  it('leaves a matched merchant untagged and uncalled with the flag off', async () => {
-    const { output } = await run(rows(3));
-
-    expect(tagsOnlyBatchWithAi).not.toHaveBeenCalled();
-    expect(output.matched).toHaveLength(3);
-    expect(output.matched[0]?.suggestedTags).toEqual([]);
-    expect(output.aiUsage).toBeUndefined();
-  });
-
-  it('tags the same rows from one call with the flag on', async () => {
-    process.env['FINANCE_AI_CATEGORIZER_TAGS_FOR_MATCHED'] = 'true';
+  it('tags deterministically matched rows by default with one batch call', async () => {
     tagsOnlyBatchWithAi.mockResolvedValue({
       results: Array.from({ length: 3 }, () => ({
         tags: ['venue:supermarket', 'contains:groceries'],
@@ -110,8 +99,18 @@ describe('tag-only pass through processImportCore', () => {
     expect(output.aiUsage?.apiCalls).toBe(1);
   });
 
+  it('leaves matched rows unchanged when explicitly opted out', async () => {
+    process.env['FINANCE_AI_CATEGORIZER_TAGS_FOR_MATCHED'] = 'false';
+
+    const { output } = await run(rows(3));
+
+    expect(tagsOnlyBatchWithAi).not.toHaveBeenCalled();
+    expect(output.matched).toHaveLength(3);
+    expect(output.matched[0]?.suggestedTags).toEqual([]);
+    expect(output.aiUsage).toBeUndefined();
+  });
+
   it('never sends a matched row to the entity categorizer', async () => {
-    process.env['FINANCE_AI_CATEGORIZER_TAGS_FOR_MATCHED'] = 'true';
     tagsOnlyBatchWithAi.mockResolvedValue({ results: [{ tags: ['venue:supermarket'] }] });
 
     await run(rows(2));

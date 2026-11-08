@@ -52,14 +52,12 @@ export function isAiCategorizerEnabled(): boolean {
 }
 
 /**
- * True only when the tag-only pass for deterministically matched rows is
- * explicitly enabled (POPS-2596). Deliberately its own gate rather than a
- * consequence of `FINANCE_AI_CATEGORIZER_ENABLED`: this path adds spend to the
- * *common* case (rows the matcher already resolved), not the rare one, so it
- * must be switchable — and measurable — on its own.
+ * Whether matched-row tag classification is enabled. It is on by default when
+ * the main categorizer is enabled; `FINANCE_AI_CATEGORIZER_TAGS_FOR_MATCHED=false`
+ * opts out of those additional calls.
  */
 export function isTagsForMatchedEnabled(): boolean {
-  return process.env['FINANCE_AI_CATEGORIZER_TAGS_FOR_MATCHED'] === 'true';
+  return process.env['FINANCE_AI_CATEGORIZER_TAGS_FOR_MATCHED'] !== 'false';
 }
 
 export function getModel(db: FinanceDb): string {
