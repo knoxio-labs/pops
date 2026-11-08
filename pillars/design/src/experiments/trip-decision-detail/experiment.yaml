@@ -1,0 +1,8 @@
+name: Decision detail
+question: Choose from options first, or inspect affected plans before choosing?
+status: active
+frame: web
+screen: trips/decision
+variants:
+  options: Compare options with notes and linked plans
+  impact: Inspect affected plans grouped by source before choosing
