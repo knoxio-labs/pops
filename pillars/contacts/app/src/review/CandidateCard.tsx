@@ -44,24 +44,48 @@ export function CandidateCard({ candidate, choices, disabled, onChange }: Candid
         <p className="text-sm font-semibold">{t('review.unmaterialized')}</p>
       )}
       {candidate.keepSeparate && <p className="text-sm font-semibold">{t('review.remembered')}</p>}
-      <div className="flex flex-wrap gap-2">
-        <Button
-          disabled={disabled || candidate.entityId === null}
-          variant={choice === 'different' ? 'secondary' : 'outline'}
-          aria-pressed={choice === 'different'}
-          onClick={() => onChange(chooseCandidate(choices, candidate, 'different'))}
-        >
-          {t('review.different')}
-        </Button>
-        <Button
-          disabled={disabled}
-          variant={choice === 'later' ? 'secondary' : 'ghost'}
-          aria-pressed={choice === 'later'}
-          onClick={() => onChange(chooseCandidate(choices, candidate, 'later'))}
-        >
-          {t('review.later')}
-        </Button>
-      </div>
+      <CandidateActions
+        candidate={candidate}
+        choices={choices}
+        disabled={disabled}
+        onChange={onChange}
+      />
     </section>
+  );
+}
+
+function CandidateActions({ candidate, choices, disabled, onChange }: CandidateProps) {
+  const { t } = useTranslation('contacts');
+  const choice = choices.candidates[candidate.id];
+  return (
+    <div className="flex flex-wrap gap-2">
+      {candidate.entityId !== null && (
+        <Button asChild variant="outline">
+          <a
+            href={`/contacts/people/${encodeURIComponent(candidate.entityId)}`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            {t('person.open')}
+          </a>
+        </Button>
+      )}
+      <Button
+        disabled={disabled || candidate.entityId === null}
+        variant={choice === 'different' ? 'secondary' : 'outline'}
+        aria-pressed={choice === 'different'}
+        onClick={() => onChange(chooseCandidate(choices, candidate, 'different'))}
+      >
+        {t('review.different')}
+      </Button>
+      <Button
+        disabled={disabled}
+        variant={choice === 'later' ? 'secondary' : 'ghost'}
+        aria-pressed={choice === 'later'}
+        onClick={() => onChange(chooseCandidate(choices, candidate, 'later'))}
+      >
+        {t('review.later')}
+      </Button>
+    </div>
   );
 }

@@ -139,7 +139,8 @@
     "saveFailed": "The decision could not be saved.",
     "invalidChoices": "Invalid review choices.",
     "stageFailed": "The export could not be read.",
-    "providerChanged": "The connection changed or the selected account does not match. Reload connections and reconnect the intended account."
+    "providerChanged": "The connection changed or the selected account does not match. Reload connections and reconnect the intended account.",
+    "notPerson": "This record is not a person."
   },
   "connections": {
     "title": "Contact connections",
@@ -214,5 +215,35 @@
     "saved_one": "Imported {{count}} resolved contact. Contacts requiring review or saved for later remain pending.",
     "saved_other": "Imported {{count}} resolved contacts. Contacts requiring review or saved for later remain pending.",
     "applying": "Importing resolved contacts…"
+  },
+  "person": {
+    "title": "Person details",
+    "name": "Person name",
+    "notes": "Notes",
+    "methods": "Contact methods",
+    "addresses": "Addresses",
+    "address": "Address",
+    "noMethods": "No contact methods yet.",
+    "noAddresses": "No addresses yet.",
+    "addMethod": "Add contact method",
+    "addAddress": "Add address",
+    "kind": "Type",
+    "label": "Label",
+    "value": "Contact value",
+    "local": "Local",
+    "unknownSource": "Source unavailable",
+    "inactive": "Inactive source",
+    "preferred": "Preferred",
+    "country": "Phone country: {{country}}",
+    "copy": "Copy value",
+    "copied": "Copied",
+    "failed": "Could not copy. Try again.",
+    "save": "Save details",
+    "saved": "Saved to Contacts.",
+    "undo": "Undo",
+    "reload": "Reload person",
+    "loading": "Loading person",
+    "uncertain": "The write outcome is unknown. Reload and check the saved facts before submitting again. Your entered values are retained.",
+    "open": "Person details (new tab)"
   }
 }
