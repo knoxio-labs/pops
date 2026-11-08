@@ -51,7 +51,7 @@ export const journeysContract = c.router({
     path: '/trips/:tripId/journeys/:id',
     pathParams: Journey,
     body: c.noBody(),
-    responses: { 204: c.noBody(), ...errors },
+    responses: { 204: c.noBody(), ...errors, 409: ErrorBodySchema },
   },
 });
 
