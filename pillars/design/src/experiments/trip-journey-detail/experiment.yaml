@@ -1,6 +1,9 @@
 name: Journey detail
 question: Start with transport legs or the timeline around departure and arrival?
-status: active
+status: decided
+chosen: window
+decided: 2026-11-08
+rationale: Joao chose Departure and arrival so nearby bookings are visible with the journey, then approved with next.
 screen: trips/journey
 frame: web
 variants:
