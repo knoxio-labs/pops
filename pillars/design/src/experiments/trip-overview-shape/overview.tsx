@@ -30,7 +30,7 @@ function scenarioItems(scenario: OverviewScenario) {
 
 function OverviewHeading({ onCapture }: { onCapture: () => void }) {
   return (
-    <header className="space-y-5">
+    <header className="space-y-5 rounded-xl border border-foreground/20 bg-muted/60 p-5">
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <Compass className="size-4" aria-hidden />
         Trips<span>/</span>
@@ -44,7 +44,7 @@ function OverviewHeading({ onCapture }: { onCapture: () => void }) {
             </h1>
             <Badge variant="outline">{tripMetadata.stage}</Badge>
           </div>
-          <p className="text-muted-foreground">{tripDateLabel(tripMetadata)}</p>
+          <p className="font-medium text-foreground/90">{tripDateLabel(tripMetadata)}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button asChild variant="outline">
@@ -64,7 +64,10 @@ function OverviewHeading({ onCapture }: { onCapture: () => void }) {
 
 function OverviewInbox({ notes }: { notes: { id: string; title: string }[] }) {
   return (
-    <section id="overview-inbox" className="space-y-3 rounded-xl border border-dashed p-5">
+    <section
+      id="overview-inbox"
+      className="space-y-3 rounded-xl border border-dashed border-foreground/25 bg-card p-5"
+    >
       <div className="flex items-center gap-2">
         <Inbox className="size-5 text-muted-foreground" aria-hidden />
         <h2 className="font-semibold">Inbox</h2>

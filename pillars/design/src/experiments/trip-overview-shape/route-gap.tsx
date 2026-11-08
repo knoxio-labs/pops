@@ -17,7 +17,7 @@ export function RouteGap({
   const options = items.filter((option) => item.optionIds?.includes(option.id));
   return (
     <section
-      className="space-y-4 rounded-xl border-2 border-dashed p-5"
+      className="space-y-4 rounded-xl border-2 border-dashed border-app-accent/40 bg-muted/30 p-5"
       aria-label="Open route segment"
     >
       <div className="flex items-start gap-3">

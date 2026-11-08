@@ -1,6 +1,9 @@
 name: City / visit workspace
 question: Is a visit easier to organise by accommodation periods or by day?
-status: active
+status: decided
+chosen: periods
+decided: 2026-11-08
+rationale: The reviewer selected accommodation periods as the main visit grouping and approved proceeding to the event prototype. Day focus remains available.
 screen: trips/visit
 frame: web
 variants:

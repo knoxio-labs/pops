@@ -47,7 +47,7 @@ export function VisitTiming({ record }: { record: TripRecord }) {
         <Button
           variant="ghost"
           aria-label="Edit timing"
-          className="min-h-11 w-full justify-end whitespace-normal px-0 text-right text-sm font-normal text-muted-foreground"
+          className="min-h-11 w-full justify-end whitespace-normal px-0 text-right text-sm font-medium text-foreground hover:text-app-accent"
         >
           {formatCityTiming(record.timing ?? {}) || 'Add dates'}
         </Button>

@@ -46,7 +46,7 @@ function PeriodDates({ period }: { period: AccommodationPeriod }) {
   if ((!period.start && !period.end) || (period.missing && (!period.start || !period.end)))
     return null;
   return (
-    <div className="text-xs text-muted-foreground">
+    <div className="text-xs font-medium text-foreground">
       {period.start && formatTripDate(period.start)}
       {period.start && period.end && ' → '}
       {period.end && formatTripDate(period.end)}
@@ -83,7 +83,9 @@ export function AccommodationPeriodView({
         <div
           className={datesInRail ? 'min-h-11' : 'flex min-h-11 items-center justify-between gap-2'}
         >
-          {!datesInRail && <span className="text-sm text-foreground">Accommodation needed</span>}
+          {!datesInRail && (
+            <span className="text-sm font-medium text-foreground">Accommodation needed</span>
+          )}
           <CanvasInsert
             target={{ visitId: visit.id, start: period.start, end: period.end }}
             label="Add accommodation"
@@ -134,7 +136,7 @@ export function AccommodationView({ visit }: { visit: TripRecord }) {
     ) : null;
   }
   return (
-    <div className="space-y-2 border-l pl-3">
+    <div className="space-y-2 border-l border-dotted border-app-accent/40 pl-3">
       {keyedAccommodationPeriods(accommodationPeriods(visit, state.records)).map(
         ({ key, period }) => (
           <AccommodationPeriodView key={key} visit={visit} period={period} />

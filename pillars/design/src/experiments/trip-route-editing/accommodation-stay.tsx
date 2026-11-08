@@ -128,17 +128,17 @@ function StaySummary({ stay, showDates }: { stay: TripRecord; showDates: boolean
   const schedule = stay.schedule;
   return (
     <span className="flex min-w-0 flex-wrap items-center gap-x-3 text-sm">
-      <BedDouble className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+      <BedDouble className="size-3.5 shrink-0 text-app-accent" aria-hidden />
       <span className="font-medium">{stay.title}</span>
       {showDates && schedule && (
-        <span className="font-normal text-muted-foreground">
+        <span className="font-medium text-foreground">
           {formatTripDate(schedule.start)}
           {schedule.end && ` → ${formatTripDate(schedule.end)}`}
         </span>
       )}
       <span className="text-xs font-normal text-muted-foreground">{stay.arrangement}</span>
       {stay.purchase && (
-        <span className="text-xs font-normal text-muted-foreground">{stay.purchase}</span>
+        <span className="text-xs font-medium text-app-accent">{stay.purchase}</span>
       )}
     </span>
   );
@@ -164,7 +164,7 @@ export function AccommodationStay({
       aria-label={stay.title ?? 'Accommodation'}
       className={cn(
         'group/stay min-h-11 border-l-2 border-transparent pl-2',
-        stay.purchase === 'Purchased' && 'border-l-app-accent',
+        stay.purchase === 'Purchased' && 'border-l-app-accent bg-app-accent/10',
         invalid && 'border-destructive bg-destructive/10',
         canvas.dragged === stay.id && 'border border-dashed border-app-accent'
       )}

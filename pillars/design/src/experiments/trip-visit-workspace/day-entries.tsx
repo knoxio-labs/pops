@@ -37,15 +37,17 @@ export function DayRow({
 }) {
   return (
     <div className={cn('flex gap-3', messages?.length && 'bg-destructive/10 text-destructive')}>
-      <div className="w-28 shrink-0 pt-3 text-right text-xs text-muted-foreground">{marker}</div>
-      <div className="relative min-w-0 flex-1 border-l border-dotted pb-3 pl-4">
+      <div className="w-28 shrink-0 pt-3 text-right text-xs font-semibold text-foreground">
+        {marker}
+      </div>
+      <div className="relative min-w-0 flex-1 border-l-2 border-dotted border-app-accent/50 pb-3 pl-4">
         <span
           aria-hidden
-          className="absolute left-0 top-4 -translate-x-1/2 bg-background text-muted-foreground"
+          className="absolute left-0 top-4 -translate-x-1/2 rounded-full bg-card text-app-accent"
         >
           {icon ?? <Circle className="size-3" />}
         </span>
-        {children}
+        <div className="rounded-lg border border-border bg-card p-2 shadow-sm">{children}</div>
         {messages?.map((message) => (
           <p key={message} className="pb-1 text-sm text-destructive" role="status">
             {message}
@@ -60,7 +62,11 @@ function EntryMarker({ entry, day }: { entry: VisitDayEntry; day: TripDate }) {
   return (
     <span className="flex flex-col items-end gap-1">
       <span>{entry.time ?? formatTripDate(day)}</span>
-      {entry.zone && <span className="whitespace-nowrap text-xs">{entry.zone}</span>}
+      {entry.zone && (
+        <span className="whitespace-nowrap text-xs font-normal text-muted-foreground">
+          {entry.zone}
+        </span>
+      )}
       <span>{entry.direction ?? entry.stayBoundary}</span>
     </span>
   );

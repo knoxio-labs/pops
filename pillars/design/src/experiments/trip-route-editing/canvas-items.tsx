@@ -126,7 +126,7 @@ export function ActivityCard({
       aria-label={`Drag ${display.title}`}
       className={cn(
         'group/item min-h-11 border-l-2 border-transparent pl-2',
-        paid && 'border-l-app-accent',
+        paid && 'border-l-app-accent bg-app-accent/10',
         messages.length > 0 && 'border-destructive bg-destructive/10'
       )}
     >

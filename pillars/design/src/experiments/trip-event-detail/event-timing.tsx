@@ -16,8 +16,8 @@ export function EventTiming({ event }: { event: TripRecord }) {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="ghost" aria-label="Edit event dates">
-          <CalendarDays className="size-4" aria-hidden />
+        <Button variant="ghost" aria-label="Edit event dates" className="font-semibold">
+          <CalendarDays className="size-4 text-app-accent" aria-hidden />
           {eventDateLabel(start, end)}
         </Button>
       </PopoverTrigger>

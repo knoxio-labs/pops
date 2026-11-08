@@ -11,7 +11,7 @@ export function EventFields({ event }: { event: TripRecord }) {
   const update = (next: TripRecord) =>
     change({ ...state, records: state.records.map((r) => (r.id === event.id ? next : r)) });
   return (
-    <div className="space-y-2">
+    <div className="-mx-3 -mt-3 space-y-2 rounded-t-xl border-b border-app-accent/30 bg-app-accent/10 px-3 pt-3 pb-2">
       <TextInput
         aria-label="Event name"
         variant="ghost"
@@ -19,7 +19,7 @@ export function EventFields({ event }: { event: TripRecord }) {
         defaultValue={event.title ?? ''}
         placeholder="Event name"
         containerClassName="bg-transparent px-0"
-        className="text-xl font-semibold md:text-xl"
+        className="text-xl font-bold text-foreground md:text-xl"
         onBlur={(e) => {
           if (e.currentTarget.value !== event.title)
             update({ ...event, title: e.currentTarget.value });

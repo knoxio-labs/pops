@@ -67,7 +67,7 @@ function CityCard({
       data-canvas-id={record.id}
       aria-label={name}
       className={cn(
-        'group/visit space-y-2 rounded-xl border border-dashed bg-card p-3',
+        'group/visit space-y-2 rounded-xl border border-dashed border-foreground/30 bg-muted/60 p-3 shadow-sm',
         issues.length > 0 && 'border-destructive bg-destructive/10'
       )}
       onDragOver={(e) => {
@@ -152,7 +152,7 @@ function NestedVisits({ parentId }: { parentId: string }) {
     .toSorted((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id));
   if (!records.length) return null;
   return (
-    <div className="ml-4 border-l pl-3">
+    <div className="ml-4 border-l border-dotted border-app-accent/50 pl-3">
       <SortableGrid
         items={records}
         getKey={(r) => r.id}

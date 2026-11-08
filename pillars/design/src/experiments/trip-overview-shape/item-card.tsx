@@ -39,7 +39,7 @@ export function OverviewItemCard({
       data-constraint={isPurchasedArrangement(item) ? 'hard' : 'soft'}
       onClick={() => onSelect(item)}
       className={cn(
-        'flex min-h-11 w-full gap-3 rounded-lg border bg-card p-4 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        'flex min-h-11 w-full gap-3 rounded-lg border border-foreground/25 bg-card p-4 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         isPurchasedArrangement(item) ? 'border-l-4 border-l-app-accent' : 'border-dashed'
       )}
     >
@@ -47,7 +47,7 @@ export function OverviewItemCard({
       <span className="min-w-0 flex-1 space-y-2">
         <span className="flex items-start justify-between gap-3">
           <span className="text-base font-semibold leading-snug">{item.title}</span>
-          <ArrowUpRight className="mt-1 size-4 shrink-0" aria-hidden />
+          <ArrowUpRight className="mt-1 size-4 shrink-0 text-app-accent" aria-hidden />
         </span>
         {item.when && (
           <span className="block text-sm font-medium leading-relaxed">{item.when}</span>

@@ -81,7 +81,7 @@ function WorkspaceContent({ layout }: { layout: 'periods' | 'days' }) {
   const days = visitDayDates(visit, state);
   return (
     <>
-      <header className="space-y-2">
+      <header className="space-y-3 rounded-xl border border-app-accent/30 bg-app-accent/10 p-4 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0 flex-1">
             <CanvasFields record={visit} showTiming={false} />
@@ -127,7 +127,7 @@ function DaySections({ visit, days }: { visit: TripRecord; days: TripDate[] }) {
     <div className="space-y-4">
       {days.map((day) => (
         <section key={day} aria-label={day}>
-          <h2 className="mb-2 text-sm font-semibold">
+          <h2 className="mb-3 rounded-lg border border-border bg-muted px-3 py-2 text-sm font-semibold text-foreground">
             {new Intl.DateTimeFormat('en-AU', {
               weekday: 'short',
               day: 'numeric',
@@ -140,7 +140,9 @@ function DaySections({ visit, days }: { visit: TripRecord; days: TripDate[] }) {
       ))}
       {undated.length > 0 && (
         <section aria-label="Undated items">
-          <h2 className="text-sm font-semibold">Ideas and people</h2>
+          <h2 className="rounded-lg border border-border bg-muted px-3 py-2 text-sm font-semibold text-foreground">
+            Ideas and people
+          </h2>
           <CanvasItemGroup
             visit={visit}
             items={undated}
@@ -182,7 +184,7 @@ function VisitSelector({ selected, select }: { selected: string; select: (id: st
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="ghost" aria-label="Choose visit">
-          <ListTree className="size-4" aria-hidden />
+          <ListTree className="size-4 text-app-accent" aria-hidden />
           Visits
         </Button>
       </PopoverTrigger>

@@ -5,7 +5,7 @@ export function VisitReview({ layout }: { layout: 'periods' | 'days' }) {
   return (
     <aside className="space-y-2 border-b bg-muted/30 px-5 py-3">
       <div className="flex flex-wrap items-center gap-3">
-        <Badge variant="outline">T06 · Review</Badge>
+        <Badge variant="outline">T06 · Approved</Badge>
         <span className="text-xs text-muted-foreground">
           Fictional data · changes reset on reload
         </span>

@@ -19,8 +19,11 @@ export function EventRouteImpact({ event }: { event: TripRecord }) {
   const { state } = canvas;
   const impact = eventRouteImpact(state, event);
   return (
-    <section aria-label="Route impact" className="space-y-4 border-t pt-5">
-      <h2 className="text-base font-semibold">Route impact</h2>
+    <section
+      aria-label="Route impact"
+      className="space-y-4 rounded-xl border border-foreground/20 bg-card p-4"
+    >
+      <h2 className="text-base font-bold">Route impact</h2>
       <EventVisit event={event} />
       {impact.findings.map((finding) => (
         <p key={finding} className="flex gap-2 text-sm text-destructive">
@@ -34,10 +37,10 @@ export function EventRouteImpact({ event }: { event: TripRecord }) {
       {impact.visit &&
         validCanvasTarget(state, { visitId: impact.visit.id }) &&
         impact.gaps.length > 0 && (
-          <div className="space-y-2 border-l pl-4">
+          <div className="space-y-2 border-l-2 border-dotted border-app-accent/50 pl-4">
             {impact.gaps.map((period) => (
               <div key={period.id} className="space-y-2">
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm font-medium text-foreground/90">
                   {period.start && formatTripDate(period.start)} →{' '}
                   {period.end && formatTripDate(period.end)}
                 </p>
@@ -97,11 +100,11 @@ function EventVisit({ event }: { event: TripRecord }) {
           aria-label="Choose associated visit"
           className="min-h-11 h-auto justify-start gap-3 px-0 text-left"
         >
-          <MapPin className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+          <MapPin className="size-4 shrink-0 text-app-accent" aria-hidden />
           {impact.visit ? (
             <span className="space-y-1">
               <span className="block font-medium">{canvasName(state, impact.visit)}</span>
-              <span className="block text-sm font-normal text-muted-foreground">
+              <span className="block text-sm font-normal text-foreground/80">
                 {[impact.placement, formatCityTiming(impact.visit.timing ?? {})]
                   .filter(Boolean)
                   .join(' · ')}
