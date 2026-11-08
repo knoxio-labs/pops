@@ -1,0 +1,8 @@
+name: Document attachment and linking
+question: Attach documents inline, or open a searchable picker?
+status: active
+frame: web
+screen: trips/document-link
+variants:
+  inline: Search existing documents in place
+  picker: Open a focused searchable document picker

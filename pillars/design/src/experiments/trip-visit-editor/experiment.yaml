@@ -1,6 +1,9 @@
 name: City visit editor
 question: Apply visit edits immediately with Undo, or save a draft?
-status: active
+status: decided
+chosen: direct
+decided: 2026-11-09
+rationale: Joao chose immediate edits with Undo, then approved the refined arrangement rows with ok next.
 frame: web
 screen: trips/visit-edit
 variants:
