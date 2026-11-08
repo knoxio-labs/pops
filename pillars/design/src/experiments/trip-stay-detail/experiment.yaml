@@ -1,0 +1,8 @@
+name: Stay detail
+question: Start with the stay details or its accommodation timeline within the visit?
+status: active
+frame: web
+screen: trips/stay
+variants:
+  details: Compact stay details with the visit timeline on demand
+  visit: Stay editor within neighbouring accommodation periods
