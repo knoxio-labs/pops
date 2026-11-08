@@ -1,6 +1,9 @@
 name: Stay detail
 question: Start with the stay details or its accommodation timeline within the visit?
-status: active
+status: decided
+chosen: visit
+decided: 2026-11-08
+rationale: Joao chose In visit to retain neighbouring accommodation periods, then approved with next.
 frame: web
 screen: trips/stay
 variants:
