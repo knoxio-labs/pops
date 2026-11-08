@@ -7,11 +7,12 @@ import { Button, cn } from '@pops/ui';
 import { useRouteState } from '../trip-route-editing/canvas-state';
 import { StayContext, useStay } from './context';
 import { StayEditor } from './editor';
-import { initialStay, stayFindings } from './model';
+import { initialStay } from './fixture';
+import { stayFindings } from './model';
 import { StayReview } from './review';
 import { StayTimeline, TimelineRow } from './timeline';
 
-import type { StayScenario } from './model';
+import type { StayScenario } from './fixture';
 
 /** Both stay proposals edit one local history; source bookings are never changed remotely. */
 export function StayWorkspace({

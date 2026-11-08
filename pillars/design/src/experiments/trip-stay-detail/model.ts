@@ -32,9 +32,6 @@ export interface StayFinding {
   detail: string;
 }
 
-export { initialStay } from './fixture';
-export type { StayScenario } from './fixture';
-
 type Interval = { from: string; to: string };
 
 function validInterval(value: Interval): boolean {

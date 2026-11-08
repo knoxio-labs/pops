@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { initialStay, stayFindings, stayNights } from './model';
+import { initialStay } from './fixture';
+import { stayFindings, stayNights } from './model';
 
 const ids = (state: ReturnType<typeof initialStay>) => stayFindings(state).map((item) => item.id);
 
