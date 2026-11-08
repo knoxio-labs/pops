@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { JourneyGroupSchema } from '../../contract/journey-groups.js';
 import { JourneySchema, JourneyLegSchema } from '../../contract/journey-schemas.js';
+import { JourneyTimingSchema } from '../../contract/journey-timing.js';
 import { PlaceSchema, TripSchema, VisitSchema } from '../../contract/schemas.js';
 import { openTripsDb, type OpenedTripsDb } from '../../db/index.js';
 import { createTripsApiApp } from '../app.js';
@@ -477,5 +478,82 @@ describe('Journey alternatives HTTP contract', () => {
         },
       },
     });
+  });
+});
+
+describe('Read-only journey timing HTTP contract', () => {
+  it('projects retained source chronology with the journey scope and publishes its OpenAPI operation', async () => {
+    const trip = TripSchema.parse(await (await call('/trips', 'POST', {})).json());
+    const base = `/trips/${trip.id}/journeys`;
+    const journey = JourneySchema.parse(
+      await (await call(base, 'POST', { buffers: { minimumConnectionMinutes: 999 } })).json()
+    );
+    const path = `${base}/${journey.id}`;
+    const source = JourneyLegSchema.parse(
+      await (
+        await call(`${path}/legs`, 'POST', {
+          from: { local: '2028-01-01T11:00', timeZone: 'UTC' },
+          to: { local: '2028-01-01T10:00', timeZone: 'UTC' },
+          purchase: 'Purchased',
+          reference: 'Retained source',
+        })
+      ).json()
+    );
+    expect((await call(`${path}/timing`, 'GET', undefined, null)).status).toBe(401);
+    expect((await call(`${path}/timing`, 'GET', undefined, 'legs-only')).status).toBe(403);
+    const response = await call(`${path}/timing`, 'GET', undefined, 'journeys-only');
+    expect(response.status).toBe(200);
+    const timing = JourneyTimingSchema.parse(await response.json());
+    expect(timing.legs).toMatchObject([
+      {
+        legId: source.id,
+        departure: '2028-01-01T11:00:00Z',
+        arrival: '2028-01-01T10:00:00Z',
+        elapsedMinutes: -60,
+      },
+    ]);
+    expect(timing.findings).toMatchObject([
+      { code: 'arrival_before_departure', legIds: [source.id] },
+    ]);
+    expect(await (await call(`${path}/legs/${source.id}`)).json()).toEqual(source);
+    expect(await (await call(path)).json()).toEqual(journey);
+    const spec: unknown = await (await call('/openapi')).json();
+    expect(spec).toMatchObject({
+      openapi: '3.0.2',
+      paths: {
+        '/trips/{tripId}/journeys/{id}/timing': { get: { operationId: 'journeys.timing' } },
+      },
+    });
+  });
+
+  it('returns unresolved clocks and empty journeys without fallback instants and enforces trip isolation', async () => {
+    const trip = TripSchema.parse(await (await call('/trips', 'POST', {})).json());
+    const other = TripSchema.parse(await (await call('/trips', 'POST', {})).json());
+    const base = `/trips/${trip.id}/journeys`;
+    const journey = JourneySchema.parse(await (await call(base, 'POST', {})).json());
+    const path = `${base}/${journey.id}`;
+    expect(await (await call(`${path}/timing`)).json()).toEqual({
+      journeyId: journey.id,
+      legs: [],
+      connections: [],
+      window: null,
+      findings: [],
+    });
+    const source = JourneyLegSchema.parse(
+      await (
+        await call(`${path}/legs`, 'POST', {
+          from: { local: '2028-11-05T01:30', timeZone: 'America/Chicago' },
+          to: { local: '2028-01-01T10:00' },
+        })
+      ).json()
+    );
+    expect(await (await call(`${path}/timing`)).json()).toMatchObject({
+      legs: [{ departure: null, arrival: null, elapsedMinutes: null }],
+      window: null,
+      findings: [{ code: 'clock_unresolved', legIds: [source.id], endpoint: 'from' }],
+    });
+    expect((await call(`/trips/${other.id}/journeys/${journey.id}/timing`)).status).toBe(404);
+    expect((await call(`${base}/99999/timing`)).status).toBe(404);
+    expect((await call(`${base}/invalid/timing`)).status).toBe(400);
   });
 });

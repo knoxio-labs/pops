@@ -9,6 +9,7 @@ import {
   reorderJourneyLegs,
   updateJourneyLeg,
 } from '../../db/services/journey-legs.js';
+import { getJourneyTiming } from '../../db/services/journey-timing.js';
 import {
   createJourney,
   deleteJourney,
@@ -27,6 +28,11 @@ export function makeJourneyHandlers(
   db: TripsDb
 ): ReturnType<typeof server.router<typeof journeysContract>> {
   return server.router(journeysContract, {
+    timing: ({ params }) =>
+      withTripsErrors(() => ({
+        status: 200 as const,
+        body: getJourneyTiming(db, params.tripId, params.id),
+      })),
     list: ({ params }) =>
       withTripsErrors(() => ({
         status: 200 as const,
