@@ -1,0 +1,38 @@
+import type { ManifestPayload } from '@pops/pillar-sdk/manifest-schema';
+
+/** Stable registry identity of the trips pillar. */
+export const TRIPS_PILLAR_ID = 'trips' as const;
+
+/** Publish the trips foundation's source operations without declaring a frontend application. */
+export function buildTripsManifest(version: string): ManifestPayload {
+  return {
+    pillar: TRIPS_PILLAR_ID,
+    version,
+    contract: { package: '@pops/trips', version, tag: `contract-trips@v${version}` },
+    routes: {
+      queries: [
+        'trips.trips.list',
+        'trips.trips.get',
+        'trips.places.list',
+        'trips.places.get',
+        'trips.visits.list',
+        'trips.visits.get',
+      ],
+      mutations: [
+        'trips.trips.create',
+        'trips.trips.update',
+        'trips.places.create',
+        'trips.places.update',
+        'trips.visits.create',
+        'trips.visits.update',
+        'trips.visits.reorder',
+      ],
+      subscriptions: [],
+    },
+    search: { adapters: [] },
+    ai: { tools: [] },
+    uri: { types: [] },
+    consumedSettings: { keys: [] },
+    healthcheck: { path: '/health' },
+  };
+}

@@ -2,7 +2,7 @@
 /**
  * Committed OpenAPI spec drift guard.
  *
- * Thirteen pillars declare `generate:openapi` (`tsx scripts/generate-openapi.ts`),
+ * Fifteen pillars declare `generate:openapi` (`tsx scripts/generate-openapi.ts`),
  * which calls the one shared projection every pillar uses —
  * `@pops/contract-openapi`'s `writePillarOpenApi` — to turn the pillar's
  * ts-rest contract into a byte-stable snapshot at the hardcoded path
@@ -191,6 +191,7 @@ export const EXPECTED_TARGETS = [
   '@pops/purchases',
   '@pops/registry',
   '@pops/tags',
+  '@pops/trips',
 ];
 
 /**
