@@ -31,19 +31,28 @@ export function CaptureComposer({
       {layout === 'type' && kinds}
       {(layout === 'text' || draft.kind) && (
         <>
-          <Textarea
-            aria-label="Capture text"
-            placeholder="Paste or type…"
-            className="min-h-24 border-foreground/20 bg-background/40 text-foreground"
-            value={draft.text}
-            onChange={(event) => change({ ...draft, text: event.target.value })}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' && (event.metaKey || event.ctrlKey) && enabled) {
-                event.preventDefault();
-                capture();
-              }
-            }}
-          />
+          <div className="relative">
+            <Textarea
+              aria-label="Capture text"
+              placeholder="Paste or type…"
+              className="min-h-28 border-foreground/20 bg-background/40 pb-14 text-foreground"
+              value={draft.text}
+              onChange={(event) => change({ ...draft, text: event.target.value })}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' && (event.metaKey || event.ctrlKey) && enabled) {
+                  event.preventDefault();
+                  capture();
+                }
+              }}
+            />
+            <div className="absolute right-2 bottom-2">
+              <CaptureAttachments
+                compact
+                files={draft.files}
+                onChange={(files) => change({ ...draft, files })}
+              />
+            </div>
+          </div>
           {layout === 'text' && kinds}
           <CaptureSource draft={draft} change={change} />
           <CaptureActions draft={draft} change={change} capture={capture} enabled={enabled} />
@@ -70,11 +79,15 @@ function CaptureActions({
   enabled: boolean;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-foreground/15 pt-2">
-      <div className="min-w-0 flex-1 sm:max-w-80">
-        <CaptureVisit value={draft.visitId} onChange={(visitId) => change({ ...draft, visitId })} />
+    <div className="flex flex-wrap items-center gap-2">
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
+        <div className="w-48 max-w-full">
+          <CaptureVisit
+            value={draft.visitId}
+            onChange={(visitId) => change({ ...draft, visitId })}
+          />
+        </div>
       </div>
-      <CaptureAttachments files={draft.files} onChange={(files) => change({ ...draft, files })} />
       <Button disabled={!enabled} onClick={capture}>
         <ArrowDownToLine className="size-4" aria-hidden />
         Capture
