@@ -80,6 +80,15 @@ The HTTP surface:
 | `/health`                                            | Fleet-standard liveness envelope.                                                                     |
 | `/openapi`                                           | The OpenAPI document, regenerated live from the same `src/openapi.rs` source as the committed copy.   |
 
+The Contacts app exposes `/contacts/people/:personId` from materialized import-review
+candidates. The link opens a separate tab to retain unsaved review choices. Person
+details show original local/imported methods (including inactive and preferred
+observations) and repeatable addresses before notes. Saving changes only the display
+name and notes; structured names and source observations remain independent. Undo
+reverts unsaved name/notes edits. Each new local method or raw address is saved
+individually. An uncertain write requires a successful reload before further writes;
+entered values remain available for checking against the refreshed record.
+
 Person entities retain the same fleet UUID identity as other entities. Multiple
 people may share a display name, including first-name-only records, and a person
 may share a name with a merchant. The Unicode case/diacritic unique-name rule

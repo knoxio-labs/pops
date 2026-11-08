@@ -139,7 +139,8 @@
     "saveFailed": "Não foi possível salvar a decisão.",
     "invalidChoices": "Escolhas de revisão inválidas.",
     "stageFailed": "Não foi possível ler a exportação.",
-    "providerChanged": "A conexão mudou ou a conta selecionada não corresponde. Recarregue as conexões e reconecte a conta desejada."
+    "providerChanged": "A conexão mudou ou a conta selecionada não corresponde. Recarregue as conexões e reconecte a conta desejada.",
+    "notPerson": "Este registro não é uma pessoa."
   },
   "connections": {
     "title": "Conexões de contatos",
@@ -214,5 +215,35 @@
     "saved_one": "{{count}} contato resolvido importado. Contatos que exigem revisão ou foram adiados continuam pendentes.",
     "saved_other": "{{count}} contatos resolvidos importados. Contatos que exigem revisão ou foram adiados continuam pendentes.",
     "applying": "Importando contatos resolvidos…"
+  },
+  "person": {
+    "title": "Detalhes da pessoa",
+    "name": "Nome da pessoa",
+    "notes": "Notas",
+    "methods": "Formas de contato",
+    "addresses": "Endereços",
+    "address": "Endereço",
+    "noMethods": "Nenhuma forma de contato ainda.",
+    "noAddresses": "Nenhum endereço ainda.",
+    "addMethod": "Adicionar forma de contato",
+    "addAddress": "Adicionar endereço",
+    "kind": "Tipo",
+    "label": "Rótulo",
+    "value": "Valor do contato",
+    "local": "Local",
+    "unknownSource": "Origem indisponível",
+    "inactive": "Origem inativa",
+    "preferred": "Preferido",
+    "country": "País do telefone: {{country}}",
+    "copy": "Copiar valor",
+    "copied": "Copiado",
+    "failed": "Não foi possível copiar. Tente novamente.",
+    "save": "Salvar detalhes",
+    "saved": "Salvo em Contatos.",
+    "undo": "Desfazer",
+    "reload": "Recarregar pessoa",
+    "loading": "Carregando pessoa",
+    "uncertain": "O resultado da gravação é desconhecido. Recarregue e confira os dados salvos antes de enviar novamente. Os valores digitados foram mantidos.",
+    "open": "Detalhes da pessoa (nova aba)"
   }
 }

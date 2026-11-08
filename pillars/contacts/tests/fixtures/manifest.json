@@ -50,6 +50,10 @@
     {
       "bundleSlot": "contacts-connections",
       "path": "connections"
+    },
+    {
+      "bundleSlot": "contacts-person",
+      "path": "people/:personId"
     }
   ],
   "pillar": "contacts",

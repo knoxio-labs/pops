@@ -86,7 +86,8 @@ pub fn build_contacts_manifest(version: &str) -> Value {
         "pages": [
             { "path": "", "index": true, "bundleSlot": "contacts-import-review" },
             { "path": "imports/:batchId", "bundleSlot": "contacts-import-review" },
-            { "path": "connections", "bundleSlot": "contacts-connections" }
+            { "path": "connections", "bundleSlot": "contacts-connections" },
+            { "path": "people/:personId", "bundleSlot": "contacts-person" }
         ],
         "healthcheck": { "path": "/health" },
     })
@@ -177,6 +178,14 @@ mod tests {
             manifest["pages"][0]["bundleSlot"],
             json!("contacts-import-review")
         );
+    }
+
+    #[test]
+    fn person_details_are_a_drill_down_page_without_an_unapproved_directory() {
+        let manifest = build_contacts_manifest("0.0.0-dev");
+        assert_eq!(manifest["pages"][3]["path"], json!("people/:personId"));
+        assert_eq!(manifest["pages"][3]["bundleSlot"], json!("contacts-person"));
+        assert_eq!(manifest["nav"]["items"].as_array().unwrap().len(), 2);
     }
 
     #[test]
