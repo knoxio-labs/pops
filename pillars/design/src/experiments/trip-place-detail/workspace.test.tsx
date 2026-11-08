@@ -103,6 +103,9 @@ describe('place and idea editing', () => {
     expect(screen.getByLabelText('Recommendation note · 1')).toHaveValue(
       'Lina mentioned a friendly group that welcomes visitors.'
     );
+    fireEvent.keyDown(screen.getByLabelText('Recommendation note · 1'), { key: 'Escape' });
+    expect(screen.queryByText('Without contact')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Edit recommendation 1' }));
     fireEvent.click(screen.getByRole('button', { name: 'Remove recommendation 1' }));
     expect(
       within(screen.getByRole('region', { name: 'Recommendations' })).queryByRole('textbox')
