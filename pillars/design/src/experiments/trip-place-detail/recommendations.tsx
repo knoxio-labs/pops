@@ -1,10 +1,20 @@
-import { Plus, Users, X } from 'lucide-react';
+import { Pencil, Plus, Trash2, Users } from 'lucide-react';
+import { useState } from 'react';
 
-import { Button, ComboboxSelect, Textarea } from '@pops/ui';
+import {
+  Button,
+  ComboboxSelect,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  Textarea,
+} from '@pops/ui';
 
 import { useIdea } from './context';
 
-/** Recommendations retain a reusable contact reference and the user's original note. */
+import type { IdeaState } from './model';
+
+/** Read recommendations and explicitly edit their retained contact reference and original note. */
 export function IdeaRecommendations() {
   const { state, change } = useIdea();
   return (
@@ -38,6 +48,37 @@ export function IdeaRecommendations() {
 }
 
 function Recommendation({ id, index }: { id: string; index: number }) {
+  const { state } = useIdea();
+  const recommendation = state.recommendations.find((item) => item.id === id);
+  const [editing, setEditing] = useState(!recommendation?.contactId && !recommendation?.note);
+  if (!recommendation) return null;
+  const contact = state.contacts.find((item) => item.id === recommendation.contactId);
+  return (
+    <div className="flex items-start gap-2 border-l border-app-accent/40 pl-3">
+      <div className="min-w-0 flex-1 space-y-1 py-2">
+        {(contact || recommendation.contactId) && (
+          <p className="text-sm font-medium">{contact?.name ?? 'Contact unavailable'}</p>
+        )}
+        {recommendation.note && (
+          <p className="whitespace-pre-wrap text-sm text-muted-foreground">{recommendation.note}</p>
+        )}
+      </div>
+      <Popover open={editing} onOpenChange={setEditing}>
+        <PopoverTrigger asChild>
+          <Button variant="ghost" size="icon" aria-label={`Edit recommendation ${index + 1}`}>
+            <Pencil className="size-4" aria-hidden />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="end" className="space-y-3">
+          <h3 className="text-sm font-semibold">Edit recommendation {index + 1}</h3>
+          <RecommendationFields id={id} index={index} />
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
+function RecommendationFields({ id, index }: { id: string; index: number }) {
   const { state, change } = useIdea();
   const recommendation = state.recommendations.find((item) => item.id === id);
   if (!recommendation) return null;
@@ -47,50 +88,56 @@ function Recommendation({ id, index }: { id: string; index: number }) {
       recommendations: state.recommendations.map((item) => (item.id === id ? next : item)),
     });
   return (
-    <div className="space-y-1 border-l border-app-accent/40 pl-3">
-      <div className="flex items-center gap-2">
+    <>
+      <div className="space-y-1">
+        <p className="text-xs text-muted-foreground">Recommended by</p>
         <ComboboxSelect
           aria-label={`Recommended by · ${index + 1}`}
-          value={
-            state.contacts.some((contact) => contact.id === recommendation.contactId)
-              ? recommendation.contactId
-              : ''
-          }
-          options={[
-            { value: '', label: 'Without contact' },
-            ...state.contacts.map((contact) => ({ value: contact.id, label: contact.name })),
-          ]}
+          value={recommendation.contactId}
+          options={contactOptions(state, recommendation.contactId)}
           placeholder="Choose contact"
           searchPlaceholder="Find a contact…"
-          variant="ghost"
           onChange={(value) => {
             if (typeof value === 'string' && value !== recommendation.contactId)
               update({ ...recommendation, contactId: value });
           }}
         />
-        <Button
-          variant="ghost"
-          aria-label={`Remove recommendation ${index + 1}`}
-          onClick={() =>
-            change({
-              ...state,
-              recommendations: state.recommendations.filter((item) => item.id !== id),
-            })
-          }
-        >
-          <X className="size-4" aria-hidden />
-        </Button>
       </div>
-      <Textarea
-        aria-label={`Recommendation note · ${index + 1}`}
-        key={recommendation.note}
-        defaultValue={recommendation.note}
-        placeholder="Add recommendation"
-        onBlur={(event) => {
-          if (event.currentTarget.value !== recommendation.note)
-            update({ ...recommendation, note: event.currentTarget.value });
-        }}
-      />
-    </div>
+      <label className="block space-y-1 text-xs text-muted-foreground">
+        <span>Recommendation note</span>
+        <Textarea
+          aria-label={`Recommendation note · ${index + 1}`}
+          key={recommendation.note}
+          defaultValue={recommendation.note}
+          placeholder="Add recommendation"
+          onBlur={(event) => {
+            if (event.currentTarget.value !== recommendation.note)
+              update({ ...recommendation, note: event.currentTarget.value });
+          }}
+        />
+      </label>
+      <Button
+        variant="ghost"
+        className="text-destructive"
+        onClick={() =>
+          change({
+            ...state,
+            recommendations: state.recommendations.filter((item) => item.id !== id),
+          })
+        }
+      >
+        <Trash2 className="size-4" aria-hidden />
+        Remove recommendation {index + 1}
+      </Button>
+    </>
   );
+}
+
+function contactOptions(state: IdeaState, selectedId: string) {
+  const unavailable = selectedId && !state.contacts.some((contact) => contact.id === selectedId);
+  return [
+    { value: '', label: 'Without contact' },
+    ...(unavailable ? [{ value: selectedId, label: 'Contact unavailable' }] : []),
+    ...state.contacts.map((contact) => ({ value: contact.id, label: contact.name })),
+  ];
 }

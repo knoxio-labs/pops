@@ -1,17 +1,45 @@
 import { MapPin, Plus, X } from 'lucide-react';
 import { useState } from 'react';
 
-import { Button, ComboboxSelect, TextInput } from '@pops/ui';
+import {
+  Button,
+  ComboboxSelect,
+  TextInput,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@pops/ui';
 
 import { useIdea } from './context';
 import { IdeaText } from './fields';
 
 /** Choose a source city or add an arbitrary one without forcing a dated visit. */
 export function IdeaLocation() {
+  const { state } = useIdea();
+  return (
+    <section aria-label="Idea location" className="space-y-1 border-t pt-3">
+      <h2 className="text-xs font-medium text-muted-foreground">Location</h2>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button variant="ghost" aria-label="Edit location">
+            <MapPin className="size-4 text-app-accent" aria-hidden />
+            {state.cities.find((city) => city.id === state.cityId)?.name ?? 'Add location'}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="start" className="w-80 space-y-3">
+          <LocationFields />
+        </PopoverContent>
+      </Popover>
+      <IdeaText field="address" label="Address" />
+    </section>
+  );
+}
+
+function LocationFields() {
   const { state, change } = useIdea();
   const [adding, setAdding] = useState(false);
   return (
-    <section aria-label="Idea location" className="space-y-2 border-t pt-3">
+    <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
         <MapPin className="size-4 text-app-accent" aria-hidden />
         <ComboboxSelect
@@ -41,8 +69,7 @@ export function IdeaLocation() {
         </Button>
       </div>
       {adding && <NewCity close={() => setAdding(false)} />}
-      <IdeaText field="address" label="Address" />
-    </section>
+    </div>
   );
 }
 

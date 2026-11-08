@@ -1,14 +1,44 @@
-import { ComboboxSelect, TextInput } from '@pops/ui';
+import { CalendarDays } from 'lucide-react';
+
+import {
+  Button,
+  ComboboxSelect,
+  TextInput,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@pops/ui';
 
 import { useIdea } from './context';
 import { timingModes } from './fixture';
+import { ideaTimingLabel } from './model';
 
 /** Optional month or date bounds remain source fields; switching precision retains inactive values. */
 export function IdeaTiming() {
+  const { state } = useIdea();
+  return (
+    <section aria-label="Idea timing">
+      <h2 className="text-xs font-medium text-muted-foreground">When</h2>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button variant="ghost" aria-label="Edit timing">
+            <CalendarDays className="size-4 text-app-accent" aria-hidden />
+            {ideaTimingLabel(state) || 'Add timing'}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="start" className="w-80 space-y-3">
+          <TimingFields />
+        </PopoverContent>
+      </Popover>
+    </section>
+  );
+}
+
+function TimingFields() {
   const { state, change } = useIdea();
   const { timing } = state;
   return (
-    <section aria-label="Idea timing" className="flex flex-wrap items-center gap-2">
+    <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-3">
         <ComboboxSelect
           aria-label="Timing precision"
@@ -54,6 +84,6 @@ export function IdeaTiming() {
           ))}
         </div>
       )}
-    </section>
+    </div>
   );
 }

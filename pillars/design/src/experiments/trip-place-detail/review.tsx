@@ -26,17 +26,19 @@ export function IdeaReview({ layout }: { layout: 'details' | 'route' }) {
             independent optional fields; changing one never silently changes the others.
           </p>
           <ol className="list-decimal space-y-1 pl-5">
-            <li>Which starting view works better for collecting an idea and later arranging it?</li>
+            <li>Are the idea’s location, timing and route placement clear as separate facts?</li>
             <li>
               Do purpose, reason and recommendations capture why you want to go, including meeting
               people?
             </li>
           </ol>
           <p>
-            Try an undated idea, month-level timing, exact dates outside the selected visit, another
-            city, a new city, multiple recommendations or links, and undo. Choosing In plan keeps
-            the idea soft. The editor records an intention; it does not buy an event or change a
-            route booking.
+            Click the name, reason or address to edit directly; blur commits and Escape cancels.
+            Timing, location, placement and sources open focused editors, with removal actions
+            inside. Try an undated idea, month-level timing, exact dates outside the selected visit,
+            another city, a new city, multiple recommendations or links, and undo. Choosing In plan
+            keeps the idea soft. The editor records an intention; it does not buy an event or change
+            a route booking.
           </p>
           <p>
             Names, reason, address, recommendations, link labels/URLs and notes are stored user
