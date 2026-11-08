@@ -2576,6 +2576,184 @@
         "tags": ["journeys"]
       }
     },
+    "/trips/{tripId}/journeys/{id}/timing": {
+      "get": {
+        "operationId": "journeys.timing",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tripId",
+            "required": true,
+            "schema": {
+              "exclusiveMinimum": true,
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "exclusiveMinimum": true,
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "connections": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "availableMinutes": {
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "nextLegId": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "previousLegId": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          }
+                        },
+                        "required": ["previousLegId", "nextLegId", "availableMinutes"],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "findings": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "code": {
+                            "enum": [
+                              "clock_unresolved",
+                              "arrival_before_departure",
+                              "departure_before_previous_arrival"
+                            ],
+                            "type": "string"
+                          },
+                          "endpoint": {
+                            "enum": ["from", "to"],
+                            "type": "string"
+                          },
+                          "id": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "enum": ["conflict"],
+                            "type": "string"
+                          },
+                          "legIds": {
+                            "items": {
+                              "exclusiveMinimum": true,
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "type": "array"
+                          }
+                        },
+                        "required": ["id", "kind", "code", "legIds"],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "journeyId": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "legs": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "arrival": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "departure": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "elapsedMinutes": {
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "legId": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          }
+                        },
+                        "required": ["legId", "departure", "arrival", "elapsedMinutes"],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "window": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "from": {
+                          "type": "string"
+                        },
+                        "toExclusive": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["from", "toExclusive"],
+                      "type": "object"
+                    }
+                  },
+                  "required": ["journeyId", "legs", "connections", "window", "findings"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "404"
+          }
+        },
+        "tags": ["journeys"]
+      }
+    },
     "/trips/{tripId}/journeys/{journeyId}/leg-order": {
       "put": {
         "operationId": "journeyLegs.reorder",

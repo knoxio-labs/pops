@@ -15,6 +15,7 @@ export function buildTripsManifest(version: string): ManifestPayload {
         'trips.journeyGroups.get',
         'trips.journeys.list',
         'trips.journeys.get',
+        'trips.journeys.timing',
         'trips.journeyLegs.list',
         'trips.journeyLegs.get',
         'trips.trips.list',

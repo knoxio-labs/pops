@@ -54,6 +54,29 @@ buffers are nonnegative physical minutes, including zero and fractions; missing
 thresholds have no defaults. A supplied buffers object replaces its complete
 configuration and `{}` clears it. Source links may remain unavailable remotely.
 
+`GET /trips/:tripId/journeys/:id/timing` projects the persisted source legs in
+one read transaction. It returns resolved endpoint instants, signed leg elapsed
+minutes, signed time available between adjacent legs, a local-calendar window,
+and nonblocking clock/chronology findings. Negative elapsed or available minutes
+record contradictions; zero is not an overlap. An absent clock or zone remains
+unknown without a filler finding. A complete clock that cannot be resolved
+unambiguously produces `clock_unresolved` and a null instant; no DST side is
+silently selected. Source values, timestamps, purchase facts, visit order and
+group selection remain unchanged.
+
+Clock resolution uses the Temporal polyfill with `disambiguation: 'reject'`.
+Skipped and repeated local clocks stay unresolved. Temporal supports nanosecond
+precision; source clocks beyond that precision remain stored verbatim and
+unresolved rather than being truncated. The returned ISO instants can use
+extended calendar-year spelling when a boundary crosses the source year range.
+The window begins at midnight on the local day before the first source departure
+and ends exclusively at midnight two local dates after the last source arrival.
+These are calendar shifts in the explicit source zones, including DST changes,
+not fixed 24-hour shifts. Unresolved endpoints or boundaries and nonpositive
+windows return a null window. The timing route does not assert connection
+safety: nearby bookings, transport classification and location-dependent buffer
+or transfer findings remain tracked by POPS-6134.
+
 Journey groups explicitly associate existing source records without changing them.
 `GET/POST /trips/:tripId/journey-groups` list or create groups; creation requires
 `currentJourneyId` and optional distinct `alternativeJourneyIds` belonging to the

@@ -10,6 +10,7 @@ import {
   JourneySchema,
   ReorderJourneyLegsBody,
 } from './journey-schemas.js';
+import { JourneyTimingSchema } from './journey-timing.js';
 
 const c = initContract();
 const Trip = z.object({ tripId: z.coerce.number().int().positive() });
@@ -20,6 +21,12 @@ const errors = { 400: ErrorBodySchema, 404: ErrorBodySchema };
 
 /** Trip-owned journey source operations; nothing infers visit placement or changes bookings. */
 export const journeysContract = c.router({
+  timing: {
+    method: 'GET',
+    path: '/trips/:tripId/journeys/:id/timing',
+    pathParams: Journey,
+    responses: { 200: JourneyTimingSchema, ...errors },
+  },
   list: {
     method: 'GET',
     path: '/trips/:tripId/journeys',
