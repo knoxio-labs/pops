@@ -37,6 +37,25 @@ async function saved() {
 }
 
 describe('Source-backed event workspace', () => {
+  it('preserves a draft and its editor through a failed background refresh and recovery', async () => {
+    const transport = eventTransport();
+    const cache = mount(transport);
+    const field = await screen.findByLabelText('Event name');
+    fireEvent.change(field, { target: { value: 'Uncommitted event' } });
+    transport.failReads();
+    const queryKey = eventQueryKey({ tripId: 7, eventId: 19, client: transport.client });
+    await act(async () => {
+      await cache.refetchQueries({ queryKey });
+    });
+    expect(await screen.findByText('trips.temporarily_unavailable')).toBeVisible();
+    expect(screen.getByLabelText('Event name')).toHaveValue('Uncommitted event');
+    expect(screen.getByText('Unsaved changes')).toBeVisible();
+    transport.restoreReads();
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    await waitFor(() => expect(screen.queryByText('trips.temporarily_unavailable')).toBeNull());
+    expect(screen.getByLabelText('Event name')).toHaveValue('Uncommitted event');
+    expect(transport.patches).toEqual([]);
+  });
   it('places the editor inside the explicit visit and preserves unknown source timing and opaque references', async () => {
     const transport = eventTransport();
     mount(transport);

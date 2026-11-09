@@ -50,11 +50,18 @@ function LoadEvent(props: EventWorkspaceProps): JSX.Element {
         Loading event…
       </p>
     );
-  if (source.isError)
+  if (source.data === undefined)
     return (
       <ErrorState error={requestProblem(source.error)} onRetry={() => void source.refetch()} />
     );
-  return <EventSession initial={source.data} identity={props} context={context} />;
+  return (
+    <>
+      {source.isError && (
+        <ErrorState error={requestProblem(source.error)} onRetry={() => void source.refetch()} />
+      )}
+      <EventSession initial={source.data} identity={props} context={context} />
+    </>
+  );
 }
 
 interface EventContext {

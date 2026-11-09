@@ -46,6 +46,7 @@ export function eventTransport(
   } = {}
 ) {
   let source = options.source ?? sourceEvent();
+  let readFailure = false;
   const replies = [...(options.replies ?? [])];
   const patches: unknown[] = [];
   const requests: Request[] = [];
@@ -59,7 +60,9 @@ export function eventTransport(
         const body: unknown = await request.json();
         patches.push(body);
         response = replies.shift() ?? { status: 200, body: source };
-      } else
+      } else if (readFailure)
+        response = { status: 503, body: problem('trips.temporarily_unavailable') };
+      else
         response = options.missing
           ? { status: 404, body: problem('trips.record.not_found') }
           : { status: 200, body: source };
@@ -104,6 +107,12 @@ export function eventTransport(
     requests,
     setSource: (next: TripEvent) => {
       source = next;
+    },
+    failReads: () => {
+      readFailure = true;
+    },
+    restoreReads: () => {
+      readFailure = false;
     },
   };
 }
