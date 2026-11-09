@@ -25,8 +25,8 @@ export function BusinessDetails() {
   const { state } = useBusiness();
   return (
     <section aria-label="Global contact details" className="space-y-3">
-      <h2 className="text-lg font-semibold">Contact details</h2>
-      <div className="divide-y rounded-xl bg-muted/50 px-4">
+      <h2 className="text-base font-semibold leading-6 tracking-normal">Contact details</h2>
+      <div className="divide-y divide-foreground/10 rounded-xl border border-foreground/15 bg-card px-4">
         {state.business.methods.map((method) => (
           <div key={method.id} className="flex items-center gap-1 py-2">
             <div className="min-w-0 flex-1 py-1">
@@ -41,7 +41,7 @@ export function BusinessDetails() {
           <MethodEditor method={{ id: '', label: '', value: '' }} add />
         </div>
       </div>
-      <div className="divide-y rounded-xl bg-muted/50 px-4">
+      <div className="divide-y divide-foreground/10 rounded-xl border border-foreground/15 bg-card px-4">
         {state.websites.map((website) => (
           <div key={website.id} className="flex items-center gap-2 py-2">
             <div className="min-w-0 flex-1 py-1">
