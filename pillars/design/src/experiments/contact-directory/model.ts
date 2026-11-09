@@ -1,4 +1,5 @@
 import { ENTITY_TYPE_LABEL, type Entity, type EntityType } from '../../fixtures/entities';
+import { normalizeSearchText } from '../../fixtures/search-text';
 
 /** A directory identity retains its complete source kind and optionally its original Finance entity. */
 export interface DirectoryContact {
@@ -34,17 +35,13 @@ export const directoryKinds: { kind: EntityType; label: string }[] = Object.entr
 
 const nameOrder = new Intl.Collator('en', { sensitivity: 'base' });
 
-function fold(value: string): string {
-  return value.normalize('NFD').replace(/\p{M}/gu, '').toLocaleLowerCase();
-}
-
 function compareContacts(left: DirectoryContact, right: DirectoryContact): number {
   return nameOrder.compare(left.name, right.name) || left.id.localeCompare(right.id, 'en');
 }
 
 /** Searches source facts with accent and case folding, then ANDs explicit kind, city and origin filters. */
 export function visibleContacts(state: DirectoryState): DirectoryContact[] {
-  const query = fold(state.query.trim());
+  const query = normalizeSearchText(state.query.trim());
   return state.contacts
     .filter((contact) => {
       if (state.kind && contact.kind !== state.kind) return false;
@@ -57,7 +54,7 @@ export function visibleContacts(state: DirectoryState): DirectoryContact[] {
         ...contact.methods.map((method) => method.value),
         ...contact.addresses.flatMap((address) => [address.city, address.value]),
       ];
-      return facts.some((fact) => fold(fact).includes(query));
+      return facts.some((fact) => normalizeSearchText(fact).includes(query));
     })
     .toSorted(compareContacts);
 }
