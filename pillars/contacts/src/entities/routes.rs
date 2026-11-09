@@ -127,6 +127,14 @@ pub struct EntityResponse {
     pub data: Entity,
 }
 
+/// Canonical POPS URI for an entity, resolving historical IDs to their retained identity.
+#[derive(Debug, Clone, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct EntityReferenceResponse {
+    pub canonical_id: String,
+    pub uri: String,
+}
+
 /// Create/update response body — the entity plus a human-readable message.
 #[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct EntityMutation {
@@ -179,6 +187,7 @@ pub fn router() -> Router<AppState> {
             "/entities/{id}",
             get(get_one).patch(update).delete(delete_one),
         )
+        .route("/entities/{id}/reference", get(reference))
         .route("/entities/lookup", post(lookup))
         .route("/entities/{id}/colour/reroll", post(reroll_colour))
         .route(
@@ -252,6 +261,31 @@ pub async fn get_one(
         .map_err(db_error)?
         .ok_or_else(|| ApiError::not_found("Entity", &id))?;
     Ok(Json(EntityResponse { data: row.into() }))
+}
+
+#[utoipa::path(
+    get,
+    path = "/entities/{id}/reference",
+    operation_id = "entities.reference",
+    params(("id" = String, Path, description = "Entity id")),
+    responses(
+        (status = 200, description = "Canonical POPS URI", body = EntityReferenceResponse),
+        (status = 404, description = "No such entity", body = crate::api::ErrorBody)
+    )
+)]
+pub async fn reference(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<Json<EntityReferenceResponse>, ApiError> {
+    let mut conn = state.pool.acquire().await.map_err(ApiError::database)?;
+    let canonical_id = crate::merges::repo::resolve_one(&mut conn, &id)
+        .await
+        .map_err(ApiError::database)?
+        .ok_or_else(|| ApiError::not_found("Entity", &id))?;
+    Ok(Json(EntityReferenceResponse {
+        canonical_id: canonical_id.clone(),
+        uri: format!("pops:contacts/contact/{canonical_id}"),
+    }))
 }
 
 #[utoipa::path(

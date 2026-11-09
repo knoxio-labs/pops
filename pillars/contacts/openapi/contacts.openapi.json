@@ -214,7 +214,7 @@
         "type": "object"
       },
       "ContactPoint": {
-        "description": "A local or imported point. `sourceRecordId: null` identifies an explicit local value.\nPreferred observations survive source refresh/deactivation, including their original value.",
+        "description": "A local or imported point. `sourceRecordId: null` identifies an explicit local value, which\nmay belong to a person, company or organisation; source-backed points remain person-owned.\nPreferred observations survive source refresh/deactivation, including their original value.",
         "properties": {
           "active": {
             "type": "boolean"
@@ -303,7 +303,7 @@
         "type": "string"
       },
       "ContactPointListResponse": {
-        "description": "Contact point observations, including inactive audit values and preferred selections.",
+        "description": "Contact point observations for a person, company or organisation, including inactive audit values and preferred selections.",
         "properties": {
           "data": {
             "items": {
@@ -502,6 +502,22 @@
         "required": [
           "data",
           "message"
+        ],
+        "type": "object"
+      },
+      "EntityReferenceResponse": {
+        "description": "Canonical POPS URI for an entity, resolving historical IDs to their retained identity.",
+        "properties": {
+          "canonicalId": {
+            "type": "string"
+          },
+          "uri": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "canonicalId",
+          "uri"
         ],
         "type": "object"
       },
@@ -3219,7 +3235,7 @@
             }
           }
         },
-        "summary": "Read all local and source points, with their provenance and preference flags.",
+        "summary": "Read local points for a person, company or organisation and source points for persons, retaining provenance and preference flags.",
         "tags": [
           "crate::persons::routes"
         ]
@@ -3577,6 +3593,47 @@
           }
         },
         "summary": "`PUT /entities/{id}/poster` — upload/replace the entity's poster image.",
+        "tags": [
+          "crate::entities::routes"
+        ]
+      }
+    },
+    "/entities/{id}/reference": {
+      "get": {
+        "operationId": "entities.reference",
+        "parameters": [
+          {
+            "description": "Entity id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntityReferenceResponse"
+                }
+              }
+            },
+            "description": "Canonical POPS URI"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "No such entity"
+          }
+        },
         "tags": [
           "crate::entities::routes"
         ]

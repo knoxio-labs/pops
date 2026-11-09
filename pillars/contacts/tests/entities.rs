@@ -157,6 +157,22 @@ async fn create_returns_201_with_the_projected_entity() {
 }
 
 #[tokio::test]
+async fn reference_returns_the_canonical_contact_uri_and_404_for_unknown_ids() {
+    let app = app().await;
+    let entity = create_contact(&app, json!({ "name": "Acme", "type": "company" })).await;
+    let id = entity["id"].as_str().expect("entity id");
+
+    let (status, body) = send(&app, get(&format!("/entities/{id}/reference"))).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["canonicalId"], id);
+    assert_eq!(body["uri"], format!("pops:contacts/contact/{id}"));
+
+    let (status, body) = send(&app, get("/entities/missing/reference")).await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+    assert_eq!(body["code"], "contacts.resource.not_found");
+}
+
+#[tokio::test]
 async fn create_defaults_type_to_company() {
     let app = app().await;
     let data = create_contact(&app, json!({ "name": "NoType" })).await;
