@@ -18,7 +18,12 @@ export function CopyValue({ value }: { value: string }) {
   }
   return (
     <div className="space-y-1">
-      <Button variant="ghost" aria-label={t('person.copy')} onClick={() => void copy()}>
+      <Button
+        variant="ghost"
+        className="min-h-11 min-w-11 text-sm"
+        aria-label={t('person.copy')}
+        onClick={() => void copy()}
+      >
         <Copy className="size-4" aria-hidden />
       </Button>
       {status && (

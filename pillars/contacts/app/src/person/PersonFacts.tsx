@@ -23,23 +23,39 @@ export function PersonFacts({
   const { t } = useTranslation('contacts');
   return (
     <>
-      <section aria-label={t('person.methods')} className="space-y-4 rounded-xl border p-4">
-        <h2 className="text-lg font-semibold">{t('person.methods')}</h2>
-        {data.points.length === 0 && <p>{t('person.noMethods')}</p>}
-        <ul className="divide-y">
+      <section
+        aria-label={t('person.methods')}
+        className="space-y-4 rounded-xl border border-border bg-card p-4"
+      >
+        <h2 className="text-base font-semibold leading-tight tracking-normal">
+          {t('person.methods')}
+        </h2>
+        {data.points.length === 0 && (
+          <p className="text-sm text-muted-foreground">{t('person.noMethods')}</p>
+        )}
+        <ul className="divide-y divide-border">
           {data.points.map((point) => (
             <PointObservation key={point.id} point={point} data={data} />
           ))}
         </ul>
         <AddContactPoint disabled={disabled} onAdd={addPoint} />
       </section>
-      <section aria-label={t('person.addresses')} className="space-y-4 rounded-xl border p-4">
-        <h2 className="text-lg font-semibold">{t('person.addresses')}</h2>
-        {data.addresses.length === 0 && <p>{t('person.noAddresses')}</p>}
-        <ul className="divide-y">
+      <section
+        aria-label={t('person.addresses')}
+        className="space-y-4 rounded-xl border border-border bg-card p-4"
+      >
+        <h2 className="text-base font-semibold leading-tight tracking-normal">
+          {t('person.addresses')}
+        </h2>
+        {data.addresses.length === 0 && (
+          <p className="text-sm text-muted-foreground">{t('person.noAddresses')}</p>
+        )}
+        <ul className="divide-y divide-border">
           {data.addresses.map((address) => (
             <li key={address.id} className="flex items-start gap-3 py-3">
-              <p className="min-w-0 flex-1 whitespace-pre-wrap break-words">{address.value}</p>
+              <p className="min-w-0 flex-1 whitespace-pre-wrap break-words text-sm">
+                {address.value}
+              </p>
               <CopyValue key={address.value} value={address.value} />
             </li>
           ))}
@@ -57,18 +73,20 @@ function PointObservation({ point, data }: { point: ContactPoint; data: PersonSn
   return (
     <li key={point.id} className="flex items-start gap-3 py-3">
       <div className="min-w-0 flex-1 space-y-1">
-        <p className="text-sm">
+        <p className="text-xs text-muted-foreground">
           {t(`pointKinds.${point.kind}`, { defaultValue: point.kind })}
           {point.label ? ` · ${point.label}` : ''}
         </p>
-        <p className="break-words">{point.value}</p>
-        <p className="break-words text-sm text-muted-foreground">
+        <p className="break-words text-sm">{point.value}</p>
+        <p className="break-words text-xs text-muted-foreground">
           {point.sourceRecordId
             ? (account?.label ?? account?.provider ?? t('person.unknownSource'))
             : t('person.local')}
         </p>
         {point.countryCode && (
-          <p className="text-sm">{t('person.country', { country: point.countryCode })}</p>
+          <p className="text-xs text-muted-foreground">
+            {t('person.country', { country: point.countryCode })}
+          </p>
         )}
         <div className="flex flex-wrap gap-2">
           {!point.active && <Badge variant="outline">{t('person.inactive')}</Badge>}

@@ -146,3 +146,35 @@ it('renders empty facts and lets a failed initial load recover without an editor
     })
   ).toBeDisabled();
 });
+
+it('uses neutral fact groups and the approved readable hierarchy without hiding source copy actions', async () => {
+  const user = userEvent.setup();
+  const copy = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue();
+  mount(personTestGateway());
+  const title = await screen.findByRole('heading', { level: 1, name: 'Marina Duarte' });
+  expect(title.firstElementChild).toHaveClass('text-2xl', 'leading-tight', 'tracking-normal');
+  expect(screen.getByRole('main')).toHaveClass('text-sm');
+  for (const label of ['Contact methods', 'Addresses', 'Notes']) {
+    const group = screen.getByRole('region', { name: label });
+    expect(group).toHaveClass('bg-card', 'border-border');
+    expect(within(group).getByRole('heading', { level: 2, name: label })).toHaveClass(
+      'text-base',
+      'leading-tight',
+      'tracking-normal'
+    );
+  }
+  const methods = within(screen.getByRole('region', { name: 'Contact methods' }));
+  expect(methods.getByText('Marina@Example.test')).toHaveClass('text-sm');
+  expect(methods.getByText('Personal account')).toHaveClass('text-xs');
+  expect(methods.getByText('Local')).toHaveClass('text-xs');
+  expect(methods.getByText('Inactive source')).toBeVisible();
+  expect(methods.getByText('Preferred')).toBeVisible();
+  const importedRow = methods.getByText('Marina@Example.test').closest('li');
+  if (!importedRow) throw new Error('Expected an imported contact observation row.');
+  const copyButton = within(importedRow).getByRole('button', { name: 'Copy value' });
+  expect(copyButton).toHaveClass('min-h-11', 'min-w-11');
+  await user.click(copyButton);
+  expect(copy).toHaveBeenCalledExactlyOnceWith('Marina@Example.test');
+  expect(methods.queryByRole('button', { name: /delete|remove|edit/i })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Save details' })).toHaveClass('text-sm', 'min-h-11');
+});
