@@ -1,0 +1,8 @@
+name: Business and organisation detail
+question: Start with contact details, or the locations linked to trip arrangements?
+status: active
+frame: web
+screen: contacts/business
+variants:
+  details: Contact methods and websites before locations
+  locations: Locations with their people and arrangements first
