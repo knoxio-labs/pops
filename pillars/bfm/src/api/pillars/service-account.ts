@@ -109,6 +109,7 @@ export const BFM_SERVICE_ACCOUNT_SCOPES: readonly string[] = [
   'trips.journeyGroups.list',
   'trips.stays.list',
   'trips.events.list',
+  'trips.documentAssociations.list',
 ];
 
 /** Local-dev source: the key inline in the environment. */

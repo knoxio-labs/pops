@@ -1,3 +1,4 @@
+import { validTripDocumentReferences } from './document-references.js';
 import { uniqueTripsIds } from './wire.js';
 
 import type { MobileTripDetail } from '../../contract/mobile-trips-detail-schemas.js';
@@ -22,7 +23,7 @@ export function referencedTripsPlaceIds(
 }
 /** Reject mismatched ownership or unresolved required identities instead of substituting source labels. */
 export function validTripsReferences(detail: MobileTripDetail, requestedId: number): boolean {
-  if (detail.trip.id !== requestedId) return false;
+  if (detail.trip.id !== requestedId || !validTripDocumentReferences(detail)) return false;
   if (
     [
       ...detail.visits,

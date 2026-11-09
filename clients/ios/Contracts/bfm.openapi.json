@@ -27383,6 +27383,56 @@
                 "schema": {
                   "additionalProperties": false,
                   "properties": {
+                    "documentAssociations": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "createdAt": {
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                            "type": "string"
+                          },
+                          "documentId": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "id": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "targetId": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "targetKind": {
+                            "enum": ["trip", "visit", "journey", "stay", "event"],
+                            "type": "string"
+                          },
+                          "tripId": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "tripId",
+                          "documentId",
+                          "targetKind",
+                          "targetId",
+                          "createdAt"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
                     "events": {
                       "items": {
                         "additionalProperties": false,
@@ -28423,7 +28473,8 @@
                     "journeys",
                     "journeyGroups",
                     "stays",
-                    "events"
+                    "events",
+                    "documentAssociations"
                   ],
                   "type": "object"
                 }
@@ -28717,7 +28768,7 @@
             "description": "503"
           }
         },
-        "summary": "Read one trip with complete ordered visits, journeys, groups, stays and events",
+        "summary": "Read one trip with complete ordered visits, journeys, groups, stays, events and document associations",
         "tags": ["mobileTrips"]
       }
     },

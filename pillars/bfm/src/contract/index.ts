@@ -21,3 +21,4 @@ export * from './mobile-trips-detail-schemas.js';
 
 export * from './mobile-trips-event-schemas.js';
 export * from './rest-mobile-documents.js';
+export * from './mobile-trips-document-schemas.js';

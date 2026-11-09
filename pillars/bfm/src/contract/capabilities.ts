@@ -272,6 +272,7 @@ export const MOBILE_CAPABILITY_SCOPES: Readonly<Record<MobileCapability, readonl
     'trips.journeyGroups.list',
     'trips.stays.list',
     'trips.events.list',
+    'trips.documentAssociations.list',
   ],
 };
 

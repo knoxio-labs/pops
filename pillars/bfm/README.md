@@ -43,7 +43,7 @@ It also holds a service-account credential and one way to spend it — see
 | `GET /mobile/documents/:id`                         | Original Documents-owner metadata, independently gated by `documents.read`.                                                                      |
 | `GET /mobile/documents/:id/file`                    | Original bytes; Range and representation headers preserved.                                                                                      |
 | `GET /mobile/trips`                                 | A snapshot-bound cursor page of original trip metadata.                                                                                          |
-| `GET /mobile/trips/:id`                             | A complete trip source snapshot: referenced places, ordered visits, journeys with ordered legs, explicit journey groups, stays and events.       |
+| `GET /mobile/trips/:id`                             | Complete source snapshot with ordered route records and explicit document associations.                                                          |
 | `GET /mobile/finance/transactions`                  | One cursor-paginated page of list rows — see [The mobile shape](#the-mobile-shape).                                                              |
 | `GET /mobile/finance/accounts`                      | One cursor-paginated page of accounts after search and filters — see [The mobile shape](#the-mobile-shape).                                      |
 | `GET /mobile/finance/summary`                       | Cost-of-credit totals for one window, by account, month and fee tag.                                                                             |
@@ -527,7 +527,10 @@ stay independent, and journey groups retain explicit current/alternative IDs.
 Event date bounds, clocks and zone also remain independent; BFM creates no
 midnight or UTC fallback. Visit duration accepts either supplied bound and a
 required unit, preserving one-sided ranges without defaults. Host, venue,
-organiser and document source links remain opaque. Unreferenced global places are omitted.
+organiser and document source links remain opaque. Unreferenced global places are omitted. Explicit `documentAssociations` retain
+association and Documents-original identities separately; trip/visit/journey/stay/event
+targets must belong to this snapshot. Shared originals retain every explicit crosslink.
+The aggregate does not resolve metadata or assert file/device availability.
 
 Every required collection must succeed. Missing referenced identities,
 duplicate IDs or wrong trip/journey ownership produce a contract mismatch;
@@ -771,7 +774,7 @@ and send it in that header, against the registry's admin surface reachable
 externally through the shell proxy:
 
 ```bash
-curl -sS -X POST https://pops.local/registry-api/service-accounts -H 'Content-Type: application/json' -H "cf-access-jwt-assertion: $ACCESS_JWT" -d '{"name":"bfm","scopes":["finance.transactions","finance.transactionHistory","finance.transactionAttachments","finance.accounts","finance.checkpoints","finance.delegatedSubject","purchases.purchase","purchases.search","purchases.receipt","inventory.sync","inventory.types.catalogue","inventory.types.read","inventory.codes","inventory.media","inventory.documents","inventory.paperless.status","inventory.items.getParts","inventory.items.addPart","inventory.items.removePart","barcode.lookup","cerebrum.ego","documents.paperless.get","documents.paperless.download","trips.trips.list","trips.trips.get","trips.places.list","trips.visits.list","trips.journeys.list","trips.journeyLegs.list","trips.journeyGroups.list","trips.stays.list","trips.events.list"]}'
+curl -sS -X POST https://pops.local/registry-api/service-accounts -H 'Content-Type: application/json' -H "cf-access-jwt-assertion: $ACCESS_JWT" -d '{"name":"bfm","scopes":["finance.transactions","finance.transactionHistory","finance.transactionAttachments","finance.accounts","finance.checkpoints","finance.delegatedSubject","purchases.purchase","purchases.search","purchases.receipt","inventory.sync","inventory.types.catalogue","inventory.types.read","inventory.codes","inventory.media","inventory.documents","inventory.paperless.status","inventory.items.getParts","inventory.items.addPart","inventory.items.removePart","barcode.lookup","cerebrum.ego","documents.paperless.get","documents.paperless.download","trips.trips.list","trips.trips.get","trips.places.list","trips.visits.list","trips.journeys.list","trips.journeyLegs.list","trips.journeyGroups.list","trips.stays.list","trips.events.list","trips.documentAssociations.list"]}'
 ```
 
 Two deployment shapes let a bare `curl` through, which is why this can work on

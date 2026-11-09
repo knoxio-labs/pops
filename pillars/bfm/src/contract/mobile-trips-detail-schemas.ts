@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { MobileTripDocumentAssociationSchema } from './mobile-trips-document-schemas.js';
 import { MobileTripEventSchema } from './mobile-trips-event-schemas.js';
 import {
   MobileJourneyGroupSchema,
@@ -27,6 +28,7 @@ export const MobileTripDetailSchema = z.object({
   journeyGroups: z.array(MobileJourneyGroupSchema),
   stays: z.array(MobileStaySchema),
   events: z.array(MobileTripEventSchema),
+  documentAssociations: z.array(MobileTripDocumentAssociationSchema),
 });
 /** Snapshot-bound cursor page, with the exact total count of source trips. */
 export const MobileTripsPageSchema = z.object({

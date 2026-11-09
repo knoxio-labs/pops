@@ -151,6 +151,7 @@ describe('the granted scopes', () => {
       'trips.journeyGroups.list',
       'trips.stays.list',
       'trips.events.list',
+      'trips.documentAssociations.list',
     ]);
   });
 

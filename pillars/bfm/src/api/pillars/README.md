@@ -89,7 +89,7 @@ and `documents.paperless.download`; no Inventory-link scopes authorize them.
 Trips reads require only `trips.trips.list`, `trips.trips.get`,
 `trips.places.list`, `trips.visits.list`, `trips.journeys.list`,
 `trips.journeyLegs.list`, `trips.journeyGroups.list`, `trips.stays.list` and
-`trips.events.list`.
+`trips.events.list` and `trips.documentAssociations.list`.
 Deployment must grant these operations to the existing BFM service account;
 adding the mobile capability alone does not authorize upstream calls. Credential
 and deployed grant configuration is tracked by POPS-6170.

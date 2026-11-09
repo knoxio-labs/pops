@@ -164,6 +164,16 @@ export const EXPECTATIONS = [
   {
     consumer: 'bfm',
     producer: 'trips',
+    operationId: 'documentAssociations.list',
+    path: '/trips/{tripId}/document-associations',
+    method: 'get',
+    query: [],
+    pathParams: ['tripId'],
+    usedBy: 'pillars/bfm/src/api/trips/client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'trips',
     operationId: 'events.list',
     path: '/trips/{tripId}/events',
     method: 'get',

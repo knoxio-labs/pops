@@ -13042,7 +13042,7 @@ internal struct Client: APIProtocol {
             }
         )
     }
-    /// Read one trip with complete ordered visits, journeys, groups, stays and events
+    /// Read one trip with complete ordered visits, journeys, groups, stays, events and document associations
     ///
     /// - Remark: HTTP `GET /mobile/trips/{id}`.
     /// - Remark: Generated from `#/paths//mobile/trips/{id}/get(mobileTrips.getTrip)`.

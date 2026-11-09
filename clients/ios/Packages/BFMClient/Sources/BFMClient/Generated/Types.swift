@@ -311,7 +311,7 @@ internal protocol APIProtocol: Sendable {
     /// - Remark: HTTP `GET /mobile/trips`.
     /// - Remark: Generated from `#/paths//mobile/trips/get(mobileTrips.listTrips)`.
     func mobileTrips_listTrips(_ input: Operations.MobileTrips_listTrips.Input) async throws -> Operations.MobileTrips_listTrips.Output
-    /// Read one trip with complete ordered visits, journeys, groups, stays and events
+    /// Read one trip with complete ordered visits, journeys, groups, stays, events and document associations
     ///
     /// - Remark: HTTP `GET /mobile/trips/{id}`.
     /// - Remark: Generated from `#/paths//mobile/trips/{id}/get(mobileTrips.getTrip)`.
@@ -1121,7 +1121,7 @@ extension APIProtocol {
             headers: headers
         ))
     }
-    /// Read one trip with complete ordered visits, journeys, groups, stays and events
+    /// Read one trip with complete ordered visits, journeys, groups, stays, events and document associations
     ///
     /// - Remark: HTTP `GET /mobile/trips/{id}`.
     /// - Remark: Generated from `#/paths//mobile/trips/{id}/get(mobileTrips.getTrip)`.
@@ -99419,7 +99419,7 @@ internal enum Operations {
             }
         }
     }
-    /// Read one trip with complete ordered visits, journeys, groups, stays and events
+    /// Read one trip with complete ordered visits, journeys, groups, stays, events and document associations
     ///
     /// - Remark: HTTP `GET /mobile/trips/{id}`.
     /// - Remark: Generated from `#/paths//mobile/trips/{id}/get(mobileTrips.getTrip)`.
@@ -99470,6 +99470,100 @@ internal enum Operations {
                 internal enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json`.
                     internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/DocumentAssociationsPayload`.
+                        internal struct DocumentAssociationsPayloadPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/DocumentAssociationsPayload/createdAt`.
+                            internal var createdAt: Foundation.Date
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/DocumentAssociationsPayload/documentId`.
+                            internal var documentId: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/DocumentAssociationsPayload/id`.
+                            internal var id: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/DocumentAssociationsPayload/targetId`.
+                            internal var targetId: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/DocumentAssociationsPayload/targetKind`.
+                            internal enum TargetKindPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case trip = "trip"
+                                case visit = "visit"
+                                case journey = "journey"
+                                case stay = "stay"
+                                case event = "event"
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/DocumentAssociationsPayload/targetKind`.
+                            internal var targetKind: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.DocumentAssociationsPayloadPayload.TargetKindPayload
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/DocumentAssociationsPayload/tripId`.
+                            internal var tripId: Swift.Int
+                            /// Creates a new `DocumentAssociationsPayloadPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - createdAt:
+                            ///   - documentId:
+                            ///   - id:
+                            ///   - targetId:
+                            ///   - targetKind:
+                            ///   - tripId:
+                            internal init(
+                                createdAt: Foundation.Date,
+                                documentId: Swift.Int,
+                                id: Swift.Int,
+                                targetId: Swift.Int,
+                                targetKind: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.DocumentAssociationsPayloadPayload.TargetKindPayload,
+                                tripId: Swift.Int
+                            ) {
+                                self.createdAt = createdAt
+                                self.documentId = documentId
+                                self.id = id
+                                self.targetId = targetId
+                                self.targetKind = targetKind
+                                self.tripId = tripId
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case createdAt
+                                case documentId
+                                case id
+                                case targetId
+                                case targetKind
+                                case tripId
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.createdAt = try container.decode(
+                                    Foundation.Date.self,
+                                    forKey: .createdAt
+                                )
+                                self.documentId = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .documentId
+                                )
+                                self.id = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .id
+                                )
+                                self.targetId = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .targetId
+                                )
+                                self.targetKind = try container.decode(
+                                    Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.DocumentAssociationsPayloadPayload.TargetKindPayload.self,
+                                    forKey: .targetKind
+                                )
+                                self.tripId = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .tripId
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "createdAt",
+                                    "documentId",
+                                    "id",
+                                    "targetId",
+                                    "targetKind",
+                                    "tripId"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/documentAssociations`.
+                        internal typealias DocumentAssociationsPayload = [Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.DocumentAssociationsPayloadPayload]
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/documentAssociations`.
+                        internal var documentAssociations: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.DocumentAssociationsPayload
                         /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload`.
                         internal struct EventsPayloadPayload: Codable, Hashable, Sendable {
                             /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/address`.
@@ -102373,6 +102467,7 @@ internal enum Operations {
                         /// Creates a new `JsonPayload`.
                         ///
                         /// - Parameters:
+                        ///   - documentAssociations:
                         ///   - events:
                         ///   - journeyGroups:
                         ///   - journeys:
@@ -102381,6 +102476,7 @@ internal enum Operations {
                         ///   - trip:
                         ///   - visits:
                         internal init(
+                            documentAssociations: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.DocumentAssociationsPayload,
                             events: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.EventsPayload,
                             journeyGroups: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneyGroupsPayload,
                             journeys: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayload,
@@ -102389,6 +102485,7 @@ internal enum Operations {
                             trip: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.TripPayload,
                             visits: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.VisitsPayload
                         ) {
+                            self.documentAssociations = documentAssociations
                             self.events = events
                             self.journeyGroups = journeyGroups
                             self.journeys = journeys
@@ -102398,6 +102495,7 @@ internal enum Operations {
                             self.visits = visits
                         }
                         internal enum CodingKeys: String, CodingKey {
+                            case documentAssociations
                             case events
                             case journeyGroups
                             case journeys
@@ -102408,6 +102506,10 @@ internal enum Operations {
                         }
                         internal init(from decoder: any Swift.Decoder) throws {
                             let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.documentAssociations = try container.decode(
+                                Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.DocumentAssociationsPayload.self,
+                                forKey: .documentAssociations
+                            )
                             self.events = try container.decode(
                                 Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.EventsPayload.self,
                                 forKey: .events
@@ -102437,6 +102539,7 @@ internal enum Operations {
                                 forKey: .visits
                             )
                             try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "documentAssociations",
                                 "events",
                                 "journeyGroups",
                                 "journeys",
