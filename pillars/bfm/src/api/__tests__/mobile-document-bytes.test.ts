@@ -76,6 +76,7 @@ describe('Documents-original raw files', () => {
         'http://documents.test/paperless/documents/31/download',
         {
           method: 'GET',
+          redirect: 'error',
           headers: { [SERVICE_ACCOUNT_HEADER]: key, range: 'bytes=0-11' },
         }
       );

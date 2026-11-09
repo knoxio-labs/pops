@@ -29,6 +29,7 @@ export function createMobileDocumentsBytesClient(
           `${target.baseUrl.replace(/\/$/u, '')}/paperless/documents/${id}/download`,
           {
             method: 'GET',
+            redirect: 'error',
             headers: {
               [SERVICE_ACCOUNT_HEADER]: key,
               ...(range === undefined ? {} : { range }),
