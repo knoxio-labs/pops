@@ -1,0 +1,7 @@
+name: Trip arrangements
+question: Review arrangements along the route, or by transport, stays, events and rental?
+status: active
+screen: trips/arrangements
+variants:
+  route: Along the route
+  kinds: By kind
