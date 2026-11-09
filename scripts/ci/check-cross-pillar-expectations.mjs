@@ -2961,8 +2961,15 @@ function run() {
 }
 
 function selfTest() {
-  const expectation = EXPECTATIONS[0];
-  assert(expectation !== undefined, 'EXPECTATIONS must not be empty');
+  const expectation = {
+    consumer: 'consumer',
+    producer: 'finance',
+    operationId: 'transactions.list',
+    path: '/transactions',
+    method: 'get',
+    query: ['startDate', 'endDate'],
+    usedBy: 'fixture.ts',
+  };
   const good = {
     paths: {
       '/transactions': {
