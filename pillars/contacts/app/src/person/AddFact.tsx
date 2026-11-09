@@ -20,7 +20,7 @@ export function AddContactPoint({
   const [point, setPoint] = useState(emptyPoint);
   return (
     <form
-      className="space-y-3 border-t pt-4"
+      className="space-y-3 border-t border-border pt-4"
       onSubmit={(event) => {
         event.preventDefault();
         void onAdd({
@@ -33,9 +33,14 @@ export function AddContactPoint({
       }}
     >
       <fieldset disabled={disabled} className="space-y-3">
-        <legend className="mb-3 font-semibold">{t('person.addMethod')}</legend>
+        <legend className="mb-3 text-sm font-medium">{t('person.addMethod')}</legend>
         <PointFields point={point} change={setPoint} />
-        <Button type="submit" disabled={disabled || !point.value.trim()}>
+        <Button
+          type="submit"
+          className="min-h-11 text-sm text-app-accent"
+          variant="outline"
+          disabled={disabled || !point.value.trim()}
+        >
           {t('person.addMethod')}
         </Button>
       </fieldset>
@@ -56,6 +61,7 @@ function PointFields({
       <div className="grid gap-3 sm:grid-cols-2">
         <Select
           aria-label={t('person.kind')}
+          className="min-h-11 text-sm"
           value={point.kind}
           options={kinds.map((item) => ({ value: item, label: t(`pointKinds.${item}`) }))}
           onChange={(event) => {
@@ -65,12 +71,16 @@ function PointFields({
         />
         <TextInput
           label={t('person.label')}
+          className="text-sm"
+          containerClassName="min-h-11"
           value={point.label ?? ''}
           onChange={(event) => change({ ...point, label: event.target.value })}
         />
       </div>
       <TextInput
         label={t('person.value')}
+        className="text-sm"
+        containerClassName="min-h-11"
         required
         value={point.value}
         onChange={(event) => change({ ...point, value: event.target.value })}
@@ -78,6 +88,8 @@ function PointFields({
       {point.kind === 'phone' && (
         <TextInput
           label={t('upload.country')}
+          className="text-sm"
+          containerClassName="min-h-11"
           value={point.countryCode ?? ''}
           onChange={(event) => change({ ...point, countryCode: event.target.value })}
         />
@@ -98,7 +110,7 @@ export function AddAddress({
   const [value, setValue] = useState('');
   return (
     <form
-      className="space-y-3 border-t pt-4"
+      className="space-y-3 border-t border-border pt-4"
       onSubmit={(event) => {
         event.preventDefault();
         void onAdd(value).then((saved) => {
@@ -108,12 +120,19 @@ export function AddAddress({
     >
       <TextInput
         label={t('person.address')}
+        className="text-sm"
+        containerClassName="min-h-11"
         disabled={disabled}
         required
         value={value}
         onChange={(event) => setValue(event.target.value)}
       />
-      <Button type="submit" disabled={disabled || !value.trim()}>
+      <Button
+        type="submit"
+        className="min-h-11 text-sm text-app-accent"
+        variant="outline"
+        disabled={disabled || !value.trim()}
+      >
         {t('person.addAddress')}
       </Button>
     </form>

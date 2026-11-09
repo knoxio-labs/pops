@@ -16,9 +16,13 @@ export function PersonPanel({ id, gateway }: { id: string; gateway: PersonGatewa
   const { t } = useTranslation('contacts');
   const model = usePerson(id, gateway);
   return (
-    <main className="mx-auto max-w-3xl space-y-5 p-4 md:p-6">
+    <main className="mx-auto max-w-3xl space-y-5 p-4 text-sm md:p-6">
       <PageHeader
-        title={model.data?.entity.name ?? t('person.title')}
+        title={
+          <span className="block text-2xl font-semibold leading-tight tracking-normal">
+            {model.data?.entity.name ?? t('person.title')}
+          </span>
+        }
         backHref="/contacts"
         renderLink={Link}
         breadcrumbs={[{ label: t('nav.title'), href: '/contacts' }, { label: t('person.title') }]}
@@ -65,20 +69,26 @@ function PersonEditor({
   }
   return (
     <>
-      <div className="space-y-3 rounded-xl border bg-app-accent/10 p-4">
+      <div className="space-y-3 rounded-xl border border-border bg-card p-4">
         <TextInput
           label={t('person.name')}
+          className="text-sm"
           value={draft.name}
           disabled={model.saving}
           onChange={(event) => setHistory([...history, { ...draft, name: event.target.value }])}
         />
         <div className="flex flex-wrap gap-2">
-          <Button disabled={disabled || !dirty || !draft.name.trim()} onClick={() => void save()}>
+          <Button
+            className="min-h-11 bg-app-accent text-app-accent-foreground text-sm hover:bg-app-accent/90"
+            disabled={disabled || !dirty || !draft.name.trim()}
+            onClick={() => void save()}
+          >
             <Save className="size-4" aria-hidden />
             {t('person.save')}
           </Button>
           <Button
             variant="outline"
+            className="min-h-11 text-sm"
             disabled={model.saving || history.length === 0}
             onClick={() => setHistory(history.slice(0, -1))}
           >
@@ -93,15 +103,38 @@ function PersonEditor({
         addPoint={model.addPoint}
         addAddress={model.addAddress}
       />
-      <section aria-label={t('person.notes')} className="space-y-3 rounded-xl border p-4">
-        <h2 className="text-lg font-semibold">{t('person.notes')}</h2>
-        <Textarea
-          aria-label={t('person.notes')}
-          value={draft.notes}
-          disabled={model.saving}
-          onChange={(event) => setHistory([...history, { ...draft, notes: event.target.value }])}
-        />
-      </section>
+      <PersonNotes
+        value={draft.notes}
+        disabled={model.saving}
+        change={(notes) => setHistory([...history, { ...draft, notes }])}
+      />
     </>
+  );
+}
+
+function PersonNotes({
+  value,
+  disabled,
+  change,
+}: {
+  value: string;
+  disabled: boolean;
+  change: (value: string) => void;
+}) {
+  const { t } = useTranslation('contacts');
+  return (
+    <section
+      aria-label={t('person.notes')}
+      className="space-y-3 rounded-xl border border-border bg-card p-4"
+    >
+      <h2 className="text-base font-semibold leading-tight tracking-normal">{t('person.notes')}</h2>
+      <Textarea
+        aria-label={t('person.notes')}
+        className="min-h-24 text-sm"
+        value={value}
+        disabled={disabled}
+        onChange={(event) => change(event.target.value)}
+      />
+    </section>
   );
 }
