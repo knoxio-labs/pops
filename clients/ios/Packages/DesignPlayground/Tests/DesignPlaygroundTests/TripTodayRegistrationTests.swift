@@ -22,7 +22,7 @@ internal struct TripTodayRegistrationTests {
         }
     }
 
-    @Test("the experiment records the hierarchy selection without claiming overall visual approval")
+    @Test("the approved experiment retains the selected hierarchy and source states")
     func experimentRecordsHierarchy() throws {
         let experiment = try #require(Catalog.experiments.first { $0.id == "trip-today" })
         #expect(!experiment.isOpen)

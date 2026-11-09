@@ -1,4 +1,4 @@
-/// M01 records the chosen hierarchy; the prototype's visual review remains separate.
+/// M01 records approval of the native Today prototype and its Now then Next hierarchy.
 @MainActor
 internal enum TripTodayExperiment {
     internal static let experiment = DesignExperiment(
@@ -7,8 +7,8 @@ internal enum TripTodayExperiment {
         subject: TripTodaySurfaces.id,
         status: .decided(
             variant: TripTodayLayout.nextFirst.rawValue,
-            rationale: "Hierarchy selected: always show what is now, then what is next. "
-                + "This records the ordering direction only; overall visual review remains open."
+            rationale: "Approved by Joao on 10 November 2026: Now then Next, with active sources "
+                + "first and known future starts in chronological order."
         ),
         variants: [
             DesignVariant(
