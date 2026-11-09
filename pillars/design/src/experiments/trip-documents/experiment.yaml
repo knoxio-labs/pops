@@ -1,0 +1,7 @@
+name: Trip documents
+question: Review documents along the route, or as originals with linked plans?
+status: active
+screen: trips/documents
+variants:
+  route: By route
+  documents: By document

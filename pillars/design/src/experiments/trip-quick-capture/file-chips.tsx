@@ -2,7 +2,8 @@ import { File, FileAudio, FileCode, FileImage, FileText, FileVideo } from 'lucid
 
 import { Chip, formatBytes } from '@pops/ui';
 
-function filePresentation(type: string) {
+/** Present a declared MIME type without inferring file content from its name. */
+export function filePresentation(type: string) {
   if (type.startsWith('image/')) return { Icon: FileImage, label: 'Image' };
   if (type.startsWith('audio/')) return { Icon: FileAudio, label: 'Audio' };
   if (type.startsWith('video/')) return { Icon: FileVideo, label: 'Video' };
