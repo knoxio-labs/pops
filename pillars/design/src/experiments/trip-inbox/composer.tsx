@@ -25,7 +25,7 @@ export function InboxComposer({ draft, change, capture }: ComposerProps) {
       <Textarea
         aria-label="Capture text"
         placeholder="Paste or type…"
-        className="min-h-20 border-0 p-0 shadow-none focus-visible:ring-0"
+        className="min-h-20 resize-none border-0 bg-transparent p-2 shadow-none focus-visible:ring-0 dark:bg-transparent"
         value={draft.text}
         onChange={(event) => change({ ...draft, text: event.currentTarget.value })}
         onKeyDown={(event) => {

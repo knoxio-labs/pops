@@ -3,14 +3,13 @@ import { useMemo, useState } from 'react';
 
 import { Button } from '@pops/ui';
 
-import { useRouteState } from '../trip-route-editing/canvas-state';
 import { InboxComposer } from './composer';
 import { InboxContext } from './context';
 import { InboxFiltersControl } from './filters';
-import { createInboxState } from './fixture';
-import { captureInboxItem, inboxRows, inboxSourceRow } from './model';
+import { inboxRows, inboxSourceRow } from './model';
 import { InboxResults } from './results';
 import { InboxReview } from './review';
+import { useInboxState } from './state';
 
 import type { InboxFilters, InboxScenario } from './model';
 
@@ -22,26 +21,13 @@ export function InboxWorkspace({
   layout: 'inline' | 'dialog';
   scenario?: InboxScenario;
 }) {
-  const history = useRouteState(() => createInboxState(scenario));
-  const [draft, setDraft] = useState(history.state.capture.draft);
+  const history = useInboxState(scenario);
   const [selectedId, select] = useState<string | null>(null);
   const [filters, setFilters] = useState<InboxFilters>({ query: '', organisation: 'all' });
-  const [error, setError] = useState<string | null>(null);
   const context = useMemo(
     () => ({ state: history.state, change: history.change }),
     [history.state, history.change]
   );
-  function capture() {
-    const result = captureInboxItem(
-      { ...history.state, capture: { ...history.state.capture, draft } },
-      crypto.randomUUID()
-    );
-    setError(result.error);
-    if (!result.error) {
-      history.change(result.state);
-      setDraft(result.state.capture.draft);
-    }
-  }
   return (
     <InboxContext value={context}>
       <InboxReview layout={layout} />
@@ -53,10 +39,14 @@ export function InboxWorkspace({
             Undo
           </Button>
         </header>
-        <InboxComposer draft={draft} change={setDraft} capture={capture} />
-        {error && (
+        <InboxComposer
+          draft={history.state.capture.draft}
+          change={history.changeDraft}
+          capture={history.capture}
+        />
+        {history.error && (
           <p role="alert" className="text-sm text-destructive">
-            {error}
+            {history.error}
           </p>
         )}
         <InboxFiltersControl filters={filters} change={setFilters} />

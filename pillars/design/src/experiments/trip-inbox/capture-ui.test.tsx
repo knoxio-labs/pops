@@ -53,6 +53,8 @@ describe('text-first Inbox capture', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Close item' }));
     fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
     expect(screen.queryByRole('button', { name: 'Open raw-note.txt' })).not.toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Attachments' })).toHaveTextContent('raw-note.txt');
+    expect(screen.getByRole('button', { name: 'Capture' })).toBeEnabled();
   });
   it('preserves an in-progress text and file draft while another source is organised', () => {
     render(<InboxWorkspace layout="dialog" scenario="files" />);
@@ -65,6 +67,10 @@ describe('text-first Inbox capture', () => {
     fireEvent.click(screen.getByRole('option', { name: /Walk in the old town/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Link' }));
     fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Close' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(
+      screen.getByRole('button', { name: 'Open Ask Clara about a walk along the waterfront.' })
+    ).toHaveTextContent('To organise');
     expect(draft).toHaveValue('Next raw source');
     expect(screen.getByRole('list', { name: 'Attachments' })).toHaveTextContent('brazil-notes.txt');
     fireEvent.click(screen.getByRole('button', { name: 'Capture' }));
@@ -72,5 +78,52 @@ describe('text-first Inbox capture', () => {
     expect(screen.getByRole('region', { name: 'Raw source' })).toHaveTextContent(
       'brazil-notes.txt'
     );
+  });
+  it('restores captured verbatim text and optional type to the composer on capture Undo', () => {
+    render(<InboxWorkspace layout="inline" scenario="empty" />);
+    fireEvent.change(screen.getByRole('textbox', { name: 'Capture text' }), {
+      target: { value: '  Original source\nSecond line.  ' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Type' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Note' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Capture' }));
+    expect(screen.getByRole('textbox', { name: 'Capture text' })).toHaveValue('');
+    fireEvent.click(
+      within(screen.getByRole('group', { name: 'Capture type' })).getByRole('button', {
+        name: 'Idea',
+      })
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(screen.getByRole('textbox', { name: 'Capture text' })).toHaveValue(
+      '  Original source\nSecond line.  '
+    );
+    expect(
+      within(screen.getByRole('group', { name: 'Capture type' })).getByRole('button', {
+        name: 'Note',
+        pressed: true,
+      })
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Capture' })).toBeEnabled();
+    expect(screen.queryByRole('button', { name: 'Open Original source' })).not.toBeInTheDocument();
+  });
+
+  it('blocks capture Undo atomically while a newer draft has material, then clears the error on success', () => {
+    render(<InboxWorkspace layout="inline" scenario="empty" />);
+    const draft = screen.getByRole('textbox', { name: 'Capture text' });
+    fireEvent.change(draft, { target: { value: 'Original source' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Capture' }));
+    fireEvent.change(draft, { target: { value: 'Newer draft' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Finish or clear the current draft before undoing capture.'
+    );
+    expect(draft).toHaveValue('Newer draft');
+    expect(screen.getByRole('button', { name: 'Open Original source' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Undo' })).toBeEnabled();
+    fireEvent.change(draft, { target: { value: '' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(draft).toHaveValue('Original source');
+    expect(screen.queryByRole('button', { name: 'Open Original source' })).not.toBeInTheDocument();
   });
 });
