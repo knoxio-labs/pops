@@ -24,6 +24,7 @@ export interface JourneyAlternativesModel extends JourneySelection {
   expanded: ExpandedJourneyOption | undefined;
   setExpanded: (id: ExpandedJourneyOption | undefined) => void;
   busy: boolean;
+  needsReload: boolean;
   failure: unknown;
   add: (group?: JourneyGroup) => Promise<void>;
   reload: () => void;
@@ -70,10 +71,10 @@ export function useJourneyAlternatives(
     expanded,
     setExpanded,
     busy: actions.busy,
+    needsReload: actions.needsReload,
     failure: actions.failure,
     reload: (): void => {
-      void query.refetch();
-      actions.clear();
+      void actions.reload(async () => (await query.refetch()).isSuccess);
     },
     add: (group): Promise<void> =>
       actions.run(async () => {

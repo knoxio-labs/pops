@@ -36,7 +36,9 @@ export function JourneyAlternatives({
         {model.groups.length === 0 && (
           <Button
             variant="ghost"
-            disabled={model.busy || model.query.isPending || model.query.isError}
+            disabled={
+              model.busy || model.needsReload || model.query.isPending || model.query.isError
+            }
             onClick={() => void model.add()}
           >
             Add option
@@ -50,9 +52,9 @@ export function JourneyAlternatives({
           onRetry={() => void model.query.refetch()}
         />
       )}
-      {model.failure !== undefined && (
+      {model.needsReload && (
         <div className="space-y-2">
-          <ErrorState error={requestProblem(model.failure)} />
+          {model.failure !== undefined && <ErrorState error={requestProblem(model.failure)} />}
           <Button variant="outline" disabled={model.busy} onClick={model.reload}>
             Reload alternatives
           </Button>
@@ -81,7 +83,7 @@ function JourneyOptions({
         {model.groups.length > 1 && <h3 className="font-medium">Group {group.id}</h3>}
         <Button
           variant="ghost"
-          disabled={busy || model.query.isError}
+          disabled={busy || model.needsReload || model.query.isError}
           onClick={() => void model.add(group)}
         >
           Add option
@@ -132,7 +134,7 @@ function JourneyOption({
         </Button>
         <Button
           variant="outline"
-          disabled={busy || model.query.isError}
+          disabled={busy || model.needsReload || model.query.isError}
           onClick={() => void select(group, id)}
         >
           Use journey

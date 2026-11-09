@@ -49,7 +49,7 @@ export function useJourneySelection({
       undo !== undefined &&
       !query.isError &&
       ownGroup?.revision === undo.postWriteRevision &&
-      !actions.busy,
+      !(actions.busy || actions.needsReload),
     clearUndo: (): void => setUndo(undefined),
     select: (group, id): Promise<void> => {
       const stamp = navigation.stamp();

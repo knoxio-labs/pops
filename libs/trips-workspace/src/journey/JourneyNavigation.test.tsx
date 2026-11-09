@@ -230,7 +230,20 @@ describe('Literal journey source navigation', () => {
       await act(async () => {
         gate.resolve();
       });
-      await waitFor(() => expect(screen.getByRole('button', { name: 'Add option' })).toBeEnabled());
+      if (status === 200) {
+        await waitFor(() =>
+          expect(screen.getByRole('button', { name: 'Add option' })).toBeEnabled()
+        );
+      } else {
+        expect(await screen.findByRole('button', { name: 'Reload alternatives' })).toBeEnabled();
+        expect(screen.getByRole('button', { name: 'Add option' })).toBeDisabled();
+        fireEvent.click(screen.getByRole('button', { name: 'Add option' }));
+        expect(writes(transport)).toHaveLength(1);
+        fireEvent.click(screen.getByRole('button', { name: 'Reload alternatives' }));
+        await waitFor(() =>
+          expect(screen.getByRole('button', { name: 'Add option' })).toBeEnabled()
+        );
+      }
       expect(screen.getByRole('heading', { name: 'Manually viewed', level: 1 })).toBeVisible();
       expect(navigations).toEqual([]);
       expect(screen.queryByRole('button', { name: 'Undo selection' })).toBeNull();

@@ -27,7 +27,9 @@ unrelated refetches never rebase that inverse. It restores the original viewed s
 only after the inverse succeeds. Manual navigation invalidates the local selection
 history, and no Undo is promised after leaving or reloading the workspace. Late source
 or selection responses cannot replace a manually chosen view. A new option is an empty
-source, never a clone of the working journey.
+source, never a clone of the working journey. Ambiguous grouping writes block further
+grouping mutations until an explicit canonical reload succeeds; pending or failed reads
+retain that guard, including across manual source navigation.
 Opaque source references display their original labels/URIs without asserting document
 resolution. Nearby bookings and buffer-safety findings are owned by POPS-6134.
 

@@ -35,6 +35,52 @@ const writes = (transport: ReturnType<typeof journeyTransport>) =>
   transport.requests.filter((request) => request.method !== 'GET');
 
 describe('Journey persistence boundaries', () => {
+  it.each(['group', 'alternative'] as const)(
+    'requires a successful canonical reload after ambiguous %s creation',
+    async (stage) => {
+      const committedGroup = { ...group, alternativeJourneyIds: [] };
+      const recoveredGroup = stage === 'group' ? committedGroup : { ...group, revision: 4 };
+      const responseWrites =
+        stage === 'group'
+          ? [{ status: 503, body: sourceProblem('trips.creation.unknown') }]
+          : [
+              { status: 201, body: committedGroup },
+              { status: 503, body: sourceProblem('trips.creation.unknown') },
+            ];
+      const transport = journeyTransport({ writes: responseWrites });
+      mount(transport);
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Add option' })).toBeEnabled());
+      fireEvent.click(screen.getByRole('button', { name: 'Add option' }));
+      expect(await screen.findByText('trips.creation.unknown')).toBeVisible();
+      const previousWrites = writes(transport).length;
+      expect(screen.getByRole('button', { name: 'Add option' })).toBeDisabled();
+      fireEvent.click(screen.getByRole('button', { name: 'Add option' }));
+      expect(writes(transport)).toHaveLength(previousWrites);
+      let release: () => void = () => {};
+      const pending = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      transport.groupRead([recoveredGroup], 503, pending);
+      fireEvent.click(screen.getByRole('button', { name: 'Reload alternatives' }));
+      expect(screen.getByRole('button', { name: 'Add option' })).toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Reload alternatives' })).toBeDisabled();
+      await act(async () => release());
+      expect(await screen.findByText('trips.groups.unavailable')).toBeVisible();
+      expect(screen.getByText('trips.creation.unknown')).toBeVisible();
+      expect(screen.getByRole('button', { name: 'Add option' })).toBeDisabled();
+      expect(writes(transport)).toHaveLength(previousWrites);
+      transport.groupRead([recoveredGroup]);
+      fireEvent.click(screen.getByRole('button', { name: 'Reload alternatives' }));
+      await waitFor(() => expect(screen.queryByText('trips.creation.unknown')).toBeNull());
+      expect(screen.getByRole('button', { name: 'Add option' })).toBeEnabled();
+      expect(screen.getByRole('region', { name: 'Alternative group 80' })).toBeVisible();
+      expect(
+        writes(transport).filter((request) => request.path.endsWith('/journey-groups'))
+      ).toHaveLength(1);
+      expect(writes(transport)).toHaveLength(previousWrites);
+    }
+  );
+
   it.each(['journey', 'leg'] as const)(
     'preserves untouched multiline %s notes and saves explicit edits',
     async (kind) => {

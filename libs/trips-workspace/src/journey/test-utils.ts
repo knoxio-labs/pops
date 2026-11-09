@@ -61,6 +61,9 @@ export function journeyTransport(
   const responses = [...(options.writes ?? [])];
   let sourceFailure = options.sourceFailure;
   let writeWait = options.writeWait;
+  let groups = options.groups ?? [];
+  let groupFailure: number | undefined;
+  let groupWait: Promise<void> | undefined;
   const requests: { method: string; path: string; body: unknown }[] = [];
   const client = createClient({
     baseUrl: 'http://journeys.test',
@@ -85,8 +88,11 @@ export function journeyTransport(
         options.alternatives?.find((entry) => entry.journey.id === requestedId) ?? source;
       let status = 200;
       let response: unknown;
-      if (path.endsWith('/journey-groups')) response = { groups: options.groups ?? [] };
-      else if (path.endsWith('/timing'))
+      if (path.endsWith('/journey-groups')) {
+        await groupWait;
+        response = groupFailure ? sourceProblem('trips.groups.unavailable') : { groups };
+        status = groupFailure ?? 200;
+      } else if (path.endsWith('/timing'))
         response = options.timing ?? {
           journeyId: 20,
           legs: [],
@@ -139,6 +145,11 @@ export function journeyTransport(
     },
     failSource: (status: number) => {
       sourceFailure = status;
+    },
+    groupRead: (next: JourneyGroup[], failure?: number, wait?: Promise<void>) => {
+      groups = next;
+      groupFailure = failure;
+      groupWait = wait;
     },
     waitWrites: (promise: Promise<void>) => {
       writeWait = promise;
