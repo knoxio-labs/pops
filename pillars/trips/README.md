@@ -135,7 +135,9 @@ while any group membership remains.
 Domain routes require their projected service-account scope: `trips.trips`,
 `trips.places`, `trips.visits`, `trips.journeys`, `trips.journeyLegs`,
 `trips.journeyGroups` or `trips.stays`; a `trips` grant covers all domains. Discovery and
-health probes remain open. The pillar has no frontend application.
+health probes remain open. The pillar advertises no shell pages. Source-backed
+stay [workspace components](../../libs/trips-workspace/README.md) and a standalone development harness
+live in `libs/trips-workspace`; shell activation is POPS-6155.
 
 Run `mise exec -- pnpm --filter @pops/trips dev`. `PORT` defaults to 3018;
 `TRIPS_SQLITE_PATH` selects the database (default `./data/trips.db`).
