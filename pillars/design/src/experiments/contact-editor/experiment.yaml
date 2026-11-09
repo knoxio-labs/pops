@@ -1,0 +1,7 @@
+name: Contact create and edit
+question: Show all contact fields, or add optional sections as needed?
+status: active
+screen: contacts/edit
+variants:
+  full: All fields
+  progressive: Add optional sections in place
