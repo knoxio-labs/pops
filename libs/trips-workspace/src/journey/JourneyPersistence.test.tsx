@@ -35,6 +35,83 @@ const writes = (transport: ReturnType<typeof journeyTransport>) =>
   transport.requests.filter((request) => request.method !== 'GET');
 
 describe('Journey persistence boundaries', () => {
+  it.each(['journey', 'leg'] as const)(
+    'preserves untouched multiline %s notes and saves explicit edits',
+    async (kind) => {
+      const notes = 'First line\r\nSecond line';
+      const next = 'Changed first line\nChanged second line';
+      const initialJourney = sourceJourney({ notes });
+      const initialLeg = sourceLeg({ notes });
+      const body =
+        kind === 'journey' ? { ...initialJourney, notes: next } : { ...initialLeg, notes: next };
+      const transport = journeyTransport({
+        source: { journey: initialJourney, legs: [initialLeg] },
+        writes: [{ status: 200, body }],
+      });
+      mount(transport);
+      fireEvent.click(
+        await screen.findByText(
+          kind === 'journey' ? 'References and timing' : 'Operator, reference and sources'
+        )
+      );
+      const field = screen.getByLabelText(kind === 'journey' ? 'Journey notes' : 'Leg notes');
+      expect(field.tagName).toBe('TEXTAREA');
+      fireEvent.focus(field);
+      fireEvent.blur(field);
+      await act(async () => {});
+      expect(writes(transport)).toEqual([]);
+      fireEvent.change(field, { target: { value: next } });
+      fireEvent.blur(field);
+      await waitFor(() => expect(writes(transport)).toHaveLength(1));
+      expect(writes(transport)[0]?.body).toEqual({ notes: next });
+      await waitFor(() => expect(field).toHaveValue(next));
+    }
+  );
+
+  it.each(['2029-02-01T22:15:00.000', '2029-02-01T22:15:00.123456789'])(
+    'preserves untouched local precision %s without a write',
+    async (local) => {
+      const transport = journeyTransport({
+        source: { journey: sourceJourney(), legs: [sourceLeg({ from: { local } })] },
+      });
+      mount(transport);
+      const field = await screen.findByLabelText('Departure local time');
+      expect(field).toHaveValue(local);
+      fireEvent.focus(field);
+      fireEvent.blur(field);
+      await act(async () => {});
+      expect(writes(transport)).toEqual([]);
+    }
+  );
+  it('roundtrips explicit local precision while retaining the complete endpoint', async () => {
+    const initial = sourceLeg();
+    const local = '2029-02-01T22:15:43.123456789';
+    const from = { ...initial.from, local };
+    const transport = journeyTransport({ writes: [{ status: 200, body: { ...initial, from } }] });
+    mount(transport);
+    const field = await screen.findByLabelText('Departure local time');
+    fireEvent.change(field, { target: { value: local } });
+    fireEvent.blur(field);
+    await waitFor(() => expect(writes(transport)).toHaveLength(1));
+    expect(writes(transport)[0]?.body).toEqual({ from });
+    await waitFor(() => expect(screen.getByLabelText('Departure local time')).toHaveValue(local));
+  });
+  it('retains an invalid local draft after owner rejection without changing canonical source', async () => {
+    const transport = journeyTransport({
+      writes: [{ status: 400, body: sourceProblem('trips.local.invalid') }],
+    });
+    const cache = mount(transport);
+    const field = await screen.findByLabelText('Departure local time');
+    fireEvent.change(field, { target: { value: '2029-02-30T25:99' } });
+    fireEvent.blur(field);
+    expect(await screen.findByText('trips.local.invalid')).toBeVisible();
+    expect(field).toHaveValue('2029-02-30T25:99');
+    expect(
+      cache.getQueryData(journeyKey({ tripId: 7, journeyId: 20, client: transport.client }))
+    ).toEqual({ journey: sourceJourney(), legs: [sourceLeg()] });
+    expect(screen.getByRole('button', { name: 'Undo' })).toBeDisabled();
+  });
+
   it.each([false, true])(
     'recovers ambiguous creation without another POST; owner reload fails: %s',
     async (ownerReadFails) => {

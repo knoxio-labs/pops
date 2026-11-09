@@ -1,4 +1,4 @@
-import { Select, TextInput } from '@pops/ui';
+import { Select, Textarea, TextInput } from '@pops/ui';
 
 import { SourceReferences } from './SourceReferences';
 
@@ -68,24 +68,27 @@ export function JourneyLegMetadata({ leg, edit, save }: JourneyLegFieldsProps): 
         Operator, reference and sources
       </summary>
       <div className="space-y-3">
-        {(['operator', 'service', 'reference', 'notes'] as const).map((field) => (
+        {(['operator', 'service', 'reference'] as const).map((field) => (
           <TextInput
             key={field}
             label={field === 'service' ? 'Service number' : field}
             value={leg[field] ?? ''}
             onChange={(event) =>
               edit({
-                [field]: field === 'notes' ? event.target.value : event.target.value || null,
+                [field]: event.target.value || null,
               })
             }
-            onBlur={(event) =>
-              save({
-                [field]:
-                  field === 'notes' ? event.currentTarget.value : event.currentTarget.value || null,
-              })
-            }
+            onBlur={() => save({ [field]: leg[field] })}
           />
         ))}
+        <label className="block space-y-2 text-sm">
+          Leg notes
+          <Textarea
+            value={leg.notes}
+            onChange={(event) => edit({ notes: event.target.value })}
+            onBlur={() => save({ notes: leg.notes })}
+          />
+        </label>
         <SourceReferences links={leg.sourceLinks} save={(sourceLinks) => save({ sourceLinks })} />
       </div>
     </details>

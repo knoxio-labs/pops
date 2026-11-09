@@ -18,7 +18,7 @@ const leg = {
   mode: 'Hydrofoil',
   from: {
     sourceLabel: 'Old wharf',
-    local: '2029-02-01T22:15',
+    local: '2029-02-01T22:15:00.123456789',
     sourceLinks: [{ uri: 'pops:documents/source/departure' }],
   },
   to: { local: '2029-02-02T01:15', timeZone: 'Pacific/Auckland' },
@@ -67,6 +67,10 @@ test('A real journey deep route loads the built remote and preserves endpoint so
     'border-style',
     'dashed'
   );
+  await expect(page.getByLabel('Departure local time')).toHaveValue(leg.from.local);
+  await page.getByLabel('Departure local time').focus();
+  await page.getByLabel('Departure local time').blur();
+  expect(patches).toEqual([]);
   await expect(page.getByText('Departure time zone unknown')).toBeVisible();
   await page.getByLabel('Departure time zone').fill('Pacific/Auckland');
   await page.getByLabel('Departure time zone').blur();

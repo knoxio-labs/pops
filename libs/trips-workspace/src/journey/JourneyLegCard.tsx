@@ -43,7 +43,7 @@ export function JourneyLegCard({
         label="Transport mode"
         value={leg.mode ?? ''}
         onChange={(event) => edit({ mode: event.target.value || null })}
-        onBlur={(event) => save({ mode: event.currentTarget.value || null })}
+        onBlur={() => save({ mode: leg.mode })}
       />
       <JourneyLegStatus leg={leg} edit={edit} save={save} />
       <JourneyEndpointFields leg={leg} side="from" places={places} edit={edit} save={save} />

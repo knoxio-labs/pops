@@ -1,4 +1,4 @@
-import { TextInput } from '@pops/ui';
+import { Textarea, TextInput } from '@pops/ui';
 
 import { SourceReferences } from './SourceReferences';
 
@@ -15,7 +15,7 @@ export function JourneyMetadata({ editor }: { editor: JourneyEditor }): JSX.Elem
         References and timing
       </summary>
       <div className="space-y-3 rounded-xl border bg-muted/40 p-3">
-        {(['name', 'reference', 'notes'] as const).map((field) => (
+        {(['name', 'reference'] as const).map((field) => (
           <TextInput
             key={field}
             label={metadataLabels[field]}
@@ -24,23 +24,30 @@ export function JourneyMetadata({ editor }: { editor: JourneyEditor }): JSX.Elem
               editor.edit({
                 kind: 'journey',
                 patch: {
-                  [field]: field === 'notes' ? event.target.value : event.target.value || null,
+                  [field]: event.target.value || null,
                 },
               })
             }
-            onBlur={(event) =>
+            onBlur={() =>
               void editor.run({
                 kind: 'journey',
                 patch: {
-                  [field]:
-                    field === 'notes'
-                      ? event.currentTarget.value
-                      : event.currentTarget.value || null,
+                  [field]: journey[field],
                 },
               })
             }
           />
         ))}
+        <label className="block space-y-2 text-sm">
+          Journey notes
+          <Textarea
+            value={journey.notes}
+            onChange={(event) =>
+              editor.edit({ kind: 'journey', patch: { notes: event.target.value } })
+            }
+            onBlur={() => void editor.run({ kind: 'journey', patch: { notes: journey.notes } })}
+          />
+        </label>
         <JourneyBuffers editor={editor} />
         <SourceReferences
           links={journey.sourceLinks}
@@ -54,7 +61,6 @@ export function JourneyMetadata({ editor }: { editor: JourneyEditor }): JSX.Elem
 const metadataLabels = {
   name: 'Journey name',
   reference: 'Journey reference',
-  notes: 'Journey notes',
 };
 
 function JourneyBuffers({ editor }: { editor: JourneyEditor }): JSX.Element {

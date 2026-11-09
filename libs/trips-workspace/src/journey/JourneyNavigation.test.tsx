@@ -170,7 +170,9 @@ describe('Literal journey source navigation', () => {
         [{ ...selected, revision: 9 }]
       );
     });
-    expect(screen.getByRole('button', { name: 'Undo selection' })).toBeDisabled();
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Undo selection' })).toBeDisabled()
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Undo selection' }));
     expect(writes(transport)).toHaveLength(1);
   });

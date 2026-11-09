@@ -4,6 +4,9 @@
 and arrival journey editor. It reads ordered legs and independent grouping identities
 through the same generated Trips client. Endpoint edits submit complete retained
 endpoint values; clearing a clock or zone never clears location or provenance.
+Local times use plain ISO text, preserving optional seconds and fractional precision.
+Only explicit draft changes save on blur; untouched fields never normalize source values.
+Journey and leg notes support multiple lines.
 Mode remains open source text, and intention, arrangement and purchase are independent.
 Only Purchased receives hard styling. Optional buffer fields have no default.
 

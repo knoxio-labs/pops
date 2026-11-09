@@ -53,12 +53,11 @@ export function JourneyEndpointFields({
         <TextInput
           key={field}
           label={`${label} ${endpointLabels[field]}`}
-          type={field === 'local' ? 'datetime-local' : 'text'}
+          type="text"
+          placeholder={field === 'local' ? '2029-02-01T22:15:00.123' : undefined}
           value={endpoint[field] ?? ''}
           onChange={(event) => edit({ [side]: endpointText(endpoint, field, event.target.value) })}
-          onBlur={(event) =>
-            save({ [side]: endpointText(endpoint, field, event.currentTarget.value) })
-          }
+          onBlur={() => save({ [side]: endpoint })}
         />
       ))}
       {!endpoint.local && <p className="text-sm text-muted-foreground">{label} time unknown</p>}
