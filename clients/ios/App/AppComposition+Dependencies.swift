@@ -3,6 +3,10 @@ import Auth
 import BFMClient
 
 extension AppComposition {
+    internal func tripsRepository(for device: PairedDevice) -> any TripsReading {
+        BFMTripsRepository(client: authenticated(device))
+    }
+
     /// Everything a paired device's screens may reach. Built per device rather
     /// than at launch, for the reason in this type's note, and kept until the
     /// device changes.
