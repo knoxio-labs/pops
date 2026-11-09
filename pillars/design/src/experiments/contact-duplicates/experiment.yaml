@@ -1,0 +1,7 @@
+name: Duplicate contacts
+question: Compare source contacts first, or review the resulting fields first?
+status: active
+screen: contacts/duplicates
+variants:
+  sources: Sources first
+  fields: Fields first
