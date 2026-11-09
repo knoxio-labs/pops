@@ -30,11 +30,12 @@ describe('Trips manifest', () => {
     expect(manifest.nav).not.toHaveProperty('color');
   });
 
-  it('publishes exactly the implemented home, stay, and settings routes', () => {
+  it('publishes exactly the implemented home, stay, journey and settings routes', () => {
     const manifest = buildTripsManifest('1.2.3');
     expect(manifest.pages).toEqual([
       { path: '', index: true, bundleSlot: 'trips-home' },
       { path: ':tripId/stays/:stayId', bundleSlot: 'trips-stay' },
+      { path: ':tripId/journeys/:journeyId', bundleSlot: 'trips-journey' },
       { path: ':tripId/settings', bundleSlot: 'trips-settings' },
     ]);
     expect(manifest.pages).toEqual(TRIPS_PAGES);
