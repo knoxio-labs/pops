@@ -1,6 +1,9 @@
 name: Trip inbox
 question: Organise captured material inline, or open one item?
-status: active
+status: decided
+chosen: inline
+decided: 2026-11-09
+rationale: Joao chose Inline and capture Undo restoring text and files, then approved the refined prototype with next.
 screen: trips/inbox
 variants:
   inline: Inline organisation

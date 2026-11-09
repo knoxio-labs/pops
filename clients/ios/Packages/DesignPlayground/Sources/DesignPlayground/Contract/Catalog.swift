@@ -67,6 +67,7 @@ internal enum Catalog {
         + AccountsSurfaces.surfaces
         + PairingSurfaces.surfaces
         + GuestSurfaces.surfaces
+        + TripTodaySurfaces.surfaces
 
     static let experiments: [DesignExperiment] = ExperimentCatalog.all
 

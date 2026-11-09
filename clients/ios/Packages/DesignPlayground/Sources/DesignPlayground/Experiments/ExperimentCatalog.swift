@@ -32,4 +32,5 @@ internal enum ExperimentCatalog {
         + InventorySyncExperiments.all
         + InventoryUntypedExperiments.all
         + AccountsExperiments.all
+        + [TripTodayExperiment.experiment]
 }
