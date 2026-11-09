@@ -53,6 +53,19 @@ must belong to the trip and appear exactly once. Reordering is atomic and change
 only position, preserving source values and timestamps. No purchase, reservation
 or certainty is inferred from route or timing.
 
+Events belong to trips independently of visits. `GET/POST /trips/:tripId/events`
+and `GET/PATCH/DELETE /trips/:tripId/events/:id` retain event source facts.
+The optional visit must belong to the same trip; changing the association never
+copies dates. Dates, clocks and the source time zone are independently optional.
+Contradictory valid dates remain editable; missing clocks never become midnight.
+Intention, arrangement and purchase use the same independent source vocabulary
+as journey legs. Only `Purchased` records a purchase. Venue, organiser and
+document links are opaque source references, not hydrated external identities.
+Source and ticket URLs accept HTTP(S) only. Patches retain omitted fields,
+clear nullable facts with null, and replace supplied timing objects and arrays.
+Deleting an event never deletes a referenced contact, document or booking.
+Event operations use the projected `trips.events` scope.
+
 Stays belong to trips independently of visits. `GET/POST /trips/:tripId/stays`
 and `GET/PATCH/DELETE /trips/:tripId/stays/:id` manage stable source records;
 lists use identity order, not route or date order. A nullable `visitId` may refer
