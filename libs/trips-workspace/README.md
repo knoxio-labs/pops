@@ -4,6 +4,16 @@
 In visit accommodation workspace. This browser component library owns no service or database and imports no pillar package.
 Its consumers supply source identities and a React Query provider; shell activation
 is tracked separately.
+`EventWorkspace({ tripId, eventId, client? })` implements the approved route-context
+event detail. It places the editor inside its explicit associated visit and shows
+the immediately neighbouring visits in persisted route order. Missing associations
+remain unlinked; event dates never move visits or create journeys. Intention,
+arrangement and purchase save independently, and only Purchased has hard styling.
+Event dates, clocks and zone remain independent source fields. Source/ticket URLs,
+address, notes and opaque source/venue/organiser/document references are editable;
+no reference is hydrated or treated as an external booking action. Undo persists
+the previous successful event source snapshot. Failed drafts remain visible and
+retryable; optional context failures do not prevent editing.
 The generated Trips client uses `/trips-api`; an explicit generated `Client`
 may be supplied for a separate transport. No backend contract types are imported
 into the browser: the committed Trips OpenAPI snapshot owns the generated types.
