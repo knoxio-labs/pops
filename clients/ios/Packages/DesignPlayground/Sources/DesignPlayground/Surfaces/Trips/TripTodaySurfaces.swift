@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Native Today proposals share source snapshots, timing projections and inspection actions.
+/// Native Today opens with the selected priority hierarchy and retains the source chronology as a utility.
 @MainActor
 internal enum TripTodaySurfaces {
     internal static let id = SurfaceID(area: "trips", slug: "today")
@@ -12,35 +12,35 @@ internal enum TripTodaySurfaces {
         DesignSurface(
             id: id,
             title: "Today",
-            synopsis: "Current accommodation, the next journey and recorded commitments.",
+            synopsis: "What is happening now, followed by known future plans.",
             chrome: .navigation,
             states: TripsTodayScenario.allCases.map { scenario in
                 DesignState(scenario.rawValue, scenario.title) {
                     TripTodayView(state: tripsTodayFixture(scenario), layout: layout)
                 }
-            } + (launchStates ? proposalStates : [])
+            } + (launchStates ? directStates : [])
         )
     }
 
-    private static let proposalStates: [DesignState] = [
-        DesignState("next-first", "Next first") {
+    private static let directStates: [DesignState] = [
+        DesignState("next-first", "Now then Next") {
             TripTodayView(state: tripsTodayFixture(.default), layout: .nextFirst)
         },
-        DesignState("day-timeline", "Day timeline") {
+        DesignState("day-timeline", "Timeline") {
             TripTodayView(state: tripsTodayFixture(.default), layout: .timeline)
         },
     ]
 }
 
-/// The two list hierarchies under review; each opens the same selected source details.
+/// The primary priority hierarchy and secondary chronology open the same selected source details.
 internal enum TripTodayLayout: String, CaseIterable {
     case nextFirst = "next-first"
     case timeline = "day-timeline"
 
     internal var title: String {
         switch self {
-        case .nextFirst: "Next first"
-        case .timeline: "Day timeline"
+        case .nextFirst: "Now then Next"
+        case .timeline: "Timeline"
         }
     }
 }

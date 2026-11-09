@@ -1,6 +1,7 @@
 import Foundation
 
-/// Uses fixed now and its selected zone; both layouts receive the identical ordered source set.
+/// Projects active sources, all known future starts, and the display day's commitments.
+/// Both layouts receive the same chronological source set, without a future-window cap.
 internal func tripsTodayProjection(_ state: TripsTodayState) -> TripsTodayProjection {
     let day = tripsTodayDay(state.now, zone: state.displayZone)
     let now = tripsTodayInstant(state.now)
@@ -18,10 +19,15 @@ internal func tripsTodayProjection(_ state: TripsTodayState) -> TripsTodayProjec
     let next = day == nil ? nil : journeys.first?.0
     let current = day == nil ? [] : stays
     let commitments = day.map { tripsTodayCommitments(state, day: $0) } ?? []
-    let promoted =
-        current.map(TripsTodaySource.stay) + (next.map { [TripsTodaySource.journey($0)] } ?? [])
+    let catalog = tripsTodayAllSources(state)
+    let timed =
+        day == nil
+        ? []
+        : catalog.filter {
+            tripsTodaySourcePhase($0, now: state.now) != .other
+        }
     let sources = tripsTodayOrderedSources(
-        promoted + commitments.map(\.source), zone: state.displayZone)
+        timed + commitments.map(\.source), zone: state.displayZone)
     return .init(
         day: day, currentStays: current, nextJourney: next, commitments: commitments,
         sources: sources, findings: tripsTodayFindings(state, current: current))
@@ -41,14 +47,6 @@ private func tripsTodayOrderedSources(_ sources: [TripsTodaySource], zone: Strin
         if leftAt == nil && rightAt != nil { return false }
         if leftAt != nil && rightAt == nil { return true }
         return left.id < right.id
-    }
-}
-
-private func tripsTodaySourceStart(_ source: TripsTodaySource) -> Date? {
-    switch source {
-    case .stay(let stay): tripsTodayClockInstant(stay.from)
-    case .journey(let journey): tripsTodayClockInstant(journey.legs.first?.departure)
-    case .event(let event): tripsTodayClockInstant(event.start)
     }
 }
 

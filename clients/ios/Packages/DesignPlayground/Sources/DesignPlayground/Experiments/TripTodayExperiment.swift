@@ -1,19 +1,22 @@
-/// M01 compares upcoming travel and accommodation with the day's chronological commitments.
+/// M01 records the chosen hierarchy; the prototype's visual review remains separate.
 @MainActor
 internal enum TripTodayExperiment {
     internal static let experiment = DesignExperiment(
         id: "trip-today",
-        question: "Start with what is next, or follow the day in time order?",
+        question: "What appears first on mobile?",
         subject: TripTodaySurfaces.id,
-        variants: TripTodayLayout.allCases.map { layout in
+        status: .decided(
+            variant: TripTodayLayout.nextFirst.rawValue,
+            rationale: "Hierarchy selected: always show what is now, then what is next. "
+                + "This records the ordering direction only; overall visual review remains open."
+        ),
+        variants: [
             DesignVariant(
-                id: layout.rawValue,
-                title: layout.title,
-                note: layout == .nextFirst
-                    ? "Promotes the next journey and current accommodation before other commitments."
-                    : "Orders the same window by displayed day and time, keeping source details available.",
-                surface: TripTodaySurfaces.surface(layout)
+                id: TripTodayLayout.nextFirst.rawValue,
+                title: TripTodayLayout.nextFirst.title,
+                note: "Active sources first, known future starts next, then date-only commitments.",
+                surface: TripTodaySurfaces.surface(.nextFirst)
             )
-        }
+        ]
     )
 }

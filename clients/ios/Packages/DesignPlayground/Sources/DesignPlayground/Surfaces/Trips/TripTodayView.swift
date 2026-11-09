@@ -1,7 +1,7 @@
 import DesignSystem
 import SwiftUI
 
-/// Native Today list compares priority grouping with source chronology from one fixed fictional projection.
+/// Native Today prioritises active sources, then known future starts, while retaining a secondary chronology.
 internal struct TripTodayView: View {
     internal let state: TripsTodayState
     internal let layout: TripTodayLayout
@@ -19,9 +19,9 @@ internal struct TripTodayView: View {
                 }
             }
             if layout == .nextFirst {
-                nextFirst
+                nowThenNext
             } else {
-                Section("Day timeline") {
+                Section("Timeline") {
                     ForEach(projection.sources) { source in
                         TripTodayRow(
                             source: source, displayZone: state.displayZone, chronological: true
@@ -41,30 +41,25 @@ internal struct TripTodayView: View {
         }
     }
 
-    @ViewBuilder private var nextFirst: some View {
-        if let journey = projection.nextJourney {
-            Section("Next journey") {
-                TripTodayRow(source: .journey(journey), displayZone: state.displayZone) {
-                    selected = $0
-                }
-            }
+    @ViewBuilder private var nowThenNext: some View {
+        prioritySection("Now", phase: .now)
+        prioritySection("Next", phase: .next)
+        prioritySection("Today", phase: .other)
+    }
+
+    @ViewBuilder private func prioritySection(
+        _ title: String, phase: TripsTodaySourcePhase
+    ) -> some View {
+        let sources = projection.sources.filter {
+            tripsTodaySourcePhase($0, now: state.now) == phase
         }
-        if !projection.currentStays.isEmpty {
-            Section("Current stay") {
-                ForEach(projection.currentStays) { stay in
-                    TripTodayRow(source: .stay(stay), displayZone: state.displayZone) {
-                        selected = $0
-                    }
-                }
-            }
-        }
-        let promoted = Set(projection.currentStays.map { TripsTodaySource.stay($0).id })
-            .union(projection.nextJourney.map { [TripsTodaySource.journey($0).id] } ?? [])
-        let remaining = projection.sources.filter { !promoted.contains($0.id) }
-        if !remaining.isEmpty {
-            Section("Today") {
-                ForEach(remaining) { source in
-                    TripTodayRow(source: source, displayZone: state.displayZone) { selected = $0 }
+        if !sources.isEmpty {
+            Section(title) {
+                ForEach(sources) { source in
+                    TripTodayRow(
+                        source: source, displayZone: state.displayZone,
+                        chronological: phase == .next
+                    ) { selected = $0 }
                 }
             }
         }

@@ -5,10 +5,14 @@ import Testing
 @Suite("Trip Today registration")
 @MainActor
 internal struct TripTodayRegistrationTests {
-    @Test("both native proposals are directly launchable with every named source state")
-    func proposalsAreRegistered() throws {
+    @Test(
+        "the primary hierarchy and secondary timeline are directly launchable with every named source state"
+    )
+    func launchStatesAreRegistered() throws {
         let surface = try #require(Catalog.surfaces.first { $0.id == TripTodaySurfaces.id })
         #expect(surface.id.description == "trips/today")
+        #expect(surface.state(id: "next-first")?.title == "Now then Next")
+        #expect(surface.state(id: "day-timeline")?.title == "Timeline")
         let states = Set(surface.states.map(\.id))
         #expect(states.isSuperset(of: TripsTodayScenario.allCases.map(\.rawValue)))
         for state in ["next-first", "day-timeline"] {
@@ -18,12 +22,13 @@ internal struct TripTodayRegistrationTests {
         }
     }
 
-    @Test("the experiment keeps distinct hierarchies and a default state tied to each variant")
-    func experimentHasBothVariants() throws {
+    @Test("the experiment records the hierarchy selection without claiming overall visual approval")
+    func experimentRecordsHierarchy() throws {
         let experiment = try #require(Catalog.experiments.first { $0.id == "trip-today" })
-        #expect(experiment.isOpen)
+        #expect(!experiment.isOpen)
+        #expect(experiment.chosen?.title == "Now then Next")
         #expect(experiment.subject == TripTodaySurfaces.id)
-        #expect(experiment.variants.map(\.id) == ["next-first", "day-timeline"])
+        #expect(experiment.variants.map(\.id) == ["next-first"])
         for variant in experiment.variants {
             #expect(variant.surface.openingState?.id == "default")
             #expect(variant.surface.state(id: "next-first") == nil)

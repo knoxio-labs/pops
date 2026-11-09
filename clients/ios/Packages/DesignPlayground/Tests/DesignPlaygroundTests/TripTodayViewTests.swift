@@ -35,10 +35,9 @@ internal struct TripTodayViewTests {
             #expect(Set(ids) == expected)
             #expect(ids.count == expected.count)
             if layout == .nextFirst {
-                #expect(ids.first == projection.nextJourney?.id)
+                #expect(ids.first == projection.currentStays.first?.id)
             } else {
                 #expect(ids == projection.sources.map(\.id))
-                #expect(ids.first != projection.nextJourney?.id)
             }
         }
     }

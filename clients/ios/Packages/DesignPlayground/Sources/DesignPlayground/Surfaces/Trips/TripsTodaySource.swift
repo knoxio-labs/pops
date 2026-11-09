@@ -87,11 +87,14 @@ internal struct TripsTodayProjection: Equatable, Sendable {
     internal var findings: [TripsTodayFinding]
 }
 
-/// Looks up the actual source identity, returning nil for a missing reference.
-internal func tripsTodaySource(_ state: TripsTodayState, id: String) -> TripsTodaySource? {
-    let sources =
-        state.stays.map(TripsTodaySource.stay)
+/// Enumerates unchanged source values without filtering their timing or merging equal names.
+internal func tripsTodayAllSources(_ state: TripsTodayState) -> [TripsTodaySource] {
+    state.stays.map(TripsTodaySource.stay)
         + state.journeys.map(TripsTodaySource.journey)
         + state.events.map(TripsTodaySource.event)
-    return sources.first { $0.id == id }
+}
+
+/// Looks up the actual source identity, returning nil for a missing reference.
+internal func tripsTodaySource(_ state: TripsTodayState, id: String) -> TripsTodaySource? {
+    tripsTodayAllSources(state).first { $0.id == id }
 }

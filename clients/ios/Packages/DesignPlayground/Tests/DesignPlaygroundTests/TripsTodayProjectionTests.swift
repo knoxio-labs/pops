@@ -13,7 +13,9 @@ internal struct TripsTodayProjectionTests {
         #expect(projection.currentStays.map(\.id) == ["carmo"])
         #expect(projection.nextJourney?.id == "return")
         #expect(
-            Set(projection.sources.map(\.id)) == ["carmo", "marina-coffee", "poa-rec", "return"])
+            Set(projection.sources.map(\.id)) == [
+                "carmo", "marina-coffee", "poa-rec", "concert", "recife-stay", "return",
+            ])
         let source = try #require(tripsTodaySource(state, id: "carmo"))
         #expect(source.purchased)
         #expect(source.kind == .stay)
