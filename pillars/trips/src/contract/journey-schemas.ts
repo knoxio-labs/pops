@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { CalendarDateSchema, SourceLinkSchema } from './schemas.js';
+import { SourceTimeZoneSchema } from './source-time.js';
 
 const Id = z.number().int().positive();
 const Text = z.string().refine((value) => value.trim().length > 0, 'Expected nonblank source text');
@@ -12,15 +13,6 @@ const LocalClock = z
     'Invalid calendar date'
   )
   .refine((value) => z.iso.time().safeParse(value.slice(11)).success, 'Invalid local clock');
-const TimeZone = z.string().refine((value) => {
-  if (!value || /^[+-]/u.test(value)) return false;
-  try {
-    new Intl.DateTimeFormat('en', { timeZone: value }).format(0);
-    return true;
-  } catch {
-    return false;
-  }
-}, 'Expected a supported IANA time zone');
 
 /** Independent endpoint source facts; an absent location, clock or zone stays unknown. */
 export const JourneyEndpointSchema = z.object({
@@ -28,7 +20,7 @@ export const JourneyEndpointSchema = z.object({
   sourceLabel: z.string().optional(),
   sourceLinks: z.array(SourceLinkSchema).optional(),
   local: LocalClock.optional(),
-  timeZone: TimeZone.optional(),
+  timeZone: SourceTimeZoneSchema.optional(),
 });
 
 /** Explicit user thresholds in physical minutes; missing thresholds have no default. */

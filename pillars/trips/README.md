@@ -1,7 +1,7 @@
 # Trips pillar
 
 `@pops/trips` owns trip metadata, reusable manual place identities and distinct
-visits, journeys and ordered transport legs in its own SQLite database. A place may occur repeatedly in one trip or
+visits, stays, journeys and ordered transport legs in its own SQLite database. A place may occur repeatedly in one trip or
 across trips. Contacts owns reusable contact identities and addresses; Documents
 owns original files; Tags owns shared membership. Explicit HTTP(S) and
 `pops:{pillar}/{type}/{id}` source links refer to records without copying them.
@@ -23,6 +23,30 @@ it. Omitted metadata fields retain their values; `null` clears an optional name.
 must belong to the trip and appear exactly once. Reordering is atomic and changes
 only position, preserving source values and timestamps. No purchase, reservation
 or certainty is inferred from route or timing.
+
+Stays belong to trips independently of visits. `GET/POST /trips/:tripId/stays`
+and `GET/PATCH/DELETE /trips/:tripId/stays/:id` manage stable source records;
+lists use identity order, not route or date order. A nullable `visitId` may refer
+only to a visit in the owning trip. Linking or detaching it never copies dates.
+Stay timing contains independent optional `arrival` and checkout-exclusive
+`departure` calendar dates, optional `checkIn`/`checkOut` HH:mm local clocks and
+an explicit supported IANA `timeZone`. A clock, date or zone may be captured on
+its own. Reversed dates, dates outside a visit, and skipped/repeated DST clocks
+remain source facts. No clock, zone, boundary or status is inferred.
+
+Stay `kind` is optionally hotel, friend, family or other. The singular optional
+`status` is Considering, Agreed, Reserved or Purchased; only explicit Purchased
+is a hard purchase fact. Empty stays select no kind or status. Name, address,
+reference and visit association are nullable. Notes and provenance `sourceLinks`
+are separate from `hostLinks` and `documentLinks`; each reference array uses the
+same explicit URI/optional-label contract. These links are opaque, retained even
+when their source is unavailable, and do not assert contact/document resolution
+or transfer ownership. Deleting a stay removes only that source record.
+
+A stay patch preserves omitted fields. Supplied `timing` replaces the **complete**
+timing object, so `{}` clears it and `{ arrival: "2028-01-16" }` removes any
+previous departure, clocks and zone. Arrays likewise replace complete arrays;
+`[]` clears them. `null` clears nullable scalar fields and detaches a visit.
 
 Journeys belong to trips independently of visits. `GET/POST /trips/:tripId/journeys`
 and `GET/PATCH/DELETE /trips/:tripId/journeys/:id` manage source metadata,
@@ -109,8 +133,8 @@ memberships in other groups. Explicit source journey deletion returns `409`
 while any group membership remains.
 
 Domain routes require their projected service-account scope: `trips.trips`,
-`trips.places`, `trips.visits`, `trips.journeys`, `trips.journeyLegs` or
-`trips.journeyGroups`; a `trips` grant covers all domains. Discovery and
+`trips.places`, `trips.visits`, `trips.journeys`, `trips.journeyLegs`,
+`trips.journeyGroups` or `trips.stays`; a `trips` grant covers all domains. Discovery and
 health probes remain open. The pillar has no frontend application.
 
 Run `mise exec -- pnpm --filter @pops/trips dev`. `PORT` defaults to 3018;

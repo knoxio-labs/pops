@@ -14,8 +14,9 @@ import { createJourneyGroup } from '../services/journey-groups.js';
 import { createJourneyLeg, listJourneyLegs } from '../services/journey-legs.js';
 import { createJourney, getJourney } from '../services/journeys.js';
 import { createPlace, createTrip, createVisit, listVisits } from '../services/records.js';
+import { createStay, getStay } from '../services/stays.js';
 
-it.each([1, 2])(
+it.each([1, 2, 3])(
   'upgrades a database with %i source migrations without replacing existing records',
   (migrationCount) => {
     const scratch = fileURLToPath(new URL('../../../../../tmp/', import.meta.url));
@@ -24,7 +25,11 @@ it.each([1, 2])(
     const oldMigrations = join(directory, 'migrations');
     mkdirSync(join(oldMigrations, 'meta'), { recursive: true });
     const migrations = fileURLToPath(new URL('../../../migrations/', import.meta.url));
-    const migrationFiles = ['0000_trips_init.sql', '0001_journey_sources.sql'];
+    const migrationFiles = [
+      '0000_trips_init.sql',
+      '0001_journey_sources.sql',
+      '0002_journey_alternatives.sql',
+    ];
     for (const file of migrationFiles.slice(0, migrationCount))
       copyFileSync(join(migrations, file), join(oldMigrations, file));
     const journal: unknown = JSON.parse(
@@ -61,7 +66,7 @@ it.each([1, 2])(
         timing: { month: { year: 2028, month: 1 } },
       });
       const previousJourney =
-        migrationCount === 2
+        migrationCount >= 2
           ? createJourney(db, trip.id, {
               reference: 'Existing source',
               sourceLinks: [{ uri: 'pops:documents/document/42' }],
@@ -81,6 +86,12 @@ it.each([1, 2])(
           expect(getJourney(upgraded.db, trip.id, previousJourney.id)).toEqual(previousJourney);
           expect(listJourneyLegs(upgraded.db, trip.id, previousJourney.id)).toEqual([previousLeg]);
         }
+        const stay = createStay(upgraded.db, trip.id, {
+          visitId: visit.id,
+          timing: { departure: '2028-01-01' },
+          status: 'Reserved',
+        });
+        expect(getStay(upgraded.db, trip.id, stay.id)).toEqual(stay);
         const journey = createJourney(upgraded.db, trip.id, {});
         const leg = createJourneyLeg(upgraded.db, trip.id, journey.id, {
           from: { placeId: place.id },

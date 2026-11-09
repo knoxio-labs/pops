@@ -6,6 +6,7 @@ import { JourneyGroupSchema } from '../../contract/journey-groups.js';
 import { JourneySchema, JourneyLegSchema } from '../../contract/journey-schemas.js';
 import { JourneyTimingSchema } from '../../contract/journey-timing.js';
 import { PlaceSchema, TripSchema, VisitSchema } from '../../contract/schemas.js';
+import { StaySchema } from '../../contract/stay-schemas.js';
 import { openTripsDb, type OpenedTripsDb } from '../../db/index.js';
 import { createTripsApiApp } from '../app.js';
 import { buildTripsManifest } from '../manifest.js';
@@ -20,6 +21,7 @@ const testScopes = new Map<string, string[]>([
   ['journeys-only', ['trips.journeys']],
   ['legs-only', ['trips.journeyLegs']],
   ['groups-only', ['trips.journeyGroups']],
+  ['stays-only', ['trips.stays']],
 ]);
 
 beforeEach(async () => {
@@ -555,5 +557,190 @@ describe('Read-only journey timing HTTP contract', () => {
     expect((await call(`/trips/${other.id}/journeys/${journey.id}/timing`)).status).toBe(404);
     expect((await call(`${base}/99999/timing`)).status).toBe(404);
     expect((await call(`${base}/invalid/timing`)).status).toBe(400);
+  });
+});
+
+describe('Stay HTTP source contract', () => {
+  it('captures independent source facts, preserves omissions, replaces timing, clears nullable fields and deletes', async () => {
+    const trip = TripSchema.parse(await (await call('/trips', 'POST', {})).json());
+    const place = PlaceSchema.parse(
+      await (await call('/places', 'POST', { name: 'Source city' })).json()
+    );
+    const visit = VisitSchema.parse(
+      await (
+        await call(`/trips/${trip.id}/visits`, 'POST', {
+          placeId: place.id,
+          timing: { arrival: '2028-06-01' },
+        })
+      ).json()
+    );
+    const base = `/trips/${trip.id}/stays`;
+    const response = await call(base, 'POST', {
+      visitId: visit.id,
+      kind: 'family',
+      status: 'Agreed',
+      timing: {
+        arrival: '2028-11-05',
+        departure: '2028-03-12',
+        checkIn: '01:30',
+        checkOut: '02:30',
+        timeZone: 'America/Chicago',
+      },
+      sourceLinks: [{ uri: 'https://source.example' }],
+      hostLinks: [{ uri: 'pops:contacts/person/unavailable', label: 'Source host' }],
+      documentLinks: [{ uri: 'pops:documents/document/unavailable' }],
+    });
+    expect(response.status).toBe(201);
+    const source = StaySchema.parse(await response.json());
+    expect(await (await call(`${base}/${source.id}`)).json()).toEqual(source);
+    const blankResponse = await call(base, 'POST', {});
+    expect(blankResponse.status).toBe(201);
+    const blank = StaySchema.parse(await blankResponse.json());
+    expect(blank).toMatchObject({
+      visitId: null,
+      name: null,
+      kind: null,
+      status: null,
+      timing: {},
+      hostLinks: [],
+      documentLinks: [],
+    });
+    expect(await (await call(base)).json()).toEqual({ stays: [source, blank] });
+    const patch = await call(`${base}/${source.id}`, 'PATCH', {
+      name: 'Named source',
+      status: 'Purchased',
+    });
+    expect(patch.status).toBe(200);
+    const edited = StaySchema.parse(await patch.json());
+    expect(edited).toEqual({
+      ...source,
+      name: 'Named source',
+      status: 'Purchased',
+      updatedAt: expect.any(String),
+    });
+    expect(
+      await (await call(`${base}/${source.id}`, 'PATCH', { timing: { checkOut: '11:00' } })).json()
+    ).toMatchObject({ timing: { checkOut: '11:00' }, status: 'Purchased', visitId: visit.id });
+    expect(
+      await (
+        await call(`${base}/${source.id}`, 'PATCH', {
+          visitId: null,
+          timing: {},
+          status: null,
+          name: null,
+          hostLinks: [],
+          documentLinks: [],
+        })
+      ).json()
+    ).toEqual({
+      ...edited,
+      visitId: null,
+      timing: {},
+      status: null,
+      name: null,
+      hostLinks: [],
+      documentLinks: [],
+      updatedAt: expect.any(String),
+    });
+    expect(await (await call(`/trips/${trip.id}/visits/${visit.id}`)).json()).toEqual(visit);
+    expect((await call(`${base}/${source.id}`, 'DELETE')).status).toBe(204);
+    expect((await call(`${base}/${source.id}`)).status).toBe(404);
+    expect(await (await call(base)).json()).toEqual({ stays: [blank] });
+  });
+
+  it('requires the projected stay scope on every operation and publishes the REST paths', async () => {
+    const trip = TripSchema.parse(await (await call('/trips', 'POST', {})).json());
+    const base = `/trips/${trip.id}/stays`;
+    const source = StaySchema.parse(await (await call(base, 'POST', {})).json());
+    for (const [path, method, body] of [
+      [base, 'GET', undefined],
+      [base, 'POST', {}],
+      [`${base}/${source.id}`, 'GET', undefined],
+      [`${base}/${source.id}`, 'PATCH', {}],
+      [`${base}/${source.id}`, 'DELETE', undefined],
+    ] satisfies [string, string, unknown][]) {
+      expect((await call(path, method, body, null)).status).toBe(401);
+      expect((await call(path, method, body, 'rejected')).status).toBe(401);
+      expect((await call(path, method, body, 'journeys-only')).status).toBe(403);
+    }
+    expect((await call(base, 'GET', undefined, 'stays-only')).status).toBe(200);
+    expect((await call(`/trips/${trip.id}/journeys`, 'GET', undefined, 'stays-only')).status).toBe(
+      403
+    );
+    expect((await call(base, 'POST', {}, 'stays-only')).status).toBe(201);
+    expect((await call(`${base}/${source.id}`, 'PATCH', {}, 'stays-only')).status).toBe(200);
+    expect((await call(`${base}/${source.id}`, 'GET', undefined, 'stays-only')).status).toBe(200);
+    expect((await call(`${base}/${source.id}`, 'DELETE', undefined, 'stays-only')).status).toBe(
+      204
+    );
+    const spec: unknown = await (await call('/openapi')).json();
+    expect(spec).toMatchObject({
+      openapi: '3.0.2',
+      paths: {
+        '/trips/{tripId}/stays': {
+          get: { operationId: 'stays.list' },
+          post: { operationId: 'stays.create' },
+        },
+        '/trips/{tripId}/stays/{id}': {
+          get: { operationId: 'stays.get' },
+          patch: { operationId: 'stays.update' },
+          delete: { operationId: 'stays.delete' },
+        },
+      },
+    });
+  });
+
+  it('rejects invalid values, foreign visits and foreign stays without partial mutation', async () => {
+    const trip = TripSchema.parse(await (await call('/trips', 'POST', {})).json());
+    const other = TripSchema.parse(await (await call('/trips', 'POST', {})).json());
+    const place = PlaceSchema.parse(
+      await (await call('/places', 'POST', { name: 'Source city' })).json()
+    );
+    const foreignVisit = VisitSchema.parse(
+      await (await call(`/trips/${other.id}/visits`, 'POST', { placeId: place.id })).json()
+    );
+    const base = `/trips/${trip.id}/stays`;
+    const source = StaySchema.parse(await (await call(base, 'POST', { notes: 'Preserve' })).json());
+    for (const body of [
+      { timing: { arrival: '2027-02-29' } },
+      { timing: { checkIn: '24:00' } },
+      { timing: { timeZone: 'Missing/Zone' } },
+      { status: 'Booked' },
+      { kind: 'hostel' },
+      { hostLinks: [{ uri: 'javascript:alert(1)' }] },
+      { documentLinks: [{ uri: 'javascript:alert(1)' }] },
+    ]) {
+      const response = await call(`${base}/${source.id}`, 'PATCH', body);
+      expect(response.status).toBe(400);
+      expect(await response.json()).toMatchObject({
+        code: 'trips.request.invalid',
+        retryable: false,
+        requestId: expect.any(String),
+        details: { issues: expect.any(Array) },
+      });
+    }
+    for (const visitId of [99999, foreignVisit.id]) {
+      expect((await call(base, 'POST', { visitId })).status).toBe(404);
+      const response = await call(`${base}/${source.id}`, 'PATCH', {
+        visitId,
+        notes: 'Do not save',
+      });
+      expect(response.status).toBe(404);
+      expect(await response.json()).toMatchObject({
+        code: 'trips.record.not_found',
+        retryable: false,
+        requestId: expect.any(String),
+      });
+    }
+    const foreignPath = `/trips/${other.id}/stays/${source.id}`;
+    for (const method of ['GET', 'PATCH', 'DELETE'])
+      expect(
+        (await call(foreignPath, method, method === 'PATCH' ? { notes: 'Wrong trip' } : undefined))
+          .status
+      ).toBe(404);
+    expect((await call('/trips/99999/stays')).status).toBe(404);
+    expect((await call('/trips/99999/stays', 'POST', {})).status).toBe(404);
+    expect((await call(`${base}/invalid`)).status).toBe(400);
+    expect(await (await call(base)).json()).toEqual({ stays: [source] });
   });
 });
