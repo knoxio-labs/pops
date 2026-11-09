@@ -21,6 +21,7 @@ type TripsReadRouter = {
   journeys: { list: (input: { tripId: number }) => Promise<unknown> };
   journeyLegs: { list: (input: { tripId: number; journeyId: number }) => Promise<unknown> };
   journeyGroups: { list: (input: { tripId: number }) => Promise<unknown> };
+  events: { list: (input: { tripId: number }) => Promise<unknown> };
   stays: { list: (input: { tripId: number }) => Promise<unknown> };
 };
 
@@ -45,7 +46,7 @@ export function createMobileTripsClient(gateway: PillarGateway): MobileTripsClie
 }
 
 type TripsCollections = {
-  [K in 'places' | 'visits' | 'journeys' | 'groups' | 'stays']: GatewayOutcome<
+  [K in 'places' | 'visits' | 'journeys' | 'groups' | 'stays' | 'events']: GatewayOutcome<
     z.infer<(typeof TripsWire)[K]>
   >;
 };
@@ -60,12 +61,13 @@ function parseCollection<T>(
   return parseOrMismatch('trips', response, schema, operation);
 }
 async function readCollections(gateway: PillarGateway, tripId: number): Promise<TripsCollections> {
-  const [places, visits, journeys, groups, stays] = await Promise.all([
+  const [places, visits, journeys, groups, stays, events] = await Promise.all([
     gateway.call<TripsReadRouter, unknown>('trips', (h) => h.places.list()),
     gateway.call<TripsReadRouter, unknown>('trips', (h) => h.visits.list({ tripId })),
     gateway.call<TripsReadRouter, unknown>('trips', (h) => h.journeys.list({ tripId })),
     gateway.call<TripsReadRouter, unknown>('trips', (h) => h.journeyGroups.list({ tripId })),
     gateway.call<TripsReadRouter, unknown>('trips', (h) => h.stays.list({ tripId })),
+    gateway.call<TripsReadRouter, unknown>('trips', (h) => h.events.list({ tripId })),
   ]);
   return {
     places: parseCollection(places, TripsWire.places, 'places.list'),
@@ -73,6 +75,7 @@ async function readCollections(gateway: PillarGateway, tripId: number): Promise<
     journeys: parseCollection(journeys, TripsWire.journeys, 'journeys.list'),
     groups: parseCollection(groups, TripsWire.groups, 'journeyGroups.list'),
     stays: parseCollection(stays, TripsWire.stays, 'stays.list'),
+    events: parseCollection(events, TripsWire.events, 'events.list'),
   };
 }
 
@@ -107,6 +110,7 @@ async function getTrip(
   if (!isGatewayOk(reads.journeys)) return reads.journeys;
   if (!isGatewayOk(reads.groups)) return reads.groups;
   if (!isGatewayOk(reads.stays)) return reads.stays;
+  if (!isGatewayOk(reads.events)) return reads.events;
   const journeys: MobileTripDetail['journeys'] = [];
   for (const journey of reads.journeys.value.journeys) {
     const detailed = await readJourney(gateway, id, journey);
@@ -120,6 +124,7 @@ async function getTrip(
     journeys,
     journeyGroups: reads.groups.value.groups,
     stays: reads.stays.value.stays,
+    events: reads.events.value.events,
   };
   if (!validTripsReferences(detail, id))
     return tripsContractMismatch('Trips read contained inconsistent source references');

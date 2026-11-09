@@ -97,6 +97,7 @@ export function tripsFixture(): MobileTripDetail {
         ...audit,
       },
     ],
+    events: [],
     stays: [
       {
         id: 70,

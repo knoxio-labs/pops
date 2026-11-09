@@ -45,6 +45,7 @@ describe('native Trips capability, discovery and source contract', () => {
       'trips.journeyLegs.list',
       'trips.journeyGroups.list',
       'trips.stays.list',
+      'trips.events.list',
     ]);
     for (const scope of scopes) expect(BFM_SERVICE_ACCOUNT_SCOPES).toContain(scope);
     expect(BFM_SERVICE_ACCOUNT_SCOPES.filter((scope) => scope.startsWith('trips'))).toEqual(scopes);
