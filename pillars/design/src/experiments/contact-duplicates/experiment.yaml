@@ -1,6 +1,9 @@
 name: Duplicate contacts
 question: Compare source contacts first, or review the resulting fields first?
-status: active
+status: decided
+chosen: sources
+decided: 2026-11-09
+rationale: Joao chose Sources first, then approved the duplicate review prototype with next.
 screen: contacts/duplicates
 variants:
   sources: Sources first
