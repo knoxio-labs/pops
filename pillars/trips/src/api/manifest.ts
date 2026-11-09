@@ -10,12 +10,13 @@ import type {
 const TRIPS_WIRE_NAV = { ...TRIPS_NAV, items: [...TRIPS_NAV.items] } satisfies NavConfigDescriptor;
 const TRIPS_WIRE_PAGES = [...TRIPS_PAGES] satisfies PageDescriptor[];
 
-/** Stable registry identity of the trips pillar. */
-export const TRIPS_PILLAR_ID = 'trips' as const;
-
 const TRIPS_QUERIES = [
   'trips.events.list',
   'trips.events.get',
+  'trips.decisions.list',
+  'trips.decisions.get',
+  'trips.decisionOptions.list',
+  'trips.decisionOptions.get',
   'trips.stays.list',
   'trips.stays.get',
   'trips.journeyGroups.list',
@@ -36,6 +37,14 @@ const TRIPS_MUTATIONS = [
   'trips.events.create',
   'trips.events.update',
   'trips.events.delete',
+  'trips.decisions.create',
+  'trips.decisions.update',
+  'trips.decisions.select',
+  'trips.decisions.delete',
+  'trips.decisionOptions.create',
+  'trips.decisionOptions.update',
+  'trips.decisionOptions.delete',
+  'trips.decisionOptions.restore',
   'trips.stays.create',
   'trips.stays.update',
   'trips.stays.delete',
@@ -58,6 +67,9 @@ const TRIPS_MUTATIONS = [
   'trips.visits.update',
   'trips.visits.reorder',
 ];
+
+/** Stable registry identity of the trips pillar. */
+export const TRIPS_PILLAR_ID = 'trips' as const;
 
 /** Publish Trips source operations and its source-backed shell routes. */
 export function buildTripsManifest(version: string): ManifestPayload {

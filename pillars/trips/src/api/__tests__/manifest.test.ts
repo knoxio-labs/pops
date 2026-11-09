@@ -50,10 +50,18 @@ describe('Trips manifest', () => {
       version: '1.2.3',
       tag: 'contract-trips@v1.2.3',
     });
-    expect(manifest.routes.queries).toHaveLength(17);
+    expect(manifest.routes.queries).toHaveLength(21);
     expect(manifest.routes.mutations).toContain('trips.visits.reorder');
     expect(manifest.routes.mutations).toEqual(
       expect.arrayContaining([
+        'trips.decisions.create',
+        'trips.decisions.update',
+        'trips.decisions.select',
+        'trips.decisions.delete',
+        'trips.decisionOptions.create',
+        'trips.decisionOptions.update',
+        'trips.decisionOptions.delete',
+        'trips.decisionOptions.restore',
         'trips.stays.create',
         'trips.events.create',
         'trips.events.update',
@@ -68,7 +76,16 @@ describe('Trips manifest', () => {
     );
     expect(manifest.routes.queries).toContain('trips.journeys.timing');
     expect(manifest.routes.queries).toEqual(
-      expect.arrayContaining(['trips.stays.list', 'trips.stays.get'])
+      expect.arrayContaining([
+        'trips.events.list',
+        'trips.events.get',
+        'trips.stays.list',
+        'trips.stays.get',
+        'trips.decisions.list',
+        'trips.decisions.get',
+        'trips.decisionOptions.list',
+        'trips.decisionOptions.get',
+      ])
     );
     expect(manifest.uri.types).toEqual([]);
   });
