@@ -1,0 +1,7 @@
+name: Trip possibilities
+question: Browse one collection, or group possibilities by location?
+status: active
+screen: trips/explore
+variants:
+  collection: One collection
+  cities: By location

@@ -1,6 +1,9 @@
 name: Trip calendar
 question: Start with a compact agenda, or a clock timeline?
-status: active
+status: decided
+chosen: timeline
+decided: 2026-11-09
+rationale: Joao chose Clock rail, then approved the direct-opening cards with next.
 screen: trips/calendar
 variants:
   agenda: Compact agenda
