@@ -44,7 +44,7 @@ export function ExploreEditor({
         <Button
           type="button"
           variant="ghost"
-          className="block h-auto min-h-11 w-full cursor-pointer whitespace-normal rounded-xl p-3 text-left font-normal"
+          className="block h-auto min-h-11 w-full cursor-pointer whitespace-normal rounded-none p-3 text-left font-normal ring-inset"
           aria-label={`Open ${facts.name}`}
         >
           {children}

@@ -47,7 +47,7 @@ function ExploreList({
   showLocation: boolean;
 }) {
   return (
-    <div className="divide-y divide-foreground/15 overflow-hidden rounded-xl border border-foreground/25 bg-muted/20">
+    <div className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-muted/20">
       {records.map((record) => (
         <ExploreRow key={record.id} record={record} showLocation={showLocation} />
       ))}

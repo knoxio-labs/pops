@@ -15,7 +15,7 @@ export function ExploreCapture() {
   return (
     <form
       aria-label="Save possibility"
-      className="space-y-3 rounded-xl border border-foreground/30 bg-muted/30 p-3"
+      className="space-y-3 rounded-xl border border-border bg-muted/30 p-3 focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/50"
       onSubmit={(event) => {
         event.preventDefault();
         const result = captureExploreRecord(state, draft, crypto.randomUUID());
@@ -30,7 +30,7 @@ export function ExploreCapture() {
     >
       <Textarea
         aria-label="Possibility"
-        className="min-h-20"
+        className="min-h-20 rounded-none border-0 bg-transparent shadow-none focus-visible:ring-0 dark:bg-transparent"
         placeholder="Save a possibility…"
         value={draft.name}
         onChange={(event) => setDraft({ ...draft, name: event.currentTarget.value })}
