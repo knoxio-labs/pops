@@ -1,6 +1,9 @@
 name: Contact picker and quick creation
 question: Choose contacts inline, or in a dialog over the trip draft?
-status: active
+status: decided
+chosen: dialog
+decided: 2026-11-09
+rationale: Joao chose Dialog, requested horizontal compact layout, then approved the refinement with next.
 screen: contacts/picker
 variants:
   inline: Inline in the event draft
