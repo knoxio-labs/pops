@@ -1,0 +1,7 @@
+name: Trips home
+question: Browse one compact list, or group trips by route dates?
+status: active
+screen: trips/home
+variants:
+  list: Compact list
+  grouped: Grouped by route dates
