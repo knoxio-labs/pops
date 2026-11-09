@@ -8,7 +8,7 @@ import { ArrangementsContext } from './context';
 import { ArrangementCoverage } from './coverage-panel';
 import { ArrangementFilterBar } from './filters';
 import { createArrangementState } from './fixture';
-import { arrangementRows, visibleArrangements } from './model';
+import { visibleArrangements } from './model';
 import { ArrangementResults } from './results';
 import { ArrangementsReview } from './review';
 
@@ -40,7 +40,7 @@ export function ArrangementsWorkspace({
             </Button>
           )}
         </header>
-        <ArrangementCoverage state={state} rows={arrangementRows(state)} />
+        <ArrangementCoverage state={state} />
         <ArrangementFilterBar filters={filters} change={change} />
         <ArrangementResults state={state} rows={rows} layout={layout} />
       </main>

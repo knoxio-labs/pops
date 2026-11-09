@@ -1,9 +1,8 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import { ArrangementCoverage } from './coverage-panel';
 import { createArrangementState } from './fixture';
-import { arrangementRows } from './model';
 
 function coverageFixture() {
   const state = createArrangementState('empty');
@@ -44,26 +43,26 @@ function coverageFixture() {
 }
 
 describe('coverage slot layout', () => {
-  it('keeps the disclosure chevron inside a markerless row and formats typed lodging dates', () => {
+  it('shows the exact missing nights without expanding neighbouring stays', () => {
     const state = coverageFixture();
-    render(<ArrangementCoverage state={state} rows={arrangementRows(state)} />);
-    const label = screen.getByText('Visit · 3 Jan — 5 Jan 2028');
-    const summary = label.closest('summary');
-    if (!summary) throw new Error('Expected expandable related stay source');
-    expect(summary).toHaveClass('flex', 'list-none', 'marker:hidden');
-    const chevron = summary.querySelector('.lucide-chevron-right');
-    expect(chevron).toBeInTheDocument();
-    expect(chevron?.parentElement).toHaveClass('flex', 'items-center');
-    expect(summary).not.toHaveTextContent('2028-01-03');
-    fireEvent.click(summary);
-    expect(summary.parentElement).toHaveAttribute('open');
-    expect(
-      within(summary.parentElement ?? summary).getByRole('button', { name: 'Open Stay' })
-    ).toBeVisible();
-    expect(within(summary).getByRole('img', { name: 'Stays' })).toBeInTheDocument();
-    const transport = screen.getByText('Visit → Next');
-    const row = transport.closest('.flex.w-full');
-    expect(row?.firstElementChild).toHaveClass('size-4', 'shrink-0');
-    expect(row?.querySelector('.lucide-chevron-right')).toBeNull();
+    render(<ArrangementCoverage state={state} />);
+    const panel = screen.getByRole('region', { name: 'Coverage issues' });
+    expect(within(panel).getByText('Visit · 3 Jan — 5 Jan 2028')).toBeVisible();
+    expect(within(panel).getByText('Visit → Next')).toBeVisible();
+    expect(within(panel).getByRole('img', { name: 'Stays' })).toBeInTheDocument();
+    expect(panel).not.toHaveTextContent('2028-01-03');
+    expect(panel.querySelector('details, summary, .lucide-chevron-right')).toBeNull();
+    expect(within(panel).queryByRole('button')).not.toBeInTheDocument();
+    expect(within(panel).queryByText('Stay', { exact: true })).not.toBeInTheDocument();
+  });
+
+  it('does not expand unarranged flight records just to repeat their routes', () => {
+    render(<ArrangementCoverage state={createArrangementState()} />);
+    const panel = screen.getByRole('region', { name: 'Coverage issues' });
+    expect(within(panel).getByText('Porto Alegre → Recife / Olinda')).toBeVisible();
+    expect(within(panel).getByText('Florianópolis → Sydney')).toBeVisible();
+    expect(panel.querySelector('details, summary, .lucide-chevron-right')).toBeNull();
+    expect(within(panel).queryByRole('button', { name: 'Open POA → REC' })).not.toBeInTheDocument();
+    expect(within(panel).queryByRole('button', { name: 'Open FLN → SYD' })).not.toBeInTheDocument();
   });
 });

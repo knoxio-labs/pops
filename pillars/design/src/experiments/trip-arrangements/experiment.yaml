@@ -1,6 +1,9 @@
 name: Trip arrangements
 question: Review arrangements along the route, or by transport, stays, events and rental?
-status: active
+status: decided
+chosen: route
+decided: 2026-11-09
+rationale: Joao chose Along the route and approved the remainder after removing redundant gap expansions.
 screen: trips/arrangements
 variants:
   route: Along the route
