@@ -7,6 +7,14 @@ import { TRIPS_PAGES } from '../../contract/pages.js';
 import { buildTripsManifest } from '../manifest.js';
 
 describe('Trips manifest', () => {
+  it('returns independently mutable operation lists on each discovery read', () => {
+    const expected = buildTripsManifest('test');
+    const changed = buildTripsManifest('test');
+    changed.routes.queries.splice(0);
+    changed.routes.mutations.splice(0);
+    expect(buildTripsManifest('test')).toEqual(expected);
+  });
+
   it('publishes the approved rail entry without adding unimplemented navigation', () => {
     const manifest = buildTripsManifest('1.2.3');
     expect(manifest.nav).toEqual({
@@ -42,11 +50,14 @@ describe('Trips manifest', () => {
       version: '1.2.3',
       tag: 'contract-trips@v1.2.3',
     });
-    expect(manifest.routes.queries).toHaveLength(15);
+    expect(manifest.routes.queries).toHaveLength(17);
     expect(manifest.routes.mutations).toContain('trips.visits.reorder');
     expect(manifest.routes.mutations).toEqual(
       expect.arrayContaining([
         'trips.stays.create',
+        'trips.events.create',
+        'trips.events.update',
+        'trips.events.delete',
         'trips.stays.update',
         'trips.stays.delete',
         'trips.journeyGroups.create',
