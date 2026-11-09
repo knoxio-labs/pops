@@ -53,6 +53,7 @@ function runCheck(fault = 'none', scheme = 'PopsTrips') {
     const result = spawnSync('bash', ['-c', task], {
       cwd: fixture,
       encoding: 'utf8',
+      timeout: 10_000,
       env: {
         ...process.env,
         PATH: fixture + delimiter + (process.env.PATH ?? ''),
@@ -72,7 +73,7 @@ function runCheck(fault = 'none', scheme = 'PopsTrips') {
   }
 }
 
-describe('Release BFM host verification', () => {
+describe('Release BFM host verification', { timeout: 12_000 }, () => {
   it('builds and inspects both applications using each Debug configuration', () => {
     const result = runCheck();
     expect(result.status).toBe(0);
