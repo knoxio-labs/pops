@@ -98,6 +98,14 @@ export const BFM_SERVICE_ACCOUNT_SCOPES: readonly string[] = [
   'inventory.items.removePart',
   'barcode.lookup',
   'cerebrum.ego',
+  'trips.trips.list',
+  'trips.trips.get',
+  'trips.places.list',
+  'trips.visits.list',
+  'trips.journeys.list',
+  'trips.journeyLegs.list',
+  'trips.journeyGroups.list',
+  'trips.stays.list',
 ];
 
 /** Local-dev source: the key inline in the environment. */
