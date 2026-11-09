@@ -5,6 +5,21 @@ import Testing
 
 @Suite("Trip source and timeline context")
 internal struct TripSourceContextTests {
+    @Test(
+        "the approved home title fallback formats source whitespace without storing a derived name")
+    internal func tripIdentity() {
+        let source = TripRecord(
+            id: 99, name: " Source title ", destination: " Elsewhere ", when: "When source",
+            tagId: nil, parentId: nil, notes: "", sourceLinks: [])
+        #expect(tripName(source) == "Source title")
+        #expect(source.name == " Source title ")
+        let unnamed = TripRecord(
+            id: 99, name: nil, destination: " Place source ", when: "", tagId: nil,
+            parentId: nil, notes: "", sourceLinks: [])
+        #expect(tripName(unnamed) == "Place source")
+        #expect(unnamed.name == nil)
+    }
+
     @Test("source collections retain a purchased alternative while the active timeline excludes it")
     internal func independentSourceCollections() throws {
         let snapshot = try TripTestSources.snapshot()

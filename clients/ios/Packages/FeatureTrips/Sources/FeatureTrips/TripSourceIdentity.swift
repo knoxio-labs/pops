@@ -1,7 +1,13 @@
 import AppCore
+import Foundation
 
+/// Matches the approved Trips home display fallback without changing either source field.
 internal func tripName(_ trip: TripRecord) -> String {
-    trip.name ?? (trip.destination.isEmpty ? "Trip \(trip.id)" : trip.destination)
+    for value in [trip.name, trip.destination].compactMap({ $0 }) {
+        let title = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !title.isEmpty { return title }
+    }
+    return "Trip \(trip.id)"
 }
 
 extension TripSource {
