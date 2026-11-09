@@ -1,0 +1,7 @@
+name: Trip calendar
+question: Start with a compact agenda, or a clock timeline?
+status: active
+screen: trips/calendar
+variants:
+  agenda: Compact agenda
+  timeline: Clock rail

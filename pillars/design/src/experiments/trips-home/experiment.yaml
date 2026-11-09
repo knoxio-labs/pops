@@ -1,6 +1,9 @@
 name: Trips home
 question: Browse one compact list, or group trips by route dates?
-status: active
+status: decided
+chosen: grouped
+decided: 2026-11-09
+rationale: Joao chose Date groups, then approved Trips home with next.
 screen: trips/home
 variants:
   list: Compact list
