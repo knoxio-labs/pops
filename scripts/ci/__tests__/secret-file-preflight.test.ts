@@ -120,6 +120,7 @@ describe('every pillar that reads a secret file proves at boot that it can', () 
       'mcp',
       'orchestrator',
       'purchases',
+      'trips',
     ]);
   });
 

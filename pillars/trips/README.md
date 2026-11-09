@@ -3,11 +3,38 @@
 `@pops/trips` owns trip metadata, reusable manual place identities and distinct
 visits, stays, journeys and ordered transport legs in its own SQLite database. A place may occur repeatedly in one trip or
 across trips. Contacts owns reusable contact identities and addresses; Documents
-owns original files; Tags owns shared membership. Explicit HTTP(S) and
+owns original files; Tags owns the shared vocabulary, while assignments remain
+with their source pillars. Explicit HTTP(S) and
 `pops:{pillar}/{type}/{id}` source links refer to records without copying them.
 
-`GET/POST /trips` and `GET/PATCH /trips/:id` manage optional trip names, notes and
-source links. Equivalent `/places` routes manage reusable names and source links.
+`GET/POST /trips` and `GET/PATCH /trips/:id` manage optional trip names, destination and
+opaque human-written `when` text, notes, source links, a nullable `parentId` and
+a nullable Tags-owned UUID `tagId`. Destination and When default to empty source
+text and remain verbatim; When is never parsed into route dates. Omission retains
+stored values; empty strings clear text and null clears name or associations.
+Existing optional name semantics stay unchanged: omitted/null is valid and an
+explicit empty/whitespace-only name is rejected. Titles are a consumer projection,
+not another persisted source field. Parent identities are existing numeric Trip
+IDs; self, descendants and cyclic ancestry are rejected atomically without
+rewriting either trip's route. A missing parent is a 400 validation failure.
+
+Only an explicit unknown tag selection refreshes a minimal identity cache through
+the authenticated Tags SDK. A successful complete response replaces the cache
+atomically; malformed/unavailable responses preserve it. Blank/omitted selections
+and known cached IDs require no Tags dependency. Unknown selections return 400;
+unverifiable selections return retryable 503 without partially changing trip
+source. Cache refresh never erases a retained trip reference, and independent
+metadata edits do not revalidate omitted associations. Trips owns no shared tag
+names, hierarchy, windows, archive/merge rules or vocabulary writes.
+Outbound reads use a Trips-owned service account granted `tags.tags`. Local
+configuration can supply `POPS_INTERNAL_API_KEY`; production supplies only a
+mounted-file path in `POPS_INTERNAL_API_KEY_FILE`. Startup checks configured
+secret-file readability and prefers that file over the local environment. No
+credential is created by Trips. Deployment activation and its secret mount are
+tracked by POPS-6166; absent credentials leave independent metadata usable and
+an unknown explicit tag selection returns retryable 503.
+
+Equivalent `/places` routes manage reusable names and source links.
 `GET/POST /trips/:tripId/visits` and `GET/PATCH /trips/:tripId/visits/:id` manage
 visit facts. A new visit appends to that trip's route.
 

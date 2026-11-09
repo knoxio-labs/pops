@@ -250,6 +250,15 @@ export const EXPECTATIONS = [
     usedBy: 'pillars/purchases/src/api/tags/client.ts',
   },
   {
+    consumer: 'trips',
+    producer: 'tags',
+    operationId: 'tags.list',
+    path: '/tags',
+    method: 'get',
+    query: ['includeArchived'],
+    usedBy: 'pillars/trips/src/api/rest/trip-tags.ts',
+  },
+  {
     consumer: 'bfm',
     producer: 'finance',
     operationId: 'transactions.list',

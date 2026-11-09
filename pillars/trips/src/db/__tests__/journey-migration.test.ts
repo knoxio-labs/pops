@@ -13,10 +13,10 @@ import * as schema from '../schema.js';
 import { createJourneyGroup } from '../services/journey-groups.js';
 import { createJourneyLeg, listJourneyLegs } from '../services/journey-legs.js';
 import { createJourney, getJourney } from '../services/journeys.js';
-import { createPlace, createTrip, createVisit, listVisits } from '../services/records.js';
+import { createPlace, getTrip, getVisit, listVisits } from '../services/records.js';
 import { createStay, getStay } from '../services/stays.js';
 
-it.each([1, 2, 3])(
+it.each([1, 2, 3, 4])(
   'upgrades a database with %i source migrations without replacing existing records',
   (migrationCount) => {
     const scratch = fileURLToPath(new URL('../../../../../tmp/', import.meta.url));
@@ -29,6 +29,7 @@ it.each([1, 2, 3])(
       '0000_trips_init.sql',
       '0001_journey_sources.sql',
       '0002_journey_alternatives.sql',
+      '0003_stay_sources.sql',
     ];
     for (const file of migrationFiles.slice(0, migrationCount))
       copyFileSync(join(migrations, file), join(oldMigrations, file));
@@ -59,18 +60,49 @@ it.each([1, 2, 3])(
     try {
       const db = drizzle(raw, { schema });
       migrate(db, { migrationsFolder: oldMigrations });
-      const trip = createTrip(db, { notes: 'original trip' });
+      const timestamp = '2028-01-01T00:00:00.000Z';
+      const trip = {
+        id: Number(
+          raw
+            .prepare('INSERT INTO trips (notes, created_at, updated_at) VALUES (?, ?, ?)')
+            .run('original trip', timestamp, timestamp).lastInsertRowid
+        ),
+      };
       const place = createPlace(db, { name: 'Original place' });
-      const visit = createVisit(db, trip.id, {
-        placeId: place.id,
-        timing: { month: { year: 2028, month: 1 } },
-      });
+      const visitId = Number(
+        raw
+          .prepare(
+            'INSERT INTO visits (trip_id, place_id, position, timing, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)'
+          )
+          .run(
+            trip.id,
+            place.id,
+            0,
+            JSON.stringify({ month: { year: 2028, month: 1 } }),
+            timestamp,
+            timestamp
+          ).lastInsertRowid
+      );
+      const visit = getVisit(db, trip.id, visitId);
       const previousJourney =
         migrationCount >= 2
-          ? createJourney(db, trip.id, {
-              reference: 'Existing source',
-              sourceLinks: [{ uri: 'pops:documents/document/42' }],
-            })
+          ? getJourney(
+              db,
+              trip.id,
+              Number(
+                raw
+                  .prepare(
+                    'INSERT INTO journeys (trip_id, reference, source_links, created_at, updated_at) VALUES (?, ?, ?, ?, ?)'
+                  )
+                  .run(
+                    trip.id,
+                    'Existing source',
+                    JSON.stringify([{ uri: 'pops:documents/document/42' }]),
+                    timestamp,
+                    timestamp
+                  ).lastInsertRowid
+              )
+            )
           : undefined;
       const previousLeg = previousJourney
         ? createJourneyLeg(db, trip.id, previousJourney.id, {
@@ -81,6 +113,16 @@ it.each([1, 2, 3])(
       raw.close();
       const upgraded = openTripsDb(path);
       try {
+        expect(getTrip(upgraded.db, trip.id)).toMatchObject({
+          notes: 'original trip',
+          destination: '',
+          when: '',
+          parentId: null,
+          tagId: null,
+          name: null,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+        });
         expect(listVisits(upgraded.db, trip.id)).toEqual([visit]);
         if (previousJourney && previousLeg) {
           expect(getJourney(upgraded.db, trip.id, previousJourney.id)).toEqual(previousJourney);

@@ -3,22 +3,19 @@ import { initServer } from '@ts-rest/express';
 import { tripsContract } from '../../contract/rest.js';
 import {
   createPlace,
-  createTrip,
   createVisit,
   getPlace,
-  getTrip,
   getVisit,
   listPlaces,
-  listTrips,
   listVisits,
   reorderVisits,
   updatePlace,
-  updateTrip,
   updateVisit,
 } from '../../db/services/records.js';
 import { makeJourneyGroupHandlers } from './journey-groups.js';
 import { makeJourneyHandlers, makeJourneyLegHandlers } from './journeys.js';
 import { makeStayHandlers } from './stays.js';
+import { makeTripMetadataHandlers } from './trip-metadata.js';
 import { withTripsErrors } from './with-errors.js';
 
 import type { TripsApiDeps } from '../handlers.js';
@@ -35,15 +32,7 @@ export function makeTripsRestHandlers(
     journeyGroups: makeJourneyGroupHandlers(db),
     journeys: makeJourneyHandlers(db),
     journeyLegs: makeJourneyLegHandlers(db),
-    trips: {
-      list: () => withTripsErrors(() => ({ status: 200 as const, body: { trips: listTrips(db) } })),
-      get: ({ params }) =>
-        withTripsErrors(() => ({ status: 200 as const, body: getTrip(db, params.id) })),
-      create: ({ body }) =>
-        withTripsErrors(() => ({ status: 201 as const, body: createTrip(db, body) })),
-      update: ({ params, body }) =>
-        withTripsErrors(() => ({ status: 200 as const, body: updateTrip(db, params.id, body) })),
-    },
+    trips: makeTripMetadataHandlers(deps),
     places: {
       list: () =>
         withTripsErrors(() => ({ status: 200 as const, body: { places: listPlaces(db) } })),

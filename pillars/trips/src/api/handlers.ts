@@ -10,6 +10,8 @@ export interface TripsApiDeps {
   readonly tripsDb: OpenedTripsDb;
   readonly version: string;
   readonly selfBaseUrl: string;
+  /** Complete authenticated identity snapshot override; undefined means unavailable, never empty. */
+  readonly fetchSharedTagIds?: () => Promise<readonly string[] | undefined>;
 }
 
 /** JSON shape returned by `GET /health`. */

@@ -2,6 +2,24 @@ import { defineErrors } from '@pops/pillar-express';
 
 /** Stable errors for missing owned records and invalid route permutations. */
 export const tripsErrors = defineErrors('trips', {
+  parent_invalid: {
+    area: 'trip',
+    status: 400,
+    message: 'Choose an existing parent trip outside this trip and its descendants.',
+    retryable: false,
+  },
+  tag_unknown: {
+    area: 'trip',
+    status: 400,
+    message: 'Choose a shared tag known to the Tags-owned vocabulary.',
+    retryable: false,
+  },
+  tags_unavailable: {
+    area: 'trip',
+    status: 503,
+    message: 'The selected shared tag could not be verified. Retry when Tags is available.',
+    retryable: true,
+  },
   revision_conflict: {
     area: 'group',
     status: 409,
