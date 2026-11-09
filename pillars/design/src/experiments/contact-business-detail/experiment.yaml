@@ -1,6 +1,9 @@
 name: Business and organisation detail
 question: Start with contact details, or the locations linked to trip arrangements?
-status: active
+status: decided
+chosen: details
+decided: 2026-11-09
+rationale: Joao chose contact methods first, then approved the typography and contrast refinement with next.
 frame: web
 screen: contacts/business
 variants:
