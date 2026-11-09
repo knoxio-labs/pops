@@ -33,8 +33,12 @@ internal func tripCalendarFacts(_ snapshot: TripSnapshot, zone: TimeZone) -> [Tr
         }
     }.sorted { left, right in
         if left.day != right.day { return left.day < right.day }
-        if let lhs = left.instant, let rhs = right.instant, lhs != rhs { return lhs < rhs }
-        return left.id < right.id
+        switch (left.instant, right.instant) {
+        case (let lhs?, let rhs?) where lhs != rhs: return lhs < rhs
+        case (_?, nil): return true
+        case (nil, _?): return false
+        default: return left.id < right.id
+        }
     }
 }
 
