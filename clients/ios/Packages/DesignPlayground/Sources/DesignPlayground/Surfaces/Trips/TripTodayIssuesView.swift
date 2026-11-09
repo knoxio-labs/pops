@@ -18,6 +18,7 @@ internal struct TripTodayIssuesView: View {
                         ForEach(finding.sourceIDs, id: \.self) { sourceID in
                             if let source = tripsTodaySource(state, id: sourceID) {
                                 Button(source.name) { open(source) }
+                                    .buttonStyle(.borderless)
                                     .font(.popsBody)
                                     .frame(minHeight: PopsSize.touchTarget)
                                     .accessibilityLabel("Open \(source.name)")
