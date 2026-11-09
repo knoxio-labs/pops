@@ -1,5 +1,3 @@
-import SwiftUI
-
 /// Native Today opens with the selected priority hierarchy and retains the source chronology as a utility.
 @MainActor
 internal enum TripTodaySurfaces {
