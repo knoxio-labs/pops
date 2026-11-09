@@ -128,4 +128,19 @@ test('A real stay identity mounts the existing source-backed workspace through t
     'Harbour cottage'
   );
   await expect(page.getByRole('heading', { name: 'Stay detail', exact: true })).toBeVisible();
+  const editor = page.getByRole('article', { name: 'Stay editor', exact: true });
+  await expect(editor).toHaveCSS('border-style', 'dashed');
+  await page.evaluate(() => {
+    const sheet = Array.from(document.styleSheets).find((candidate) =>
+      candidate.href?.includes('/trips-ui/trips.css')
+    );
+    if (!sheet) throw new Error('Trips remote stylesheet was not installed');
+    sheet.disabled = true;
+  });
+  await expect(editor).toHaveCSS('border-style', 'dashed');
+  await page.evaluate(() => {
+    for (const sheet of document.styleSheets)
+      sheet.disabled = !sheet.href?.includes('/trips-ui/trips.css');
+  });
+  await expect(editor).not.toHaveCSS('border-style', 'dashed');
 });
