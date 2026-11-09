@@ -1,4 +1,4 @@
-import { RotateCcw, UsersRound } from 'lucide-react';
+import { Plus, RotateCcw, UsersRound } from 'lucide-react';
 
 import {
   Button,
@@ -133,12 +133,29 @@ function TaskFields({ session }: { session: PickerSession }) {
 
 function PickerBody({ session }: { session: PickerSession }) {
   return (
-    <div className="space-y-4">
-      {session.creating ? <PickerCreate session={session} /> : <PickerSearch session={session} />}
-      <div className="flex justify-end border-t border-border pt-4">
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
+      {session.creating ? (
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <PickerCreate session={session} />
+        </div>
+      ) : (
+        <PickerSearch session={session} />
+      )}
+      <div className="flex shrink-0 items-center justify-between gap-2 border-t border-border pt-3">
+        {!session.creating && (
+          <Button
+            type="button"
+            variant="ghost"
+            className="min-h-11 text-sm text-app-accent"
+            onClick={session.startCreation}
+          >
+            <Plus className="size-4" aria-hidden />
+            Create contact
+          </Button>
+        )}
         <Button
           variant="secondary"
-          className="min-h-11 text-sm"
+          className="ml-auto min-h-11 text-sm"
           onClick={() => session.setOpen(false)}
         >
           Done
@@ -160,7 +177,7 @@ function InlinePicker({ session }: { session: PickerSession }) {
 function DialogPicker({ session }: { session: PickerSession }) {
   return (
     <Dialog open={session.open} onOpenChange={session.setOpen}>
-      <DialogContent className="max-h-screen overflow-y-auto bg-card">
+      <DialogContent className="flex max-h-screen flex-col overflow-hidden bg-card md:h-160 md:max-w-3xl">
         <DialogTitle className="text-base font-semibold leading-tight tracking-normal">
           Choose contacts
         </DialogTitle>
