@@ -12,7 +12,8 @@ removes only that member while submitting the complete retained timing object.
 Empty scalar choices clear to null. No visit dates or default clocks/zones are
 copied. Only Purchased receives hard styling. Undo persists the previous successful
 source snapshot; failed drafts remain visible with safe diagnostic codes and retry.
-Context failures do not block editing the stay. Neighbours share an explicit
+Successful mutations update the source cache. Fresh source reads replace an untouched
+editor; pending drafts survive background reads. Context failures do not block editing the stay. Neighbours share an explicit
 visit identity; an unlinked stay implies no accommodation coverage.
 
 Existing host/document/provenance links are displayed and can be removed. Their

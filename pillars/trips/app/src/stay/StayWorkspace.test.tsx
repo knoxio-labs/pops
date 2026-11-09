@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { staySource } from './model';
@@ -15,9 +15,9 @@ afterEach(() => {
 
 function mount(
   transport: ReturnType<typeof workspaceTransport>,
-  identity = { tripId: 7, stayId: 13 }
+  identity = { tripId: 7, stayId: 13 },
+  cache = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 60_000 } } })
 ) {
-  const cache = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
   caches.push(cache);
   return render(
     <QueryClientProvider client={cache}>
@@ -246,6 +246,74 @@ describe('Source-backed In visit stay workspace', () => {
     expect(screen.getByText('Unsaved changes')).toBeVisible();
     expect(screen.queryByText('Changes saved')).toBeNull();
     expect(transport.patches).toEqual([]);
+  });
+
+  it('remounts from the latest persisted source rather than an obsolete cached snapshot', async () => {
+    const changed = sourceStay({ name: 'Persisted source' });
+    const transport = workspaceTransport({ patches: [{ status: 200, body: changed }] });
+    const cache = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 60_000 } },
+    });
+    const first = mount(transport, undefined, cache);
+    await screen.findByLabelText('Stay name');
+    transport.setSource(changed);
+    await edit('Stay name', 'Persisted source');
+    await saved();
+    await waitFor(() =>
+      expect(cache.getQueryData(['trips', 'http://trips.test', 7, 'stays'])).toEqual([changed])
+    );
+    first.unmount();
+    mount(transport, undefined, cache);
+    await waitFor(() => expect(screen.getByLabelText('Stay name')).toHaveValue('Persisted source'));
+  });
+
+  it('refreshes an untouched source while preserving a locally edited draft on background reads', async () => {
+    const transport = workspaceTransport();
+    const cache = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    mount(transport, undefined, cache);
+    await screen.findByLabelText('Stay name');
+    transport.setSource(
+      sourceStay({ name: 'Fresh source read', updatedAt: '2029-01-02T00:00:00Z' })
+    );
+    await act(() =>
+      cache.refetchQueries({ queryKey: ['trips', 'http://trips.test', 7, 'stay', 13] })
+    );
+    await waitFor(() =>
+      expect(screen.getByLabelText('Stay name')).toHaveValue('Fresh source read')
+    );
+    fireEvent.change(screen.getByLabelText('Stay name'), { target: { value: 'Keep local draft' } });
+    transport.setSource(
+      sourceStay({ name: 'Another source read', updatedAt: '2029-01-03T00:00:00Z' })
+    );
+    await act(() =>
+      cache.refetchQueries({ queryKey: ['trips', 'http://trips.test', 7, 'stay', 13] })
+    );
+    expect(screen.getByLabelText('Stay name')).toHaveValue('Keep local draft');
+    expect(screen.getByText('Unsaved changes')).toBeVisible();
+  });
+
+  it('resets the editor when the host switches to an already cached source origin', async () => {
+    const first = workspaceTransport();
+    const otherSource = sourceStay({ name: 'Other origin source' });
+    const other = workspaceTransport({ stay: otherSource });
+    other.client.setConfig({ baseUrl: 'http://other-trips.test' });
+    const cache = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    cache.setQueryData(['trips', 'http://other-trips.test', 7, 'stay', 13], otherSource);
+    const view = mount(first, undefined, cache);
+    expect(await screen.findByLabelText('Stay name')).toHaveValue('Cedar guesthouse');
+    fireEvent.change(screen.getByLabelText('Stay name'), {
+      target: { value: 'First origin draft' },
+    });
+    view.rerender(
+      <QueryClientProvider client={cache}>
+        <StayWorkspace tripId={7} stayId={13} client={other.client} />
+      </QueryClientProvider>
+    );
+    await waitFor(() =>
+      expect(screen.getByLabelText('Stay name')).toHaveValue('Other origin source')
+    );
+    expect(first.patches).toEqual([]);
+    expect(other.patches).toEqual([]);
   });
 
   it('rejects invalid host-supplied identities before issuing any source or context request', async () => {

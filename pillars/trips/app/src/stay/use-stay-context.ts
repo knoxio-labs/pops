@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 
-import { loadPlaces, loadStays, loadTrip, loadVisits } from './api';
+import { loadPlaces, loadStays, loadTrip, loadVisits, stayListQueryKey } from './api';
 
 import type { StayWorkspaceProps } from './types';
 
@@ -18,7 +18,7 @@ export function useStayContext({ tripId, client }: StayWorkspaceProps) {
     retry: false,
   });
   const stays = useQuery({
-    queryKey: ['trips', origin, tripId, 'stays'],
+    queryKey: stayListQueryKey({ tripId, client }),
     queryFn: () => loadStays(tripId, client),
     retry: false,
   });

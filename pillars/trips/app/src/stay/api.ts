@@ -52,3 +52,16 @@ export function requestProblem(error: unknown) {
         retryable: true,
       };
 }
+
+/** Cache identity for one source stay, scoped to the supplied API origin and owning trip. */
+export function stayQueryKey({ tripId, stayId, client }: StayWorkspaceProps) {
+  return ['trips', client?.getConfig().baseUrl ?? '/trips-api', tripId, 'stay', stayId] as const;
+}
+
+/** Cache identity for the complete trip-owned accommodation list. */
+export function stayListQueryKey({
+  tripId,
+  client,
+}: Pick<StayWorkspaceProps, 'tripId' | 'client'>) {
+  return ['trips', client?.getConfig().baseUrl ?? '/trips-api', tripId, 'stays'] as const;
+}

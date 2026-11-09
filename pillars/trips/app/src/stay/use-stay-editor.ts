@@ -1,23 +1,30 @@
-import { useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useRef } from 'react';
 
-import { patchStay } from './api';
+import { patchStay, stayListQueryKey, stayQueryKey } from './api';
 import { staySource } from './model';
+import { useStaySource } from './use-stay-source';
+
+import type { QueryClient } from '@tanstack/react-query';
 
 import type { Stay, StayPatch, StayWorkspaceProps } from './types';
 
-interface FailedChange {
-  patch: StayPatch;
-  undo: boolean;
-  error: unknown;
-}
-
 /** Persist direct edits serially, retaining failed drafts and successful source snapshots for undo. */
 export function useStayEditor(initial: Stay, props: StayWorkspaceProps) {
-  const [saved, setSaved] = useState(initial);
-  const [draft, setDraft] = useState(initial);
-  const [history, setHistory] = useState<Stay[]>([]);
-  const [busy, setBusy] = useState(false);
-  const [failure, setFailure] = useState<FailedChange>();
+  const {
+    saved,
+    setSaved,
+    draft,
+    setDraft,
+    history,
+    setHistory,
+    busy,
+    setBusy,
+    failure,
+    setFailure,
+    dirty,
+  } = useStaySource(initial);
+  const cache = useQueryClient();
   const lock = useRef(false);
 
   const edit = (patch: StayPatch) => setDraft((previous) => ({ ...previous, ...patch }));
@@ -36,6 +43,7 @@ export function useStayEditor(initial: Stay, props: StayWorkspaceProps) {
     edit(pending);
     try {
       const result = await patchStay(props, pending);
+      refreshStayCache(cache, props, result);
       setHistory((previous) => (undo ? previous.slice(0, -1) : [...previous, saved]));
       setSaved(result);
       setDraft(result);
@@ -49,7 +57,7 @@ export function useStayEditor(initial: Stay, props: StayWorkspaceProps) {
   const previous = history.at(-1);
   return {
     draft,
-    dirty: JSON.stringify(staySource(draft)) !== JSON.stringify(staySource(saved)),
+    dirty,
     saved,
     edit,
     commit,
@@ -59,4 +67,12 @@ export function useStayEditor(initial: Stay, props: StayWorkspaceProps) {
     undo: () => previous && commit(staySource(previous), true),
     retry: () => failure && commit(failure.patch, failure.undo),
   };
+}
+
+function refreshStayCache(cache: QueryClient, props: StayWorkspaceProps, result: Stay) {
+  cache.setQueryData(stayQueryKey(props), result);
+  cache.setQueryData<Stay[]>(stayListQueryKey(props), (previous) =>
+    previous?.map((stay) => (stay.id === result.id ? result : stay))
+  );
+  void cache.invalidateQueries({ queryKey: stayListQueryKey(props) });
 }

@@ -3,7 +3,7 @@ import { RotateCcw } from 'lucide-react';
 
 import { Button, ErrorState, PageHeader } from '@pops/ui';
 
-import { loadStay, requestProblem } from './api';
+import { loadStay, requestProblem, stayQueryKey } from './api';
 import { StayFields } from './StayFields';
 import { StayReferences } from './StayReferences';
 import { StayTimeline } from './StayTimeline';
@@ -31,7 +31,7 @@ function LoadStay(props: StayWorkspaceProps) {
   const origin = props.client?.getConfig().baseUrl ?? '/trips-api';
   const context = useStayContext(props);
   const source = useQuery({
-    queryKey: ['trips', origin, props.tripId, 'stay', props.stayId],
+    queryKey: stayQueryKey(props),
     queryFn: () => loadStay(props),
     retry: false,
   });
@@ -45,7 +45,7 @@ function LoadStay(props: StayWorkspaceProps) {
     return (
       <ErrorState error={requestProblem(source.error)} onRetry={() => void source.refetch()} />
     );
-  return <StaySession initial={source.data} identity={props} context={context} />;
+  return <StaySession key={origin} initial={source.data} identity={props} context={context} />;
 }
 
 function StaySession({
