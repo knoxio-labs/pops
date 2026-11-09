@@ -9685,7 +9685,7 @@
                                     "type": "string"
                                   }
                                 },
-                                "required": ["min", "max", "unit"],
+                                "required": ["unit"],
                                 "type": "object"
                               },
                               "month": {
@@ -9871,7 +9871,7 @@
                                     "type": "string"
                                   }
                                 },
-                                "required": ["min", "max", "unit"],
+                                "required": ["unit"],
                                 "type": "object"
                               },
                               "month": {
@@ -10039,7 +10039,7 @@
                             "type": "string"
                           }
                         },
-                        "required": ["min", "max", "unit"],
+                        "required": ["unit"],
                         "type": "object"
                       },
                       "month": {
@@ -10155,7 +10155,7 @@
                               "type": "string"
                             }
                           },
-                          "required": ["min", "max", "unit"],
+                          "required": ["unit"],
                           "type": "object"
                         },
                         "month": {
@@ -10342,7 +10342,7 @@
                               "type": "string"
                             }
                           },
-                          "required": ["min", "max", "unit"],
+                          "required": ["unit"],
                           "type": "object"
                         },
                         "month": {
@@ -10515,7 +10515,7 @@
                             "type": "string"
                           }
                         },
-                        "required": ["min", "max", "unit"],
+                        "required": ["unit"],
                         "type": "object"
                       },
                       "month": {
@@ -10630,7 +10630,7 @@
                               "type": "string"
                             }
                           },
-                          "required": ["min", "max", "unit"],
+                          "required": ["unit"],
                           "type": "object"
                         },
                         "month": {

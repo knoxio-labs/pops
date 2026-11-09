@@ -28,6 +28,8 @@ describe('Trips source contracts', () => {
       {},
       { arrival: '2028-01-20' },
       { departure: '2028-01-10' },
+      { duration: { min: 0, unit: 'days' } },
+      { duration: { max: 1.5, unit: 'weeks' } },
       {
         month: { year: 2028, month: 1, part: 'late' },
         duration: { min: 1.5, max: 4, unit: 'weeks' },
@@ -50,6 +52,17 @@ describe('Trips source contracts', () => {
     { month: { year: 2028.5, month: 1 } },
     { duration: { min: 3, max: 2, unit: 'days' } },
     { duration: { min: -1, max: 2, unit: 'days' } },
+    { duration: { unit: 'days' } },
+    { duration: { min: -1, unit: 'days' } },
+    { duration: { max: -1, unit: 'days' } },
+    { duration: { min: Infinity, unit: 'days' } },
+    { duration: { max: Infinity, unit: 'days' } },
+    { duration: { min: NaN, unit: 'days' } },
+    { duration: { max: NaN, unit: 'days' } },
+    { duration: { min: 1 } },
+    { duration: { max: 1 } },
+    { duration: { min: '1', unit: 'days' } },
+    { duration: { max: null, unit: 'days' } },
     { duration: { min: 1, max: 2, unit: 'months' } },
   ])('rejects malformed approximate timing %j', (timing) => {
     expect(VisitTimingSchema.safeParse(timing).success).toBe(false);
