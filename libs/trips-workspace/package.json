@@ -1,5 +1,5 @@
 {
-  "name": "@pops/app-trips",
+  "name": "@pops/trips-workspace",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -10,14 +10,13 @@
   "scripts": {
     "build": "tsc --noEmit && vite build",
     "dev": "vite --host 127.0.0.1",
-    "typecheck": "node ../../../scripts/require-built-graph.mjs && tsc --noEmit",
-    "test": "node ../../../scripts/require-built-graph.mjs && vitest run",
+    "typecheck": "node ../../scripts/require-built-graph.mjs && tsc --noEmit",
+    "test": "node ../../scripts/require-built-graph.mjs && vitest run",
     "generate:trips-client": "openapi-ts -o src/trips-api"
   },
   "dependencies": {
     "@hey-api/client-fetch": "^0.13.1",
     "@pops/pillar-sdk": "workspace:*",
-    "@pops/trips": "workspace:*",
     "@pops/ui": "workspace:*",
     "@tanstack/react-query": "5.102.8",
     "lucide-react": "^1.45.0",

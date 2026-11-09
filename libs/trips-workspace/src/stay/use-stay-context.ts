@@ -2,10 +2,12 @@ import { useQuery } from '@tanstack/react-query';
 
 import { loadPlaces, loadStays, loadTrip, loadVisits, stayListQueryKey } from './api';
 
-import type { StayWorkspaceProps } from './types';
+import type { UseQueryResult } from '@tanstack/react-query';
+
+import type { Stay, Visit, Place, Trip, StayWorkspaceProps } from './types';
 
 /** Load optional source context independently so its failure never prevents stay editing. */
-export function useStayContext({ tripId, client }: StayWorkspaceProps) {
+export function useStayContext({ tripId, client }: StayWorkspaceProps): StayContext {
   const origin = client?.getConfig().baseUrl ?? '/trips-api';
   const trip = useQuery({
     queryKey: ['trips', origin, tripId],
@@ -28,4 +30,12 @@ export function useStayContext({ tripId, client }: StayWorkspaceProps) {
     retry: false,
   });
   return { trip, visits, stays, places };
+}
+
+/** Independently available source queries; each may fail without blocking edits. */
+export interface StayContext {
+  trip: UseQueryResult<Trip, Error>;
+  visits: UseQueryResult<Visit[], Error>;
+  stays: UseQueryResult<Stay[], Error>;
+  places: UseQueryResult<Place[], Error>;
 }

@@ -1,5 +1,7 @@
 import { Select } from '@pops/ui';
 
+import type { JSX } from 'react';
+
 import type { Stay, StayFieldProps, Visit, Place } from './types';
 
 /** Only explicit approved kind/status values and existing visit identities can be selected. */
@@ -8,7 +10,7 @@ export function StaySelectors({
   visits,
   places,
   commit,
-}: StayFieldProps & { visits: Visit[]; places: Place[] }) {
+}: StayFieldProps & { visits: Visit[]; places: Place[] }): JSX.Element {
   return (
     <div className="grid gap-3 sm:grid-cols-3">
       <Select
@@ -53,7 +55,11 @@ const statuses = ['Considering', 'Agreed', 'Reserved', 'Purchased'] satisfies No
   Stay['status']
 >[];
 
-function visitOptions(stay: Stay, visits: Visit[], places: Place[]) {
+function visitOptions(
+  stay: Stay,
+  visits: Visit[],
+  places: Place[]
+): { value: string; label: string }[] {
   const options = visits.map((visit) => ({
     value: String(visit.id),
     label: places.find((place) => place.id === visit.placeId)?.name ?? `Visit ${visit.id}`,

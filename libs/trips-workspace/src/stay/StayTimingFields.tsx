@@ -2,10 +2,12 @@ import { TextInput } from '@pops/ui';
 
 import { changeTiming } from './model';
 
+import type { JSX } from 'react';
+
 import type { Stay, StayFieldProps } from './types';
 
 /** Individual date/time/zone controls send a complete timing value without copying visit facts. */
-export function StayTimingFields(props: StayFieldProps) {
+export function StayTimingFields(props: StayFieldProps): JSX.Element {
   return (
     <>
       <div className="grid gap-3 sm:max-lg:grid-cols-2 lg:grid-cols-4">
@@ -30,7 +32,7 @@ function TimingField({
   field: keyof Stay['timing'];
   label: string;
   type: 'date' | 'time' | 'text';
-}) {
+}): JSX.Element {
   return (
     <TextInput
       label={label}

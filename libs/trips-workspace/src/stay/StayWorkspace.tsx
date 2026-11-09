@@ -10,10 +10,12 @@ import { StayTimeline } from './StayTimeline';
 import { useStayContext } from './use-stay-context';
 import { useStayEditor } from './use-stay-editor';
 
+import type { JSX } from 'react';
+
 import type { Stay, StayWorkspaceProps } from './types';
 
 /** Source-backed approved In visit workspace; the host supplies its authenticated query/client context. */
-export function StayWorkspace(props: StayWorkspaceProps) {
+export function StayWorkspace(props: StayWorkspaceProps): JSX.Element {
   if (![props.tripId, props.stayId].every((value) => Number.isSafeInteger(value) && value > 0))
     return (
       <ErrorState
@@ -27,7 +29,7 @@ export function StayWorkspace(props: StayWorkspaceProps) {
   return <LoadStay key={`${props.tripId}:${props.stayId}`} {...props} />;
 }
 
-function LoadStay(props: StayWorkspaceProps) {
+function LoadStay(props: StayWorkspaceProps): JSX.Element {
   const origin = props.client?.getConfig().baseUrl ?? '/trips-api';
   const context = useStayContext(props);
   const source = useQuery({
@@ -56,7 +58,7 @@ function StaySession({
   initial: Stay;
   identity: StayWorkspaceProps;
   context: ReturnType<typeof useStayContext>;
-}) {
+}): JSX.Element {
   const editor = useStayEditor(initial, identity);
   const visit = context.visits.data?.find((candidate) => candidate.id === editor.draft.visitId);
   const place = context.places.data?.find((candidate) => candidate.id === visit?.placeId);
@@ -99,7 +101,11 @@ function StaySession({
   );
 }
 
-function ContextProblems({ context }: { context: ReturnType<typeof useStayContext> }) {
+function ContextProblems({
+  context,
+}: {
+  context: ReturnType<typeof useStayContext>;
+}): JSX.Element | null {
   const problems = Object.entries(context).filter(([, query]) => query.isError);
   if (problems.length === 0) return null;
   return (
@@ -116,7 +122,11 @@ function ContextProblems({ context }: { context: ReturnType<typeof useStayContex
   );
 }
 
-function saveStatus(busy: boolean, failed: boolean, dirty: boolean) {
+function saveStatus(
+  busy: boolean,
+  failed: boolean,
+  dirty: boolean
+): 'Saving…' | 'Changes have not been saved' | 'Unsaved changes' | 'Changes saved' {
   if (busy) return 'Saving…';
   if (failed) return 'Changes have not been saved';
   return dirty ? 'Unsaved changes' : 'Changes saved';

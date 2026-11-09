@@ -1,5 +1,7 @@
 import { Chip } from '@pops/ui';
 
+import type { JSX } from 'react';
+
 import type { Stay, StayPatch } from './types';
 
 /** Display/remove opaque references without claiming that their source owner resolved them. */
@@ -9,7 +11,7 @@ export function StayReferences({
 }: {
   stay: Stay;
   commit: (patch: StayPatch) => void;
-}) {
+}): JSX.Element {
   return (
     <div className="space-y-3">
       {groups.map(({ field, label }) => (
@@ -47,7 +49,9 @@ const groups = [
   { field: 'sourceLinks', label: 'Sources' },
 ] satisfies { field: 'hostLinks' | 'documentLinks' | 'sourceLinks'; label: string }[];
 
-function referenceEntries(links: Stay['sourceLinks']) {
+function referenceEntries(
+  links: Stay['sourceLinks']
+): { link: Stay['sourceLinks'][number]; index: number; key: string }[] {
   const occurrences = new Map<string, number>();
   return links.map((link, index) => {
     const content = JSON.stringify(link);

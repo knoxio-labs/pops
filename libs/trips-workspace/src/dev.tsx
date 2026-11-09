@@ -8,9 +8,11 @@ import { Button, TextInput } from '@pops/ui';
 
 import { StayWorkspace } from './index';
 
+import type { JSX } from 'react';
+
 const cache = new QueryClient();
 
-function DevelopmentWorkspace() {
+function DevelopmentWorkspace(): JSX.Element {
   const [identity, setIdentity] = useState<{ tripId: number; stayId: number }>();
   return (
     <QueryClientProvider client={cache}>

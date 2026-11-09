@@ -2,10 +2,10 @@
 run = "pnpm build"
 
 [tasks.typecheck]
-run = "node ../../../scripts/local-dev/typecheck.mjs"
+run = "node ../../scripts/local-dev/typecheck.mjs"
 
 [tasks.test]
-run = ["node ../../../scripts/require-built-graph.mjs", "vitest run"]
+run = ["node ../../scripts/require-built-graph.mjs", "vitest run"]
 
 [tasks.lint]
 run = "oxlint src && oxfmt --check ."

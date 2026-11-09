@@ -3,10 +3,14 @@ import { Textarea, TextInput } from '@pops/ui';
 import { StaySelectors } from './StaySelectors';
 import { StayTimingFields } from './StayTimingFields';
 
+import type { JSX } from 'react';
+
 import type { StayFieldProps, Visit, Place } from './types';
 
 /** Editable source facts; timing controls remain independent and unknown values stay blank. */
-export function StayFields(props: StayFieldProps & { visits: Visit[]; places: Place[] }) {
+export function StayFields(
+  props: StayFieldProps & { visits: Visit[]; places: Place[] }
+): JSX.Element {
   const { stay, edit, commit } = props;
   return (
     <div className="space-y-4">

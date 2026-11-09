@@ -4,6 +4,7 @@ import { Badge, cn } from '@pops/ui';
 
 import { calendarNights, neighbouringStays } from './model';
 
+import type { JSX } from 'react';
 import type { ReactNode } from 'react';
 
 import type { Stay } from './types';
@@ -17,7 +18,7 @@ export function StayTimeline({
   stay: Stay;
   stays: Stay[];
   children: ReactNode;
-}) {
+}): JSX.Element {
   const periods = [stay, ...neighbouringStays(stay, stays)].toSorted((left, right) => {
     const arrivalOrder = (left.timing.arrival ?? '').localeCompare(right.timing.arrival ?? '');
     return arrivalOrder || left.id - right.id;
