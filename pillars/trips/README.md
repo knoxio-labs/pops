@@ -178,3 +178,47 @@ Run `mise exec -- pnpm --filter @pops/trips dev`. `PORT` defaults to 3018;
 `POPS_REGISTRY_ENABLED=true` enables self-registration. Production uses its own
 volume and Litestream sidecar. Generate migrations with
 `mise exec -- pnpm exec drizzle-kit generate` from this directory.
+
+## Decisions and options
+
+Decisions belong to a trip independently of its arrangements. `/trips/:tripId/decisions`
+provides list/create and `/:id` provides get/patch/delete. Source fields are
+`question`, nullable date-only `deadline`, `notes` and `sourceLinks`. An empty
+decision has no selected option or deadline. Options at `/:decisionId/options`
+provide list/create and `/:id` get/patch/delete, retaining `title`, `notes`,
+`sourceLinks` and `affectedSources`. Each affected source is an explicit
+`{ kind: 'visit' | 'journey' | 'stay', id }` identity in the same trip. New or
+replaced references must exist; retained references remain identifiable after
+source deletion and unrelated edits do not revalidate them. Duplicate references
+are rejected. Options never own or rewrite arrangements.
+
+Every mutation after decision creation requires `expectedRevision` from the
+owning decision. Immediate transactions reject stale writes with 409 and advance
+the aggregate revision for option edits as well as decision edits. Reads do not
+select. `PUT /trips/:tripId/decisions/:id/selection` accepts a nullable `optionId`;
+null reopens the decision. A selected option must belong to that decision.
+Removing the selected option clears the selection atomically; deleting a decision
+removes only its options and source record. Neither operation cancels bookings.
+
+PATCH omission retains values, null clears the deadline, and supplied arrays
+replace their complete values. Decision/option text may be empty for unfinished
+source capture. Selection and its inverse are explicit revision-guarded writes;
+there is no persisted general Undo log or derived deadline clock.
+
+Option DELETE retains a removed source record rather than destroying its identity;
+ordinary GET/list routes omit removed options. POST
+`/trips/:tripId/decisions/:decisionId/options/:id/restore` requires
+`expectedRevision` and an explicit boolean `select`. False retains the current
+selection; true selects the restored option atomically at that same revision.
+Restoring never revalidates or modifies retained affected sources. Foreign
+ownership and removed decisions return 404; an already-live option returns 409.
+There is no retention expiry or automatic cleanup. This supports identity-preserving
+Undo without creating a replacement option or racing a separate selection write.
+
+The revision progression is part of the mutation protocol: every successful guarded
+decision or option mutation produces exactly `expectedRevision + 1`; failed
+mutations preserve the previous revision. Decision creation starts at zero.
+Option mutation responses do not contain the parent revision and DELETE returns
+204, so consumers may record that exact one-step result for their own operation.
+A later parent read with a different revision must clear local Undo rather than
+adopting another writer's revision for an inverse mutation.
