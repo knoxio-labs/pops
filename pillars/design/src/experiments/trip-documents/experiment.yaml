@@ -1,6 +1,9 @@
 name: Trip documents
 question: Review documents along the route, or as originals with linked plans?
-status: active
+status: decided
+chosen: route
+decided: 2026-11-09
+rationale: Joao chose By route with trip documents on top, then approved with next.
 screen: trips/documents
 variants:
   route: By route
