@@ -127,6 +127,45 @@ services:
       timeout: 5s
       retries: 3
 
+  trips-api:
+    build:
+      context: ..
+      dockerfile: pillars/trips/Dockerfile
+      args:
+        BUILD_VERSION: ${BUILD_VERSION:-dev}
+    container_name: pops-trips
+    restart: unless-stopped
+    networks:
+      - frontend
+      - backend
+    volumes:
+      - pops-trips-data:/data/sqlite
+    secrets:
+      - pops_trips_api_key
+    environment:
+      NODE_ENV: production
+      POPS_INTERNAL_API_KEY_FILE: /run/secrets/pops_trips_api_key
+      PORT: '3018'
+      TRIPS_SQLITE_PATH: /data/sqlite/trips.db
+      TRIPS_SELF_BASE_URL: http://trips-api:3018
+      POPS_REGISTRY_ENABLED: 'true'
+    expose:
+      - '3018'
+    depends_on:
+      registry-api:
+        condition: service_started
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://localhost:3018/health').then(r=>{if(!r.ok)process.exit(1)})",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
   # Finance pillar API (ADR-026, Phase 3 PR 2 of the finance track).
   # Hosts finance.db reads/writes for the wish_list slice today;
   # subsequent slices (budgets, transactions, imports, tag rules, tag
@@ -707,6 +746,24 @@ services:
       timeout: 5s
       retries: 3
 
+  trips-ui:
+    build:
+      context: ..
+      dockerfile: pillars/trips/app/Dockerfile
+      args:
+        BUILD_VERSION: ${BUILD_VERSION:-dev}
+    container_name: pops-trips-ui
+    restart: unless-stopped
+    networks:
+      - frontend
+    expose:
+      - '80'
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:80/healthz']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
   # The inventory UI bundle (pillars/inventory/app) — a static nginx image
   # behind the shell's `/inventory-ui/` location block.
   inventory-ui:
@@ -1141,11 +1198,15 @@ volumes:
   # so it starts where ADR-039 workstream S11 wants every pillar to end up.
   pops-bfm-data:
     name: pops-bfm-data
+  pops-trips-data:
+    name: pops-trips-data
 
   pops-design-data:
     name: pops-design-data
 
 secrets:
+  pops_trips_api_key:
+    file: ../secrets/pops_trips_api_key
   notion_api_token:
     file: ../secrets/notion_api_token
   up_bank_token:

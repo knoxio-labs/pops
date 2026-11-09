@@ -59,6 +59,7 @@ describe('a pillar declares its nav once', () => {
       'lists',
       'media',
       'purchases',
+      'trips',
     ]);
   });
 

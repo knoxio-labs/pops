@@ -64,5 +64,7 @@
   "purchases.reconcile": "Conciliação",
   "purchases.merchants": "Comerciantes",
   "purchases.receipts": "Recibos",
-  "purchases.products": "Produtos"
+  "purchases.products": "Produtos",
+  "trips": "Viagens",
+  "trips.home": "Início"
 }

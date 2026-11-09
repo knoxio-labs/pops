@@ -91,6 +91,8 @@ export const EXPECTED_TARGETS = Object.freeze([
   { pkgName: '@pops/app-lists', scriptName: 'generate:lists-client' },
   { pkgName: '@pops/app-media', scriptName: 'generate:media-client' },
   { pkgName: '@pops/app-purchases', scriptName: 'generate:purchases-client' },
+  { pkgName: '@pops/app-trips', scriptName: 'generate:trips-client' },
+  { pkgName: '@pops/app-trips', scriptName: 'generate:tags-client' },
   { pkgName: '@pops/trips-workspace', scriptName: 'generate:trips-client' },
   { pkgName: '@pops/shell', scriptName: 'generate:registry-client' },
   { pkgName: '@pops/overlay-ego', scriptName: 'generate:ego-client' },

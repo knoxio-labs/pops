@@ -1,9 +1,19 @@
-import type { ManifestPayload } from '@pops/pillar-sdk/manifest-schema';
+import { TRIPS_NAV } from '../contract/nav.js';
+import { TRIPS_PAGES } from '../contract/pages.js';
+
+import type {
+  ManifestPayload,
+  NavConfigDescriptor,
+  PageDescriptor,
+} from '@pops/pillar-sdk/manifest-schema';
+
+const TRIPS_WIRE_NAV = { ...TRIPS_NAV, items: [...TRIPS_NAV.items] } satisfies NavConfigDescriptor;
+const TRIPS_WIRE_PAGES = [...TRIPS_PAGES] satisfies PageDescriptor[];
 
 /** Stable registry identity of the trips pillar. */
 export const TRIPS_PILLAR_ID = 'trips' as const;
 
-/** Publish the trips foundation's source operations without declaring a frontend application. */
+/** Publish Trips source operations and its source-backed shell routes. */
 export function buildTripsManifest(version: string): ManifestPayload {
   return {
     pillar: TRIPS_PILLAR_ID,
@@ -56,6 +66,10 @@ export function buildTripsManifest(version: string): ManifestPayload {
     ai: { tools: [] },
     uri: { types: [] },
     consumedSettings: { keys: [] },
+    nav: TRIPS_WIRE_NAV,
+    pages: [...TRIPS_WIRE_PAGES],
+    assetsBaseUrl: '/trips-ui/trips.js',
+    stylesheetUrl: '/trips-ui/trips.css',
     healthcheck: { path: '/health' },
   };
 }

@@ -27,7 +27,14 @@ const devCompose = ComposeFileSchema.parse(
   load(readFileSync(join(repoRoot, 'infra', 'docker-compose.dev.yml'), 'utf8'))
 );
 
+const TRIPS_SECRET = {
+  service: 'trips-api',
+  variable: 'POPS_INTERNAL_API_KEY_FILE',
+  secret: 'pops_trips_api_key',
+};
+
 const FILE_SECRETS = [
+  TRIPS_SECRET,
   {
     service: 'inventory-api',
     variable: 'POPS_INTERNAL_API_KEY_FILE',
@@ -85,5 +92,35 @@ describe('local service-account credentials in infra/docker-compose.dev.yml', ()
     expect(devCompose.services['pops-orchestrator']?.environment?.POPS_INTERNAL_API_KEY).toBe(
       '${POPS_ORCHESTRATOR_API_KEY:-}'
     );
+  });
+});
+
+describe('Trips deployment', () => {
+  it('mounts the Trips-owned credential in development', () => {
+    const { service, variable, secret } = TRIPS_SECRET;
+    expect(mountedSecrets(devCompose, service)).toContain(secret);
+    expect(devCompose.services[service]?.environment?.[variable]).toBe(`/run/secrets/${secret}`);
+    expect(Object.keys(devCompose.secrets ?? {})).toContain(secret);
+  });
+
+  it.each([
+    ['production', productionCompose],
+    ['development', devCompose],
+  ] as const)('serves the Trips UI in %s', (_name, compose) => {
+    const service = compose.services['trips-ui'];
+    expect(service).toBeDefined();
+    expect(service?.healthcheck?.test).toEqual([
+      'CMD',
+      'wget',
+      '-q',
+      '--spider',
+      'http://127.0.0.1:80/healthz',
+    ]);
+    expect(
+      service?.image ===
+        'ghcr.io/${POPS_IMAGE_OWNER:-knoxio-labs}/pops-trips-ui:${POPS_IMAGE_TAG:-main}' ||
+        (typeof service?.build === 'object' &&
+          service.build.dockerfile === 'pillars/trips/app/Dockerfile')
+    ).toBe(true);
   });
 });

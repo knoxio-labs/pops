@@ -2,9 +2,38 @@ import { describe, expect, it } from 'vitest';
 
 import { validateManifestPayload } from '@pops/pillar-sdk/manifest-schema';
 
+import { TRIPS_NAV } from '../../contract/nav.js';
+import { TRIPS_PAGES } from '../../contract/pages.js';
 import { buildTripsManifest } from '../manifest.js';
 
 describe('Trips manifest', () => {
+  it('publishes the approved rail entry without adding unimplemented navigation', () => {
+    const manifest = buildTripsManifest('1.2.3');
+    expect(manifest.nav).toEqual({
+      id: 'trips',
+      label: 'Trips',
+      labelKey: 'trips',
+      icon: 'plane',
+      basePath: '/trips',
+      order: 90,
+      items: [{ path: '', label: 'Home', labelKey: 'trips.home', icon: 'layout-dashboard' }],
+    });
+    expect(manifest.nav).toEqual(TRIPS_NAV);
+    expect(manifest.nav).not.toHaveProperty('color');
+  });
+
+  it('publishes exactly the implemented home, stay, and settings routes', () => {
+    const manifest = buildTripsManifest('1.2.3');
+    expect(manifest.pages).toEqual([
+      { path: '', index: true, bundleSlot: 'trips-home' },
+      { path: ':tripId/stays/:stayId', bundleSlot: 'trips-stay' },
+      { path: ':tripId/settings', bundleSlot: 'trips-settings' },
+    ]);
+    expect(manifest.pages).toEqual(TRIPS_PAGES);
+    expect(manifest.assetsBaseUrl).toBe('/trips-ui/trips.js');
+    expect(manifest.stylesheetUrl).toBe('/trips-ui/trips.css');
+  });
+
   it('passes registry validation and declares all source and order operations', () => {
     const manifest = buildTripsManifest('1.2.3');
     expect(validateManifestPayload(manifest).ok).toBe(true);
