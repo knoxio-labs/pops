@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { ErrorBodySchema } from '@pops/types';
 
 import { decisionsContract, decisionOptionsContract } from './decisions.js';
+import { documentAssociationsContract } from './document-associations.js';
 import { eventsContract } from './events.js';
 import { journeyGroupsContract } from './journey-groups.js';
 import { journeysContract, journeyLegsContract } from './journeys.js';
@@ -35,6 +36,7 @@ export const tripsContract = c.router(
     decisions: decisionsContract,
     decisionOptions: decisionOptionsContract,
     stays: staysContract,
+    documentAssociations: documentAssociationsContract,
     journeyGroups: journeyGroupsContract,
     journeys: journeysContract,
     journeyLegs: journeyLegsContract,
