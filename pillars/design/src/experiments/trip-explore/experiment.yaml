@@ -1,6 +1,9 @@
 name: Trip possibilities
 question: Browse one collection, or group possibilities by location?
-status: active
+status: decided
+chosen: cities
+decided: 2026-11-09
+rationale: Joao chose By location, then approved the refined controls and grouped surfaces with next.
 screen: trips/explore
 variants:
   collection: One collection
