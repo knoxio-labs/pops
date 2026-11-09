@@ -7,7 +7,7 @@ import {
 
 describe('Trip document association contract', () => {
   it('accepts the approved explicit target kinds and numeric Documents identity', () => {
-    for (const targetKind of ['trip', 'visit', 'journey', 'stay']) {
+    for (const targetKind of ['trip', 'visit', 'journey', 'stay', 'event']) {
       expect(DocumentTargetKindSchema.parse(targetKind)).toBe(targetKind);
       expect(
         TripDocumentAssociationSchema.parse({
@@ -23,7 +23,7 @@ describe('Trip document association contract', () => {
   });
 
   it('rejects inferred or unsupported target kinds and nonpositive source identities', () => {
-    expect(DocumentTargetKindSchema.safeParse('event').success).toBe(false);
+    expect(DocumentTargetKindSchema.safeParse('booking').success).toBe(false);
     expect(
       TripDocumentAssociationSchema.safeParse({
         id: 1,
