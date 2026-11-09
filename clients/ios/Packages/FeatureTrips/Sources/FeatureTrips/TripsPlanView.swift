@@ -65,6 +65,9 @@ internal struct TripsPlanView: View {
             if !dates.isEmpty {
                 Text(dates.map(TripClock.dayLabel).joined(separator: " – ")).font(.popsCaption)
             }
+            if let duration = visit.timing.duration, let label = tripVisitDurationLabel(duration) {
+                Text(label).font(.popsCaption)
+            }
             if !visit.notes.isEmpty { Text(visit.notes).font(.popsSubheadline) }
         }
         .frame(minHeight: PopsSize.touchTarget, alignment: .leading)
