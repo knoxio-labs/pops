@@ -13,10 +13,13 @@ describe('Trips manifest', () => {
       version: '1.2.3',
       tag: 'contract-trips@v1.2.3',
     });
-    expect(manifest.routes.queries).toHaveLength(13);
+    expect(manifest.routes.queries).toHaveLength(15);
     expect(manifest.routes.mutations).toContain('trips.visits.reorder');
     expect(manifest.routes.mutations).toEqual(
       expect.arrayContaining([
+        'trips.stays.create',
+        'trips.stays.update',
+        'trips.stays.delete',
         'trips.journeyGroups.create',
         'trips.journeyGroups.addBlank',
         'trips.journeyGroups.select',
@@ -24,6 +27,9 @@ describe('Trips manifest', () => {
       ])
     );
     expect(manifest.routes.queries).toContain('trips.journeys.timing');
+    expect(manifest.routes.queries).toEqual(
+      expect.arrayContaining(['trips.stays.list', 'trips.stays.get'])
+    );
     expect(manifest.uri.types).toEqual([]);
   });
 });

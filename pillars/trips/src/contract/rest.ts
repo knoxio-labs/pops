@@ -17,6 +17,7 @@ import {
   UpdateVisitBody,
   VisitSchema,
 } from './schemas.js';
+import { staysContract } from './stays.js';
 
 const c = initContract();
 const IdParams = z.object({ id: z.coerce.number().int().positive() });
@@ -28,6 +29,7 @@ const VisitList = z.object({ visits: z.array(VisitSchema) });
 /** Trips-owned source metadata and route identity contract; ordering never rewrites dates. */
 export const tripsContract = c.router(
   {
+    stays: staysContract,
     journeyGroups: journeyGroupsContract,
     journeys: journeysContract,
     journeyLegs: journeyLegsContract,
