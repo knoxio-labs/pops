@@ -1,0 +1,10 @@
+name: Trip people
+question: Review people along the route, or by person?
+status: decided
+chosen: route
+decided: 2026-11-09
+rationale: Joao chose By route, then approved the prototype with next.
+screen: trips/people
+variants:
+  route: By route
+  people: By person
