@@ -32,7 +32,7 @@ export function ExploreKind({
           ? [{ value: '', label: 'All kinds' }, ...exploreKindOptions]
           : [{ value: '', label: 'Clear kind' }, ...exploreKindOptions]
       }
-      placeholder="Kind (optional)"
+      placeholder={all ? 'All kinds' : 'Kind (optional)'}
       onChange={(next) => {
         if (typeof next === 'string') change(next);
       }}

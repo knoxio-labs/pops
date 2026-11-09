@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { ExploreWorkspace } from './workspace';
 
 function chooseKind(label: string) {
+  fireEvent.click(screen.getByRole('button', { name: 'Capture options' }));
   fireEvent.click(screen.getByRole('combobox', { name: 'Kind' }));
   fireEvent.click(screen.getByRole('option', { name: label }));
 }
@@ -13,6 +14,51 @@ function search(value: string) {
 }
 
 describe('trip explore proposals', () => {
+  it('keeps optional capture choices closed and preserves chosen values when collapsed', () => {
+    render(<ExploreWorkspace layout="cities" scenario="empty" />);
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Possibility'), { target: { value: 'Drawing meetup' } });
+    chooseKind('Activity');
+    fireEvent.click(screen.getByRole('combobox', { name: 'Location' }));
+    fireEvent.click(screen.getByRole('option', { name: 'Olinda' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Capture options' }));
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+    const capture = screen.getByRole('form', { name: 'Save possibility' });
+    expect(capture).toHaveTextContent('Activity · Olinda');
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(capture).not.toHaveTextContent('Activity · Olinda');
+    expect(screen.getByRole('region', { name: 'Olinda' })).toHaveTextContent('Drawing meetup');
+  });
+
+  it('keeps active filters visible and clearable after closing the filter controls', () => {
+    render(<ExploreWorkspace layout="cities" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
+    fireEvent.click(screen.getByRole('combobox', { name: 'Filter kind' }));
+    fireEvent.click(screen.getByRole('option', { name: 'Note' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
+    expect(screen.queryByRole('combobox', { name: 'Filter kind' })).not.toBeInTheDocument();
+    const results = screen.getByRole('region', { name: 'Possibilities' });
+    expect(within(results).getAllByRole('article')).toHaveLength(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Clear kind filter' }));
+    expect(within(results).getAllByRole('article').length).toBeGreaterThan(1);
+    expect(screen.queryByRole('button', { name: 'Clear kind filter' })).not.toBeInTheDocument();
+  });
+
+  it('keeps summary rows focused on names and timing while retaining details', () => {
+    render(<ExploreWorkspace layout="cities" />);
+    const row = screen.getByRole('article', { name: 'Neighbourhood drawing circle' });
+    expect(row).toHaveTextContent('Jan 2028');
+    expect(row).not.toHaveTextContent('Saved');
+    expect(row).not.toHaveTextContent('Lina Prado');
+    expect(row).not.toHaveTextContent('Ask about the next gathering');
+    fireEvent.click(within(row).getByRole('button'));
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveTextContent('Lina Prado');
+    expect(within(dialog).getByLabelText('Notes')).toHaveValue(
+      'Ask about the next gathering before choosing a day.'
+    );
+  });
+
   it.each(['collection', 'cities'] as const)(
     'captures unclassified multiline text without dates, opens its own source and undoes it in %s',
     (layout) => {
@@ -52,9 +98,10 @@ describe('trip explore proposals', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     const group = screen.getByRole('region', { name: 'Olinda' });
     expect(group).toHaveTextContent('Waterfront sketching');
-    expect(group).toHaveTextContent('Activity');
-    expect(group).not.toHaveTextContent('Other');
-    expect(group).not.toHaveTextContent('Saved');
+    fireEvent.click(within(group).getByRole('button', { name: 'Open Waterfront sketching' }));
+    const dialog = screen.getByRole('dialog', { name: 'Waterfront sketching' });
+    expect(dialog).toHaveTextContent('Activity');
+    expect(within(dialog).getByRole('combobox', { name: 'Status' })).not.toHaveTextContent('Saved');
   });
 
   it('edits only the selected source and restores it with Undo', () => {
@@ -69,9 +116,9 @@ describe('trip explore proposals', () => {
       target: { value: 'Bring the small sketchbook.' },
     });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Save changes' }));
-    expect(screen.getByRole('article', { name: 'Evening drawing circle' })).toHaveTextContent(
-      'Bring the small sketchbook.'
-    );
+    fireEvent.click(screen.getByRole('button', { name: 'Open Evening drawing circle' }));
+    expect(screen.getByLabelText('Notes')).toHaveValue('Bring the small sketchbook.');
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(screen.getByRole('article', { name: 'Olinda' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
     expect(
@@ -106,9 +153,10 @@ describe('trip explore proposals', () => {
         target: { value: 'Keep the original reference for review.' },
       });
       fireEvent.click(within(dialog).getByRole('button', { name: 'Save changes' }));
-      expect(
-        screen.getByRole('article', { name: 'Neighbourhood drawing circle' })
-      ).toHaveTextContent('Keep the original reference for review.');
+      fireEvent.click(screen.getByRole('button', { name: 'Open Neighbourhood drawing circle' }));
+      expect(screen.getByLabelText('Notes')).toHaveValue('Keep the original reference for review.');
+      expect(screen.getByRole('dialog')).toHaveTextContent('Recommender unavailable');
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
       if (layout === 'cities')
         expect(screen.getByRole('region', { name: 'Location unavailable' })).toBeInTheDocument();
     }
@@ -140,9 +188,8 @@ describe('trip explore proposals', () => {
       target: { value: 'Check the published programme.' },
     });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Save changes' }));
-    expect(screen.getByRole('region', { name: 'Belo Horizonte / Minas' })).toHaveTextContent(
-      'Check the published programme.'
-    );
+    fireEvent.click(screen.getByRole('button', { name: 'Open Festival Horizonte' }));
+    expect(screen.getByLabelText('Notes')).toHaveValue('Check the published programme.');
   });
 
   it('offers source-compatible locations when editing an existing city-owned idea', () => {
@@ -159,6 +206,7 @@ describe('trip explore proposals', () => {
   it('filters existing captured source kinds and shows an empty result without repeated action copy', () => {
     render(<ExploreWorkspace layout="collection" />);
     expect(screen.queryByText(/^Inspect(?: |$)/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
     fireEvent.click(screen.getByRole('combobox', { name: 'Filter kind' }));
     fireEvent.click(screen.getByRole('option', { name: 'Note' }));
     const results = screen.getByRole('region', { name: 'Possibilities' });
