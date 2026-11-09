@@ -1,0 +1,7 @@
+name: Trip people
+question: Review people along the route, or by person?
+status: active
+screen: trips/people
+variants:
+  route: By route
+  people: By person
