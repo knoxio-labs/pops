@@ -13,6 +13,7 @@ const TRIPS_WIRE_PAGES = [...TRIPS_PAGES] satisfies PageDescriptor[];
 const TRIPS_QUERIES = [
   'trips.decisions.list',
   'trips.decisions.get',
+  'trips.decisions.workspace',
   'trips.decisionOptions.list',
   'trips.decisionOptions.get',
   'trips.stays.list',

@@ -21,13 +21,16 @@ export function advanceDecision(
     .run();
   return getDecision(db, decision.tripId, decision.id);
 }
-/** Validate explicitly supplied source identities; omitted references are never revalidated. */
+/** Validate newly added memberships; unchanged identities retain their historical ownership. */
 export function validateDecisionSources(
   db: TripsDb,
   tripId: number,
-  sources: DecisionSource[] | undefined
+  sources: DecisionSource[] | undefined,
+  retained: readonly DecisionSource[] = []
 ): void {
+  const existing = new Set(retained.map((source) => `${source.kind}/${source.id}`));
   for (const source of sources ?? []) {
+    if (existing.has(`${source.kind}/${source.id}`)) continue;
     switch (source.kind) {
       case 'visit':
         getVisit(db, tripId, source.id);
