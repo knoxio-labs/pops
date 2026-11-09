@@ -20,6 +20,19 @@ export const tripsErrors = defineErrors('trips', {
     message: 'The selected shared tag could not be verified. Retry when Tags is available.',
     retryable: true,
   },
+  option_not_removed: {
+    area: 'decision',
+    status: 409,
+    message: 'Only a removed decision option can be restored.',
+    retryable: false,
+  },
+  decision_revision_conflict: {
+    area: 'decision',
+    status: 409,
+    message:
+      'This decision or its options changed. Read its latest revision before editing or selecting.',
+    retryable: false,
+  },
   revision_conflict: {
     area: 'group',
     status: 409,

@@ -12,6 +12,7 @@ import {
   updatePlace,
   updateVisit,
 } from '../../db/services/records.js';
+import { makeDecisionHandlers, makeDecisionOptionHandlers } from './decisions.js';
 import { makeJourneyGroupHandlers } from './journey-groups.js';
 import { makeJourneyHandlers, makeJourneyLegHandlers } from './journeys.js';
 import { makeStayHandlers } from './stays.js';
@@ -28,6 +29,8 @@ export function makeTripsRestHandlers(
 ): ReturnType<typeof server.router<typeof tripsContract>> {
   const db = deps.tripsDb.db;
   return server.router(tripsContract, {
+    decisions: makeDecisionHandlers(db),
+    decisionOptions: makeDecisionOptionHandlers(db),
     stays: makeStayHandlers(db),
     journeyGroups: makeJourneyGroupHandlers(db),
     journeys: makeJourneyHandlers(db),
