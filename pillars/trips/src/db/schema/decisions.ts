@@ -49,6 +49,10 @@ export const decisionOptions = sqliteTable('decision_options', {
     .$type<DecisionSource[]>()
     .notNull()
     .default([]),
+  validatedSources: text('validated_sources', { mode: 'json' })
+    .$type<DecisionSource[]>()
+    .notNull()
+    .default([]),
   sourceLinks: text('source_links', { mode: 'json' }).$type<SourceLink[]>().notNull().default([]),
   ...audit(),
 });

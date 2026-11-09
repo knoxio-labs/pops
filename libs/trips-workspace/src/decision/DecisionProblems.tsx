@@ -30,17 +30,15 @@ export function DecisionProblems({
       {state.failures.map((failure) => (
         <section aria-label={`${failure.label} failed`} key={failure.key}>
           <ErrorState error={requestProblem(failure.error)} />
-          {!failure.undo &&
-            failure.expectedRevision === state.source.decision.revision &&
-            !state.conflict && (
-              <Button
-                variant="outline"
-                disabled={state.busy}
-                onClick={() => void editor.retry(failure)}
-              >
-                Retry {failure.label}
-              </Button>
-            )}
+          {failure.expectedRevision === state.source.decision.revision && !state.conflict && (
+            <Button
+              variant="outline"
+              disabled={state.busy}
+              onClick={() => void editor.retry(failure)}
+            >
+              Retry {failure.label}
+            </Button>
+          )}
         </section>
       ))}
     </div>

@@ -52,7 +52,7 @@ for (const viewport of [
         writes.push({ method: request.method(), path, body });
         if (body.expectedRevision !== decision.revision) {
           await json(route, 409, {
-            code: 'trips.decision_revision_conflict',
+            code: 'trips.decision.decision_revision_conflict',
             message: 'Revision changed',
             retryable: false,
           });

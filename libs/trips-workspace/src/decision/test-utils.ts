@@ -71,7 +71,7 @@ export function decisionTransport(initial = sourceDecision()) {
       )
         return json(
           {
-            code: 'trips.decision_revision_conflict',
+            code: 'trips.decision.decision_revision_conflict',
             message: 'Revision changed',
             retryable: false,
             requestId: 'request-conflict',

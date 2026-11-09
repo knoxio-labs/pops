@@ -1,10 +1,8 @@
 import { eq } from 'drizzle-orm';
 
-import { decisions } from '../schema.js';
+import { decisions, visits, journeys, stays } from '../schema.js';
 import { getDecision } from './decision-queries.js';
-import { getJourney } from './journeys.js';
-import { getVisit } from './records.js';
-import { getStay } from './stays.js';
+import { TripsServiceError } from './source-record.js';
 
 import type { Decision, DecisionInput, DecisionSource } from '../../contract/decision-schemas.js';
 import type { TripsDb } from '../index.js';
@@ -21,26 +19,36 @@ export function advanceDecision(
     .run();
   return getDecision(db, decision.tripId, decision.id);
 }
-/** Validate newly added memberships; unchanged identities retain their historical ownership. */
+/** Validate exact accepted history against live ownership, returning the accumulated private provenance. */
 export function validateDecisionSources(
   db: TripsDb,
   tripId: number,
   sources: DecisionSource[] | undefined,
-  retained: readonly DecisionSource[] = []
-): void {
-  const existing = new Set(retained.map((source) => `${source.kind}/${source.id}`));
+  history: readonly DecisionSource[] = []
+): DecisionSource[] {
+  const validated = new Map(history.map((source) => [`${source.kind}/${source.id}`, source]));
   for (const source of sources ?? []) {
-    if (existing.has(`${source.kind}/${source.id}`)) continue;
-    switch (source.kind) {
-      case 'visit':
-        getVisit(db, tripId, source.id);
-        break;
-      case 'journey':
-        getJourney(db, tripId, source.id);
-        break;
-      case 'stay':
-        getStay(db, tripId, source.id);
-        break;
-    }
+    const owner = sourceOwner(db, source);
+    const key = `${source.kind}/${source.id}`;
+    if (owner !== undefined ? owner !== tripId : !validated.has(key))
+      throw new TripsServiceError('not_found');
+    validated.set(key, source);
+  }
+  return [...validated.values()];
+}
+function sourceOwner(db: TripsDb, source: DecisionSource): number | undefined {
+  switch (source.kind) {
+    case 'visit':
+      return db.select({ tripId: visits.tripId }).from(visits).where(eq(visits.id, source.id)).get()
+        ?.tripId;
+    case 'journey':
+      return db
+        .select({ tripId: journeys.tripId })
+        .from(journeys)
+        .where(eq(journeys.id, source.id))
+        .get()?.tripId;
+    case 'stay':
+      return db.select({ tripId: stays.tripId }).from(stays).where(eq(stays.id, source.id)).get()
+        ?.tripId;
   }
 }

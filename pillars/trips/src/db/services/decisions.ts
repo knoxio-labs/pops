@@ -92,11 +92,11 @@ export function createDecisionOption(
   return db.transaction(
     (tx) => {
       const decision = requireDecisionRevision(tx, identity.tripId, identity.id, expectedRevision);
-      validateDecisionSources(tx, identity.tripId, fields.affectedSources);
+      const validatedSources = validateDecisionSources(tx, identity.tripId, fields.affectedSources);
       const row = requireOwnedRecord(
         tx
           .insert(decisionOptions)
-          .values({ ...fields, decisionId: identity.id })
+          .values({ ...fields, validatedSources, decisionId: identity.id })
           .returning()
           .get()
       );
@@ -122,15 +122,22 @@ export function updateDecisionOption(
         identity.decisionId,
         expectedRevision
       );
-      const previous = getDecisionOption(tx, identity.tripId, identity.decisionId, identity.id);
-      validateDecisionSources(
+      getDecisionOption(tx, identity.tripId, identity.decisionId, identity.id);
+      const previous = requireOwnedRecord(
+        tx
+          .select({ validatedSources: decisionOptions.validatedSources })
+          .from(decisionOptions)
+          .where(eq(decisionOptions.id, identity.id))
+          .get()
+      );
+      const validatedSources = validateDecisionSources(
         tx,
         identity.tripId,
         fields.affectedSources,
-        previous.affectedSources
+        previous.validatedSources
       );
       tx.update(decisionOptions)
-        .set({ ...fields, updatedAt: new Date().toISOString() })
+        .set({ ...fields, validatedSources, updatedAt: new Date().toISOString() })
         .where(eq(decisionOptions.id, identity.id))
         .run();
       advanceDecision(tx, decision);

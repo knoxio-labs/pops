@@ -1,5 +1,7 @@
 import { expect, it, vi } from 'vitest';
 
+import { ApiError } from '@pops/pillar-sdk/client';
+
 import { createDecisionEditor } from './editor';
 import { sourceDecision } from './test-utils';
 
@@ -71,17 +73,45 @@ it('retains failed intent preconditions and never duplicates an uncertain create
   expect(perform).toHaveBeenCalledTimes(1);
   expect(editor.getState().undoCount).toBe(0);
 });
-it('does not accept an unrelated revision from an invalid success response or retry a failed inverse', async () => {
+it('retains a transiently failed inverse and retries its original revision after an unchanged reload', async () => {
   const perform = vi
     .fn<DecisionPerformer>()
     .mockResolvedValueOnce(success(1))
-    .mockRejectedValueOnce(new Error('lost inverse'));
+    .mockRejectedValueOnce(new Error('lost inverse'))
+    .mockResolvedValueOnce(success(2));
   const editor = createDecisionEditor(sourceDecision(), perform);
   await editor.commit(edit, 'Edit');
   expect(await editor.undo()).toBe(false);
   const failure = editor.getState().failures.at(-1);
   if (!failure) throw new Error('Missing inverse failure');
-  expect(await editor.retry(failure)).toBe(false);
+  expect(editor.getState().undoCount).toBe(1);
+  editor.reload(sourceDecision(1));
+  expect(await editor.retry(failure)).toBe(true);
+  expect(perform.mock.calls.slice(1).map(([source]) => source.decision.revision)).toEqual([1, 1]);
+  expect(editor.getState()).toMatchObject({
+    undoCount: 0,
+    failures: [],
+    source: { decision: { revision: 2 } },
+  });
+});
+it('clears stale history on an actual revision conflict and rejects unrelated success revisions', async () => {
+  const perform = vi
+    .fn<DecisionPerformer>()
+    .mockResolvedValueOnce(success(1))
+    .mockRejectedValueOnce(
+      new ApiError({
+        code: 'trips.decision.decision_revision_conflict',
+        kind: 'client',
+        status: 409,
+        message: 'Changed source',
+        retryable: false,
+      })
+    );
+  const editor = createDecisionEditor(sourceDecision(), perform);
+  await editor.commit(edit, 'Edit');
+  expect(await editor.undo()).toBe(false);
+  expect(editor.getState()).toMatchObject({ undoCount: 0, conflict: true });
+  expect(await editor.undo()).toBe(false);
   expect(perform).toHaveBeenCalledTimes(2);
   const invalid = createDecisionEditor(
     sourceDecision(),
@@ -89,6 +119,21 @@ it('does not accept an unrelated revision from an invalid success response or re
   );
   expect(await invalid.commit(edit, 'Edit')).toBe(false);
   expect(invalid.getState().source.decision.revision).toBe(0);
+});
+it('does not retry an uncertain inverse after a canonical read proves that another revision already exists', async () => {
+  const perform = vi
+    .fn<DecisionPerformer>()
+    .mockResolvedValueOnce(success(1))
+    .mockRejectedValueOnce(new Error('lost response'));
+  const editor = createDecisionEditor(sourceDecision(), perform);
+  await editor.commit(edit, 'Edit');
+  await editor.undo();
+  const failure = editor.getState().failures.at(-1);
+  if (!failure) throw new Error('Missing inverse failure');
+  editor.receive(sourceDecision(2));
+  expect(await editor.retry(failure)).toBe(false);
+  expect(editor.getState().undoCount).toBe(0);
+  expect(perform).toHaveBeenCalledTimes(2);
 });
 it('handles a newer canonical read arriving during a mutation without adopting it for Undo', async () => {
   let resolve: (result: AppliedDecisionChange) => void = () => {

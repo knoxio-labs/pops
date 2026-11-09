@@ -52,7 +52,7 @@ it('treats an unsuccessful deletion and an absent response as failures, producin
     async () =>
       new Response(
         JSON.stringify({
-          code: 'trips.decision_revision_conflict',
+          code: 'trips.decision.decision_revision_conflict',
           message: 'Revision changed',
           retryable: false,
           requestId: 'revision-test',

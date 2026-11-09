@@ -1,5 +1,7 @@
 import { ApiError } from '@pops/pillar-sdk/client';
 
+import { isDecisionConflict } from './failure';
+
 import type {
   DecisionEditor,
   DecisionEditorState,
@@ -61,9 +63,7 @@ class SourceEditor implements DecisionEditor {
     return command ? this.run(command, 'Undo', true) : Promise.resolve(false);
   }
   retry(failure: DecisionFailure): Promise<boolean> {
-    return failure.undo
-      ? Promise.resolve(false)
-      : this.run(failure.command, failure.label, false, failure.expectedRevision);
+    return this.run(failure.command, failure.label, failure.undo, failure.expectedRevision);
   }
   receive(source: DecisionSource): void {
     if (
@@ -91,12 +91,15 @@ class SourceEditor implements DecisionEditor {
       this.pending && this.pending.decision.revision > source.decision.revision
         ? this.pending
         : source;
-    this.history = [];
+    const changed = latest.decision.revision !== this.state.source.decision.revision;
+    if (changed) this.history = [];
     this.pending = undefined;
     this.publish({
       source: latest,
       conflict: false,
-      failures: this.state.failures.filter((failure) => !failure.undo),
+      failures: changed
+        ? this.state.failures.filter((failure) => !failure.undo)
+        : this.state.failures,
     });
   }
   setDirty(key: string, value: boolean): void {
@@ -116,10 +119,11 @@ class SourceEditor implements DecisionEditor {
     error: unknown
   ): void {
     const { command, label, undo, expectedRevision } = context;
-    this.history = [];
+    if (isDecisionConflict(error)) this.history = [];
     const key = commandKey(command, undo);
     this.publish({
       busy: false,
+      conflict: this.state.conflict || isDecisionConflict(error),
       failures: [
         ...this.state.failures.filter((failure) => failure.key !== key),
         { key, label, error, command, expectedRevision, undo },

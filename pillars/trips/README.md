@@ -188,9 +188,13 @@ decision has no selected option or deadline. Options at `/:decisionId/options`
 provide list/create and `/:id` get/patch/delete, retaining `title`, `notes`,
 `sourceLinks` and `affectedSources`. Each affected source is an explicit
 `{ kind: 'visit' | 'journey' | 'stay', id }` identity in the same trip. Creation
-validates every reference. PATCH validates only newly added exact
-kind/ID memberships; unchanged identities may remain unavailable or be removed.
-Retained references remain identifiable after source deletion. Duplicate references
+validates every reference. Each option privately retains its validated exact
+kind/ID membership history. PATCH may retain, unlink or restore a historical
+membership after source deletion; genuinely new memberships must currently belong
+to the trip. A currently live source owned by another trip is always rejected.
+Existing live and tombstoned option memberships are backfilled when this provenance
+is migrated, and it survives unlink, option removal and restoration. Historical
+references remain identifiable after source deletion. Duplicate references
 are rejected. Options never own or rewrite arrangements.
 
 Every mutation after decision creation requires `expectedRevision` from the

@@ -136,3 +136,29 @@ it('discards the old field draft after a confirmed retry so a later clean source
   await waitFor(() => expect(field).toHaveValue('Later canonical question'));
   expect(screen.queryByText(/The source changed. Your drafts/)).not.toBeInTheDocument();
 });
+it('retains a failed Undo in the UI and retries it at its original revision', async () => {
+  const { transport } = mount();
+  const question = await screen.findByLabelText('Question');
+  fireEvent.change(question, { target: { value: 'Temporary question' } });
+  fireEvent.blur(question);
+  const undo = screen.getByRole('button', { name: 'Undo' });
+  await waitFor(() => expect(undo).toBeEnabled());
+  transport.failWrite(true);
+  fireEvent.click(undo);
+  const retry = await screen.findByRole('button', { name: 'Retry Undo' });
+  expect(question).toHaveValue('Temporary question');
+  expect(undo).toBeEnabled();
+  transport.failWrite(false);
+  fireEvent.click(retry);
+  await waitFor(() => expect(question).toHaveValue('Which departure?'));
+  expect(
+    transport.requests
+      .filter((request) => request.method === 'PATCH')
+      .map((request) => request.body)
+  ).toEqual([
+    { question: 'Temporary question', expectedRevision: 0 },
+    { question: 'Which departure?', expectedRevision: 1 },
+    { question: 'Which departure?', expectedRevision: 1 },
+  ]);
+  await waitFor(() => expect(undo).toBeDisabled());
+});

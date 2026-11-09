@@ -3,7 +3,7 @@ import { and, eq } from 'drizzle-orm';
 import { DecisionOptionSchema } from '../../contract/decision-schemas.js';
 import { decisionOptions } from '../schema.js';
 import { requireDecisionRevision } from './decision-queries.js';
-import { advanceDecision } from './decision-write.js';
+import { advanceDecision, validateDecisionSources } from './decision-write.js';
 import { requireOwnedRecord, TripsServiceError } from './source-record.js';
 
 import type { DecisionOption } from '../../contract/decision-schemas.js';
@@ -39,6 +39,12 @@ export function restoreDecisionOption(
           .get()
       );
       if (removed.removedAt === null) throw new TripsServiceError('option_not_removed');
+      validateDecisionSources(
+        tx,
+        identity.tripId,
+        removed.affectedSources,
+        removed.validatedSources
+      );
       tx.update(decisionOptions)
         .set({ removedAt: null, updatedAt: new Date().toISOString() })
         .where(eq(decisionOptions.id, identity.id))

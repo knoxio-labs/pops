@@ -34,15 +34,18 @@ from one transactional producer snapshot. It writes only explicit fields, keeps 
 deadline date-only, and never changes linked visits, journeys or stays when choosing
 or reopening a decision. Optional context failures remain independent. Unavailable
 stored memberships retain their exact kind and identity and may be removed without
-revalidating other retained links; newly added memberships require live sources in
-the owning trip. Provenance URIs remain opaque.
+revalidating other retained links. An option's persisted validated membership
+history permits guarded restoration of an unlinked unavailable source; genuinely
+new memberships require live sources in the owning trip. Currently live foreign
+ownership is rejected even for a historical identity. Provenance URIs remain opaque.
 
 Inline fields save on blur and Escape discards the draft. Failed writes and cached
 read failures retain drafts and diagnostics. A newer source arriving during edits
 requires an explicit reload and review; changing the API origin or owning record
 starts a new editor. Undo uses only confirmed own successor revisions under the
 producer's exact one-step revision protocol. Selected-option removal restores the
-same option identity and prior selection atomically. A newer writer or uncertain
-mutation clears Undo. Retries retain their original revision and cannot silently
-rebase an uncertain create or inverse. The host supplies the parent navigation link
-and authenticated query/client context.
+same option identity and prior selection atomically. A confirmed newer revision
+or revision conflict clears stale Undo. Transient failures retain inverse intent;
+retries keep their original revision, including after an unchanged refresh, and
+cannot silently rebase an uncertain create or inverse. The host supplies the parent
+navigation link and authenticated query/client context.
