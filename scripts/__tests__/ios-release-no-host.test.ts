@@ -8,7 +8,6 @@ const config = readFileSync(resolve('clients/ios/mise.toml'), 'utf8');
 const task = config.match(
   /\[tasks\."verify:release-carries-no-host"\][\s\S]*?run = '''([\s\S]*?)'''/
 )?.[1];
-if (task === undefined) throw new Error('Release host verification task is missing.');
 
 const xcodebuild = `#!/usr/bin/env node
 const fs = require('node:fs');
@@ -43,6 +42,7 @@ process.stdout.write(plist.POPSBFMBaseURL);
 `;
 
 function runCheck(fault = 'none', scheme = 'PopsTrips') {
+  if (task === undefined) throw new Error('Release host verification task is missing.');
   const temporaryRoot = resolve('tmp');
   mkdirSync(temporaryRoot, { recursive: true });
   const fixture = mkdtempSync(join(temporaryRoot, 'trips-release-'));
