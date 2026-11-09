@@ -1,0 +1,7 @@
+name: Trip inbox
+question: Organise captured material inline, or open one item?
+status: active
+screen: trips/inbox
+variants:
+  inline: Inline organisation
+  dialog: Open item
