@@ -1,5 +1,7 @@
 import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
+import type { AnySQLiteColumn } from 'drizzle-orm/sqlite-core';
+
 import type { SourceLink, VisitTiming } from '../../contract/schemas.js';
 
 const audit = {
@@ -15,6 +17,10 @@ const audit = {
 export const trips = sqliteTable('trips', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   name: text('name'),
+  destination: text('destination').notNull().default(''),
+  when: text('when_text').notNull().default(''),
+  tagId: text('tag_id'),
+  parentId: integer('parent_id').references((): AnySQLiteColumn => trips.id),
   notes: text('notes').notNull().default(''),
   sourceLinks: text('source_links', { mode: 'json' }).$type<SourceLink[]>().notNull().default([]),
   ...audit,

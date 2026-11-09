@@ -49,14 +49,14 @@ export const tripsContract = c.router(
         method: 'POST',
         path: '/trips',
         body: CreateTripBody,
-        responses: { 201: TripSchema, 400: ErrorBodySchema },
+        responses: { 201: TripSchema, 400: ErrorBodySchema, 503: ErrorBodySchema },
       },
       update: {
         method: 'PATCH',
         path: '/trips/:id',
         pathParams: IdParams,
         body: UpdateTripBody,
-        responses: { 200: TripSchema, ...errors },
+        responses: { 200: TripSchema, ...errors, 503: ErrorBodySchema },
       },
     }),
     places: c.router({

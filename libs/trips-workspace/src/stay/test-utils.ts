@@ -103,6 +103,10 @@ export function workspaceTransport(
         body: {
           id: 7,
           name: 'Source trip',
+          destination: '',
+          when: '',
+          parentId: null,
+          tagId: null,
           notes: '',
           sourceLinks: [],
           createdAt: source.createdAt,

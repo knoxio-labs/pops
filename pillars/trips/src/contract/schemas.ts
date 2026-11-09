@@ -46,10 +46,14 @@ const SourceFields = {
 };
 const AuditFields = { createdAt: TimestampSchema, updatedAt: TimestampSchema };
 
-/** A trip's source metadata, independent of its route and any future arrangements. */
+/** Trip-owned metadata; When stays opaque text and parent/tag references never supply route dates. */
 export const TripSchema = z.object({
   id: IdSchema,
   name: NameSchema.nullable(),
+  destination: z.string(),
+  when: z.string(),
+  tagId: z.string().uuid().nullable(),
+  parentId: IdSchema.nullable(),
   ...SourceFields,
   ...AuditFields,
 });
@@ -72,9 +76,13 @@ export const VisitSchema = z.object({
   ...AuditFields,
 });
 
-/** Source fields accepted when creating a trip; no name or timing is inferred. */
+/** Optional source capture; empty destination/When clears text, null clears associations, and names stay nonblank or null. */
 export const CreateTripBody = z.object({
   name: NameSchema.nullable().optional(),
+  destination: z.string().optional(),
+  when: z.string().optional(),
+  tagId: z.string().uuid().nullable().optional(),
+  parentId: IdSchema.nullable().optional(),
   notes: z.string().optional(),
   sourceLinks: z.array(SourceLinkSchema).optional(),
 });

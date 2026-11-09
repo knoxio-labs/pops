@@ -162,6 +162,15 @@ const repoRoot = resolve(here, '..', '..');
  */
 export const EXPECTATIONS = [
   {
+    consumer: 'trips',
+    producer: 'tags',
+    operationId: 'tags.list',
+    path: '/tags',
+    method: 'get',
+    query: ['includeArchived'],
+    usedBy: 'pillars/trips/src/api/rest/trip-tags.ts',
+  },
+  {
     consumer: 'purchases',
     producer: 'finance',
     operationId: 'transactions.list',

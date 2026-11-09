@@ -3,6 +3,7 @@ import { and, asc, eq } from 'drizzle-orm';
 import { PlaceSchema, TripSchema, VisitSchema } from '../../contract/schemas.js';
 import { places, trips, visits } from '../schema.js';
 import { requireOwnedRecord, TripsServiceError } from './source-record.js';
+import { validateTripAssociations } from './trip-associations.js';
 
 import type {
   Place,
@@ -35,21 +36,28 @@ export function getTrip(db: TripsDb, id: number): Trip {
 
 /** Persist explicit trip metadata; an unnamed trip retains a null name. */
 export function createTrip(db: TripsDb, input: TripInput): Trip {
-  return TripSchema.parse(requireOwnedRecord(db.insert(trips).values(input).returning().get()));
+  return db.transaction((tx) => {
+    validateTripAssociations(tx, input);
+    return TripSchema.parse(requireOwnedRecord(tx.insert(trips).values(input).returning().get()));
+  });
 }
 
 /** Patch only supplied trip fields. */
 export function updateTrip(db: TripsDb, id: number, input: TripInput): Trip {
-  return TripSchema.parse(
-    requireOwnedRecord(
-      db
-        .update(trips)
-        .set({ ...input, updatedAt: new Date().toISOString() })
-        .where(eq(trips.id, id))
-        .returning()
-        .get()
-    )
-  );
+  return db.transaction((tx) => {
+    getTrip(tx, id);
+    validateTripAssociations(tx, input, id);
+    return TripSchema.parse(
+      requireOwnedRecord(
+        tx
+          .update(trips)
+          .set({ ...input, updatedAt: new Date().toISOString() })
+          .where(eq(trips.id, id))
+          .returning()
+          .get()
+      )
+    );
+  });
 }
 
 /** List manually captured place identities without provider inference or deduplication. */

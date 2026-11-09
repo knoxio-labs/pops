@@ -3,6 +3,7 @@ import {
   shutdownPillar,
   type PillarBootstrapHandle,
 } from '@pops/pillar-sdk/bootstrap';
+import { assertSecretFilesReadable } from '@pops/pillar-sdk/pillar-env';
 
 import { openTripsDb } from '../db/index.js';
 import { createTripsApiApp } from './app.js';
@@ -14,6 +15,10 @@ import {
   shouldSelfRegister,
 } from './boot-env.js';
 import { buildTripsManifest } from './manifest.js';
+import { configureTripsServerSdk } from './server-sdk.js';
+
+assertSecretFilesReadable();
+configureTripsServerSdk();
 
 const port = resolvePort();
 const version = resolveVersion();
