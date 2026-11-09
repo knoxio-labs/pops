@@ -34,7 +34,7 @@ export function BusinessWorkspace({
   return (
     <BusinessContext.Provider value={context}>
       <BusinessReview layout={layout} />
-      <main className="mx-auto max-w-2xl space-y-6 p-4 md:p-6">
+      <main className="mx-auto max-w-2xl space-y-6 p-4 pb-24 text-sm leading-6 md:p-6 md:pb-24">
         <div className="flex justify-end">
           <Button
             variant="ghost"
@@ -62,7 +62,9 @@ export function BusinessWorkspace({
         )}
         {findings.length > 0 && (
           <section aria-label="Unavailable references" className="space-y-2 rounded-xl border p-4">
-            <h2 className="text-sm font-medium">Unavailable references</h2>
+            <h2 className="text-sm font-medium leading-5 tracking-normal">
+              Unavailable references
+            </h2>
             {findings.map((finding) => (
               <p key={finding.id} className="text-sm text-muted-foreground">
                 {finding.message}
@@ -81,7 +83,7 @@ function BusinessHero() {
     <header className="space-y-4">
       <DirectoryIdentity contact={state.business} />
       <div
-        className={`flex items-center gap-2 ${state.business.notes ? 'rounded-xl bg-muted/50 p-4' : 'justify-end'}`}
+        className={`flex items-center gap-2 ${state.business.notes ? 'rounded-xl border border-foreground/15 bg-card p-4' : 'justify-end'}`}
       >
         {state.business.notes && (
           <div className="min-w-0 flex-1">

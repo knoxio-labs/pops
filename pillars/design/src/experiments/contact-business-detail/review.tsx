@@ -12,7 +12,7 @@ export function BusinessReview({ layout }: { layout: 'details' | 'locations' }) 
         {(['details', 'locations'] as const).map((id) => (
           <Button key={id} asChild variant={layout === id ? 'secondary' : 'ghost'}>
             <a target="_top" href={`/design/x/contact-business-detail/${id}/s/contacts/business`}>
-              {id === 'details' ? 'Details first' : 'Locations first'}
+              {id === 'details' ? 'Contact methods first' : 'Locations first'}
             </a>
           </Button>
         ))}

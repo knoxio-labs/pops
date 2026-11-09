@@ -33,7 +33,11 @@ export function BusinessEditor(props: EditorProps) {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" className="min-h-11 min-w-11" aria-label={props.label}>
+        <Button
+          variant="ghost"
+          className={`min-h-11 min-w-11 text-sm ${props.add ? 'text-app-accent' : 'text-muted-foreground hover:text-foreground'}`}
+          aria-label={props.label}
+        >
           {props.add ? (
             <Plus className="size-4" aria-hidden />
           ) : (
@@ -42,8 +46,8 @@ export function BusinessEditor(props: EditorProps) {
           {props.add && props.label}
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-80 max-w-full space-y-3">
-        <h3 className="font-medium">{props.label}</h3>
+      <PopoverContent align="end" className="w-80 max-w-full space-y-3 text-sm">
+        <h3 className="text-sm font-semibold leading-5 tracking-normal">{props.label}</h3>
         <EditorForm {...props} close={() => setOpen(false)} />
       </PopoverContent>
     </Popover>

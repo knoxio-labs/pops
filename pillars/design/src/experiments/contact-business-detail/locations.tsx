@@ -1,3 +1,7 @@
+import { BedDouble, Check, MapPin, Plane, Ticket } from 'lucide-react';
+
+import { Badge } from '@pops/ui';
+
 import { visitDateLabel } from '../trip-visit-editor/model';
 import { useBusiness } from './context';
 import { BusinessEditor } from './editor';
@@ -21,11 +25,24 @@ export function BusinessArrangements({
         <article
           key={item.id}
           aria-label={item.title}
-          className={`space-y-1 rounded-lg border border-foreground/25 p-3 ${item.status === 'Purchased' ? 'border-solid' : 'border-dashed'}`}
+          className={`space-y-1 rounded-lg border border-foreground/25 p-3 ${item.status === 'Purchased' ? 'border-solid border-l-2 border-l-app-accent' : 'border-dashed'}`}
         >
-          <div className="flex flex-wrap justify-between gap-2">
-            <h3 className="font-medium">{item.title}</h3>
-            <span className="text-sm text-muted-foreground">{item.status}</span>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-2">
+              <ArrangementIcon kind={item.kind} />
+              <h4 className="text-sm font-semibold leading-5 tracking-normal">{item.title}</h4>
+            </div>
+            <Badge
+              variant="outline"
+              className={
+                item.status === 'Purchased'
+                  ? 'border-transparent bg-app-accent text-app-accent-foreground'
+                  : 'border-foreground/25'
+              }
+            >
+              {item.status === 'Purchased' && <Check aria-hidden />}
+              {item.status}
+            </Badge>
           </div>
           <p className="text-sm">
             {[item.from, item.to].filter(Boolean).map(visitDateLabel).join(' — ')}
@@ -51,14 +68,14 @@ export function BusinessLocations({ groupPeople }: { groupPeople: boolean }) {
   return (
     <section aria-label="Locations" className="space-y-3">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold">Locations</h2>
+        <h2 className="text-base font-semibold leading-6 tracking-normal">Locations</h2>
         <LocationEditor location={{ id: '', label: '', address: '', city: '' }} add />
       </div>
       {state.locations.map((location) => (
         <section
           aria-label={location.label || 'Location'}
           key={location.id}
-          className="space-y-4 rounded-xl bg-muted/30 p-4"
+          className="space-y-3 rounded-xl border border-foreground/20 bg-card p-4"
         >
           <LocationFacts location={location} />
           {groupPeople && (
@@ -69,8 +86,10 @@ export function BusinessLocations({ groupPeople }: { groupPeople: boolean }) {
             />
           )}
           {state.arrangements.some((item) => item.locationId === location.id) && (
-            <div className="space-y-2">
-              <h3 className="text-sm font-medium">Related arrangements</h3>
+            <div className="space-y-2 border-t border-foreground/15 pt-3">
+              <h3 className="text-xs font-medium leading-5 tracking-normal text-muted-foreground">
+                Related arrangements
+              </h3>
               <BusinessArrangements
                 arrangements={state.arrangements.filter((item) => item.locationId === location.id)}
               />
@@ -80,7 +99,9 @@ export function BusinessLocations({ groupPeople }: { groupPeople: boolean }) {
       ))}
       {unresolved.length > 0 && (
         <section className="space-y-2">
-          <h3 className="font-medium">Other related arrangements</h3>
+          <h3 className="text-sm font-semibold leading-5 tracking-normal">
+            Other related arrangements
+          </h3>
           <BusinessArrangements arrangements={unresolved} showLocation />
         </section>
       )}
@@ -124,9 +145,14 @@ function LocationEditor({
 
 function LocationFacts({ location }: { location: BusinessState['locations'][number] }) {
   return (
-    <div className="flex items-start gap-2">
+    <div className="flex items-start gap-3">
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-app-accent/15 text-app-accent">
+        <MapPin className="size-4" aria-hidden />
+      </span>
       <div className="min-w-0 flex-1 space-y-2">
-        {location.label && <h3 className="font-medium">{location.label}</h3>}
+        {location.label && (
+          <h3 className="text-base font-semibold leading-6 tracking-normal">{location.label}</h3>
+        )}
         {location.address && (
           <div>
             <p className="text-xs text-muted-foreground">Address</p>
@@ -143,4 +169,10 @@ function LocationFacts({ location }: { location: BusinessState['locations'][numb
       <LocationEditor location={location} />
     </div>
   );
+}
+
+function ArrangementIcon({ kind }: { kind: BusinessState['arrangements'][number]['kind'] }) {
+  const icons = { stay: BedDouble, journey: Plane, event: Ticket };
+  const Icon = icons[kind];
+  return <Icon className="size-4 shrink-0 text-app-accent" aria-hidden />;
 }

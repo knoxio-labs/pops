@@ -23,14 +23,16 @@ export function BusinessPeople({
   const { state } = useBusiness();
   return (
     <section aria-label={title} className="space-y-3">
-      <h2 className="text-lg font-semibold">{title}</h2>
-      <div className="divide-y rounded-xl bg-muted/50 px-4">
+      <h2 className="text-base font-semibold leading-6 tracking-normal">{title}</h2>
+      <div className="divide-y divide-foreground/10 rounded-xl border border-foreground/15 bg-card px-4">
         {people.map((person) => {
           const contact = state.contacts.find((item) => item.id === person.contactId);
           return (
             <div className="flex items-center gap-1 py-2" key={person.id}>
               <div className="min-w-0 flex-1 space-y-1 py-1">
-                <p className="font-medium">{businessContactLabel(state, person.contactId)}</p>
+                <p className="text-sm font-semibold leading-5 tracking-normal">
+                  {businessContactLabel(state, person.contactId)}
+                </p>
                 {person.role && (
                   <div>
                     <p className="text-xs text-muted-foreground">Role</p>
