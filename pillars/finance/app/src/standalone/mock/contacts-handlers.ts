@@ -18,6 +18,7 @@ import type {
   AddressMutation,
   EntitiesLookupResponses,
   EntityResponse,
+  EntityReferenceResponse,
   HealthResponse,
   IdentityGroup,
   MergeResult,
@@ -52,6 +53,16 @@ const entityById: MockHandler = ({ params }) => {
 };
 
 const mutation = { data: firstEntity, message: 'ok' };
+
+const entityReference: MockHandler = ({ params }) => {
+  const entity = CONTACT_ENTITIES.find((entity) => entity.id === params['id']);
+  if (entity === undefined) return notFound('entity', 'contacts.resource.not_found');
+  const body: EntityReferenceResponse = {
+    canonicalId: entity.id,
+    uri: `pops:contacts/contact/${entity.id}`,
+  };
+  return { body };
+};
 
 const addressCreated: MockHandler = ({ params }) => {
   const body: AddressMutation = {
@@ -131,6 +142,7 @@ export const contactsHandlers: MockHandlers = {
     fetchedAt: '2026-09-05T08:00:00.000Z',
   }),
   'GET /entities/{id}': entityById,
+  'GET /entities/{id}/reference': entityReference,
   'PATCH /entities/{id}': ok(mutation),
   'DELETE /entities/{id}': ok({ message: 'deleted' }),
   'GET /entities/{id}/contact-points': ok({ data: [contactPoint.data] }),
