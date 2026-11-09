@@ -18,6 +18,12 @@ internal func tripReferenceFindings(_ snapshot: TripSnapshot) -> [TripReferenceF
         return TripReferenceFinding(
             id: "stay-\(stay.id)", message: "\(stay.name ?? "Stay"): visit \(visit) unavailable")
     }
+    let missingEvents = snapshot.events.compactMap { event -> TripReferenceFinding? in
+        guard let visit = event.visitId, !visits.contains(visit) else { return nil }
+        return TripReferenceFinding(
+            id: "event-\(event.id)", message: "\(event.name ?? "Event"): visit \(visit) unavailable"
+        )
+    }
     let missingJourneys = snapshot.journeyGroups.flatMap { group in
         ([group.currentJourneyId] + group.alternativeJourneyIds).filter { !journeys.contains($0) }
             .map {
@@ -25,5 +31,5 @@ internal func tripReferenceFindings(_ snapshot: TripSnapshot) -> [TripReferenceF
                     id: "group-\(group.id)-\($0)", message: "Journey \($0) unavailable")
             }
     }
-    return missingPlaces + missingVisits + missingJourneys
+    return missingPlaces + missingVisits + missingEvents + missingJourneys
 }

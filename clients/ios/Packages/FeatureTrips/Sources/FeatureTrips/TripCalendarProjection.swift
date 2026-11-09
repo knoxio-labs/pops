@@ -21,6 +21,14 @@ internal func tripCalendarFacts(_ snapshot: TripSnapshot, zone: TimeZone) -> [Tr
                     source, day: stay.timing.departure, instant: source.end, label: "Check-out",
                     zone: zone),
             ].compactMap { $0 }
+        case .event(let event):
+            return [
+                calendarFact(
+                    source, day: event.timing.start, instant: source.start, label: "Start",
+                    zone: zone),
+                calendarFact(
+                    source, day: event.timing.end, instant: source.end, label: "End", zone: zone),
+            ].compactMap { $0 }
         case .journey(let journey):
             return journey.legs.flatMap { leg in
                 [

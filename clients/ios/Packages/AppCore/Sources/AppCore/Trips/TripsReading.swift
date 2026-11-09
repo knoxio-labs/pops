@@ -16,11 +16,14 @@ public struct TripSnapshot: Codable, Hashable, Sendable {
     public let journeys: [TripJourney]
     public let journeyGroups: [TripJourneyGroup]
     public let stays: [TripStay]
+    public let events: [TripEvent]
+    public let documentAssociations: [TripDocumentAssociation]
 
     /// Creates an aggregate without inferring relationships or selecting alternatives.
     public init(
         trip: TripRecord, places: [TripPlace], visits: [TripVisit], journeys: [TripJourney],
-        journeyGroups: [TripJourneyGroup], stays: [TripStay]
+        journeyGroups: [TripJourneyGroup], stays: [TripStay], events: [TripEvent],
+        documentAssociations: [TripDocumentAssociation]
     ) {
         self.trip = trip
         self.places = places
@@ -28,5 +31,7 @@ public struct TripSnapshot: Codable, Hashable, Sendable {
         self.journeys = journeys
         self.journeyGroups = journeyGroups
         self.stays = stays
+        self.events = events
+        self.documentAssociations = documentAssociations
     }
 }

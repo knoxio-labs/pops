@@ -44,7 +44,8 @@ internal struct TripsSelectionRaceTests {
             trip: TripRecord(
                 id: 2, name: "Other trip", destination: "", when: "", tagId: nil,
                 parentId: nil, notes: "", sourceLinks: []),
-            places: [], visits: [], journeys: [], journeyGroups: [], stays: [])
+            places: [], visits: [], journeys: [], journeyGroups: [], stays: [], events: [],
+            documentAssociations: [])
     }
 }
 

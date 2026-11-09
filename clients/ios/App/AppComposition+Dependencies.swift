@@ -3,6 +3,11 @@ import Auth
 import BFMClient
 
 extension AppComposition {
+    internal func documentsRepository(for device: PairedDevice) -> any DocumentsReading {
+        BFMDocumentsRepository(
+            client: authenticated(device), baseURL: device.baseURL, authorizer: streamAuthorizer)
+    }
+
     internal func tripsRepository(for device: PairedDevice) -> any TripsReading {
         BFMTripsRepository(client: authenticated(device))
     }

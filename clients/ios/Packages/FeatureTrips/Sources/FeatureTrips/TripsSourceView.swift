@@ -11,6 +11,7 @@ internal struct TripsSourceView: View {
             switch source {
             case .stay(let stay): stayFields(stay)
             case .journey(let journey): journeyFields(journey)
+            case .event(let event): eventFields(event)
             }
         }
         .font(.popsBody)
@@ -57,6 +58,28 @@ internal struct TripsSourceView: View {
             references("Leg source", leg.sourceLinks)
         }
         references("Source", journey.sourceLinks)
+    }
+
+    @ViewBuilder private func eventFields(_ event: TripEvent) -> some View {
+        Section {
+            fact("Intention", event.intention)
+            fact("Arrangement", event.arrangement)
+            fact("Purchase", event.purchase)
+            fact("Start", event.timing.start.map(TripClock.dayLabel))
+            fact("Start time", event.timing.startTime)
+            fact("End", event.timing.end.map(TripClock.dayLabel))
+            fact("End time", event.timing.endTime)
+            fact("Time zone", event.timing.timeZone)
+            fact("Reference", event.reference)
+            fact("Address", event.address)
+            fact("Source URL", event.sourceUrl)
+            fact("Ticket URL", event.ticketUrl)
+            fact("Notes", event.notes)
+        }
+        references("Source", event.sourceLinks)
+        references("Venue references", event.venueLinks)
+        references("Organiser references", event.organiserLinks)
+        references("Document references", event.documentLinks)
     }
 
     @ViewBuilder private func endpoint(_ label: String, _ endpoint: TripEndpoint) -> some View {

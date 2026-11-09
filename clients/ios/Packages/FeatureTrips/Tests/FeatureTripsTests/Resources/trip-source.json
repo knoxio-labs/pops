@@ -105,9 +105,7 @@
       "id": 1,
       "tripId": 1,
       "currentJourneyId": 1,
-      "alternativeJourneyIds": [
-        2
-      ],
+      "alternativeJourneyIds": [2],
       "revision": 1,
       "createdAt": "",
       "updatedAt": ""
@@ -180,5 +178,7 @@
       "createdAt": "",
       "updatedAt": ""
     }
-  ]
+  ],
+  "events": [],
+  "documentAssociations": []
 }

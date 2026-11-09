@@ -55,7 +55,8 @@ internal struct TripSourceContextTests {
         let original = try TripTestSources.snapshot()
         let snapshot = TripSnapshot(
             trip: original.trip, places: [], visits: original.visits, journeys: [],
-            journeyGroups: original.journeyGroups, stays: original.stays)
+            journeyGroups: original.journeyGroups, stays: original.stays, events: original.events,
+            documentAssociations: original.documentAssociations)
         let findings = tripReferenceFindings(snapshot)
         #expect(findings.map(\.id) == ["visit-4", "group-1-1", "group-1-2"])
         #expect(snapshot.stays == original.stays)

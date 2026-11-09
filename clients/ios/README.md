@@ -14,7 +14,7 @@ ordinary pairing and session restoration, BFM bootstrap, the shared error and
 connection banners, and the same Ego sheet. It pairs independently of Pops;
 its bundle identifier isolates its credentials and stored device identity.
 The paired root is `TripsContentView`, which supplies an authenticated `TripsReading` to
-`FeatureTrips.TripsRootView`. Its bootstrap surface contains only Ego and binds no Inventory
+`FeatureTrips.TripsRootView`, alongside an independently authenticated Documents-original reader. Its bootstrap surface contains only Ego and binds no Inventory
 replica or sync. Trips reads its source records through the BFM.
 Ego availability comes from the BFM and turns carry `app: "trips"` context.
 

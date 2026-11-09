@@ -36,6 +36,7 @@ internal struct TripSourceStateLines: View {
             }
             if let address = stay.address, !address.isEmpty { Text(address).font(.popsCaption) }
         }
+        if case .event(let event) = source { TripEventStateLines(event: event) }
         if let start = source.start, let end = source.end, start >= end {
             Label("Recorded times conflict", systemImage: "exclamationmark.triangle")
                 .font(.popsCaption).foregroundStyle(Color.popsWarning)

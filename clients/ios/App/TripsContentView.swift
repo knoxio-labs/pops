@@ -38,8 +38,11 @@ internal struct TripsContentView: View {
 
     @ViewBuilder private var content: some View {
         if case .paired(let device) = composition.session.state {
-            TripsRootView(repository: composition.tripsRepository(for: device))
-                .id(device)
+            TripsRootView(
+                repository: composition.tripsRepository(for: device),
+                documents: composition.documentsRepository(for: device)
+            )
+            .id(device)
         } else {
             TripsPlaceholderView()
         }

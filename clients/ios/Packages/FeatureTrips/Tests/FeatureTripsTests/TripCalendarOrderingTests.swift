@@ -38,7 +38,7 @@ internal struct TripCalendarOrderingTests {
         let original = try TripTestSources.snapshot()
         let snapshot = TripSnapshot(
             trip: original.trip, places: [], visits: [], journeys: [], journeyGroups: [],
-            stays: stays)
+            stays: stays, events: [], documentAssociations: [])
         return tripCalendarFacts(snapshot, zone: try #require(TimeZone(identifier: "UTC")))
     }
 

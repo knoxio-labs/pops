@@ -27,6 +27,7 @@ internal actor ScriptedRawSession: BFMRawHTTPSession {
 
     private var replies: [Reply]
     internal private(set) var recorded: [Recorded] = []
+    internal private(set) var downloads: [URL] = []
     private let failure: URLError?
 
     internal init(_ replies: [Reply], failure: URLError? = nil) {
@@ -58,6 +59,7 @@ internal actor ScriptedRawSession: BFMRawHTTPSession {
         let (response, body) = try next(request, kind: "download")
         let url = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
         try body.write(to: url)
+        downloads.append(url)
         return (response, url)
     }
 

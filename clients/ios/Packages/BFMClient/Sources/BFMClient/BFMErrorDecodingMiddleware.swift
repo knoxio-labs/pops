@@ -166,7 +166,7 @@ extension PopsError {
         return nil
     }
 
-    private static var offline: PopsError {
+    internal static var offline: PopsError {
         PopsError(
             code: "ios.net.offline",
             message: "The request could not reach the server",
@@ -175,7 +175,7 @@ extension PopsError {
         )
     }
 
-    private static var timeout: PopsError {
+    internal static var timeout: PopsError {
         PopsError(
             code: "ios.net.timeout",
             message: "Request timed out",

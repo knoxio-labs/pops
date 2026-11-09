@@ -2,15 +2,18 @@ import AppCore
 import DesignSystem
 import SwiftUI
 
-/// Approved native Trips navigation backed only by injected source reads; it performs no writes or offline downloads.
+/// Approved native Trips navigation backed only by injected source reads.
+/// It performs no trip writes and opens files only after an actual authenticated download.
 public struct TripsRootView: View {
     @State private var model: TripsModel
     @State private var tab = TripsTab.today
     @State private var calendar = false
     @State private var people = false
+    private let documents: any DocumentsReading
 
-    /// Creates the feature with an authenticated repository supplied by the app's composition root.
-    public init(repository: any TripsReading) {
+    /// Creates the feature with authenticated trip and original-document readers from the composition root.
+    public init(repository: any TripsReading, documents: any DocumentsReading) {
+        self.documents = documents
         _model = State(initialValue: TripsModel(repository: repository))
     }
 
@@ -30,7 +33,9 @@ public struct TripsRootView: View {
                 stack("Bookings") { snapshot in TripsBookingsView(snapshot: snapshot) }
             }
             Tab("Documents", systemImage: "doc.fill", value: TripsTab.documents) {
-                stack("Documents") { snapshot in TripsDocumentsView(snapshot: snapshot) }
+                stack("Documents") { snapshot in
+                    TripsDocumentsView(snapshot: snapshot, repository: documents)
+                }
             }
             Tab(value: TripsTab.search, role: .search) {
                 NavigationStack {

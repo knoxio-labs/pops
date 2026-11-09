@@ -29,7 +29,7 @@ public struct BFMTripsRepository: TripsReading {
             output = try await client.generated.mobileTrips_getTrip(path: .init(id: id))
         } catch let error as ClientError {
             if BFMRepositoryFailure.statusCode(in: error) == 404 { return nil }
-            throw tripReadFailure(error, operation: "mobileTrips.getTrip")
+            throw bfmReadFailure(error, operation: "mobileTrips.getTrip")
         }
         switch output {
         case .ok(let ok):
@@ -87,7 +87,7 @@ public struct BFMTripsRepository: TripsReading {
             if cursor != nil, BFMRepositoryFailure.code(in: error) == "invalid_cursor" {
                 throw TripReadFailure.staleCursor
             }
-            throw tripReadFailure(error, operation: "mobileTrips.listTrips")
+            throw bfmReadFailure(error, operation: "mobileTrips.listTrips")
         }
         switch output {
         case .ok(let ok): return try tripDomain(try ok.body.json)

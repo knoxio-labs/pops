@@ -10,6 +10,11 @@ internal func tripSourceMatches(_ source: TripSource, query: String, places: [Tr
         fields += [stay.address, stay.reference, stay.notes, stay.kind, stay.status].compactMap {
             $0
         }
+    case .event(let event):
+        fields += [
+            event.address, event.reference, event.notes, event.intention, event.arrangement,
+            event.purchase, event.sourceUrl, event.ticketUrl,
+        ].compactMap { $0 }
     case .journey(let journey):
         fields += [journey.reference, journey.notes].compactMap { $0 }
         fields += journey.legs.flatMap {

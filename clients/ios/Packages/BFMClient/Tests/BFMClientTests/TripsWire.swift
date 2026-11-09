@@ -22,7 +22,8 @@ internal enum TripsWire {
 
     internal static var detail: String {
         """
-        {"trip":\(trip(1)),"places":[],"visits":[],"journeyGroups":[],"stays":[],"journeys":[
+        {"trip":\(trip(1)),"places":[],"visits":[],"journeyGroups":[],"stays":[],\
+        "events":[],"documentAssociations":[],"journeys":[
         {"id":3,"tripId":1,"name":null,"reference":"SRC123","notes":"","sourceLinks":[],"buffers":{},\
         "createdAt":"2026-01-01T00:00:00Z","updatedAt":"2026-01-01T00:00:00Z",\
         "legs":[\(leg(22)),\(leg(11))]}]}

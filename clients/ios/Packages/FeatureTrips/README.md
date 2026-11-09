@@ -1,11 +1,13 @@
 # FeatureTrips
 
-`TripsRootView(repository:)` contains the approved native Today and trip-navigation content. The app supplies an authenticated `TripsReading`; this package imports neither the generated client nor another feature. `BFMTripsRepository(client:)` implements that seam in BFMClient.
+`TripsRootView(repository:documents:)` contains the approved native Today and trip-navigation content. The app supplies authenticated `TripsReading` and `DocumentsReading`; this package imports neither the generated client nor another feature. `BFMTripsRepository(client:)` implements that seam in BFMClient.
 
 Trip selection is explicit and shared across the native tabs. The selected source snapshot supplies route order, source sheets, the calendar and bookings. Now uses valid active intervals; Next includes known future starts across supported record kinds in chronological order. Missing clocks or zones never acquire a midnight or UTC fallback. Ambiguous and nonexistent local clocks stay unresolved.
 
 Visits retain the service's order. Today, Plan and Calendar exclude alternatives only through explicit group membership. Bookings and search retain every original, including alternatives; purchase never selects a journey. Booking intention, arrangement and purchase stay independent. Past bookings use explicit source end times, not audit timestamps. Source endpoints and their original zones remain visible in their own record.
 
-The current read contract supplies trips, places, visits, journeys and stays. It does not supply events, linked people, a document catalogue, offline file availability or change history. The Documents tab presents recorded stay document references and states its file-access limitation. People states the missing capability. Neither implies that a reference is an accessible file or that unreturned data is empty.
+The current read contract supplies trips, places, visits, journeys, stays, events and explicit document associations. Every event remains visible with its independent intention, arrangement and purchase. Documents originals use their own IDs and independently granted `documents.read` service; Inventory link IDs and opaque source URIs never substitute for originals. Trip documents lead the ordered visit groups; journeys stay separate because no mixed route order is published. Multiple associations preserve one original identity and remain visible in its own source page.
 
-Tests use fictional records only inside test resources. Production has no fixture fallback, write path, persisted cache or simulated upload/download operation.
+Document metadata does not establish file availability. Open File streams actual bytes through authenticated BFM access and uses the standard native preview. A preview owns a transient file removed on dismissal; it is not a persistent offline copy. Missing originals, unavailable services and missing grants remain distinct from an empty association set. Linked people, offline catalogue availability and change history are not part of the current read contract. Association creation instants remain provenance and never determine route order or completed travel.
+
+Tests use fictional records only inside test resources. Production has no fixture fallback, write path, persisted offline cache or simulated upload/download operation.

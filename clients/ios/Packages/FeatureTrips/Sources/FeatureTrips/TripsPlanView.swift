@@ -38,6 +38,7 @@ internal struct TripsPlanView: View {
                             }
                         }
                     }
+                    otherEvents
                     let unlinked = snapshot.stays.filter { stay in
                         !snapshot.visits.contains { $0.id == stay.visitId }
                     }
@@ -49,6 +50,19 @@ internal struct TripsPlanView: View {
                             }
                         }
                     }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder private var otherEvents: some View {
+        let events = snapshot.events.filter { event in
+            !snapshot.visits.contains { $0.id == event.visitId }
+        }
+        if !events.isEmpty {
+            Section("Other Events") {
+                ForEach(events) {
+                    TripsSourceRow(source: .event($0), zone: zone, places: snapshot.places)
                 }
             }
         }
@@ -71,6 +85,9 @@ internal struct TripsPlanView: View {
             if !visit.notes.isEmpty { Text(visit.notes).font(.popsSubheadline) }
         }
         .frame(minHeight: PopsSize.touchTarget, alignment: .leading)
+        ForEach(snapshot.events.filter { $0.visitId == visit.id }) {
+            TripsSourceRow(source: .event($0), zone: zone, places: snapshot.places)
+        }
         ForEach(snapshot.stays.filter { $0.visitId == visit.id }) {
             TripsSourceRow(source: .stay($0), zone: zone, places: snapshot.places)
         }
