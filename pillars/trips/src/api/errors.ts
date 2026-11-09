@@ -59,4 +59,16 @@ export const tripsErrors = defineErrors('trips', {
       'Order must contain every existing member of the selected route or journey exactly once.',
     retryable: false,
   },
+  association_invalid: {
+    area: 'document',
+    status: 400,
+    message: 'Choose a document target belonging to this trip.',
+    retryable: false,
+  },
+  association_exists: {
+    area: 'document',
+    status: 409,
+    message: 'This document is already linked to the selected trip target.',
+    retryable: false,
+  },
 });

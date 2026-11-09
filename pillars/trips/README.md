@@ -85,6 +85,13 @@ same explicit URI/optional-label contract. These links are opaque, retained even
 when their source is unavailable, and do not assert contact/document resolution
 or transfer ownership. Deleting a stay removes only that source record.
 
+Trips document associations use `POST/GET /trips/:tripId/document-associations`
+and `DELETE /trips/:tripId/document-associations/:id`. They retain the numeric
+Documents-owned Paperless identity and an explicit trip, visit, journey or stay
+target. Targets must belong to the route trip. Unlinking removes only the
+association; it does not modify the original document. Existing stay
+`documentLinks` remain opaque source references and are not rewritten.
+
 A stay patch preserves omitted fields. Supplied `timing` replaces the **complete**
 timing object, so `{}` clears it and `{ arrival: "2028-01-16" }` removes any
 previous departure, clocks and zone. Arrays likewise replace complete arrays;
