@@ -6,6 +6,24 @@ That pillar is the BFM. Its contract is vendored here and a Swift client is gene
 
 The consequence worth internalising before changing anything here: this app is **distributed, not deployed**. It leaves through App Store Connect onto hardware the operator does not control, so a build already on a phone keeps calling yesterday's contract for as long as its owner declines to update. Every other consumer of a pillar contract in this repo redeploys with its producer; this one cannot.
 
+## Standalone Trips shell
+
+`PopsTrips` is a separate iPhone app built from the same shell sources and SPM
+packages. Its entry point, `App/TripsApp.swift`, selects the Trips experience:
+ordinary pairing and session restoration, BFM bootstrap, the shared error and
+connection banners, and the same Ego sheet. It pairs independently of Pops;
+its bundle identifier isolates its credentials and stored device identity.
+The paired root is `TripsContentView`, with a local dummy screen. Its bootstrap surface contains
+only Ego and binds no Inventory replica, sync or domain repositories.
+Ego availability comes from the BFM and turns carry `app: "trips"` context.
+
+Select the `PopsTrips` scheme in Xcode, or run
+`mise run install:phone PopsTrips` to install its local flavour alongside Pops.
+The ordinary simulator test build also builds this target. Release carries no
+server address; scan a pairing QR or enter the server and code as in Pops.
+Trips does not register the shared `pops` URL scheme or Inventory background tasks.
+`mise icon:ios` regenerates its plane icon and local badge alongside the Pops icons.
+
 ## Building it
 
 ```bash

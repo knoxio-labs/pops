@@ -57,8 +57,8 @@ select_device() {
 cmd_install() {
     local scheme="${1:-Pops}"
     case "$scheme" in
-        Pops | PopsPlayground) ;;
-        *) die "expected 'Pops' or 'PopsPlayground', got '${scheme}'." ;;
+        Pops | PopsPlayground | PopsTrips) ;;
+        *) die "expected 'Pops', 'PopsPlayground' or 'PopsTrips', got '${scheme}'." ;;
     esac
     [ -f Pops.xcodeproj/project.pbxproj ] || die "no Pops.xcodeproj here; run 'mise run generate' in clients/ios first."
 
