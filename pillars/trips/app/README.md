@@ -1,6 +1,6 @@
 # Trips browser app
 
-The shell loads `dist/remote/trips.js` and `trips.css` from the Trips manifest. The app exposes the grouped home, trip metadata settings, and route adapters for the `@pops/trips-workspace` stay and journey editors. It owns no database and uses generated Trips and Tags clients at the shell's authenticated same-origin proxy paths.
+The shell loads `dist/remote/trips.js` and `trips.css` from the Trips manifest. The app exposes the grouped home, trip metadata settings, a trip calendar, and route adapters for the `@pops/trips-workspace` stay and journey editors. It owns no database and uses generated Trips and Tags clients at the shell's authenticated same-origin proxy paths.
 
 Home groups use the first ordered visit's arrival and the last visit's departure, relative to the viewer's local calendar day. Missing, invalid, or contradictory outer dates remain in Other. Trip titles use trimmed custom name, then trimmed destination, then the translated Trip label. `when` is opaque source text and never supplies route dates.
 
@@ -19,3 +19,12 @@ Run the unit's discovered mise tasks for tests, typecheck, and the isolated remo
 REST operations and does not infer mixed route placement or alternative membership.
 Use journey replaces this literal source URL after selection succeeds; selection Undo
 persists its own revisioned inverse before restoring the original viewed URL.
+
+## Calendar
+
+The selected trip preview links to `/trips/:tripId/calendar`. Its exported calendar
+workspace reads independent journey, stay and event sources through the generated
+Trips transport, requires an explicit display zone, and opens exact owning editor
+routes. Unavailable collections render retryable errors, retaining a prior complete
+read during refresh failures. Calendar date bounds remain separate from resolved
+source clocks; the optional journey window uses the owning timing endpoint.

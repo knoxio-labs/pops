@@ -10,6 +10,7 @@ import {
   updateJourneyLeg,
 } from '../../db/services/journey-legs.js';
 import { getJourneyTiming } from '../../db/services/journey-timing.js';
+import { getJourneyWorkspace } from '../../db/services/journey-workspace.js';
 import {
   createJourney,
   deleteJourney,
@@ -28,6 +29,11 @@ export function makeJourneyHandlers(
   db: TripsDb
 ): ReturnType<typeof server.router<typeof journeysContract>> {
   return server.router(journeysContract, {
+    workspace: ({ params }) =>
+      withTripsErrors(() => ({
+        status: 200 as const,
+        body: getJourneyWorkspace(db, params.tripId, params.id),
+      })),
     timing: ({ params }) =>
       withTripsErrors(() => ({
         status: 200 as const,

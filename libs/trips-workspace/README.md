@@ -61,3 +61,20 @@ harness, then enter real trip/stay IDs. Its proxy targets the local Trips API on
 The harness is a development entry, not shell navigation. Shell routes, remote
 assets and deployment activation are tracked by POPS-6155. Activity context is
 tracked by POPS-6134; derived stay findings remain under POPS-6147.
+
+`CalendarWorkspace({ tripId, locale, onOpenSource, client? })` projects complete journey,
+workspace/group, stay and event reads onto the approved clock rail. Its host opens
+exact source identities. Only explicit journey groups exclude alternative journeys;
+every event intention remains visible. Source clocks and zones remain independent.
+Journey workspace reads atomically couple source metadata and live legs to their
+exact timing projection. Foreign identities or incomplete timing membership fail
+with a retryable diagnostic instead of invented unknown clocks.
+The user chooses a display zone, inclusive date bounds, kind, and optional journey
+window. Journey windows come directly from usable owning timing projections.
+Floating dates are never midnight instants; complete skipped/repeated source clocks
+remain unresolved. Recorded boundaries and clipped ongoing intervals keep projection
+work proportional to sources rather than the number of days selected. Stay occupancy
+ends before checkout. Floating Event endpoints imply no intermediate occupancy. Unknown dates and chronology issues remain available to open.
+Required read failures never become empty collections; failed background refreshes
+retain the last complete read and explicit retry. The standalone `/calendar/:tripId`
+route mounts this workspace; source opening targets the shell's literal source paths.

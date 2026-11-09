@@ -8,6 +8,9 @@ import type { TripsPageSlot } from '@pops/trips/pages';
 const HomePage = lazy(() =>
   import('./home/HomePage').then((module) => ({ default: module.HomePage }))
 );
+const CalendarPage = lazy(() =>
+  import('./CalendarPage').then((module) => ({ default: module.CalendarPage }))
+);
 const StayPage = lazy(() => import('./StayPage').then((module) => ({ default: module.StayPage })));
 const JourneyPage = lazy(() =>
   import('./JourneyPage').then((module) => ({ default: module.JourneyPage }))
@@ -18,6 +21,7 @@ const SettingsPage = lazy(() =>
 /** Implemented source-backed slots resolved by the shell's registry-driven remote loader. */
 export const bundles = {
   'trips-home': HomePage,
+  'trips-calendar': CalendarPage,
   'trips-stay': StayPage,
   'trips-journey': JourneyPage,
   'trips-settings': SettingsPage,
@@ -25,6 +29,7 @@ export const bundles = {
 /** Local route projection used only by component hosts and development integration. */
 export const routes: RouteObject[] = [
   { index: true, element: <HomePage /> },
+  { path: ':tripId/calendar', element: <CalendarPage /> },
   { path: ':tripId/stays/:stayId', element: <StayPage /> },
   { path: ':tripId/journeys/:journeyId', element: <JourneyPage /> },
   { path: ':tripId/settings', element: <SettingsPage /> },

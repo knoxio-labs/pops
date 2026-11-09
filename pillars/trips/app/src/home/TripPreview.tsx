@@ -44,6 +44,9 @@ export function TripPreview({
           </p>
         )}
       </header>
+      <Button asChild variant="outline" className="min-h-11">
+        <a href={`/trips/${trip.id}/calendar`}>{t('calendar')}</a>
+      </Button>
       <PreviewRoute visits={visits} places={places} locale={locale} />
       {trip.notes && (
         <section className="space-y-2 rounded-xl border border-border bg-card p-4">
