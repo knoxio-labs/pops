@@ -460,6 +460,12 @@ const BFM_MIN_ROUTES_WITH_FIELDS = 5;
 export const BFM_ROUTES = [
   {
     method: 'get',
+    path: '/mobile/trips',
+    handlerFile: 'pillars/bfm/src/api/rest/mobile-trips-handlers.ts',
+    handlerKey: 'listTrips',
+  },
+  {
+    method: 'get',
     path: '/mobile/ego/conversations',
     handlerFile: 'pillars/bfm/src/api/rest/mobile-ego-handlers.ts',
     handlerKey: 'listConversations',

@@ -30,11 +30,12 @@ describe('Trips manifest', () => {
     expect(manifest.nav).not.toHaveProperty('color');
   });
 
-  it('publishes exactly the implemented home, stay, and settings routes', () => {
+  it('publishes exactly the implemented home, stay, journey and settings routes', () => {
     const manifest = buildTripsManifest('1.2.3');
     expect(manifest.pages).toEqual([
       { path: '', index: true, bundleSlot: 'trips-home' },
       { path: ':tripId/stays/:stayId', bundleSlot: 'trips-stay' },
+      { path: ':tripId/journeys/:journeyId', bundleSlot: 'trips-journey' },
       { path: ':tripId/settings', bundleSlot: 'trips-settings' },
     ]);
     expect(manifest.pages).toEqual(TRIPS_PAGES);
@@ -50,7 +51,14 @@ describe('Trips manifest', () => {
       version: '1.2.3',
       tag: 'contract-trips@v1.2.3',
     });
-    expect(manifest.routes.queries).toHaveLength(21);
+    expect(manifest.routes.queries).toHaveLength(22);
+    expect(manifest.routes.queries).toContain('trips.documentAssociations.list');
+    expect(manifest.routes.mutations).toEqual(
+      expect.arrayContaining([
+        'trips.documentAssociations.create',
+        'trips.documentAssociations.delete',
+      ])
+    );
     expect(manifest.routes.mutations).toContain('trips.visits.reorder');
     expect(manifest.routes.mutations).toEqual(
       expect.arrayContaining([

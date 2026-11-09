@@ -2,6 +2,7 @@ import { and, asc, eq } from 'drizzle-orm';
 
 import { EventSchema } from '../../contract/event-schemas.js';
 import { events } from '../schema.js';
+import { deleteDocumentAssociationsForTarget } from './document-association-cleanup.js';
 import { getTrip, getVisit } from './records.js';
 import { requireOwnedRecord } from './source-record.js';
 
@@ -76,13 +77,20 @@ export function updateEvent(db: TripsDb, tripId: number, id: number, input: Even
   );
 }
 
-/** Remove one source event without changing visits, contacts, documents or external bookings. */
+/** Remove one event and its document associations atomically without changing linked originals. */
 export function deleteEvent(db: TripsDb, tripId: number, id: number): void {
-  requireOwnedRecord(
-    db
-      .delete(events)
-      .where(and(eq(events.tripId, tripId), eq(events.id, id)))
-      .returning()
-      .get()
+  db.transaction(
+    (tx) => {
+      getEvent(tx, tripId, id);
+      deleteDocumentAssociationsForTarget(tx, tripId, 'event', id);
+      requireOwnedRecord(
+        tx
+          .delete(events)
+          .where(and(eq(events.tripId, tripId), eq(events.id, id)))
+          .returning()
+          .get()
+      );
+    },
+    { behavior: 'immediate' }
   );
 }

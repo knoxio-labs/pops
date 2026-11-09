@@ -65,6 +65,7 @@ import {
   MOBILE_UPSTREAM_RESPONSES,
   MobilePageLimit,
 } from './rest-mobile-responses.js';
+import { mobileTripsContract } from './rest-mobile-trips.js';
 import { bfmOperatorContract } from './rest-operator.js';
 import { MobileReceiptUploadBodySchema as MobileReceiptExtractBodySchema } from './rest-schemas.js';
 import {
@@ -284,6 +285,7 @@ export const bfmContract = c.router(
     mobile: mobileContract,
     mobileContacts: mobileContactsContract,
     mobileEgo: mobileEgoContract,
+    mobileTrips: mobileTripsContract,
     mobileBarcode: mobileBarcodeContract,
     mobileFinance: mobileFinanceContract,
     mobileInventory: mobileInventoryContract,
