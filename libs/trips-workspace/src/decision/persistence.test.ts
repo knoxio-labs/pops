@@ -8,7 +8,7 @@ import { expect, it } from 'vitest';
 import { unwrap } from '@pops/pillar-sdk/client';
 
 import { createClient } from '../trips-api/client';
-import { journeysDelete, journeysGet } from '../trips-api/sdk.gen';
+import { decisionOptionsUpdate, journeysDelete, journeysGet } from '../trips-api/sdk.gen';
 import { applyDecisionCommand, loadDecision } from './api';
 import { createDecisionEditor } from './editor';
 
@@ -131,6 +131,30 @@ it(
         )
       ).toBe(false);
       expect(await loadDecision(props)).toEqual(restored);
+      expect(
+        await editor.commit(
+          { kind: 'edit-option', id: identity.optionId, fields: { notes: 'Own confirmed note' } },
+          'Edit notes'
+        )
+      ).toBe(true);
+      unwrap(
+        await decisionOptionsUpdate({
+          client: props.client,
+          path: { tripId: identity.tripId, decisionId: identity.decisionId, id: identity.optionId },
+          body: { expectedRevision: 4, notes: 'Concurrent writer note' },
+        })
+      );
+      expect(await editor.undo()).toBe(false);
+      expect(editor.getState()).toMatchObject({ undoCount: 0, conflict: true });
+      expect(await loadDecision(props)).toMatchObject({
+        decision: { revision: 5 },
+        options: [
+          {
+            notes: 'Concurrent writer note',
+            affectedSources: [{ kind: 'journey', id: identity.journeyId }],
+          },
+        ],
+      });
     } finally {
       lines.close();
       if (child.exitCode === null && child.signalCode === null) {
