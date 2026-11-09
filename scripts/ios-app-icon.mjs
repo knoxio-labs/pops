@@ -386,12 +386,12 @@ const BACKGROUND = {
 };
 
 /**
+ * Creates a layer group with the shared Pops material and shadow treatment.
  * @param {string} name
  * @param {string} imageName
  * @param {number} translucency
- * @returns {Record<string, unknown>}
  */
-function group(name, imageName, translucency) {
+export function iconGroup(name, imageName, translucency) {
   return {
     layers: [
       {
@@ -424,11 +424,11 @@ export const LAYER_FILES = { 'layer-warp.svg': 'warp', 'layer-weft.svg': 'weft' 
  */
 export function iconManifest(options = {}) {
   const groups = [
-    group('Weft', 'layer-weft.svg', UPPER_TRANSLUCENCY),
-    group('Warp', 'layer-warp.svg', 0),
+    iconGroup('Weft', 'layer-weft.svg', UPPER_TRANSLUCENCY),
+    iconGroup('Warp', 'layer-warp.svg', 0),
   ];
   if (options.badge !== undefined) {
-    groups.unshift({ ...group('Local badge', options.badge, 0), specular: true });
+    groups.unshift({ ...iconGroup('Local badge', options.badge, 0), specular: true });
   }
 
   return {

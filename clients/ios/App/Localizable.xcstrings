@@ -221,6 +221,16 @@
         }
       }
     },
+    "Trips" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Viagens"
+          }
+        }
+      }
+    },
     "Try again" : {
       "localizations" : {
         "pt-BR" : {

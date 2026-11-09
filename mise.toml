@@ -285,9 +285,12 @@ run = [
 # gloss also needs visual checks of the native appearance exports from Icon
 # Composer's bundled ictool; the README includes the export command.
 [tasks."icon:ios"]
-description = "Regenerate the iOS app icon layers into both Icon Composer bundles"
+description = "Regenerate Pops and Trips iOS Icon Composer bundles"
 dir = "{{config_root}}"
-run = "node scripts/ios-app-icon.mjs"
+run = """
+node scripts/ios-app-icon.mjs
+node scripts/ios-trips-icon.mjs
+"""
 
 [tasks."icon:pwa"]
 description = "Render the iOS app icon into the shell's PWA sizes"
