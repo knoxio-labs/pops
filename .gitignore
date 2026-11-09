@@ -177,3 +177,5 @@ pillars/lists/src/contract/api-types.generated.ts
 pillars/media/src/contract/api-types.generated.ts
 pillars/purchases/src/contract/api-types.generated.ts
 pillars/registry/src/contract/api-types.generated.ts
+
+/pillars/trips/app/src/trips-api/

@@ -1,0 +1,14 @@
+[tasks.build]
+run = "pnpm build"
+
+[tasks.typecheck]
+run = "node ../../../scripts/local-dev/typecheck.mjs"
+
+[tasks.test]
+run = ["node ../../../scripts/require-built-graph.mjs", "vitest run"]
+
+[tasks.lint]
+run = "oxlint src && oxfmt --check ."
+
+[env]
+_.path = ["{{config_root}}/node_modules/.bin"]
