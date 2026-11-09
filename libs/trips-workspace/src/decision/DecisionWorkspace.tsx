@@ -65,7 +65,7 @@ function DecisionSession({
     if (result.data) editor.reload(result.data);
   };
   return (
-    <main className="mx-auto max-w-4xl space-y-5 p-4 md:p-6">
+    <main className="mx-auto w-full max-w-4xl space-y-5 p-4 md:p-6">
       <PageHeader
         title="Decision"
         backHref={identity.backHref}
