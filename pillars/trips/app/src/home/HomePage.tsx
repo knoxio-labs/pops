@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Button, ErrorState, PageHeader } from '@pops/ui';
+import { Button, PageHeader } from '@pops/ui';
 
-import { sourceProblem, tripKeys } from '../api/source';
+import { tripKeys } from '../api/source';
+import { SourceFailure } from '../api/SourceFailure';
 import { defaultClients } from '../api/types';
 import { NewTripDialog } from '../settings/NewTripDialog';
 import { HomeToolbar } from './HomeToolbar';
@@ -29,15 +30,8 @@ function HomeSession({ clients }: { clients: ApiClients }) {
   const referenceDate = useToday();
   const { trips, places, visits, retryContext } = useHomeSources(clients);
   if (trips.isPending) return <p role="status">{t('loading')}</p>;
-  if (trips.isError)
-    return (
-      <ErrorState
-        error={sourceProblem(trips.error)}
-        onRetry={() => {
-          void trips.refetch();
-        }}
-      />
-    );
+  if (trips.isError && trips.data === undefined)
+    return <SourceFailure error={trips.error} retry={trips.refetch} />;
   const records: HomeRecord[] = trips.data.map((trip, index) => ({
     trip,
     visits: visits[index]?.data,
@@ -45,6 +39,7 @@ function HomeSession({ clients }: { clients: ApiClients }) {
   const selected = records.find(({ trip }) => trip.id === selectedId);
   return (
     <main className="mx-auto max-w-5xl space-y-5 px-4 py-6 text-sm md:py-8">
+      {trips.isError && <SourceFailure error={trips.error} retry={trips.refetch} />}
       {(places.isError || visits.some((visit) => visit.isError)) && (
         <ContextFailure retry={retryContext} />
       )}

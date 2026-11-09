@@ -5,6 +5,7 @@ import { useParams } from 'react-router';
 import { ErrorState } from '@pops/ui';
 
 import { loadTrip, loadTrips, loadTags, sourceProblem, tripKeys } from '../api/source';
+import { SourceFailure } from '../api/SourceFailure';
 import { defaultClients } from '../api/types';
 import { sourceId } from '../source-id';
 import { SettingsHeader } from './SettingsHeader';
@@ -34,16 +35,14 @@ function LoadSettings({ id, clients = defaultClients }: { id: number; clients?: 
     retry: false,
   });
   if (source.isPending) return <p role="status">{t('loading')}</p>;
-  if (source.isError)
-    return (
-      <ErrorState
-        error={sourceProblem(source.error)}
-        onRetry={() => {
-          void source.refetch();
-        }}
-      />
-    );
-  return <SettingsSource source={source.data} clients={clients} />;
+  if (source.isError && source.data === undefined)
+    return <SourceFailure error={source.error} retry={source.refetch} />;
+  return (
+    <>
+      {source.isError && <SourceFailure error={source.error} retry={source.refetch} />}
+      <SettingsSource source={source.data} clients={clients} />
+    </>
+  );
 }
 function SettingsSource({ source, clients }: { source: Trip; clients: ApiClients }) {
   const keys = tripKeys(clients);

@@ -2,13 +2,14 @@ import { once } from 'node:events';
 import { createServer } from 'node:http';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createInstance } from 'i18next';
 import { I18nextProvider } from 'react-i18next';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { tripKeys } from '../api/source';
 import enAU from '../locales/en-AU.json';
 import { client as tagsClient } from '../tags-api/client.gen';
 import { client as tripClient } from '../trips-api/client.gen';
@@ -37,6 +38,7 @@ let server: Server;
 let source: Trip;
 let failTags: boolean;
 let failTrips: boolean;
+let failTripRead: boolean;
 const writes: (Trip | 'error')[] = [];
 const requests: { method: string | undefined; path: string | undefined; body: string }[] = [];
 const originalTripConfig = tripClient.getConfig();
@@ -46,6 +48,7 @@ beforeEach(async () => {
   source = structuredClone(original);
   failTags = false;
   failTrips = false;
+  failTripRead = false;
   writes.length = 0;
   requests.length = 0;
   server = createServer((request, response) => {
@@ -80,6 +83,18 @@ beforeEach(async () => {
             message: 'Trips unavailable',
             retryable: true,
             requestId: 'trips-test',
+          })
+        );
+        return;
+      }
+      if (request.method === 'GET' && request.url === '/trips/7' && failTripRead) {
+        response.writeHead(503);
+        response.end(
+          JSON.stringify({
+            code: 'trips.source.unavailable',
+            message: 'Source trip unavailable',
+            retryable: true,
+            requestId: 'trip-read-test',
           })
         );
         return;
@@ -229,6 +244,32 @@ describe('NewTripDialog persistence', () => {
 });
 
 describe('TripSettingsPage persistence', () => {
+  it('retains unsaved settings when a background source refresh fails and allows source retry', async () => {
+    const { user, cache } = await mount(settings());
+    const destination = await screen.findByLabelText('Destination');
+    const when = screen.getByLabelText('When');
+    fireEvent.change(destination, { target: { value: '  unsaved destination  ' } });
+    fireEvent.change(when, { target: { value: '  after graduation  ' } });
+    failTripRead = true;
+    await act(async () => {
+      await cache.refetchQueries({ queryKey: tripKeys().one(7), exact: true });
+    });
+    await waitFor(() => expect(cache.getQueryState(tripKeys().one(7))?.status).toBe('error'));
+    expect(screen.getByLabelText('Destination')).toBe(destination);
+    expect(destination).toHaveValue('  unsaved destination  ');
+    expect(when).toHaveValue('  after graduation  ');
+    expect(screen.getByText('Source trip unavailable')).toBeInTheDocument();
+    failTripRead = false;
+    await user.click(screen.getByRole('button', { name: 'Try again' }));
+    await waitFor(() =>
+      expect(screen.queryByText('Source trip unavailable')).not.toBeInTheDocument()
+    );
+    expect(destination).toHaveValue('  unsaved destination  ');
+    expect(when).toHaveValue('  after graduation  ');
+    expect(screen.getByRole('button', { name: 'Save changes' })).toBeEnabled();
+    expect(mutations()).toEqual([]);
+  });
+
   it('saves and undoes metadata through PATCH while retaining unrelated source links', async () => {
     const edited: Trip = {
       ...original,
