@@ -1,0 +1,7 @@
+name: Contact picker and quick creation
+question: Choose contacts inline, or in a dialog over the trip draft?
+status: active
+screen: contacts/picker
+variants:
+  inline: Inline in the event draft
+  dialog: Dialog over the event draft

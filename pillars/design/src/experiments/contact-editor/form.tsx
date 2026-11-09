@@ -75,7 +75,8 @@ export function ContactForm({
   );
 }
 
-function IdentityFields({
+/** Edits an explicit name and source taxonomy kind without selecting a default type. */
+export function IdentityFields({
   draft,
   update,
 }: {
