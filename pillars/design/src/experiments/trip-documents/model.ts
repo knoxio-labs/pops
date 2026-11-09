@@ -13,6 +13,7 @@ export type {
 } from './types';
 export {
   documentRows,
+  sourceRow,
   documentOccurrences,
   groupDocumentOccurrences,
   tripDocumentFindings,

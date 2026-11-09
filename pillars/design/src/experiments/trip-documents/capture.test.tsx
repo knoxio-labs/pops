@@ -37,6 +37,8 @@ describe('document capture references', () => {
         name: 'Unlink Olinda · Pousada do Carmo',
       })
     );
+    expect(screen.getByRole('dialog')).toHaveTextContent('olinda-reservation.pdf');
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Close' }));
     expect(
       screen.queryByRole('button', { name: 'Open Olinda hotel reservation' })
     ).not.toBeInTheDocument();

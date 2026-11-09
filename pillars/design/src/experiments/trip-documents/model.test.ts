@@ -31,11 +31,7 @@ describe('original identity and explicit route references', () => {
     expect(original.links).toHaveLength(2);
     expect(new Set(occurrences.map((occurrence) => occurrence.row.id)).size).toBe(rows.length);
     const groups = groupDocumentOccurrences(state, occurrences);
-    expect(groups.slice(0, 3).map((group) => group.id)).toEqual([
-      'sydney-out',
-      'arrival',
-      'recife',
-    ]);
+    expect(groups.map((group) => group.id)).toEqual(['trip', 'sydney-out', 'arrival', 'recife']);
     expect(groups.some((group) => group.name === 'Not linked')).toBe(false);
     expect(
       rows.some((row) => row.id === 'document-image' || row.id === 'document-unavailable')
@@ -43,6 +39,22 @@ describe('original identity and explicit route references', () => {
     expect(state.linking.documents).toHaveLength(4);
     expect(groups.flatMap((group) => group.occurrences)).toHaveLength(occurrences.length);
     expect(state).toEqual(before);
+  });
+
+  it('prioritises explicit trip targets independently of labels, visit mappings and input order', () => {
+    const state = createTripDocumentsState();
+    state.linking.targets = state.linking.targets.map((target) => ({
+      ...target,
+      label: target.kind === 'trip' ? 'Brazil' : 'Trip documents',
+    }));
+    state.targetVisits.push({ id: 'trip-context', targetId: 'trip-brazil', visitId: 'recife' });
+    const occurrences = documentOccurrences(state, documentRows(state, all)).toReversed();
+    const groups = groupDocumentOccurrences(state, occurrences);
+    expect(groups.map((group) => group.id)).toEqual(['trip', 'sydney-out', 'arrival', 'recife']);
+    const tripGroup = groups[0];
+    if (!tripGroup) throw new Error('Trip document group missing');
+    expect(tripGroup.occurrences).toHaveLength(1);
+    expect(tripGroup.occurrences[0]?.target?.kind).toBe('trip');
   });
 
   it('keeps equal filenames or titles distinct when original identities differ', () => {

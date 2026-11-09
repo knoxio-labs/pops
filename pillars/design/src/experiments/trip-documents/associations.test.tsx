@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { DocumentAssociations } from './associations';
-import { TripDocumentsContext } from './context';
+import { TripDocumentsProvider } from './context';
 import { createTripDocumentsState } from './fixture';
 import { documentRows } from './model';
 
@@ -28,9 +28,9 @@ describe('source dialog association draft isolation', () => {
     if (!row) throw new Error('Hotel original missing');
     const change = vi.fn((next: TripDocumentsState) => next);
     render(
-      <TripDocumentsContext value={{ state, change }}>
+      <TripDocumentsProvider state={state} change={change}>
         <DocumentAssociations row={row} />
-      </TripDocumentsContext>
+      </TripDocumentsProvider>
     );
     fireEvent.click(screen.getByRole('combobox', { name: 'Link document to' }));
     fireEvent.click(screen.getByRole('option', { name: 'Brazil' }));

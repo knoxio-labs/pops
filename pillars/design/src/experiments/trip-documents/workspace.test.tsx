@@ -22,7 +22,9 @@ describe('trip document ledger', () => {
       expect(plans).toHaveTextContent('Brazil');
       expect(plans).toHaveTextContent('SYD → DFW → GRU');
       fireEvent.click(within(plans).getByRole('button', { name: 'Unlink Brazil' }));
-      expect(plans).not.toHaveTextContent('Brazil');
+      expect(
+        within(plans).queryByRole('button', { name: 'Unlink Brazil' })
+      ).not.toBeInTheDocument();
       expect(plans).toHaveTextContent('SYD → DFW → GRU');
       expect(source).toHaveTextContent('flight-confirmation.pdf');
       fireEvent.click(within(source).getByRole('button', { name: 'Close' }));

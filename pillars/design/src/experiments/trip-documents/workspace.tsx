@@ -1,16 +1,17 @@
 import { Plus, Undo2 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 
 import { Button } from '@pops/ui';
 
 import { useRouteState } from '../trip-route-editing/canvas-state';
 import { DocumentCapture } from './capture';
-import { TripDocumentsContext } from './context';
+import { TripDocumentsProvider } from './context';
 import { DocumentFilters } from './filters';
 import { createTripDocumentsState } from './fixture';
 import { documentRows } from './model';
 import { DocumentResults } from './results';
 import { TripDocumentsReview } from './review';
+import { DocumentDialog } from './source';
 
 import type { TripDocumentsScenario } from './fixture';
 import type { TripDocumentFilters } from './model';
@@ -24,10 +25,6 @@ export function TripDocumentsWorkspace({
   scenario?: TripDocumentsScenario;
 }) {
   const history = useRouteState(() => createTripDocumentsState(scenario));
-  const value = useMemo(
-    () => ({ state: history.state, change: history.change }),
-    [history.state, history.change]
-  );
   const [adding, setAdding] = useState(false);
   const [filters, setFilters] = useState<TripDocumentFilters>({
     query: '',
@@ -36,7 +33,7 @@ export function TripDocumentsWorkspace({
     offline: 'all',
   });
   return (
-    <TripDocumentsContext value={value}>
+    <TripDocumentsProvider state={history.state} change={history.change}>
       <TripDocumentsReview layout={layout} />
       <main className="mx-auto max-w-3xl space-y-5 px-5 py-6">
         <header className="flex flex-wrap items-center justify-between gap-2">
@@ -56,6 +53,7 @@ export function TripDocumentsWorkspace({
         <DocumentFilters filters={filters} onChange={setFilters} />
         <DocumentResults layout={layout} rows={documentRows(history.state, filters)} />
       </main>
-    </TripDocumentsContext>
+      <DocumentDialog />
+    </TripDocumentsProvider>
   );
 }

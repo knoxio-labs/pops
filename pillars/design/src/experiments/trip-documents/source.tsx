@@ -5,14 +5,13 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   formatBytes,
 } from '@pops/ui';
 
 import { calendarStamp } from '../trip-calendar/format';
 import { DocumentAssociations } from './associations';
 import { useTripDocuments } from './context';
-import { documentRows, tripDocumentFindings } from './model';
+import { sourceRow, tripDocumentFindings } from './model';
 import { DocumentAvailability, DocumentTypeIcon } from './presentation';
 
 import type { DocumentRow } from './model';
@@ -51,48 +50,56 @@ function SourceMetadata({ row }: { row: DocumentRow }) {
   );
 }
 
-/** Open the selected original's own metadata and all explicit associations. */
+/** Open the selected original without tying its dialog lifetime to a route occurrence. */
 export function DocumentSource({ row, children }: { row: DocumentRow; children: React.ReactNode }) {
-  const { state } = useTripDocuments();
-  const current =
-    documentRows(state, { query: '', mimeType: '', source: 'all', offline: 'all' }).find(
-      (item) => item.id === row.id
-    ) ?? row;
+  const { select } = useTripDocuments();
   return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <Button
-          variant="ghost"
-          aria-label={`Open ${row.title}`}
-          aria-description={
-            row.document
-              ? `${row.document.fileName} · ${formatBytes(row.document.size)}`
-              : undefined
-          }
-          className="block h-auto min-h-11 w-full cursor-pointer whitespace-normal rounded-none p-3 text-left font-normal hover:bg-muted focus-visible:ring-inset"
-        >
-          {children}
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-h-full overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-base">
-            <DocumentTypeIcon row={current} />
-            {current.title}
-          </DialogTitle>
-          <DialogDescription>
-            {current.document?.fileName ?? 'Document unavailable'}
-          </DialogDescription>
-        </DialogHeader>
-        <DocumentAvailability row={current} />
-        <SourceMetadata row={current} />
-        {tripDocumentFindings(state, current).map((finding) => (
-          <p key={finding.id} role="alert" className="text-sm text-destructive">
-            {finding.message}
-          </p>
-        ))}
-        <DocumentAssociations row={current} />
-      </DialogContent>
+    <Button
+      variant="ghost"
+      aria-label={`Open ${row.title}`}
+      aria-description={
+        row.document ? `${row.document.fileName} · ${formatBytes(row.document.size)}` : undefined
+      }
+      className="block h-auto min-h-11 w-full cursor-pointer whitespace-normal rounded-none p-3 text-left font-normal hover:bg-muted focus-visible:ring-inset"
+      onClick={() => select(row.id)}
+    >
+      {children}
+    </Button>
+  );
+}
+
+/** Show the live selected source even after its last association or visible occurrence disappears. */
+export function DocumentDialog() {
+  const { state, selectedId, select } = useTripDocuments();
+  const current = selectedId ? sourceRow(state, selectedId) : null;
+  return (
+    <Dialog
+      open={Boolean(current)}
+      onOpenChange={(open) => {
+        if (!open) select(null);
+      }}
+    >
+      {current && (
+        <DialogContent className="max-h-full overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <DocumentTypeIcon row={current} />
+              {current.title}
+            </DialogTitle>
+            <DialogDescription>
+              {current.document?.fileName ?? 'Document unavailable'}
+            </DialogDescription>
+          </DialogHeader>
+          <DocumentAvailability row={current} />
+          <SourceMetadata row={current} />
+          {tripDocumentFindings(state, current).map((finding) => (
+            <p key={finding.id} role="alert" className="text-sm text-destructive">
+              {finding.message}
+            </p>
+          ))}
+          <DocumentAssociations key={current.id} row={current} />
+        </DialogContent>
+      )}
     </Dialog>
   );
 }

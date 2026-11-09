@@ -36,7 +36,8 @@ function rowFacts(state: TripDocumentsState, row: DocumentRow): string[] {
   ];
 }
 
-function sourceRow(state: TripDocumentsState, id: string): DocumentRow {
+/** Resolve one original identity and its current associations, including an unlinked or unavailable source. */
+export function sourceRow(state: TripDocumentsState, id: string): DocumentRow {
   const document = state.linking.documents.find((entry) => entry.id === id);
   const offline = state.offline.find((entry) => entry.documentId === id);
   return {
@@ -101,15 +102,14 @@ export function documentOccurrences(
 }
 
 function occurrenceGroup(occurrence: TripDocumentOccurrence): { id: string; name: string } {
+  if (occurrence.target?.kind === 'trip') return { id: 'trip', name: 'Trip documents' };
   if (occurrence.visitId) return { id: occurrence.visitId, name: occurrence.visitLabel };
   if (!occurrence.target)
     return { id: `missing:${occurrence.link.targetId}`, name: 'Target unavailable' };
-  return occurrence.target.kind === 'trip'
-    ? { id: 'trip', name: 'Trip documents' }
-    : { id: 'no-visit', name: 'No visit selected' };
+  return { id: 'no-visit', name: 'No visit selected' };
 }
 
-/** Groups references in actual route order without changing the original count or creating source copies. */
+/** Places trip-wide originals first, then references in route order, retaining original identities. */
 export function groupDocumentOccurrences(
   state: TripDocumentsState,
   occurrences: TripDocumentOccurrence[]
@@ -125,6 +125,8 @@ export function groupDocumentOccurrences(
     groups.set(identity.id, group);
   }
   return [...groups.values()].toSorted((left, right) => {
+    const tripOrder = Number(right.id === 'trip') - Number(left.id === 'trip');
+    if (tripOrder) return tripOrder;
     const a = state.visits.findIndex((visit) => visit.id === left.id);
     const b = state.visits.findIndex((visit) => visit.id === right.id);
     if (a === b) return 0;
