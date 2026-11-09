@@ -1,0 +1,3 @@
+@reference '@pops/ui/theme/globals.css';
+@import 'tailwindcss/utilities' layer(utilities) source(none);
+@source './src';

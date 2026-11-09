@@ -1,0 +1,55 @@
+{
+  "name": "@pops/app-trips",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "pnpm run build:remote",
+    "build:remote": "tsx scripts/build-remote.ts",
+    "typecheck": "node ../../../scripts/require-built-graph.mjs && tsc --noEmit",
+    "test": "node ../../../scripts/require-built-graph.mjs && vitest run",
+    "test:coverage": "node ../../../scripts/require-built-graph.mjs && vitest run --coverage",
+    "test:watch": "vitest",
+    "generate:trips-client": "openapi-ts -o src/trips-api",
+    "generate:tags-client": "openapi-ts -f openapi-ts.tags.config.ts -o src/tags-api"
+  },
+  "dependencies": {
+    "@hey-api/client-fetch": "^0.13.1",
+    "@pops/date": "workspace:*",
+    "@pops/navigation": "workspace:*",
+    "@pops/pillar-sdk": "workspace:*",
+    "@pops/trips": "workspace:*",
+    "@pops/trips-workspace": "workspace:*",
+    "@pops/types": "workspace:*",
+    "@pops/ui": "workspace:*",
+    "@tanstack/react-query": "5.102.8",
+    "i18next": "^26.4.2",
+    "lucide-react": "^1.45.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "react-i18next": "^17.0.13",
+    "react-router": "^8.3.1"
+  },
+  "devDependencies": {
+    "@hey-api/openapi-ts": "^0.99.0",
+    "@tailwindcss/vite": "4.3.3",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.7",
+    "@types/node": "^24.13.4",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "@vitest/coverage-v8": "^4.1.10",
+    "jsdom": "^30.0.1",
+    "tailwindcss": "4.3.3",
+    "tsx": "^4.23.13",
+    "typescript": "^6.0.3",
+    "vite": "^8.3.0",
+    "vitest": "^4.1.11"
+  }
+}

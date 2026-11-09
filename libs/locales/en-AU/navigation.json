@@ -64,5 +64,7 @@
   "purchases.reconcile": "Reconcile",
   "purchases.merchants": "Merchants",
   "purchases.receipts": "Receipts",
-  "purchases.products": "Products"
+  "purchases.products": "Products",
+  "trips": "Trips",
+  "trips.home": "Home"
 }

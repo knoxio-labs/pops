@@ -3,12 +3,21 @@
   "version": "0.1.0",
   "private": true,
   "files": [
+    "dist/contract/**",
     "openapi/trips.openapi.json"
   ],
   "type": "module",
   "exports": {
     "./openapi": "./openapi/trips.openapi.json",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./pages": {
+      "types": "./dist/contract/pages.d.ts",
+      "default": "./dist/contract/pages.js"
+    },
+    "./nav": {
+      "types": "./dist/contract/nav.d.ts",
+      "default": "./dist/contract/nav.js"
+    }
   },
   "scripts": {
     "build": "tsc -b tsconfig.build.json && tsx scripts/generate-openapi.ts",

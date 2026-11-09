@@ -30,9 +30,11 @@ Outbound reads use a Trips-owned service account granted `tags.tags`. Local
 configuration can supply `POPS_INTERNAL_API_KEY`; production supplies only a
 mounted-file path in `POPS_INTERNAL_API_KEY_FILE`. Startup checks configured
 secret-file readability and prefers that file over the local environment. No
-credential is created by Trips. Deployment activation and its secret mount are
-tracked by POPS-6166; absent credentials leave independent metadata usable and
-an unknown explicit tag selection returns retryable 503.
+credential is created by Trips. Both compose variants mount the Trips-owned
+`pops_trips_api_key` secret; the operator must first provision the account and
+host file using the [Trips deployment runbook](../../infra/secrets.example/trips/README.md).
+Without credentials in a standalone local process, independent metadata remains
+usable and an unknown explicit tag selection returns retryable 503.
 
 Equivalent `/places` routes manage reusable names and source links.
 `GET/POST /trips/:tripId/visits` and `GET/PATCH /trips/:tripId/visits/:id` manage
@@ -162,9 +164,13 @@ while any group membership remains.
 Domain routes require their projected service-account scope: `trips.trips`,
 `trips.places`, `trips.visits`, `trips.journeys`, `trips.journeyLegs`,
 `trips.journeyGroups` or `trips.stays`; a `trips` grant covers all domains. Discovery and
-health probes remain open. The pillar advertises no shell pages. Source-backed
-stay [workspace components](../../libs/trips-workspace/README.md) and a standalone development harness
-live in `libs/trips-workspace`; shell activation is POPS-6155.
+health probes remain open. The pillar advertises `/trips`,
+`/trips/:tripId/stays/:stayId`, and `/trips/:tripId/settings` shell pages. The home
+page groups source-backed trips and opens a selected-trip preview; stay links use the persisted trip and
+stay identities. Source-backed stay
+[workspace components](../../libs/trips-workspace/README.md) and their standalone
+development harness remain in `libs/trips-workspace`. The shell loads
+`/trips-ui/trips.js` and `/trips-ui/trips.css` from the `trips-ui` service.
 
 Run `mise exec -- pnpm --filter @pops/trips dev`. `PORT` defaults to 3018;
 `TRIPS_SQLITE_PATH` selects the database (default `./data/trips.db`).

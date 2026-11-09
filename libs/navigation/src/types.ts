@@ -65,6 +65,7 @@ export type IconName =
   | 'Network'
   | 'Package'
   | 'PiggyBank'
+  | 'Plane'
   | 'Plug'
   | 'Receipt'
   | 'RefreshCw'

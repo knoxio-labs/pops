@@ -240,6 +240,24 @@ function minimalManifest(pillarId: string): Record<string, unknown> {
  * a URL its dev server serves.
  */
 const LOADER_MOUNTED_UI: Readonly<Record<string, Record<string, unknown>>> = {
+  trips: {
+    assetsBaseUrl: '/trips-ui/trips.js',
+    stylesheetUrl: '/trips-ui/trips.css',
+    nav: {
+      id: 'trips',
+      label: 'Trips',
+      labelKey: 'trips',
+      icon: 'plane',
+      basePath: '/trips',
+      order: 90,
+      items: [{ path: '', label: 'Home', labelKey: 'trips.home', icon: 'layout-dashboard' }],
+    },
+    pages: [
+      { path: '', index: true, bundleSlot: 'trips-home' },
+      { path: ':tripId/stays/:stayId', bundleSlot: 'trips-stay' },
+      { path: ':tripId/settings', bundleSlot: 'trips-settings' },
+    ],
+  },
   media: {
     assetsBaseUrl: '/media-ui/media.js',
     stylesheetUrl: '/media-ui/media.css',
@@ -691,6 +709,7 @@ export const IN_REPO_PILLARS = [
   'cerebrum',
   'ai',
   'bfm',
+  'trips',
 ] as const;
 
 /**

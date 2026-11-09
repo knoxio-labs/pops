@@ -697,8 +697,11 @@ services:
       - backend
     volumes:
       - pops-trips-data:/data/sqlite
+    secrets:
+      - pops_trips_api_key
     environment:
       NODE_ENV: production
+      POPS_INTERNAL_API_KEY_FILE: /run/secrets/pops_trips_api_key
       PORT: '3018'
       CLOUDFLARE_ACCESS_TEAM_NAME: ${CLOUDFLARE_ACCESS_TEAM_NAME:-}
       CLOUDFLARE_ACCESS_AUD: ${CLOUDFLARE_ACCESS_AUD:-}
@@ -1421,6 +1424,22 @@ services:
       timeout: 5s
       retries: 3
 
+  trips-ui:
+    image: ghcr.io/${POPS_IMAGE_OWNER:-knoxio-labs}/pops-trips-ui:${POPS_IMAGE_TAG:-main}
+    container_name: pops-trips-ui
+    restart: unless-stopped
+    labels:
+      com.centurylinklabs.watchtower.enable: 'true'
+    networks:
+      - frontend
+    expose:
+      - '80'
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:80/healthz']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
   # The inventory UI bundle (pillars/inventory/app) — a static nginx image,
   # like pops-purchases-ui. The `/inventory-ui/` location block in pops-shell's
   # nginx.conf reverse-proxies browser traffic here.
@@ -1913,6 +1932,8 @@ secrets:
   # `finance-api`.
   pops_finance_api_key:
     file: ../secrets/pops_finance_api_key
+  pops_trips_api_key:
+    file: ../secrets/pops_trips_api_key
   # inventory's account is separate from every other caller; it needs the
   # finance transaction read used by its URI reconciliation worker.
   pops_inventory_api_key:
