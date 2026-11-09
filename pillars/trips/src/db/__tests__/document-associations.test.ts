@@ -10,6 +10,7 @@ import {
   deleteDocumentAssociation,
   listDocumentAssociations,
 } from '../services/document-associations.js';
+import { createEvent, deleteEvent } from '../services/events.js';
 import { createJourney, deleteJourney } from '../services/journeys.js';
 import { createPlace, createTrip, createVisit } from '../services/records.js';
 import { TripsServiceError } from '../services/source-record.js';
@@ -37,6 +38,7 @@ describe('Trips document associations', () => {
     const visit = createVisit(db, trip.id, { placeId: place.id });
     const journey = createJourney(db, trip.id, {});
     const stay = createStay(db, trip.id, {});
+    const event = createEvent(db, trip.id, {});
     const links = [
       createDocumentAssociation(db, trip.id, {
         documentId: 41,
@@ -58,14 +60,24 @@ describe('Trips document associations', () => {
         targetKind: 'stay',
         targetId: stay.id,
       }),
+      createDocumentAssociation(db, trip.id, {
+        documentId: 41,
+        targetKind: 'event',
+        targetId: event.id,
+      }),
     ];
     expect(listDocumentAssociations(db, trip.id)).toEqual(links);
     deleteDocumentAssociation(db, trip.id, links[1]!.id);
-    expect(listDocumentAssociations(db, trip.id)).toEqual([links[0], links[2], links[3]]);
+    expect(listDocumentAssociations(db, trip.id)).toEqual([links[0], links[2], links[3], links[4]]);
     expect(listDocumentAssociations(db, otherTrip.id)).toEqual([]);
     opened.raw.close();
     opened = openTripsDb(join(directory, 'trips.db'));
-    expect(listDocumentAssociations(opened.db, trip.id)).toEqual([links[0], links[2], links[3]]);
+    expect(listDocumentAssociations(opened.db, trip.id)).toEqual([
+      links[0],
+      links[2],
+      links[3],
+      links[4],
+    ]);
   });
 
   it('rejects duplicate links and targets outside the owning trip', () => {
@@ -74,6 +86,7 @@ describe('Trips document associations', () => {
     const otherTrip = createTrip(db, {});
     const place = createPlace(db, { name: 'Place' });
     const foreignVisit = createVisit(db, otherTrip.id, { placeId: place.id });
+    const foreignEvent = createEvent(db, otherTrip.id, {});
     const input = { documentId: 7, targetKind: 'trip' as const, targetId: trip.id };
     createDocumentAssociation(db, trip.id, input);
     expect(() => createDocumentAssociation(db, trip.id, input)).toThrowError(
@@ -84,6 +97,13 @@ describe('Trips document associations', () => {
         documentId: 8,
         targetKind: 'visit',
         targetId: foreignVisit.id,
+      })
+    ).toThrowError(new TripsServiceError('not_found'));
+    expect(() =>
+      createDocumentAssociation(db, trip.id, {
+        documentId: 8,
+        targetKind: 'event',
+        targetId: foreignEvent.id,
       })
     ).toThrowError(new TripsServiceError('not_found'));
     expect(() =>
@@ -119,6 +139,8 @@ describe('Trips document associations', () => {
     const otherStay = createStay(db, trip.id, {});
     const journey = createJourney(db, trip.id, {});
     const otherJourney = createJourney(db, trip.id, {});
+    const event = createEvent(db, trip.id, {});
+    const otherEvent = createEvent(db, trip.id, {});
     const associations = [
       createDocumentAssociation(db, trip.id, {
         documentId: 31,
@@ -150,7 +172,30 @@ describe('Trips document associations', () => {
         targetKind: 'journey',
         targetId: otherJourney.id,
       }),
+      createDocumentAssociation(db, trip.id, {
+        documentId: 35,
+        targetKind: 'event',
+        targetId: event.id,
+      }),
+      createDocumentAssociation(db, trip.id, {
+        documentId: 35,
+        targetKind: 'trip',
+        targetId: trip.id,
+      }),
+      createDocumentAssociation(db, trip.id, {
+        documentId: 36,
+        targetKind: 'event',
+        targetId: otherEvent.id,
+      }),
     ];
+
+    expect(() =>
+      createDocumentAssociation(db, trip.id, {
+        documentId: 35,
+        targetKind: 'event',
+        targetId: event.id,
+      })
+    ).toThrowError(new TripsServiceError('association_exists'));
 
     expect(() => deleteStay(db, otherTrip.id, stay.id)).toThrowError(
       new TripsServiceError('not_found')
@@ -171,13 +216,23 @@ describe('Trips document associations', () => {
     expect(listDocumentAssociations(db, trip.id)).toEqual(associations);
     opened.raw.exec('DROP TRIGGER reject_journey_delete');
 
+    opened.raw.exec(
+      "CREATE TRIGGER reject_event_delete BEFORE DELETE ON events BEGIN SELECT RAISE(ABORT, 'rejected event deletion'); END"
+    );
+    expect(() => deleteEvent(db, trip.id, event.id)).toThrow(/rejected event deletion/);
+    expect(listDocumentAssociations(db, trip.id)).toEqual(associations);
+    opened.raw.exec('DROP TRIGGER reject_event_delete');
+
     deleteStay(db, trip.id, stay.id);
     deleteJourney(db, trip.id, journey.id);
+    deleteEvent(db, trip.id, event.id);
     expect(listDocumentAssociations(db, trip.id)).toEqual([
       associations[1],
       associations[2],
       associations[4],
       associations[5],
+      associations[7],
+      associations[8],
     ]);
   });
 });

@@ -7,6 +7,7 @@ import {
   type DocumentTargetKind,
 } from '../../contract/document-associations.js';
 import { openTripsDb, type OpenedTripsDb } from '../../db/index.js';
+import { createEvent } from '../../db/services/events.js';
 import { createJourney } from '../../db/services/journeys.js';
 import { createPlace, createTrip, createVisit } from '../../db/services/records.js';
 import { createStay } from '../../db/services/stays.js';
@@ -91,6 +92,7 @@ describe('Trip document association HTTP contract', () => {
     const other = createTrip(opened.db, {});
     const place = createPlace(opened.db, { name: 'Place' });
     const visit = createVisit(opened.db, other.id, { placeId: place.id });
+    const event = createEvent(opened.db, other.id, {});
     const path = `/trips/${trip.id}/document-associations`;
     expect(
       (await call(path, 'POST', { documentId: 0, targetKind: 'visit', targetId: visit.id })).status
@@ -101,19 +103,27 @@ describe('Trip document association HTTP contract', () => {
       targetId: visit.id,
     });
     expect(foreign.status).toBe(404);
+    const foreignEvent = await call(path, 'POST', {
+      documentId: 42,
+      targetKind: 'event',
+      targetId: event.id,
+    });
+    expect(foreignEvent.status).toBe(404);
   });
 
-  it('supports the explicit trip, visit, journey and stay targets', async () => {
+  it('supports explicit trip, visit, journey, stay and event targets', async () => {
     const trip = createTrip(opened.db, {});
     const place = createPlace(opened.db, { name: 'Place' });
     const visit = createVisit(opened.db, trip.id, { placeId: place.id });
     const journey = createJourney(opened.db, trip.id, {});
     const stay = createStay(opened.db, trip.id, {});
+    const event = createEvent(opened.db, trip.id, {});
     const targets: Array<{ targetKind: DocumentTargetKind; targetId: number }> = [
       { targetKind: 'trip', targetId: trip.id },
       { targetKind: 'visit', targetId: visit.id },
       { targetKind: 'journey', targetId: journey.id },
       { targetKind: 'stay', targetId: stay.id },
+      { targetKind: 'event', targetId: event.id },
     ];
     for (const [index, target] of targets.entries()) {
       const response = await call(`/trips/${trip.id}/document-associations`, 'POST', {
@@ -122,6 +132,14 @@ describe('Trip document association HTTP contract', () => {
         targetId: target.targetId,
       });
       expect(response.status).toBe(201);
+      if (target.targetKind === 'event') {
+        const duplicate = await call(`/trips/${trip.id}/document-associations`, 'POST', {
+          documentId: index + 1,
+          targetKind: target.targetKind,
+          targetId: target.targetId,
+        });
+        expect(duplicate.status).toBe(409);
+      }
     }
   });
 

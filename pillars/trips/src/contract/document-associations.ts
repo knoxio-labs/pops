@@ -7,7 +7,7 @@ const c = initContract();
 const Trip = z.object({ tripId: z.coerce.number().int().positive() });
 const AssociationId = Trip.extend({ id: z.coerce.number().int().positive() });
 /** Documents may be associated with a route object whose identity Trips owns. */
-export const DOCUMENT_TARGET_KINDS = ['trip', 'visit', 'journey', 'stay'] as const;
+export const DOCUMENT_TARGET_KINDS = ['trip', 'visit', 'journey', 'stay', 'event'] as const;
 /** Runtime contract for supported Trips-owned document targets. */
 export const DocumentTargetKindSchema = z.enum(DOCUMENT_TARGET_KINDS);
 /** One explicit association record; `documentId` remains owned by Documents. */

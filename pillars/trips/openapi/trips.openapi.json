@@ -3238,7 +3238,7 @@
                             "type": "integer"
                           },
                           "targetKind": {
-                            "enum": ["trip", "visit", "journey", "stay"],
+                            "enum": ["trip", "visit", "journey", "stay", "event"],
                             "type": "string"
                           },
                           "tripId": {
@@ -3325,7 +3325,7 @@
                     "type": "integer"
                   },
                   "targetKind": {
-                    "enum": ["trip", "visit", "journey", "stay"],
+                    "enum": ["trip", "visit", "journey", "stay", "event"],
                     "type": "string"
                   }
                 },
@@ -3367,7 +3367,7 @@
                       "type": "integer"
                     },
                     "targetKind": {
-                      "enum": ["trip", "visit", "journey", "stay"],
+                      "enum": ["trip", "visit", "journey", "stay", "event"],
                       "type": "string"
                     },
                     "tripId": {

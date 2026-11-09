@@ -9,7 +9,7 @@ import type { TripsDb } from '../index.js';
 export function deleteDocumentAssociationsForTarget(
   db: Pick<TripsDb, 'delete'>,
   tripId: number,
-  targetKind: Extract<DocumentTargetKind, 'journey' | 'stay'>,
+  targetKind: Extract<DocumentTargetKind, 'event' | 'journey' | 'stay'>,
   targetId: number
 ): void {
   db.delete(tripDocumentAssociations)

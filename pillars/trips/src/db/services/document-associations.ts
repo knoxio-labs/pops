@@ -2,6 +2,7 @@ import { and, asc, eq } from 'drizzle-orm';
 
 import { TripDocumentAssociationSchema } from '../../contract/document-associations.js';
 import { tripDocumentAssociations } from '../schema.js';
+import { getEvent } from './events.js';
 import { getJourney } from './journeys.js';
 import { getTrip, getVisit } from './records.js';
 import { requireOwnedRecord, TripsServiceError } from './source-record.js';
@@ -46,6 +47,7 @@ export function createDocumentAssociation(
       if (input.targetKind === 'visit') getVisit(tx, tripId, input.targetId);
       if (input.targetKind === 'journey') getJourney(tx, tripId, input.targetId);
       if (input.targetKind === 'stay') getStay(tx, tripId, input.targetId);
+      if (input.targetKind === 'event') getEvent(tx, tripId, input.targetId);
       const existing = tx
         .select({ id: tripDocumentAssociations.id })
         .from(tripDocumentAssociations)
