@@ -180,6 +180,8 @@ describe('GET /openapi', () => {
       '/mobile/purchases/summary',
       '/mobile/purchases/tags',
       '/mobile/purchases/{id}',
+      '/mobile/trips',
+      '/mobile/trips/{id}',
     ]);
   });
 

@@ -53,6 +53,19 @@ must belong to the trip and appear exactly once. Reordering is atomic and change
 only position, preserving source values and timestamps. No purchase, reservation
 or certainty is inferred from route or timing.
 
+Events belong to trips independently of visits. `GET/POST /trips/:tripId/events`
+and `GET/PATCH/DELETE /trips/:tripId/events/:id` retain event source facts.
+The optional visit must belong to the same trip; changing the association never
+copies dates. Dates, clocks and the source time zone are independently optional.
+Contradictory valid dates remain editable; missing clocks never become midnight.
+Intention, arrangement and purchase use the same independent source vocabulary
+as journey legs. Only `Purchased` records a purchase. Venue, organiser and
+document links are opaque source references, not hydrated external identities.
+Source and ticket URLs accept HTTP(S) only. Patches retain omitted fields,
+clear nullable facts with null, and replace supplied timing objects and arrays.
+Deleting an event never deletes a referenced contact, document or booking.
+Event operations use the projected `trips.events` scope.
+
 Stays belong to trips independently of visits. `GET/POST /trips/:tripId/stays`
 and `GET/PATCH/DELETE /trips/:tripId/stays/:id` manage stable source records;
 lists use identity order, not route or date order. A nullable `visitId` may refer
@@ -71,6 +84,15 @@ are separate from `hostLinks` and `documentLinks`; each reference array uses the
 same explicit URI/optional-label contract. These links are opaque, retained even
 when their source is unavailable, and do not assert contact/document resolution
 or transfer ownership. Deleting a stay removes only that source record.
+
+Trips document associations use `POST/GET /trips/:tripId/document-associations`
+and `DELETE /trips/:tripId/document-associations/:id`. They retain the numeric
+Documents-owned Paperless identity and an explicit trip, visit, journey, stay
+or event target. Targets must belong to the route trip. Deleting an event,
+journey or stay atomically removes associations targeting only that record.
+Unlinking removes only the
+association; it does not modify the original document. Existing stay
+`documentLinks` remain opaque source references and are not rewritten.
 
 A stay patch preserves omitted fields. Supplied `timing` replaces the **complete**
 timing object, so `{}` clears it and `{ arrival: "2028-01-16" }` removes any

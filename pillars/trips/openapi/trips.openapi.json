@@ -3444,6 +3444,1831 @@
         "tags": ["decisions"]
       }
     },
+    "/trips/{tripId}/document-associations": {
+      "get": {
+        "operationId": "documentAssociations.list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tripId",
+            "required": true,
+            "schema": {
+              "exclusiveMinimum": true,
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "associations": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "createdAt": {
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                            "type": "string"
+                          },
+                          "documentId": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "id": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "targetId": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "targetKind": {
+                            "enum": ["trip", "visit", "journey", "stay", "event"],
+                            "type": "string"
+                          },
+                          "tripId": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "tripId",
+                          "documentId",
+                          "targetKind",
+                          "targetId",
+                          "createdAt"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": ["associations"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "404"
+          }
+        },
+        "tags": ["documentAssociations"]
+      },
+      "post": {
+        "operationId": "documentAssociations.create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tripId",
+            "required": true,
+            "schema": {
+              "exclusiveMinimum": true,
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "documentId": {
+                    "exclusiveMinimum": true,
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "targetId": {
+                    "exclusiveMinimum": true,
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "targetKind": {
+                    "enum": ["trip", "visit", "journey", "stay", "event"],
+                    "type": "string"
+                  }
+                },
+                "required": ["documentId", "targetKind", "targetId"],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "createdAt": {
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "documentId": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "id": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "targetId": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "targetKind": {
+                      "enum": ["trip", "visit", "journey", "stay", "event"],
+                      "type": "string"
+                    },
+                    "tripId": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "required": ["id", "tripId", "documentId", "targetKind", "targetId", "createdAt"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "201"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "409"
+          }
+        },
+        "tags": ["documentAssociations"]
+      }
+    },
+    "/trips/{tripId}/document-associations/{id}": {
+      "delete": {
+        "operationId": "documentAssociations.delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tripId",
+            "required": true,
+            "schema": {
+              "exclusiveMinimum": true,
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "exclusiveMinimum": true,
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "204"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "404"
+          }
+        },
+        "tags": ["documentAssociations"]
+      }
+    },
+    "/trips/{tripId}/events": {
+      "get": {
+        "operationId": "events.list",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tripId",
+            "required": true,
+            "schema": {
+              "exclusiveMinimum": true,
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "events": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "address": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "arrangement": {
+                            "enum": ["Booked", "Agreed", "Not arranged", "Not needed", null],
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                            "type": "string"
+                          },
+                          "documentLinks": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "label": {
+                                  "type": "string"
+                                },
+                                "uri": {
+                                  "anyOf": [
+                                    {
+                                      "format": "uri",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                      "type": "string"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": ["uri"],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "id": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "intention": {
+                            "enum": ["In plan", "Considering", "Alternative", null],
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "name": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "notes": {
+                            "type": "string"
+                          },
+                          "organiserLinks": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "label": {
+                                  "type": "string"
+                                },
+                                "uri": {
+                                  "anyOf": [
+                                    {
+                                      "format": "uri",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                      "type": "string"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": ["uri"],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "purchase": {
+                            "enum": ["Purchased", null],
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "reference": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "sourceLinks": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "label": {
+                                  "type": "string"
+                                },
+                                "uri": {
+                                  "anyOf": [
+                                    {
+                                      "format": "uri",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                      "type": "string"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": ["uri"],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "sourceUrl": {
+                            "format": "uri",
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "ticketUrl": {
+                            "format": "uri",
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "timing": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "end": {
+                                "format": "date",
+                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+                                "type": "string"
+                              },
+                              "endTime": {
+                                "pattern": "^(?:[01]\\d|2[0-3]):[0-5]\\d$",
+                                "type": "string"
+                              },
+                              "start": {
+                                "format": "date",
+                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+                                "type": "string"
+                              },
+                              "startTime": {
+                                "pattern": "^(?:[01]\\d|2[0-3]):[0-5]\\d$",
+                                "type": "string"
+                              },
+                              "timeZone": {
+                                "type": "string"
+                              }
+                            },
+                            "type": "object"
+                          },
+                          "tripId": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "updatedAt": {
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                            "type": "string"
+                          },
+                          "venueLinks": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "label": {
+                                  "type": "string"
+                                },
+                                "uri": {
+                                  "anyOf": [
+                                    {
+                                      "format": "uri",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                      "type": "string"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": ["uri"],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "visitId": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "nullable": true,
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "tripId",
+                          "visitId",
+                          "name",
+                          "intention",
+                          "arrangement",
+                          "purchase",
+                          "timing",
+                          "address",
+                          "reference",
+                          "sourceUrl",
+                          "ticketUrl",
+                          "notes",
+                          "sourceLinks",
+                          "venueLinks",
+                          "organiserLinks",
+                          "documentLinks",
+                          "createdAt",
+                          "updatedAt"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": ["events"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "404"
+          }
+        },
+        "tags": ["events"]
+      },
+      "post": {
+        "operationId": "events.create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tripId",
+            "required": true,
+            "schema": {
+              "exclusiveMinimum": true,
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "address": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "arrangement": {
+                    "enum": ["Booked", "Agreed", "Not arranged", "Not needed", null],
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "documentLinks": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "label": {
+                          "type": "string"
+                        },
+                        "uri": {
+                          "anyOf": [
+                            {
+                              "format": "uri",
+                              "type": "string"
+                            },
+                            {
+                              "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                              "type": "string"
+                            }
+                          ]
+                        }
+                      },
+                      "required": ["uri"],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "intention": {
+                    "enum": ["In plan", "Considering", "Alternative", null],
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "name": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "notes": {
+                    "type": "string"
+                  },
+                  "organiserLinks": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "label": {
+                          "type": "string"
+                        },
+                        "uri": {
+                          "anyOf": [
+                            {
+                              "format": "uri",
+                              "type": "string"
+                            },
+                            {
+                              "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                              "type": "string"
+                            }
+                          ]
+                        }
+                      },
+                      "required": ["uri"],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "purchase": {
+                    "enum": ["Purchased", null],
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "reference": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "sourceLinks": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "label": {
+                          "type": "string"
+                        },
+                        "uri": {
+                          "anyOf": [
+                            {
+                              "format": "uri",
+                              "type": "string"
+                            },
+                            {
+                              "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                              "type": "string"
+                            }
+                          ]
+                        }
+                      },
+                      "required": ["uri"],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "sourceUrl": {
+                    "format": "uri",
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "ticketUrl": {
+                    "format": "uri",
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "timing": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "end": {
+                        "format": "date",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+                        "type": "string"
+                      },
+                      "endTime": {
+                        "pattern": "^(?:[01]\\d|2[0-3]):[0-5]\\d$",
+                        "type": "string"
+                      },
+                      "start": {
+                        "format": "date",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+                        "type": "string"
+                      },
+                      "startTime": {
+                        "pattern": "^(?:[01]\\d|2[0-3]):[0-5]\\d$",
+                        "type": "string"
+                      },
+                      "timeZone": {
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "venueLinks": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "label": {
+                          "type": "string"
+                        },
+                        "uri": {
+                          "anyOf": [
+                            {
+                              "format": "uri",
+                              "type": "string"
+                            },
+                            {
+                              "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                              "type": "string"
+                            }
+                          ]
+                        }
+                      },
+                      "required": ["uri"],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "visitId": {
+                    "exclusiveMinimum": true,
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "nullable": true,
+                    "type": "integer"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "address": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "arrangement": {
+                      "enum": ["Booked", "Agreed", "Not arranged", "Not needed", null],
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "documentLinks": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "label": {
+                            "type": "string"
+                          },
+                          "uri": {
+                            "anyOf": [
+                              {
+                                "format": "uri",
+                                "type": "string"
+                              },
+                              {
+                                "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                "type": "string"
+                              }
+                            ]
+                          }
+                        },
+                        "required": ["uri"],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "id": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "intention": {
+                      "enum": ["In plan", "Considering", "Alternative", null],
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "name": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "notes": {
+                      "type": "string"
+                    },
+                    "organiserLinks": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "label": {
+                            "type": "string"
+                          },
+                          "uri": {
+                            "anyOf": [
+                              {
+                                "format": "uri",
+                                "type": "string"
+                              },
+                              {
+                                "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                "type": "string"
+                              }
+                            ]
+                          }
+                        },
+                        "required": ["uri"],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "purchase": {
+                      "enum": ["Purchased", null],
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "reference": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "sourceLinks": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "label": {
+                            "type": "string"
+                          },
+                          "uri": {
+                            "anyOf": [
+                              {
+                                "format": "uri",
+                                "type": "string"
+                              },
+                              {
+                                "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                "type": "string"
+                              }
+                            ]
+                          }
+                        },
+                        "required": ["uri"],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "sourceUrl": {
+                      "format": "uri",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "ticketUrl": {
+                      "format": "uri",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "timing": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "end": {
+                          "format": "date",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+                          "type": "string"
+                        },
+                        "endTime": {
+                          "pattern": "^(?:[01]\\d|2[0-3]):[0-5]\\d$",
+                          "type": "string"
+                        },
+                        "start": {
+                          "format": "date",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+                          "type": "string"
+                        },
+                        "startTime": {
+                          "pattern": "^(?:[01]\\d|2[0-3]):[0-5]\\d$",
+                          "type": "string"
+                        },
+                        "timeZone": {
+                          "type": "string"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "tripId": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "updatedAt": {
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "venueLinks": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "label": {
+                            "type": "string"
+                          },
+                          "uri": {
+                            "anyOf": [
+                              {
+                                "format": "uri",
+                                "type": "string"
+                              },
+                              {
+                                "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                "type": "string"
+                              }
+                            ]
+                          }
+                        },
+                        "required": ["uri"],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "visitId": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "nullable": true,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "tripId",
+                    "visitId",
+                    "name",
+                    "intention",
+                    "arrangement",
+                    "purchase",
+                    "timing",
+                    "address",
+                    "reference",
+                    "sourceUrl",
+                    "ticketUrl",
+                    "notes",
+                    "sourceLinks",
+                    "venueLinks",
+                    "organiserLinks",
+                    "documentLinks",
+                    "createdAt",
+                    "updatedAt"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "201"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "404"
+          }
+        },
+        "tags": ["events"]
+      }
+    },
+    "/trips/{tripId}/events/{id}": {
+      "delete": {
+        "operationId": "events.delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tripId",
+            "required": true,
+            "schema": {
+              "exclusiveMinimum": true,
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "exclusiveMinimum": true,
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "204"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "404"
+          }
+        },
+        "tags": ["events"]
+      },
+      "get": {
+        "operationId": "events.get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tripId",
+            "required": true,
+            "schema": {
+              "exclusiveMinimum": true,
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "exclusiveMinimum": true,
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "address": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "arrangement": {
+                      "enum": ["Booked", "Agreed", "Not arranged", "Not needed", null],
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "documentLinks": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "label": {
+                            "type": "string"
+                          },
+                          "uri": {
+                            "anyOf": [
+                              {
+                                "format": "uri",
+                                "type": "string"
+                              },
+                              {
+                                "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                "type": "string"
+                              }
+                            ]
+                          }
+                        },
+                        "required": ["uri"],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "id": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "intention": {
+                      "enum": ["In plan", "Considering", "Alternative", null],
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "name": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "notes": {
+                      "type": "string"
+                    },
+                    "organiserLinks": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "label": {
+                            "type": "string"
+                          },
+                          "uri": {
+                            "anyOf": [
+                              {
+                                "format": "uri",
+                                "type": "string"
+                              },
+                              {
+                                "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                "type": "string"
+                              }
+                            ]
+                          }
+                        },
+                        "required": ["uri"],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "purchase": {
+                      "enum": ["Purchased", null],
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "reference": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "sourceLinks": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "label": {
+                            "type": "string"
+                          },
+                          "uri": {
+                            "anyOf": [
+                              {
+                                "format": "uri",
+                                "type": "string"
+                              },
+                              {
+                                "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                "type": "string"
+                              }
+                            ]
+                          }
+                        },
+                        "required": ["uri"],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "sourceUrl": {
+                      "format": "uri",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "ticketUrl": {
+                      "format": "uri",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "timing": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "end": {
+                          "format": "date",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+                          "type": "string"
+                        },
+                        "endTime": {
+                          "pattern": "^(?:[01]\\d|2[0-3]):[0-5]\\d$",
+                          "type": "string"
+                        },
+                        "start": {
+                          "format": "date",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+                          "type": "string"
+                        },
+                        "startTime": {
+                          "pattern": "^(?:[01]\\d|2[0-3]):[0-5]\\d$",
+                          "type": "string"
+                        },
+                        "timeZone": {
+                          "type": "string"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "tripId": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "updatedAt": {
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "venueLinks": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "label": {
+                            "type": "string"
+                          },
+                          "uri": {
+                            "anyOf": [
+                              {
+                                "format": "uri",
+                                "type": "string"
+                              },
+                              {
+                                "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                "type": "string"
+                              }
+                            ]
+                          }
+                        },
+                        "required": ["uri"],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "visitId": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "nullable": true,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "tripId",
+                    "visitId",
+                    "name",
+                    "intention",
+                    "arrangement",
+                    "purchase",
+                    "timing",
+                    "address",
+                    "reference",
+                    "sourceUrl",
+                    "ticketUrl",
+                    "notes",
+                    "sourceLinks",
+                    "venueLinks",
+                    "organiserLinks",
+                    "documentLinks",
+                    "createdAt",
+                    "updatedAt"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "404"
+          }
+        },
+        "tags": ["events"]
+      },
+      "patch": {
+        "operationId": "events.update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tripId",
+            "required": true,
+            "schema": {
+              "exclusiveMinimum": true,
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "exclusiveMinimum": true,
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "address": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "arrangement": {
+                    "enum": ["Booked", "Agreed", "Not arranged", "Not needed", null],
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "documentLinks": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "label": {
+                          "type": "string"
+                        },
+                        "uri": {
+                          "anyOf": [
+                            {
+                              "format": "uri",
+                              "type": "string"
+                            },
+                            {
+                              "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                              "type": "string"
+                            }
+                          ]
+                        }
+                      },
+                      "required": ["uri"],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "intention": {
+                    "enum": ["In plan", "Considering", "Alternative", null],
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "name": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "notes": {
+                    "type": "string"
+                  },
+                  "organiserLinks": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "label": {
+                          "type": "string"
+                        },
+                        "uri": {
+                          "anyOf": [
+                            {
+                              "format": "uri",
+                              "type": "string"
+                            },
+                            {
+                              "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                              "type": "string"
+                            }
+                          ]
+                        }
+                      },
+                      "required": ["uri"],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "purchase": {
+                    "enum": ["Purchased", null],
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "reference": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "sourceLinks": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "label": {
+                          "type": "string"
+                        },
+                        "uri": {
+                          "anyOf": [
+                            {
+                              "format": "uri",
+                              "type": "string"
+                            },
+                            {
+                              "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                              "type": "string"
+                            }
+                          ]
+                        }
+                      },
+                      "required": ["uri"],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "sourceUrl": {
+                    "format": "uri",
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "ticketUrl": {
+                    "format": "uri",
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "timing": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "end": {
+                        "format": "date",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+                        "type": "string"
+                      },
+                      "endTime": {
+                        "pattern": "^(?:[01]\\d|2[0-3]):[0-5]\\d$",
+                        "type": "string"
+                      },
+                      "start": {
+                        "format": "date",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+                        "type": "string"
+                      },
+                      "startTime": {
+                        "pattern": "^(?:[01]\\d|2[0-3]):[0-5]\\d$",
+                        "type": "string"
+                      },
+                      "timeZone": {
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "venueLinks": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "label": {
+                          "type": "string"
+                        },
+                        "uri": {
+                          "anyOf": [
+                            {
+                              "format": "uri",
+                              "type": "string"
+                            },
+                            {
+                              "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                              "type": "string"
+                            }
+                          ]
+                        }
+                      },
+                      "required": ["uri"],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "visitId": {
+                    "exclusiveMinimum": true,
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "nullable": true,
+                    "type": "integer"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "address": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "arrangement": {
+                      "enum": ["Booked", "Agreed", "Not arranged", "Not needed", null],
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "documentLinks": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "label": {
+                            "type": "string"
+                          },
+                          "uri": {
+                            "anyOf": [
+                              {
+                                "format": "uri",
+                                "type": "string"
+                              },
+                              {
+                                "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                "type": "string"
+                              }
+                            ]
+                          }
+                        },
+                        "required": ["uri"],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "id": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "intention": {
+                      "enum": ["In plan", "Considering", "Alternative", null],
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "name": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "notes": {
+                      "type": "string"
+                    },
+                    "organiserLinks": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "label": {
+                            "type": "string"
+                          },
+                          "uri": {
+                            "anyOf": [
+                              {
+                                "format": "uri",
+                                "type": "string"
+                              },
+                              {
+                                "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                "type": "string"
+                              }
+                            ]
+                          }
+                        },
+                        "required": ["uri"],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "purchase": {
+                      "enum": ["Purchased", null],
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "reference": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "sourceLinks": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "label": {
+                            "type": "string"
+                          },
+                          "uri": {
+                            "anyOf": [
+                              {
+                                "format": "uri",
+                                "type": "string"
+                              },
+                              {
+                                "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                "type": "string"
+                              }
+                            ]
+                          }
+                        },
+                        "required": ["uri"],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "sourceUrl": {
+                      "format": "uri",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "ticketUrl": {
+                      "format": "uri",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "timing": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "end": {
+                          "format": "date",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+                          "type": "string"
+                        },
+                        "endTime": {
+                          "pattern": "^(?:[01]\\d|2[0-3]):[0-5]\\d$",
+                          "type": "string"
+                        },
+                        "start": {
+                          "format": "date",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+                          "type": "string"
+                        },
+                        "startTime": {
+                          "pattern": "^(?:[01]\\d|2[0-3]):[0-5]\\d$",
+                          "type": "string"
+                        },
+                        "timeZone": {
+                          "type": "string"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "tripId": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "updatedAt": {
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "venueLinks": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "label": {
+                            "type": "string"
+                          },
+                          "uri": {
+                            "anyOf": [
+                              {
+                                "format": "uri",
+                                "type": "string"
+                              },
+                              {
+                                "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                "type": "string"
+                              }
+                            ]
+                          }
+                        },
+                        "required": ["uri"],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "visitId": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "nullable": true,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "tripId",
+                    "visitId",
+                    "name",
+                    "intention",
+                    "arrangement",
+                    "purchase",
+                    "timing",
+                    "address",
+                    "reference",
+                    "sourceUrl",
+                    "ticketUrl",
+                    "notes",
+                    "sourceLinks",
+                    "venueLinks",
+                    "organiserLinks",
+                    "documentLinks",
+                    "createdAt",
+                    "updatedAt"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "404"
+          }
+        },
+        "tags": ["events"]
+      }
+    },
     "/trips/{tripId}/journey-groups": {
       "get": {
         "operationId": "journeyGroups.list",
