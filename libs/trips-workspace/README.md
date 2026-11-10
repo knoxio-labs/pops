@@ -1,8 +1,15 @@
 # Trips workspace components
 
-`TripOverview` is the approved route-first read surface. Its host supplies translated
-labels and links to published source pages. Trip, Place, ordered Visit, Journey,
-Journey group, Stay, Event, Decision and document-association reads fail independently;
+`TripOverview` is the shared Trip Timeline. Its host supplies translated labels,
+controlled tools and exact `onOpenSource({ kind, id })` callbacks for existing editors.
+The `controls` slot belongs to that host; `contextualEditor` renders after the Timeline's
+main landmark so a Sheet or Dialog can reuse its existing workspace without nested mains.
+Meetings, captures, Ideas and Rentals retain their canonical identities and independent facts.
+People and Capture reads share the contextual editors' existing query keys and transports.
+The optional controlled `calendar` selection embeds the existing date/zone/source-window
+projection and requires a contextual source opener; it adds no Calendar destination.
+Trip, Place, ordered Visit, Journey, Journey group, Stay, Event, Rental, Meeting,
+Capture workspace, Decision and document-association reads fail independently;
 cached successes remain visible during refresh failures. Missing source references
 retain their identities. Only explicit Visit IDs attach stays and events to route
 occurrences. Journeys remain independent of visits, with current and alternative

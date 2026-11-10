@@ -1,5 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 
+import { captureQueryKey } from '../capture/api';
+import { peopleQueryKey } from '../people/api';
 import { loadTrip } from '../stay/api';
 import { overviewLoaders } from './api';
 
@@ -47,5 +49,38 @@ export function useOverviewSources(props: TripOverviewProps): OverviewQueries {
     queryFn: loaders.documents,
     retry: false,
   });
-  return { trip, visits, places, stays, events, journeys, groups, decisions, documents };
+  return {
+    trip,
+    visits,
+    places,
+    stays,
+    events,
+    journeys,
+    groups,
+    decisions,
+    documents,
+    ...useAdditionalSources(props),
+  };
+}
+
+function useAdditionalSources(
+  props: TripOverviewProps
+): Pick<OverviewQueries, 'meetings' | 'capture' | 'rentals'> {
+  const loaders = overviewLoaders(props);
+  const meetings = useQuery({
+    queryKey: peopleQueryKey(props),
+    queryFn: loaders.meetings,
+    retry: false,
+  });
+  const capture = useQuery({
+    queryKey: captureQueryKey(props),
+    queryFn: loaders.capture,
+    retry: false,
+  });
+  const rentals = useQuery({
+    queryKey: ['trips', props.client?.getConfig().baseUrl ?? '/trips-api', props.tripId, 'rentals'],
+    queryFn: loaders.rentals,
+    retry: false,
+  });
+  return { meetings, capture, rentals };
 }

@@ -3,7 +3,10 @@ import { MapPin } from 'lucide-react';
 import { Button } from '@pops/ui';
 
 import { EventCard, StayCard } from './ArrangementCards';
+import { contextRecords, ContextSources } from './ContextSources';
 import { visitRecords, visitTiming } from './model';
+import { overviewRentals, RentalCard } from './OverviewRentals';
+import { sourceAction } from './source-action';
 
 import type { JSX } from 'react';
 
@@ -38,7 +41,6 @@ function RouteVisit({
   const title =
     props.sources.places?.find((place) => place.id === visit.placeId)?.name ??
     props.labels.source('place', visit.placeId);
-  const href = props.href('visit', visit.id);
   return (
     <li
       data-visit-id={visit.id}
@@ -52,19 +54,7 @@ function RouteVisit({
           <MapPin className="size-4 text-app-accent" aria-hidden />
         </span>
         <div className="min-w-0 space-y-3 rounded-lg border border-dashed border-border p-3">
-          <h3 className="break-words text-lg font-semibold">
-            {href ? (
-              <Button
-                asChild
-                variant="ghost"
-                className="h-auto min-h-11 w-full justify-start whitespace-normal px-0 text-left text-lg"
-              >
-                <a href={href}>{title}</a>
-              </Button>
-            ) : (
-              title
-            )}
-          </h3>
+          <VisitTitle {...props} id={visit.id} title={title} />
           {visit.notes && (
             <p className="whitespace-pre-wrap break-words text-sm text-muted-foreground">
               {visit.notes}
@@ -76,8 +66,39 @@ function RouteVisit({
           {visitEvents.map((event) => (
             <EventCard key={event.id} {...props} event={event} />
           ))}
+          <ContextSources
+            {...props}
+            records={contextRecords(props.sources, props.tripId).filter(
+              (record) => record.source.visitId === visit.id
+            )}
+          />
+          {overviewRentals(props.sources, props.tripId)
+            .filter((row) => row.visitId === visit.id)
+            .map((row) => (
+              <RentalCard key={row.source.id} {...props} row={row} />
+            ))}
         </div>
       </div>
     </li>
   );
+}
+
+function VisitTitle(props: OverviewViewProps & { id: number; title: string }): JSX.Element {
+  const action = sourceAction(props, { kind: 'visit', id: props.id });
+  const className = 'h-auto min-h-11 w-full justify-start whitespace-normal px-0 text-left text-lg';
+  let content: JSX.Element;
+  if (action.onOpen)
+    content = (
+      <Button variant="ghost" onClick={action.onOpen} className={className}>
+        {props.title}
+      </Button>
+    );
+  else if (action.href)
+    content = (
+      <Button asChild variant="ghost" className={className}>
+        <a href={action.href}>{props.title}</a>
+      </Button>
+    );
+  else content = <>{props.title}</>;
+  return <h3 className="break-words text-lg font-semibold">{content}</h3>;
 }

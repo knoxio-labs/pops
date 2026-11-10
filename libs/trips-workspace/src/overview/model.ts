@@ -35,8 +35,19 @@ export function detachedRecords<T extends { visitId: number | null }>(
   records: T[],
   visits: Visit[]
 ): T[] {
+  return detachedByVisit(records, visits, (record) => record.visitId);
+}
+/** Apply the same exact Visit membership test to canonical sources wrapped in a view reference. */
+export function detachedByVisit<T>(
+  records: T[],
+  visits: Visit[],
+  visitId: (record: T) => number | null
+): T[] {
   const identities = new Set(visits.map((visit) => visit.id));
-  return records.filter((record) => record.visitId === null || !identities.has(record.visitId));
+  return records.filter((record) => {
+    const id = visitId(record);
+    return id === null || !identities.has(id);
+  });
 }
 /** Explicit groups retain current and alternative identities, including unavailable sources. */
 export function journeyRecords(journeys: Journey[], groups: JourneyGroup[]): JourneyRecords {

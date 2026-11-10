@@ -1,51 +1,13 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { sourceJourney, sourceLeg } from '../journey/test-utils';
 import { sourceStay, sourceVisits } from '../stay/test-utils';
-import { createClient } from '../trips-api/client';
-import { overviewProps, overviewResponses, overviewTrip } from './test-utils';
-import { TripOverview } from './TripOverview';
-
-import type { TripOverviewProps } from './types';
+import { mountOverview as mount } from './render.test-utils';
+import { overviewResponses, overviewTrip } from './test-utils';
 
 afterEach(cleanup);
-
-function mount(
-  responses = overviewResponses(),
-  wait?: { path: string; until: Promise<void> },
-  props: Partial<TripOverviewProps> = {}
-) {
-  const requests: string[] = [];
-  const client = createClient({
-    baseUrl: 'http://overview.test',
-    fetch: async (input, init) => {
-      const request = new Request(input, init);
-      const path = new URL(request.url).pathname;
-      requests.push(path);
-      if (path === wait?.path) await wait.until;
-      return new Response(
-        JSON.stringify(
-          responses.get(path) ?? {
-            code: 'trips.source.unavailable',
-            message: 'Source read failed',
-            retryable: true,
-          }
-        ),
-        { status: responses.has(path) ? 200 : 503, headers: { 'content-type': 'application/json' } }
-      );
-    },
-  });
-  const cache = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  render(
-    <QueryClientProvider client={cache}>
-      <TripOverview {...overviewProps} {...props} client={client} />
-    </QueryClientProvider>
-  );
-  return { requests, cache };
-}
 
 describe('source-backed TripOverview', () => {
   it('opens the published Documents workspace even before the first association exists', async () => {

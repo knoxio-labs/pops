@@ -1,3 +1,4 @@
+import { captureSource } from '../capture/test-utils';
 import { sourceJourney, sourceLeg } from '../journey/test-utils';
 import { sourcePlaces, sourceStay, sourceVisits } from '../stay/test-utils';
 
@@ -85,5 +86,8 @@ export function overviewResponses(): Map<string, unknown> {
     ['/trips/7/journey-groups', { groups: [] }],
     ['/trips/7/decisions', { decisions: [] }],
     ['/trips/7/document-associations', { associations: [] }],
+    ['/trips/7/meeting-plans', { meetingPlans: [] }],
+    ['/trips/7/capture-workspace', captureSource()],
+    ['/trips/7/rentals', { rentals: [] }],
   ]);
 }

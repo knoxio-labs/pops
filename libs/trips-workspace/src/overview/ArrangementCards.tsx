@@ -1,4 +1,5 @@
 import { dateRange } from './model';
+import { sourceAction } from './source-action';
 import { SourceCard } from './SourceCard';
 
 import type { JSX } from 'react';
@@ -16,7 +17,7 @@ export function StayCard({
     <SourceCard
       kind="stay"
       title={stay.name ?? props.labels.source('stay', stay.id)}
-      href={props.href('stay', stay.id)}
+      {...sourceAction(props, { kind: 'stay', id: stay.id })}
       purchased={stay.status === 'Purchased'}
       statuses={[stay.status]}
       labels={props.labels}
@@ -44,7 +45,7 @@ export function EventCard({
     <SourceCard
       kind="event"
       title={event.name ?? props.labels.source('event', event.id)}
-      href={props.href('event', event.id)}
+      {...sourceAction(props, { kind: 'event', id: event.id })}
       purchased={event.purchase === 'Purchased'}
       statuses={[event.intention, event.arrangement, event.purchase]}
       labels={props.labels}

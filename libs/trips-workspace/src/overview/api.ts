@@ -1,5 +1,8 @@
 import { unwrap } from '@pops/pillar-sdk/client';
 
+import { loadRentals } from '../arrangements/api';
+import { loadCaptureSource } from '../capture/api';
+import { loadMeetingPlans } from '../people/api';
 import {
   decisionsList,
   documentAssociationsList,
@@ -34,5 +37,8 @@ export function overviewLoaders({ tripId, client }: TripOverviewProps): Overview
       unwrap(await decisionsList(options)).decisions,
     documents: async (): Promise<Collections['documents']> =>
       unwrap(await documentAssociationsList(options)).associations,
+    meetings: () => loadMeetingPlans({ tripId, client }),
+    capture: () => loadCaptureSource({ tripId, client }),
+    rentals: () => loadRentals({ tripId, client }),
   };
 }

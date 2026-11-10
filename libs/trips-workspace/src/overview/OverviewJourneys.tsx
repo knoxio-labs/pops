@@ -6,6 +6,7 @@ import { Badge, ErrorState } from '@pops/ui';
 import { requestProblem } from '../stay/api';
 import { journeyLegsList } from '../trips-api/sdk.gen';
 import { journeyRecords } from './model';
+import { sourceAction } from './source-action';
 import { SourceCard } from './SourceCard';
 
 import type { JSX } from 'react';
@@ -65,7 +66,7 @@ function MissingJourney(props: OverviewViewProps & { id: number }): JSX.Element 
       title={
         props.sources.journeys === undefined ? title : `${title} · ${props.labels.unavailable}`
       }
-      href={props.href('journey', props.id)}
+      {...sourceAction(props, { kind: 'journey', id: props.id })}
       labels={props.labels}
     />
   );
@@ -93,7 +94,7 @@ function JourneyRecord({
       <SourceCard
         kind="journey"
         title={journey.name ?? props.labels.source('journey', journey.id)}
-        href={props.href('journey', journey.id)}
+        {...sourceAction(props, { kind: 'journey', id: journey.id })}
         labels={props.labels}
       />
       {legs.isPending && (
@@ -108,6 +109,7 @@ function JourneyRecord({
         <SourceCard
           key={leg.id}
           kind="journey"
+          {...sourceAction(props, { kind: 'journey', id: journey.id })}
           title={
             [leg.mode, leg.operator, leg.service].filter(Boolean).join(' · ') ||
             props.labels.source('leg', leg.id)
