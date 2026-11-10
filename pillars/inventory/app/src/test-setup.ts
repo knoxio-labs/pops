@@ -2,12 +2,13 @@ import '@testing-library/jest-dom/vitest';
 
 import { createInstance } from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import { afterEach } from 'vitest';
+import { aroundEach } from 'vitest';
 
 import enAUUi from '@pops/locales/en-AU/ui.json';
 
 import { resetInterruption } from './foundation/interruptions/interruption-store';
 import enAUInventory from './locales/en-AU.json';
+import { observeTestDomTasks } from './test-dom-cleanup';
 
 const i18n = createInstance();
 
@@ -32,8 +33,17 @@ globalThis.ResizeObserver ??= class ResizeObserver {
   disconnect() {}
 };
 
-afterEach(() => {
-  resetInterruption();
+aroundEach(async (runTest) => {
+  const lifecycle = observeTestDomTasks();
+  try {
+    await runTest();
+  } finally {
+    try {
+      await lifecycle.cleanup();
+    } finally {
+      resetInterruption();
+    }
+  }
 });
 
 Element.prototype.scrollIntoView ??= () => undefined;
