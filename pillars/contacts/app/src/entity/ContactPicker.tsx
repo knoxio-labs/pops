@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Button, SearchPickerDialog } from '@pops/ui';
 
 import { contactGateway } from './api';
+import { useContactSelection } from './useContactSelection';
 
 import type { TFunction } from 'i18next';
 
@@ -23,6 +24,8 @@ export interface ContactPickerProps {
   gateway?: ContactGateway;
   /** Search text restored when a host returns from its creation step. */
   initialSearch?: string;
+  /** Host intent identity; replacement invalidates pending resolution without selecting into the new intent. */
+  selectionIntent?: object;
 }
 
 /** Search existing contacts or hand an explicit create intent to the owning flow. */
@@ -35,31 +38,23 @@ export function ContactPicker({
   allowCreate = true,
   gateway = contactGateway,
   initialSearch = '',
+  selectionIntent,
 }: ContactPickerProps) {
   const { t } = useTranslation('contacts');
   const [search, setSearch] = useState(initialSearch);
-  const [selecting, setSelecting] = useState(false);
-  const [failedSelection, setFailedSelection] = useState<Entity | null>(null);
+  const { selecting, failedSelection, select, changeOpen, clear } = useContactSelection({
+    open,
+    gateway,
+    onSelect,
+    onOpenChange,
+    intent: selectionIntent,
+  });
   const query = useQuery({
     queryKey: ['contacts-picker-search', search.trim(), entityType],
     queryFn: () => gateway.search(search.trim(), entityType),
     enabled: open && search.trim().length > 0,
     retry: false,
   });
-
-  async function select(entity: Entity) {
-    setSelecting(true);
-    setFailedSelection(null);
-    try {
-      const selection = await gateway.resolve(entity.id);
-      onSelect(selection.entity, selection.reference);
-      onOpenChange(false);
-    } catch {
-      setFailedSelection(entity);
-    } finally {
-      setSelecting(false);
-    }
-  }
 
   function retry() {
     if (failedSelection) void select(failedSelection);
@@ -68,19 +63,21 @@ export function ContactPicker({
 
   function changeSearch(value: string) {
     setSearch(value);
-    setFailedSelection(null);
+    clear();
   }
 
   return (
     <ContactPickerDialog
       t={t}
       open={open}
-      onOpenChange={onOpenChange}
+      onOpenChange={changeOpen}
       search={search}
       onSearchChange={changeSearch}
       results={query.data ?? []}
       isLoading={query.isFetching || selecting}
-      errorMessage={failedSelection || query.isError ? t('picker.failed') : undefined}
+      errorMessage={
+        (failedSelection && !selecting) || query.isError ? t('picker.failed') : undefined
+      }
       onRetry={retry}
       onSelect={select}
       onCreate={allowCreate ? onCreate : undefined}

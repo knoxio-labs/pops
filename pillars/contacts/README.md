@@ -39,7 +39,11 @@ retrying resolves that known entity without repeating POST. An unknown create
 outcome retains and locks the attempted draft; the user can explicitly search
 existing contacts. A duplicate conflict requires explicit existing selection,
 never a guessed identity match. Dismissing a pending request prevents its result
-from being delivered to the host automatically.
+from being delivered to the host automatically. Reopening, replacing the retained
+intent or changing gateway context requires a new explicit selection/resolution;
+late results never deliver into that replacement context. This fence also applies
+to existing-contact selection, whose selected ID remains available for explicit
+retry after dismissal.
 
 `ContactChooser` registers both owner catalogues on the host's shared i18next
 instance before its embedded view mounts, including when no Contacts remote has
