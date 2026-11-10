@@ -1,4 +1,5 @@
 import type { MobileTripDetail } from '../../../contract/mobile-trips-detail-schemas.js';
+import type { MobileTripEvent } from '../../../contract/mobile-trips-event-schemas.js';
 
 const audit = { createdAt: '2027-01-01T00:00:00Z', updatedAt: '2027-01-02T00:00:00Z' };
 function routeFacts(): Pick<MobileTripDetail, 'trip' | 'places' | 'visits'> {
@@ -97,6 +98,8 @@ export function tripsFixture(): MobileTripDetail {
         ...audit,
       },
     ],
+    events: [],
+    documentAssociations: [],
     stays: [
       {
         id: 70,
@@ -115,5 +118,30 @@ export function tripsFixture(): MobileTripDetail {
         ...audit,
       },
     ],
+  };
+}
+
+/** Fictional canonical Event source with independent optional timing and lifecycle fields. */
+export function tripsEventFixture(): MobileTripEvent {
+  return {
+    id: 80,
+    tripId: 7,
+    visitId: 21,
+    name: 'Concert',
+    intention: 'Alternative',
+    arrangement: 'Not needed',
+    purchase: null,
+    timing: { start: '2028-01-02', endTime: '23:00', timeZone: 'America/Recife' },
+    address: 'Rua da Aurora',
+    reference: null,
+    sourceUrl: null,
+    ticketUrl: null,
+    notes: '',
+    sourceLinks: [],
+    venueLinks: [{ uri: 'pops:contacts/entity/venue' }],
+    organiserLinks: [],
+    documentLinks: [{ uri: 'pops:documents/document/31' }],
+    createdAt: '2027-01-01T00:00:00Z',
+    updatedAt: '2027-01-02T00:00:00Z',
   };
 }

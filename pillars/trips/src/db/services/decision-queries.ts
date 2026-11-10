@@ -82,3 +82,15 @@ export function requireDecisionRevision(
     throw new TripsServiceError('decision_revision_conflict');
   return decision;
 }
+
+/** Read decision revision and its live options from one SQLite snapshot. */
+export function getDecisionWorkspace(
+  db: TripsDb,
+  tripId: number,
+  id: number
+): { decision: Decision; options: DecisionOption[] } {
+  return db.transaction((tx) => ({
+    decision: getDecision(tx, tripId, id),
+    options: listDecisionOptions(tx, tripId, id),
+  }));
+}

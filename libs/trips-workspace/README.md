@@ -37,6 +37,16 @@ resolution. Nearby bookings and buffer-safety findings are owned by POPS-6134.
 In visit accommodation workspace. This browser component library owns no service or database and imports no pillar package.
 Its consumers supply source identities and a React Query provider; shell activation
 is tracked separately.
+`EventWorkspace({ tripId, eventId, client? })` implements the approved route-context
+event detail. It places the editor inside its explicit associated visit and shows
+the immediately neighbouring visits in persisted route order. Missing associations
+remain unlinked; event dates never move visits or create journeys. Intention,
+arrangement and purchase save independently, and only Purchased has hard styling.
+Event dates, clocks and zone remain independent source fields. Source/ticket URLs,
+address, notes and opaque source/venue/organiser/document references are editable;
+no reference is hydrated or treated as an external booking action. Undo persists
+the previous successful event source snapshot. Failed drafts remain visible and
+retryable; optional context failures do not prevent editing.
 The generated Trips client uses `/trips-api`; an explicit generated `Client`
 may be supplied for a separate transport. No backend contract types are imported
 into the browser: the committed Trips OpenAPI snapshot owns the generated types.
@@ -96,3 +106,29 @@ harness, then enter real trip/stay IDs. Its proxy targets the local Trips API on
 The harness is a development entry, not shell navigation. Shell routes, remote
 assets and deployment activation are tracked by POPS-6155. Activity context is
 tracked by POPS-6134; derived stay findings remain under POPS-6147.
+
+The approved options-first `DecisionWorkspace` loads a decision and its live options
+from one transactional producer snapshot. It writes only explicit fields, keeps the
+deadline date-only, and never changes linked visits, journeys or stays when choosing
+or reopening a decision. Optional context failures remain independent. Unavailable
+stored memberships retain their exact kind and identity and may be removed without
+revalidating other retained links. An option's persisted validated membership
+history permits guarded restoration of an unlinked unavailable source; genuinely
+new memberships require live sources in the owning trip. Currently live foreign
+ownership is rejected even for a historical identity. Provenance URIs remain opaque.
+
+Inline fields save on blur and Escape discards the draft. Failed writes and cached
+read failures retain drafts and diagnostics. A newer source arriving during edits
+requires an explicit reload and review; changing the API origin or owning record
+starts a new editor. Undo uses only confirmed own successor revisions under the
+producer's exact one-step revision protocol. Selected-option removal restores the
+same option identity and prior selection atomically. A confirmed newer revision
+or revision conflict clears stale Undo. Transient failures retain inverse intent;
+retries keep their original revision, including after an unchanged refresh, and
+cannot silently rebase an uncertain create or inverse. The host supplies the parent
+navigation link and authenticated query/client context.
+
+`@pops/trips-workspace/decision-client` exports the headless decision controller
+and its generated-transport load/apply operations. The owning Trips app runs the
+real editor/HTTP/SQLite integration regression; this extractable library does not
+install or start a pillar runtime in its own unit tests.

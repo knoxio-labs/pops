@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { MobileTripDocumentAssociationSchema } from '../../contract/mobile-trips-document-schemas.js';
+import { MobileTripEventSchema } from '../../contract/mobile-trips-event-schemas.js';
 import {
   MobileJourneyGroupSchema,
   MobileJourneyLegSchema,
@@ -26,4 +28,8 @@ export const TripsWire = {
   legs: z.object({ legs: z.array(MobileJourneyLegSchema).refine(uniqueTripsIds) }),
   groups: z.object({ groups: z.array(MobileJourneyGroupSchema).refine(uniqueTripsIds) }),
   stays: z.object({ stays: z.array(MobileStaySchema).refine(uniqueTripsIds) }),
+  associations: z.object({
+    associations: z.array(MobileTripDocumentAssociationSchema).refine(uniqueTripsIds),
+  }),
+  events: z.object({ events: z.array(MobileTripEventSchema).refine(uniqueTripsIds) }),
 };

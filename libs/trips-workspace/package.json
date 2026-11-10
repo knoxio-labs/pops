@@ -5,7 +5,8 @@
   "type": "module",
   "main": "src/index.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./decision-client": "./src/decision/client.ts"
   },
   "scripts": {
     "build": "tsc --noEmit && vite build",
