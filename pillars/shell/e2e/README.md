@@ -64,6 +64,14 @@ upper bound. Tests with no recent script or pillar REST request do not wait,
 and a page that fails to settle within the bound fails with its remaining
 requests listed.
 
+The configured Chromium projects track main-frame scripts by CDP request, frame and
+document loader IDs. A committed replacement retires only scripts from that exact
+frame's previously known loader, including abandoned requests that never emit a
+Playwright terminal event during a development-server reload. Same-document navigation,
+unknown loaders and new-document scripts remain pending. Iframe scripts retain their
+existing Playwright lifecycle tracking. All REST requests, including writes and requests
+from earlier documents, still require a terminal event; navigation never clears them.
+
 A spec whose actual subject is the shell's behaviour when a pillar answers
 nothing (a rail-navigation smoke test, a "mounts even with a dead API" case)
 opts out with `test.use({ allowUnroutedPillarRest: '<why>' })`, scoped as

@@ -10,6 +10,7 @@
 import { test as base, expect } from '@playwright/test';
 
 import { PILLAR_REST_URL, REGISTRY_HEALTH_URL } from '../helpers/pillar-rest';
+import { observeMainFrameScripts } from './script-requests';
 
 import type { Request, Route } from '@playwright/test';
 
@@ -50,7 +51,7 @@ function shouldTrackRequest(request: Request): boolean {
 }
 
 interface RequestSettlement {
-  readonly pending: ReadonlySet<Request>;
+  readonly pending: () => readonly { method: string; url: string }[];
   readonly lastActivityAt: () => number | undefined;
   readonly revision: () => number;
   readonly waitForChange: (revision: number, timeoutMs: number) => Promise<boolean>;
@@ -62,8 +63,9 @@ async function settlePendingRequests(settlement: RequestSettlement): Promise<voi
   while (true) {
     const remaining = deadline - Date.now();
     if (remaining <= 0) {
-      const pending = [...settlement.pending]
-        .map((request) => `  ${request.method()} ${request.url()}`)
+      const pending = settlement
+        .pending()
+        .map((request) => `  ${request.method} ${request.url}`)
         .join('\n');
       throw new Error(
         `Shell E2E did not settle within ${SETTLEMENT_TIMEOUT_MS}ms after relevant network activity:\n${pending}`
@@ -73,14 +75,16 @@ async function settlePendingRequests(settlement: RequestSettlement): Promise<voi
     const lastActivityAt = settlement.lastActivityAt();
     const quietRemaining =
       lastActivityAt === undefined ? 0 : SETTLEMENT_QUIET_PERIOD_MS - (Date.now() - lastActivityAt);
-    if (settlement.pending.size === 0 && quietRemaining <= 0) return;
+    if (settlement.pending().length === 0 && quietRemaining <= 0) return;
 
-    const timeout = settlement.pending.size > 0 ? remaining : Math.min(remaining, quietRemaining);
+    const timeout =
+      settlement.pending().length > 0 ? remaining : Math.min(remaining, quietRemaining);
     const changed = await settlement.waitForChange(settlement.revision(), timeout);
-    if (!changed && settlement.pending.size === 0 && Date.now() < deadline) return;
+    if (!changed && settlement.pending().length === 0 && Date.now() < deadline) return;
     if (!changed) {
-      const pending = [...settlement.pending]
-        .map((request) => `  ${request.method()} ${request.url()}`)
+      const pending = settlement
+        .pending()
+        .map((request) => `  ${request.method} ${request.url}`)
         .join('\n');
       throw new Error(
         `Shell E2E did not settle within ${SETTLEMENT_TIMEOUT_MS}ms after relevant network activity:\n${pending}`
@@ -106,8 +110,19 @@ export const test = base.extend<PillarRestGuardOptions>({
       requestRevision += 1;
       for (const wake of requestChangeWaiters) wake();
     };
+    const scripts = await observeMainFrameScripts(page, () => {
+      lastRequestActivity = Date.now();
+      notifyRequestChange();
+    });
     const trackRequest = (request: Request) => {
       if (!shouldTrackRequest(request)) return;
+      if (request.resourceType() === 'script' && !PILLAR_REST_URL.test(request.url())) {
+        try {
+          if (request.frame() === page.mainFrame()) return;
+        } catch {
+          // Requests without a known frame retain the existing terminal-event guard.
+        }
+      }
       pendingRequests.add(request);
       lastRequestActivity = Date.now();
       notifyRequestChange();
@@ -169,7 +184,13 @@ export const test = base.extend<PillarRestGuardOptions>({
     try {
       await runTest(page);
       await settlePendingRequests({
-        pending: pendingRequests,
+        pending: () => [
+          ...[...pendingRequests].map((request) => ({
+            method: request.method(),
+            url: request.url(),
+          })),
+          ...scripts.requests.pending(),
+        ],
         lastActivityAt: () => lastRequestActivity,
         revision: () => requestRevision,
         waitForChange,
@@ -178,6 +199,7 @@ export const test = base.extend<PillarRestGuardOptions>({
       page.off('request', trackRequest);
       page.off('requestfinished', settleRequest);
       page.off('requestfailed', settleRequest);
+      await scripts.dispose();
     }
 
     if (expectedUnroutedPillarRestCalls !== undefined) {
