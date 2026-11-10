@@ -38,6 +38,15 @@ describe('Trips manifest', () => {
     expect(manifest.nav).not.toHaveProperty('color');
   });
 
+  it('keeps People source operations available without an independent Trip destination', () => {
+    const manifest = buildTripsManifest('test');
+    if (!manifest.pages) throw new Error('Missing Trips page manifest');
+    expect(manifest.pages.some((page) => page.path === ':tripId/people')).toBe(false);
+    expect(manifest.pages.map((page) => page.bundleSlot)).not.toContain('trips-people');
+    expect(manifest.routes.queries).toContain('trips.meetingPlans.list');
+    expect(manifest.routes.mutations).toContain('trips.meetingPlans.operate');
+  });
+
   it('publishes exactly the implemented source-backed routes', () => {
     const manifest = buildTripsManifest('1.2.3');
     expect(manifest.pages).toEqual([
@@ -51,7 +60,6 @@ describe('Trips manifest', () => {
       { path: ':tripId/journeys/:journeyId', bundleSlot: 'trips-journey' },
       { path: ':tripId/documents', bundleSlot: 'trips-documents' },
       { path: ':tripId/settings', bundleSlot: 'trips-settings' },
-      { path: ':tripId/people', bundleSlot: 'trips-people' },
     ]);
     expect(manifest.pages).toEqual(TRIPS_PAGES);
     expect(manifest.assetsBaseUrl).toBe('/trips-ui/trips.js');

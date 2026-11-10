@@ -60,7 +60,7 @@ function PeopleSession(props: PeopleWorkspaceProps & { initial: MeetingPlan[] })
   const [filters, setFilters] = useState({ query: '', intention: '', agreement: '', visitId: '' });
   const [adding, setAdding] = useState(false);
   return (
-    <main className="mx-auto max-w-4xl space-y-4 p-4 md:p-6">
+    <section className="mx-auto max-w-4xl space-y-4 p-4 md:p-6">
       <PeopleControls
         context={context}
         workspace={props}
@@ -88,6 +88,6 @@ function PeopleSession(props: PeopleWorkspaceProps & { initial: MeetingPlan[] })
           setAdding(false);
         }}
       />
-    </main>
+    </section>
   );
 }

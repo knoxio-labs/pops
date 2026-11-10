@@ -41,6 +41,7 @@ describe('meeting workspace source actions', () => {
       })),
     });
     await screen.findByText('Casey Park');
+    expect(screen.queryByRole('main')).not.toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('search'), { target: { value: 'Casey' } });
     expect(screen.getByRole('article', { name: 'Coffee' })).toBeVisible();
     fireEvent.change(screen.getByLabelText('search'), { target: { value: 'Different person' } });
