@@ -4,6 +4,7 @@ import { StaySchema } from '../../contract/stay-schemas.js';
 import { stays } from '../schema.js';
 import { deleteDocumentAssociationsForTarget } from './document-association-cleanup.js';
 import { getTrip, getVisit } from './records.js';
+import { deleteResponsibilityForTarget } from './responsibility-cleanup.js';
 import { requireOwnedRecord } from './source-record.js';
 
 import type { Stay, StayInput } from '../../contract/stay-schemas.js';
@@ -83,6 +84,7 @@ export function deleteStay(db: TripsDb, tripId: number, id: number): void {
     (tx) => {
       getStay(tx, tripId, id);
       deleteDocumentAssociationsForTarget(tx, tripId, 'stay', id);
+      deleteResponsibilityForTarget(tx, tripId, 'stay', id);
       requireOwnedRecord(
         tx
           .delete(stays)

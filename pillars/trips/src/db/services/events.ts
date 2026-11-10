@@ -4,6 +4,7 @@ import { EventSchema } from '../../contract/event-schemas.js';
 import { events } from '../schema.js';
 import { deleteDocumentAssociationsForTarget } from './document-association-cleanup.js';
 import { getTrip, getVisit } from './records.js';
+import { deleteResponsibilityForTarget } from './responsibility-cleanup.js';
 import { requireOwnedRecord } from './source-record.js';
 
 import type { TripEvent, EventInput } from '../../contract/event-schemas.js';
@@ -83,6 +84,7 @@ export function deleteEvent(db: TripsDb, tripId: number, id: number): void {
     (tx) => {
       getEvent(tx, tripId, id);
       deleteDocumentAssociationsForTarget(tx, tripId, 'event', id);
+      deleteResponsibilityForTarget(tx, tripId, 'event', id);
       requireOwnedRecord(
         tx
           .delete(events)
