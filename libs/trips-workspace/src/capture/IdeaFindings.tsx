@@ -4,7 +4,7 @@ import { ideaFindingInput, ideaFindings } from './idea-findings';
 
 import type { JSX } from 'react';
 
-import type { IdeaFieldProps } from './IdeaFields';
+import type { IdeaFieldProps } from './idea-field-types';
 
 /** Explain explicit source discrepancies while leaving optional facts editable and independently saveable. */
 export function IdeaFindings({

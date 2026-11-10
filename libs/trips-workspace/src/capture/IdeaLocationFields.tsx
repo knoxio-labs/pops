@@ -2,7 +2,7 @@ import { Select } from '@pops/ui';
 
 import type { JSX } from 'react';
 
-import type { IdeaFieldProps } from './IdeaFields';
+import type { IdeaFieldProps } from './idea-field-types';
 
 /** Select exact recorded place and visit identities without appending to or inferring the route. */
 

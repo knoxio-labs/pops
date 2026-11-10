@@ -8,19 +8,10 @@ import { CaptureUpload } from './CaptureUpload';
 
 import type { JSX } from 'react';
 
-import type { CaptureBrowserSession } from './browser-session';
-import type { CaptureEditorState } from './editor-types';
-import type { CaptureWorkspaceProps } from './types';
-import type { useCaptureContext } from './use-capture-context';
+import type { CaptureComposerProps } from './composer-types';
 
 /** Text-first composer shared by all approved source surfaces; optional fields stay explicit. */
-export function CaptureComposer(
-  props: CaptureWorkspaceProps & {
-    session: CaptureBrowserSession;
-    state: CaptureEditorState;
-    context: ReturnType<typeof useCaptureContext>;
-  }
-): JSX.Element {
+export function CaptureComposer(props: CaptureComposerProps): JSX.Element {
   const { session, state, view } = props;
   const editor = session.editor;
   const submit = (): void => {
@@ -73,7 +64,7 @@ function ComposerSelections({
   session,
   state,
   documentsClient,
-}: Parameters<typeof CaptureComposer>[0]): JSX.Element {
+}: CaptureComposerProps): JSX.Element {
   return (
     <div className="space-y-2">
       {state.draft.selections.map((selection) =>
@@ -110,7 +101,7 @@ function ComposerSelections({
   );
 }
 
-function ComposerFiles(props: Parameters<typeof CaptureComposer>[0]): JSX.Element {
+function ComposerFiles(props: CaptureComposerProps): JSX.Element {
   const { session, state } = props;
   const editor = session.editor;
   return (

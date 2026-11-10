@@ -1,5 +1,6 @@
 import type { ComponentProps, ReactNode } from 'react';
 
+import type { ContactsHostCapability } from '@pops/pillar-sdk';
 import type { PageHeader } from '@pops/ui';
 
 import type { Client as DocumentsClient } from '../documents-api/client';
@@ -88,6 +89,8 @@ export type CapturePerformer = (request: CaptureRequest) => Promise<CaptureResul
 /** Approved source surfaces share one browser session for an owning trip. */
 export interface CaptureWorkspaceProps extends CaptureIdentity {
   view: 'capture' | 'inbox' | 'explore';
+  /** Optional owner-provided Contacts chooser; absent capabilities do not create local contact identities. */
+  contacts?: ContactsHostCapability;
   backHref?: string;
   documentsClient?: DocumentsClient;
   onViewEvent?: (eventId: number) => void;

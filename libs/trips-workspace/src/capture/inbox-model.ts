@@ -1,18 +1,33 @@
 import type { Capture, CaptureSource } from './types';
 
-/** Organisation requires a live explicit local target; unresolved external owner references remain distinguishable. */
+/** Preserve live-target organisation while distinguishing missing local sources from unverified external owners. */
 export function captureOrganisation(
   capture: Capture,
-  source: CaptureSource
-): 'unorganised' | 'organised' | 'unresolved' {
+  source: CaptureSource,
+  knownContact: (uri: string) => boolean = () => false
+): 'unorganised' | 'organised' | 'unresolved' | 'unverified' {
   const associations = source.associations.filter(
     (row) => row.captureId === capture.id && row.removedAt === null
   );
-  if (associations.some((row) => localTargetExists(row.target, source))) return 'organised';
+  const availability = associations.map((row) =>
+    captureTargetAvailability(row.target, source, knownContact)
+  );
+  if (availability.includes('available')) return 'organised';
+  if (availability.includes('unverified')) return 'unverified';
   return associations.length > 0 ? 'unresolved' : 'unorganised';
 }
-function localTargetExists(
+/** Report source presence independently of association existence; no Contacts read means unverified, never missing. */
+export function captureTargetAvailability(
   target: CaptureSource['associations'][number]['target'],
+  source: CaptureSource,
+  knownContact: (uri: string) => boolean = () => false
+): 'available' | 'missing' | 'unverified' {
+  if (target.kind === 'contact')
+    return knownContact(target.reference.uri) ? 'available' : 'unverified';
+  return localTargetExists(target, source) ? 'available' : 'missing';
+}
+function localTargetExists(
+  target: Exclude<CaptureSource['associations'][number]['target'], { kind: 'contact' }>,
   source: CaptureSource
 ): boolean {
   switch (target.kind) {
@@ -24,7 +39,5 @@ function localTargetExists(
       return source.journeys.some((row) => row.id === target.id);
     case 'stay':
       return source.stays.some((row) => row.id === target.id);
-    case 'contact':
-      return false;
   }
 }

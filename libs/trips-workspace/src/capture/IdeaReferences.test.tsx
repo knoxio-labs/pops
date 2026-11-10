@@ -6,7 +6,11 @@ import { CaptureBrowserSession } from './browser-session';
 import { IdeaReferences } from './IdeaReferences';
 import { captureSource, sourceIdea } from './test-utils';
 
+import type { ContactsHostCapability } from '@pops/pillar-sdk';
+
 import type { CaptureRequest, CaptureSource } from './types';
+
+const contacts: ContactsHostCapability = { createIntent: () => ({ Chooser: () => null }) };
 
 afterEach(cleanup);
 
@@ -17,10 +21,15 @@ function mount(
   }
 ) {
   const requests: CaptureRequest[] = [];
-  const session = new CaptureBrowserSession(source, 1, async (request) => {
-    requests.push(request);
-    return perform(request);
-  });
+  const session = new CaptureBrowserSession(
+    source,
+    1,
+    async (request) => {
+      requests.push(request);
+      return perform(request);
+    },
+    contacts
+  );
   const row = source.ideas[0];
   if (!row) throw new Error('Idea fixture missing');
   render(<IdeaReferences session={session} row={row} value={row} busy={false} />);

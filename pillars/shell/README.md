@@ -94,8 +94,15 @@ the shell source names no pillar, not even for the nudge bell.
 
 Until POPS-3227 there was a second route: a static bundle map statically
 imported the published `@pops/app-<pillar>` package and the shell mounted its
-routes at build time. That file is gone, and with it the shell's dependency on
-any pillar package.
+routes at build time. That file is gone; page routes still resolve entirely
+through the runtime manifest.
+
+Remote pages receive optional `RemotePageHostProps` capabilities. The Contacts
+adapter lazily imports the owner's public app entry only when an explicit chooser
+intent mounts. Each opaque intent retains its owner session across route remounts,
+including pending and ambiguous creation. Libraries retain that intent rather than
+importing a pillar or owning its creation workflow. The capability factory has no
+global session cache; canonical name/reference callbacks come from the owner.
 
 ### The shared-runtime contract
 

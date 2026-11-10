@@ -35,8 +35,9 @@ resolution. Nearby bookings and buffer-safety findings are owned by POPS-6134.
 
 `@pops/trips-workspace` exports `StayWorkspace({ tripId, stayId, client? })`, the approved
 In visit accommodation workspace. This browser component library owns no service or
-database. Its Contacts chooser uses the owning app’s public UI API; persisted Trips
-types come from this library’s generated client.
+database. Its Contacts chooser is an opaque host-injected capability; the library
+imports no pillar implementation. Persisted Trips types come from this library's
+generated client.
 Its consumers supply source identities and a React Query provider; shell activation
 is tracked separately.
 `EventWorkspace({ tripId, eventId, client? })` implements the approved route-context
@@ -157,6 +158,9 @@ to the host QueryClient, API origin and owning trip. Optional catalogue failures
 separate from the source read. Inbox keeps raw material visible while saving explicit
 fields and typed existing/new Idea, Event, Journey or Stay organisation. Classification
 alone stays unorganised; unresolved external references retain their canonical identity.
+An unverified external owner is distinct from a missing local target. Canonical Contact
+selection supplies evidence for its retained browser intent; after reload the owner
+availability stays unverified until an owner read confirms it.
 Failed row edits and target descriptions survive filters and navigation with their
 original preconditions. Upload views compose the Documents owner's controlled session;
 remounting a pending upload cannot issue another POST.
@@ -176,7 +180,7 @@ Idea detail retains source links, canonical Contacts references and recommendati
 notes as explicit fields. Optional timing and location discrepancies produce findings
 without blocking unrelated edits. Mutable reference text keeps its editing identity
 while typing; failed writes retain the exact draft and original source revision.
-Contact selection and creation use the Contacts-owned chooser, which supplies its own
+Contact selection and creation use a host-injected opaque owner intent, which supplies its own
 catalogues to the host locale. Each organisation intent retains the owner session above
 route views, including pending creation and ambiguous outcomes. The canonical reference
 is retained before a Trips association is attempted; retrying the association cannot

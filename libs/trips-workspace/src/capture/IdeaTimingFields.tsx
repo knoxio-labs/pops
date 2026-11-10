@@ -2,7 +2,7 @@ import { Select, TextInput } from '@pops/ui';
 
 import type { JSX } from 'react';
 
-import type { IdeaFieldProps } from './IdeaFields';
+import type { IdeaFieldProps } from './idea-field-types';
 
 /** Preserve declared timing precision and optional bounds without supplying dates from a visit. */
 export function IdeaTimingFields(props: IdeaFieldProps): JSX.Element {

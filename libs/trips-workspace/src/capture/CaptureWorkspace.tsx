@@ -51,9 +51,10 @@ function LoadWorkspace(props: CaptureWorkspaceProps): JSX.Element {
   const session =
     retained ??
     (query.data &&
-      retainCaptureSession(cache, props, query.data.source, (request) =>
-        performCaptureRequest(props, request)
-      ));
+      retainCaptureSession(cache, props, query.data.source, {
+        perform: (request) => performCaptureRequest(props, request),
+        contacts: props.contacts,
+      }));
   if (!session) throw new Error('Missing source session');
   return <WorkspaceSession session={session} query={query} {...props} />;
 }

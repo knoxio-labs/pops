@@ -26,10 +26,16 @@ export function CaptureInbox({
     session.editor.getState
   );
   const [filter, setFilter] = useState('all');
+  useSyncExternalStore(
+    session.contacts.subscribe,
+    session.contacts.snapshot,
+    session.contacts.snapshot
+  );
   const captures = state.source.captures.filter(
     (row) =>
       row.removedAt === null &&
-      (filter === 'all' || captureOrganisation(row, state.source) === filter)
+      (filter === 'all' ||
+        captureOrganisation(row, state.source, session.contacts.hasKnownReference) === filter)
   );
   return (
     <section aria-label="Inbox sources" className="space-y-4">
@@ -42,6 +48,7 @@ export function CaptureInbox({
           { value: 'unorganised', label: 'Unorganised' },
           { value: 'organised', label: 'Organised' },
           { value: 'unresolved', label: 'Unresolved' },
+          { value: 'unverified', label: 'Unverified owner' },
         ]}
       />
       {captures.length === 0 ? (
@@ -87,7 +94,7 @@ function CaptureInboxRow({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="font-semibold">{capture.title ?? `Capture ${capture.id}`}</h2>
         <span className="text-sm text-muted-foreground">
-          {captureOrganisation(capture, source)}
+          {captureOrganisation(capture, source, session.contacts.hasKnownReference)}
         </span>
       </div>
       <p className="whitespace-pre-wrap break-words">{capture.originalText}</p>

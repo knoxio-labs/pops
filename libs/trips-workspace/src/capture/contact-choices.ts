@@ -1,6 +1,8 @@
-import { ContactChooserSession } from '@pops/app-contacts';
-
-import type { ContactChooserProps, ContactReference } from '@pops/app-contacts';
+import type {
+  ContactChooserIntent,
+  ContactChooserSelection,
+  ContactsHostCapability,
+} from '@pops/pillar-sdk';
 
 import type { CaptureEditor } from './editor-types';
 import type { CaptureRecordDrafts } from './record-drafts';
@@ -14,9 +16,9 @@ export type CaptureContactIntent = {
 export interface CaptureContactChoice {
   id: string;
   intent: CaptureContactIntent;
-  session: ContactChooserSession;
+  chooser: ContactChooserIntent;
   open: boolean;
-  selected: { name: string; reference: ContactReference } | null;
+  selected: ContactChooserSelection | null;
   applied: boolean;
 }
 
@@ -28,10 +30,18 @@ export class CaptureContactChoices {
   private listeners = new Set<() => void>();
   constructor(
     private editor: CaptureEditor,
-    private records: CaptureRecordDrafts
+    private records: CaptureRecordDrafts,
+    private host?: ContactsHostCapability
   ) {}
+  /** Whether the host supplied the real owner chooser required to make a contact choice. */
+  get available(): boolean {
+    return this.host !== undefined;
+  }
   /** Stable current chooser snapshot; its owner session persists while views are unmounted. */
   snapshot = (): CaptureContactChoice | null => this.active;
+  /** Canonical owner evidence exists only for selections confirmed during this retained browser intent. */
+  hasKnownReference = (uri: string): boolean =>
+    [...this.choices.values()].some((choice) => choice.selected?.reference.uri === uri);
   /** Observe only explicit chooser changes, without serializing owner state or file bytes. */
   subscribe = (listener: () => void): (() => void) => {
     this.listeners.add(listener);
@@ -41,6 +51,7 @@ export class CaptureContactChoices {
   };
   /** Resume the same unresolved intent; a new explicit choice may replace only a known canonical selection. */
   open(intent: CaptureContactIntent, another = false): void {
+    if (this.host === undefined) return;
     const key = JSON.stringify(intent);
     const previousId = this.contexts.get(key);
     let choice = previousId === undefined ? undefined : this.choices.get(previousId);
@@ -48,7 +59,7 @@ export class CaptureContactChoices {
       choice = {
         id: crypto.randomUUID(),
         intent,
-        session: new ContactChooserSession(),
+        chooser: this.host.createIntent(),
         open: true,
         selected: null,
         applied: false,
@@ -62,17 +73,16 @@ export class CaptureContactChoices {
     if (this.active !== null) this.update({ ...this.active, open });
   }
   /** Retain the actual owner reference before attempting any Trips link, including when its source disappeared. */
-  accept(
-    id: string,
-    entity: Parameters<ContactChooserProps['onSelect']>[0],
-    reference: ContactReference
-  ): void {
+  accept(id: string, selection: ContactChooserSelection): void {
     const choice = this.choices.get(id);
-    if (choice === undefined) return;
+    if (choice === undefined || !choice.open || this.active?.id !== id) return;
     const selected = {
       ...choice,
       open: false,
-      selected: { name: entity.name, reference: { ...reference } },
+      selected: {
+        name: selection.name,
+        reference: { ...selection.reference },
+      },
     };
     this.choices.set(id, selected);
     if (this.active?.id !== id) return;

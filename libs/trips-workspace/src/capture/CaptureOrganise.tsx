@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react';
 
 import { Button, Select, Textarea, TextInput } from '@pops/ui';
 
+import { captureTargetAvailability } from './inbox-model';
 import { organisationChoices, selectedValue } from './organisation-choices';
 
 import type { JSX } from 'react';
@@ -130,7 +131,7 @@ function ExistingAssociations({ source, capture, session, busy }: Props): JSX.El
           <div className="flex flex-wrap items-center gap-3" key={row.id}>
             <span>
               {row.target.kind === 'contact'
-                ? `Unresolved contact: ${row.target.reference.label ?? row.target.reference.uri}`
+                ? `${captureTargetAvailability(row.target, source, session.contacts.hasKnownReference) === 'available' ? 'Contact' : 'Unverified contact'}: ${row.target.reference.label ?? row.target.reference.uri}`
                 : `${row.target.kind} ${row.target.id}`}{' '}
               · {row.provenance}
             </span>
@@ -161,7 +162,7 @@ function ContactChoice({
     <>
       <Button
         variant="outline"
-        disabled={busy}
+        disabled={busy || !session.contacts.available}
         onClick={() => session.contacts.open({ kind: 'capture', id: capture.id }, true)}
       >
         Choose contact

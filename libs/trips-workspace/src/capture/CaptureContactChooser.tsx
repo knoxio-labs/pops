@@ -1,6 +1,5 @@
 import { useSyncExternalStore } from 'react';
 
-import { ContactChooser } from '@pops/app-contacts';
 import { Button } from '@pops/ui';
 
 import type { JSX } from 'react';
@@ -16,14 +15,14 @@ export function CaptureContactChooser({
   const contacts = session.contacts;
   const choice = useSyncExternalStore(contacts.subscribe, contacts.snapshot, contacts.snapshot);
   if (choice === null) return null;
+  const Chooser = choice.chooser.Chooser;
   return (
     <>
-      <ContactChooser
+      <Chooser
         key={choice.id}
-        session={choice.session}
         open={choice.open}
         onOpenChange={(open) => contacts.changeOpen(open)}
-        onSelect={(entity, reference) => contacts.accept(choice.id, entity, reference)}
+        onSelect={(selection) => contacts.accept(choice.id, selection)}
       />
       {choice.selected !== null && !choice.applied ? (
         <section role="status" className="space-y-2 rounded-md border border-border p-3">

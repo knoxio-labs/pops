@@ -58,9 +58,9 @@ it('retains actual upload receipts before acceptance and after unmount without c
     reason: null,
   });
   vi.mocked(uploadPaperlessDocument).mockReturnValue(accepted.promise);
-  const session = retainCaptureSession(cache, { tripId: 1 }, captureSource(), async (request) =>
-    captureResult(request)
-  );
+  const session = retainCaptureSession(cache, { tripId: 1 }, captureSource(), {
+    perform: async (request) => captureResult(request),
+  });
   const file = new File(['bytes'], 'same.pdf', { type: 'application/pdf' });
   session.addFile(file);
   session.addFile(new File(['different bytes'], 'same.pdf', { type: 'application/pdf' }));

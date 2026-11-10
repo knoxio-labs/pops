@@ -8,8 +8,13 @@ import { sourceId } from './source-id';
 
 import type { JSX } from 'react';
 
+import type { RemotePageHostProps } from '@pops/pillar-sdk';
+
 /** Mount a source-backed Capture surface for one real owning trip identity. */
-export function CapturePage({ view }: { view: 'capture' | 'inbox' | 'explore' }): JSX.Element {
+export function CapturePage({
+  view,
+  contacts,
+}: RemotePageHostProps & { view: 'capture' | 'inbox' | 'explore' }): JSX.Element {
   const tripId = sourceId(useParams().tripId);
   const navigate = useNavigate();
   return tripId === undefined ? (
@@ -19,6 +24,7 @@ export function CapturePage({ view }: { view: 'capture' | 'inbox' | 'explore' })
   ) : (
     <CaptureWorkspace
       tripId={tripId}
+      contacts={contacts}
       view={view}
       backHref={navConfig.basePath}
       renderLink={Link}
@@ -65,16 +71,16 @@ function CaptureNavigation({
 }
 
 /** Route adapter for the approved text-first Capture surface. */
-export function CaptureHomePage(): JSX.Element {
-  return <CapturePage view="capture" />;
+export function CaptureHomePage(props: RemotePageHostProps): JSX.Element {
+  return <CapturePage {...props} view="capture" />;
 }
 
 /** Route adapter for the approved inline source Inbox. */
-export function InboxPage(): JSX.Element {
-  return <CapturePage view="inbox" />;
+export function InboxPage(props: RemotePageHostProps): JSX.Element {
+  return <CapturePage {...props} view="inbox" />;
 }
 
 /** Route adapter for saved possibilities grouped by their recorded location. */
-export function ExplorePage(): JSX.Element {
-  return <CapturePage view="explore" />;
+export function ExplorePage(props: RemotePageHostProps): JSX.Element {
+  return <CapturePage {...props} view="explore" />;
 }

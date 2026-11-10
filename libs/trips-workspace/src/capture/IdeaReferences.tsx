@@ -6,7 +6,7 @@ import { referenceEntries } from '../reference-entries';
 
 import type { JSX } from 'react';
 
-import type { IdeaFieldProps } from './IdeaFields';
+import type { IdeaFieldProps } from './idea-field-types';
 
 type Props = Pick<IdeaFieldProps, 'session' | 'row' | 'value' | 'busy'>;
 type FieldScope = Pick<Props, 'session' | 'row' | 'busy'>;
@@ -130,7 +130,7 @@ function ContactLinks({
       ))}
       <Button
         variant="outline"
-        disabled={busy}
+        disabled={busy || !session.contacts.available}
         onClick={() => session.contacts.open({ kind: 'idea-contact', id: row.id }, true)}
       >
         Add contact
@@ -187,7 +187,7 @@ function Recommendations({
       ))}
       <Button
         variant="outline"
-        disabled={busy}
+        disabled={busy || !session.contacts.available}
         onClick={() => session.contacts.open({ kind: 'recommendation', id: row.id }, true)}
       >
         Add recommendation

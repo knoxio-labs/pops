@@ -10,19 +10,7 @@ import { IdeaTimingFields } from './IdeaTimingFields';
 
 import type { JSX } from 'react';
 
-import type { CaptureBrowserSession } from './browser-session';
-import type { CaptureSource } from './types';
-import type { CaptureContext } from './use-capture-context';
-
-type Idea = CaptureSource['ideas'][number];
-/** Explicit Idea facts and retained source revision used by inline detail controls. */
-export interface IdeaFieldProps {
-  session: CaptureBrowserSession;
-  row: Idea;
-  value: Idea;
-  busy: boolean;
-  context: CaptureContext;
-}
+import type { IdeaFieldProps } from './idea-field-types';
 
 /** Edit the actual independent Idea; dates, location, purpose and route membership stay separate. */
 export function IdeaFields({

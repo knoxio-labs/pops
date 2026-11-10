@@ -7,11 +7,19 @@ import { CaptureReferenceIdentities } from './reference-identities';
 import type { QueryClient } from '@tanstack/react-query';
 import type { Dispatch, SetStateAction } from 'react';
 
+import type { ContactsHostCapability } from '@pops/pillar-sdk';
+
 import type { DocumentUploadSession } from '../documents/useUploadFields';
 import type { CaptureEditor } from './editor-types';
 import type { CaptureIdentity, CapturePerformer, CaptureSource } from './types';
 
 const sessions = new WeakMap<QueryClient, Map<string, CaptureBrowserSession>>();
+
+/** Owner resources used only when creating a retained trip session. */
+export interface CaptureSessionOptions {
+  perform: CapturePerformer;
+  contacts?: ContactsHostCapability;
+}
 
 /** Browser-only owner of one trip's composer, operation history and per-file upload sessions. */
 export class CaptureBrowserSession {
@@ -22,10 +30,15 @@ export class CaptureBrowserSession {
   private uploads = new Map<string, DocumentUploadSession>();
   private listeners = new Set<() => void>();
   private version = 0;
-  constructor(source: CaptureSource, tripId: number, perform: CapturePerformer) {
+  constructor(
+    source: CaptureSource,
+    tripId: number,
+    perform: CapturePerformer,
+    contacts?: ContactsHostCapability
+  ) {
     this.editor = createCaptureEditor({ source, tripId, perform });
     this.records = new CaptureRecordDrafts(this.editor);
-    this.contacts = new CaptureContactChoices(this.editor, this.records);
+    this.contacts = new CaptureContactChoices(this.editor, this.records, contacts);
   }
   /** Observe retained upload changes without storing bytes outside this browser session. */
   subscribe = (listener: () => void): (() => void) => {
@@ -83,7 +96,7 @@ export function retainCaptureSession(
   cache: QueryClient,
   identity: CaptureIdentity,
   source: CaptureSource,
-  perform: CapturePerformer
+  options: CaptureSessionOptions
 ): CaptureBrowserSession {
   let owned = sessions.get(cache);
   if (owned === undefined) {
@@ -93,7 +106,7 @@ export function retainCaptureSession(
   const key = sessionKey(identity);
   let session = owned.get(key);
   if (session === undefined) {
-    session = new CaptureBrowserSession(source, identity.tripId, perform);
+    session = new CaptureBrowserSession(source, identity.tripId, options.perform, options.contacts);
     owned.set(key, session);
   }
   return session;

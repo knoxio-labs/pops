@@ -4,10 +4,10 @@ import { captureClassifications as classifications, ideaKinds } from './choices'
 
 import type { JSX } from 'react';
 
-import type { CaptureComposer } from './CaptureComposer';
+import type { CaptureComposerProps } from './composer-types';
 import type { CaptureDraft } from './types';
 
-type DetailsProps = Parameters<typeof CaptureComposer>[0];
+type DetailsProps = CaptureComposerProps;
 
 /** Optional kind, URL and location selections never parse or replace the raw source. */
 export function CaptureDetails(props: DetailsProps): JSX.Element {
