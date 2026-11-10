@@ -365,11 +365,33 @@ for (const viewport of [
     await page.getByRole('button', { name: 'Retry status check', exact: true }).click();
     await page.getByRole('button', { name: 'Link file', exact: true }).click();
     await expect(page.getByText('Booking original', { exact: true })).toBeVisible();
+    const overflowingFields = await page
+      .getByRole('article', { name: 'Stay editor', exact: true })
+      .evaluate((element) => {
+        const boundary = element.getBoundingClientRect();
+        return [
+          ...element.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(
+            'input, select, textarea'
+          ),
+        ]
+          .map((field) => ({
+            field: [...(field.labels ?? [])].map((label) => label.textContent).join(' '),
+            type: field.getAttribute('type'),
+            width: field.getBoundingClientRect().width,
+            right: field.getBoundingClientRect().right,
+          }))
+          .filter((field) => field.width > 0 && field.right > boundary.right);
+      });
+    expect(overflowingFields).toEqual([]);
     const dialogWidth = await page.getByRole('dialog').evaluate((element) => ({
       content: element.scrollWidth,
       viewport: element.clientWidth,
     }));
     expect(dialogWidth.content).toBeLessThanOrEqual(dialogWidth.viewport);
+    await page
+      .getByRole('dialog')
+      .getByLabel('Check-in date', { exact: true })
+      .scrollIntoViewIfNeeded();
     await page.screenshot({
       path: new URL(`../../../tmp/arrangements-source-${viewport.width}.png`, import.meta.url)
         .pathname,

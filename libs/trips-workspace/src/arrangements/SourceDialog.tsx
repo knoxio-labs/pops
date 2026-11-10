@@ -54,7 +54,7 @@ export function SourceDialog({
       }}
     >
       <DialogContent
-        className="max-h-screen grid-cols-1 overflow-y-auto sm:max-w-5xl"
+        className="max-h-screen grid-cols-1 overflow-y-auto md:max-w-5xl"
         showCloseButton={false}
         aria-describedby={undefined}
       >
