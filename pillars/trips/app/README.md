@@ -65,7 +65,7 @@ editor through this app's generated client against SQLite. Both dependencies alr
 belong to this app's declared graph, so filtered CI installs include the producer's
 native SQLite runtime without adding a lib-to-pillar dependency.
 
-`PeopleContext({ tripId, contacts?, client? })` supplies Trips translations and
+`PeopleContext({ tripId, meetingId?, contacts?, client? })` supplies Trips translations and
 forwards the owning trip, transport and opaque Contacts host capability to the
 shared workspace. It is a contextual component for the Trip Timeline; it publishes
 no independent People route or remote page slot. The shared workspace owns exact Visit grouping,

@@ -25,10 +25,12 @@ afterEach(() => {
 it('forwards the owning Trip identity, transport and opaque Contacts capability without a router', () => {
   const contacts: ContactsHostCapability = { createIntent: () => ({ Chooser: () => null }) };
   const client = createClient({ baseUrl: 'http://localhost/trips-api' });
-  const view = render(<PeopleContext tripId={7} contacts={contacts} client={client} />);
+  const view = render(
+    <PeopleContext tripId={7} meetingId={41} contacts={contacts} client={client} />
+  );
   expect(screen.getByText('People source 7')).toBeVisible();
   expect(workspace).toHaveBeenLastCalledWith(
-    expect.objectContaining({ tripId: 7, contacts, client })
+    expect.objectContaining({ tripId: 7, meetingId: 41, contacts, client })
   );
   const props = workspace.mock.calls[0]?.[0];
   expect(props?.text('visit', { id: 2 })).toBe('people.visit');
@@ -41,4 +43,5 @@ it('forwards the owning Trip identity, transport and opaque Contacts capability 
     expect.objectContaining({ tripId: 8, client: nextClient })
   );
   expect(workspace.mock.lastCall?.[0].contacts).toBeUndefined();
+  expect(workspace.mock.lastCall?.[0].meetingId).toBeUndefined();
 });
