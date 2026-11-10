@@ -38,6 +38,14 @@ export function CaptureContactChooser({
           <Button disabled={choice.linking} onClick={() => void contacts.applySelection()}>
             Retry linking selected contact
           </Button>
+          {choice.intent.kind !== 'capture' ? (
+            <Button disabled={choice.linking} onClick={() => contacts.restoreSelection()}>
+              Restore selected link to draft
+            </Button>
+          ) : null}
+          <Button disabled={choice.linking} onClick={() => contacts.chooseAnother()}>
+            Choose another contact
+          </Button>
         </section>
       ) : null}
     </>

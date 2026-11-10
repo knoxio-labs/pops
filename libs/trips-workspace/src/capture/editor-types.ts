@@ -45,6 +45,8 @@ export interface CaptureEditorState {
 /** Serialized source operations with original draft recovery and exact request replay. */
 export interface CaptureEditor {
   getState: () => CaptureEditorState;
+  /** Copy the request currently reserved for execution or exact replay; callers cannot mutate its retained payload. */
+  getPendingRequest: () => CaptureRequest | null;
   subscribe: (listener: () => void) => () => void;
   receive: (source: CaptureSource, readGeneration: number) => void;
   setPerformer: (perform: CapturePerformer) => void;

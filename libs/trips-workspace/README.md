@@ -186,6 +186,10 @@ route views, including pending creation and ambiguous outcomes. The canonical re
 is retained before a Trips association is attempted; retrying the association cannot
 create the Contact again. Removing a Trips reference never deletes a Contacts record.
 An Idea Contact or recommendation link remains explicitly retryable while another
-Trips operation is pending. Its draft entry is prepared once; only confirmation for
-that exact Idea, original revision and submitted fields marks the link applied.
-An uncertain link response resolves through the editor's retained request replay.
+Trips operation is pending. Its canonical selection is immutable per intent; only
+confirmation for that operation UUID, Idea, original revision and submitted canonical
+link marks it applied. An uncertain link response resolves through the editor's retained
+request replay before that link can be replaced. Explicit replacement of an unsent or
+rejected link creates a new intent and removes only its own prepared entry. The old owner
+receipt remains retained. Discarded link drafts require an explicit restore, which adds
+only the selected canonical link to current edits without restoring discarded fields.

@@ -1,10 +1,10 @@
-import { containsFields, sameFields } from './record-field-match';
+import { IdeaContactLinks } from './idea-contact-links';
 
 import type { ContactChooserSelection, ContactsHostCapability } from '@pops/pillar-sdk';
 
 import type { CaptureContactChoice, CaptureContactIntent } from './contact-choice-types';
 import type { CaptureEditor } from './editor-types';
-import type { CaptureRecordDrafts, IdeaRecordDraft } from './record-drafts';
+import type { CaptureRecordDrafts } from './record-drafts';
 
 export type { CaptureContactChoice, CaptureContactIntent } from './contact-choice-types';
 
@@ -14,14 +14,18 @@ export class CaptureContactChoices {
   private contexts = new Map<string, string>();
   private active: CaptureContactChoice | null = null;
   private listeners = new Set<() => void>();
-  private prepared = new Set<string>();
-  private pendingLinks = new Map<string, IdeaRecordDraft>();
+  private links: IdeaContactLinks;
   constructor(
     private editor: CaptureEditor,
     private records: CaptureRecordDrafts,
     private host?: ContactsHostCapability
   ) {
-    editor.subscribe(() => this.acceptConfirmation());
+    this.links = new IdeaContactLinks(
+      editor,
+      records,
+      (id) => this.choices.get(id),
+      (choice, activate) => this.update(choice, activate)
+    );
   }
   /** Whether the host supplied the real owner chooser required to make a contact choice. */
   get available(): boolean {
@@ -39,13 +43,14 @@ export class CaptureContactChoices {
       this.listeners.delete(listener);
     };
   };
-  /** Resume the same unresolved intent; a new explicit choice may replace only a known canonical selection. */
+  /** Resume retained owner work; explicit replacement gets a new intent unless this link has an unresolved command. */
   open(intent: CaptureContactIntent, another = false): void {
     if (this.host === undefined) return;
     const key = JSON.stringify(intent);
     const previousId = this.contexts.get(key);
     let choice = previousId === undefined ? undefined : this.choices.get(previousId);
-    if (choice === undefined || (another && choice.applied)) {
+    if (choice && another && !choice.applied && !this.links.release(choice)) return;
+    if (choice === undefined || (another && choice.selected !== null)) {
       choice = {
         id: crypto.randomUUID(),
         intent,
@@ -58,16 +63,18 @@ export class CaptureContactChoices {
       };
       this.contexts.set(key, choice.id);
     }
-    this.update({ ...choice, open: true });
+    this.update({ ...choice, open: choice.selected === null });
   }
   /** Closing a view never replaces its pending, uncertain or known-created owner receipt. */
   changeOpen(open: boolean): void {
-    if (this.active !== null) this.update({ ...this.active, open });
+    if (this.active !== null)
+      this.update({ ...this.active, open: open && this.active.selected === null });
   }
   /** Retain the actual owner reference before attempting any Trips link, including when its source disappeared. */
   accept(id: string, selection: ContactChooserSelection): void {
     const choice = this.choices.get(id);
-    if (choice === undefined || !choice.open || this.active?.id !== id) return;
+    if (choice === undefined || !choice.open || choice.selected !== null || this.active?.id !== id)
+      return;
     const selected = {
       ...choice,
       open: false,
@@ -97,72 +104,15 @@ export class CaptureContactChoices {
         target: { kind: 'contact', reference },
       });
       this.update({ ...choice, applied: true, linkError: null });
-    } else await this.applyIdea(choice, reference);
+    } else await this.links.apply(choice, reference);
   }
-  private async applyIdea(choice: CaptureContactChoice, reference: { uri: string }): Promise<void> {
-    const idea = this.editor
-      .getState()
-      .source.ideas.find((row) => row.id === choice.intent.id && row.removedAt === null);
-    if (idea === undefined) {
-      this.update({ ...choice, linkError: 'The owning Idea is unavailable.' });
-      return;
-    }
-    if (!this.prepared.has(choice.id)) this.prepareIdea(choice, idea, reference);
-    const submitted = this.records.idea(idea.id);
-    if (submitted !== undefined) this.pendingLinks.set(choice.id, submitted);
-    this.update({ ...choice, linking: true, linkError: null });
-    await this.records.saveIdea(idea.id);
-    const current = this.choices.get(choice.id);
-    if (current !== undefined)
-      this.update(
-        {
-          ...current,
-          linking: false,
-          linkError: current.applied
-            ? null
-            : 'The contact is retained. Confirm or retry the Trips operation, then retry linking.',
-        },
-        false
-      );
+  /** Start a new explicit selection without deleting the old owner receipt or abandoning its unknown write. */
+  chooseAnother(): void {
+    if (this.active !== null) this.open(this.active.intent, true);
   }
-  private prepareIdea(
-    choice: CaptureContactChoice,
-    idea: Parameters<CaptureRecordDrafts['editIdea']>[0],
-    reference: { uri: string }
-  ): void {
-    const draft = this.records.idea(idea.id)?.input;
-    if (choice.intent.kind === 'idea-contact')
-      this.records.editIdea(idea, {
-        contactLinks: [...(draft?.contactLinks ?? idea.contactLinks), reference],
-      });
-    else
-      this.records.editIdea(idea, {
-        recommendations: [
-          ...(draft?.recommendations ?? idea.recommendations),
-          { contact: reference, note: '' },
-        ],
-      });
-    this.prepared.add(choice.id);
-  }
-  private acceptConfirmation(): void {
-    const confirmation = this.editor.getState().confirmation;
-    if (confirmation === null || confirmation.result.undone) return;
-    const command = confirmation.request.command;
-    if (command.kind !== 'idea.update') return;
-    const row = confirmation.result.current.ideas.find((item) => item.id === command.id);
-    for (const [id, draft] of this.pendingLinks) {
-      const choice = this.choices.get(id);
-      if (
-        choice?.intent.id === command.id &&
-        row &&
-        draft.revision === command.expectedRevision &&
-        sameFields(draft.input, command.input) &&
-        containsFields(row, command.input)
-      ) {
-        this.update({ ...choice, applied: true, linking: false, linkError: null }, false);
-        this.pendingLinks.delete(id);
-      }
-    }
+  /** Explicitly restore only the selected link after a draft discard; unresolved requests remain immutable. */
+  restoreSelection(): void {
+    if (this.active !== null) this.links.restore(this.active);
   }
   private update(choice: CaptureContactChoice, activate = true): void {
     this.choices.set(choice.id, choice);

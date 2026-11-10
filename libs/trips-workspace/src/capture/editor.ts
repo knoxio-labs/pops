@@ -29,6 +29,8 @@ class SourceCaptureEditor implements CaptureEditor {
     );
   }
   getState: CaptureEditor['getState'] = () => this.store.state;
+  getPendingRequest: CaptureEditor['getPendingRequest'] = () =>
+    this.store.pending === null ? null : structuredClone(this.store.pending.request);
   subscribe: CaptureEditor['subscribe'] = (listener) => this.store.subscribe(listener);
   receive: CaptureEditor['receive'] = (source, generation) =>
     this.store.receive(source, generation);

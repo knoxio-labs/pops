@@ -53,6 +53,17 @@ it('exposes the retained canonical link retry after a blocked save and never cre
   const user = userEvent.setup();
   await user.click(retry);
   expect(requests).toHaveLength(1);
+  session.records.discard('idea', 7);
+  await user.click(retry);
+  expect(
+    await screen.findByText(
+      'The link draft was discarded or changed. Restore the selected link before retrying.'
+    )
+  ).toBeVisible();
+  await user.click(screen.getByRole('button', { name: 'Restore selected link to draft' }));
+  expect(session.records.idea(7)?.input.contactLinks).toEqual([
+    { uri: 'pops:contacts/contact/opaque' },
+  ]);
   const request = requests[0];
   if (!request) throw new Error('Missing request');
   gate.resolve(captureResult(request, source));
