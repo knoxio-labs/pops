@@ -2,6 +2,7 @@ import { and, asc, eq } from 'drizzle-orm';
 
 import { StaySchema } from '../../contract/stay-schemas.js';
 import { stays } from '../schema.js';
+import { deleteDocumentAssociationsForTarget } from './document-association-cleanup.js';
 import { getTrip, getVisit } from './records.js';
 import { requireOwnedRecord } from './source-record.js';
 
@@ -76,13 +77,20 @@ export function updateStay(db: TripsDb, tripId: number, id: number, input: StayI
   );
 }
 
-/** Remove one source stay without changing visits, contacts, documents or external bookings. */
+/** Remove one stay and its document associations atomically without changing linked originals. */
 export function deleteStay(db: TripsDb, tripId: number, id: number): void {
-  requireOwnedRecord(
-    db
-      .delete(stays)
-      .where(and(eq(stays.tripId, tripId), eq(stays.id, id)))
-      .returning()
-      .get()
+  db.transaction(
+    (tx) => {
+      getStay(tx, tripId, id);
+      deleteDocumentAssociationsForTarget(tx, tripId, 'stay', id);
+      requireOwnedRecord(
+        tx
+          .delete(stays)
+          .where(and(eq(stays.tripId, tripId), eq(stays.id, id)))
+          .returning()
+          .get()
+      );
+    },
+    { behavior: 'immediate' }
   );
 }

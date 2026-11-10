@@ -2,6 +2,24 @@ import { defineErrors } from '@pops/pillar-express';
 
 /** Stable errors for missing owned records and invalid route permutations. */
 export const tripsErrors = defineErrors('trips', {
+  leg_revision_conflict: {
+    area: 'journey_leg',
+    status: 409,
+    message: 'This journey’s legs changed. Read their current revision before retrying.',
+    retryable: false,
+  },
+  leg_order_conflict: {
+    area: 'journey_leg',
+    status: 409,
+    message: 'The live leg order changed. This removal cannot be undone against a different order.',
+    retryable: false,
+  },
+  leg_removal_conflict: {
+    area: 'journey_leg',
+    status: 409,
+    message: 'This removal identity belongs to a different intent or lifecycle.',
+    retryable: false,
+  },
   parent_invalid: {
     area: 'trip',
     status: 400,
@@ -19,6 +37,19 @@ export const tripsErrors = defineErrors('trips', {
     status: 503,
     message: 'The selected shared tag could not be verified. Retry when Tags is available.',
     retryable: true,
+  },
+  option_not_removed: {
+    area: 'decision',
+    status: 409,
+    message: 'Only a removed decision option can be restored.',
+    retryable: false,
+  },
+  decision_revision_conflict: {
+    area: 'decision',
+    status: 409,
+    message:
+      'This decision or its options changed. Read its latest revision before editing or selecting.',
+    retryable: false,
   },
   revision_conflict: {
     area: 'group',
@@ -44,6 +75,18 @@ export const tripsErrors = defineErrors('trips', {
     status: 400,
     message:
       'Order must contain every existing member of the selected route or journey exactly once.',
+    retryable: false,
+  },
+  association_invalid: {
+    area: 'document',
+    status: 400,
+    message: 'Choose a document target belonging to this trip.',
+    retryable: false,
+  },
+  association_exists: {
+    area: 'document',
+    status: 409,
+    message: 'This document is already linked to the selected trip target.',
     retryable: false,
   },
 });

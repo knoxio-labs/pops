@@ -1,5 +1,7 @@
 import { Chip } from '@pops/ui';
 
+import { referenceEntries } from '../reference-entries';
+
 import type { JSX } from 'react';
 
 import type { Stay, StayPatch } from './types';
@@ -48,15 +50,3 @@ const groups = [
   { field: 'documentLinks', label: 'Documents' },
   { field: 'sourceLinks', label: 'Sources' },
 ] satisfies { field: 'hostLinks' | 'documentLinks' | 'sourceLinks'; label: string }[];
-
-function referenceEntries(
-  links: Stay['sourceLinks']
-): { link: Stay['sourceLinks'][number]; index: number; key: string }[] {
-  const occurrences = new Map<string, number>();
-  return links.map((link, index) => {
-    const content = JSON.stringify(link);
-    const occurrence = occurrences.get(content) ?? 0;
-    occurrences.set(content, occurrence + 1);
-    return { link, index, key: `${content}:${occurrence}` };
-  });
-}

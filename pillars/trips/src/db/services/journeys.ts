@@ -2,6 +2,7 @@ import { and, asc, eq } from 'drizzle-orm';
 
 import { JourneySchema } from '../../contract/journey-schemas.js';
 import { journeys, journeyLegs, journeyGroupMembers } from '../schema.js';
+import { deleteDocumentAssociationsForTarget } from './document-association-cleanup.js';
 import { getTrip } from './records.js';
 import { requireOwnedRecord, TripsServiceError } from './source-record.js';
 
@@ -85,6 +86,7 @@ export function deleteJourney(db: TripsDb, tripId: number, id: number): void {
           .get()
       )
         throw new TripsServiceError('journey_grouped');
+      deleteDocumentAssociationsForTarget(tx, tripId, 'journey', id);
       tx.delete(journeyLegs).where(eq(journeyLegs.journeyId, id)).run();
       tx.delete(journeys)
         .where(and(eq(journeys.tripId, tripId), eq(journeys.id, id)))

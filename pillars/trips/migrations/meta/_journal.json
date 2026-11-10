@@ -36,6 +36,41 @@
       "when": 1794209816017,
       "tag": "0004_trip_metadata",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1794239640130,
+      "tag": "0005_decisions",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1794241943007,
+      "tag": "0006_events",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1794243069021,
+      "tag": "0007_document_associations",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1794245591529,
+      "tag": "0008_decision_source_provenance",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1794271955361,
+      "tag": "0009_journey_leg_removals",
+      "breakpoints": true
     }
   ]
 }

@@ -3,7 +3,7 @@
 # libs/pops-settings). Mirrors the TS isolation discipline on the Rust side:
 # every dependency is pinned (no wildcards — the Rust analogue of "exports
 # declares every subpath"), licensed permissively, advisory-clean, and sourced
-# only from crates.io.
+# from crates.io or the explicitly approved, revision-pinned upstream below.
 #
 # Run locally with `cargo deny check`; wired into `.github/workflows/
 # rust-quality.yml`.
@@ -60,10 +60,15 @@ allow = []
 deny = []
 
 [sources]
-# Only crates.io. A git or alternative-registry source would not survive
-# extraction to a standalone repo without dragging private infrastructure, so
-# any non-crates.io source is a hard failure that must be justified explicitly.
+# Crates.io is the default. The pinned public SQLx revision permits the patched
+# libsqlite3-sys 0.39.1 while the published SQLx release excludes it:
+# https://rustsec.org/advisories/RUSTSEC-2026-0459.html
+# https://github.com/launchbadge/sqlx/commit/10462fa4414c6c7f1ed1d39bb31678e3b726878c
+# Cargo.toml and Cargo.lock pin the approved revision; this source allowlist
+# constrains the repository, and required-git-spec requires revision pins.
+# The exception lasts until a compatible crates.io SQLx release is available.
 unknown-registry = "deny"
 unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
-allow-git = []
+required-git-spec = "rev"
+allow-git = ["https://github.com/launchbadge/sqlx"]

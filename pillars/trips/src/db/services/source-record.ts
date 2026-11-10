@@ -3,12 +3,19 @@ export class TripsServiceError extends Error {
   constructor(
     readonly code:
       | 'not_found'
+      | 'leg_revision_conflict'
+      | 'leg_order_conflict'
+      | 'leg_removal_conflict'
       | 'order_invalid'
       | 'revision_conflict'
+      | 'decision_revision_conflict'
+      | 'option_not_removed'
       | 'journey_grouped'
       | 'parent_invalid'
       | 'tag_unknown'
       | 'tags_unavailable'
+      | 'association_invalid'
+      | 'association_exists'
   ) {
     super(code);
     this.name = 'TripsServiceError';

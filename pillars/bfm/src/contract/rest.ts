@@ -54,6 +54,7 @@ import {
 import { bfmDeviceContract } from './rest-device.js';
 import { mobileBarcodeContract } from './rest-mobile-barcode.js';
 import { mobileContactsContract } from './rest-mobile-contacts.js';
+import { mobileDocumentsContract } from './rest-mobile-documents.js';
 import { mobileEgoContract } from './rest-mobile-ego.js';
 import { mobileFinanceContract } from './rest-mobile-finance.js';
 import { mobileInventoryContract } from './rest-mobile-inventory.js';
@@ -65,6 +66,7 @@ import {
   MOBILE_UPSTREAM_RESPONSES,
   MobilePageLimit,
 } from './rest-mobile-responses.js';
+import { mobileTripsContract } from './rest-mobile-trips.js';
 import { bfmOperatorContract } from './rest-operator.js';
 import { MobileReceiptUploadBodySchema as MobileReceiptExtractBodySchema } from './rest-schemas.js';
 import {
@@ -284,6 +286,8 @@ export const bfmContract = c.router(
     mobile: mobileContract,
     mobileContacts: mobileContactsContract,
     mobileEgo: mobileEgoContract,
+    mobileTrips: mobileTripsContract,
+    mobileDocuments: mobileDocumentsContract,
     mobileBarcode: mobileBarcodeContract,
     mobileFinance: mobileFinanceContract,
     mobileInventory: mobileInventoryContract,

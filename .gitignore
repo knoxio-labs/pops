@@ -179,6 +179,7 @@ pillars/purchases/src/contract/api-types.generated.ts
 pillars/registry/src/contract/api-types.generated.ts
 
 /libs/trips-workspace/src/trips-api/
+/libs/trips-workspace/src/documents-api/
 
 /pillars/trips/app/src/trips-api/
 /pillars/trips/app/src/tags-api/

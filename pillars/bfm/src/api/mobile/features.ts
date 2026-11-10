@@ -31,6 +31,7 @@ export const MOBILE_FEATURES: readonly MobileFeature[] = [
   { id: 'receipt-capture', pillar: 'purchases' },
   { id: 'inventory', pillar: 'inventory' },
   { id: 'ego', pillar: 'cerebrum' },
+  { id: 'trips', pillar: 'trips' },
 ];
 
 /** The surfaces a guest device is offered: the accounts shared with them and their rows. */

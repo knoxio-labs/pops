@@ -17,7 +17,7 @@ a request handler
             → CallResult  ──translated──→  GatewayOutcome
 ```
 
-The one caller today is `../finance/`, which turns finance's transaction list
+Domain clients include `../finance/` and `../trips/`. The former turns finance's transaction list
 into the mobile one — see "The mobile shape" in the pillar README for what that
 reshaping is allowed to do. `../rest/upstream-error.ts` is where a
 `GatewayOutcome`'s failure arm becomes the status a phone sees, and it is the
@@ -77,12 +77,22 @@ outage.
 ## What the account can actually reach
 
 `BFM_SERVICE_ACCOUNT_SCOPES` in `service-account.ts` is the grant, and it is
-narrow on purpose. It is also enforced: `finance` — the only pillar bfm calls —
-resolves the presented `X-API-Key` against the registry and refuses any
-operation the grant does not cover, so widening the mobile surface to a second
-finance module means widening the grant in the same change. Producers that have
+narrow on purpose. Producers resolve the presented `X-API-Key` against the
+registry and refuse operations the grant does not cover. Widening a mobile
+surface therefore requires the exact producer operation grants in the same change. Producers that have
 not adopted the guard yet still serve any in-network caller; each has its own
 adoption ticket.
+
+Original Documents metadata and bytes separately require `documents.paperless.get`
+and `documents.paperless.download`; no Inventory-link scopes authorize them.
+
+Trips reads require only `trips.trips.list`, `trips.trips.get`,
+`trips.places.list`, `trips.visits.list`, `trips.journeys.list`,
+`trips.journeyLegs.list`, `trips.journeyGroups.list`, `trips.stays.list` and
+`trips.events.list` and `trips.documentAssociations.list`.
+Deployment must grant these operations to the existing BFM service account;
+adding the mobile capability alone does not authorize upstream calls. Credential
+and deployed grant configuration is tracked by POPS-6170.
 
 ## What is not here
 

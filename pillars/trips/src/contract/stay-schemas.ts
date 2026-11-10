@@ -1,18 +1,17 @@
 import { z } from 'zod';
 
 import { CalendarDateSchema, SourceLinkSchema } from './schemas.js';
-import { SourceTimeZoneSchema } from './source-time.js';
+import { SourceClockSchema, SourceTimeZoneSchema } from './source-time.js';
 
 const Id = z.number().int().positive();
 const Text = z.string().refine((value) => value.trim().length > 0, 'Expected nonblank source text');
-const Clock = z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/u, 'Expected an HH:mm local clock');
 
 /** Independent stay source facts; departure is checkout-exclusive and no instant is inferred. */
 export const StayTimingSchema = z.object({
   arrival: CalendarDateSchema.optional(),
   departure: CalendarDateSchema.optional(),
-  checkIn: Clock.optional(),
-  checkOut: Clock.optional(),
+  checkIn: SourceClockSchema.optional(),
+  checkOut: SourceClockSchema.optional(),
   timeZone: SourceTimeZoneSchema.optional(),
 });
 

@@ -21,6 +21,8 @@ export interface SearchPickerDialogProps<T> {
   title: string;
   description?: string;
   searchPlaceholder?: string;
+  /** Accessible name for the search field. */
+  searchLabel?: string;
   search: string;
   onSearchChange: (value: string) => void;
   isLoading: boolean;
@@ -100,6 +102,34 @@ function ResultsBody<T>({
   );
 }
 
+function SearchPickerInput({
+  trailing,
+  search,
+  onSearchChange,
+  searchPlaceholder,
+  searchLabel,
+}: Pick<
+  SearchPickerDialogProps<unknown>,
+  'trailing' | 'search' | 'onSearchChange' | 'searchPlaceholder' | 'searchLabel'
+>) {
+  return (
+    <div className={trailing ? 'flex items-center gap-2' : undefined}>
+      <div className="relative flex-1">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <TextInput
+          value={search}
+          onChange={(event) => onSearchChange(event.target.value)}
+          placeholder={searchPlaceholder}
+          aria-label={searchLabel ?? searchPlaceholder}
+          className="pl-9"
+          autoFocus
+        />
+      </div>
+      {trailing}
+    </div>
+  );
+}
+
 /** Renders a searchable dialog with localized loading, guidance and empty states. */
 export function SearchPickerDialog<T>({
   trigger,
@@ -108,6 +138,7 @@ export function SearchPickerDialog<T>({
   title,
   description,
   searchPlaceholder = 'Search...',
+  searchLabel,
   search,
   onSearchChange,
   isLoading,
@@ -130,19 +161,13 @@ export function SearchPickerDialog<T>({
           <DialogTitle>{title}</DialogTitle>
           {description && <DialogDescription>{description}</DialogDescription>}
         </DialogHeader>
-        <div className={trailing ? 'flex items-center gap-2' : undefined}>
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <TextInput
-              value={search}
-              onChange={(e) => onSearchChange(e.target.value)}
-              placeholder={searchPlaceholder}
-              className="pl-9"
-              autoFocus
-            />
-          </div>
-          {trailing}
-        </div>
+        <SearchPickerInput
+          trailing={trailing}
+          search={search}
+          onSearchChange={onSearchChange}
+          searchPlaceholder={searchPlaceholder}
+          searchLabel={searchLabel}
+        />
         <div className={`${maxResultsHeight} overflow-y-auto space-y-1`}>
           <ResultsBody
             search={search}

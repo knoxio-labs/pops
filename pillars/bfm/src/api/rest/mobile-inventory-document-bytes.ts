@@ -23,13 +23,8 @@
  * every contract route relays. The upload limits are documents'; nothing here
  * restates them.
  */
-import { Readable } from 'node:stream';
-import { pipeline } from 'node:stream/promises';
-
 import { Router } from 'express';
 import { z } from 'zod';
-
-import { ErrorBodySchema } from '@pops/types';
 
 import {
   MobileDocumentIdSchema,
@@ -42,6 +37,7 @@ import {
   MOBILE_INVENTORY_DOCUMENT_FILE_PATH,
   MOBILE_INVENTORY_DOCUMENT_UPLOAD_PATH,
 } from '../paths.js';
+import { readRawDocumentFailure, streamDocumentResponse } from './raw-document-response.js';
 import { relayBody, type Classification, type RelaySource } from './upstream-error.js';
 
 import type { Request, Response } from 'express';
@@ -58,46 +54,15 @@ const RELAYED_STATUSES: ReadonlySet<number> = new Set([400, 404, 412, 413, 415, 
 
 const STREAMED_STATUSES: ReadonlySet<number> = new Set([200, 206, 416]);
 
-const PASSED_HEADERS = [
-  'content-type',
-  'content-length',
-  'content-disposition',
-  'content-range',
-  'accept-ranges',
-] as const;
-
 const AcceptedSchema = z.object({ data: MobileDocumentIngestionSchema });
 
 const UNREACHABLE: RelaySource = { pillar: INVENTORY_MEDIA_PILLAR_ID, status: 503 };
-
-function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-async function readSource(upstream: globalThis.Response): Promise<RelaySource> {
-  const parsed = ErrorBodySchema.safeParse(await upstream.json().catch(() => null));
-  const base = {
-    pillar: INVENTORY_MEDIA_PILLAR_ID,
-    status: upstream.status,
-    upstreamStatus: upstream.status,
-  };
-  if (!parsed.success) return base;
-  const { code, message, requestId, retryable, details } = parsed.data;
-  return {
-    ...base,
-    code,
-    message,
-    requestId,
-    retryable,
-    ...(isRecord(details) ? { details } : {}),
-  };
-}
 
 /** The phone's status and body for an inventory answer that is not a success. */
 export async function mapDocumentBytesFailure(
   upstream: globalThis.Response
 ): Promise<{ status: number; body: MobileUpstreamError }> {
-  const source = await readSource(upstream);
+  const source = await readRawDocumentFailure(upstream, INVENTORY_MEDIA_PILLAR_ID);
   if (RELAYED_STATUSES.has(upstream.status)) {
     const fallback: Classification['fallback'] =
       upstream.status === 503 ? 'unavailable' : 'contract_mismatch';
@@ -183,16 +148,7 @@ async function file(
   if (upstream === null) return sendUnreachable(res);
   if (!STREAMED_STATUSES.has(upstream.status)) return sendFailure(res, upstream);
 
-  res.status(upstream.status);
-  for (const name of PASSED_HEADERS) {
-    const value = upstream.headers.get(name);
-    if (value !== null) res.setHeader(name, value);
-  }
-  if (upstream.body === null) {
-    res.end();
-    return;
-  }
-  await pipeline(Readable.from(upstream.body), res);
+  await streamDocumentResponse(upstream, res);
 }
 
 /** Build the raw item-document router. Mount it behind the `/mobile` guards and ahead of any body parser. */

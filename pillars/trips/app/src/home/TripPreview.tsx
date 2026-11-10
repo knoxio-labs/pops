@@ -1,5 +1,6 @@
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, FileText } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router';
 
 import { Button } from '@pops/ui';
 
@@ -44,6 +45,17 @@ export function TripPreview({
           </p>
         )}
       </header>
+      <div className="flex flex-wrap gap-2">
+        <Button asChild variant="outline" className="min-h-11">
+          <a href={`/trips/${trip.id}/calendar`}>{t('calendar')}</a>
+        </Button>
+        <Button asChild variant="outline" className="min-h-11">
+          <Link to={`/trips/${trip.id}/documents`}>
+            <FileText className="size-4" aria-hidden />
+            Documents
+          </Link>
+        </Button>
+      </div>
       <PreviewRoute visits={visits} places={places} locale={locale} />
       {trip.notes && (
         <section className="space-y-2 rounded-xl border border-border bg-card p-4">

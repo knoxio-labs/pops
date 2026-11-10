@@ -66,6 +66,11 @@ internal protocol APIProtocol: Sendable {
     /// - Remark: HTTP `POST /mobile/contacts/merchants/{id}/addresses`.
     /// - Remark: Generated from `#/paths//mobile/contacts/merchants/{id}/addresses/post(mobileContacts.createMerchantAddress)`.
     func mobileContacts_createMerchantAddress(_ input: Operations.MobileContacts_createMerchantAddress.Input) async throws -> Operations.MobileContacts_createMerchantAddress.Output
+    /// Read original metadata from the Documents owner
+    ///
+    /// - Remark: HTTP `GET /mobile/documents/{id}`.
+    /// - Remark: Generated from `#/paths//mobile/documents/{id}/get(mobileDocuments.getDocument)`.
+    func mobileDocuments_getDocument(_ input: Operations.MobileDocuments_getDocument.Input) async throws -> Operations.MobileDocuments_getDocument.Output
     /// Record a decision for a pending Ego action batch
     ///
     /// - Remark: HTTP `POST /mobile/ego/action-batches/{batchId}/decide`.
@@ -301,6 +306,16 @@ internal protocol APIProtocol: Sendable {
     /// - Remark: HTTP `PATCH /mobile/purchases/{id}`.
     /// - Remark: Generated from `#/paths//mobile/purchases/{id}/patch(mobilePurchases.updatePurchase)`.
     func mobilePurchases_updatePurchase(_ input: Operations.MobilePurchases_updatePurchase.Input) async throws -> Operations.MobilePurchases_updatePurchase.Output
+    /// Read a snapshot-bound page of original trip metadata
+    ///
+    /// - Remark: HTTP `GET /mobile/trips`.
+    /// - Remark: Generated from `#/paths//mobile/trips/get(mobileTrips.listTrips)`.
+    func mobileTrips_listTrips(_ input: Operations.MobileTrips_listTrips.Input) async throws -> Operations.MobileTrips_listTrips.Output
+    /// Read one trip with complete ordered visits, journeys, groups, stays, events and document associations
+    ///
+    /// - Remark: HTTP `GET /mobile/trips/{id}`.
+    /// - Remark: Generated from `#/paths//mobile/trips/{id}/get(mobileTrips.getTrip)`.
+    func mobileTrips_getTrip(_ input: Operations.MobileTrips_getTrip.Input) async throws -> Operations.MobileTrips_getTrip.Output
     /// List paired devices, revoked ones included. Never returns a token or a key
     ///
     /// - Remark: HTTP `GET /operator/devices`.
@@ -451,6 +466,19 @@ extension APIProtocol {
             path: path,
             headers: headers,
             body: body
+        ))
+    }
+    /// Read original metadata from the Documents owner
+    ///
+    /// - Remark: HTTP `GET /mobile/documents/{id}`.
+    /// - Remark: Generated from `#/paths//mobile/documents/{id}/get(mobileDocuments.getDocument)`.
+    internal func mobileDocuments_getDocument(
+        path: Operations.MobileDocuments_getDocument.Input.Path,
+        headers: Operations.MobileDocuments_getDocument.Input.Headers = .init()
+    ) async throws -> Operations.MobileDocuments_getDocument.Output {
+        try await mobileDocuments_getDocument(Operations.MobileDocuments_getDocument.Input(
+            path: path,
+            headers: headers
         ))
     }
     /// Record a decision for a pending Ego action batch
@@ -1078,6 +1106,32 @@ extension APIProtocol {
             path: path,
             headers: headers,
             body: body
+        ))
+    }
+    /// Read a snapshot-bound page of original trip metadata
+    ///
+    /// - Remark: HTTP `GET /mobile/trips`.
+    /// - Remark: Generated from `#/paths//mobile/trips/get(mobileTrips.listTrips)`.
+    internal func mobileTrips_listTrips(
+        query: Operations.MobileTrips_listTrips.Input.Query,
+        headers: Operations.MobileTrips_listTrips.Input.Headers = .init()
+    ) async throws -> Operations.MobileTrips_listTrips.Output {
+        try await mobileTrips_listTrips(Operations.MobileTrips_listTrips.Input(
+            query: query,
+            headers: headers
+        ))
+    }
+    /// Read one trip with complete ordered visits, journeys, groups, stays, events and document associations
+    ///
+    /// - Remark: HTTP `GET /mobile/trips/{id}`.
+    /// - Remark: Generated from `#/paths//mobile/trips/{id}/get(mobileTrips.getTrip)`.
+    internal func mobileTrips_getTrip(
+        path: Operations.MobileTrips_getTrip.Input.Path,
+        headers: Operations.MobileTrips_getTrip.Input.Headers = .init()
+    ) async throws -> Operations.MobileTrips_getTrip.Output {
+        try await mobileTrips_getTrip(Operations.MobileTrips_getTrip.Input(
+            path: path,
+            headers: headers
         ))
     }
     /// List paired devices, revoked ones included. Never returns a token or a key
@@ -11385,6 +11439,1576 @@ internal enum Operations {
             /// - Throws: An error if `self` is not `.serviceUnavailable`.
             /// - SeeAlso: `.serviceUnavailable`.
             internal var serviceUnavailable: Operations.MobileContacts_createMerchantAddress.Output.ServiceUnavailable {
+                get throws {
+                    switch self {
+                    case let .serviceUnavailable(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "serviceUnavailable",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        internal enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            internal init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            internal var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            internal static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
+    /// Read original metadata from the Documents owner
+    ///
+    /// - Remark: HTTP `GET /mobile/documents/{id}`.
+    /// - Remark: Generated from `#/paths//mobile/documents/{id}/get(mobileDocuments.getDocument)`.
+    internal enum MobileDocuments_getDocument {
+        internal static let id: Swift.String = "mobileDocuments.getDocument"
+        internal struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/path`.
+            internal struct Path: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/path/id`.
+                internal var id: Swift.Int
+                /// Creates a new `Path`.
+                ///
+                /// - Parameters:
+                ///   - id:
+                internal init(id: Swift.Int) {
+                    self.id = id
+                }
+            }
+            internal var path: Operations.MobileDocuments_getDocument.Input.Path
+            /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/header`.
+            internal struct Headers: Sendable, Hashable {
+                internal var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.MobileDocuments_getDocument.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                internal init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.MobileDocuments_getDocument.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            internal var headers: Operations.MobileDocuments_getDocument.Input.Headers
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - path:
+            ///   - headers:
+            internal init(
+                path: Operations.MobileDocuments_getDocument.Input.Path,
+                headers: Operations.MobileDocuments_getDocument.Input.Headers = .init()
+            ) {
+                self.path = path
+                self.headers = headers
+            }
+        }
+        internal enum Output: Sendable, Hashable {
+            internal struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/200/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/200/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/200/content/json/created`.
+                        internal var created: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/200/content/json/id`.
+                        internal var id: Swift.Double
+                        /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/200/content/json/originalFileName`.
+                        internal var originalFileName: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/200/content/json/thumbnailUrl`.
+                        internal var thumbnailUrl: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/200/content/json/title`.
+                        internal var title: Swift.String
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - created:
+                        ///   - id:
+                        ///   - originalFileName:
+                        ///   - thumbnailUrl:
+                        ///   - title:
+                        internal init(
+                            created: Swift.String,
+                            id: Swift.Double,
+                            originalFileName: Swift.String,
+                            thumbnailUrl: Swift.String,
+                            title: Swift.String
+                        ) {
+                            self.created = created
+                            self.id = id
+                            self.originalFileName = originalFileName
+                            self.thumbnailUrl = thumbnailUrl
+                            self.title = title
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case created
+                            case id
+                            case originalFileName
+                            case thumbnailUrl
+                            case title
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.created = try container.decode(
+                                Swift.String.self,
+                                forKey: .created
+                            )
+                            self.id = try container.decode(
+                                Swift.Double.self,
+                                forKey: .id
+                            )
+                            self.originalFileName = try container.decode(
+                                Swift.String.self,
+                                forKey: .originalFileName
+                            )
+                            self.thumbnailUrl = try container.decode(
+                                Swift.String.self,
+                                forKey: .thumbnailUrl
+                            )
+                            self.title = try container.decode(
+                                Swift.String.self,
+                                forKey: .title
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "created",
+                                "id",
+                                "originalFileName",
+                                "thumbnailUrl",
+                                "title"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/200/content/application\/json`.
+                    case json(Operations.MobileDocuments_getDocument.Output.Ok.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileDocuments_getDocument.Output.Ok.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileDocuments_getDocument.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileDocuments_getDocument.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// 200
+            ///
+            /// - Remark: Generated from `#/paths//mobile/documents/{id}/get(mobileDocuments.getDocument)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.MobileDocuments_getDocument.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            internal var ok: Operations.MobileDocuments_getDocument.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/400/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/400/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/400/content/json/code`.
+                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case invalidCursor = "invalid_cursor"
+                            case bfm_request_invalid = "bfm.request.invalid"
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/400/content/json/code`.
+                        internal var code: Operations.MobileDocuments_getDocument.Output.BadRequest.Body.JsonPayload.CodePayload
+                        /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/400/content/json/details`.
+                        internal var details: OpenAPIRuntime.OpenAPIValueContainer?
+                        /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/400/content/json/message`.
+                        internal var message: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/400/content/json/requestId`.
+                        internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/400/content/json/retryable`.
+                        internal var retryable: Swift.Bool
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - details:
+                        ///   - message:
+                        ///   - requestId:
+                        ///   - retryable:
+                        internal init(
+                            code: Operations.MobileDocuments_getDocument.Output.BadRequest.Body.JsonPayload.CodePayload,
+                            details: OpenAPIRuntime.OpenAPIValueContainer? = nil,
+                            message: Swift.String,
+                            requestId: Swift.String,
+                            retryable: Swift.Bool
+                        ) {
+                            self.code = code
+                            self.details = details
+                            self.message = message
+                            self.requestId = requestId
+                            self.retryable = retryable
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case details
+                            case message
+                            case requestId
+                            case retryable
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Operations.MobileDocuments_getDocument.Output.BadRequest.Body.JsonPayload.CodePayload.self,
+                                forKey: .code
+                            )
+                            self.details = try container.decodeIfPresent(
+                                OpenAPIRuntime.OpenAPIValueContainer.self,
+                                forKey: .details
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            self.requestId = try container.decode(
+                                Swift.String.self,
+                                forKey: .requestId
+                            )
+                            self.retryable = try container.decode(
+                                Swift.Bool.self,
+                                forKey: .retryable
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "details",
+                                "message",
+                                "requestId",
+                                "retryable"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/400/content/application\/json`.
+                    case json(Operations.MobileDocuments_getDocument.Output.BadRequest.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileDocuments_getDocument.Output.BadRequest.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileDocuments_getDocument.Output.BadRequest.Body
+                /// Creates a new `BadRequest`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileDocuments_getDocument.Output.BadRequest.Body) {
+                    self.body = body
+                }
+            }
+            /// 400
+            ///
+            /// - Remark: Generated from `#/paths//mobile/documents/{id}/get(mobileDocuments.getDocument)/responses/400`.
+            ///
+            /// HTTP response code: `400 badRequest`.
+            case badRequest(Operations.MobileDocuments_getDocument.Output.BadRequest)
+            /// The associated value of the enum case if `self` is `.badRequest`.
+            ///
+            /// - Throws: An error if `self` is not `.badRequest`.
+            /// - SeeAlso: `.badRequest`.
+            internal var badRequest: Operations.MobileDocuments_getDocument.Output.BadRequest {
+                get throws {
+                    switch self {
+                    case let .badRequest(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "badRequest",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Unauthorized: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/401/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/401/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/401/content/json/code`.
+                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case bfm_auth_invalidToken = "bfm.auth.invalid_token"
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/401/content/json/code`.
+                        internal var code: Operations.MobileDocuments_getDocument.Output.Unauthorized.Body.JsonPayload.CodePayload
+                        /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/401/content/json/details`.
+                        internal var details: OpenAPIRuntime.OpenAPIValueContainer?
+                        /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/401/content/json/message`.
+                        internal var message: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/401/content/json/requestId`.
+                        internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/401/content/json/retryable`.
+                        internal var retryable: Swift.Bool
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - details:
+                        ///   - message:
+                        ///   - requestId:
+                        ///   - retryable:
+                        internal init(
+                            code: Operations.MobileDocuments_getDocument.Output.Unauthorized.Body.JsonPayload.CodePayload,
+                            details: OpenAPIRuntime.OpenAPIValueContainer? = nil,
+                            message: Swift.String,
+                            requestId: Swift.String,
+                            retryable: Swift.Bool
+                        ) {
+                            self.code = code
+                            self.details = details
+                            self.message = message
+                            self.requestId = requestId
+                            self.retryable = retryable
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case details
+                            case message
+                            case requestId
+                            case retryable
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Operations.MobileDocuments_getDocument.Output.Unauthorized.Body.JsonPayload.CodePayload.self,
+                                forKey: .code
+                            )
+                            self.details = try container.decodeIfPresent(
+                                OpenAPIRuntime.OpenAPIValueContainer.self,
+                                forKey: .details
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            self.requestId = try container.decode(
+                                Swift.String.self,
+                                forKey: .requestId
+                            )
+                            self.retryable = try container.decode(
+                                Swift.Bool.self,
+                                forKey: .retryable
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "details",
+                                "message",
+                                "requestId",
+                                "retryable"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/401/content/application\/json`.
+                    case json(Operations.MobileDocuments_getDocument.Output.Unauthorized.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileDocuments_getDocument.Output.Unauthorized.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileDocuments_getDocument.Output.Unauthorized.Body
+                /// Creates a new `Unauthorized`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileDocuments_getDocument.Output.Unauthorized.Body) {
+                    self.body = body
+                }
+            }
+            /// 401
+            ///
+            /// - Remark: Generated from `#/paths//mobile/documents/{id}/get(mobileDocuments.getDocument)/responses/401`.
+            ///
+            /// HTTP response code: `401 unauthorized`.
+            case unauthorized(Operations.MobileDocuments_getDocument.Output.Unauthorized)
+            /// The associated value of the enum case if `self` is `.unauthorized`.
+            ///
+            /// - Throws: An error if `self` is not `.unauthorized`.
+            /// - SeeAlso: `.unauthorized`.
+            internal var unauthorized: Operations.MobileDocuments_getDocument.Output.Unauthorized {
+                get throws {
+                    switch self {
+                    case let .unauthorized(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unauthorized",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Forbidden: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/403/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/403/content/json`.
+                    internal enum JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/403/content/json/case1`.
+                        internal struct Case1Payload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/403/content/json/case1/code`.
+                            internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case bfm_auth_deviceRevoked = "bfm.auth.device_revoked"
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/403/content/json/case1/code`.
+                            internal var code: Operations.MobileDocuments_getDocument.Output.Forbidden.Body.JsonPayload.Case1Payload.CodePayload
+                            /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/403/content/json/case1/details`.
+                            internal var details: OpenAPIRuntime.OpenAPIValueContainer?
+                            /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/403/content/json/case1/message`.
+                            internal var message: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/403/content/json/case1/requestId`.
+                            internal var requestId: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/403/content/json/case1/retryable`.
+                            internal var retryable: Swift.Bool
+                            /// Creates a new `Case1Payload`.
+                            ///
+                            /// - Parameters:
+                            ///   - code:
+                            ///   - details:
+                            ///   - message:
+                            ///   - requestId:
+                            ///   - retryable:
+                            internal init(
+                                code: Operations.MobileDocuments_getDocument.Output.Forbidden.Body.JsonPayload.Case1Payload.CodePayload,
+                                details: OpenAPIRuntime.OpenAPIValueContainer? = nil,
+                                message: Swift.String,
+                                requestId: Swift.String,
+                                retryable: Swift.Bool
+                            ) {
+                                self.code = code
+                                self.details = details
+                                self.message = message
+                                self.requestId = requestId
+                                self.retryable = retryable
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case code
+                                case details
+                                case message
+                                case requestId
+                                case retryable
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.code = try container.decode(
+                                    Operations.MobileDocuments_getDocument.Output.Forbidden.Body.JsonPayload.Case1Payload.CodePayload.self,
+                                    forKey: .code
+                                )
+                                self.details = try container.decodeIfPresent(
+                                    OpenAPIRuntime.OpenAPIValueContainer.self,
+                                    forKey: .details
+                                )
+                                self.message = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .message
+                                )
+                                self.requestId = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .requestId
+                                )
+                                self.retryable = try container.decode(
+                                    Swift.Bool.self,
+                                    forKey: .retryable
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "code",
+                                    "details",
+                                    "message",
+                                    "requestId",
+                                    "retryable"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/403/content/json/case1`.
+                        case case1(Operations.MobileDocuments_getDocument.Output.Forbidden.Body.JsonPayload.Case1Payload)
+                        /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/403/content/json/case2`.
+                        internal struct Case2Payload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/403/content/json/case2/capability`.
+                            internal var capability: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/403/content/json/case2/code`.
+                            internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case capabilityNotGranted = "capability_not_granted"
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/403/content/json/case2/code`.
+                            internal var code: Operations.MobileDocuments_getDocument.Output.Forbidden.Body.JsonPayload.Case2Payload.CodePayload
+                            /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/403/content/json/case2/message`.
+                            internal var message: Swift.String
+                            /// Creates a new `Case2Payload`.
+                            ///
+                            /// - Parameters:
+                            ///   - capability:
+                            ///   - code:
+                            ///   - message:
+                            internal init(
+                                capability: Swift.String,
+                                code: Operations.MobileDocuments_getDocument.Output.Forbidden.Body.JsonPayload.Case2Payload.CodePayload,
+                                message: Swift.String
+                            ) {
+                                self.capability = capability
+                                self.code = code
+                                self.message = message
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case capability
+                                case code
+                                case message
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.capability = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .capability
+                                )
+                                self.code = try container.decode(
+                                    Operations.MobileDocuments_getDocument.Output.Forbidden.Body.JsonPayload.Case2Payload.CodePayload.self,
+                                    forKey: .code
+                                )
+                                self.message = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .message
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "capability",
+                                    "code",
+                                    "message"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/403/content/json/case2`.
+                        case case2(Operations.MobileDocuments_getDocument.Output.Forbidden.Body.JsonPayload.Case2Payload)
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            var errors: [any Swift.Error] = []
+                            do {
+                                self = .case1(try .init(from: decoder))
+                                return
+                            } catch {
+                                errors.append(error)
+                            }
+                            do {
+                                self = .case2(try .init(from: decoder))
+                                return
+                            } catch {
+                                errors.append(error)
+                            }
+                            throw Swift.DecodingError.failedToDecodeOneOfSchema(
+                                type: Self.self,
+                                codingPath: decoder.codingPath,
+                                errors: errors
+                            )
+                        }
+                        internal func encode(to encoder: any Swift.Encoder) throws {
+                            switch self {
+                            case let .case1(value):
+                                try value.encode(to: encoder)
+                            case let .case2(value):
+                                try value.encode(to: encoder)
+                            }
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/403/content/application\/json`.
+                    case json(Operations.MobileDocuments_getDocument.Output.Forbidden.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileDocuments_getDocument.Output.Forbidden.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileDocuments_getDocument.Output.Forbidden.Body
+                /// Creates a new `Forbidden`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileDocuments_getDocument.Output.Forbidden.Body) {
+                    self.body = body
+                }
+            }
+            /// 403
+            ///
+            /// - Remark: Generated from `#/paths//mobile/documents/{id}/get(mobileDocuments.getDocument)/responses/403`.
+            ///
+            /// HTTP response code: `403 forbidden`.
+            case forbidden(Operations.MobileDocuments_getDocument.Output.Forbidden)
+            /// The associated value of the enum case if `self` is `.forbidden`.
+            ///
+            /// - Throws: An error if `self` is not `.forbidden`.
+            /// - SeeAlso: `.forbidden`.
+            internal var forbidden: Operations.MobileDocuments_getDocument.Output.Forbidden {
+                get throws {
+                    switch self {
+                    case let .forbidden(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "forbidden",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct NotFound: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/404/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/404/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/404/content/json/code`.
+                        internal var code: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/404/content/json/details`.
+                        internal struct DetailsPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/404/content/json/details/upstream`.
+                            internal struct UpstreamPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/404/content/json/details/upstream/pillar`.
+                                internal var pillar: Swift.String
+                                /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/404/content/json/details/upstream/status`.
+                                internal var status: Swift.Int
+                                /// Creates a new `UpstreamPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - pillar:
+                                ///   - status:
+                                internal init(
+                                    pillar: Swift.String,
+                                    status: Swift.Int
+                                ) {
+                                    self.pillar = pillar
+                                    self.status = status
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case pillar
+                                    case status
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.pillar = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .pillar
+                                    )
+                                    self.status = try container.decode(
+                                        Swift.Int.self,
+                                        forKey: .status
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "pillar",
+                                        "status"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/404/content/json/details/upstream`.
+                            internal var upstream: Operations.MobileDocuments_getDocument.Output.NotFound.Body.JsonPayload.DetailsPayload.UpstreamPayload
+                            /// A container of undocumented properties.
+                            internal var additionalProperties: [String: OpenAPIRuntime.OpenAPIValueContainer]
+                            /// Creates a new `DetailsPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - upstream:
+                            ///   - additionalProperties: A container of undocumented properties.
+                            internal init(
+                                upstream: Operations.MobileDocuments_getDocument.Output.NotFound.Body.JsonPayload.DetailsPayload.UpstreamPayload,
+                                additionalProperties: [String: OpenAPIRuntime.OpenAPIValueContainer] = .init()
+                            ) {
+                                self.upstream = upstream
+                                self.additionalProperties = additionalProperties
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case upstream
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.upstream = try container.decode(
+                                    Operations.MobileDocuments_getDocument.Output.NotFound.Body.JsonPayload.DetailsPayload.UpstreamPayload.self,
+                                    forKey: .upstream
+                                )
+                                additionalProperties = try decoder.decodeAdditionalProperties(knownKeys: [
+                                    "upstream"
+                                ])
+                            }
+                            internal func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(
+                                    self.upstream,
+                                    forKey: .upstream
+                                )
+                                try encoder.encodeAdditionalProperties(additionalProperties)
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/404/content/json/details`.
+                        internal var details: Operations.MobileDocuments_getDocument.Output.NotFound.Body.JsonPayload.DetailsPayload
+                        /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/404/content/json/message`.
+                        internal var message: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/404/content/json/requestId`.
+                        internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/404/content/json/retryable`.
+                        internal var retryable: Swift.Bool
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - details:
+                        ///   - message:
+                        ///   - requestId:
+                        ///   - retryable:
+                        internal init(
+                            code: Swift.String,
+                            details: Operations.MobileDocuments_getDocument.Output.NotFound.Body.JsonPayload.DetailsPayload,
+                            message: Swift.String,
+                            requestId: Swift.String,
+                            retryable: Swift.Bool
+                        ) {
+                            self.code = code
+                            self.details = details
+                            self.message = message
+                            self.requestId = requestId
+                            self.retryable = retryable
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case details
+                            case message
+                            case requestId
+                            case retryable
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Swift.String.self,
+                                forKey: .code
+                            )
+                            self.details = try container.decode(
+                                Operations.MobileDocuments_getDocument.Output.NotFound.Body.JsonPayload.DetailsPayload.self,
+                                forKey: .details
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            self.requestId = try container.decode(
+                                Swift.String.self,
+                                forKey: .requestId
+                            )
+                            self.retryable = try container.decode(
+                                Swift.Bool.self,
+                                forKey: .retryable
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "details",
+                                "message",
+                                "requestId",
+                                "retryable"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/404/content/application\/json`.
+                    case json(Operations.MobileDocuments_getDocument.Output.NotFound.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileDocuments_getDocument.Output.NotFound.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileDocuments_getDocument.Output.NotFound.Body
+                /// Creates a new `NotFound`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileDocuments_getDocument.Output.NotFound.Body) {
+                    self.body = body
+                }
+            }
+            /// 404
+            ///
+            /// - Remark: Generated from `#/paths//mobile/documents/{id}/get(mobileDocuments.getDocument)/responses/404`.
+            ///
+            /// HTTP response code: `404 notFound`.
+            case notFound(Operations.MobileDocuments_getDocument.Output.NotFound)
+            /// The associated value of the enum case if `self` is `.notFound`.
+            ///
+            /// - Throws: An error if `self` is not `.notFound`.
+            /// - SeeAlso: `.notFound`.
+            internal var notFound: Operations.MobileDocuments_getDocument.Output.NotFound {
+                get throws {
+                    switch self {
+                    case let .notFound(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "notFound",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct PreconditionFailed: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/412/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/412/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/412/content/json/code`.
+                        internal var code: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/412/content/json/details`.
+                        internal struct DetailsPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/412/content/json/details/upstream`.
+                            internal struct UpstreamPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/412/content/json/details/upstream/pillar`.
+                                internal var pillar: Swift.String
+                                /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/412/content/json/details/upstream/status`.
+                                internal var status: Swift.Int
+                                /// Creates a new `UpstreamPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - pillar:
+                                ///   - status:
+                                internal init(
+                                    pillar: Swift.String,
+                                    status: Swift.Int
+                                ) {
+                                    self.pillar = pillar
+                                    self.status = status
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case pillar
+                                    case status
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.pillar = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .pillar
+                                    )
+                                    self.status = try container.decode(
+                                        Swift.Int.self,
+                                        forKey: .status
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "pillar",
+                                        "status"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/412/content/json/details/upstream`.
+                            internal var upstream: Operations.MobileDocuments_getDocument.Output.PreconditionFailed.Body.JsonPayload.DetailsPayload.UpstreamPayload
+                            /// A container of undocumented properties.
+                            internal var additionalProperties: [String: OpenAPIRuntime.OpenAPIValueContainer]
+                            /// Creates a new `DetailsPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - upstream:
+                            ///   - additionalProperties: A container of undocumented properties.
+                            internal init(
+                                upstream: Operations.MobileDocuments_getDocument.Output.PreconditionFailed.Body.JsonPayload.DetailsPayload.UpstreamPayload,
+                                additionalProperties: [String: OpenAPIRuntime.OpenAPIValueContainer] = .init()
+                            ) {
+                                self.upstream = upstream
+                                self.additionalProperties = additionalProperties
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case upstream
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.upstream = try container.decode(
+                                    Operations.MobileDocuments_getDocument.Output.PreconditionFailed.Body.JsonPayload.DetailsPayload.UpstreamPayload.self,
+                                    forKey: .upstream
+                                )
+                                additionalProperties = try decoder.decodeAdditionalProperties(knownKeys: [
+                                    "upstream"
+                                ])
+                            }
+                            internal func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(
+                                    self.upstream,
+                                    forKey: .upstream
+                                )
+                                try encoder.encodeAdditionalProperties(additionalProperties)
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/412/content/json/details`.
+                        internal var details: Operations.MobileDocuments_getDocument.Output.PreconditionFailed.Body.JsonPayload.DetailsPayload
+                        /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/412/content/json/message`.
+                        internal var message: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/412/content/json/requestId`.
+                        internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/412/content/json/retryable`.
+                        internal var retryable: Swift.Bool
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - details:
+                        ///   - message:
+                        ///   - requestId:
+                        ///   - retryable:
+                        internal init(
+                            code: Swift.String,
+                            details: Operations.MobileDocuments_getDocument.Output.PreconditionFailed.Body.JsonPayload.DetailsPayload,
+                            message: Swift.String,
+                            requestId: Swift.String,
+                            retryable: Swift.Bool
+                        ) {
+                            self.code = code
+                            self.details = details
+                            self.message = message
+                            self.requestId = requestId
+                            self.retryable = retryable
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case details
+                            case message
+                            case requestId
+                            case retryable
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Swift.String.self,
+                                forKey: .code
+                            )
+                            self.details = try container.decode(
+                                Operations.MobileDocuments_getDocument.Output.PreconditionFailed.Body.JsonPayload.DetailsPayload.self,
+                                forKey: .details
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            self.requestId = try container.decode(
+                                Swift.String.self,
+                                forKey: .requestId
+                            )
+                            self.retryable = try container.decode(
+                                Swift.Bool.self,
+                                forKey: .retryable
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "details",
+                                "message",
+                                "requestId",
+                                "retryable"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/412/content/application\/json`.
+                    case json(Operations.MobileDocuments_getDocument.Output.PreconditionFailed.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileDocuments_getDocument.Output.PreconditionFailed.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileDocuments_getDocument.Output.PreconditionFailed.Body
+                /// Creates a new `PreconditionFailed`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileDocuments_getDocument.Output.PreconditionFailed.Body) {
+                    self.body = body
+                }
+            }
+            /// 412
+            ///
+            /// - Remark: Generated from `#/paths//mobile/documents/{id}/get(mobileDocuments.getDocument)/responses/412`.
+            ///
+            /// HTTP response code: `412 preconditionFailed`.
+            case preconditionFailed(Operations.MobileDocuments_getDocument.Output.PreconditionFailed)
+            /// The associated value of the enum case if `self` is `.preconditionFailed`.
+            ///
+            /// - Throws: An error if `self` is not `.preconditionFailed`.
+            /// - SeeAlso: `.preconditionFailed`.
+            internal var preconditionFailed: Operations.MobileDocuments_getDocument.Output.PreconditionFailed {
+                get throws {
+                    switch self {
+                    case let .preconditionFailed(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "preconditionFailed",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct TooManyRequests: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/429/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/429/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/429/content/json/code`.
+                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case rateLimited = "rate_limited"
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/429/content/json/code`.
+                        internal var code: Operations.MobileDocuments_getDocument.Output.TooManyRequests.Body.JsonPayload.CodePayload
+                        /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/429/content/json/message`.
+                        internal var message: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/429/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - message:
+                        ///   - retryAfterSeconds:
+                        internal init(
+                            code: Operations.MobileDocuments_getDocument.Output.TooManyRequests.Body.JsonPayload.CodePayload,
+                            message: Swift.String,
+                            retryAfterSeconds: Swift.Int
+                        ) {
+                            self.code = code
+                            self.message = message
+                            self.retryAfterSeconds = retryAfterSeconds
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case message
+                            case retryAfterSeconds
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Operations.MobileDocuments_getDocument.Output.TooManyRequests.Body.JsonPayload.CodePayload.self,
+                                forKey: .code
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            self.retryAfterSeconds = try container.decode(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "message",
+                                "retryAfterSeconds"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/429/content/application\/json`.
+                    case json(Operations.MobileDocuments_getDocument.Output.TooManyRequests.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileDocuments_getDocument.Output.TooManyRequests.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileDocuments_getDocument.Output.TooManyRequests.Body
+                /// Creates a new `TooManyRequests`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileDocuments_getDocument.Output.TooManyRequests.Body) {
+                    self.body = body
+                }
+            }
+            /// 429
+            ///
+            /// - Remark: Generated from `#/paths//mobile/documents/{id}/get(mobileDocuments.getDocument)/responses/429`.
+            ///
+            /// HTTP response code: `429 tooManyRequests`.
+            case tooManyRequests(Operations.MobileDocuments_getDocument.Output.TooManyRequests)
+            /// The associated value of the enum case if `self` is `.tooManyRequests`.
+            ///
+            /// - Throws: An error if `self` is not `.tooManyRequests`.
+            /// - SeeAlso: `.tooManyRequests`.
+            internal var tooManyRequests: Operations.MobileDocuments_getDocument.Output.TooManyRequests {
+                get throws {
+                    switch self {
+                    case let .tooManyRequests(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "tooManyRequests",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct BadGateway: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/502/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/502/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/502/content/json/code`.
+                        internal var code: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/502/content/json/details`.
+                        internal struct DetailsPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/502/content/json/details/upstream`.
+                            internal struct UpstreamPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/502/content/json/details/upstream/pillar`.
+                                internal var pillar: Swift.String
+                                /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/502/content/json/details/upstream/status`.
+                                internal var status: Swift.Int
+                                /// Creates a new `UpstreamPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - pillar:
+                                ///   - status:
+                                internal init(
+                                    pillar: Swift.String,
+                                    status: Swift.Int
+                                ) {
+                                    self.pillar = pillar
+                                    self.status = status
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case pillar
+                                    case status
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.pillar = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .pillar
+                                    )
+                                    self.status = try container.decode(
+                                        Swift.Int.self,
+                                        forKey: .status
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "pillar",
+                                        "status"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/502/content/json/details/upstream`.
+                            internal var upstream: Operations.MobileDocuments_getDocument.Output.BadGateway.Body.JsonPayload.DetailsPayload.UpstreamPayload
+                            /// A container of undocumented properties.
+                            internal var additionalProperties: [String: OpenAPIRuntime.OpenAPIValueContainer]
+                            /// Creates a new `DetailsPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - upstream:
+                            ///   - additionalProperties: A container of undocumented properties.
+                            internal init(
+                                upstream: Operations.MobileDocuments_getDocument.Output.BadGateway.Body.JsonPayload.DetailsPayload.UpstreamPayload,
+                                additionalProperties: [String: OpenAPIRuntime.OpenAPIValueContainer] = .init()
+                            ) {
+                                self.upstream = upstream
+                                self.additionalProperties = additionalProperties
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case upstream
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.upstream = try container.decode(
+                                    Operations.MobileDocuments_getDocument.Output.BadGateway.Body.JsonPayload.DetailsPayload.UpstreamPayload.self,
+                                    forKey: .upstream
+                                )
+                                additionalProperties = try decoder.decodeAdditionalProperties(knownKeys: [
+                                    "upstream"
+                                ])
+                            }
+                            internal func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(
+                                    self.upstream,
+                                    forKey: .upstream
+                                )
+                                try encoder.encodeAdditionalProperties(additionalProperties)
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/502/content/json/details`.
+                        internal var details: Operations.MobileDocuments_getDocument.Output.BadGateway.Body.JsonPayload.DetailsPayload
+                        /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/502/content/json/message`.
+                        internal var message: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/502/content/json/requestId`.
+                        internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/502/content/json/retryable`.
+                        internal var retryable: Swift.Bool
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - details:
+                        ///   - message:
+                        ///   - requestId:
+                        ///   - retryable:
+                        internal init(
+                            code: Swift.String,
+                            details: Operations.MobileDocuments_getDocument.Output.BadGateway.Body.JsonPayload.DetailsPayload,
+                            message: Swift.String,
+                            requestId: Swift.String,
+                            retryable: Swift.Bool
+                        ) {
+                            self.code = code
+                            self.details = details
+                            self.message = message
+                            self.requestId = requestId
+                            self.retryable = retryable
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case details
+                            case message
+                            case requestId
+                            case retryable
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Swift.String.self,
+                                forKey: .code
+                            )
+                            self.details = try container.decode(
+                                Operations.MobileDocuments_getDocument.Output.BadGateway.Body.JsonPayload.DetailsPayload.self,
+                                forKey: .details
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            self.requestId = try container.decode(
+                                Swift.String.self,
+                                forKey: .requestId
+                            )
+                            self.retryable = try container.decode(
+                                Swift.Bool.self,
+                                forKey: .retryable
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "details",
+                                "message",
+                                "requestId",
+                                "retryable"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/502/content/application\/json`.
+                    case json(Operations.MobileDocuments_getDocument.Output.BadGateway.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileDocuments_getDocument.Output.BadGateway.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileDocuments_getDocument.Output.BadGateway.Body
+                /// Creates a new `BadGateway`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileDocuments_getDocument.Output.BadGateway.Body) {
+                    self.body = body
+                }
+            }
+            /// 502
+            ///
+            /// - Remark: Generated from `#/paths//mobile/documents/{id}/get(mobileDocuments.getDocument)/responses/502`.
+            ///
+            /// HTTP response code: `502 badGateway`.
+            case badGateway(Operations.MobileDocuments_getDocument.Output.BadGateway)
+            /// The associated value of the enum case if `self` is `.badGateway`.
+            ///
+            /// - Throws: An error if `self` is not `.badGateway`.
+            /// - SeeAlso: `.badGateway`.
+            internal var badGateway: Operations.MobileDocuments_getDocument.Output.BadGateway {
+                get throws {
+                    switch self {
+                    case let .badGateway(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "badGateway",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct ServiceUnavailable: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/503/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/503/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/503/content/json/code`.
+                        internal var code: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/503/content/json/details`.
+                        internal struct DetailsPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/503/content/json/details/upstream`.
+                            internal struct UpstreamPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/503/content/json/details/upstream/pillar`.
+                                internal var pillar: Swift.String
+                                /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/503/content/json/details/upstream/status`.
+                                internal var status: Swift.Int
+                                /// Creates a new `UpstreamPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - pillar:
+                                ///   - status:
+                                internal init(
+                                    pillar: Swift.String,
+                                    status: Swift.Int
+                                ) {
+                                    self.pillar = pillar
+                                    self.status = status
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case pillar
+                                    case status
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.pillar = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .pillar
+                                    )
+                                    self.status = try container.decode(
+                                        Swift.Int.self,
+                                        forKey: .status
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "pillar",
+                                        "status"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/503/content/json/details/upstream`.
+                            internal var upstream: Operations.MobileDocuments_getDocument.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload.UpstreamPayload
+                            /// A container of undocumented properties.
+                            internal var additionalProperties: [String: OpenAPIRuntime.OpenAPIValueContainer]
+                            /// Creates a new `DetailsPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - upstream:
+                            ///   - additionalProperties: A container of undocumented properties.
+                            internal init(
+                                upstream: Operations.MobileDocuments_getDocument.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload.UpstreamPayload,
+                                additionalProperties: [String: OpenAPIRuntime.OpenAPIValueContainer] = .init()
+                            ) {
+                                self.upstream = upstream
+                                self.additionalProperties = additionalProperties
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case upstream
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.upstream = try container.decode(
+                                    Operations.MobileDocuments_getDocument.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload.UpstreamPayload.self,
+                                    forKey: .upstream
+                                )
+                                additionalProperties = try decoder.decodeAdditionalProperties(knownKeys: [
+                                    "upstream"
+                                ])
+                            }
+                            internal func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(
+                                    self.upstream,
+                                    forKey: .upstream
+                                )
+                                try encoder.encodeAdditionalProperties(additionalProperties)
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/503/content/json/details`.
+                        internal var details: Operations.MobileDocuments_getDocument.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload
+                        /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/503/content/json/message`.
+                        internal var message: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/503/content/json/requestId`.
+                        internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/503/content/json/retryable`.
+                        internal var retryable: Swift.Bool
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - details:
+                        ///   - message:
+                        ///   - requestId:
+                        ///   - retryable:
+                        internal init(
+                            code: Swift.String,
+                            details: Operations.MobileDocuments_getDocument.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload,
+                            message: Swift.String,
+                            requestId: Swift.String,
+                            retryable: Swift.Bool
+                        ) {
+                            self.code = code
+                            self.details = details
+                            self.message = message
+                            self.requestId = requestId
+                            self.retryable = retryable
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case details
+                            case message
+                            case requestId
+                            case retryable
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Swift.String.self,
+                                forKey: .code
+                            )
+                            self.details = try container.decode(
+                                Operations.MobileDocuments_getDocument.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload.self,
+                                forKey: .details
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            self.requestId = try container.decode(
+                                Swift.String.self,
+                                forKey: .requestId
+                            )
+                            self.retryable = try container.decode(
+                                Swift.Bool.self,
+                                forKey: .retryable
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "details",
+                                "message",
+                                "requestId",
+                                "retryable"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/documents/{id}/GET/responses/503/content/application\/json`.
+                    case json(Operations.MobileDocuments_getDocument.Output.ServiceUnavailable.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileDocuments_getDocument.Output.ServiceUnavailable.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileDocuments_getDocument.Output.ServiceUnavailable.Body
+                /// Creates a new `ServiceUnavailable`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileDocuments_getDocument.Output.ServiceUnavailable.Body) {
+                    self.body = body
+                }
+            }
+            /// 503
+            ///
+            /// - Remark: Generated from `#/paths//mobile/documents/{id}/get(mobileDocuments.getDocument)/responses/503`.
+            ///
+            /// HTTP response code: `503 serviceUnavailable`.
+            case serviceUnavailable(Operations.MobileDocuments_getDocument.Output.ServiceUnavailable)
+            /// The associated value of the enum case if `self` is `.serviceUnavailable`.
+            ///
+            /// - Throws: An error if `self` is not `.serviceUnavailable`.
+            /// - SeeAlso: `.serviceUnavailable`.
+            internal var serviceUnavailable: Operations.MobileDocuments_getDocument.Output.ServiceUnavailable {
                 get throws {
                     switch self {
                     case let .serviceUnavailable(response):
@@ -96382,6 +98006,5757 @@ internal enum Operations {
             /// - Throws: An error if `self` is not `.serviceUnavailable`.
             /// - SeeAlso: `.serviceUnavailable`.
             internal var serviceUnavailable: Operations.MobilePurchases_updatePurchase.Output.ServiceUnavailable {
+                get throws {
+                    switch self {
+                    case let .serviceUnavailable(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "serviceUnavailable",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        internal enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            internal init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            internal var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            internal static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
+    /// Read a snapshot-bound page of original trip metadata
+    ///
+    /// - Remark: HTTP `GET /mobile/trips`.
+    /// - Remark: Generated from `#/paths//mobile/trips/get(mobileTrips.listTrips)`.
+    internal enum MobileTrips_listTrips {
+        internal static let id: Swift.String = "mobileTrips.listTrips"
+        internal struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/mobile/trips/GET/query`.
+            internal struct Query: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/trips/GET/query/limit`.
+                internal var limit: Swift.Int
+                /// - Remark: Generated from `#/paths/mobile/trips/GET/query/cursor`.
+                internal var cursor: Swift.String?
+                /// Creates a new `Query`.
+                ///
+                /// - Parameters:
+                ///   - limit:
+                ///   - cursor:
+                internal init(
+                    limit: Swift.Int,
+                    cursor: Swift.String? = nil
+                ) {
+                    self.limit = limit
+                    self.cursor = cursor
+                }
+            }
+            internal var query: Operations.MobileTrips_listTrips.Input.Query
+            /// - Remark: Generated from `#/paths/mobile/trips/GET/header`.
+            internal struct Headers: Sendable, Hashable {
+                internal var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.MobileTrips_listTrips.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                internal init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.MobileTrips_listTrips.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            internal var headers: Operations.MobileTrips_listTrips.Input.Headers
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - query:
+            ///   - headers:
+            internal init(
+                query: Operations.MobileTrips_listTrips.Input.Query,
+                headers: Operations.MobileTrips_listTrips.Input.Headers = .init()
+            ) {
+                self.query = query
+                self.headers = headers
+            }
+        }
+        internal enum Output: Sendable, Hashable {
+            internal struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/200/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/200/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/200/content/json/ItemsPayload`.
+                        internal struct ItemsPayloadPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/200/content/json/ItemsPayload/createdAt`.
+                            internal var createdAt: Foundation.Date
+                            /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/200/content/json/ItemsPayload/destination`.
+                            internal var destination: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/200/content/json/ItemsPayload/id`.
+                            internal var id: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/200/content/json/ItemsPayload/name`.
+                            internal var name: Swift.String?
+                            /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/200/content/json/ItemsPayload/notes`.
+                            internal var notes: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/200/content/json/ItemsPayload/parentId`.
+                            internal var parentId: Swift.Int?
+                            /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/200/content/json/ItemsPayload/SourceLinksPayload`.
+                            internal struct SourceLinksPayloadPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/200/content/json/ItemsPayload/SourceLinksPayload/label`.
+                                internal var label: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/200/content/json/ItemsPayload/SourceLinksPayload/uri`.
+                                internal struct UriPayload: Codable, Hashable, Sendable {
+                                    /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/200/content/json/ItemsPayload/SourceLinksPayload/uri/value1`.
+                                    internal var value1: Swift.String?
+                                    /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/200/content/json/ItemsPayload/SourceLinksPayload/uri/value2`.
+                                    internal var value2: Swift.String?
+                                    /// Creates a new `UriPayload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - value1:
+                                    ///   - value2:
+                                    internal init(
+                                        value1: Swift.String? = nil,
+                                        value2: Swift.String? = nil
+                                    ) {
+                                        self.value1 = value1
+                                        self.value2 = value2
+                                    }
+                                    internal init(from decoder: any Swift.Decoder) throws {
+                                        var errors: [any Swift.Error] = []
+                                        do {
+                                            self.value1 = try decoder.decodeFromSingleValueContainer()
+                                        } catch {
+                                            errors.append(error)
+                                        }
+                                        do {
+                                            self.value2 = try decoder.decodeFromSingleValueContainer()
+                                        } catch {
+                                            errors.append(error)
+                                        }
+                                        try Swift.DecodingError.verifyAtLeastOneSchemaIsNotNil(
+                                            [
+                                                self.value1,
+                                                self.value2
+                                            ],
+                                            type: Self.self,
+                                            codingPath: decoder.codingPath,
+                                            errors: errors
+                                        )
+                                    }
+                                    internal func encode(to encoder: any Swift.Encoder) throws {
+                                        try encoder.encodeFirstNonNilValueToSingleValueContainer([
+                                            self.value1,
+                                            self.value2
+                                        ])
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/200/content/json/ItemsPayload/SourceLinksPayload/uri`.
+                                internal var uri: Operations.MobileTrips_listTrips.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.SourceLinksPayloadPayload.UriPayload
+                                /// Creates a new `SourceLinksPayloadPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - label:
+                                ///   - uri:
+                                internal init(
+                                    label: Swift.String? = nil,
+                                    uri: Operations.MobileTrips_listTrips.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.SourceLinksPayloadPayload.UriPayload
+                                ) {
+                                    self.label = label
+                                    self.uri = uri
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case label
+                                    case uri
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.label = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .label
+                                    )
+                                    self.uri = try container.decode(
+                                        Operations.MobileTrips_listTrips.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.SourceLinksPayloadPayload.UriPayload.self,
+                                        forKey: .uri
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "label",
+                                        "uri"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/200/content/json/ItemsPayload/sourceLinks`.
+                            internal typealias SourceLinksPayload = [Operations.MobileTrips_listTrips.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.SourceLinksPayloadPayload]
+                            /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/200/content/json/ItemsPayload/sourceLinks`.
+                            internal var sourceLinks: Operations.MobileTrips_listTrips.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.SourceLinksPayload
+                            /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/200/content/json/ItemsPayload/tagId`.
+                            internal var tagId: Swift.String?
+                            /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/200/content/json/ItemsPayload/updatedAt`.
+                            internal var updatedAt: Foundation.Date
+                            /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/200/content/json/ItemsPayload/when`.
+                            internal var when: Swift.String
+                            /// Creates a new `ItemsPayloadPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - createdAt:
+                            ///   - destination:
+                            ///   - id:
+                            ///   - name:
+                            ///   - notes:
+                            ///   - parentId:
+                            ///   - sourceLinks:
+                            ///   - tagId:
+                            ///   - updatedAt:
+                            ///   - when:
+                            internal init(
+                                createdAt: Foundation.Date,
+                                destination: Swift.String,
+                                id: Swift.Int,
+                                name: Swift.String? = nil,
+                                notes: Swift.String,
+                                parentId: Swift.Int? = nil,
+                                sourceLinks: Operations.MobileTrips_listTrips.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.SourceLinksPayload,
+                                tagId: Swift.String? = nil,
+                                updatedAt: Foundation.Date,
+                                when: Swift.String
+                            ) {
+                                self.createdAt = createdAt
+                                self.destination = destination
+                                self.id = id
+                                self.name = name
+                                self.notes = notes
+                                self.parentId = parentId
+                                self.sourceLinks = sourceLinks
+                                self.tagId = tagId
+                                self.updatedAt = updatedAt
+                                self.when = when
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case createdAt
+                                case destination
+                                case id
+                                case name
+                                case notes
+                                case parentId
+                                case sourceLinks
+                                case tagId
+                                case updatedAt
+                                case when
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.createdAt = try container.decode(
+                                    Foundation.Date.self,
+                                    forKey: .createdAt
+                                )
+                                self.destination = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .destination
+                                )
+                                self.id = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .id
+                                )
+                                self.name = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .name
+                                )
+                                self.notes = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .notes
+                                )
+                                self.parentId = try container.decodeIfPresent(
+                                    Swift.Int.self,
+                                    forKey: .parentId
+                                )
+                                self.sourceLinks = try container.decode(
+                                    Operations.MobileTrips_listTrips.Output.Ok.Body.JsonPayload.ItemsPayloadPayload.SourceLinksPayload.self,
+                                    forKey: .sourceLinks
+                                )
+                                self.tagId = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .tagId
+                                )
+                                self.updatedAt = try container.decode(
+                                    Foundation.Date.self,
+                                    forKey: .updatedAt
+                                )
+                                self.when = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .when
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "createdAt",
+                                    "destination",
+                                    "id",
+                                    "name",
+                                    "notes",
+                                    "parentId",
+                                    "sourceLinks",
+                                    "tagId",
+                                    "updatedAt",
+                                    "when"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/200/content/json/items`.
+                        internal typealias ItemsPayload = [Operations.MobileTrips_listTrips.Output.Ok.Body.JsonPayload.ItemsPayloadPayload]
+                        /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/200/content/json/items`.
+                        internal var items: Operations.MobileTrips_listTrips.Output.Ok.Body.JsonPayload.ItemsPayload
+                        /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/200/content/json/nextCursor`.
+                        internal var nextCursor: Swift.String?
+                        /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/200/content/json/totalCount`.
+                        internal var totalCount: Swift.Int
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - items:
+                        ///   - nextCursor:
+                        ///   - totalCount:
+                        internal init(
+                            items: Operations.MobileTrips_listTrips.Output.Ok.Body.JsonPayload.ItemsPayload,
+                            nextCursor: Swift.String? = nil,
+                            totalCount: Swift.Int
+                        ) {
+                            self.items = items
+                            self.nextCursor = nextCursor
+                            self.totalCount = totalCount
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case items
+                            case nextCursor
+                            case totalCount
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.items = try container.decode(
+                                Operations.MobileTrips_listTrips.Output.Ok.Body.JsonPayload.ItemsPayload.self,
+                                forKey: .items
+                            )
+                            self.nextCursor = try container.decodeIfPresent(
+                                Swift.String.self,
+                                forKey: .nextCursor
+                            )
+                            self.totalCount = try container.decode(
+                                Swift.Int.self,
+                                forKey: .totalCount
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "items",
+                                "nextCursor",
+                                "totalCount"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/200/content/application\/json`.
+                    case json(Operations.MobileTrips_listTrips.Output.Ok.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileTrips_listTrips.Output.Ok.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileTrips_listTrips.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileTrips_listTrips.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// 200
+            ///
+            /// - Remark: Generated from `#/paths//mobile/trips/get(mobileTrips.listTrips)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.MobileTrips_listTrips.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            internal var ok: Operations.MobileTrips_listTrips.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/400/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/400/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/400/content/json/code`.
+                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case invalidCursor = "invalid_cursor"
+                            case bfm_request_invalid = "bfm.request.invalid"
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/400/content/json/code`.
+                        internal var code: Operations.MobileTrips_listTrips.Output.BadRequest.Body.JsonPayload.CodePayload
+                        /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/400/content/json/details`.
+                        internal var details: OpenAPIRuntime.OpenAPIValueContainer?
+                        /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/400/content/json/message`.
+                        internal var message: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/400/content/json/requestId`.
+                        internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/400/content/json/retryable`.
+                        internal var retryable: Swift.Bool
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - details:
+                        ///   - message:
+                        ///   - requestId:
+                        ///   - retryable:
+                        internal init(
+                            code: Operations.MobileTrips_listTrips.Output.BadRequest.Body.JsonPayload.CodePayload,
+                            details: OpenAPIRuntime.OpenAPIValueContainer? = nil,
+                            message: Swift.String,
+                            requestId: Swift.String,
+                            retryable: Swift.Bool
+                        ) {
+                            self.code = code
+                            self.details = details
+                            self.message = message
+                            self.requestId = requestId
+                            self.retryable = retryable
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case details
+                            case message
+                            case requestId
+                            case retryable
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Operations.MobileTrips_listTrips.Output.BadRequest.Body.JsonPayload.CodePayload.self,
+                                forKey: .code
+                            )
+                            self.details = try container.decodeIfPresent(
+                                OpenAPIRuntime.OpenAPIValueContainer.self,
+                                forKey: .details
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            self.requestId = try container.decode(
+                                Swift.String.self,
+                                forKey: .requestId
+                            )
+                            self.retryable = try container.decode(
+                                Swift.Bool.self,
+                                forKey: .retryable
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "details",
+                                "message",
+                                "requestId",
+                                "retryable"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/400/content/application\/json`.
+                    case json(Operations.MobileTrips_listTrips.Output.BadRequest.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileTrips_listTrips.Output.BadRequest.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileTrips_listTrips.Output.BadRequest.Body
+                /// Creates a new `BadRequest`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileTrips_listTrips.Output.BadRequest.Body) {
+                    self.body = body
+                }
+            }
+            /// 400
+            ///
+            /// - Remark: Generated from `#/paths//mobile/trips/get(mobileTrips.listTrips)/responses/400`.
+            ///
+            /// HTTP response code: `400 badRequest`.
+            case badRequest(Operations.MobileTrips_listTrips.Output.BadRequest)
+            /// The associated value of the enum case if `self` is `.badRequest`.
+            ///
+            /// - Throws: An error if `self` is not `.badRequest`.
+            /// - SeeAlso: `.badRequest`.
+            internal var badRequest: Operations.MobileTrips_listTrips.Output.BadRequest {
+                get throws {
+                    switch self {
+                    case let .badRequest(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "badRequest",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Unauthorized: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/401/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/401/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/401/content/json/code`.
+                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case bfm_auth_invalidToken = "bfm.auth.invalid_token"
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/401/content/json/code`.
+                        internal var code: Operations.MobileTrips_listTrips.Output.Unauthorized.Body.JsonPayload.CodePayload
+                        /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/401/content/json/details`.
+                        internal var details: OpenAPIRuntime.OpenAPIValueContainer?
+                        /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/401/content/json/message`.
+                        internal var message: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/401/content/json/requestId`.
+                        internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/401/content/json/retryable`.
+                        internal var retryable: Swift.Bool
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - details:
+                        ///   - message:
+                        ///   - requestId:
+                        ///   - retryable:
+                        internal init(
+                            code: Operations.MobileTrips_listTrips.Output.Unauthorized.Body.JsonPayload.CodePayload,
+                            details: OpenAPIRuntime.OpenAPIValueContainer? = nil,
+                            message: Swift.String,
+                            requestId: Swift.String,
+                            retryable: Swift.Bool
+                        ) {
+                            self.code = code
+                            self.details = details
+                            self.message = message
+                            self.requestId = requestId
+                            self.retryable = retryable
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case details
+                            case message
+                            case requestId
+                            case retryable
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Operations.MobileTrips_listTrips.Output.Unauthorized.Body.JsonPayload.CodePayload.self,
+                                forKey: .code
+                            )
+                            self.details = try container.decodeIfPresent(
+                                OpenAPIRuntime.OpenAPIValueContainer.self,
+                                forKey: .details
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            self.requestId = try container.decode(
+                                Swift.String.self,
+                                forKey: .requestId
+                            )
+                            self.retryable = try container.decode(
+                                Swift.Bool.self,
+                                forKey: .retryable
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "details",
+                                "message",
+                                "requestId",
+                                "retryable"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/401/content/application\/json`.
+                    case json(Operations.MobileTrips_listTrips.Output.Unauthorized.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileTrips_listTrips.Output.Unauthorized.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileTrips_listTrips.Output.Unauthorized.Body
+                /// Creates a new `Unauthorized`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileTrips_listTrips.Output.Unauthorized.Body) {
+                    self.body = body
+                }
+            }
+            /// 401
+            ///
+            /// - Remark: Generated from `#/paths//mobile/trips/get(mobileTrips.listTrips)/responses/401`.
+            ///
+            /// HTTP response code: `401 unauthorized`.
+            case unauthorized(Operations.MobileTrips_listTrips.Output.Unauthorized)
+            /// The associated value of the enum case if `self` is `.unauthorized`.
+            ///
+            /// - Throws: An error if `self` is not `.unauthorized`.
+            /// - SeeAlso: `.unauthorized`.
+            internal var unauthorized: Operations.MobileTrips_listTrips.Output.Unauthorized {
+                get throws {
+                    switch self {
+                    case let .unauthorized(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unauthorized",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Forbidden: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/403/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/403/content/json`.
+                    internal enum JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/403/content/json/case1`.
+                        internal struct Case1Payload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/403/content/json/case1/code`.
+                            internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case bfm_auth_deviceRevoked = "bfm.auth.device_revoked"
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/403/content/json/case1/code`.
+                            internal var code: Operations.MobileTrips_listTrips.Output.Forbidden.Body.JsonPayload.Case1Payload.CodePayload
+                            /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/403/content/json/case1/details`.
+                            internal var details: OpenAPIRuntime.OpenAPIValueContainer?
+                            /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/403/content/json/case1/message`.
+                            internal var message: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/403/content/json/case1/requestId`.
+                            internal var requestId: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/403/content/json/case1/retryable`.
+                            internal var retryable: Swift.Bool
+                            /// Creates a new `Case1Payload`.
+                            ///
+                            /// - Parameters:
+                            ///   - code:
+                            ///   - details:
+                            ///   - message:
+                            ///   - requestId:
+                            ///   - retryable:
+                            internal init(
+                                code: Operations.MobileTrips_listTrips.Output.Forbidden.Body.JsonPayload.Case1Payload.CodePayload,
+                                details: OpenAPIRuntime.OpenAPIValueContainer? = nil,
+                                message: Swift.String,
+                                requestId: Swift.String,
+                                retryable: Swift.Bool
+                            ) {
+                                self.code = code
+                                self.details = details
+                                self.message = message
+                                self.requestId = requestId
+                                self.retryable = retryable
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case code
+                                case details
+                                case message
+                                case requestId
+                                case retryable
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.code = try container.decode(
+                                    Operations.MobileTrips_listTrips.Output.Forbidden.Body.JsonPayload.Case1Payload.CodePayload.self,
+                                    forKey: .code
+                                )
+                                self.details = try container.decodeIfPresent(
+                                    OpenAPIRuntime.OpenAPIValueContainer.self,
+                                    forKey: .details
+                                )
+                                self.message = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .message
+                                )
+                                self.requestId = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .requestId
+                                )
+                                self.retryable = try container.decode(
+                                    Swift.Bool.self,
+                                    forKey: .retryable
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "code",
+                                    "details",
+                                    "message",
+                                    "requestId",
+                                    "retryable"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/403/content/json/case1`.
+                        case case1(Operations.MobileTrips_listTrips.Output.Forbidden.Body.JsonPayload.Case1Payload)
+                        /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/403/content/json/case2`.
+                        internal struct Case2Payload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/403/content/json/case2/capability`.
+                            internal var capability: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/403/content/json/case2/code`.
+                            internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case capabilityNotGranted = "capability_not_granted"
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/403/content/json/case2/code`.
+                            internal var code: Operations.MobileTrips_listTrips.Output.Forbidden.Body.JsonPayload.Case2Payload.CodePayload
+                            /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/403/content/json/case2/message`.
+                            internal var message: Swift.String
+                            /// Creates a new `Case2Payload`.
+                            ///
+                            /// - Parameters:
+                            ///   - capability:
+                            ///   - code:
+                            ///   - message:
+                            internal init(
+                                capability: Swift.String,
+                                code: Operations.MobileTrips_listTrips.Output.Forbidden.Body.JsonPayload.Case2Payload.CodePayload,
+                                message: Swift.String
+                            ) {
+                                self.capability = capability
+                                self.code = code
+                                self.message = message
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case capability
+                                case code
+                                case message
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.capability = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .capability
+                                )
+                                self.code = try container.decode(
+                                    Operations.MobileTrips_listTrips.Output.Forbidden.Body.JsonPayload.Case2Payload.CodePayload.self,
+                                    forKey: .code
+                                )
+                                self.message = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .message
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "capability",
+                                    "code",
+                                    "message"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/403/content/json/case2`.
+                        case case2(Operations.MobileTrips_listTrips.Output.Forbidden.Body.JsonPayload.Case2Payload)
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            var errors: [any Swift.Error] = []
+                            do {
+                                self = .case1(try .init(from: decoder))
+                                return
+                            } catch {
+                                errors.append(error)
+                            }
+                            do {
+                                self = .case2(try .init(from: decoder))
+                                return
+                            } catch {
+                                errors.append(error)
+                            }
+                            throw Swift.DecodingError.failedToDecodeOneOfSchema(
+                                type: Self.self,
+                                codingPath: decoder.codingPath,
+                                errors: errors
+                            )
+                        }
+                        internal func encode(to encoder: any Swift.Encoder) throws {
+                            switch self {
+                            case let .case1(value):
+                                try value.encode(to: encoder)
+                            case let .case2(value):
+                                try value.encode(to: encoder)
+                            }
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/403/content/application\/json`.
+                    case json(Operations.MobileTrips_listTrips.Output.Forbidden.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileTrips_listTrips.Output.Forbidden.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileTrips_listTrips.Output.Forbidden.Body
+                /// Creates a new `Forbidden`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileTrips_listTrips.Output.Forbidden.Body) {
+                    self.body = body
+                }
+            }
+            /// 403
+            ///
+            /// - Remark: Generated from `#/paths//mobile/trips/get(mobileTrips.listTrips)/responses/403`.
+            ///
+            /// HTTP response code: `403 forbidden`.
+            case forbidden(Operations.MobileTrips_listTrips.Output.Forbidden)
+            /// The associated value of the enum case if `self` is `.forbidden`.
+            ///
+            /// - Throws: An error if `self` is not `.forbidden`.
+            /// - SeeAlso: `.forbidden`.
+            internal var forbidden: Operations.MobileTrips_listTrips.Output.Forbidden {
+                get throws {
+                    switch self {
+                    case let .forbidden(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "forbidden",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct TooManyRequests: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/429/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/429/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/429/content/json/code`.
+                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case rateLimited = "rate_limited"
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/429/content/json/code`.
+                        internal var code: Operations.MobileTrips_listTrips.Output.TooManyRequests.Body.JsonPayload.CodePayload
+                        /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/429/content/json/message`.
+                        internal var message: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/429/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - message:
+                        ///   - retryAfterSeconds:
+                        internal init(
+                            code: Operations.MobileTrips_listTrips.Output.TooManyRequests.Body.JsonPayload.CodePayload,
+                            message: Swift.String,
+                            retryAfterSeconds: Swift.Int
+                        ) {
+                            self.code = code
+                            self.message = message
+                            self.retryAfterSeconds = retryAfterSeconds
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case message
+                            case retryAfterSeconds
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Operations.MobileTrips_listTrips.Output.TooManyRequests.Body.JsonPayload.CodePayload.self,
+                                forKey: .code
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            self.retryAfterSeconds = try container.decode(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "message",
+                                "retryAfterSeconds"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/429/content/application\/json`.
+                    case json(Operations.MobileTrips_listTrips.Output.TooManyRequests.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileTrips_listTrips.Output.TooManyRequests.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileTrips_listTrips.Output.TooManyRequests.Body
+                /// Creates a new `TooManyRequests`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileTrips_listTrips.Output.TooManyRequests.Body) {
+                    self.body = body
+                }
+            }
+            /// 429
+            ///
+            /// - Remark: Generated from `#/paths//mobile/trips/get(mobileTrips.listTrips)/responses/429`.
+            ///
+            /// HTTP response code: `429 tooManyRequests`.
+            case tooManyRequests(Operations.MobileTrips_listTrips.Output.TooManyRequests)
+            /// The associated value of the enum case if `self` is `.tooManyRequests`.
+            ///
+            /// - Throws: An error if `self` is not `.tooManyRequests`.
+            /// - SeeAlso: `.tooManyRequests`.
+            internal var tooManyRequests: Operations.MobileTrips_listTrips.Output.TooManyRequests {
+                get throws {
+                    switch self {
+                    case let .tooManyRequests(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "tooManyRequests",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct BadGateway: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/502/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/502/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/502/content/json/code`.
+                        internal var code: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/502/content/json/details`.
+                        internal struct DetailsPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/502/content/json/details/upstream`.
+                            internal struct UpstreamPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/502/content/json/details/upstream/pillar`.
+                                internal var pillar: Swift.String
+                                /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/502/content/json/details/upstream/status`.
+                                internal var status: Swift.Int
+                                /// Creates a new `UpstreamPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - pillar:
+                                ///   - status:
+                                internal init(
+                                    pillar: Swift.String,
+                                    status: Swift.Int
+                                ) {
+                                    self.pillar = pillar
+                                    self.status = status
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case pillar
+                                    case status
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.pillar = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .pillar
+                                    )
+                                    self.status = try container.decode(
+                                        Swift.Int.self,
+                                        forKey: .status
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "pillar",
+                                        "status"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/502/content/json/details/upstream`.
+                            internal var upstream: Operations.MobileTrips_listTrips.Output.BadGateway.Body.JsonPayload.DetailsPayload.UpstreamPayload
+                            /// A container of undocumented properties.
+                            internal var additionalProperties: [String: OpenAPIRuntime.OpenAPIValueContainer]
+                            /// Creates a new `DetailsPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - upstream:
+                            ///   - additionalProperties: A container of undocumented properties.
+                            internal init(
+                                upstream: Operations.MobileTrips_listTrips.Output.BadGateway.Body.JsonPayload.DetailsPayload.UpstreamPayload,
+                                additionalProperties: [String: OpenAPIRuntime.OpenAPIValueContainer] = .init()
+                            ) {
+                                self.upstream = upstream
+                                self.additionalProperties = additionalProperties
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case upstream
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.upstream = try container.decode(
+                                    Operations.MobileTrips_listTrips.Output.BadGateway.Body.JsonPayload.DetailsPayload.UpstreamPayload.self,
+                                    forKey: .upstream
+                                )
+                                additionalProperties = try decoder.decodeAdditionalProperties(knownKeys: [
+                                    "upstream"
+                                ])
+                            }
+                            internal func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(
+                                    self.upstream,
+                                    forKey: .upstream
+                                )
+                                try encoder.encodeAdditionalProperties(additionalProperties)
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/502/content/json/details`.
+                        internal var details: Operations.MobileTrips_listTrips.Output.BadGateway.Body.JsonPayload.DetailsPayload
+                        /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/502/content/json/message`.
+                        internal var message: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/502/content/json/requestId`.
+                        internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/502/content/json/retryable`.
+                        internal var retryable: Swift.Bool
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - details:
+                        ///   - message:
+                        ///   - requestId:
+                        ///   - retryable:
+                        internal init(
+                            code: Swift.String,
+                            details: Operations.MobileTrips_listTrips.Output.BadGateway.Body.JsonPayload.DetailsPayload,
+                            message: Swift.String,
+                            requestId: Swift.String,
+                            retryable: Swift.Bool
+                        ) {
+                            self.code = code
+                            self.details = details
+                            self.message = message
+                            self.requestId = requestId
+                            self.retryable = retryable
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case details
+                            case message
+                            case requestId
+                            case retryable
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Swift.String.self,
+                                forKey: .code
+                            )
+                            self.details = try container.decode(
+                                Operations.MobileTrips_listTrips.Output.BadGateway.Body.JsonPayload.DetailsPayload.self,
+                                forKey: .details
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            self.requestId = try container.decode(
+                                Swift.String.self,
+                                forKey: .requestId
+                            )
+                            self.retryable = try container.decode(
+                                Swift.Bool.self,
+                                forKey: .retryable
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "details",
+                                "message",
+                                "requestId",
+                                "retryable"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/502/content/application\/json`.
+                    case json(Operations.MobileTrips_listTrips.Output.BadGateway.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileTrips_listTrips.Output.BadGateway.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileTrips_listTrips.Output.BadGateway.Body
+                /// Creates a new `BadGateway`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileTrips_listTrips.Output.BadGateway.Body) {
+                    self.body = body
+                }
+            }
+            /// 502
+            ///
+            /// - Remark: Generated from `#/paths//mobile/trips/get(mobileTrips.listTrips)/responses/502`.
+            ///
+            /// HTTP response code: `502 badGateway`.
+            case badGateway(Operations.MobileTrips_listTrips.Output.BadGateway)
+            /// The associated value of the enum case if `self` is `.badGateway`.
+            ///
+            /// - Throws: An error if `self` is not `.badGateway`.
+            /// - SeeAlso: `.badGateway`.
+            internal var badGateway: Operations.MobileTrips_listTrips.Output.BadGateway {
+                get throws {
+                    switch self {
+                    case let .badGateway(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "badGateway",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct ServiceUnavailable: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/503/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/503/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/503/content/json/code`.
+                        internal var code: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/503/content/json/details`.
+                        internal struct DetailsPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/503/content/json/details/upstream`.
+                            internal struct UpstreamPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/503/content/json/details/upstream/pillar`.
+                                internal var pillar: Swift.String
+                                /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/503/content/json/details/upstream/status`.
+                                internal var status: Swift.Int
+                                /// Creates a new `UpstreamPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - pillar:
+                                ///   - status:
+                                internal init(
+                                    pillar: Swift.String,
+                                    status: Swift.Int
+                                ) {
+                                    self.pillar = pillar
+                                    self.status = status
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case pillar
+                                    case status
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.pillar = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .pillar
+                                    )
+                                    self.status = try container.decode(
+                                        Swift.Int.self,
+                                        forKey: .status
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "pillar",
+                                        "status"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/503/content/json/details/upstream`.
+                            internal var upstream: Operations.MobileTrips_listTrips.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload.UpstreamPayload
+                            /// A container of undocumented properties.
+                            internal var additionalProperties: [String: OpenAPIRuntime.OpenAPIValueContainer]
+                            /// Creates a new `DetailsPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - upstream:
+                            ///   - additionalProperties: A container of undocumented properties.
+                            internal init(
+                                upstream: Operations.MobileTrips_listTrips.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload.UpstreamPayload,
+                                additionalProperties: [String: OpenAPIRuntime.OpenAPIValueContainer] = .init()
+                            ) {
+                                self.upstream = upstream
+                                self.additionalProperties = additionalProperties
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case upstream
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.upstream = try container.decode(
+                                    Operations.MobileTrips_listTrips.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload.UpstreamPayload.self,
+                                    forKey: .upstream
+                                )
+                                additionalProperties = try decoder.decodeAdditionalProperties(knownKeys: [
+                                    "upstream"
+                                ])
+                            }
+                            internal func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(
+                                    self.upstream,
+                                    forKey: .upstream
+                                )
+                                try encoder.encodeAdditionalProperties(additionalProperties)
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/503/content/json/details`.
+                        internal var details: Operations.MobileTrips_listTrips.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload
+                        /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/503/content/json/message`.
+                        internal var message: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/503/content/json/requestId`.
+                        internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/503/content/json/retryable`.
+                        internal var retryable: Swift.Bool
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - details:
+                        ///   - message:
+                        ///   - requestId:
+                        ///   - retryable:
+                        internal init(
+                            code: Swift.String,
+                            details: Operations.MobileTrips_listTrips.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload,
+                            message: Swift.String,
+                            requestId: Swift.String,
+                            retryable: Swift.Bool
+                        ) {
+                            self.code = code
+                            self.details = details
+                            self.message = message
+                            self.requestId = requestId
+                            self.retryable = retryable
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case details
+                            case message
+                            case requestId
+                            case retryable
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Swift.String.self,
+                                forKey: .code
+                            )
+                            self.details = try container.decode(
+                                Operations.MobileTrips_listTrips.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload.self,
+                                forKey: .details
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            self.requestId = try container.decode(
+                                Swift.String.self,
+                                forKey: .requestId
+                            )
+                            self.retryable = try container.decode(
+                                Swift.Bool.self,
+                                forKey: .retryable
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "details",
+                                "message",
+                                "requestId",
+                                "retryable"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/trips/GET/responses/503/content/application\/json`.
+                    case json(Operations.MobileTrips_listTrips.Output.ServiceUnavailable.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileTrips_listTrips.Output.ServiceUnavailable.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileTrips_listTrips.Output.ServiceUnavailable.Body
+                /// Creates a new `ServiceUnavailable`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileTrips_listTrips.Output.ServiceUnavailable.Body) {
+                    self.body = body
+                }
+            }
+            /// 503
+            ///
+            /// - Remark: Generated from `#/paths//mobile/trips/get(mobileTrips.listTrips)/responses/503`.
+            ///
+            /// HTTP response code: `503 serviceUnavailable`.
+            case serviceUnavailable(Operations.MobileTrips_listTrips.Output.ServiceUnavailable)
+            /// The associated value of the enum case if `self` is `.serviceUnavailable`.
+            ///
+            /// - Throws: An error if `self` is not `.serviceUnavailable`.
+            /// - SeeAlso: `.serviceUnavailable`.
+            internal var serviceUnavailable: Operations.MobileTrips_listTrips.Output.ServiceUnavailable {
+                get throws {
+                    switch self {
+                    case let .serviceUnavailable(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "serviceUnavailable",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        internal enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            internal init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            internal var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            internal static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
+    /// Read one trip with complete ordered visits, journeys, groups, stays, events and document associations
+    ///
+    /// - Remark: HTTP `GET /mobile/trips/{id}`.
+    /// - Remark: Generated from `#/paths//mobile/trips/{id}/get(mobileTrips.getTrip)`.
+    internal enum MobileTrips_getTrip {
+        internal static let id: Swift.String = "mobileTrips.getTrip"
+        internal struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/path`.
+            internal struct Path: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/path/id`.
+                internal var id: Swift.Int
+                /// Creates a new `Path`.
+                ///
+                /// - Parameters:
+                ///   - id:
+                internal init(id: Swift.Int) {
+                    self.id = id
+                }
+            }
+            internal var path: Operations.MobileTrips_getTrip.Input.Path
+            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/header`.
+            internal struct Headers: Sendable, Hashable {
+                internal var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.MobileTrips_getTrip.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                internal init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.MobileTrips_getTrip.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            internal var headers: Operations.MobileTrips_getTrip.Input.Headers
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - path:
+            ///   - headers:
+            internal init(
+                path: Operations.MobileTrips_getTrip.Input.Path,
+                headers: Operations.MobileTrips_getTrip.Input.Headers = .init()
+            ) {
+                self.path = path
+                self.headers = headers
+            }
+        }
+        internal enum Output: Sendable, Hashable {
+            internal struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/DocumentAssociationsPayload`.
+                        internal struct DocumentAssociationsPayloadPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/DocumentAssociationsPayload/createdAt`.
+                            internal var createdAt: Foundation.Date
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/DocumentAssociationsPayload/documentId`.
+                            internal var documentId: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/DocumentAssociationsPayload/id`.
+                            internal var id: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/DocumentAssociationsPayload/targetId`.
+                            internal var targetId: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/DocumentAssociationsPayload/targetKind`.
+                            internal enum TargetKindPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case trip = "trip"
+                                case visit = "visit"
+                                case journey = "journey"
+                                case stay = "stay"
+                                case event = "event"
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/DocumentAssociationsPayload/targetKind`.
+                            internal var targetKind: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.DocumentAssociationsPayloadPayload.TargetKindPayload
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/DocumentAssociationsPayload/tripId`.
+                            internal var tripId: Swift.Int
+                            /// Creates a new `DocumentAssociationsPayloadPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - createdAt:
+                            ///   - documentId:
+                            ///   - id:
+                            ///   - targetId:
+                            ///   - targetKind:
+                            ///   - tripId:
+                            internal init(
+                                createdAt: Foundation.Date,
+                                documentId: Swift.Int,
+                                id: Swift.Int,
+                                targetId: Swift.Int,
+                                targetKind: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.DocumentAssociationsPayloadPayload.TargetKindPayload,
+                                tripId: Swift.Int
+                            ) {
+                                self.createdAt = createdAt
+                                self.documentId = documentId
+                                self.id = id
+                                self.targetId = targetId
+                                self.targetKind = targetKind
+                                self.tripId = tripId
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case createdAt
+                                case documentId
+                                case id
+                                case targetId
+                                case targetKind
+                                case tripId
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.createdAt = try container.decode(
+                                    Foundation.Date.self,
+                                    forKey: .createdAt
+                                )
+                                self.documentId = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .documentId
+                                )
+                                self.id = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .id
+                                )
+                                self.targetId = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .targetId
+                                )
+                                self.targetKind = try container.decode(
+                                    Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.DocumentAssociationsPayloadPayload.TargetKindPayload.self,
+                                    forKey: .targetKind
+                                )
+                                self.tripId = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .tripId
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "createdAt",
+                                    "documentId",
+                                    "id",
+                                    "targetId",
+                                    "targetKind",
+                                    "tripId"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/documentAssociations`.
+                        internal typealias DocumentAssociationsPayload = [Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.DocumentAssociationsPayloadPayload]
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/documentAssociations`.
+                        internal var documentAssociations: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.DocumentAssociationsPayload
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload`.
+                        internal struct EventsPayloadPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/address`.
+                            internal var address: Swift.String?
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/arrangement`.
+                            internal enum ArrangementPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case booked = "Booked"
+                                case agreed = "Agreed"
+                                case notArranged = "Not arranged"
+                                case notNeeded = "Not needed"
+                                case _empty_ = ""
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/arrangement`.
+                            internal var arrangement: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.EventsPayloadPayload.ArrangementPayload?
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/createdAt`.
+                            internal var createdAt: Foundation.Date
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/DocumentLinksPayload`.
+                            internal struct DocumentLinksPayloadPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/DocumentLinksPayload/label`.
+                                internal var label: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/DocumentLinksPayload/uri`.
+                                internal struct UriPayload: Codable, Hashable, Sendable {
+                                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/DocumentLinksPayload/uri/value1`.
+                                    internal var value1: Swift.String?
+                                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/DocumentLinksPayload/uri/value2`.
+                                    internal var value2: Swift.String?
+                                    /// Creates a new `UriPayload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - value1:
+                                    ///   - value2:
+                                    internal init(
+                                        value1: Swift.String? = nil,
+                                        value2: Swift.String? = nil
+                                    ) {
+                                        self.value1 = value1
+                                        self.value2 = value2
+                                    }
+                                    internal init(from decoder: any Swift.Decoder) throws {
+                                        var errors: [any Swift.Error] = []
+                                        do {
+                                            self.value1 = try decoder.decodeFromSingleValueContainer()
+                                        } catch {
+                                            errors.append(error)
+                                        }
+                                        do {
+                                            self.value2 = try decoder.decodeFromSingleValueContainer()
+                                        } catch {
+                                            errors.append(error)
+                                        }
+                                        try Swift.DecodingError.verifyAtLeastOneSchemaIsNotNil(
+                                            [
+                                                self.value1,
+                                                self.value2
+                                            ],
+                                            type: Self.self,
+                                            codingPath: decoder.codingPath,
+                                            errors: errors
+                                        )
+                                    }
+                                    internal func encode(to encoder: any Swift.Encoder) throws {
+                                        try encoder.encodeFirstNonNilValueToSingleValueContainer([
+                                            self.value1,
+                                            self.value2
+                                        ])
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/DocumentLinksPayload/uri`.
+                                internal var uri: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.EventsPayloadPayload.DocumentLinksPayloadPayload.UriPayload
+                                /// Creates a new `DocumentLinksPayloadPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - label:
+                                ///   - uri:
+                                internal init(
+                                    label: Swift.String? = nil,
+                                    uri: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.EventsPayloadPayload.DocumentLinksPayloadPayload.UriPayload
+                                ) {
+                                    self.label = label
+                                    self.uri = uri
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case label
+                                    case uri
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.label = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .label
+                                    )
+                                    self.uri = try container.decode(
+                                        Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.EventsPayloadPayload.DocumentLinksPayloadPayload.UriPayload.self,
+                                        forKey: .uri
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "label",
+                                        "uri"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/documentLinks`.
+                            internal typealias DocumentLinksPayload = [Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.EventsPayloadPayload.DocumentLinksPayloadPayload]
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/documentLinks`.
+                            internal var documentLinks: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.EventsPayloadPayload.DocumentLinksPayload
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/id`.
+                            internal var id: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/intention`.
+                            internal enum IntentionPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case inPlan = "In plan"
+                                case considering = "Considering"
+                                case alternative = "Alternative"
+                                case _empty_ = ""
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/intention`.
+                            internal var intention: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.EventsPayloadPayload.IntentionPayload?
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/name`.
+                            internal var name: Swift.String?
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/notes`.
+                            internal var notes: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/OrganiserLinksPayload`.
+                            internal struct OrganiserLinksPayloadPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/OrganiserLinksPayload/label`.
+                                internal var label: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/OrganiserLinksPayload/uri`.
+                                internal struct UriPayload: Codable, Hashable, Sendable {
+                                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/OrganiserLinksPayload/uri/value1`.
+                                    internal var value1: Swift.String?
+                                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/OrganiserLinksPayload/uri/value2`.
+                                    internal var value2: Swift.String?
+                                    /// Creates a new `UriPayload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - value1:
+                                    ///   - value2:
+                                    internal init(
+                                        value1: Swift.String? = nil,
+                                        value2: Swift.String? = nil
+                                    ) {
+                                        self.value1 = value1
+                                        self.value2 = value2
+                                    }
+                                    internal init(from decoder: any Swift.Decoder) throws {
+                                        var errors: [any Swift.Error] = []
+                                        do {
+                                            self.value1 = try decoder.decodeFromSingleValueContainer()
+                                        } catch {
+                                            errors.append(error)
+                                        }
+                                        do {
+                                            self.value2 = try decoder.decodeFromSingleValueContainer()
+                                        } catch {
+                                            errors.append(error)
+                                        }
+                                        try Swift.DecodingError.verifyAtLeastOneSchemaIsNotNil(
+                                            [
+                                                self.value1,
+                                                self.value2
+                                            ],
+                                            type: Self.self,
+                                            codingPath: decoder.codingPath,
+                                            errors: errors
+                                        )
+                                    }
+                                    internal func encode(to encoder: any Swift.Encoder) throws {
+                                        try encoder.encodeFirstNonNilValueToSingleValueContainer([
+                                            self.value1,
+                                            self.value2
+                                        ])
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/OrganiserLinksPayload/uri`.
+                                internal var uri: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.EventsPayloadPayload.OrganiserLinksPayloadPayload.UriPayload
+                                /// Creates a new `OrganiserLinksPayloadPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - label:
+                                ///   - uri:
+                                internal init(
+                                    label: Swift.String? = nil,
+                                    uri: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.EventsPayloadPayload.OrganiserLinksPayloadPayload.UriPayload
+                                ) {
+                                    self.label = label
+                                    self.uri = uri
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case label
+                                    case uri
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.label = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .label
+                                    )
+                                    self.uri = try container.decode(
+                                        Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.EventsPayloadPayload.OrganiserLinksPayloadPayload.UriPayload.self,
+                                        forKey: .uri
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "label",
+                                        "uri"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/organiserLinks`.
+                            internal typealias OrganiserLinksPayload = [Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.EventsPayloadPayload.OrganiserLinksPayloadPayload]
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/organiserLinks`.
+                            internal var organiserLinks: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.EventsPayloadPayload.OrganiserLinksPayload
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/purchase`.
+                            internal enum PurchasePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case purchased = "Purchased"
+                                case _empty_ = ""
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/purchase`.
+                            internal var purchase: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.EventsPayloadPayload.PurchasePayload?
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/reference`.
+                            internal var reference: Swift.String?
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/SourceLinksPayload`.
+                            internal struct SourceLinksPayloadPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/SourceLinksPayload/label`.
+                                internal var label: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/SourceLinksPayload/uri`.
+                                internal struct UriPayload: Codable, Hashable, Sendable {
+                                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/SourceLinksPayload/uri/value1`.
+                                    internal var value1: Swift.String?
+                                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/SourceLinksPayload/uri/value2`.
+                                    internal var value2: Swift.String?
+                                    /// Creates a new `UriPayload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - value1:
+                                    ///   - value2:
+                                    internal init(
+                                        value1: Swift.String? = nil,
+                                        value2: Swift.String? = nil
+                                    ) {
+                                        self.value1 = value1
+                                        self.value2 = value2
+                                    }
+                                    internal init(from decoder: any Swift.Decoder) throws {
+                                        var errors: [any Swift.Error] = []
+                                        do {
+                                            self.value1 = try decoder.decodeFromSingleValueContainer()
+                                        } catch {
+                                            errors.append(error)
+                                        }
+                                        do {
+                                            self.value2 = try decoder.decodeFromSingleValueContainer()
+                                        } catch {
+                                            errors.append(error)
+                                        }
+                                        try Swift.DecodingError.verifyAtLeastOneSchemaIsNotNil(
+                                            [
+                                                self.value1,
+                                                self.value2
+                                            ],
+                                            type: Self.self,
+                                            codingPath: decoder.codingPath,
+                                            errors: errors
+                                        )
+                                    }
+                                    internal func encode(to encoder: any Swift.Encoder) throws {
+                                        try encoder.encodeFirstNonNilValueToSingleValueContainer([
+                                            self.value1,
+                                            self.value2
+                                        ])
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/SourceLinksPayload/uri`.
+                                internal var uri: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.EventsPayloadPayload.SourceLinksPayloadPayload.UriPayload
+                                /// Creates a new `SourceLinksPayloadPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - label:
+                                ///   - uri:
+                                internal init(
+                                    label: Swift.String? = nil,
+                                    uri: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.EventsPayloadPayload.SourceLinksPayloadPayload.UriPayload
+                                ) {
+                                    self.label = label
+                                    self.uri = uri
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case label
+                                    case uri
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.label = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .label
+                                    )
+                                    self.uri = try container.decode(
+                                        Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.EventsPayloadPayload.SourceLinksPayloadPayload.UriPayload.self,
+                                        forKey: .uri
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "label",
+                                        "uri"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/sourceLinks`.
+                            internal typealias SourceLinksPayload = [Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.EventsPayloadPayload.SourceLinksPayloadPayload]
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/sourceLinks`.
+                            internal var sourceLinks: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.EventsPayloadPayload.SourceLinksPayload
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/sourceUrl`.
+                            internal var sourceUrl: Swift.String?
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/ticketUrl`.
+                            internal var ticketUrl: Swift.String?
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/timing`.
+                            internal struct TimingPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/timing/end`.
+                                internal var end: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/timing/endTime`.
+                                internal var endTime: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/timing/start`.
+                                internal var start: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/timing/startTime`.
+                                internal var startTime: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/timing/timeZone`.
+                                internal var timeZone: Swift.String?
+                                /// Creates a new `TimingPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - end:
+                                ///   - endTime:
+                                ///   - start:
+                                ///   - startTime:
+                                ///   - timeZone:
+                                internal init(
+                                    end: Swift.String? = nil,
+                                    endTime: Swift.String? = nil,
+                                    start: Swift.String? = nil,
+                                    startTime: Swift.String? = nil,
+                                    timeZone: Swift.String? = nil
+                                ) {
+                                    self.end = end
+                                    self.endTime = endTime
+                                    self.start = start
+                                    self.startTime = startTime
+                                    self.timeZone = timeZone
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case end
+                                    case endTime
+                                    case start
+                                    case startTime
+                                    case timeZone
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.end = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .end
+                                    )
+                                    self.endTime = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .endTime
+                                    )
+                                    self.start = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .start
+                                    )
+                                    self.startTime = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .startTime
+                                    )
+                                    self.timeZone = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .timeZone
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "end",
+                                        "endTime",
+                                        "start",
+                                        "startTime",
+                                        "timeZone"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/timing`.
+                            internal var timing: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.EventsPayloadPayload.TimingPayload
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/tripId`.
+                            internal var tripId: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/updatedAt`.
+                            internal var updatedAt: Foundation.Date
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/VenueLinksPayload`.
+                            internal struct VenueLinksPayloadPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/VenueLinksPayload/label`.
+                                internal var label: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/VenueLinksPayload/uri`.
+                                internal struct UriPayload: Codable, Hashable, Sendable {
+                                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/VenueLinksPayload/uri/value1`.
+                                    internal var value1: Swift.String?
+                                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/VenueLinksPayload/uri/value2`.
+                                    internal var value2: Swift.String?
+                                    /// Creates a new `UriPayload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - value1:
+                                    ///   - value2:
+                                    internal init(
+                                        value1: Swift.String? = nil,
+                                        value2: Swift.String? = nil
+                                    ) {
+                                        self.value1 = value1
+                                        self.value2 = value2
+                                    }
+                                    internal init(from decoder: any Swift.Decoder) throws {
+                                        var errors: [any Swift.Error] = []
+                                        do {
+                                            self.value1 = try decoder.decodeFromSingleValueContainer()
+                                        } catch {
+                                            errors.append(error)
+                                        }
+                                        do {
+                                            self.value2 = try decoder.decodeFromSingleValueContainer()
+                                        } catch {
+                                            errors.append(error)
+                                        }
+                                        try Swift.DecodingError.verifyAtLeastOneSchemaIsNotNil(
+                                            [
+                                                self.value1,
+                                                self.value2
+                                            ],
+                                            type: Self.self,
+                                            codingPath: decoder.codingPath,
+                                            errors: errors
+                                        )
+                                    }
+                                    internal func encode(to encoder: any Swift.Encoder) throws {
+                                        try encoder.encodeFirstNonNilValueToSingleValueContainer([
+                                            self.value1,
+                                            self.value2
+                                        ])
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/VenueLinksPayload/uri`.
+                                internal var uri: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.EventsPayloadPayload.VenueLinksPayloadPayload.UriPayload
+                                /// Creates a new `VenueLinksPayloadPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - label:
+                                ///   - uri:
+                                internal init(
+                                    label: Swift.String? = nil,
+                                    uri: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.EventsPayloadPayload.VenueLinksPayloadPayload.UriPayload
+                                ) {
+                                    self.label = label
+                                    self.uri = uri
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case label
+                                    case uri
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.label = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .label
+                                    )
+                                    self.uri = try container.decode(
+                                        Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.EventsPayloadPayload.VenueLinksPayloadPayload.UriPayload.self,
+                                        forKey: .uri
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "label",
+                                        "uri"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/venueLinks`.
+                            internal typealias VenueLinksPayload = [Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.EventsPayloadPayload.VenueLinksPayloadPayload]
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/venueLinks`.
+                            internal var venueLinks: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.EventsPayloadPayload.VenueLinksPayload
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/EventsPayload/visitId`.
+                            internal var visitId: Swift.Int?
+                            /// Creates a new `EventsPayloadPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - address:
+                            ///   - arrangement:
+                            ///   - createdAt:
+                            ///   - documentLinks:
+                            ///   - id:
+                            ///   - intention:
+                            ///   - name:
+                            ///   - notes:
+                            ///   - organiserLinks:
+                            ///   - purchase:
+                            ///   - reference:
+                            ///   - sourceLinks:
+                            ///   - sourceUrl:
+                            ///   - ticketUrl:
+                            ///   - timing:
+                            ///   - tripId:
+                            ///   - updatedAt:
+                            ///   - venueLinks:
+                            ///   - visitId:
+                            internal init(
+                                address: Swift.String? = nil,
+                                arrangement: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.EventsPayloadPayload.ArrangementPayload? = nil,
+                                createdAt: Foundation.Date,
+                                documentLinks: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.EventsPayloadPayload.DocumentLinksPayload,
+                                id: Swift.Int,
+                                intention: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.EventsPayloadPayload.IntentionPayload? = nil,
+                                name: Swift.String? = nil,
+                                notes: Swift.String,
+                                organiserLinks: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.EventsPayloadPayload.OrganiserLinksPayload,
+                                purchase: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.EventsPayloadPayload.PurchasePayload? = nil,
+                                reference: Swift.String? = nil,
+                                sourceLinks: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.EventsPayloadPayload.SourceLinksPayload,
+                                sourceUrl: Swift.String? = nil,
+                                ticketUrl: Swift.String? = nil,
+                                timing: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.EventsPayloadPayload.TimingPayload,
+                                tripId: Swift.Int,
+                                updatedAt: Foundation.Date,
+                                venueLinks: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.EventsPayloadPayload.VenueLinksPayload,
+                                visitId: Swift.Int? = nil
+                            ) {
+                                self.address = address
+                                self.arrangement = arrangement
+                                self.createdAt = createdAt
+                                self.documentLinks = documentLinks
+                                self.id = id
+                                self.intention = intention
+                                self.name = name
+                                self.notes = notes
+                                self.organiserLinks = organiserLinks
+                                self.purchase = purchase
+                                self.reference = reference
+                                self.sourceLinks = sourceLinks
+                                self.sourceUrl = sourceUrl
+                                self.ticketUrl = ticketUrl
+                                self.timing = timing
+                                self.tripId = tripId
+                                self.updatedAt = updatedAt
+                                self.venueLinks = venueLinks
+                                self.visitId = visitId
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case address
+                                case arrangement
+                                case createdAt
+                                case documentLinks
+                                case id
+                                case intention
+                                case name
+                                case notes
+                                case organiserLinks
+                                case purchase
+                                case reference
+                                case sourceLinks
+                                case sourceUrl
+                                case ticketUrl
+                                case timing
+                                case tripId
+                                case updatedAt
+                                case venueLinks
+                                case visitId
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.address = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .address
+                                )
+                                self.arrangement = try container.decodeIfPresent(
+                                    Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.EventsPayloadPayload.ArrangementPayload.self,
+                                    forKey: .arrangement
+                                )
+                                self.createdAt = try container.decode(
+                                    Foundation.Date.self,
+                                    forKey: .createdAt
+                                )
+                                self.documentLinks = try container.decode(
+                                    Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.EventsPayloadPayload.DocumentLinksPayload.self,
+                                    forKey: .documentLinks
+                                )
+                                self.id = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .id
+                                )
+                                self.intention = try container.decodeIfPresent(
+                                    Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.EventsPayloadPayload.IntentionPayload.self,
+                                    forKey: .intention
+                                )
+                                self.name = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .name
+                                )
+                                self.notes = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .notes
+                                )
+                                self.organiserLinks = try container.decode(
+                                    Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.EventsPayloadPayload.OrganiserLinksPayload.self,
+                                    forKey: .organiserLinks
+                                )
+                                self.purchase = try container.decodeIfPresent(
+                                    Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.EventsPayloadPayload.PurchasePayload.self,
+                                    forKey: .purchase
+                                )
+                                self.reference = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .reference
+                                )
+                                self.sourceLinks = try container.decode(
+                                    Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.EventsPayloadPayload.SourceLinksPayload.self,
+                                    forKey: .sourceLinks
+                                )
+                                self.sourceUrl = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .sourceUrl
+                                )
+                                self.ticketUrl = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .ticketUrl
+                                )
+                                self.timing = try container.decode(
+                                    Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.EventsPayloadPayload.TimingPayload.self,
+                                    forKey: .timing
+                                )
+                                self.tripId = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .tripId
+                                )
+                                self.updatedAt = try container.decode(
+                                    Foundation.Date.self,
+                                    forKey: .updatedAt
+                                )
+                                self.venueLinks = try container.decode(
+                                    Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.EventsPayloadPayload.VenueLinksPayload.self,
+                                    forKey: .venueLinks
+                                )
+                                self.visitId = try container.decodeIfPresent(
+                                    Swift.Int.self,
+                                    forKey: .visitId
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "address",
+                                    "arrangement",
+                                    "createdAt",
+                                    "documentLinks",
+                                    "id",
+                                    "intention",
+                                    "name",
+                                    "notes",
+                                    "organiserLinks",
+                                    "purchase",
+                                    "reference",
+                                    "sourceLinks",
+                                    "sourceUrl",
+                                    "ticketUrl",
+                                    "timing",
+                                    "tripId",
+                                    "updatedAt",
+                                    "venueLinks",
+                                    "visitId"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/events`.
+                        internal typealias EventsPayload = [Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.EventsPayloadPayload]
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/events`.
+                        internal var events: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.EventsPayload
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneyGroupsPayload`.
+                        internal struct JourneyGroupsPayloadPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneyGroupsPayload/alternativeJourneyIds`.
+                            internal var alternativeJourneyIds: [Swift.Int]
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneyGroupsPayload/createdAt`.
+                            internal var createdAt: Foundation.Date
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneyGroupsPayload/currentJourneyId`.
+                            internal var currentJourneyId: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneyGroupsPayload/id`.
+                            internal var id: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneyGroupsPayload/revision`.
+                            internal var revision: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneyGroupsPayload/tripId`.
+                            internal var tripId: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneyGroupsPayload/updatedAt`.
+                            internal var updatedAt: Foundation.Date
+                            /// Creates a new `JourneyGroupsPayloadPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - alternativeJourneyIds:
+                            ///   - createdAt:
+                            ///   - currentJourneyId:
+                            ///   - id:
+                            ///   - revision:
+                            ///   - tripId:
+                            ///   - updatedAt:
+                            internal init(
+                                alternativeJourneyIds: [Swift.Int],
+                                createdAt: Foundation.Date,
+                                currentJourneyId: Swift.Int,
+                                id: Swift.Int,
+                                revision: Swift.Int,
+                                tripId: Swift.Int,
+                                updatedAt: Foundation.Date
+                            ) {
+                                self.alternativeJourneyIds = alternativeJourneyIds
+                                self.createdAt = createdAt
+                                self.currentJourneyId = currentJourneyId
+                                self.id = id
+                                self.revision = revision
+                                self.tripId = tripId
+                                self.updatedAt = updatedAt
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case alternativeJourneyIds
+                                case createdAt
+                                case currentJourneyId
+                                case id
+                                case revision
+                                case tripId
+                                case updatedAt
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.alternativeJourneyIds = try container.decode(
+                                    [Swift.Int].self,
+                                    forKey: .alternativeJourneyIds
+                                )
+                                self.createdAt = try container.decode(
+                                    Foundation.Date.self,
+                                    forKey: .createdAt
+                                )
+                                self.currentJourneyId = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .currentJourneyId
+                                )
+                                self.id = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .id
+                                )
+                                self.revision = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .revision
+                                )
+                                self.tripId = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .tripId
+                                )
+                                self.updatedAt = try container.decode(
+                                    Foundation.Date.self,
+                                    forKey: .updatedAt
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "alternativeJourneyIds",
+                                    "createdAt",
+                                    "currentJourneyId",
+                                    "id",
+                                    "revision",
+                                    "tripId",
+                                    "updatedAt"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/journeyGroups`.
+                        internal typealias JourneyGroupsPayload = [Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneyGroupsPayloadPayload]
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/journeyGroups`.
+                        internal var journeyGroups: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneyGroupsPayload
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload`.
+                        internal struct JourneysPayloadPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/buffers`.
+                            internal struct BuffersPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/buffers/airportBufferMinutes`.
+                                internal var airportBufferMinutes: Swift.Double?
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/buffers/minimumConnectionMinutes`.
+                                internal var minimumConnectionMinutes: Swift.Double?
+                                /// Creates a new `BuffersPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - airportBufferMinutes:
+                                ///   - minimumConnectionMinutes:
+                                internal init(
+                                    airportBufferMinutes: Swift.Double? = nil,
+                                    minimumConnectionMinutes: Swift.Double? = nil
+                                ) {
+                                    self.airportBufferMinutes = airportBufferMinutes
+                                    self.minimumConnectionMinutes = minimumConnectionMinutes
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case airportBufferMinutes
+                                    case minimumConnectionMinutes
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.airportBufferMinutes = try container.decodeIfPresent(
+                                        Swift.Double.self,
+                                        forKey: .airportBufferMinutes
+                                    )
+                                    self.minimumConnectionMinutes = try container.decodeIfPresent(
+                                        Swift.Double.self,
+                                        forKey: .minimumConnectionMinutes
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "airportBufferMinutes",
+                                        "minimumConnectionMinutes"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/buffers`.
+                            internal var buffers: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.BuffersPayload
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/createdAt`.
+                            internal var createdAt: Foundation.Date
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/id`.
+                            internal var id: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload`.
+                            internal struct LegsPayloadPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/arrangement`.
+                                internal enum ArrangementPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case booked = "Booked"
+                                    case agreed = "Agreed"
+                                    case notArranged = "Not arranged"
+                                    case notNeeded = "Not needed"
+                                    case _empty_ = ""
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/arrangement`.
+                                internal var arrangement: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.LegsPayloadPayload.ArrangementPayload?
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/createdAt`.
+                                internal var createdAt: Foundation.Date
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/from`.
+                                internal struct FromPayload: Codable, Hashable, Sendable {
+                                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/from/local`.
+                                    internal var local: Swift.String?
+                                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/from/placeId`.
+                                    internal var placeId: Swift.Int?
+                                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/from/sourceLabel`.
+                                    internal var sourceLabel: Swift.String?
+                                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/from/SourceLinksPayload`.
+                                    internal struct SourceLinksPayloadPayload: Codable, Hashable, Sendable {
+                                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/from/SourceLinksPayload/label`.
+                                        internal var label: Swift.String?
+                                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/from/SourceLinksPayload/uri`.
+                                        internal struct UriPayload: Codable, Hashable, Sendable {
+                                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/from/SourceLinksPayload/uri/value1`.
+                                            internal var value1: Swift.String?
+                                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/from/SourceLinksPayload/uri/value2`.
+                                            internal var value2: Swift.String?
+                                            /// Creates a new `UriPayload`.
+                                            ///
+                                            /// - Parameters:
+                                            ///   - value1:
+                                            ///   - value2:
+                                            internal init(
+                                                value1: Swift.String? = nil,
+                                                value2: Swift.String? = nil
+                                            ) {
+                                                self.value1 = value1
+                                                self.value2 = value2
+                                            }
+                                            internal init(from decoder: any Swift.Decoder) throws {
+                                                var errors: [any Swift.Error] = []
+                                                do {
+                                                    self.value1 = try decoder.decodeFromSingleValueContainer()
+                                                } catch {
+                                                    errors.append(error)
+                                                }
+                                                do {
+                                                    self.value2 = try decoder.decodeFromSingleValueContainer()
+                                                } catch {
+                                                    errors.append(error)
+                                                }
+                                                try Swift.DecodingError.verifyAtLeastOneSchemaIsNotNil(
+                                                    [
+                                                        self.value1,
+                                                        self.value2
+                                                    ],
+                                                    type: Self.self,
+                                                    codingPath: decoder.codingPath,
+                                                    errors: errors
+                                                )
+                                            }
+                                            internal func encode(to encoder: any Swift.Encoder) throws {
+                                                try encoder.encodeFirstNonNilValueToSingleValueContainer([
+                                                    self.value1,
+                                                    self.value2
+                                                ])
+                                            }
+                                        }
+                                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/from/SourceLinksPayload/uri`.
+                                        internal var uri: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.LegsPayloadPayload.FromPayload.SourceLinksPayloadPayload.UriPayload
+                                        /// Creates a new `SourceLinksPayloadPayload`.
+                                        ///
+                                        /// - Parameters:
+                                        ///   - label:
+                                        ///   - uri:
+                                        internal init(
+                                            label: Swift.String? = nil,
+                                            uri: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.LegsPayloadPayload.FromPayload.SourceLinksPayloadPayload.UriPayload
+                                        ) {
+                                            self.label = label
+                                            self.uri = uri
+                                        }
+                                        internal enum CodingKeys: String, CodingKey {
+                                            case label
+                                            case uri
+                                        }
+                                        internal init(from decoder: any Swift.Decoder) throws {
+                                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                                            self.label = try container.decodeIfPresent(
+                                                Swift.String.self,
+                                                forKey: .label
+                                            )
+                                            self.uri = try container.decode(
+                                                Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.LegsPayloadPayload.FromPayload.SourceLinksPayloadPayload.UriPayload.self,
+                                                forKey: .uri
+                                            )
+                                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                                "label",
+                                                "uri"
+                                            ])
+                                        }
+                                    }
+                                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/from/sourceLinks`.
+                                    internal typealias SourceLinksPayload = [Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.LegsPayloadPayload.FromPayload.SourceLinksPayloadPayload]
+                                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/from/sourceLinks`.
+                                    internal var sourceLinks: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.LegsPayloadPayload.FromPayload.SourceLinksPayload?
+                                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/from/timeZone`.
+                                    internal var timeZone: Swift.String?
+                                    /// Creates a new `FromPayload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - local:
+                                    ///   - placeId:
+                                    ///   - sourceLabel:
+                                    ///   - sourceLinks:
+                                    ///   - timeZone:
+                                    internal init(
+                                        local: Swift.String? = nil,
+                                        placeId: Swift.Int? = nil,
+                                        sourceLabel: Swift.String? = nil,
+                                        sourceLinks: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.LegsPayloadPayload.FromPayload.SourceLinksPayload? = nil,
+                                        timeZone: Swift.String? = nil
+                                    ) {
+                                        self.local = local
+                                        self.placeId = placeId
+                                        self.sourceLabel = sourceLabel
+                                        self.sourceLinks = sourceLinks
+                                        self.timeZone = timeZone
+                                    }
+                                    internal enum CodingKeys: String, CodingKey {
+                                        case local
+                                        case placeId
+                                        case sourceLabel
+                                        case sourceLinks
+                                        case timeZone
+                                    }
+                                    internal init(from decoder: any Swift.Decoder) throws {
+                                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                                        self.local = try container.decodeIfPresent(
+                                            Swift.String.self,
+                                            forKey: .local
+                                        )
+                                        self.placeId = try container.decodeIfPresent(
+                                            Swift.Int.self,
+                                            forKey: .placeId
+                                        )
+                                        self.sourceLabel = try container.decodeIfPresent(
+                                            Swift.String.self,
+                                            forKey: .sourceLabel
+                                        )
+                                        self.sourceLinks = try container.decodeIfPresent(
+                                            Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.LegsPayloadPayload.FromPayload.SourceLinksPayload.self,
+                                            forKey: .sourceLinks
+                                        )
+                                        self.timeZone = try container.decodeIfPresent(
+                                            Swift.String.self,
+                                            forKey: .timeZone
+                                        )
+                                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                            "local",
+                                            "placeId",
+                                            "sourceLabel",
+                                            "sourceLinks",
+                                            "timeZone"
+                                        ])
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/from`.
+                                internal var from: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.LegsPayloadPayload.FromPayload
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/id`.
+                                internal var id: Swift.Int
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/intention`.
+                                internal enum IntentionPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case inPlan = "In plan"
+                                    case considering = "Considering"
+                                    case alternative = "Alternative"
+                                    case _empty_ = ""
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/intention`.
+                                internal var intention: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.LegsPayloadPayload.IntentionPayload?
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/journeyId`.
+                                internal var journeyId: Swift.Int
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/mode`.
+                                internal var mode: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/notes`.
+                                internal var notes: Swift.String
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/operator`.
+                                internal var _operator: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/purchase`.
+                                internal enum PurchasePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case purchased = "Purchased"
+                                    case _empty_ = ""
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/purchase`.
+                                internal var purchase: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.LegsPayloadPayload.PurchasePayload?
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/reference`.
+                                internal var reference: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/service`.
+                                internal var service: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/SourceLinksPayload`.
+                                internal struct SourceLinksPayloadPayload: Codable, Hashable, Sendable {
+                                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/SourceLinksPayload/label`.
+                                    internal var label: Swift.String?
+                                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/SourceLinksPayload/uri`.
+                                    internal struct UriPayload: Codable, Hashable, Sendable {
+                                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/SourceLinksPayload/uri/value1`.
+                                        internal var value1: Swift.String?
+                                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/SourceLinksPayload/uri/value2`.
+                                        internal var value2: Swift.String?
+                                        /// Creates a new `UriPayload`.
+                                        ///
+                                        /// - Parameters:
+                                        ///   - value1:
+                                        ///   - value2:
+                                        internal init(
+                                            value1: Swift.String? = nil,
+                                            value2: Swift.String? = nil
+                                        ) {
+                                            self.value1 = value1
+                                            self.value2 = value2
+                                        }
+                                        internal init(from decoder: any Swift.Decoder) throws {
+                                            var errors: [any Swift.Error] = []
+                                            do {
+                                                self.value1 = try decoder.decodeFromSingleValueContainer()
+                                            } catch {
+                                                errors.append(error)
+                                            }
+                                            do {
+                                                self.value2 = try decoder.decodeFromSingleValueContainer()
+                                            } catch {
+                                                errors.append(error)
+                                            }
+                                            try Swift.DecodingError.verifyAtLeastOneSchemaIsNotNil(
+                                                [
+                                                    self.value1,
+                                                    self.value2
+                                                ],
+                                                type: Self.self,
+                                                codingPath: decoder.codingPath,
+                                                errors: errors
+                                            )
+                                        }
+                                        internal func encode(to encoder: any Swift.Encoder) throws {
+                                            try encoder.encodeFirstNonNilValueToSingleValueContainer([
+                                                self.value1,
+                                                self.value2
+                                            ])
+                                        }
+                                    }
+                                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/SourceLinksPayload/uri`.
+                                    internal var uri: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.LegsPayloadPayload.SourceLinksPayloadPayload.UriPayload
+                                    /// Creates a new `SourceLinksPayloadPayload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - label:
+                                    ///   - uri:
+                                    internal init(
+                                        label: Swift.String? = nil,
+                                        uri: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.LegsPayloadPayload.SourceLinksPayloadPayload.UriPayload
+                                    ) {
+                                        self.label = label
+                                        self.uri = uri
+                                    }
+                                    internal enum CodingKeys: String, CodingKey {
+                                        case label
+                                        case uri
+                                    }
+                                    internal init(from decoder: any Swift.Decoder) throws {
+                                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                                        self.label = try container.decodeIfPresent(
+                                            Swift.String.self,
+                                            forKey: .label
+                                        )
+                                        self.uri = try container.decode(
+                                            Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.LegsPayloadPayload.SourceLinksPayloadPayload.UriPayload.self,
+                                            forKey: .uri
+                                        )
+                                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                            "label",
+                                            "uri"
+                                        ])
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/sourceLinks`.
+                                internal typealias SourceLinksPayload = [Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.LegsPayloadPayload.SourceLinksPayloadPayload]
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/sourceLinks`.
+                                internal var sourceLinks: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.LegsPayloadPayload.SourceLinksPayload
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/to`.
+                                internal struct ToPayload: Codable, Hashable, Sendable {
+                                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/to/local`.
+                                    internal var local: Swift.String?
+                                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/to/placeId`.
+                                    internal var placeId: Swift.Int?
+                                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/to/sourceLabel`.
+                                    internal var sourceLabel: Swift.String?
+                                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/to/SourceLinksPayload`.
+                                    internal struct SourceLinksPayloadPayload: Codable, Hashable, Sendable {
+                                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/to/SourceLinksPayload/label`.
+                                        internal var label: Swift.String?
+                                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/to/SourceLinksPayload/uri`.
+                                        internal struct UriPayload: Codable, Hashable, Sendable {
+                                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/to/SourceLinksPayload/uri/value1`.
+                                            internal var value1: Swift.String?
+                                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/to/SourceLinksPayload/uri/value2`.
+                                            internal var value2: Swift.String?
+                                            /// Creates a new `UriPayload`.
+                                            ///
+                                            /// - Parameters:
+                                            ///   - value1:
+                                            ///   - value2:
+                                            internal init(
+                                                value1: Swift.String? = nil,
+                                                value2: Swift.String? = nil
+                                            ) {
+                                                self.value1 = value1
+                                                self.value2 = value2
+                                            }
+                                            internal init(from decoder: any Swift.Decoder) throws {
+                                                var errors: [any Swift.Error] = []
+                                                do {
+                                                    self.value1 = try decoder.decodeFromSingleValueContainer()
+                                                } catch {
+                                                    errors.append(error)
+                                                }
+                                                do {
+                                                    self.value2 = try decoder.decodeFromSingleValueContainer()
+                                                } catch {
+                                                    errors.append(error)
+                                                }
+                                                try Swift.DecodingError.verifyAtLeastOneSchemaIsNotNil(
+                                                    [
+                                                        self.value1,
+                                                        self.value2
+                                                    ],
+                                                    type: Self.self,
+                                                    codingPath: decoder.codingPath,
+                                                    errors: errors
+                                                )
+                                            }
+                                            internal func encode(to encoder: any Swift.Encoder) throws {
+                                                try encoder.encodeFirstNonNilValueToSingleValueContainer([
+                                                    self.value1,
+                                                    self.value2
+                                                ])
+                                            }
+                                        }
+                                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/to/SourceLinksPayload/uri`.
+                                        internal var uri: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.LegsPayloadPayload.ToPayload.SourceLinksPayloadPayload.UriPayload
+                                        /// Creates a new `SourceLinksPayloadPayload`.
+                                        ///
+                                        /// - Parameters:
+                                        ///   - label:
+                                        ///   - uri:
+                                        internal init(
+                                            label: Swift.String? = nil,
+                                            uri: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.LegsPayloadPayload.ToPayload.SourceLinksPayloadPayload.UriPayload
+                                        ) {
+                                            self.label = label
+                                            self.uri = uri
+                                        }
+                                        internal enum CodingKeys: String, CodingKey {
+                                            case label
+                                            case uri
+                                        }
+                                        internal init(from decoder: any Swift.Decoder) throws {
+                                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                                            self.label = try container.decodeIfPresent(
+                                                Swift.String.self,
+                                                forKey: .label
+                                            )
+                                            self.uri = try container.decode(
+                                                Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.LegsPayloadPayload.ToPayload.SourceLinksPayloadPayload.UriPayload.self,
+                                                forKey: .uri
+                                            )
+                                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                                "label",
+                                                "uri"
+                                            ])
+                                        }
+                                    }
+                                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/to/sourceLinks`.
+                                    internal typealias SourceLinksPayload = [Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.LegsPayloadPayload.ToPayload.SourceLinksPayloadPayload]
+                                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/to/sourceLinks`.
+                                    internal var sourceLinks: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.LegsPayloadPayload.ToPayload.SourceLinksPayload?
+                                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/to/timeZone`.
+                                    internal var timeZone: Swift.String?
+                                    /// Creates a new `ToPayload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - local:
+                                    ///   - placeId:
+                                    ///   - sourceLabel:
+                                    ///   - sourceLinks:
+                                    ///   - timeZone:
+                                    internal init(
+                                        local: Swift.String? = nil,
+                                        placeId: Swift.Int? = nil,
+                                        sourceLabel: Swift.String? = nil,
+                                        sourceLinks: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.LegsPayloadPayload.ToPayload.SourceLinksPayload? = nil,
+                                        timeZone: Swift.String? = nil
+                                    ) {
+                                        self.local = local
+                                        self.placeId = placeId
+                                        self.sourceLabel = sourceLabel
+                                        self.sourceLinks = sourceLinks
+                                        self.timeZone = timeZone
+                                    }
+                                    internal enum CodingKeys: String, CodingKey {
+                                        case local
+                                        case placeId
+                                        case sourceLabel
+                                        case sourceLinks
+                                        case timeZone
+                                    }
+                                    internal init(from decoder: any Swift.Decoder) throws {
+                                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                                        self.local = try container.decodeIfPresent(
+                                            Swift.String.self,
+                                            forKey: .local
+                                        )
+                                        self.placeId = try container.decodeIfPresent(
+                                            Swift.Int.self,
+                                            forKey: .placeId
+                                        )
+                                        self.sourceLabel = try container.decodeIfPresent(
+                                            Swift.String.self,
+                                            forKey: .sourceLabel
+                                        )
+                                        self.sourceLinks = try container.decodeIfPresent(
+                                            Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.LegsPayloadPayload.ToPayload.SourceLinksPayload.self,
+                                            forKey: .sourceLinks
+                                        )
+                                        self.timeZone = try container.decodeIfPresent(
+                                            Swift.String.self,
+                                            forKey: .timeZone
+                                        )
+                                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                            "local",
+                                            "placeId",
+                                            "sourceLabel",
+                                            "sourceLinks",
+                                            "timeZone"
+                                        ])
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/to`.
+                                internal var to: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.LegsPayloadPayload.ToPayload
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/updatedAt`.
+                                internal var updatedAt: Foundation.Date
+                                /// Creates a new `LegsPayloadPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - arrangement:
+                                ///   - createdAt:
+                                ///   - from:
+                                ///   - id:
+                                ///   - intention:
+                                ///   - journeyId:
+                                ///   - mode:
+                                ///   - notes:
+                                ///   - _operator:
+                                ///   - purchase:
+                                ///   - reference:
+                                ///   - service:
+                                ///   - sourceLinks:
+                                ///   - to:
+                                ///   - updatedAt:
+                                internal init(
+                                    arrangement: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.LegsPayloadPayload.ArrangementPayload? = nil,
+                                    createdAt: Foundation.Date,
+                                    from: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.LegsPayloadPayload.FromPayload,
+                                    id: Swift.Int,
+                                    intention: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.LegsPayloadPayload.IntentionPayload? = nil,
+                                    journeyId: Swift.Int,
+                                    mode: Swift.String? = nil,
+                                    notes: Swift.String,
+                                    _operator: Swift.String? = nil,
+                                    purchase: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.LegsPayloadPayload.PurchasePayload? = nil,
+                                    reference: Swift.String? = nil,
+                                    service: Swift.String? = nil,
+                                    sourceLinks: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.LegsPayloadPayload.SourceLinksPayload,
+                                    to: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.LegsPayloadPayload.ToPayload,
+                                    updatedAt: Foundation.Date
+                                ) {
+                                    self.arrangement = arrangement
+                                    self.createdAt = createdAt
+                                    self.from = from
+                                    self.id = id
+                                    self.intention = intention
+                                    self.journeyId = journeyId
+                                    self.mode = mode
+                                    self.notes = notes
+                                    self._operator = _operator
+                                    self.purchase = purchase
+                                    self.reference = reference
+                                    self.service = service
+                                    self.sourceLinks = sourceLinks
+                                    self.to = to
+                                    self.updatedAt = updatedAt
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case arrangement
+                                    case createdAt
+                                    case from
+                                    case id
+                                    case intention
+                                    case journeyId
+                                    case mode
+                                    case notes
+                                    case _operator = "operator"
+                                    case purchase
+                                    case reference
+                                    case service
+                                    case sourceLinks
+                                    case to
+                                    case updatedAt
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.arrangement = try container.decodeIfPresent(
+                                        Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.LegsPayloadPayload.ArrangementPayload.self,
+                                        forKey: .arrangement
+                                    )
+                                    self.createdAt = try container.decode(
+                                        Foundation.Date.self,
+                                        forKey: .createdAt
+                                    )
+                                    self.from = try container.decode(
+                                        Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.LegsPayloadPayload.FromPayload.self,
+                                        forKey: .from
+                                    )
+                                    self.id = try container.decode(
+                                        Swift.Int.self,
+                                        forKey: .id
+                                    )
+                                    self.intention = try container.decodeIfPresent(
+                                        Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.LegsPayloadPayload.IntentionPayload.self,
+                                        forKey: .intention
+                                    )
+                                    self.journeyId = try container.decode(
+                                        Swift.Int.self,
+                                        forKey: .journeyId
+                                    )
+                                    self.mode = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .mode
+                                    )
+                                    self.notes = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .notes
+                                    )
+                                    self._operator = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: ._operator
+                                    )
+                                    self.purchase = try container.decodeIfPresent(
+                                        Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.LegsPayloadPayload.PurchasePayload.self,
+                                        forKey: .purchase
+                                    )
+                                    self.reference = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .reference
+                                    )
+                                    self.service = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .service
+                                    )
+                                    self.sourceLinks = try container.decode(
+                                        Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.LegsPayloadPayload.SourceLinksPayload.self,
+                                        forKey: .sourceLinks
+                                    )
+                                    self.to = try container.decode(
+                                        Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.LegsPayloadPayload.ToPayload.self,
+                                        forKey: .to
+                                    )
+                                    self.updatedAt = try container.decode(
+                                        Foundation.Date.self,
+                                        forKey: .updatedAt
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "arrangement",
+                                        "createdAt",
+                                        "from",
+                                        "id",
+                                        "intention",
+                                        "journeyId",
+                                        "mode",
+                                        "notes",
+                                        "operator",
+                                        "purchase",
+                                        "reference",
+                                        "service",
+                                        "sourceLinks",
+                                        "to",
+                                        "updatedAt"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/legs`.
+                            internal typealias LegsPayload = [Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.LegsPayloadPayload]
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/legs`.
+                            internal var legs: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.LegsPayload
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/name`.
+                            internal var name: Swift.String?
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/notes`.
+                            internal var notes: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/reference`.
+                            internal var reference: Swift.String?
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/SourceLinksPayload`.
+                            internal struct SourceLinksPayloadPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/SourceLinksPayload/label`.
+                                internal var label: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/SourceLinksPayload/uri`.
+                                internal struct UriPayload: Codable, Hashable, Sendable {
+                                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/SourceLinksPayload/uri/value1`.
+                                    internal var value1: Swift.String?
+                                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/SourceLinksPayload/uri/value2`.
+                                    internal var value2: Swift.String?
+                                    /// Creates a new `UriPayload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - value1:
+                                    ///   - value2:
+                                    internal init(
+                                        value1: Swift.String? = nil,
+                                        value2: Swift.String? = nil
+                                    ) {
+                                        self.value1 = value1
+                                        self.value2 = value2
+                                    }
+                                    internal init(from decoder: any Swift.Decoder) throws {
+                                        var errors: [any Swift.Error] = []
+                                        do {
+                                            self.value1 = try decoder.decodeFromSingleValueContainer()
+                                        } catch {
+                                            errors.append(error)
+                                        }
+                                        do {
+                                            self.value2 = try decoder.decodeFromSingleValueContainer()
+                                        } catch {
+                                            errors.append(error)
+                                        }
+                                        try Swift.DecodingError.verifyAtLeastOneSchemaIsNotNil(
+                                            [
+                                                self.value1,
+                                                self.value2
+                                            ],
+                                            type: Self.self,
+                                            codingPath: decoder.codingPath,
+                                            errors: errors
+                                        )
+                                    }
+                                    internal func encode(to encoder: any Swift.Encoder) throws {
+                                        try encoder.encodeFirstNonNilValueToSingleValueContainer([
+                                            self.value1,
+                                            self.value2
+                                        ])
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/SourceLinksPayload/uri`.
+                                internal var uri: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.SourceLinksPayloadPayload.UriPayload
+                                /// Creates a new `SourceLinksPayloadPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - label:
+                                ///   - uri:
+                                internal init(
+                                    label: Swift.String? = nil,
+                                    uri: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.SourceLinksPayloadPayload.UriPayload
+                                ) {
+                                    self.label = label
+                                    self.uri = uri
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case label
+                                    case uri
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.label = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .label
+                                    )
+                                    self.uri = try container.decode(
+                                        Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.SourceLinksPayloadPayload.UriPayload.self,
+                                        forKey: .uri
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "label",
+                                        "uri"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/sourceLinks`.
+                            internal typealias SourceLinksPayload = [Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.SourceLinksPayloadPayload]
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/sourceLinks`.
+                            internal var sourceLinks: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.SourceLinksPayload
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/tripId`.
+                            internal var tripId: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/updatedAt`.
+                            internal var updatedAt: Foundation.Date
+                            /// Creates a new `JourneysPayloadPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - buffers:
+                            ///   - createdAt:
+                            ///   - id:
+                            ///   - legs:
+                            ///   - name:
+                            ///   - notes:
+                            ///   - reference:
+                            ///   - sourceLinks:
+                            ///   - tripId:
+                            ///   - updatedAt:
+                            internal init(
+                                buffers: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.BuffersPayload,
+                                createdAt: Foundation.Date,
+                                id: Swift.Int,
+                                legs: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.LegsPayload,
+                                name: Swift.String? = nil,
+                                notes: Swift.String,
+                                reference: Swift.String? = nil,
+                                sourceLinks: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.SourceLinksPayload,
+                                tripId: Swift.Int,
+                                updatedAt: Foundation.Date
+                            ) {
+                                self.buffers = buffers
+                                self.createdAt = createdAt
+                                self.id = id
+                                self.legs = legs
+                                self.name = name
+                                self.notes = notes
+                                self.reference = reference
+                                self.sourceLinks = sourceLinks
+                                self.tripId = tripId
+                                self.updatedAt = updatedAt
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case buffers
+                                case createdAt
+                                case id
+                                case legs
+                                case name
+                                case notes
+                                case reference
+                                case sourceLinks
+                                case tripId
+                                case updatedAt
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.buffers = try container.decode(
+                                    Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.BuffersPayload.self,
+                                    forKey: .buffers
+                                )
+                                self.createdAt = try container.decode(
+                                    Foundation.Date.self,
+                                    forKey: .createdAt
+                                )
+                                self.id = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .id
+                                )
+                                self.legs = try container.decode(
+                                    Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.LegsPayload.self,
+                                    forKey: .legs
+                                )
+                                self.name = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .name
+                                )
+                                self.notes = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .notes
+                                )
+                                self.reference = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .reference
+                                )
+                                self.sourceLinks = try container.decode(
+                                    Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.SourceLinksPayload.self,
+                                    forKey: .sourceLinks
+                                )
+                                self.tripId = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .tripId
+                                )
+                                self.updatedAt = try container.decode(
+                                    Foundation.Date.self,
+                                    forKey: .updatedAt
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "buffers",
+                                    "createdAt",
+                                    "id",
+                                    "legs",
+                                    "name",
+                                    "notes",
+                                    "reference",
+                                    "sourceLinks",
+                                    "tripId",
+                                    "updatedAt"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/journeys`.
+                        internal typealias JourneysPayload = [Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload]
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/journeys`.
+                        internal var journeys: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayload
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/PlacesPayload`.
+                        internal struct PlacesPayloadPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/PlacesPayload/createdAt`.
+                            internal var createdAt: Foundation.Date
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/PlacesPayload/id`.
+                            internal var id: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/PlacesPayload/name`.
+                            internal var name: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/PlacesPayload/SourceLinksPayload`.
+                            internal struct SourceLinksPayloadPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/PlacesPayload/SourceLinksPayload/label`.
+                                internal var label: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/PlacesPayload/SourceLinksPayload/uri`.
+                                internal struct UriPayload: Codable, Hashable, Sendable {
+                                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/PlacesPayload/SourceLinksPayload/uri/value1`.
+                                    internal var value1: Swift.String?
+                                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/PlacesPayload/SourceLinksPayload/uri/value2`.
+                                    internal var value2: Swift.String?
+                                    /// Creates a new `UriPayload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - value1:
+                                    ///   - value2:
+                                    internal init(
+                                        value1: Swift.String? = nil,
+                                        value2: Swift.String? = nil
+                                    ) {
+                                        self.value1 = value1
+                                        self.value2 = value2
+                                    }
+                                    internal init(from decoder: any Swift.Decoder) throws {
+                                        var errors: [any Swift.Error] = []
+                                        do {
+                                            self.value1 = try decoder.decodeFromSingleValueContainer()
+                                        } catch {
+                                            errors.append(error)
+                                        }
+                                        do {
+                                            self.value2 = try decoder.decodeFromSingleValueContainer()
+                                        } catch {
+                                            errors.append(error)
+                                        }
+                                        try Swift.DecodingError.verifyAtLeastOneSchemaIsNotNil(
+                                            [
+                                                self.value1,
+                                                self.value2
+                                            ],
+                                            type: Self.self,
+                                            codingPath: decoder.codingPath,
+                                            errors: errors
+                                        )
+                                    }
+                                    internal func encode(to encoder: any Swift.Encoder) throws {
+                                        try encoder.encodeFirstNonNilValueToSingleValueContainer([
+                                            self.value1,
+                                            self.value2
+                                        ])
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/PlacesPayload/SourceLinksPayload/uri`.
+                                internal var uri: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.PlacesPayloadPayload.SourceLinksPayloadPayload.UriPayload
+                                /// Creates a new `SourceLinksPayloadPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - label:
+                                ///   - uri:
+                                internal init(
+                                    label: Swift.String? = nil,
+                                    uri: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.PlacesPayloadPayload.SourceLinksPayloadPayload.UriPayload
+                                ) {
+                                    self.label = label
+                                    self.uri = uri
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case label
+                                    case uri
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.label = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .label
+                                    )
+                                    self.uri = try container.decode(
+                                        Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.PlacesPayloadPayload.SourceLinksPayloadPayload.UriPayload.self,
+                                        forKey: .uri
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "label",
+                                        "uri"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/PlacesPayload/sourceLinks`.
+                            internal typealias SourceLinksPayload = [Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.PlacesPayloadPayload.SourceLinksPayloadPayload]
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/PlacesPayload/sourceLinks`.
+                            internal var sourceLinks: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.PlacesPayloadPayload.SourceLinksPayload
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/PlacesPayload/updatedAt`.
+                            internal var updatedAt: Foundation.Date
+                            /// Creates a new `PlacesPayloadPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - createdAt:
+                            ///   - id:
+                            ///   - name:
+                            ///   - sourceLinks:
+                            ///   - updatedAt:
+                            internal init(
+                                createdAt: Foundation.Date,
+                                id: Swift.Int,
+                                name: Swift.String,
+                                sourceLinks: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.PlacesPayloadPayload.SourceLinksPayload,
+                                updatedAt: Foundation.Date
+                            ) {
+                                self.createdAt = createdAt
+                                self.id = id
+                                self.name = name
+                                self.sourceLinks = sourceLinks
+                                self.updatedAt = updatedAt
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case createdAt
+                                case id
+                                case name
+                                case sourceLinks
+                                case updatedAt
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.createdAt = try container.decode(
+                                    Foundation.Date.self,
+                                    forKey: .createdAt
+                                )
+                                self.id = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .id
+                                )
+                                self.name = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .name
+                                )
+                                self.sourceLinks = try container.decode(
+                                    Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.PlacesPayloadPayload.SourceLinksPayload.self,
+                                    forKey: .sourceLinks
+                                )
+                                self.updatedAt = try container.decode(
+                                    Foundation.Date.self,
+                                    forKey: .updatedAt
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "createdAt",
+                                    "id",
+                                    "name",
+                                    "sourceLinks",
+                                    "updatedAt"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/places`.
+                        internal typealias PlacesPayload = [Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.PlacesPayloadPayload]
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/places`.
+                        internal var places: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.PlacesPayload
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/StaysPayload`.
+                        internal struct StaysPayloadPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/StaysPayload/address`.
+                            internal var address: Swift.String?
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/StaysPayload/createdAt`.
+                            internal var createdAt: Foundation.Date
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/StaysPayload/DocumentLinksPayload`.
+                            internal struct DocumentLinksPayloadPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/StaysPayload/DocumentLinksPayload/label`.
+                                internal var label: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/StaysPayload/DocumentLinksPayload/uri`.
+                                internal struct UriPayload: Codable, Hashable, Sendable {
+                                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/StaysPayload/DocumentLinksPayload/uri/value1`.
+                                    internal var value1: Swift.String?
+                                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/StaysPayload/DocumentLinksPayload/uri/value2`.
+                                    internal var value2: Swift.String?
+                                    /// Creates a new `UriPayload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - value1:
+                                    ///   - value2:
+                                    internal init(
+                                        value1: Swift.String? = nil,
+                                        value2: Swift.String? = nil
+                                    ) {
+                                        self.value1 = value1
+                                        self.value2 = value2
+                                    }
+                                    internal init(from decoder: any Swift.Decoder) throws {
+                                        var errors: [any Swift.Error] = []
+                                        do {
+                                            self.value1 = try decoder.decodeFromSingleValueContainer()
+                                        } catch {
+                                            errors.append(error)
+                                        }
+                                        do {
+                                            self.value2 = try decoder.decodeFromSingleValueContainer()
+                                        } catch {
+                                            errors.append(error)
+                                        }
+                                        try Swift.DecodingError.verifyAtLeastOneSchemaIsNotNil(
+                                            [
+                                                self.value1,
+                                                self.value2
+                                            ],
+                                            type: Self.self,
+                                            codingPath: decoder.codingPath,
+                                            errors: errors
+                                        )
+                                    }
+                                    internal func encode(to encoder: any Swift.Encoder) throws {
+                                        try encoder.encodeFirstNonNilValueToSingleValueContainer([
+                                            self.value1,
+                                            self.value2
+                                        ])
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/StaysPayload/DocumentLinksPayload/uri`.
+                                internal var uri: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.StaysPayloadPayload.DocumentLinksPayloadPayload.UriPayload
+                                /// Creates a new `DocumentLinksPayloadPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - label:
+                                ///   - uri:
+                                internal init(
+                                    label: Swift.String? = nil,
+                                    uri: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.StaysPayloadPayload.DocumentLinksPayloadPayload.UriPayload
+                                ) {
+                                    self.label = label
+                                    self.uri = uri
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case label
+                                    case uri
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.label = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .label
+                                    )
+                                    self.uri = try container.decode(
+                                        Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.StaysPayloadPayload.DocumentLinksPayloadPayload.UriPayload.self,
+                                        forKey: .uri
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "label",
+                                        "uri"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/StaysPayload/documentLinks`.
+                            internal typealias DocumentLinksPayload = [Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.StaysPayloadPayload.DocumentLinksPayloadPayload]
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/StaysPayload/documentLinks`.
+                            internal var documentLinks: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.StaysPayloadPayload.DocumentLinksPayload
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/StaysPayload/HostLinksPayload`.
+                            internal struct HostLinksPayloadPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/StaysPayload/HostLinksPayload/label`.
+                                internal var label: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/StaysPayload/HostLinksPayload/uri`.
+                                internal struct UriPayload: Codable, Hashable, Sendable {
+                                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/StaysPayload/HostLinksPayload/uri/value1`.
+                                    internal var value1: Swift.String?
+                                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/StaysPayload/HostLinksPayload/uri/value2`.
+                                    internal var value2: Swift.String?
+                                    /// Creates a new `UriPayload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - value1:
+                                    ///   - value2:
+                                    internal init(
+                                        value1: Swift.String? = nil,
+                                        value2: Swift.String? = nil
+                                    ) {
+                                        self.value1 = value1
+                                        self.value2 = value2
+                                    }
+                                    internal init(from decoder: any Swift.Decoder) throws {
+                                        var errors: [any Swift.Error] = []
+                                        do {
+                                            self.value1 = try decoder.decodeFromSingleValueContainer()
+                                        } catch {
+                                            errors.append(error)
+                                        }
+                                        do {
+                                            self.value2 = try decoder.decodeFromSingleValueContainer()
+                                        } catch {
+                                            errors.append(error)
+                                        }
+                                        try Swift.DecodingError.verifyAtLeastOneSchemaIsNotNil(
+                                            [
+                                                self.value1,
+                                                self.value2
+                                            ],
+                                            type: Self.self,
+                                            codingPath: decoder.codingPath,
+                                            errors: errors
+                                        )
+                                    }
+                                    internal func encode(to encoder: any Swift.Encoder) throws {
+                                        try encoder.encodeFirstNonNilValueToSingleValueContainer([
+                                            self.value1,
+                                            self.value2
+                                        ])
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/StaysPayload/HostLinksPayload/uri`.
+                                internal var uri: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.StaysPayloadPayload.HostLinksPayloadPayload.UriPayload
+                                /// Creates a new `HostLinksPayloadPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - label:
+                                ///   - uri:
+                                internal init(
+                                    label: Swift.String? = nil,
+                                    uri: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.StaysPayloadPayload.HostLinksPayloadPayload.UriPayload
+                                ) {
+                                    self.label = label
+                                    self.uri = uri
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case label
+                                    case uri
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.label = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .label
+                                    )
+                                    self.uri = try container.decode(
+                                        Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.StaysPayloadPayload.HostLinksPayloadPayload.UriPayload.self,
+                                        forKey: .uri
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "label",
+                                        "uri"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/StaysPayload/hostLinks`.
+                            internal typealias HostLinksPayload = [Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.StaysPayloadPayload.HostLinksPayloadPayload]
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/StaysPayload/hostLinks`.
+                            internal var hostLinks: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.StaysPayloadPayload.HostLinksPayload
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/StaysPayload/id`.
+                            internal var id: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/StaysPayload/kind`.
+                            internal enum KindPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case hotel = "hotel"
+                                case friend = "friend"
+                                case family = "family"
+                                case other = "other"
+                                case _empty_ = ""
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/StaysPayload/kind`.
+                            internal var kind: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.StaysPayloadPayload.KindPayload?
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/StaysPayload/name`.
+                            internal var name: Swift.String?
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/StaysPayload/notes`.
+                            internal var notes: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/StaysPayload/reference`.
+                            internal var reference: Swift.String?
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/StaysPayload/SourceLinksPayload`.
+                            internal struct SourceLinksPayloadPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/StaysPayload/SourceLinksPayload/label`.
+                                internal var label: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/StaysPayload/SourceLinksPayload/uri`.
+                                internal struct UriPayload: Codable, Hashable, Sendable {
+                                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/StaysPayload/SourceLinksPayload/uri/value1`.
+                                    internal var value1: Swift.String?
+                                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/StaysPayload/SourceLinksPayload/uri/value2`.
+                                    internal var value2: Swift.String?
+                                    /// Creates a new `UriPayload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - value1:
+                                    ///   - value2:
+                                    internal init(
+                                        value1: Swift.String? = nil,
+                                        value2: Swift.String? = nil
+                                    ) {
+                                        self.value1 = value1
+                                        self.value2 = value2
+                                    }
+                                    internal init(from decoder: any Swift.Decoder) throws {
+                                        var errors: [any Swift.Error] = []
+                                        do {
+                                            self.value1 = try decoder.decodeFromSingleValueContainer()
+                                        } catch {
+                                            errors.append(error)
+                                        }
+                                        do {
+                                            self.value2 = try decoder.decodeFromSingleValueContainer()
+                                        } catch {
+                                            errors.append(error)
+                                        }
+                                        try Swift.DecodingError.verifyAtLeastOneSchemaIsNotNil(
+                                            [
+                                                self.value1,
+                                                self.value2
+                                            ],
+                                            type: Self.self,
+                                            codingPath: decoder.codingPath,
+                                            errors: errors
+                                        )
+                                    }
+                                    internal func encode(to encoder: any Swift.Encoder) throws {
+                                        try encoder.encodeFirstNonNilValueToSingleValueContainer([
+                                            self.value1,
+                                            self.value2
+                                        ])
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/StaysPayload/SourceLinksPayload/uri`.
+                                internal var uri: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.StaysPayloadPayload.SourceLinksPayloadPayload.UriPayload
+                                /// Creates a new `SourceLinksPayloadPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - label:
+                                ///   - uri:
+                                internal init(
+                                    label: Swift.String? = nil,
+                                    uri: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.StaysPayloadPayload.SourceLinksPayloadPayload.UriPayload
+                                ) {
+                                    self.label = label
+                                    self.uri = uri
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case label
+                                    case uri
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.label = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .label
+                                    )
+                                    self.uri = try container.decode(
+                                        Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.StaysPayloadPayload.SourceLinksPayloadPayload.UriPayload.self,
+                                        forKey: .uri
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "label",
+                                        "uri"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/StaysPayload/sourceLinks`.
+                            internal typealias SourceLinksPayload = [Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.StaysPayloadPayload.SourceLinksPayloadPayload]
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/StaysPayload/sourceLinks`.
+                            internal var sourceLinks: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.StaysPayloadPayload.SourceLinksPayload
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/StaysPayload/status`.
+                            internal enum StatusPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case considering = "Considering"
+                                case agreed = "Agreed"
+                                case reserved = "Reserved"
+                                case purchased = "Purchased"
+                                case _empty_ = ""
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/StaysPayload/status`.
+                            internal var status: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.StaysPayloadPayload.StatusPayload?
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/StaysPayload/timing`.
+                            internal struct TimingPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/StaysPayload/timing/arrival`.
+                                internal var arrival: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/StaysPayload/timing/checkIn`.
+                                internal var checkIn: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/StaysPayload/timing/checkOut`.
+                                internal var checkOut: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/StaysPayload/timing/departure`.
+                                internal var departure: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/StaysPayload/timing/timeZone`.
+                                internal var timeZone: Swift.String?
+                                /// Creates a new `TimingPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - arrival:
+                                ///   - checkIn:
+                                ///   - checkOut:
+                                ///   - departure:
+                                ///   - timeZone:
+                                internal init(
+                                    arrival: Swift.String? = nil,
+                                    checkIn: Swift.String? = nil,
+                                    checkOut: Swift.String? = nil,
+                                    departure: Swift.String? = nil,
+                                    timeZone: Swift.String? = nil
+                                ) {
+                                    self.arrival = arrival
+                                    self.checkIn = checkIn
+                                    self.checkOut = checkOut
+                                    self.departure = departure
+                                    self.timeZone = timeZone
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case arrival
+                                    case checkIn
+                                    case checkOut
+                                    case departure
+                                    case timeZone
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.arrival = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .arrival
+                                    )
+                                    self.checkIn = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .checkIn
+                                    )
+                                    self.checkOut = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .checkOut
+                                    )
+                                    self.departure = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .departure
+                                    )
+                                    self.timeZone = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .timeZone
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "arrival",
+                                        "checkIn",
+                                        "checkOut",
+                                        "departure",
+                                        "timeZone"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/StaysPayload/timing`.
+                            internal var timing: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.StaysPayloadPayload.TimingPayload
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/StaysPayload/tripId`.
+                            internal var tripId: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/StaysPayload/updatedAt`.
+                            internal var updatedAt: Foundation.Date
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/StaysPayload/visitId`.
+                            internal var visitId: Swift.Int?
+                            /// Creates a new `StaysPayloadPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - address:
+                            ///   - createdAt:
+                            ///   - documentLinks:
+                            ///   - hostLinks:
+                            ///   - id:
+                            ///   - kind:
+                            ///   - name:
+                            ///   - notes:
+                            ///   - reference:
+                            ///   - sourceLinks:
+                            ///   - status:
+                            ///   - timing:
+                            ///   - tripId:
+                            ///   - updatedAt:
+                            ///   - visitId:
+                            internal init(
+                                address: Swift.String? = nil,
+                                createdAt: Foundation.Date,
+                                documentLinks: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.StaysPayloadPayload.DocumentLinksPayload,
+                                hostLinks: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.StaysPayloadPayload.HostLinksPayload,
+                                id: Swift.Int,
+                                kind: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.StaysPayloadPayload.KindPayload? = nil,
+                                name: Swift.String? = nil,
+                                notes: Swift.String,
+                                reference: Swift.String? = nil,
+                                sourceLinks: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.StaysPayloadPayload.SourceLinksPayload,
+                                status: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.StaysPayloadPayload.StatusPayload? = nil,
+                                timing: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.StaysPayloadPayload.TimingPayload,
+                                tripId: Swift.Int,
+                                updatedAt: Foundation.Date,
+                                visitId: Swift.Int? = nil
+                            ) {
+                                self.address = address
+                                self.createdAt = createdAt
+                                self.documentLinks = documentLinks
+                                self.hostLinks = hostLinks
+                                self.id = id
+                                self.kind = kind
+                                self.name = name
+                                self.notes = notes
+                                self.reference = reference
+                                self.sourceLinks = sourceLinks
+                                self.status = status
+                                self.timing = timing
+                                self.tripId = tripId
+                                self.updatedAt = updatedAt
+                                self.visitId = visitId
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case address
+                                case createdAt
+                                case documentLinks
+                                case hostLinks
+                                case id
+                                case kind
+                                case name
+                                case notes
+                                case reference
+                                case sourceLinks
+                                case status
+                                case timing
+                                case tripId
+                                case updatedAt
+                                case visitId
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.address = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .address
+                                )
+                                self.createdAt = try container.decode(
+                                    Foundation.Date.self,
+                                    forKey: .createdAt
+                                )
+                                self.documentLinks = try container.decode(
+                                    Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.StaysPayloadPayload.DocumentLinksPayload.self,
+                                    forKey: .documentLinks
+                                )
+                                self.hostLinks = try container.decode(
+                                    Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.StaysPayloadPayload.HostLinksPayload.self,
+                                    forKey: .hostLinks
+                                )
+                                self.id = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .id
+                                )
+                                self.kind = try container.decodeIfPresent(
+                                    Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.StaysPayloadPayload.KindPayload.self,
+                                    forKey: .kind
+                                )
+                                self.name = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .name
+                                )
+                                self.notes = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .notes
+                                )
+                                self.reference = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .reference
+                                )
+                                self.sourceLinks = try container.decode(
+                                    Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.StaysPayloadPayload.SourceLinksPayload.self,
+                                    forKey: .sourceLinks
+                                )
+                                self.status = try container.decodeIfPresent(
+                                    Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.StaysPayloadPayload.StatusPayload.self,
+                                    forKey: .status
+                                )
+                                self.timing = try container.decode(
+                                    Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.StaysPayloadPayload.TimingPayload.self,
+                                    forKey: .timing
+                                )
+                                self.tripId = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .tripId
+                                )
+                                self.updatedAt = try container.decode(
+                                    Foundation.Date.self,
+                                    forKey: .updatedAt
+                                )
+                                self.visitId = try container.decodeIfPresent(
+                                    Swift.Int.self,
+                                    forKey: .visitId
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "address",
+                                    "createdAt",
+                                    "documentLinks",
+                                    "hostLinks",
+                                    "id",
+                                    "kind",
+                                    "name",
+                                    "notes",
+                                    "reference",
+                                    "sourceLinks",
+                                    "status",
+                                    "timing",
+                                    "tripId",
+                                    "updatedAt",
+                                    "visitId"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/stays`.
+                        internal typealias StaysPayload = [Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.StaysPayloadPayload]
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/stays`.
+                        internal var stays: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.StaysPayload
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/trip`.
+                        internal struct TripPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/trip/createdAt`.
+                            internal var createdAt: Foundation.Date
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/trip/destination`.
+                            internal var destination: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/trip/id`.
+                            internal var id: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/trip/name`.
+                            internal var name: Swift.String?
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/trip/notes`.
+                            internal var notes: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/trip/parentId`.
+                            internal var parentId: Swift.Int?
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/trip/SourceLinksPayload`.
+                            internal struct SourceLinksPayloadPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/trip/SourceLinksPayload/label`.
+                                internal var label: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/trip/SourceLinksPayload/uri`.
+                                internal struct UriPayload: Codable, Hashable, Sendable {
+                                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/trip/SourceLinksPayload/uri/value1`.
+                                    internal var value1: Swift.String?
+                                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/trip/SourceLinksPayload/uri/value2`.
+                                    internal var value2: Swift.String?
+                                    /// Creates a new `UriPayload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - value1:
+                                    ///   - value2:
+                                    internal init(
+                                        value1: Swift.String? = nil,
+                                        value2: Swift.String? = nil
+                                    ) {
+                                        self.value1 = value1
+                                        self.value2 = value2
+                                    }
+                                    internal init(from decoder: any Swift.Decoder) throws {
+                                        var errors: [any Swift.Error] = []
+                                        do {
+                                            self.value1 = try decoder.decodeFromSingleValueContainer()
+                                        } catch {
+                                            errors.append(error)
+                                        }
+                                        do {
+                                            self.value2 = try decoder.decodeFromSingleValueContainer()
+                                        } catch {
+                                            errors.append(error)
+                                        }
+                                        try Swift.DecodingError.verifyAtLeastOneSchemaIsNotNil(
+                                            [
+                                                self.value1,
+                                                self.value2
+                                            ],
+                                            type: Self.self,
+                                            codingPath: decoder.codingPath,
+                                            errors: errors
+                                        )
+                                    }
+                                    internal func encode(to encoder: any Swift.Encoder) throws {
+                                        try encoder.encodeFirstNonNilValueToSingleValueContainer([
+                                            self.value1,
+                                            self.value2
+                                        ])
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/trip/SourceLinksPayload/uri`.
+                                internal var uri: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.TripPayload.SourceLinksPayloadPayload.UriPayload
+                                /// Creates a new `SourceLinksPayloadPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - label:
+                                ///   - uri:
+                                internal init(
+                                    label: Swift.String? = nil,
+                                    uri: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.TripPayload.SourceLinksPayloadPayload.UriPayload
+                                ) {
+                                    self.label = label
+                                    self.uri = uri
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case label
+                                    case uri
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.label = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .label
+                                    )
+                                    self.uri = try container.decode(
+                                        Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.TripPayload.SourceLinksPayloadPayload.UriPayload.self,
+                                        forKey: .uri
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "label",
+                                        "uri"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/trip/sourceLinks`.
+                            internal typealias SourceLinksPayload = [Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.TripPayload.SourceLinksPayloadPayload]
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/trip/sourceLinks`.
+                            internal var sourceLinks: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.TripPayload.SourceLinksPayload
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/trip/tagId`.
+                            internal var tagId: Swift.String?
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/trip/updatedAt`.
+                            internal var updatedAt: Foundation.Date
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/trip/when`.
+                            internal var when: Swift.String
+                            /// Creates a new `TripPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - createdAt:
+                            ///   - destination:
+                            ///   - id:
+                            ///   - name:
+                            ///   - notes:
+                            ///   - parentId:
+                            ///   - sourceLinks:
+                            ///   - tagId:
+                            ///   - updatedAt:
+                            ///   - when:
+                            internal init(
+                                createdAt: Foundation.Date,
+                                destination: Swift.String,
+                                id: Swift.Int,
+                                name: Swift.String? = nil,
+                                notes: Swift.String,
+                                parentId: Swift.Int? = nil,
+                                sourceLinks: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.TripPayload.SourceLinksPayload,
+                                tagId: Swift.String? = nil,
+                                updatedAt: Foundation.Date,
+                                when: Swift.String
+                            ) {
+                                self.createdAt = createdAt
+                                self.destination = destination
+                                self.id = id
+                                self.name = name
+                                self.notes = notes
+                                self.parentId = parentId
+                                self.sourceLinks = sourceLinks
+                                self.tagId = tagId
+                                self.updatedAt = updatedAt
+                                self.when = when
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case createdAt
+                                case destination
+                                case id
+                                case name
+                                case notes
+                                case parentId
+                                case sourceLinks
+                                case tagId
+                                case updatedAt
+                                case when
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.createdAt = try container.decode(
+                                    Foundation.Date.self,
+                                    forKey: .createdAt
+                                )
+                                self.destination = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .destination
+                                )
+                                self.id = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .id
+                                )
+                                self.name = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .name
+                                )
+                                self.notes = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .notes
+                                )
+                                self.parentId = try container.decodeIfPresent(
+                                    Swift.Int.self,
+                                    forKey: .parentId
+                                )
+                                self.sourceLinks = try container.decode(
+                                    Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.TripPayload.SourceLinksPayload.self,
+                                    forKey: .sourceLinks
+                                )
+                                self.tagId = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .tagId
+                                )
+                                self.updatedAt = try container.decode(
+                                    Foundation.Date.self,
+                                    forKey: .updatedAt
+                                )
+                                self.when = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .when
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "createdAt",
+                                    "destination",
+                                    "id",
+                                    "name",
+                                    "notes",
+                                    "parentId",
+                                    "sourceLinks",
+                                    "tagId",
+                                    "updatedAt",
+                                    "when"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/trip`.
+                        internal var trip: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.TripPayload
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/VisitsPayload`.
+                        internal struct VisitsPayloadPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/VisitsPayload/createdAt`.
+                            internal var createdAt: Foundation.Date
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/VisitsPayload/id`.
+                            internal var id: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/VisitsPayload/notes`.
+                            internal var notes: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/VisitsPayload/placeId`.
+                            internal var placeId: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/VisitsPayload/SourceLinksPayload`.
+                            internal struct SourceLinksPayloadPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/VisitsPayload/SourceLinksPayload/label`.
+                                internal var label: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/VisitsPayload/SourceLinksPayload/uri`.
+                                internal struct UriPayload: Codable, Hashable, Sendable {
+                                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/VisitsPayload/SourceLinksPayload/uri/value1`.
+                                    internal var value1: Swift.String?
+                                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/VisitsPayload/SourceLinksPayload/uri/value2`.
+                                    internal var value2: Swift.String?
+                                    /// Creates a new `UriPayload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - value1:
+                                    ///   - value2:
+                                    internal init(
+                                        value1: Swift.String? = nil,
+                                        value2: Swift.String? = nil
+                                    ) {
+                                        self.value1 = value1
+                                        self.value2 = value2
+                                    }
+                                    internal init(from decoder: any Swift.Decoder) throws {
+                                        var errors: [any Swift.Error] = []
+                                        do {
+                                            self.value1 = try decoder.decodeFromSingleValueContainer()
+                                        } catch {
+                                            errors.append(error)
+                                        }
+                                        do {
+                                            self.value2 = try decoder.decodeFromSingleValueContainer()
+                                        } catch {
+                                            errors.append(error)
+                                        }
+                                        try Swift.DecodingError.verifyAtLeastOneSchemaIsNotNil(
+                                            [
+                                                self.value1,
+                                                self.value2
+                                            ],
+                                            type: Self.self,
+                                            codingPath: decoder.codingPath,
+                                            errors: errors
+                                        )
+                                    }
+                                    internal func encode(to encoder: any Swift.Encoder) throws {
+                                        try encoder.encodeFirstNonNilValueToSingleValueContainer([
+                                            self.value1,
+                                            self.value2
+                                        ])
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/VisitsPayload/SourceLinksPayload/uri`.
+                                internal var uri: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.VisitsPayloadPayload.SourceLinksPayloadPayload.UriPayload
+                                /// Creates a new `SourceLinksPayloadPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - label:
+                                ///   - uri:
+                                internal init(
+                                    label: Swift.String? = nil,
+                                    uri: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.VisitsPayloadPayload.SourceLinksPayloadPayload.UriPayload
+                                ) {
+                                    self.label = label
+                                    self.uri = uri
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case label
+                                    case uri
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.label = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .label
+                                    )
+                                    self.uri = try container.decode(
+                                        Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.VisitsPayloadPayload.SourceLinksPayloadPayload.UriPayload.self,
+                                        forKey: .uri
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "label",
+                                        "uri"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/VisitsPayload/sourceLinks`.
+                            internal typealias SourceLinksPayload = [Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.VisitsPayloadPayload.SourceLinksPayloadPayload]
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/VisitsPayload/sourceLinks`.
+                            internal var sourceLinks: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.VisitsPayloadPayload.SourceLinksPayload
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/VisitsPayload/timing`.
+                            internal struct TimingPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/VisitsPayload/timing/arrival`.
+                                internal var arrival: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/VisitsPayload/timing/departure`.
+                                internal var departure: Swift.String?
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/VisitsPayload/timing/duration`.
+                                internal struct DurationPayload: Codable, Hashable, Sendable {
+                                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/VisitsPayload/timing/duration/max`.
+                                    internal var max: Swift.Double?
+                                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/VisitsPayload/timing/duration/min`.
+                                    internal var min: Swift.Double?
+                                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/VisitsPayload/timing/duration/unit`.
+                                    internal enum UnitPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                        case days = "days"
+                                        case weeks = "weeks"
+                                    }
+                                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/VisitsPayload/timing/duration/unit`.
+                                    internal var unit: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.VisitsPayloadPayload.TimingPayload.DurationPayload.UnitPayload
+                                    /// Creates a new `DurationPayload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - max:
+                                    ///   - min:
+                                    ///   - unit:
+                                    internal init(
+                                        max: Swift.Double? = nil,
+                                        min: Swift.Double? = nil,
+                                        unit: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.VisitsPayloadPayload.TimingPayload.DurationPayload.UnitPayload
+                                    ) {
+                                        self.max = max
+                                        self.min = min
+                                        self.unit = unit
+                                    }
+                                    internal enum CodingKeys: String, CodingKey {
+                                        case max
+                                        case min
+                                        case unit
+                                    }
+                                    internal init(from decoder: any Swift.Decoder) throws {
+                                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                                        self.max = try container.decodeIfPresent(
+                                            Swift.Double.self,
+                                            forKey: .max
+                                        )
+                                        self.min = try container.decodeIfPresent(
+                                            Swift.Double.self,
+                                            forKey: .min
+                                        )
+                                        self.unit = try container.decode(
+                                            Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.VisitsPayloadPayload.TimingPayload.DurationPayload.UnitPayload.self,
+                                            forKey: .unit
+                                        )
+                                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                            "max",
+                                            "min",
+                                            "unit"
+                                        ])
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/VisitsPayload/timing/duration`.
+                                internal var duration: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.VisitsPayloadPayload.TimingPayload.DurationPayload?
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/VisitsPayload/timing/month`.
+                                internal struct MonthPayload: Codable, Hashable, Sendable {
+                                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/VisitsPayload/timing/month/month`.
+                                    internal var month: Swift.Int
+                                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/VisitsPayload/timing/month/part`.
+                                    internal enum PartPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                        case early = "early"
+                                        case middle = "middle"
+                                        case late = "late"
+                                    }
+                                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/VisitsPayload/timing/month/part`.
+                                    internal var part: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.VisitsPayloadPayload.TimingPayload.MonthPayload.PartPayload?
+                                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/VisitsPayload/timing/month/year`.
+                                    internal var year: Swift.Int
+                                    /// Creates a new `MonthPayload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - month:
+                                    ///   - part:
+                                    ///   - year:
+                                    internal init(
+                                        month: Swift.Int,
+                                        part: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.VisitsPayloadPayload.TimingPayload.MonthPayload.PartPayload? = nil,
+                                        year: Swift.Int
+                                    ) {
+                                        self.month = month
+                                        self.part = part
+                                        self.year = year
+                                    }
+                                    internal enum CodingKeys: String, CodingKey {
+                                        case month
+                                        case part
+                                        case year
+                                    }
+                                    internal init(from decoder: any Swift.Decoder) throws {
+                                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                                        self.month = try container.decode(
+                                            Swift.Int.self,
+                                            forKey: .month
+                                        )
+                                        self.part = try container.decodeIfPresent(
+                                            Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.VisitsPayloadPayload.TimingPayload.MonthPayload.PartPayload.self,
+                                            forKey: .part
+                                        )
+                                        self.year = try container.decode(
+                                            Swift.Int.self,
+                                            forKey: .year
+                                        )
+                                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                            "month",
+                                            "part",
+                                            "year"
+                                        ])
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/VisitsPayload/timing/month`.
+                                internal var month: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.VisitsPayloadPayload.TimingPayload.MonthPayload?
+                                /// Creates a new `TimingPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - arrival:
+                                ///   - departure:
+                                ///   - duration:
+                                ///   - month:
+                                internal init(
+                                    arrival: Swift.String? = nil,
+                                    departure: Swift.String? = nil,
+                                    duration: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.VisitsPayloadPayload.TimingPayload.DurationPayload? = nil,
+                                    month: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.VisitsPayloadPayload.TimingPayload.MonthPayload? = nil
+                                ) {
+                                    self.arrival = arrival
+                                    self.departure = departure
+                                    self.duration = duration
+                                    self.month = month
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case arrival
+                                    case departure
+                                    case duration
+                                    case month
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.arrival = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .arrival
+                                    )
+                                    self.departure = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .departure
+                                    )
+                                    self.duration = try container.decodeIfPresent(
+                                        Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.VisitsPayloadPayload.TimingPayload.DurationPayload.self,
+                                        forKey: .duration
+                                    )
+                                    self.month = try container.decodeIfPresent(
+                                        Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.VisitsPayloadPayload.TimingPayload.MonthPayload.self,
+                                        forKey: .month
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "arrival",
+                                        "departure",
+                                        "duration",
+                                        "month"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/VisitsPayload/timing`.
+                            internal var timing: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.VisitsPayloadPayload.TimingPayload
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/VisitsPayload/tripId`.
+                            internal var tripId: Swift.Int
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/VisitsPayload/updatedAt`.
+                            internal var updatedAt: Foundation.Date
+                            /// Creates a new `VisitsPayloadPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - createdAt:
+                            ///   - id:
+                            ///   - notes:
+                            ///   - placeId:
+                            ///   - sourceLinks:
+                            ///   - timing:
+                            ///   - tripId:
+                            ///   - updatedAt:
+                            internal init(
+                                createdAt: Foundation.Date,
+                                id: Swift.Int,
+                                notes: Swift.String,
+                                placeId: Swift.Int,
+                                sourceLinks: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.VisitsPayloadPayload.SourceLinksPayload,
+                                timing: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.VisitsPayloadPayload.TimingPayload,
+                                tripId: Swift.Int,
+                                updatedAt: Foundation.Date
+                            ) {
+                                self.createdAt = createdAt
+                                self.id = id
+                                self.notes = notes
+                                self.placeId = placeId
+                                self.sourceLinks = sourceLinks
+                                self.timing = timing
+                                self.tripId = tripId
+                                self.updatedAt = updatedAt
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case createdAt
+                                case id
+                                case notes
+                                case placeId
+                                case sourceLinks
+                                case timing
+                                case tripId
+                                case updatedAt
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.createdAt = try container.decode(
+                                    Foundation.Date.self,
+                                    forKey: .createdAt
+                                )
+                                self.id = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .id
+                                )
+                                self.notes = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .notes
+                                )
+                                self.placeId = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .placeId
+                                )
+                                self.sourceLinks = try container.decode(
+                                    Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.VisitsPayloadPayload.SourceLinksPayload.self,
+                                    forKey: .sourceLinks
+                                )
+                                self.timing = try container.decode(
+                                    Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.VisitsPayloadPayload.TimingPayload.self,
+                                    forKey: .timing
+                                )
+                                self.tripId = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .tripId
+                                )
+                                self.updatedAt = try container.decode(
+                                    Foundation.Date.self,
+                                    forKey: .updatedAt
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "createdAt",
+                                    "id",
+                                    "notes",
+                                    "placeId",
+                                    "sourceLinks",
+                                    "timing",
+                                    "tripId",
+                                    "updatedAt"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/visits`.
+                        internal typealias VisitsPayload = [Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.VisitsPayloadPayload]
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/visits`.
+                        internal var visits: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.VisitsPayload
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - documentAssociations:
+                        ///   - events:
+                        ///   - journeyGroups:
+                        ///   - journeys:
+                        ///   - places:
+                        ///   - stays:
+                        ///   - trip:
+                        ///   - visits:
+                        internal init(
+                            documentAssociations: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.DocumentAssociationsPayload,
+                            events: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.EventsPayload,
+                            journeyGroups: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneyGroupsPayload,
+                            journeys: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayload,
+                            places: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.PlacesPayload,
+                            stays: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.StaysPayload,
+                            trip: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.TripPayload,
+                            visits: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.VisitsPayload
+                        ) {
+                            self.documentAssociations = documentAssociations
+                            self.events = events
+                            self.journeyGroups = journeyGroups
+                            self.journeys = journeys
+                            self.places = places
+                            self.stays = stays
+                            self.trip = trip
+                            self.visits = visits
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case documentAssociations
+                            case events
+                            case journeyGroups
+                            case journeys
+                            case places
+                            case stays
+                            case trip
+                            case visits
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.documentAssociations = try container.decode(
+                                Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.DocumentAssociationsPayload.self,
+                                forKey: .documentAssociations
+                            )
+                            self.events = try container.decode(
+                                Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.EventsPayload.self,
+                                forKey: .events
+                            )
+                            self.journeyGroups = try container.decode(
+                                Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneyGroupsPayload.self,
+                                forKey: .journeyGroups
+                            )
+                            self.journeys = try container.decode(
+                                Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayload.self,
+                                forKey: .journeys
+                            )
+                            self.places = try container.decode(
+                                Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.PlacesPayload.self,
+                                forKey: .places
+                            )
+                            self.stays = try container.decode(
+                                Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.StaysPayload.self,
+                                forKey: .stays
+                            )
+                            self.trip = try container.decode(
+                                Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.TripPayload.self,
+                                forKey: .trip
+                            )
+                            self.visits = try container.decode(
+                                Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.VisitsPayload.self,
+                                forKey: .visits
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "documentAssociations",
+                                "events",
+                                "journeyGroups",
+                                "journeys",
+                                "places",
+                                "stays",
+                                "trip",
+                                "visits"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/application\/json`.
+                    case json(Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileTrips_getTrip.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileTrips_getTrip.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// 200
+            ///
+            /// - Remark: Generated from `#/paths//mobile/trips/{id}/get(mobileTrips.getTrip)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.MobileTrips_getTrip.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            internal var ok: Operations.MobileTrips_getTrip.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/400/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/400/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/400/content/json/code`.
+                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case invalidCursor = "invalid_cursor"
+                            case bfm_request_invalid = "bfm.request.invalid"
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/400/content/json/code`.
+                        internal var code: Operations.MobileTrips_getTrip.Output.BadRequest.Body.JsonPayload.CodePayload
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/400/content/json/details`.
+                        internal var details: OpenAPIRuntime.OpenAPIValueContainer?
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/400/content/json/message`.
+                        internal var message: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/400/content/json/requestId`.
+                        internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/400/content/json/retryable`.
+                        internal var retryable: Swift.Bool
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - details:
+                        ///   - message:
+                        ///   - requestId:
+                        ///   - retryable:
+                        internal init(
+                            code: Operations.MobileTrips_getTrip.Output.BadRequest.Body.JsonPayload.CodePayload,
+                            details: OpenAPIRuntime.OpenAPIValueContainer? = nil,
+                            message: Swift.String,
+                            requestId: Swift.String,
+                            retryable: Swift.Bool
+                        ) {
+                            self.code = code
+                            self.details = details
+                            self.message = message
+                            self.requestId = requestId
+                            self.retryable = retryable
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case details
+                            case message
+                            case requestId
+                            case retryable
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Operations.MobileTrips_getTrip.Output.BadRequest.Body.JsonPayload.CodePayload.self,
+                                forKey: .code
+                            )
+                            self.details = try container.decodeIfPresent(
+                                OpenAPIRuntime.OpenAPIValueContainer.self,
+                                forKey: .details
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            self.requestId = try container.decode(
+                                Swift.String.self,
+                                forKey: .requestId
+                            )
+                            self.retryable = try container.decode(
+                                Swift.Bool.self,
+                                forKey: .retryable
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "details",
+                                "message",
+                                "requestId",
+                                "retryable"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/400/content/application\/json`.
+                    case json(Operations.MobileTrips_getTrip.Output.BadRequest.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileTrips_getTrip.Output.BadRequest.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileTrips_getTrip.Output.BadRequest.Body
+                /// Creates a new `BadRequest`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileTrips_getTrip.Output.BadRequest.Body) {
+                    self.body = body
+                }
+            }
+            /// 400
+            ///
+            /// - Remark: Generated from `#/paths//mobile/trips/{id}/get(mobileTrips.getTrip)/responses/400`.
+            ///
+            /// HTTP response code: `400 badRequest`.
+            case badRequest(Operations.MobileTrips_getTrip.Output.BadRequest)
+            /// The associated value of the enum case if `self` is `.badRequest`.
+            ///
+            /// - Throws: An error if `self` is not `.badRequest`.
+            /// - SeeAlso: `.badRequest`.
+            internal var badRequest: Operations.MobileTrips_getTrip.Output.BadRequest {
+                get throws {
+                    switch self {
+                    case let .badRequest(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "badRequest",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Unauthorized: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/401/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/401/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/401/content/json/code`.
+                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case bfm_auth_invalidToken = "bfm.auth.invalid_token"
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/401/content/json/code`.
+                        internal var code: Operations.MobileTrips_getTrip.Output.Unauthorized.Body.JsonPayload.CodePayload
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/401/content/json/details`.
+                        internal var details: OpenAPIRuntime.OpenAPIValueContainer?
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/401/content/json/message`.
+                        internal var message: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/401/content/json/requestId`.
+                        internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/401/content/json/retryable`.
+                        internal var retryable: Swift.Bool
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - details:
+                        ///   - message:
+                        ///   - requestId:
+                        ///   - retryable:
+                        internal init(
+                            code: Operations.MobileTrips_getTrip.Output.Unauthorized.Body.JsonPayload.CodePayload,
+                            details: OpenAPIRuntime.OpenAPIValueContainer? = nil,
+                            message: Swift.String,
+                            requestId: Swift.String,
+                            retryable: Swift.Bool
+                        ) {
+                            self.code = code
+                            self.details = details
+                            self.message = message
+                            self.requestId = requestId
+                            self.retryable = retryable
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case details
+                            case message
+                            case requestId
+                            case retryable
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Operations.MobileTrips_getTrip.Output.Unauthorized.Body.JsonPayload.CodePayload.self,
+                                forKey: .code
+                            )
+                            self.details = try container.decodeIfPresent(
+                                OpenAPIRuntime.OpenAPIValueContainer.self,
+                                forKey: .details
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            self.requestId = try container.decode(
+                                Swift.String.self,
+                                forKey: .requestId
+                            )
+                            self.retryable = try container.decode(
+                                Swift.Bool.self,
+                                forKey: .retryable
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "details",
+                                "message",
+                                "requestId",
+                                "retryable"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/401/content/application\/json`.
+                    case json(Operations.MobileTrips_getTrip.Output.Unauthorized.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileTrips_getTrip.Output.Unauthorized.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileTrips_getTrip.Output.Unauthorized.Body
+                /// Creates a new `Unauthorized`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileTrips_getTrip.Output.Unauthorized.Body) {
+                    self.body = body
+                }
+            }
+            /// 401
+            ///
+            /// - Remark: Generated from `#/paths//mobile/trips/{id}/get(mobileTrips.getTrip)/responses/401`.
+            ///
+            /// HTTP response code: `401 unauthorized`.
+            case unauthorized(Operations.MobileTrips_getTrip.Output.Unauthorized)
+            /// The associated value of the enum case if `self` is `.unauthorized`.
+            ///
+            /// - Throws: An error if `self` is not `.unauthorized`.
+            /// - SeeAlso: `.unauthorized`.
+            internal var unauthorized: Operations.MobileTrips_getTrip.Output.Unauthorized {
+                get throws {
+                    switch self {
+                    case let .unauthorized(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unauthorized",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Forbidden: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/403/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/403/content/json`.
+                    internal enum JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/403/content/json/case1`.
+                        internal struct Case1Payload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/403/content/json/case1/code`.
+                            internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case bfm_auth_deviceRevoked = "bfm.auth.device_revoked"
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/403/content/json/case1/code`.
+                            internal var code: Operations.MobileTrips_getTrip.Output.Forbidden.Body.JsonPayload.Case1Payload.CodePayload
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/403/content/json/case1/details`.
+                            internal var details: OpenAPIRuntime.OpenAPIValueContainer?
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/403/content/json/case1/message`.
+                            internal var message: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/403/content/json/case1/requestId`.
+                            internal var requestId: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/403/content/json/case1/retryable`.
+                            internal var retryable: Swift.Bool
+                            /// Creates a new `Case1Payload`.
+                            ///
+                            /// - Parameters:
+                            ///   - code:
+                            ///   - details:
+                            ///   - message:
+                            ///   - requestId:
+                            ///   - retryable:
+                            internal init(
+                                code: Operations.MobileTrips_getTrip.Output.Forbidden.Body.JsonPayload.Case1Payload.CodePayload,
+                                details: OpenAPIRuntime.OpenAPIValueContainer? = nil,
+                                message: Swift.String,
+                                requestId: Swift.String,
+                                retryable: Swift.Bool
+                            ) {
+                                self.code = code
+                                self.details = details
+                                self.message = message
+                                self.requestId = requestId
+                                self.retryable = retryable
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case code
+                                case details
+                                case message
+                                case requestId
+                                case retryable
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.code = try container.decode(
+                                    Operations.MobileTrips_getTrip.Output.Forbidden.Body.JsonPayload.Case1Payload.CodePayload.self,
+                                    forKey: .code
+                                )
+                                self.details = try container.decodeIfPresent(
+                                    OpenAPIRuntime.OpenAPIValueContainer.self,
+                                    forKey: .details
+                                )
+                                self.message = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .message
+                                )
+                                self.requestId = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .requestId
+                                )
+                                self.retryable = try container.decode(
+                                    Swift.Bool.self,
+                                    forKey: .retryable
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "code",
+                                    "details",
+                                    "message",
+                                    "requestId",
+                                    "retryable"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/403/content/json/case1`.
+                        case case1(Operations.MobileTrips_getTrip.Output.Forbidden.Body.JsonPayload.Case1Payload)
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/403/content/json/case2`.
+                        internal struct Case2Payload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/403/content/json/case2/capability`.
+                            internal var capability: Swift.String
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/403/content/json/case2/code`.
+                            internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case capabilityNotGranted = "capability_not_granted"
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/403/content/json/case2/code`.
+                            internal var code: Operations.MobileTrips_getTrip.Output.Forbidden.Body.JsonPayload.Case2Payload.CodePayload
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/403/content/json/case2/message`.
+                            internal var message: Swift.String
+                            /// Creates a new `Case2Payload`.
+                            ///
+                            /// - Parameters:
+                            ///   - capability:
+                            ///   - code:
+                            ///   - message:
+                            internal init(
+                                capability: Swift.String,
+                                code: Operations.MobileTrips_getTrip.Output.Forbidden.Body.JsonPayload.Case2Payload.CodePayload,
+                                message: Swift.String
+                            ) {
+                                self.capability = capability
+                                self.code = code
+                                self.message = message
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case capability
+                                case code
+                                case message
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.capability = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .capability
+                                )
+                                self.code = try container.decode(
+                                    Operations.MobileTrips_getTrip.Output.Forbidden.Body.JsonPayload.Case2Payload.CodePayload.self,
+                                    forKey: .code
+                                )
+                                self.message = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .message
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "capability",
+                                    "code",
+                                    "message"
+                                ])
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/403/content/json/case2`.
+                        case case2(Operations.MobileTrips_getTrip.Output.Forbidden.Body.JsonPayload.Case2Payload)
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            var errors: [any Swift.Error] = []
+                            do {
+                                self = .case1(try .init(from: decoder))
+                                return
+                            } catch {
+                                errors.append(error)
+                            }
+                            do {
+                                self = .case2(try .init(from: decoder))
+                                return
+                            } catch {
+                                errors.append(error)
+                            }
+                            throw Swift.DecodingError.failedToDecodeOneOfSchema(
+                                type: Self.self,
+                                codingPath: decoder.codingPath,
+                                errors: errors
+                            )
+                        }
+                        internal func encode(to encoder: any Swift.Encoder) throws {
+                            switch self {
+                            case let .case1(value):
+                                try value.encode(to: encoder)
+                            case let .case2(value):
+                                try value.encode(to: encoder)
+                            }
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/403/content/application\/json`.
+                    case json(Operations.MobileTrips_getTrip.Output.Forbidden.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileTrips_getTrip.Output.Forbidden.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileTrips_getTrip.Output.Forbidden.Body
+                /// Creates a new `Forbidden`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileTrips_getTrip.Output.Forbidden.Body) {
+                    self.body = body
+                }
+            }
+            /// 403
+            ///
+            /// - Remark: Generated from `#/paths//mobile/trips/{id}/get(mobileTrips.getTrip)/responses/403`.
+            ///
+            /// HTTP response code: `403 forbidden`.
+            case forbidden(Operations.MobileTrips_getTrip.Output.Forbidden)
+            /// The associated value of the enum case if `self` is `.forbidden`.
+            ///
+            /// - Throws: An error if `self` is not `.forbidden`.
+            /// - SeeAlso: `.forbidden`.
+            internal var forbidden: Operations.MobileTrips_getTrip.Output.Forbidden {
+                get throws {
+                    switch self {
+                    case let .forbidden(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "forbidden",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct NotFound: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/404/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/404/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/404/content/json/code`.
+                        internal var code: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/404/content/json/details`.
+                        internal struct DetailsPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/404/content/json/details/upstream`.
+                            internal struct UpstreamPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/404/content/json/details/upstream/pillar`.
+                                internal var pillar: Swift.String
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/404/content/json/details/upstream/status`.
+                                internal var status: Swift.Int
+                                /// Creates a new `UpstreamPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - pillar:
+                                ///   - status:
+                                internal init(
+                                    pillar: Swift.String,
+                                    status: Swift.Int
+                                ) {
+                                    self.pillar = pillar
+                                    self.status = status
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case pillar
+                                    case status
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.pillar = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .pillar
+                                    )
+                                    self.status = try container.decode(
+                                        Swift.Int.self,
+                                        forKey: .status
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "pillar",
+                                        "status"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/404/content/json/details/upstream`.
+                            internal var upstream: Operations.MobileTrips_getTrip.Output.NotFound.Body.JsonPayload.DetailsPayload.UpstreamPayload
+                            /// A container of undocumented properties.
+                            internal var additionalProperties: [String: OpenAPIRuntime.OpenAPIValueContainer]
+                            /// Creates a new `DetailsPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - upstream:
+                            ///   - additionalProperties: A container of undocumented properties.
+                            internal init(
+                                upstream: Operations.MobileTrips_getTrip.Output.NotFound.Body.JsonPayload.DetailsPayload.UpstreamPayload,
+                                additionalProperties: [String: OpenAPIRuntime.OpenAPIValueContainer] = .init()
+                            ) {
+                                self.upstream = upstream
+                                self.additionalProperties = additionalProperties
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case upstream
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.upstream = try container.decode(
+                                    Operations.MobileTrips_getTrip.Output.NotFound.Body.JsonPayload.DetailsPayload.UpstreamPayload.self,
+                                    forKey: .upstream
+                                )
+                                additionalProperties = try decoder.decodeAdditionalProperties(knownKeys: [
+                                    "upstream"
+                                ])
+                            }
+                            internal func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(
+                                    self.upstream,
+                                    forKey: .upstream
+                                )
+                                try encoder.encodeAdditionalProperties(additionalProperties)
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/404/content/json/details`.
+                        internal var details: Operations.MobileTrips_getTrip.Output.NotFound.Body.JsonPayload.DetailsPayload
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/404/content/json/message`.
+                        internal var message: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/404/content/json/requestId`.
+                        internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/404/content/json/retryable`.
+                        internal var retryable: Swift.Bool
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - details:
+                        ///   - message:
+                        ///   - requestId:
+                        ///   - retryable:
+                        internal init(
+                            code: Swift.String,
+                            details: Operations.MobileTrips_getTrip.Output.NotFound.Body.JsonPayload.DetailsPayload,
+                            message: Swift.String,
+                            requestId: Swift.String,
+                            retryable: Swift.Bool
+                        ) {
+                            self.code = code
+                            self.details = details
+                            self.message = message
+                            self.requestId = requestId
+                            self.retryable = retryable
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case details
+                            case message
+                            case requestId
+                            case retryable
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Swift.String.self,
+                                forKey: .code
+                            )
+                            self.details = try container.decode(
+                                Operations.MobileTrips_getTrip.Output.NotFound.Body.JsonPayload.DetailsPayload.self,
+                                forKey: .details
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            self.requestId = try container.decode(
+                                Swift.String.self,
+                                forKey: .requestId
+                            )
+                            self.retryable = try container.decode(
+                                Swift.Bool.self,
+                                forKey: .retryable
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "details",
+                                "message",
+                                "requestId",
+                                "retryable"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/404/content/application\/json`.
+                    case json(Operations.MobileTrips_getTrip.Output.NotFound.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileTrips_getTrip.Output.NotFound.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileTrips_getTrip.Output.NotFound.Body
+                /// Creates a new `NotFound`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileTrips_getTrip.Output.NotFound.Body) {
+                    self.body = body
+                }
+            }
+            /// 404
+            ///
+            /// - Remark: Generated from `#/paths//mobile/trips/{id}/get(mobileTrips.getTrip)/responses/404`.
+            ///
+            /// HTTP response code: `404 notFound`.
+            case notFound(Operations.MobileTrips_getTrip.Output.NotFound)
+            /// The associated value of the enum case if `self` is `.notFound`.
+            ///
+            /// - Throws: An error if `self` is not `.notFound`.
+            /// - SeeAlso: `.notFound`.
+            internal var notFound: Operations.MobileTrips_getTrip.Output.NotFound {
+                get throws {
+                    switch self {
+                    case let .notFound(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "notFound",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct TooManyRequests: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/429/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/429/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/429/content/json/code`.
+                        internal enum CodePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case rateLimited = "rate_limited"
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/429/content/json/code`.
+                        internal var code: Operations.MobileTrips_getTrip.Output.TooManyRequests.Body.JsonPayload.CodePayload
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/429/content/json/message`.
+                        internal var message: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/429/content/json/retryAfterSeconds`.
+                        internal var retryAfterSeconds: Swift.Int
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - message:
+                        ///   - retryAfterSeconds:
+                        internal init(
+                            code: Operations.MobileTrips_getTrip.Output.TooManyRequests.Body.JsonPayload.CodePayload,
+                            message: Swift.String,
+                            retryAfterSeconds: Swift.Int
+                        ) {
+                            self.code = code
+                            self.message = message
+                            self.retryAfterSeconds = retryAfterSeconds
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case message
+                            case retryAfterSeconds
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Operations.MobileTrips_getTrip.Output.TooManyRequests.Body.JsonPayload.CodePayload.self,
+                                forKey: .code
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            self.retryAfterSeconds = try container.decode(
+                                Swift.Int.self,
+                                forKey: .retryAfterSeconds
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "message",
+                                "retryAfterSeconds"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/429/content/application\/json`.
+                    case json(Operations.MobileTrips_getTrip.Output.TooManyRequests.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileTrips_getTrip.Output.TooManyRequests.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileTrips_getTrip.Output.TooManyRequests.Body
+                /// Creates a new `TooManyRequests`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileTrips_getTrip.Output.TooManyRequests.Body) {
+                    self.body = body
+                }
+            }
+            /// 429
+            ///
+            /// - Remark: Generated from `#/paths//mobile/trips/{id}/get(mobileTrips.getTrip)/responses/429`.
+            ///
+            /// HTTP response code: `429 tooManyRequests`.
+            case tooManyRequests(Operations.MobileTrips_getTrip.Output.TooManyRequests)
+            /// The associated value of the enum case if `self` is `.tooManyRequests`.
+            ///
+            /// - Throws: An error if `self` is not `.tooManyRequests`.
+            /// - SeeAlso: `.tooManyRequests`.
+            internal var tooManyRequests: Operations.MobileTrips_getTrip.Output.TooManyRequests {
+                get throws {
+                    switch self {
+                    case let .tooManyRequests(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "tooManyRequests",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct BadGateway: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/502/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/502/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/502/content/json/code`.
+                        internal var code: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/502/content/json/details`.
+                        internal struct DetailsPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/502/content/json/details/upstream`.
+                            internal struct UpstreamPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/502/content/json/details/upstream/pillar`.
+                                internal var pillar: Swift.String
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/502/content/json/details/upstream/status`.
+                                internal var status: Swift.Int
+                                /// Creates a new `UpstreamPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - pillar:
+                                ///   - status:
+                                internal init(
+                                    pillar: Swift.String,
+                                    status: Swift.Int
+                                ) {
+                                    self.pillar = pillar
+                                    self.status = status
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case pillar
+                                    case status
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.pillar = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .pillar
+                                    )
+                                    self.status = try container.decode(
+                                        Swift.Int.self,
+                                        forKey: .status
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "pillar",
+                                        "status"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/502/content/json/details/upstream`.
+                            internal var upstream: Operations.MobileTrips_getTrip.Output.BadGateway.Body.JsonPayload.DetailsPayload.UpstreamPayload
+                            /// A container of undocumented properties.
+                            internal var additionalProperties: [String: OpenAPIRuntime.OpenAPIValueContainer]
+                            /// Creates a new `DetailsPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - upstream:
+                            ///   - additionalProperties: A container of undocumented properties.
+                            internal init(
+                                upstream: Operations.MobileTrips_getTrip.Output.BadGateway.Body.JsonPayload.DetailsPayload.UpstreamPayload,
+                                additionalProperties: [String: OpenAPIRuntime.OpenAPIValueContainer] = .init()
+                            ) {
+                                self.upstream = upstream
+                                self.additionalProperties = additionalProperties
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case upstream
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.upstream = try container.decode(
+                                    Operations.MobileTrips_getTrip.Output.BadGateway.Body.JsonPayload.DetailsPayload.UpstreamPayload.self,
+                                    forKey: .upstream
+                                )
+                                additionalProperties = try decoder.decodeAdditionalProperties(knownKeys: [
+                                    "upstream"
+                                ])
+                            }
+                            internal func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(
+                                    self.upstream,
+                                    forKey: .upstream
+                                )
+                                try encoder.encodeAdditionalProperties(additionalProperties)
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/502/content/json/details`.
+                        internal var details: Operations.MobileTrips_getTrip.Output.BadGateway.Body.JsonPayload.DetailsPayload
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/502/content/json/message`.
+                        internal var message: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/502/content/json/requestId`.
+                        internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/502/content/json/retryable`.
+                        internal var retryable: Swift.Bool
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - details:
+                        ///   - message:
+                        ///   - requestId:
+                        ///   - retryable:
+                        internal init(
+                            code: Swift.String,
+                            details: Operations.MobileTrips_getTrip.Output.BadGateway.Body.JsonPayload.DetailsPayload,
+                            message: Swift.String,
+                            requestId: Swift.String,
+                            retryable: Swift.Bool
+                        ) {
+                            self.code = code
+                            self.details = details
+                            self.message = message
+                            self.requestId = requestId
+                            self.retryable = retryable
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case details
+                            case message
+                            case requestId
+                            case retryable
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Swift.String.self,
+                                forKey: .code
+                            )
+                            self.details = try container.decode(
+                                Operations.MobileTrips_getTrip.Output.BadGateway.Body.JsonPayload.DetailsPayload.self,
+                                forKey: .details
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            self.requestId = try container.decode(
+                                Swift.String.self,
+                                forKey: .requestId
+                            )
+                            self.retryable = try container.decode(
+                                Swift.Bool.self,
+                                forKey: .retryable
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "details",
+                                "message",
+                                "requestId",
+                                "retryable"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/502/content/application\/json`.
+                    case json(Operations.MobileTrips_getTrip.Output.BadGateway.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileTrips_getTrip.Output.BadGateway.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileTrips_getTrip.Output.BadGateway.Body
+                /// Creates a new `BadGateway`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileTrips_getTrip.Output.BadGateway.Body) {
+                    self.body = body
+                }
+            }
+            /// 502
+            ///
+            /// - Remark: Generated from `#/paths//mobile/trips/{id}/get(mobileTrips.getTrip)/responses/502`.
+            ///
+            /// HTTP response code: `502 badGateway`.
+            case badGateway(Operations.MobileTrips_getTrip.Output.BadGateway)
+            /// The associated value of the enum case if `self` is `.badGateway`.
+            ///
+            /// - Throws: An error if `self` is not `.badGateway`.
+            /// - SeeAlso: `.badGateway`.
+            internal var badGateway: Operations.MobileTrips_getTrip.Output.BadGateway {
+                get throws {
+                    switch self {
+                    case let .badGateway(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "badGateway",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct ServiceUnavailable: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/503/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/503/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/503/content/json/code`.
+                        internal var code: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/503/content/json/details`.
+                        internal struct DetailsPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/503/content/json/details/upstream`.
+                            internal struct UpstreamPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/503/content/json/details/upstream/pillar`.
+                                internal var pillar: Swift.String
+                                /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/503/content/json/details/upstream/status`.
+                                internal var status: Swift.Int
+                                /// Creates a new `UpstreamPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - pillar:
+                                ///   - status:
+                                internal init(
+                                    pillar: Swift.String,
+                                    status: Swift.Int
+                                ) {
+                                    self.pillar = pillar
+                                    self.status = status
+                                }
+                                internal enum CodingKeys: String, CodingKey {
+                                    case pillar
+                                    case status
+                                }
+                                internal init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self.pillar = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .pillar
+                                    )
+                                    self.status = try container.decode(
+                                        Swift.Int.self,
+                                        forKey: .status
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "pillar",
+                                        "status"
+                                    ])
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/503/content/json/details/upstream`.
+                            internal var upstream: Operations.MobileTrips_getTrip.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload.UpstreamPayload
+                            /// A container of undocumented properties.
+                            internal var additionalProperties: [String: OpenAPIRuntime.OpenAPIValueContainer]
+                            /// Creates a new `DetailsPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - upstream:
+                            ///   - additionalProperties: A container of undocumented properties.
+                            internal init(
+                                upstream: Operations.MobileTrips_getTrip.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload.UpstreamPayload,
+                                additionalProperties: [String: OpenAPIRuntime.OpenAPIValueContainer] = .init()
+                            ) {
+                                self.upstream = upstream
+                                self.additionalProperties = additionalProperties
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case upstream
+                            }
+                            internal init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self.upstream = try container.decode(
+                                    Operations.MobileTrips_getTrip.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload.UpstreamPayload.self,
+                                    forKey: .upstream
+                                )
+                                additionalProperties = try decoder.decodeAdditionalProperties(knownKeys: [
+                                    "upstream"
+                                ])
+                            }
+                            internal func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(
+                                    self.upstream,
+                                    forKey: .upstream
+                                )
+                                try encoder.encodeAdditionalProperties(additionalProperties)
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/503/content/json/details`.
+                        internal var details: Operations.MobileTrips_getTrip.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/503/content/json/message`.
+                        internal var message: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/503/content/json/requestId`.
+                        internal var requestId: Swift.String
+                        /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/503/content/json/retryable`.
+                        internal var retryable: Swift.Bool
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - code:
+                        ///   - details:
+                        ///   - message:
+                        ///   - requestId:
+                        ///   - retryable:
+                        internal init(
+                            code: Swift.String,
+                            details: Operations.MobileTrips_getTrip.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload,
+                            message: Swift.String,
+                            requestId: Swift.String,
+                            retryable: Swift.Bool
+                        ) {
+                            self.code = code
+                            self.details = details
+                            self.message = message
+                            self.requestId = requestId
+                            self.retryable = retryable
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case code
+                            case details
+                            case message
+                            case requestId
+                            case retryable
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.code = try container.decode(
+                                Swift.String.self,
+                                forKey: .code
+                            )
+                            self.details = try container.decode(
+                                Operations.MobileTrips_getTrip.Output.ServiceUnavailable.Body.JsonPayload.DetailsPayload.self,
+                                forKey: .details
+                            )
+                            self.message = try container.decode(
+                                Swift.String.self,
+                                forKey: .message
+                            )
+                            self.requestId = try container.decode(
+                                Swift.String.self,
+                                forKey: .requestId
+                            )
+                            self.retryable = try container.decode(
+                                Swift.Bool.self,
+                                forKey: .retryable
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "code",
+                                "details",
+                                "message",
+                                "requestId",
+                                "retryable"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/503/content/application\/json`.
+                    case json(Operations.MobileTrips_getTrip.Output.ServiceUnavailable.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.MobileTrips_getTrip.Output.ServiceUnavailable.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.MobileTrips_getTrip.Output.ServiceUnavailable.Body
+                /// Creates a new `ServiceUnavailable`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.MobileTrips_getTrip.Output.ServiceUnavailable.Body) {
+                    self.body = body
+                }
+            }
+            /// 503
+            ///
+            /// - Remark: Generated from `#/paths//mobile/trips/{id}/get(mobileTrips.getTrip)/responses/503`.
+            ///
+            /// HTTP response code: `503 serviceUnavailable`.
+            case serviceUnavailable(Operations.MobileTrips_getTrip.Output.ServiceUnavailable)
+            /// The associated value of the enum case if `self` is `.serviceUnavailable`.
+            ///
+            /// - Throws: An error if `self` is not `.serviceUnavailable`.
+            /// - SeeAlso: `.serviceUnavailable`.
+            internal var serviceUnavailable: Operations.MobileTrips_getTrip.Output.ServiceUnavailable {
                 get throws {
                     switch self {
                     case let .serviceUnavailable(response):

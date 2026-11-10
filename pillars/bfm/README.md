@@ -40,6 +40,10 @@ It also holds a service-account credential and one way to spend it — see
 | `GET /mobile/ego/conversations/:id`                 | One stored Ego conversation with its messages and parts.                                                                                         |
 | `POST /mobile/ego/action-batches/:batchId/decide`   | Records an action-batch decision; the phone then resumes the existing chat stream.                                                               |
 | `POST /mobile/ego/chat/stream`                      | Relays Ego's SSE stream; omitted from OpenAPI because ts-rest cannot describe event streams, and read by iOS outside the generated client.       |
+| `GET /mobile/documents/:id`                         | Original Documents-owner metadata, independently gated by `documents.read`.                                                                      |
+| `GET /mobile/documents/:id/file`                    | Original bytes; Range and representation headers preserved.                                                                                      |
+| `GET /mobile/trips`                                 | A snapshot-bound cursor page of original trip metadata.                                                                                          |
+| `GET /mobile/trips/:id`                             | Complete source snapshot with ordered route records and explicit document associations.                                                          |
 | `GET /mobile/finance/transactions`                  | One cursor-paginated page of list rows — see [The mobile shape](#the-mobile-shape).                                                              |
 | `GET /mobile/finance/accounts`                      | One cursor-paginated page of accounts after search and filters — see [The mobile shape](#the-mobile-shape).                                      |
 | `GET /mobile/finance/summary`                       | Cost-of-credit totals for one window, by account, month and fee tag.                                                                             |
@@ -503,6 +507,52 @@ served, which stays a valid position in the data no matter what lands at the
 head of the list mid-scroll. Opacity is what let that change without touching
 a handset — a cursor of the old offset shape simply fails to decode.
 
+### Trips source snapshots
+
+`trips.read` gates both Trips routes. Operator devices tracking the default
+grant receive it through the existing pairing/refresh capability resolution;
+explicit grants and guest grants remain unchanged. Bootstrap advertises the
+`trips` feature with the Trips pillar's actual reachability.
+
+The list defaults to 25 records and uses the shared mobile page-size contract.
+Its opaque cursor is bound to the complete producer snapshot. A source change
+between pages returns `400 invalid_cursor`; restart the list rather than append
+potentially skipped or repeated rows. The producer currently returns an
+unpaginated list, so BFM reads it completely before paging.
+
+Detail retains source identities and producer visit/leg order. Endpoint local
+clocks and zones remain independent optional facts; date-only stays never gain
+an inferred clock. When remains opaque. Intention, arrangement and purchase
+stay independent, and journey groups retain explicit current/alternative IDs.
+Event date bounds, clocks and zone also remain independent; BFM creates no
+midnight or UTC fallback. Visit duration accepts either supplied bound and a
+required unit, preserving one-sided ranges without defaults. Host, venue,
+organiser and document source links remain opaque. Unreferenced global places are omitted. Explicit `documentAssociations` retain
+association and Documents-original identities separately; trip/visit/journey/stay/event
+targets must belong to this snapshot. Shared originals retain every explicit crosslink.
+The aggregate does not resolve metadata or assert file/device availability.
+
+Every required collection must succeed. Missing referenced identities,
+duplicate IDs or wrong trip/journey ownership produce a contract mismatch;
+unavailable sources never become empty successful arrays. The exact upstream
+service-account grants are listed in [the federation client documentation](src/api/pillars/README.md).
+
+### Documents originals
+
+`documents.read` independently gates original metadata and bytes. It is part of
+the authoritative operator default capability catalogue; explicit and guest
+grants do not widen. `trips.read` alone cannot read an original. The identity is
+Documents' original ID, not an Inventory link or a Trips association ID.
+Metadata is the owner's `id`, `title`, `created`, `originalFileName` and
+`thumbnailUrl`, with no invented MIME, size or device/offline availability.
+
+The raw file route calls Documents' original download directly. It forwards
+`Range`, streams `200`/`206`/`416` unchanged, and preserves content type, length,
+disposition, range, accept-ranges, ETag and Last-Modified. Owner `404` remains
+missing and `412` remains unconfigured; owner authorization faults become
+`502`, and unreachable sources become `503`. These reads never report a
+successful download or cached copy merely because metadata resolves.
+
 ## The mobile write
 
 `POST /mobile/purchases/receipts` is the only route on this pillar that is not
@@ -724,7 +774,7 @@ and send it in that header, against the registry's admin surface reachable
 externally through the shell proxy:
 
 ```bash
-curl -sS -X POST https://pops.local/registry-api/service-accounts -H 'Content-Type: application/json' -H "cf-access-jwt-assertion: $ACCESS_JWT" -d '{"name":"bfm","scopes":["finance.transactions","finance.transactionHistory","finance.transactionAttachments","finance.accounts","finance.checkpoints","finance.delegatedSubject","purchases.purchase","purchases.search","purchases.receipt","inventory.sync","inventory.types.catalogue","inventory.types.read","inventory.codes","inventory.media","inventory.documents","inventory.paperless.status","inventory.items.getParts","inventory.items.addPart","inventory.items.removePart","barcode.lookup","cerebrum.ego"]}'
+curl -sS -X POST https://pops.local/registry-api/service-accounts -H 'Content-Type: application/json' -H "cf-access-jwt-assertion: $ACCESS_JWT" -d '{"name":"bfm","scopes":["finance.transactions","finance.transactionHistory","finance.transactionAttachments","finance.accounts","finance.checkpoints","finance.delegatedSubject","purchases.purchase","purchases.search","purchases.receipt","inventory.sync","inventory.types.catalogue","inventory.types.read","inventory.codes","inventory.media","inventory.documents","inventory.paperless.status","inventory.items.getParts","inventory.items.addPart","inventory.items.removePart","barcode.lookup","cerebrum.ego","documents.paperless.get","documents.paperless.download","trips.trips.list","trips.trips.get","trips.places.list","trips.visits.list","trips.journeys.list","trips.journeyLegs.list","trips.journeyGroups.list","trips.stays.list","trips.events.list","trips.documentAssociations.list"]}'
 ```
 
 Two deployment shapes let a bare `curl` through, which is why this can work on

@@ -2,6 +2,7 @@ import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createInstance } from 'i18next';
 import { I18nextProvider } from 'react-i18next';
+import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import enAU from '../locales/en-AU.json';
@@ -89,13 +90,15 @@ function preview(source: Trip, visits: Visit[] | undefined, allTrips: Trip[] = [
   const onBack = vi.fn();
   render(
     <I18nextProvider i18n={translation}>
-      <TripPreview
-        trip={source}
-        visits={visits}
-        allTrips={allTrips}
-        places={places}
-        onBack={onBack}
-      />
+      <MemoryRouter>
+        <TripPreview
+          trip={source}
+          visits={visits}
+          allTrips={allTrips}
+          places={places}
+          onBack={onBack}
+        />
+      </MemoryRouter>
     </I18nextProvider>
   );
   return onBack;
@@ -160,7 +163,7 @@ describe('TripRows', () => {
 });
 
 describe('TripPreview', () => {
-  it('renders only selected source facts and offers only the working back action', async () => {
+  it('renders only selected source facts and opens the selected calendar and offers the working back action', async () => {
     const onBack = preview(
       trip(4, {
         name: 'Holiday',
@@ -183,7 +186,14 @@ describe('TripPreview', () => {
         .map((item) => item.textContent)
     ).toEqual(['LyonVisit10 Nov 2026 → 12 Nov 2026', 'ParisVisit… → …']);
     expect(screen.queryByText('Unrelated')).not.toBeInTheDocument();
-    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Calendar' })).toHaveAttribute(
+      'href',
+      '/trips/4/calendar'
+    );
+    expect(screen.getByRole('link', { name: 'Documents' })).toHaveAttribute(
+      'href',
+      '/trips/4/documents'
+    );
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
     expect(screen.getAllByRole('button')).toHaveLength(1);
     await userEvent.click(screen.getByRole('button', { name: 'Trips' }));
