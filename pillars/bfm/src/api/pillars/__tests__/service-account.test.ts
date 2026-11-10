@@ -140,6 +140,14 @@ describe('the granted scopes', () => {
       'inventory.items.removePart',
       'barcode.lookup',
       'cerebrum.ego',
+      'trips.trips.list',
+      'trips.trips.get',
+      'trips.places.list',
+      'trips.visits.list',
+      'trips.journeys.list',
+      'trips.journeyLegs.list',
+      'trips.journeyGroups.list',
+      'trips.stays.list',
     ]);
   });
 

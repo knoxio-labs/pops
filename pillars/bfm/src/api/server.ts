@@ -82,6 +82,7 @@ import { createPillarGateway } from './pillars/gateway.js';
 import { configureBfmServerSdk } from './pillars/sdk-config.js';
 import { createMobilePurchasesClient } from './purchases/client.js';
 import { createRateLimiter, PAIRING_CODE_RATE_WINDOW_MS } from './rate-limit.js';
+import { createMobileTripsClient } from './trips/client.js';
 
 // Before the port, the database, or anything that resolves a credential.
 // A `*_FILE` variable pointing at a file this process cannot open makes every
@@ -121,6 +122,7 @@ const purchases = createMobilePurchasesClient(gateway);
 const contacts = createMobileContactsClient(gateway);
 const barcode = createMobileBarcodeClient(gateway);
 const ego = createMobileEgoClient(gateway);
+const trips = createMobileTripsClient(gateway);
 const egoStream = createEgoStreamClient();
 
 // Its own gateway, not the shared one above: this is the one leg that must
@@ -173,6 +175,7 @@ const app = createBfmApiApp(
     contacts,
     barcode,
     ego,
+    trips,
     egoStream,
     barcodeLogger: {
       info: (message, context) => {
