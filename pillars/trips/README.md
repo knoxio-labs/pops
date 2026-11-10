@@ -75,6 +75,41 @@ An event referenced by an active capture association or Explore membership
 returns `409` until those relations are explicitly removed.
 Event operations use the projected `trips.events` scope.
 
+Meeting plans are independent Trips-owned records. `GET /trips/:tripId/meeting-plans`
+lists active plans in identity order; `GET .../:id` reads one active source.
+`POST .../operations` accepts an `operationId` UUID and a typed `create`, `update`,
+`remove` or `undo` command. Creation requires a Contacts-issued
+`pops:contacts/contact/<opaque-id>` reference; subsequent edits may clear it.
+Only new or changed nonnull references call Contacts `entities.reference` through
+authenticated discovery. Contacts resolves historical IDs and supplies the stored
+canonical URI. Trips never constructs identity from a name/type, copies Contact
+facts, or rewrites retained references during reads. Unknown selections return 400;
+unverifiable selections return retryable 503 without a source write. Owner
+responses whose canonical ID disagrees with their URI are unverifiable and
+create neither a source nor an operation receipt. Retained
+unavailable references remain editable and clearable without Contacts access.
+The outbound Trips account therefore needs the Contacts `contacts.entities` scope.
+
+A nullable explicit `visitId` identifies an occurrence, including repeated visits
+to the same place. New or changed links must belong to the owning trip; retained
+unavailable links survive unrelated edits and may be cleared. Meeting title and
+notes are independent text. Intention (`Considering`, `Planned`) and agreement
+(`Not agreed`, `Agreed`) are independent choices, initially Considering and Not
+agreed. Independent nullable `startDate`/`endDate` retain valid calendar dates,
+including partial and reversed bounds. They imply no clocks, Contact availability,
+route insertion, agreement, booking or purchase.
+
+Updates and removals require `expectedRevision`. Immediate transactions recheck
+that exact source revision and newly selected Visit ownership after external
+Contact verification; stale revisions return 409. Revisions stop at JavaScript's
+safe integer boundary. Removal retains an internal source tombstone, deleting no
+Contact or Visit. Undo names a confirmed operation and restores only its untouched
+outcome. Proven own LIFO Undo advances a separate predecessor guard without
+rewriting historical receipt snapshots; intervening foreign writes block Undo.
+Exact operation-ID retries return the immutable receipt plus current source,
+Undo state and a replay flag, with no external revalidation or duplicate mutation.
+Reusing the UUID for a different request returns 409. All operations use the
+projected `trips.meetingPlans` scope.
 `GET /trips/:tripId/capture-workspace` returns captures, Ideas, organisation
 associations, Explore memberships, Events, Journeys and Stays in one SQLite read transaction.
 Captures retain immutable verbatim `originalText` and opaque `originalUrl`;
