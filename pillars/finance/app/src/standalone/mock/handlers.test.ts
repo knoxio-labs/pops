@@ -155,6 +155,31 @@ describe('contacts reference', () => {
   );
 });
 
+describe('contacts reference', () => {
+  it.each([CONTACT_ENTITIES[0]?.id, 'missing-contact'])(
+    'resolves %s without inventing contacts',
+    async (id) => {
+      expect(id).toBeDefined();
+      const handler = contactsHandlers['GET /entities/{id}/reference'];
+      expect(handler).toBeDefined();
+      if (handler === undefined || id === undefined)
+        throw new Error('Contact fixture or handler missing');
+      const answer = await handler({
+        method: 'GET',
+        path: `/entities/${id}/reference`,
+        params: { id },
+        query: new URLSearchParams(),
+        body: undefined,
+      });
+      if (id === 'missing-contact') {
+        expect(answer.status).toBe(404);
+      } else {
+        expect(answer.body).toEqual({ canonicalId: id, uri: `pops:contacts/contact/${id}` });
+      }
+    }
+  );
+});
+
 describe('contacts, absent', () => {
   it.each(Object.entries(contactsUnavailableHandlers))(
     '%s answers pillar-unavailable under a 503',
@@ -170,4 +195,26 @@ describe('contacts, absent', () => {
       expect(answer.body).toMatchObject({ kind: 'pillar-unavailable', moduleId: 'contacts' });
     }
   );
+});
+
+it.each([
+  'GET /entities/{id}/facts',
+  'POST /entities/{id}/facts/changes',
+  'POST /entities/{id}/facts/changes/{operation_id}/undo',
+])('answers %s without inventing person facts for merchant fixtures', async (operation) => {
+  const handler = contactsHandlers[operation];
+  const entity = CONTACT_ENTITIES[0];
+  if (!handler || !entity) throw new Error('Missing handler or merchant fixture');
+  const answer = await handler({
+    method: 'GET',
+    path: '/',
+    params: { id: entity.id },
+    query: new URLSearchParams(),
+    body: undefined,
+  });
+  expect(answer.status).toBe(400);
+  expect(answer.body).toMatchObject({
+    code: 'contacts.request.invalid',
+    message: 'Entity must be a person',
+  });
 });

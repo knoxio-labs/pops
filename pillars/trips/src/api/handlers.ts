@@ -4,6 +4,7 @@ import { getPillarRegistry } from './pillars/registry.js';
 import type { PillarRegistryEntry } from '@pops/types';
 
 import type { OpenedTripsDb } from '../db/index.js';
+import type { ContactReferenceResolver } from './rest/contact-reference.js';
 import type { MeetingContactResolver } from './rest/meeting-plan-contact.js';
 
 /** Dependencies for the trips pillar's liveness and roster probes. */
@@ -15,6 +16,8 @@ export interface TripsApiDeps {
   readonly selfBaseUrl: string;
   /** Complete authenticated identity snapshot override; undefined means unavailable, never empty. */
   readonly fetchSharedTagIds?: () => Promise<readonly string[] | undefined>;
+  /** Contacts owner-proof seam; retained identities, self and clear never call it. */
+  readonly resolveContactReference?: ContactReferenceResolver;
 }
 
 /** JSON shape returned by `GET /health`. */

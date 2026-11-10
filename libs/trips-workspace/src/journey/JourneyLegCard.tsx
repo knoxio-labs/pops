@@ -1,6 +1,6 @@
-import { GripVertical } from 'lucide-react';
+import { GripVertical, Trash2 } from 'lucide-react';
 
-import { TextInput, cn } from '@pops/ui';
+import { Button, TextInput, cn } from '@pops/ui';
 
 import { JourneyEndpointFields } from './JourneyEndpointFields';
 import { JourneyLegMetadata, JourneyLegStatus } from './JourneyLegFields';
@@ -35,9 +35,17 @@ export function JourneyLegCard({
     >
       <header className="flex items-center gap-2">
         <GripVertical className="size-4" aria-hidden />
-        <h2 className="text-sm font-semibold">
+        <h2 className="flex-1 text-sm font-semibold">
           {leg.mode ?? 'Transport'} · {index + 1}
         </h2>
+        <Button
+          size="icon"
+          variant="ghost"
+          aria-label={`Remove transport leg ${index + 1}`}
+          onClick={() => void editor.run({ kind: 'remove', id: leg.id })}
+        >
+          <Trash2 className="size-4" aria-hidden />
+        </Button>
       </header>
       <TextInput
         label="Transport mode"

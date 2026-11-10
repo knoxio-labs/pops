@@ -1,13 +1,15 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
 
 import { usePersonWrites } from './usePersonWrites';
 
-import type { ContactPointInput } from '../contacts-api/types.gen';
-import type { PersonDraft, PersonGateway, PersonSnapshot } from './contracts';
+import type { PersonGateway, PersonSnapshot } from './contracts';
+import type { PersonDraft } from './draft';
 
-/** Load the person without background replacement of unsaved edits and apply acknowledged write receipts. */
+/** Load atomic facts without replacing unsaved drafts and apply only acknowledged mutation or undo receipts. */
 export function usePerson(id: string, gateway: PersonGateway) {
   const key = ['contacts-person', id];
+  const [ownOperations, setOwnOperations] = useState<string[]>([]);
   const client = useQueryClient();
   const query = useQuery({
     queryKey: key,
@@ -27,6 +29,10 @@ export function usePerson(id: string, gateway: PersonGateway) {
     if (result.isError) writes.setError(result.error);
     if (result.isSuccess) writes.reset();
   }
+  const data = query.data;
+  const undoable = data?.operations.findLast(
+    (operation) => operation.canUndo && ownOperations.includes(operation.id)
+  );
   return {
     ...query,
     error: writes.error ?? query.error,
@@ -34,20 +40,30 @@ export function usePerson(id: string, gateway: PersonGateway) {
     uncertain: writes.uncertain,
     success: writes.success,
     reload,
-    save: (draft: PersonDraft) =>
+    canUndo: undoable !== undefined,
+    save: (draft: PersonDraft, before?: PersonSnapshot) =>
       writes.write(
-        (personId) => gateway.save(personId, draft),
-        (previous, entity) => ({ ...previous, entity })
+        (personId) => {
+          if (!data) throw new Error('Person not loaded');
+          return gateway.save(personId, draft, before ?? data);
+        },
+        (previous, receipt) => {
+          setOwnOperations((operations) => [...operations, receipt.operation.id]);
+          return { ...previous, ...receipt.data };
+        }
       ),
-    addPoint: (point: ContactPointInput) =>
+    undo: () =>
       writes.write(
-        (personId) => gateway.addPoint(personId, point),
-        (previous, receipt) => ({ ...previous, points: [...previous.points, receipt] })
-      ),
-    addAddress: (value: string) =>
-      writes.write(
-        (personId) => gateway.addAddress(personId, value),
-        (previous, receipt) => ({ ...previous, addresses: [...previous.addresses, receipt] })
+        (personId) => {
+          if (!data || !undoable) throw new Error('No person operation to undo');
+          return gateway.undo(personId, undoable.id, data.version);
+        },
+        (previous, receipt) => {
+          setOwnOperations((operations) =>
+            operations.filter((operation) => operation !== receipt.operation.undoneOperationId)
+          );
+          return { ...previous, ...receipt.data };
+        }
       ),
   };
 }

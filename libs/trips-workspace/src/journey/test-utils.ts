@@ -57,7 +57,7 @@ export function journeyTransport(
     readWait?: { path: string; promise: Promise<void> };
   } = {}
 ) {
-  let source = options.source ?? { journey: sourceJourney(), legs: [sourceLeg()] };
+  let source = options.source ?? { legRevision: 0, journey: sourceJourney(), legs: [sourceLeg()] };
   const responses = [...(options.writes ?? [])];
   let sourceFailure = options.sourceFailure;
   let writeWait = options.writeWait;
@@ -112,7 +112,8 @@ export function journeyTransport(
             },
           ],
         };
-      else if (path.endsWith('/legs')) response = { legs: current.legs };
+      else if (path.endsWith('/legs'))
+        response = { revision: current.legRevision, legs: current.legs };
       else response = current.journey;
       if (Number.isFinite(requestedId) && current.journey.id !== requestedId) {
         status = 404;

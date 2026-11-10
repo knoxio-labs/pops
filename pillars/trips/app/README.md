@@ -1,6 +1,6 @@
 # Trips browser app
 
-The shell loads `dist/remote/trips.js` and `trips.css` from the Trips manifest. The app exposes the grouped home, trip metadata settings, and route adapters for the `@pops/trips-workspace` stay, journey, event, and options-first decision editors. Event detail is registered at `:tripId/events/:eventId`; invalid route identities fail before making source requests. It owns no database and uses generated Trips and Tags clients at the shell's authenticated same-origin proxy paths.
+The shell loads `dist/remote/trips.js` and `trips.css` from the Trips manifest. The app exposes the grouped home, trip metadata settings, a trip calendar, and route adapters for the `@pops/trips-workspace` visit, stay, journey, event, and options-first decision editors. Event detail is registered at `:tripId/events/:eventId`; invalid route identities fail before making source requests. The `/trips/:tripId/documents` route provides typed document associations and owner uploads. It owns no database and uses generated Trips and Tags clients at the shell's authenticated same-origin proxy paths.
 
 Home groups use the first ordered visit's arrival and the last visit's departure, relative to the viewer's local calendar day. Missing, invalid, or contradictory outer dates remain in Other. Trip titles use trimmed custom name, then trimmed destination, then the translated Trip label. `when` is opaque source text and never supplies route dates.
 
@@ -38,3 +38,19 @@ independent meeting edits, durable retry and confirmed source Undo. It imports
 no Contacts implementation into this app. The meeting persistence regression
 drives the public headless editor through the generated HTTP client and the
 owning SQLite producer, including a lost response after a committed create.
+
+## Visit sources
+
+`/trips/:tripId/visits/:visitId` mounts `VisitWorkspace` with literal source identities.
+The selected-trip preview links each distinct visit occurrence to that route.
+Visit navigation replaces the source URL; accommodation links open the existing stay route.
+Timing edits and Undo write only the visit, guarded by its confirmed source revision.
+
+## Calendar
+
+The selected trip preview links to `/trips/:tripId/calendar`. Its exported calendar
+workspace reads independent journey, stay and event sources through the generated
+Trips transport, requires an explicit display zone, and opens exact owning editor
+routes. Unavailable collections render retryable errors, retaining a prior complete
+read during refresh failures. Calendar date bounds remain separate from resolved
+source clocks; the optional journey window uses the owning timing endpoint.

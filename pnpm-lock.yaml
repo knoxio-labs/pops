@@ -441,6 +441,9 @@ importers:
       '@hey-api/client-fetch':
         specifier: ^0.13.1
         version: 0.13.1(@hey-api/openapi-ts@0.99.0(magicast@0.5.4)(typescript@6.0.3))
+      '@js-temporal/polyfill':
+        specifier: ^0.5.1
+        version: 0.5.1
       '@pops/pillar-sdk':
         specifier: workspace:*
         version: link:../sdk
@@ -450,6 +453,9 @@ importers:
       '@tanstack/react-query':
         specifier: 5.102.8
         version: 5.102.8(react@19.3.0)
+      i18next:
+        specifier: ^26.4.2
+        version: 26.4.2(typescript@6.0.3)
       lucide-react:
         specifier: ^1.45.0
         version: 1.46.0(react@19.3.0)
@@ -459,6 +465,9 @@ importers:
       react-dom:
         specifier: ^19.3.0
         version: 19.3.0(react@19.3.0)
+      react-i18next:
+        specifier: ^17.0.13
+        version: 17.0.13(i18next@26.4.2(typescript@6.0.3))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
     devDependencies:
       '@hey-api/openapi-ts':
         specifier: ^0.99.0

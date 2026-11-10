@@ -4,7 +4,9 @@ import { JourneySchema } from '../../contract/journey-schemas.js';
 import { journeys, journeyLegs, journeyGroupMembers } from '../schema.js';
 import { deleteDocumentAssociationsForTarget } from './document-association-cleanup.js';
 import { getTrip } from './records.js';
+import { deleteResponsibilityForTarget } from './responsibility-cleanup.js';
 import { requireOwnedRecord, TripsServiceError } from './source-record.js';
+import { assertSourceUnreferenced } from './source-references.js';
 
 import type { Journey, JourneyInput } from '../../contract/journey-schemas.js';
 import type { TripsDb } from '../index.js';
@@ -77,6 +79,7 @@ export function deleteJourney(db: TripsDb, tripId: number, id: number): void {
   db.transaction(
     (tx) => {
       getJourney(tx, tripId, id);
+      assertSourceUnreferenced(tx, tripId, { kind: 'journey', id });
       if (
         tx
           .select({ groupId: journeyGroupMembers.groupId })
@@ -87,6 +90,7 @@ export function deleteJourney(db: TripsDb, tripId: number, id: number): void {
       )
         throw new TripsServiceError('journey_grouped');
       deleteDocumentAssociationsForTarget(tx, tripId, 'journey', id);
+      deleteResponsibilityForTarget(tx, tripId, 'journey', id);
       tx.delete(journeyLegs).where(eq(journeyLegs.journeyId, id)).run();
       tx.delete(journeys)
         .where(and(eq(journeys.tripId, tripId), eq(journeys.id, id)))

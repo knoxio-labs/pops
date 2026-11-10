@@ -14,16 +14,20 @@
     "dev": "vite --host 127.0.0.1",
     "typecheck": "node ../../scripts/require-built-graph.mjs && tsc --noEmit",
     "test": "node ../../scripts/require-built-graph.mjs && vitest run",
-    "generate:trips-client": "openapi-ts -o src/trips-api"
+    "generate:trips-client": "openapi-ts -o src/trips-api",
+    "generate:documents-client": "openapi-ts -f openapi-ts.documents.config.ts -o src/documents-api"
   },
   "dependencies": {
     "@hey-api/client-fetch": "^0.13.1",
+    "@js-temporal/polyfill": "^0.5.1",
     "@pops/pillar-sdk": "workspace:*",
     "@pops/ui": "workspace:*",
     "@tanstack/react-query": "5.102.8",
+    "i18next": "^26.4.2",
     "lucide-react": "^1.45.0",
     "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "react-dom": "^19.3.0",
+    "react-i18next": "^17.0.13"
   },
   "devDependencies": {
     "@hey-api/openapi-ts": "^0.99.0",
