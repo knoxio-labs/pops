@@ -423,12 +423,18 @@ rejected link creates a new intent and removes only its own prepared entry. The 
 receipt remains retained. Discarded link drafts require an explicit restore, which adds
 only the selected canonical link to current edits without restoring discarded fields.
 
-`PeopleWorkspace({ tripId, text, contacts?, client? })` implements
+`PeopleWorkspace({ tripId, meetingId?, text, contacts?, client? })` implements
 the approved People grouping by persisted Visit occurrence order. Repeated places
 keep separate occurrence identities; unassociated and unavailable Visit references
 remain separate. Contact identity, title, notes, intention, agreement and date-only
 bounds are independent source fields. Missing and reversed dates remain editable
 facts; no availability, agreement or route placement is inferred.
+
+An optional canonical `meetingId` focuses the existing row within the exact owning
+trip and API origin. An unavailable or foreign-trip ID
+never falls back to another meeting. Omitting it retains the full grouped workspace.
+Unsaved title, notes and date text belong to the retained editor session, including
+across context unmount/remount; changing the selection does not create another editor.
 
 The host injects the SDK's opaque Contacts chooser capability. Each explicit choice
 retains its owner session across close/reopen and route remount, including unknown
@@ -443,6 +449,14 @@ retain the same command across route remounts and retry; uncertain creates canno
 be released by reload. Definitively rejected writes require an explicit successful
 canonical reload before another command. Undo targets only confirmed own receipts
 in LIFO order, including source removal and restoration of the same identity.
+Every write, retry and Undo checks the captured transport's current API origin at
+point of use. A changed origin sends nothing and retains the exact command and
+receipt history; restoring the original origin permits explicit exact retry.
+The generated default transport uses its actual configured origin as well.
+Meeting queries and optional Trip/Visit/Place context retain that same immutable
+view owner. Reads check it before dispatch and after completion; a changed transport
+cannot seed another owner's source into the retained query cache or editor. Explicit
+reload uses the captured editor owner too. Failures preserve the last good source.
 `@pops/trips-workspace/people-client` exports this headless editor and generated
 transport operations for the owning app's HTTP/SQLite integration regression.
 `VisitWorkspace({ tripId, visitId, client?, onViewVisit?, onViewStay?, onViewEvent? })`

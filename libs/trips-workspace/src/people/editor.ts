@@ -2,12 +2,13 @@ import { ApiError } from '@pops/pillar-sdk/client';
 
 import type { MeetingOperation, MeetingPlan, MeetingResult } from './types';
 
-/** Stable state of serialized source mutations, retained failures and confirmed own Undo. */
+/** Stable state of serialized mutations, retained unsaved fields/failures and confirmed own Undo. */
 export interface PeopleEditorSnapshot {
   readonly plans: MeetingPlan[];
   readonly busy: boolean;
   readonly failure: { operation: MeetingOperation; error: unknown } | null;
   readonly canUndo: boolean;
+  readonly drafts: ReadonlyMap<string, string>;
 }
 /** Revision-guarded meeting editor; retries never manufacture a new create or borrow a foreign revision. */
 export class PeopleEditor {
@@ -20,7 +21,7 @@ export class PeopleEditor {
     initial: MeetingPlan[],
     private apply: (operation: MeetingOperation) => Promise<MeetingResult>
   ) {
-    this.state = { plans: initial, busy: false, failure: null, canUndo: false };
+    this.state = { plans: initial, busy: false, failure: null, canUndo: false, drafts: new Map() };
   }
 
   /** Subscribe to a stable immutable editor snapshot. */
@@ -62,6 +63,19 @@ export class PeopleEditor {
     this.publish({});
   };
 
+  /** Retain exact unsaved field text in this source session until confirmation or explicit discard. */
+  setDraft = (key: string, value: string | null): void => {
+    const drafts = new Map(this.state.drafts);
+    if (value === null) {
+      drafts.delete(key);
+      this.dirty.delete(key);
+    } else {
+      drafts.set(key, value);
+      this.dirty.add(key);
+    }
+    this.publish({ drafts });
+  };
+
   /** Explicitly discard a definitively rejected command after a successful canonical read; uncertain writes stay fenced. */
   reload = (plans: MeetingPlan[]): void => {
     const error = this.state.failure?.error;
@@ -77,7 +91,8 @@ export class PeopleEditor {
     )
       return;
     this.history = [];
-    this.publish({ plans, failure: null });
+    this.dirty.clear();
+    this.publish({ plans, failure: null, drafts: new Map() });
   };
 
   /** Submit a new explicit command once; pending or failed operations prevent another write. */

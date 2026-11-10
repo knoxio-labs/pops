@@ -1,5 +1,5 @@
 import { Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { Button } from '@pops/ui';
 
@@ -7,7 +7,7 @@ import { MeetingContact } from './MeetingContact';
 import { MeetingFields } from './MeetingFields';
 import { PeopleChooser } from './PeopleChooser';
 
-import type { JSX } from 'react';
+import type { JSX, RefObject } from 'react';
 
 import type { Place, Visit } from '../stay/types';
 import type { PeopleEditor, PeopleEditorSnapshot } from './editor';
@@ -31,6 +31,9 @@ export function MeetingCard({
   places,
 }: MeetingCardProps): JSX.Element {
   const [choosing, setChoosing] = useState(false);
+  const card = useMeetingFocus(
+    workspace.meetingId === plan.id && workspace.tripId === plan.tripId && !plan.removed
+  );
   const pending = state.failure?.operation.command;
   const draft =
     pending?.kind === 'update' && pending.id === plan.id ? { ...plan, ...pending.patch } : plan;
@@ -39,6 +42,8 @@ export function MeetingCard({
   const text = workspace.text;
   return (
     <article
+      ref={card}
+      tabIndex={-1}
       aria-label={plan.title || `${text('planTitle')} ${plan.id}`}
       className="min-w-0 rounded-xl border border-border bg-card p-4"
     >
@@ -76,6 +81,14 @@ export function MeetingCard({
       />
     </article>
   );
+}
+
+function useMeetingFocus(selected: boolean): RefObject<HTMLElement | null> {
+  const card = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (selected) card.current?.focus();
+  }, [selected]);
+  return card;
 }
 
 function RemoveMeeting({

@@ -1,16 +1,18 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 
-import { loadMeetingPlans, peopleQueryKey } from './api';
+import { currentSourceOwner, sourceOwner } from '../arrangements/source-owner';
+import { loadOwnedMeetingPlans, peopleOwnerQueryKey, peopleQueryKey } from './api';
 import { PeopleChooser } from './PeopleChooser';
 import { PeopleControls } from './PeopleControls';
 import { PeopleGroups } from './PeopleGroups';
 import { PeopleProblems, SourceFailure } from './PeopleProblems';
-import { peopleSession } from './session';
+import { ownedPeopleSession } from './session';
 import { usePeopleContext } from './use-people-context';
 
 import type { JSX } from 'react';
 
+import type { SourceOwner } from '../arrangements/source-owner';
 import type { MeetingPlan, PeopleWorkspaceProps } from './types';
 
 /** Source-backed People workspace grouped by exact Visit occurrence and persisted route order. */
@@ -24,9 +26,10 @@ export function PeopleWorkspace(props: PeopleWorkspaceProps): JSX.Element {
   );
 }
 function PeopleSource(props: PeopleWorkspaceProps): JSX.Element {
+  const [owner] = useState(() => sourceOwner(props));
   const source = useQuery({
-    queryKey: peopleQueryKey(props),
-    queryFn: () => loadMeetingPlans(props),
+    queryKey: peopleOwnerQueryKey(owner),
+    queryFn: () => loadOwnedMeetingPlans(owner),
     retry: false,
   });
   if (source.data === undefined)
@@ -48,15 +51,19 @@ function PeopleSource(props: PeopleWorkspaceProps): JSX.Element {
       {source.isError && (
         <SourceFailure error={source.error} text={props.text} retry={() => void source.refetch()} />
       )}
-      <PeopleSession {...props} initial={source.data} />
+      <PeopleSession {...props} owner={owner} initial={source.data} />
     </>
   );
 }
-function PeopleSession(props: PeopleWorkspaceProps & { initial: MeetingPlan[] }): JSX.Element {
-  const [editor] = useState(() => peopleSession(props, props.initial));
+function PeopleSession(
+  props: PeopleWorkspaceProps & { initial: MeetingPlan[]; owner: SourceOwner }
+): JSX.Element {
+  const [editor] = useState(() => ownedPeopleSession(props.owner, props.initial));
   const state = useSyncExternalStore(editor.subscribe, editor.snapshot);
-  useEffect(() => editor.refresh(props.initial), [editor, props.initial]);
-  const context = usePeopleContext(props);
+  useEffect(() => {
+    if (currentSourceOwner(props.owner, props.owner)) editor.refresh(props.initial);
+  }, [editor, props.initial, props.owner]);
+  const context = usePeopleContext(props.owner);
   const [filters, setFilters] = useState({ query: '', intention: '', agreement: '', visitId: '' });
   const [adding, setAdding] = useState(false);
   return (

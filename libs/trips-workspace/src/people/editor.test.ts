@@ -8,6 +8,23 @@ import { meetingPlan, meetingResult } from './test-utils';
 import type { MeetingOperation, MeetingResult } from './types';
 
 describe('confirmed meeting operations', () => {
+  it('retains session-owned text and observed revision until explicit discard, including empty text', () => {
+    const editor = new PeopleEditor(
+      [meetingPlan()],
+      vi.fn<(operation: MeetingOperation) => Promise<MeetingResult>>()
+    );
+    const before = editor.snapshot();
+    editor.setDraft('41:title', '');
+    expect(before.drafts.size).toBe(0);
+    editor.refresh([meetingPlan({ revision: 9, title: 'Foreign change' })]);
+    expect(editor.snapshot().drafts.get('41:title')).toBe('');
+    expect(editor.snapshot().plans[0]?.revision).toBe(1);
+    editor.setDraft('41:title', null);
+    editor.refresh([meetingPlan({ revision: 9, title: 'Foreign change' })]);
+    expect(editor.snapshot().drafts.size).toBe(0);
+    expect(editor.snapshot().plans[0]?.revision).toBe(9);
+  });
+
   it('retains the observed revision while a field is dirty and never silently rebases its pending edit', async () => {
     const apply = vi.fn(async (operation: MeetingOperation) =>
       meetingResult(operation, meetingPlan(), meetingPlan({ revision: 2, title: 'Draft' }))
