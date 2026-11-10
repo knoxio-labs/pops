@@ -5,7 +5,7 @@ import { expect, test } from './fixtures/pillar-rest-guard';
 import { json, stubShellBoot } from './helpers/pillar-rest';
 import { captureWorkspace, stubCaptureWorkspace } from './helpers/trips-capture-workspace';
 
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 
 async function bootCapture(page: Page, locale = 'en-AU', retainedContact = false): Promise<void> {
   const resources: string[] = [];
@@ -29,6 +29,23 @@ async function bootCapture(page: Page, locale = 'en-AU', retainedContact = false
   );
 }
 
+async function navigateCaptureView(
+  page: Page,
+  view: 'Capture' | 'Inbox' | 'Explore'
+): Promise<void> {
+  await page.getByRole('link', { name: view, exact: true }).click();
+  await expect(page.getByRole('heading', { name: view, exact: true })).toBeVisible();
+}
+
+async function openOrganisation(row: Locator): Promise<void> {
+  const details = row
+    .locator('details')
+    .filter({ has: row.page().getByText('Organise', { exact: true }) });
+  if ((await details.getAttribute('open')) === null)
+    await row.getByText('Organise', { exact: true }).click();
+  await expect(details).toHaveJSProperty('open', true);
+}
+
 function capturePath(name: string): string {
   const directory = join(process.cwd(), '..', '..', 'tmp', 'trips-capture');
   mkdirSync(directory, { recursive: true });
@@ -37,6 +54,17 @@ function capturePath(name: string): string {
     `${test.info().project.metadata.remoteMode === 'source' ? 'source' : 'built'}-${name}`
   );
 }
+
+test('keeps organisation controls open when returning to the current Inbox', async ({ page }) => {
+  await bootCapture(page);
+  await navigateCaptureView(page, 'Inbox');
+  const row = page.getByRole('article', { name: 'Capture 701' });
+  await openOrganisation(row);
+  await navigateCaptureView(page, 'Inbox');
+  await expect(row.getByRole('button', { name: 'Choose contact' })).toBeVisible();
+  await openOrganisation(row);
+  await expect(row.getByRole('button', { name: 'Choose contact' })).toBeVisible();
+});
 
 for (const metadataStatus of [404, 503]) {
   test(`reads a retained Contact after metadata ${metadataStatus} through the real owner adapter without replacing source identity`, async ({
@@ -69,9 +97,9 @@ for (const metadataStatus of [404, 503]) {
         },
       });
     });
-    await page.getByRole('link', { name: 'Inbox' }).click();
+    await navigateCaptureView(page, 'Inbox');
     const row = page.getByRole('article', { name: 'Capture 701' });
-    await row.getByText('Organise', { exact: true }).click();
+    await openOrganisation(row);
     await expect(row.getByText('Contacts is unavailable.')).toBeVisible();
     await expect(row.getByText('unverified', { exact: true })).toBeVisible();
     await expect(row.getByText('pops:contacts/contact/old-id', { exact: true })).toBeVisible();
@@ -81,9 +109,9 @@ for (const metadataStatus of [404, 503]) {
       '/contacts/actual-id'
     );
     await expect(row.getByText('organised', { exact: true })).toBeVisible();
-    await page.getByRole('link', { name: 'Explore' }).click();
-    await page.getByRole('link', { name: 'Capture', exact: true }).click();
-    await page.getByRole('link', { name: 'Inbox' }).click();
+    await navigateCaptureView(page, 'Explore');
+    await navigateCaptureView(page, 'Capture');
+    await navigateCaptureView(page, 'Inbox');
     await expect(row.getByText('organised', { exact: true })).toBeVisible();
     expect(referenceReads).toBe(2);
     expect(entityReads).toBe(2);
@@ -118,7 +146,7 @@ test('keeps raw text, distinct selected files, and an accepted Documents task ac
   ]);
   await page.getByRole('button', { name: 'Send to Documents' }).first().click();
   await expect(page.getByRole('button', { name: 'Sending to Documents…' })).toBeDisabled();
-  await page.getByRole('link', { name: 'Inbox' }).click();
+  await navigateCaptureView(page, 'Inbox');
   const source = captureWorkspace.captures[0];
   if (source === undefined) throw new Error('Missing captured source fixture');
   await expect(page.getByText(source.originalText)).toBeVisible();
@@ -127,8 +155,8 @@ test('keeps raw text, distinct selected files, and an accepted Documents task ac
   await expect(page.getByRole('button', { name: 'Sending to Documents…' })).toBeDisabled();
   accept();
   await expect(page.getByRole('button', { name: 'Sending to Documents…' })).toHaveCount(0);
-  await page.getByRole('link', { name: 'Explore' }).click();
-  await page.getByRole('link', { name: 'Capture', exact: true }).click();
+  await navigateCaptureView(page, 'Explore');
+  await navigateCaptureView(page, 'Capture');
   await page.getByRole('button', { name: 'Send to Documents' }).click();
   await expect(page.getByText('Documents is processing the upload…').last()).toBeVisible();
   await expect(page.getByRole('textbox', { name: 'Capture text' })).toHaveValue(
@@ -142,9 +170,9 @@ test('keeps raw text, distinct selected files, and an accepted Documents task ac
 });
 
 async function openContactCreation(page: Page): Promise<void> {
-  await page.getByRole('link', { name: 'Inbox' }).click();
+  await navigateCaptureView(page, 'Inbox');
   const row = page.getByRole('article', { name: 'Capture 701' });
-  await row.getByText('Organise', { exact: true }).click();
+  await openOrganisation(row);
   await row.getByRole('button', { name: 'Choose contact' }).click();
   await page
     .getByRole('textbox', { name: /Search contacts|Pesquisar contatos/ })
@@ -201,12 +229,12 @@ test('retains a known-created Contacts entity across navigation without another 
   await page.getByRole('button', { name: 'Create contact' }).click();
   await expect(page.getByRole('button', { name: 'Create contact' })).toBeDisabled();
   await page.keyboard.press('Escape');
-  await page.getByRole('link', { name: 'Explore' }).click();
-  await page.getByRole('link', { name: 'Capture', exact: true }).click();
+  await navigateCaptureView(page, 'Explore');
+  await navigateCaptureView(page, 'Capture');
   accept();
-  await page.getByRole('link', { name: 'Inbox' }).click();
+  await navigateCaptureView(page, 'Inbox');
   const row = page.getByRole('article', { name: 'Capture 701' });
-  await row.getByText('Organise', { exact: true }).click();
+  await openOrganisation(row);
   await row.getByRole('button', { name: 'Choose contact' }).click();
   await expect(page.getByRole('button', { name: 'Use created contact' })).toBeVisible();
   await page.getByRole('button', { name: 'Use created contact' }).click();
@@ -238,10 +266,10 @@ test('uses the owner Portuguese labels and retains an ambiguous create without r
     page.getByRole('alert').filter({ hasText: 'Não foi possível confirmar' })
   ).toContainText('Não foi possível confirmar o resultado da criação');
   await page.keyboard.press('Escape');
-  await page.getByRole('link', { name: 'Explore' }).click();
-  await page.getByRole('link', { name: 'Inbox' }).click();
+  await navigateCaptureView(page, 'Explore');
+  await navigateCaptureView(page, 'Inbox');
   const row = page.getByRole('article', { name: 'Capture 701' });
-  await row.getByText('Organise', { exact: true }).click();
+  await openOrganisation(row);
   await row.getByRole('button', { name: 'Choose contact' }).click();
   await expect(page.getByRole('alert').filter({ hasText: 'O rascunho foi mantido' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Criar contato' })).toBeDisabled();
