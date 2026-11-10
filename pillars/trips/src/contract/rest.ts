@@ -22,6 +22,12 @@ import {
   UpdateVisitBody,
   VisitSchema,
 } from './schemas.js';
+import {
+  captureWorkspaceContract,
+  capturesContract,
+  ideasContract,
+  exploreContract,
+} from './source-workspace.js';
 import { staysContract } from './stays.js';
 
 const c = initContract();
@@ -34,6 +40,10 @@ const VisitList = z.object({ visits: z.array(VisitSchema) });
 /** Trips-owned source metadata and route identity contract; ordering never rewrites dates. */
 export const tripsContract = c.router(
   {
+    captureWorkspace: captureWorkspaceContract,
+    captures: capturesContract,
+    ideas: ideasContract,
+    explore: exploreContract,
     rentals: rentalsContract,
     responsibilities: responsibilitiesContract,
     events: eventsContract,

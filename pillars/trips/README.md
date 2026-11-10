@@ -1,7 +1,7 @@
 # Trips pillar
 
 `@pops/trips` owns trip metadata, reusable manual place identities and distinct
-visits, stays, events, rental periods, journeys and ordered transport legs in its own SQLite database. A place may occur repeatedly in one trip or
+visits, stays, events, rental periods, journeys, ordered transport legs, captures and Ideas in its own SQLite database. A place may occur repeatedly in one trip or
 across trips. Contacts owns reusable contact identities and addresses; Documents
 owns original files; Tags owns the shared vocabulary, while assignments remain
 with their source pillars. Explicit HTTP(S) and
@@ -71,7 +71,70 @@ document links are opaque source references, not hydrated external identities.
 Source and ticket URLs accept HTTP(S) only. Patches retain omitted fields,
 clear nullable facts with null, and replace supplied timing objects and arrays.
 Deleting an event never deletes a referenced contact, document or booking.
+An event referenced by an active capture association or Explore membership
+returns `409` until those relations are explicitly removed.
 Event operations use the projected `trips.events` scope.
+
+`GET /trips/:tripId/capture-workspace` returns captures, Ideas, organisation
+associations, Explore memberships, Events, Journeys and Stays in one SQLite read transaction.
+Captures retain immutable verbatim `originalText` and opaque `originalUrl`;
+editable title, notes, classification and explicit nullable place/visit references
+are separate. Classification (`idea`, `note`, `event`, `link`, `document`) alone
+does not organise a capture. Attachments contain only a Documents-owned original
+ID or an accepted upload task ID, with task provenance retained when an original
+becomes available. This separate capture relation does not invent an Event target
+or change the route document-target contract. Browser File objects never enter
+the database. Documents owns task status, originals and upload retry policy.
+
+Ideas have independent identities, nullable destination/place/activity kind,
+visit/meet-people/see-someone/other purpose and Saved/Considering/In plan status.
+Reason, notes, address, source/contact references and recommender notes remain
+source facts. Timing explicitly selects none, month or calendar dates; omitted
+bounds remain unknown and valid contradictory dates stay editable. External
+references survive unavailable owners. Contact links and recommendations accept
+only owner-issued `pops:contacts/contact/<id>` references, retaining unresolved
+opaque identities. An explicit place or same-trip visit is
+checked only when supplied; unrelated edits do not revalidate retained references.
+Neither an Idea nor its status inserts a route visit. Explore membership explicitly
+references a capture, Idea or Event; removing membership never removes its source.
+
+Capture actions use `/trips/:tripId/captures/{create,update,attach,remove,organise,remove-association,undo}`;
+Idea actions use `/trips/:tripId/ideas/{create,update,remove,undo}` and collection
+actions use `/trips/:tripId/explore/{add,remove,undo}`. Each action projects its own
+`trips.captures`, `trips.ideas` or `trips.explore` child scope and accepts only its
+typed command. Organisation explicitly associates an existing Idea, Event,
+Journey or Stay, or a canonical external Contacts reference. It can also
+atomically create an explicitly described Idea, Event, Journey or Stay, retaining both identities and provenance.
+Capture creation may include that explicit target in the same transaction; an
+Explore activity/place/destination choice therefore retains its Idea subtype and
+independent raw capture rather than being reduced to a generic classification.
+With an Idea/Event target, `explore: true` adds that target's membership; without
+a target it adds the raw capture's membership. Explicit Explore membership for a
+Journey, Stay or Contact target is rejected; omitting it never blocks organisation.
+Contacts references remain unverified until the consumer resolves their owner;
+their presence alone does not assert contact availability or an organised
+projection. Trips never creates or deletes a Contacts person. A consumer that
+already created a Contact retries only linking its retained owner reference when
+the Trips association fails.
+Every mutation carries a trip-scoped operation UUID and persists canonical input,
+an immutable original receipt and conditional per-record inverse in the same
+immediate transaction. Exact retries perform no writes, including after Undo;
+different input with the same UUID returns `409`. Responses separate `receipt`
+from `current` affected records and expose `replayed` and `undone` state.
+Edits require the expected revision. Resource-scoped Undo reverses only that
+operation; stale revisions, edited/referenced created targets and repeated Undo
+return `409` atomically. Created capture/Idea identities are tombstoned, and
+receipts and accepted attachment identities remain durable. Undo never modifies
+Documents originals or tasks. Web composer text and actual File handles remain
+the consumer's in-session responsibility; this API does not persist file bytes.
+Independent active Handled by assignments prevent Undo from deleting a created
+Journey, Stay or Event. Explicitly cleared assignments do not block the inverse.
+Successful Undo advances only a prior active inverse whose complete expected
+row equals the restored snapshot. This records the server-confirmed successor
+revision for repeated LIFO Undo while leaving original receipts immutable;
+ordinary later writes, including writes restoring identical fields, do not
+advance older inverse preconditions. A failed inverse rolls back these lineage
+updates with its source changes.
 
 Stays belong to trips independently of visits. `GET/POST /trips/:tripId/stays`
 and `GET/PATCH/DELETE /trips/:tripId/stays/:id` manage stable source records;

@@ -21,6 +21,11 @@ export class TripsServiceError extends Error {
       | 'tags_unavailable'
       | 'association_invalid'
       | 'association_exists'
+      | 'source_revision_conflict'
+      | 'source_operation_mismatch'
+      | 'source_undo_conflict'
+      | 'source_target_invalid'
+      | 'source_referenced'
   ) {
     super(code);
     this.name = 'TripsServiceError';

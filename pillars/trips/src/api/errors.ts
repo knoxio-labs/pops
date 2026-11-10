@@ -2,6 +2,38 @@ import { defineErrors } from '@pops/pillar-express';
 
 /** Stable errors for missing owned records and invalid route permutations. */
 export const tripsErrors = defineErrors('trips', {
+  source_referenced: {
+    area: 'source',
+    status: 409,
+    message:
+      'Remove active capture associations and Explore memberships before deleting this source.',
+    retryable: false,
+  },
+  source_target_invalid: {
+    area: 'source',
+    status: 400,
+    message: 'Explore membership requires a capture, Idea or Event source.',
+    retryable: false,
+  },
+  source_revision_conflict: {
+    area: 'source',
+    status: 409,
+    message: 'This source or relation changed. Read its current revision before editing.',
+    retryable: false,
+  },
+  source_operation_mismatch: {
+    area: 'source',
+    status: 409,
+    message: 'This operation identifier was already used with different source input.',
+    retryable: false,
+  },
+  source_undo_conflict: {
+    area: 'source',
+    status: 409,
+    message:
+      'This operation cannot be undone because its records changed or are referenced. Nothing was changed.',
+    retryable: false,
+  },
   contact_unknown: {
     area: 'responsibility',
     status: 400,

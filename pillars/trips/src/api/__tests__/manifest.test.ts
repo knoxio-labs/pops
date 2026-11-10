@@ -57,7 +57,7 @@ describe('Trips manifest', () => {
       version: '1.2.3',
       tag: 'contract-trips@v1.2.3',
     });
-    expect(manifest.routes.queries).toHaveLength(28);
+    expect(manifest.routes.queries).toHaveLength(29);
     expect(manifest.routes.queries).toEqual(
       expect.arrayContaining([
         'trips.rentals.list',
