@@ -102,6 +102,8 @@ outcomes across unmounts; overlapping views observe the same selections and uplo
 claim. Supplying a different target, client identity or owner origin throws
 `TripDocumentUploadContextError`
 before any owner action. Queues are live browser objects, not serializable drafts.
+Uploads, task reads, picker searches, linking and recovery recheck that captured
+context immediately before the operation, including mutable default clients.
 Without the prop, the component keeps its existing view-local queue behavior.
 `DocumentPicker({ onSelected, documentsClient? })` returns the actual owner original
 without writing a route association. `useDocumentUpload({ session, onSessionChange,
@@ -118,6 +120,7 @@ the exact browser File handle; only actual task/document identities belong in pe
 provenance. Completed and explicit duplicate task results expose the canonical document
 ID while retaining the accepted task ID. Verified owner task results also remain in
 the receipt when its query cache is evicted; pending task lookup resumes on remount.
+An older read without a canonical identity cannot erase a verified original.
 The controller never repeats an accepted or
 uncertain upload; a definite rejection can be retried explicitly.
 

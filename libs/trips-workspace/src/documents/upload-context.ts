@@ -1,6 +1,32 @@
 import type { Client as DocumentsClient } from '../documents-api/client';
 import type { Client as TripsClient } from '../trips-api/client';
 import type { DocumentAssociationTarget } from './types';
+import type { UploadFields } from './useUploadFields';
+
+/** Host configuration error: a retained queue cannot be rebound to another target or owner. */
+export class TripDocumentUploadContextError extends Error {
+  readonly code = 'trips.document.upload_context_mismatch';
+
+  constructor() {
+    super('The trip, item or document connection changed for this upload.');
+    this.name = 'TripDocumentUploadContextError';
+  }
+}
+
+/** Validate a retained context before a local recovery action, preserving its receipt on rejection. */
+export function runUploadContextAction(
+  fields: UploadFields,
+  beforeRequest: (() => void) | undefined,
+  action: () => void
+): void {
+  try {
+    beforeRequest?.();
+    action();
+  } catch (error) {
+    if (!(error instanceof TripDocumentUploadContextError)) throw error;
+    fields.setUploadError(error.message);
+  }
+}
 
 /** Identify an upload context by its owner transports and explicit Trips target. */
 export function uploadSessionKey(

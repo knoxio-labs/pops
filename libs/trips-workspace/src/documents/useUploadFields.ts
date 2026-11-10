@@ -1,6 +1,7 @@
 import { useCallback, useSyncExternalStore } from 'react';
 
 import { DocumentUploadSession } from './document-upload-session';
+import { retainOwnerOriginal } from './owner-task-receipt';
 
 import type { Dispatch, SetStateAction } from 'react';
 
@@ -65,8 +66,10 @@ export function useUploadFields(
   const setTaskReceipt = useCallback(
     (taskId: string, result: PaperlessTask): void => {
       const current = intent.read();
-      if (current.taskId !== taskId || current.taskReceipt?.result === result) return;
-      setField('taskReceipt', { taskId, result });
+      if (current.taskId !== taskId) return;
+      const known = current.taskReceipt?.taskId === taskId ? current.taskReceipt.result : undefined;
+      const retained = retainOwnerOriginal(known, result);
+      if (known !== retained) setField('taskReceipt', { taskId, result: retained });
     },
     [intent, setField]
   );

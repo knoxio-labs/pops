@@ -4,11 +4,13 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import { createClient } from '../documents-api/client';
+import { client as defaultDocumentsClient } from '../documents-api/client.gen';
 import { createClient as createTripsClient } from '../trips-api/client';
 import { createTripDocumentUploadSession } from './trip-document-upload-session';
 import { TripDocumentUpload } from './TripDocumentUpload';
 
 import type { TripDocumentUploadSession } from './trip-document-upload-session';
+import type { PaperlessSearchDocument } from './types';
 
 const caches: QueryClient[] = [];
 afterEach(() => {
@@ -17,11 +19,12 @@ afterEach(() => {
   caches.length = 0;
 });
 
-function harness() {
+function harness(searchResults: PaperlessSearchDocument[] = []) {
   const responses: Array<(response: Response) => void> = [];
   let posts = 0;
   let taskUnavailable = false;
   const links: unknown[] = [];
+  const reads: string[] = [];
   const documentsClient = createClient({
     baseUrl: 'https://pops.example/documents-api',
     fetch: vi.fn<typeof fetch>(async (input) => {
@@ -30,6 +33,8 @@ function harness() {
         posts += 1;
         return new Promise<Response>((resolve) => responses.push(resolve));
       }
+      reads.push(request.url);
+      if (request.url.includes('/paperless/search')) return Response.json({ data: searchResults });
       if (request.url.endsWith('/paperless/status'))
         return Response.json({
           data: {
@@ -84,6 +89,7 @@ function harness() {
     session,
     cache,
     links,
+    reads,
     posts: () => posts,
     expireTask: () => {
       taskUnavailable = true;
@@ -91,7 +97,7 @@ function harness() {
   };
 }
 
-async function selectFile(): Promise<void> {
+async function selectFile(start = true): Promise<void> {
   await waitFor(() =>
     expect(screen.getByRole('button', { name: /^Upload a file/ })).not.toHaveAttribute(
       'aria-disabled',
@@ -101,8 +107,153 @@ async function selectFile(): Promise<void> {
   const input = document.querySelector<HTMLInputElement>('input[type="file"]');
   if (input === null) throw new Error('File upload was not mounted');
   await userEvent.upload(input, new File(['agenda'], 'agenda.pdf', { type: 'application/pdf' }));
-  await userEvent.click(screen.getByRole('button', { name: 'Send to Documents' }));
+  if (start) await userEvent.click(screen.getByRole('button', { name: 'Send to Documents' }));
 }
+
+it('checks the captured owner immediately before a private File POST after a client mutates without rendering', async () => {
+  const owner = harness();
+  owner.mount();
+  await selectFile(false);
+  owner.session.context.documentsClient?.setConfig({
+    baseUrl: 'https://other.example/documents-api',
+  });
+  await userEvent.click(screen.getByRole('button', { name: 'Send to Documents' }));
+  expect(owner.posts()).toBe(0);
+  expect(await screen.findByRole('alert')).toHaveTextContent('connection changed');
+  expect(owner.session.read()[0]?.upload.uncertain).toBe(false);
+});
+
+it('blocks task lookup at a changed owner while retaining an acceptance from the original request', async () => {
+  const owner = harness();
+  owner.mount();
+  await selectFile();
+  const respond = owner.responses[0];
+  if (respond === undefined) throw new Error('Upload acceptance missing');
+  owner.session.context.documentsClient?.setConfig({
+    baseUrl: 'https://other.example/documents-api',
+  });
+  await act(async () =>
+    respond(Response.json({ data: { taskId: 'accepted-8' } }, { status: 202 }))
+  );
+  await screen.findByRole('button', { name: 'Retry status check' });
+  expect(owner.reads.some((url) => url.includes('other.example'))).toBe(false);
+  expect(owner.session.read()[0]?.upload.taskId).toBe('accepted-8');
+});
+
+it('checks the captured Trips owner immediately before linking a completed original', async () => {
+  const owner = harness();
+  owner.mount();
+  await selectFile();
+  const respond = owner.responses[0];
+  if (respond === undefined) throw new Error('Upload acceptance missing');
+  await act(async () =>
+    respond(Response.json({ data: { taskId: 'accepted-8' } }, { status: 202 }))
+  );
+  await screen.findByRole('button', { name: 'Link file' });
+  owner.session.context.tripsClient?.setConfig({ baseUrl: 'https://other.example/trips-api' });
+  await userEvent.click(screen.getByRole('button', { name: 'Link file' }));
+  expect(owner.links).toHaveLength(0);
+  expect(owner.session.read()[0]?.upload.file).not.toBeNull();
+});
+
+it('does not search a changed owner to recover an uncertain original', async () => {
+  const owner = harness();
+  owner.mount();
+  await selectFile();
+  const respond = owner.responses[0];
+  if (respond === undefined) throw new Error('Upload acceptance missing');
+  await act(async () => respond(Response.json({ message: 'Interrupted' }, { status: 503 })));
+  await screen.findByRole('button', { name: 'Search Documents for agenda.pdf' });
+  owner.session.context.documentsClient?.setConfig({
+    baseUrl: 'https://other.example/documents-api',
+  });
+  await userEvent.click(screen.getByRole('button', { name: 'Search Documents for agenda.pdf' }));
+  await act(async () => undefined);
+  expect(owner.reads.some((url) => url.includes('other.example'))).toBe(false);
+  expect(owner.session.read()[0]?.upload.uncertain).toBe(true);
+});
+
+it('blocks replacement-file recovery when the owner changes after a no-results search', async () => {
+  const owner = harness();
+  owner.mount();
+  await selectFile();
+  const respond = owner.responses[0];
+  if (respond === undefined) throw new Error('Upload acceptance missing');
+  await act(async () => respond(Response.json({ message: 'Interrupted' }, { status: 503 })));
+  await userEvent.click(
+    await screen.findByRole('button', { name: 'Search Documents for agenda.pdf' })
+  );
+  const recovery = await screen.findByRole('button', {
+    name: 'No original found; choose a different file',
+  });
+  const file = owner.session.read()[0]?.upload.file;
+  owner.session.context.documentsClient?.setConfig({
+    baseUrl: 'https://other.example/documents-api',
+  });
+  await userEvent.click(recovery);
+  expect(owner.session.read()[0]?.upload.file).toBe(file);
+  expect(owner.session.read()[0]?.upload.uncertain).toBe(true);
+  expect(owner.reads.some((url) => url.includes('other.example'))).toBe(false);
+});
+
+it('does not link a cached picker choice after the Trips transport changes without rendering', async () => {
+  const owner = harness([
+    { id: 91, title: 'Agenda', originalFileName: 'agenda.pdf', created: '', thumbnailUrl: '' },
+  ]);
+  owner.mount();
+  await userEvent.click(screen.getByRole('button', { name: 'Choose existing document' }));
+  await userEvent.type(screen.getByPlaceholderText('Search documents...'), 'agenda');
+  const select = await screen.findByRole('button', { name: 'Link' });
+  owner.session.context.tripsClient?.setConfig({ baseUrl: 'https://other.example/trips-api' });
+  await userEvent.click(select);
+  expect(owner.links).toHaveLength(0);
+  expect(await screen.findByRole('alert')).toHaveTextContent('could not be linked');
+});
+
+it('checks mutable default owner configuration immediately before uploading', async () => {
+  const beforeBase = defaultDocumentsClient.getConfig().baseUrl;
+  const beforeFetch = defaultDocumentsClient.getConfig().fetch;
+  let posts = 0;
+  const cache = new QueryClient();
+  caches.push(cache);
+  defaultDocumentsClient.setConfig({
+    baseUrl: 'https://default-a.example/documents-api',
+    fetch: vi.fn<typeof fetch>(async (input) => {
+      const request = input instanceof Request ? input : new Request(input);
+      if (request.method === 'POST') {
+        posts += 1;
+        return Response.json({ data: { taskId: 'accepted' } }, { status: 202 });
+      }
+      return Response.json({
+        data: {
+          configured: true,
+          available: true,
+          maxUploadBytes: 1000,
+          allowedMimeTypes: ['application/pdf'],
+        },
+      });
+    }),
+  });
+  try {
+    const session = createTripDocumentUploadSession({
+      tripId: 4,
+      target: { kind: 'event', id: 8 },
+    });
+    render(
+      <QueryClientProvider client={cache}>
+        <TripDocumentUpload {...session.context} session={session} />
+      </QueryClientProvider>
+    );
+    await selectFile(false);
+    defaultDocumentsClient.setConfig({ baseUrl: 'https://default-b.example/documents-api' });
+    await userEvent.click(screen.getByRole('button', { name: 'Send to Documents' }));
+    expect(posts).toBe(0);
+    expect(await screen.findByRole('alert')).toHaveTextContent('connection changed');
+  } finally {
+    cleanup();
+    defaultDocumentsClient.setConfig({ baseUrl: beforeBase, fetch: beforeFetch });
+  }
+});
 
 it('retains a late accepted original when its upload view closes before the 202 response', async () => {
   const owner = harness();

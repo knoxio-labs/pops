@@ -3,8 +3,10 @@ import { useEffect } from 'react';
 
 import { loadPaperlessTask, loadPaperlessUploadPolicy } from './api';
 import { uploadFileProblem } from './model';
+import { completedDocumentId, retainOwnerOriginal } from './owner-task-receipt';
 import { documentQueryKeys } from './query-keys';
 import { recoverAmbiguousUpload, submitSelectedFile } from './upload-actions';
+import { runUploadContextAction } from './upload-context';
 import { useUploadFields } from './useUploadFields';
 import { useUploadMutation } from './useUploadMutations';
 
@@ -20,6 +22,8 @@ export interface DocumentUploadOptions {
   session: DocumentUploadSession;
   onSessionChange: Dispatch<SetStateAction<DocumentUploadSession>>;
   documentsClient?: DocumentsClient;
+  /** Revalidate a retaining parent's captured context immediately before owner operations. */
+  beforeRequest?: () => void;
 }
 
 /** The owner upload task and canonical result, without any Trips route association. */
@@ -45,11 +49,17 @@ export function useDocumentUpload({
   session,
   onSessionChange,
   documentsClient,
+  beforeRequest,
 }: DocumentUploadOptions): DocumentUploadController {
   const fields = useUploadFields(session, onSessionChange);
-  const policyQuery = useUploadPolicy(documentsClient);
-  const taskQuery = useUploadTask(fields, documentsClient);
-  const actions = useOwnerUploadActions(fields, policyQuery.data, documentsClient);
+  const policyQuery = useUploadPolicy(documentsClient, beforeRequest);
+  const taskQuery = useUploadTask(fields, documentsClient, beforeRequest);
+  const actions = useOwnerUploadActions({
+    fields,
+    policy: policyQuery.data,
+    client: documentsClient,
+    beforeRequest,
+  });
   return {
     fields,
     actions,
@@ -63,12 +73,18 @@ export function useDocumentUpload({
   };
 }
 
-function useOwnerUploadActions(
-  fields: UploadFields,
-  policy: PaperlessUploadPolicy | undefined,
-  client: DocumentsClient | undefined
-): DocumentUploadController['actions'] {
-  const uploadMutation = useUploadMutation(client);
+function useOwnerUploadActions({
+  fields,
+  policy,
+  client,
+  beforeRequest,
+}: {
+  fields: UploadFields;
+  policy: PaperlessUploadPolicy | undefined;
+  client: DocumentsClient | undefined;
+  beforeRequest: (() => void) | undefined;
+}): DocumentUploadController['actions'] {
+  const uploadMutation = useUploadMutation(client, beforeRequest);
   const submitUpload = (): void => {
     if (!fields.canStartUpload()) return;
     submitSelectedFile({
@@ -85,34 +101,43 @@ function useOwnerUploadActions(
   return {
     uploadMutation,
     submitUpload,
-    recoverSelection: () => recoverAmbiguousUpload(fields),
+    recoverSelection: () =>
+      runUploadContextAction(fields, beforeRequest, () => recoverAmbiguousUpload(fields)),
     searchCompleted: fields.setOwnerLookupCount,
   };
 }
 
 function useUploadPolicy(
-  documentsClient: DocumentsClient | undefined
+  documentsClient: DocumentsClient | undefined,
+  beforeRequest: (() => void) | undefined
 ): UseQueryResult<PaperlessUploadPolicy, Error> {
   return useQuery({
     queryKey: documentQueryKeys.status(documentsClient),
-    queryFn: () => loadPaperlessUploadPolicy(documentsClient),
+    queryFn: () => {
+      beforeRequest?.();
+      return loadPaperlessUploadPolicy(documentsClient);
+    },
     retry: false,
   });
 }
 
 function useUploadTask(
   fields: UploadFields,
-  documentsClient: DocumentsClient | undefined
+  documentsClient: DocumentsClient | undefined,
+  beforeRequest: (() => void) | undefined
 ): UseQueryResult<PaperlessTask, Error> {
   const { taskId, taskReceipt, setTaskReceipt } = fields;
   const query = useQuery({
     queryKey: documentQueryKeys.task(documentsClient, taskId ?? ''),
     queryFn: async () => {
+      beforeRequest?.();
       const result = await loadPaperlessTask(taskId ?? '', documentsClient);
       if (taskId !== null) setTaskReceipt(taskId, result);
       return result;
     },
     initialData: taskReceipt?.taskId === taskId ? taskReceipt.result : undefined,
+    select: (result) =>
+      retainOwnerOriginal(taskReceipt?.taskId === taskId ? taskReceipt.result : undefined, result),
     enabled: taskId !== null,
     retry: false,
     refetchInterval: (query) => (query.state.data?.state === 'pending' ? 1500 : false),
@@ -134,9 +159,4 @@ function uploadProblem(
   if (fields.uploadError !== null) return fields.uploadError;
   if (fields.file === null || fields.taskId !== null) return null;
   return uploadFileProblem(fields.file, policy ?? null) ?? null;
-}
-
-function completedDocumentId(task: PaperlessTask | undefined): number | undefined {
-  if (task?.state !== 'done' && task?.state !== 'duplicate') return undefined;
-  return task.documentId ?? undefined;
 }

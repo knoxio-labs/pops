@@ -1,4 +1,4 @@
-import { uploadSessionKey } from './upload-context';
+import { TripDocumentUploadContextError, uploadSessionKey } from './upload-context';
 import { createDocumentUploadSession } from './useUploadFields';
 
 import type { SetStateAction } from 'react';
@@ -23,15 +23,7 @@ export interface TripDocumentFileIntent {
   readonly upload: DocumentUploadSession;
 }
 
-/** Host configuration error: a retained queue cannot be rebound to another target or owner. */
-export class TripDocumentUploadContextError extends Error {
-  readonly code = 'trips.document.upload_context_mismatch';
-
-  constructor() {
-    super('This upload session belongs to a different trip, target or owner.');
-    this.name = 'TripDocumentUploadContextError';
-  }
-}
+export { TripDocumentUploadContextError } from './upload-context';
 
 /**
  * A live browser queue bound to one immutable trip/target/owner context. Retain the object
@@ -62,6 +54,9 @@ export class TripDocumentUploadSession {
     )
       throw new TripDocumentUploadContextError();
   }
+
+  /** Recheck mutable owner configuration at the instant an operation is about to start. */
+  readonly assertCurrentContext = (): void => this.assertContext(this.context);
 
   /** Read the stable current queue snapshot for React's external-store subscription. */
   readonly read = (): readonly TripDocumentFileIntent[] => this.intents;
