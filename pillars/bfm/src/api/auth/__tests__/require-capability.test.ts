@@ -27,6 +27,7 @@ import { requestOn } from '../../__tests__/test-http.js';
 import {
   MOBILE_EGO_CHAT_STREAM_PATH,
   MOBILE_INVENTORY_DOCUMENT_FILE_PATH,
+  MOBILE_DOCUMENT_FILE_PATH,
   MOBILE_INVENTORY_DOCUMENT_UPLOAD_PATH,
   MOBILE_PATH_PREFIX,
 } from '../../paths.js';
@@ -310,6 +311,7 @@ describe('the route table it derives', () => {
     const contractRoutes = collectContractRoutes(bfmContract);
 
     expect(UNCONTRACTED_MOBILE_ROUTES).toEqual([
+      { method: 'GET', path: MOBILE_DOCUMENT_FILE_PATH, capability: 'documents.read' },
       { method: 'POST', path: MOBILE_EGO_CHAT_STREAM_PATH, capability: 'ego.chat' },
       {
         method: 'POST',
