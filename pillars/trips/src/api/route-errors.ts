@@ -1,7 +1,7 @@
-import type { ErrorDefinition } from '@pops/pillar-express';
+import { defineErrors } from '@pops/pillar-express';
 
 /** Registered aggregate CAS, exclusive placement, replay and own-Undo failures. */
-export const routeErrorDefinitions = {
+export const routeErrors = defineErrors('trips', {
   route_revision_conflict: {
     area: 'route',
     status: 409,
@@ -26,4 +26,4 @@ export const routeErrorDefinitions = {
     message: 'Undo requires the untouched confirmed route outcome.',
     retryable: false,
   },
-} satisfies Record<string, ErrorDefinition>;
+});
