@@ -61,6 +61,7 @@ import { bfmContract } from '../../contract/rest.js';
 import {
   MOBILE_EGO_CHAT_STREAM_PATH,
   MOBILE_INVENTORY_DOCUMENT_FILE_PATH,
+  MOBILE_DOCUMENT_FILE_PATH,
   MOBILE_INVENTORY_DOCUMENT_UPLOAD_PATH,
   MOBILE_PATH_PREFIX,
 } from '../paths.js';
@@ -83,6 +84,7 @@ export interface UncontractedMobileRoute {
 }
 
 export const UNCONTRACTED_MOBILE_ROUTES: readonly UncontractedMobileRoute[] = [
+  { method: 'GET', path: MOBILE_DOCUMENT_FILE_PATH, capability: 'documents.read' },
   {
     method: 'POST',
     path: MOBILE_EGO_CHAT_STREAM_PATH,

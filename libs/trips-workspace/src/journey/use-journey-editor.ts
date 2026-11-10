@@ -1,11 +1,6 @@
-import { useQueryClient } from '@tanstack/react-query';
-import { useRef } from 'react';
-
-import { changeJourney, journeyKey } from './api';
-import { canRetryJourneyChange, draftJourney, sameJourney } from './model';
+import { canRetryJourneyChange, draftJourney } from './model';
+import { useJourneyRunner } from './use-journey-runner';
 import { useJourneyState } from './use-journey-state';
-
-import type { QueryClient } from '@tanstack/react-query';
 
 import type { JourneySource, JourneyChange, JourneyWorkspaceProps } from './types';
 import type { JourneyFailure } from './use-journey-state';
@@ -16,34 +11,9 @@ export function useJourneyEditor(
   props: JourneyWorkspaceProps
 ): JourneyEditor {
   const state = useJourneyState(initial);
-  const lock = useRef(false);
-  const cache = useQueryClient();
   const edit = (change: JourneyChange): void =>
     state.setDraft((value) => draftJourney(value, change));
-  const run = async (change: JourneyChange, undo = false): Promise<void> => {
-    if (lock.current) return;
-    if (
-      (change.kind === 'leg' || change.kind === 'journey') &&
-      sameJourney(state.saved, draftJourney(state.saved, change))
-    )
-      return;
-    lock.current = true;
-    state.setBusy(true);
-    state.setFailure(undefined);
-    edit(change);
-    try {
-      const result = await changeJourney(props, state.saved, change);
-      state.setSaved(result.source);
-      state.setDraft(result.source);
-      state.setHistory((previous) => nextHistory(previous, result.inverse, undo));
-      refreshCache(cache, props, result.source);
-    } catch (error) {
-      state.setFailure({ error, change, undo });
-    } finally {
-      lock.current = false;
-      state.setBusy(false);
-    }
-  };
+  const run = useJourneyRunner(props, state, edit);
   return {
     draft: state.draft,
     busy: state.busy,
@@ -65,32 +35,7 @@ export function useJourneyEditor(
       state.setFailure(undefined);
     },
   };
-}
-function nextHistory(
-  history: JourneyChange[],
-  inverse: JourneyChange | undefined,
-  undo: boolean
-): JourneyChange[] {
-  if (undo) return history.slice(0, -1);
-  return inverse ? [...history, inverse] : history;
-}
-function refreshCache(
-  cache: QueryClient,
-  props: JourneyWorkspaceProps,
-  source: JourneySource
-): void {
-  cache.setQueryData(journeyKey(props), source);
-  void cache.invalidateQueries({ queryKey: [...journeyKey(props), 'timing'] });
-  void cache.invalidateQueries({
-    queryKey: [
-      'trips',
-      props.client?.getConfig().baseUrl ?? '/trips-api',
-      props.tripId,
-      'journeys',
-    ],
-  });
-}
-/** Source editor operations consumed by presentational journey sections. */
+} /** Source editor operations consumed by presentational journey sections. */
 export interface JourneyEditor {
   draft: JourneySource;
   busy: boolean;

@@ -20,7 +20,21 @@ export interface TripsResponses {
   journeys?: CallResult<unknown>;
   groups?: CallResult<unknown>;
   stays?: CallResult<unknown>;
+  events?: CallResult<unknown>;
+  associations?: CallResult<unknown>;
   legs?: CallResult<unknown>;
+}
+function sourceLegs(
+  detail: MobileTripDetail,
+  input: unknown
+): { legs: MobileTripDetail['journeys'][number]['legs'] } {
+  const parsed = z.object({ tripId: z.number(), journeyId: z.number() }).parse(input);
+  return { legs: detail.journeys.find((journey) => journey.id === parsed.journeyId)?.legs ?? [] };
+}
+function sourceJourneys(detail: MobileTripDetail): {
+  journeys: Omit<MobileTripDetail['journeys'][number], 'legs'>[];
+} {
+  return { journeys: detail.journeys.map(({ legs: _legs, ...journey }) => journey) };
 }
 /** Drives the actual authenticated gateway/client mapping without a network or unsafe handle casts. */
 export function tripsClientOver(
@@ -50,33 +64,30 @@ export function tripsClientOver(
         list: (input) => answer('visits.list', input, { visits: detail.visits }, responses.visits),
       },
       journeys: {
-        list: (input) =>
-          answer(
-            'journeys.list',
-            input,
-            { journeys: detail.journeys.map(({ legs: _legs, ...journey }) => journey) },
-            responses.journeys
-          ),
+        list: (input) => answer('journeys.list', input, sourceJourneys(detail), responses.journeys),
       },
       journeyGroups: {
         list: (input) =>
           answer('journeyGroups.list', input, { groups: detail.journeyGroups }, responses.groups),
       },
+      documentAssociations: {
+        list: (input) =>
+          answer(
+            'documentAssociations.list',
+            input,
+            { associations: detail.documentAssociations },
+            responses.associations
+          ),
+      },
+      events: {
+        list: (input) => answer('events.list', input, { events: detail.events }, responses.events),
+      },
       stays: {
         list: (input) => answer('stays.list', input, { stays: detail.stays }, responses.stays),
       },
       journeyLegs: {
-        list: (input) => {
-          const parsed = z.object({ tripId: z.number(), journeyId: z.number() }).parse(input);
-          return answer(
-            'journeyLegs.list',
-            input,
-            {
-              legs: detail.journeys.find((journey) => journey.id === parsed.journeyId)?.legs ?? [],
-            },
-            responses.legs
-          );
-        },
+        list: (input) =>
+          answer('journeyLegs.list', input, sourceLegs(detail, input), responses.legs),
       },
     });
   return { client: createMobileTripsClient(createPillarGateway(factory)), calls };

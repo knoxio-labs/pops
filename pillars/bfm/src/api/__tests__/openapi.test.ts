@@ -140,6 +140,7 @@ describe('GET /openapi', () => {
       '/mobile/contacts/merchants/search',
       '/mobile/contacts/merchants/{id}',
       '/mobile/contacts/merchants/{id}/addresses',
+      '/mobile/documents/{id}',
       '/mobile/ego/action-batches/{batchId}/decide',
       '/mobile/ego/conversations',
       '/mobile/ego/conversations/{id}',

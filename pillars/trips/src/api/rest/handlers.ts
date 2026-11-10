@@ -23,6 +23,8 @@ import { makeDocumentAssociationHandlers } from './document-associations.js';
 import { makeEventHandlers } from './events.js';
 import { makeJourneyGroupHandlers } from './journey-groups.js';
 import { makeJourneyHandlers, makeJourneyLegHandlers } from './journeys.js';
+import { makeRentalHandlers } from './rentals.js';
+import { makeResponsibilityHandlers } from './responsibilities.js';
 import { makeStayHandlers } from './stays.js';
 import { makeTripMetadataHandlers } from './trip-metadata.js';
 import { withTripsErrors } from './with-errors.js';
@@ -41,6 +43,8 @@ export function makeTripsRestHandlers(
     captures: makeCaptureHandlers(db),
     ideas: makeIdeaHandlers(db),
     explore: makeExploreHandlers(db),
+    rentals: makeRentalHandlers(db),
+    responsibilities: makeResponsibilityHandlers(deps),
     events: makeEventHandlers(db),
     decisions: makeDecisionHandlers(db),
     decisionOptions: makeDecisionOptionHandlers(db),

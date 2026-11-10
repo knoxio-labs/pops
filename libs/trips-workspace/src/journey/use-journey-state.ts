@@ -37,7 +37,7 @@ export function useJourneyState(initial: JourneySource): JourneyState {
   const dirty = !sameJourney(saved, draft);
   if (observed !== initial && !busy && !failure && !dirty) {
     setObserved(initial);
-    if (!sameJourney(saved, initial)) {
+    if (saved.legRevision !== initial.legRevision || !sameJourney(saved, initial)) {
       setSaved(initial);
       setDraft(initial);
       setHistory([]);

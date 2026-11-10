@@ -31,6 +31,7 @@ describe('Independent journey source edits', () => {
   });
   it('keeps purchase orthogonal and never borrows clocks or modes from another leg', () => {
     const source = {
+      legRevision: 0,
       journey: sourceJourney(),
       legs: [sourceLeg(), sourceLeg({ id: 41, from: {}, to: {}, mode: null })],
     };
@@ -44,10 +45,15 @@ describe('Independent journey source edits', () => {
     expect(source.legs[0]?.purchase).toBeNull();
   });
   it('detects source/order changes while ignoring audit-only refreshes', () => {
-    const source = { journey: sourceJourney(), legs: [sourceLeg(), sourceLeg({ id: 41 })] };
+    const source = {
+      legRevision: 0,
+      journey: sourceJourney(),
+      legs: [sourceLeg(), sourceLeg({ id: 41 })],
+    };
     expect(
       sameJourney(source, {
         ...source,
+        legRevision: 0,
         journey: sourceJourney({ updatedAt: '2029-02-02T00:00:00Z' }),
       })
     ).toBe(true);

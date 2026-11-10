@@ -117,3 +117,6 @@ export const MOBILE_FINANCE_RECEIPT_EXTRACT_PATH =
 
 /** Where files are attached to a finance transaction. Carries files. */
 export const MOBILE_FINANCE_ATTACH_PATH = bfmContract.mobileFinance.attachToTransaction.path;
+
+/** Original Documents-owner bytes, independently authorized from trip associations. */
+export const MOBILE_DOCUMENT_FILE_PATH = '/mobile/documents/:id/file';

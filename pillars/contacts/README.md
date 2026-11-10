@@ -25,6 +25,54 @@ address-book namespace for subsequent exports. Select a phone country explicitly
 when national numbers should be normalized; leaving it blank retains the original
 number without inferring a country.
 
+The app also supports creating people, companies and organisations, and editing
+company and organisation contact methods, addresses, name and notes. Its dialog
+picker returns the selected entity and the canonical Contacts URI to its host;
+`ContactPicker` retains its explicit creation-intent callback for existing hosts.
+`ContactChooser` owns progressive in-place creation and returns a real canonical
+entity/reference through the same selection callback. Keep it mounted while
+closed to retain its name, type and creation outcome. Hosts whose routes unmount
+the chooser retain one `ContactChooserSession` per creation intent outside those
+views and pass it through `session`; its draft and asynchronous outcome survive
+remounting. Replace the session only for a new explicit intent. Once a create succeeds,
+retrying resolves that known entity without repeating POST. An unknown create
+outcome retains and locks the attempted draft; the user can explicitly search
+existing contacts. A duplicate conflict requires explicit existing selection,
+never a guessed identity match. Dismissing a pending request prevents its result
+from being delivered to the host automatically. Reopening, replacing the retained
+intent or changing gateway context requires a new explicit selection/resolution;
+late results never deliver into that replacement context. This fence also applies
+to existing-contact selection, whose selected ID remains available for explicit
+retry after dismissal.
+
+`ContactChooser` registers both owner catalogues on the host's shared i18next
+instance before its embedded view mounts, including when no Contacts remote has
+loaded. It follows the host locale without a second i18next instance. The public
+`contactsI18n` metadata remains available to hosts with their own sanctioned
+translation registration.
+
+`readContactReference(uri, { signal })` is the public retained-reference reader.
+It verifies the owner-issued URI with `GET /entities/{id}/reference`, follows
+historical aliases to the canonical entity, then reads that entity's current
+name and data. An available result includes the actual name, entity, canonical
+reference and encoded generic Contacts route; entity type never determines the
+link or label. The reader does not depend on the creation catalogue.
+
+Only a resolver 404 means `missing`. Network, permission, service and cancelled
+reads are `unavailable`; malformed or inconsistent owner responses are
+`readError`. After successful identity proof, display-read failure retains that
+reference without claiming the contact is missing. Consumers keep an unread URI
+unverified and can clear it without calling the reader. Cancellation belongs to
+the caller; there is no automatic timeout or retry. IDs remain opaque and are
+not decoded or normalized. URL dot-segment IDs cannot be safely addressed by
+this path-based API and produce `readError` without following a normalized path.
+
+`GET /entity-types` publishes choices and the default from the backend's actual
+validation constants. Both creation surfaces consume that catalogue; retained
+unknown choices stay visible instead of being silently replaced. Search and
+creation accept a single nonempty Unicode character. Duplicate review selects both existing entities
+and requires an explicit preview and merge action.
+
 The global “Import resolved contacts” action applies the server’s complete-batch
 plan in one atomic request. Eligibility counts and its dedicated proof come from
 the server; the browser never derives safe merges from visible rows or candidate
@@ -57,37 +105,39 @@ server and the `emit-openapi` bin share.
 
 The HTTP surface:
 
-| Path                                                 | What it serves                                                                                        |
-| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `/`                                                  | Stub root — a plain-text identity banner so `GET /` is not a 404.                                     |
-| `/entities`                                          | Contact CRUD + paginated/filtered list (`GET`/`POST`).                                                |
-| `/entities/{id}`                                     | Single-entity read/update/delete (`GET`/`PATCH`/`DELETE`).                                            |
-| `/entities/lookup`                                   | Bulk match-column lookup (`POST`) — resolve many names/ids in one call.                               |
-| `/entities/resolve`                                  | Canonical-ID mapping with a snapshot revision (`POST`); preserves missing and repeated requested IDs. |
-| `/merges/groups/{id}`                                | Canonical root, retained members and optimistic directory revision (`GET`).                           |
-| `/merges`                                            | Explicit subset merge with validated field/point selections (`POST`).                                 |
-| `/merges/{id}/undo`                                  | Undo only an untouched merge (`POST`).                                                                |
-| `/merges/keep-separate`                              | Stable member-pair decisions (`GET`); explicitly set or revoke a decision (`POST`).                   |
-| `/entities/{id}/addresses`                           | An entity's addresses (`GET`/`POST`) — one row per branch (ADR-053).                                  |
-| `/entities/{id}/avatar`                              | Avatar image upload (`PUT`, raw bytes + `Content-Type`) / serve (`GET`).                              |
-| `/entities/{id}/poster`                              | Poster image upload (`PUT`, raw bytes + `Content-Type`) / serve (`GET`).                              |
-| `/entities/{id}/person`                              | Local structured-name override (`GET`/`PUT`), independent of imported names.                          |
-| `/entities/{id}/contact-points`                      | Labeled local and source email/phone/social/URL observations (`GET`/`POST`).                          |
-| `/entities/{id}/contact-points/{point_id}/preferred` | Choose a preferred observation (`PUT`), scoped to its person and kind.                                |
-| `/entities/{id}/sources`                             | Active and inactive namespaced source links (`GET`).                                                  |
-| `/sources/accounts`                                  | Stable provider account metadata (`GET`/`POST`); credentials are never accepted here.                 |
-| `/search`                                            | The contacts slice of unified search (`POST`) — ranked name hits.                                     |
-| `/health`                                            | Fleet-standard liveness envelope.                                                                     |
-| `/openapi`                                           | The OpenAPI document, regenerated live from the same `src/openapi.rs` source as the committed copy.   |
+| Path                                                 | What it serves                                                                                                                                  |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/`                                                  | Stub root — a plain-text identity banner so `GET /` is not a 404.                                                                               |
+| `/entity-types`                                      | Owning entity type choices and creation default (`GET`).                                                                                        |
+| `/entities`                                          | Contact CRUD + paginated/filtered list (`GET`/`POST`).                                                                                          |
+| `/entities/{id}`                                     | Single-entity read/update/delete (`GET`/`PATCH`/`DELETE`).                                                                                      |
+| `/entities/{id}/reference`                           | Canonical `pops:contacts/contact/{id}` URI, resolving merged historical IDs (`GET`).                                                            |
+| `/entities/lookup`                                   | Bulk match-column lookup (`POST`) — resolve many names/ids in one call.                                                                         |
+| `/entities/resolve`                                  | Canonical-ID mapping with a snapshot revision (`POST`); preserves missing and repeated requested IDs.                                           |
+| `/merges/groups/{id}`                                | Canonical root, retained members and optimistic directory revision (`GET`).                                                                     |
+| `/merges`                                            | Explicit subset merge with validated field/point selections (`POST`).                                                                           |
+| `/merges/{id}/undo`                                  | Undo only an untouched merge (`POST`).                                                                                                          |
+| `/merges/keep-separate`                              | Stable member-pair decisions (`GET`); explicitly set or revoke a decision (`POST`).                                                             |
+| `/entities/{id}/addresses`                           | An entity's addresses (`GET`/`POST`) — one row per branch (ADR-053).                                                                            |
+| `/entities/{id}/avatar`                              | Avatar image upload (`PUT`, raw bytes + `Content-Type`) / serve (`GET`).                                                                        |
+| `/entities/{id}/poster`                              | Poster image upload (`PUT`, raw bytes + `Content-Type`) / serve (`GET`).                                                                        |
+| `/entities/{id}/person`                              | Local structured-name override (`GET`/`PUT`), independent of imported names.                                                                    |
+| `/entities/{id}/contact-points`                      | Labeled contact points (`GET`/`POST`); local points support people, companies and organisations, while source observations remain person-owned. |
+| `/entities/{id}/contact-points/{point_id}/preferred` | Choose a preferred observation (`PUT`), scoped to its contact and kind.                                                                         |
+| `/entities/{id}/sources`                             | Active and inactive namespaced source links (`GET`).                                                                                            |
+| `/sources/accounts`                                  | Stable provider account metadata (`GET`/`POST`); credentials are never accepted here.                                                           |
+| `/search`                                            | The contacts slice of unified search (`POST`) — ranked name hits.                                                                               |
+| `/health`                                            | Fleet-standard liveness envelope.                                                                                                               |
+| `/openapi`                                           | The OpenAPI document, regenerated live from the same `src/openapi.rs` source as the committed copy.                                             |
 
 The Contacts app exposes `/contacts/people/:personId` from materialized import-review
-candidates. The link opens a separate tab to retain unsaved review choices. Person
-details show original local/imported methods (including inactive and preferred
-observations) and repeatable addresses before notes. Saving changes only the display
-name and notes; structured names and source observations remain independent. Undo
-reverts unsaved name/notes edits. Each new local method or raw address is saved
-individually. An uncertain write requires a successful reload before further writes;
-entered values remain available for checking against the refreshed record.
+candidates and `/contacts/:entityId` for a canonical contact reference. The candidate
+link opens a separate tab to retain unsaved review choices. Person details show
+original local/imported methods (including inactive and preferred observations) and
+repeatable addresses before notes. Company and organisation details put local methods
+and addresses before editable name and notes. Each new local method or raw address is
+saved individually. An uncertain write requires a successful reload before further
+writes; entered values remain available for checking against the refreshed record.
 
 Person entities retain the same fleet UUID identity as other entities. Multiple
 people may share a display name, including first-name-only records, and a person

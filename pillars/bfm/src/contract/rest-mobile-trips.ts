@@ -41,7 +41,8 @@ export const mobileTripsContract = c.router({
       404: MobileUpstreamErrorSchema,
       ...MOBILE_UPSTREAM_RESPONSES,
     },
-    summary: 'Read one trip with complete ordered visits, journeys, groups and stays',
+    summary:
+      'Read one trip with complete ordered visits, journeys, groups, stays, events and document associations',
     metadata: requires('trips.read'),
   },
 });

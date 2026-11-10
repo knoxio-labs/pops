@@ -21,6 +21,12 @@ const operations: WireOperation[] = [
   { operationId: 'visits.list', method: 'get', path: '/trips/{tripId}/visits' },
   { operationId: 'journeys.list', method: 'get', path: '/trips/{tripId}/journeys' },
   { operationId: 'journeyGroups.list', method: 'get', path: '/trips/{tripId}/journey-groups' },
+  {
+    operationId: 'documentAssociations.list',
+    method: 'get',
+    path: '/trips/{tripId}/document-associations',
+  },
+  { operationId: 'events.list', method: 'get', path: '/trips/{tripId}/events' },
   { operationId: 'stays.list', method: 'get', path: '/trips/{tripId}/stays' },
   {
     operationId: 'journeyLegs.list',
@@ -48,6 +54,8 @@ describe('Trips reads through the real SDK wire', () => {
       '/trips/7/journeys': { journeys: detail.journeys.map(({ legs, ...journey }) => journey) },
       '/trips/7/journey-groups': { groups: detail.journeyGroups },
       '/trips/7/stays': { stays: detail.stays },
+      '/trips/7/events': { events: detail.events },
+      '/trips/7/document-associations': { associations: detail.documentAssociations },
     };
     for (const journey of detail.journeys) {
       replies[`/trips/7/journeys/${journey.id}/legs`] = { legs: journey.legs };

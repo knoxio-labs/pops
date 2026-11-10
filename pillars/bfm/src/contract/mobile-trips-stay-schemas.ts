@@ -2,19 +2,19 @@ import { z } from 'zod';
 
 import {
   MobileTripAuditFields,
+  MobileTripClockSchema,
   MobileTripDateSchema,
   MobileTripIdSchema,
   MobileTripSourceLinkSchema,
   MobileTripTimeZoneSchema,
 } from './mobile-trips-schemas.js';
 
-const Clock = z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/u);
 /** Original date-only stay bounds and optional source clocks, with checkout-exclusive departure. */
 export const MobileStayTimingSchema = z.object({
   arrival: MobileTripDateSchema.optional(),
   departure: MobileTripDateSchema.optional(),
-  checkIn: Clock.optional(),
-  checkOut: Clock.optional(),
+  checkIn: MobileTripClockSchema.optional(),
+  checkOut: MobileTripClockSchema.optional(),
   timeZone: MobileTripTimeZoneSchema.optional(),
 });
 /** Independent stay source facts; host/document links stay opaque rather than becoming new relations. */

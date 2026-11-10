@@ -37,7 +37,7 @@ export function AddContactPoint({
         <PointFields point={point} change={setPoint} />
         <Button
           type="submit"
-          className="min-h-11 text-sm text-app-accent"
+          className="min-h-11 text-sm"
           variant="outline"
           disabled={disabled || !point.value.trim()}
         >
@@ -129,7 +129,7 @@ export function AddAddress({
       />
       <Button
         type="submit"
-        className="min-h-11 text-sm text-app-accent"
+        className="min-h-11 text-sm"
         variant="outline"
         disabled={disabled || !value.trim()}
       >
