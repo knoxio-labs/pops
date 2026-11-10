@@ -12,6 +12,7 @@ import type { DocumentAssociationTarget, PaperlessUploadPolicy } from './types';
 export function UploadEntry({
   policy,
   onFilesSelected,
+  beforeRequest,
   ...context
 }: {
   tripId: number;
@@ -20,6 +21,7 @@ export function UploadEntry({
   documentsClient?: DocumentsClient;
   policy: PaperlessUploadPolicy | undefined;
   onFilesSelected: (files: File[]) => void;
+  beforeRequest?: () => void;
 }): ReactElement {
   const available = policy?.configured === true && policy.available;
   return (
@@ -38,7 +40,7 @@ export function UploadEntry({
             if ('file' in reason) onFilesSelected([reason.file]);
           }}
         />
-        <DocumentAssociationPicker {...context} />
+        <DocumentAssociationPicker {...context} beforeRequest={beforeRequest} />
       </div>
       {policy ? (
         <p className="text-xs text-muted-foreground">

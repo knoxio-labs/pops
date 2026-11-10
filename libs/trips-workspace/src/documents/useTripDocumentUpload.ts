@@ -30,6 +30,7 @@ export function useTripDocumentUpload({
   documentsClient,
   file,
   storage,
+  beforeRequest,
 }: {
   tripId: number;
   target: DocumentAssociationTarget;
@@ -40,12 +41,14 @@ export function useTripDocumentUpload({
     session: DocumentUploadSession;
     onSessionChange: Dispatch<SetStateAction<DocumentUploadSession>>;
   };
+  beforeRequest?: () => void;
 }): TripDocumentUploadController {
   const [session, setSession] = useState(() => createDocumentUploadSession(file ?? null));
   const upload = useDocumentUpload({
     session: storage?.session ?? session,
     onSessionChange: storage?.onSessionChange ?? setSession,
     documentsClient,
+    beforeRequest,
   });
   const queryClient = useQueryClient();
   const associationMutation = useAssociationMutation({
@@ -54,6 +57,7 @@ export function useTripDocumentUpload({
     tripsClient,
     fields: upload.fields,
     queryClient,
+    beforeRequest,
   });
   return {
     ...upload,

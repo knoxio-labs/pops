@@ -36,13 +36,21 @@ export function TripDocumentUpload(props: TripDocumentUploadProps): ReactElement
   activeSession.assertContext(props);
   const policy = useQuery({
     queryKey: documentQueryKeys.status(documentsClient),
-    queryFn: () => loadPaperlessUploadPolicy(documentsClient),
+    queryFn: () => {
+      activeSession.assertCurrentContext();
+      return loadPaperlessUploadPolicy(documentsClient);
+    },
     retry: false,
   });
   return (
     <section aria-label="Add files" className="flex flex-col gap-3">
       <h2 className="text-lg font-medium">Add files</h2>
-      <UploadEntry {...props} policy={policy.data} onFilesSelected={activeSession.addFiles} />
+      <UploadEntry
+        {...props}
+        policy={policy.data}
+        onFilesSelected={activeSession.addFiles}
+        beforeRequest={activeSession.assertCurrentContext}
+      />
       {!policy.isError && policy.data?.available && policy.data.configured ? null : (
         <p role="status" className="text-sm text-muted-foreground">
           {policy.isFetching
@@ -80,11 +88,17 @@ function UploadIntent({
   const workflow = useTripDocumentUpload({
     ...session.context,
     storage: { session: intent.upload, onSessionChange },
+    beforeRequest: session.assertCurrentContext,
   });
   if (workflow.fields.file === null) return null;
   return (
     <article aria-label={`Selected file ${intent.file.name}`}>
-      <UploadContent {...session.context} workflow={workflow} active />
+      <UploadContent
+        {...session.context}
+        workflow={workflow}
+        active
+        beforeRequest={session.assertCurrentContext}
+      />
     </article>
   );
 }
