@@ -6,7 +6,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { loadPlaces, loadVisits } from '../stay/api';
 import { loadCaptureSource, performCaptureRequest } from './api';
 import { CaptureWorkspace } from './CaptureWorkspace';
-import { captureResult, captureSource, sourceCapture, sourceIdea } from './test-utils';
+import { captureResult, captureSource, sourceCapture, sourceIdea, sourceEvent } from './test-utils';
 
 import type { CaptureSource, CaptureWorkspaceProps } from './types';
 
@@ -31,13 +31,17 @@ afterEach(() => {
   caches.length = 0;
   vi.resetAllMocks();
 });
-function mount(view: CaptureWorkspaceProps['view'], source: CaptureSource): void {
+function mount(
+  view: CaptureWorkspaceProps['view'],
+  source: CaptureSource,
+  onViewEvent?: (id: number) => void
+): void {
   const cache = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   caches.push(cache);
   vi.mocked(loadCaptureSource).mockResolvedValue(source);
   render(
     <QueryClientProvider client={cache}>
-      <CaptureWorkspace tripId={1} view={view} />
+      <CaptureWorkspace tripId={1} view={view} onViewEvent={onViewEvent} />
     </QueryClientProvider>
   );
 }
@@ -79,6 +83,65 @@ it('retains failed explicit target input across filters and never copies raw tex
   );
   expect(within(restored).getByText('Raw source stays raw')).toBeVisible();
 });
+
+it.each(['missing visit', 'failed places', 'missing Event'] as const)(
+  'keeps source navigation independent of optional context: %s',
+  async (state) => {
+    if (state === 'failed places') {
+      vi.mocked(loadPlaces).mockRejectedValue(new Error('Place catalogue unavailable'));
+      vi.mocked(loadVisits).mockResolvedValue([
+        {
+          id: 3,
+          tripId: 1,
+          placeId: 2,
+          notes: '',
+          sourceLinks: [],
+          timing: {},
+          createdAt: '',
+          updatedAt: '',
+        },
+      ]);
+    }
+    const event = sourceEvent();
+    const onViewEvent = vi.fn();
+    mount(
+      'explore',
+      {
+        ...captureSource(),
+        events: state === 'missing Event' ? [] : [event],
+        memberships: [
+          {
+            id: 8,
+            tripId: 1,
+            source: { kind: 'event', id: event.id },
+            revision: 1,
+            removedAt: null,
+            createdAt: '',
+            updatedAt: '',
+          },
+        ],
+      },
+      onViewEvent
+    );
+    const row = await screen.findByRole('article', { name: 'event 7' });
+    if (state === 'missing Event') {
+      expect(within(row).queryByRole('button', { name: 'Open Event 7' })).not.toBeInTheDocument();
+      expect(within(row).getByText('The recorded source is unavailable.')).toBeVisible();
+    } else {
+      if (state === 'failed places')
+        await screen.findByRole('region', { name: 'places unavailable' });
+      await userEvent.click(
+        within(screen.getByRole('article', { name: 'event 7' })).getByRole('button', {
+          name: 'Open Event 7',
+        })
+      );
+      expect(onViewEvent).toHaveBeenCalledExactlyOnceWith(7);
+      expect(
+        within(row).queryByText('The recorded source is unavailable.')
+      ).not.toBeInTheDocument();
+    }
+  }
+);
 
 it('edits the actual Idea source and removes only its Explore membership', async () => {
   const idea = sourceIdea({

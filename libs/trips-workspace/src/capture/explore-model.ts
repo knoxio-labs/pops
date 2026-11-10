@@ -12,6 +12,7 @@ export interface ExploreRow {
     | { kind: 'place'; id: number }
     | { kind: 'unassigned' }
     | { kind: 'unavailable'; kindOfReference: 'place' | 'visit'; id: number };
+  /** Only the owning source record controls availability; optional location metadata is independent. */
   unavailable: boolean;
 }
 
@@ -90,17 +91,8 @@ function eventRow({
     label: row?.name ?? null,
     text: row?.notes ?? null,
     location,
-    unavailable: eventUnavailable(row !== undefined, visitId, visit !== undefined, location),
+    unavailable: row === undefined,
   };
-}
-
-function eventUnavailable(
-  eventExists: boolean,
-  visitId: number | null,
-  visitExists: boolean,
-  location: ExploreRow['location']
-): boolean {
-  return !eventExists || (visitId !== null && !visitExists) || location.kind === 'unavailable';
 }
 
 function eventLocation(

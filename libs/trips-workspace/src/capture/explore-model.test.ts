@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { projectExploreRows } from './explore-model';
-import { captureSource, sourceCapture } from './test-utils';
+import { captureSource, sourceCapture, sourceEvent } from './test-utils';
 
 import type { Place, Visit } from '../stay/types';
 import type { CaptureSource } from './types';
@@ -38,6 +38,30 @@ const visit = (id: number, placeId: number): Visit => ({
 });
 
 describe('Explore projection', () => {
+  it('keeps an existing Event available when its explicit visit or place context is unavailable', () => {
+    const source: CaptureSource = {
+      ...captureSource(),
+      events: [sourceEvent()],
+      memberships: [membership(8, { kind: 'event', id: 7 })],
+    };
+    expect(projectExploreRows(source, [], [])).toMatchObject([
+      {
+        source: { kind: 'event', id: 7 },
+        unavailable: false,
+        location: { kind: 'unavailable', kindOfReference: 'visit', id: 3 },
+      },
+    ]);
+    expect(projectExploreRows(source, [], [visit(3, 2)])).toMatchObject([
+      {
+        source: { kind: 'event', id: 7 },
+        unavailable: false,
+        location: { kind: 'unavailable', kindOfReference: 'place', id: 2 },
+      },
+    ]);
+    expect(projectExploreRows({ ...source, events: [] }, [], [visit(3, 2)])).toMatchObject([
+      { source: { kind: 'event', id: 7 }, unavailable: true },
+    ]);
+  });
   it('keeps same-name places distinct and preserves source raw text and membership revision', () => {
     const source: CaptureSource = {
       ...captureSource([

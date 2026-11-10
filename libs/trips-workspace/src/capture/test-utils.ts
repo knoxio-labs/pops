@@ -59,6 +59,33 @@ export function sourceIdea(
     ...fields,
   };
 }
+/** Actual source Event identity and independent optional visit used by Explore boundary tests. */
+export function sourceEvent(
+  fields: Partial<CaptureSource['events'][number]> = {}
+): CaptureSource['events'][number] {
+  return {
+    id: 7,
+    tripId: 1,
+    visitId: 3,
+    name: 'Show',
+    intention: null,
+    arrangement: null,
+    purchase: null,
+    timing: {},
+    address: null,
+    reference: null,
+    sourceUrl: null,
+    ticketUrl: null,
+    notes: 'Original note',
+    sourceLinks: [],
+    venueLinks: [],
+    organiserLinks: [],
+    documentLinks: [],
+    createdAt: '',
+    updatedAt: '',
+    ...fields,
+  };
+}
 /** Return one request-bound receipt while letting tests distinguish original outcome from current state. */
 export function captureResult(
   request: CaptureRequest,
