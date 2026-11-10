@@ -145,13 +145,17 @@ export function createVisit(db: TripsDb, tripId: number, input: VisitInput): Vis
 export function updateVisit(db: TripsDb, tripId: number, id: number, input: VisitUpdate): Visit {
   return db.transaction(
     (tx) => {
-      getVisit(tx, tripId, id);
+      const current = getVisit(tx, tripId, id);
+      const { expectedRevision, ...fields } = input;
+      if (expectedRevision !== undefined && expectedRevision !== current.revision)
+        throw new TripsServiceError('visit_revision_conflict');
+      const revision = nextVisitRevision(current.revision);
       if (input.placeId !== undefined) getPlace(tx, input.placeId);
       return VisitSchema.parse(
         requireOwnedRecord(
           tx
             .update(visits)
-            .set({ ...input, updatedAt: new Date().toISOString() })
+            .set({ ...fields, revision, updatedAt: new Date().toISOString() })
             .where(and(eq(visits.id, id), eq(visits.tripId, tripId)))
             .returning()
             .get()
@@ -162,7 +166,7 @@ export function updateVisit(db: TripsDb, tripId: number, id: number, input: Visi
   );
 }
 
-/** Atomically replace the complete route order; all source facts and timestamps remain unchanged. */
+/** Atomically replace route order; source facts and timestamps remain, and each written row advances revision. */
 export function reorderVisits(db: TripsDb, tripId: number, visitIds: number[]): Visit[] {
   return db.transaction(
     (tx) => {
@@ -175,9 +179,12 @@ export function reorderVisits(db: TripsDb, tripId: number, visitIds: number[]): 
       ) {
         throw new TripsServiceError('order_invalid');
       }
+      const revisions = new Map(
+        current.map((visit) => [visit.id, nextVisitRevision(visit.revision)])
+      );
       for (const [position, id] of visitIds.entries()) {
         tx.update(visits)
-          .set({ position })
+          .set({ position, revision: revisions.get(id) })
           .where(and(eq(visits.id, id), eq(visits.tripId, tripId)))
           .run();
       }
@@ -185,4 +192,9 @@ export function reorderVisits(db: TripsDb, tripId: number, visitIds: number[]): 
     },
     { behavior: 'immediate' }
   );
+}
+
+function nextVisitRevision(revision: number): number {
+  if (revision >= Number.MAX_SAFE_INTEGER) throw new TripsServiceError('visit_revision_exhausted');
+  return revision + 1;
 }

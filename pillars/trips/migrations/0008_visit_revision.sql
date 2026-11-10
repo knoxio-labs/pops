@@ -1,0 +1,1 @@
+ALTER TABLE `visits` ADD `revision` integer DEFAULT 0 NOT NULL;

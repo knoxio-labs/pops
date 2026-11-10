@@ -57,6 +57,13 @@
       "when": 1794243069021,
       "tag": "0007_document_associations",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1794271027904,
+      "tag": "0008_visit_revision",
+      "breakpoints": true
     }
   ]
 }

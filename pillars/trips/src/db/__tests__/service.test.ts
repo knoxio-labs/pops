@@ -73,8 +73,14 @@ describe('Trips persistence and route invariants', () => {
 
   it('reorders independently of dates and preserves all source values and timestamps', () => {
     const { db, trip, first, second } = fixture();
-    expect(reorderVisits(db, trip.id, [second.id, first.id])).toEqual([second, first]);
-    expect(listVisits(db, trip.id)).toEqual([second, first]);
+    expect(reorderVisits(db, trip.id, [second.id, first.id])).toEqual([
+      { ...second, revision: 1 },
+      { ...first, revision: 1 },
+    ]);
+    expect(listVisits(db, trip.id)).toEqual([
+      { ...second, revision: 1 },
+      { ...first, revision: 1 },
+    ]);
   });
 
   it('rejects duplicate, missing, unknown and foreign visit IDs without partial mutation', () => {
@@ -112,6 +118,7 @@ describe('Trips persistence and route invariants', () => {
     expect(updateVisit(db, trip.id, first.id, { timing: {} })).toMatchObject({
       ...first,
       timing: {},
+      revision: 1,
       updatedAt: expect.any(String),
     });
     updatePlace(db, place.id, { name: 'Updated city' });

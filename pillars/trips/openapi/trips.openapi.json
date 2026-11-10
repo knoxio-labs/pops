@@ -9917,6 +9917,11 @@
                             "minimum": 0,
                             "type": "integer"
                           },
+                          "revision": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
                           "sourceLinks": {
                             "items": {
                               "additionalProperties": false,
@@ -10014,6 +10019,7 @@
                           "id",
                           "tripId",
                           "placeId",
+                          "revision",
                           "timing",
                           "notes",
                           "sourceLinks",
@@ -10051,6 +10057,16 @@
               }
             },
             "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "409"
           }
         },
         "tags": ["visits"]
@@ -10103,6 +10119,11 @@
                             "minimum": 0,
                             "type": "integer"
                           },
+                          "revision": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
                           "sourceLinks": {
                             "items": {
                               "additionalProperties": false,
@@ -10200,6 +10221,7 @@
                           "id",
                           "tripId",
                           "placeId",
+                          "revision",
                           "timing",
                           "notes",
                           "sourceLinks",
@@ -10387,6 +10409,11 @@
                       "minimum": 0,
                       "type": "integer"
                     },
+                    "revision": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
                     "sourceLinks": {
                       "items": {
                         "additionalProperties": false,
@@ -10484,6 +10511,7 @@
                     "id",
                     "tripId",
                     "placeId",
+                    "revision",
                     "timing",
                     "notes",
                     "sourceLinks",
@@ -10574,6 +10602,11 @@
                       "minimum": 0,
                       "type": "integer"
                     },
+                    "revision": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
                     "sourceLinks": {
                       "items": {
                         "additionalProperties": false,
@@ -10671,6 +10704,7 @@
                     "id",
                     "tripId",
                     "placeId",
+                    "revision",
                     "timing",
                     "notes",
                     "sourceLinks",
@@ -10738,6 +10772,11 @@
               "schema": {
                 "additionalProperties": false,
                 "properties": {
+                  "expectedRevision": {
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
                   "notes": {
                     "type": "string"
                   },
@@ -10862,6 +10901,11 @@
                       "minimum": 0,
                       "type": "integer"
                     },
+                    "revision": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
                     "sourceLinks": {
                       "items": {
                         "additionalProperties": false,
@@ -10959,6 +11003,7 @@
                     "id",
                     "tripId",
                     "placeId",
+                    "revision",
                     "timing",
                     "notes",
                     "sourceLinks",
@@ -10990,6 +11035,16 @@
               }
             },
             "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "409"
           }
         },
         "tags": ["visits"]

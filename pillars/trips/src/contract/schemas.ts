@@ -78,6 +78,7 @@ export const VisitSchema = z.object({
   id: IdSchema,
   tripId: IdSchema,
   placeId: IdSchema,
+  revision: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),
   timing: VisitTimingSchema,
   ...SourceFields,
   ...AuditFields,
@@ -114,8 +115,10 @@ export const CreateVisitBody = z.object({
   sourceLinks: z.array(SourceLinkSchema).optional(),
 });
 
-/** Mutable visit facts; timing replaces the complete timing value so fields can be cleared. */
-export const UpdateVisitBody = CreateVisitBody.partial();
+/** Mutable visit facts with an optional compatibility precondition; timing replaces the complete value. */
+export const UpdateVisitBody = CreateVisitBody.partial().extend({
+  expectedRevision: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional(),
+});
 
 /** The complete visit order for one trip, containing each existing visit exactly once. */
 export const ReorderVisitsBody = z.object({ visitIds: z.array(IdSchema) });

@@ -5,6 +5,8 @@ export class TripsServiceError extends Error {
       | 'not_found'
       | 'order_invalid'
       | 'revision_conflict'
+      | 'visit_revision_conflict'
+      | 'visit_revision_exhausted'
       | 'decision_revision_conflict'
       | 'option_not_removed'
       | 'journey_grouped'

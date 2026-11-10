@@ -38,7 +38,12 @@ usable and an unknown explicit tag selection returns retryable 503.
 
 Equivalent `/places` routes manage reusable names and source links.
 `GET/POST /trips/:tripId/visits` and `GET/PATCH /trips/:tripId/visits/:id` manage
-visit facts. A new visit appends to that trip's route.
+visit facts. A new visit appends to that trip's route with revision zero. Visit
+responses include a monotonic safe-integer `revision`. PATCH accepts optional
+`expectedRevision` for compatibility; editors and Undo supply it. A stale write
+returns 409 atomically. Every successful PATCH and route-order row write advances
+revision by exactly one, including unchanged values. Exhausted revisions reject
+the complete mutation without advancing any row.
 
 Visit timing supports independent arrival/departure calendar dates, approximate
 year/month/early-middle-late precision and a numeric duration in explicit days or
@@ -51,7 +56,7 @@ it. Omitted metadata fields retain their values; `null` clears an optional name.
 
 `PUT /trips/:tripId/visit-order` accepts the complete `visitIds` array. Each visit
 must belong to the trip and appear exactly once. Reordering is atomic and changes
-only position, preserving source values and timestamps. No purchase, reservation
+position and revision, preserving source values and timestamps. No purchase, reservation
 or certainty is inferred from route or timing.
 
 Events belong to trips independently of visits. `GET/POST /trips/:tripId/events`
