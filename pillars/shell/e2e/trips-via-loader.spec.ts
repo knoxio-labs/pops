@@ -25,6 +25,18 @@ test('Trips loads its real remote, creates permanently, and edits metadata throu
   await page.route(/\/tags-api\/tags(?:\?.*)?$/, (route) => json(route, 200, { tags: [] }));
   await page.route(/\/trips-api\/places$/, (route) => json(route, 200, { places: [] }));
   await page.route(/\/trips-api\/trips\/\d+\/visits$/, (route) => json(route, 200, { visits: [] }));
+  for (const [collection, response] of [
+    ['stays', { stays: [] }],
+    ['events', { events: [] }],
+    ['journeys', { journeys: [] }],
+    ['journey-groups', { groups: [] }],
+    ['decisions', { decisions: [] }],
+    ['document-associations', { associations: [] }],
+  ] as const) {
+    await page.route(new RegExp(`/trips-api/trips/72/${collection}$`), (route) =>
+      json(route, 200, response)
+    );
+  }
   await page.route(/\/trips-api\/trips$/, async (route) => {
     if (route.request().method() === 'POST') {
       writes.push('POST');
@@ -52,6 +64,7 @@ test('Trips loads its real remote, creates permanently, and edits metadata throu
   await page.getByRole('textbox', { name: 'Destination', exact: true }).fill('Hill country');
   await page.getByRole('textbox', { name: 'When', exact: true }).fill('Whenever the ferry resumes');
   await page.getByRole('button', { name: 'Create trip', exact: true }).click();
+  await expect(page).toHaveURL(/\/trips\/72$/);
   await expect(page.getByRole('heading', { name: 'Hill country', exact: true })).toBeVisible();
   await expect(page.getByText('Whenever the ferry resumes', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Undo', exact: true })).toHaveCount(0);
