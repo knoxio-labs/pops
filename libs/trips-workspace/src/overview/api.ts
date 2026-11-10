@@ -1,5 +1,8 @@
 import { unwrap } from '@pops/pillar-sdk/client';
 
+import { loadRentals } from '../arrangements/api';
+import { loadCaptureSource } from '../capture/api';
+import { loadMeetingPlans } from '../people/api';
 import {
   decisionsList,
   documentAssociationsList,
@@ -19,7 +22,10 @@ type Collections = Required<OverviewSources>;
 export type OverviewLoaders = { [K in keyof Collections]: () => Promise<Collections[K]> };
 
 /** Read each collection independently through the owning generated Trips transport. */
-export function overviewLoaders({ tripId, client }: TripOverviewProps): OverviewLoaders {
+export function overviewLoaders({
+  tripId,
+  client,
+}: Pick<TripOverviewProps, 'tripId' | 'client'>): OverviewLoaders {
   const options = { client, path: { tripId } };
   return {
     visits: async (): Promise<Collections['visits']> => unwrap(await visitsList(options)).visits,
@@ -34,5 +40,8 @@ export function overviewLoaders({ tripId, client }: TripOverviewProps): Overview
       unwrap(await decisionsList(options)).decisions,
     documents: async (): Promise<Collections['documents']> =>
       unwrap(await documentAssociationsList(options)).associations,
+    meetings: () => loadMeetingPlans({ tripId, client }),
+    capture: () => loadCaptureSource({ tripId, client }),
+    rentals: () => loadRentals({ tripId, client }),
   };
 }

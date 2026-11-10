@@ -11,11 +11,13 @@ import { requireJourneySnapshot } from './snapshot';
 
 import type { CalendarSnapshot, CalendarWorkspaceProps } from './types';
 
-/** Load complete published collections and owning journey projections; abort obsolete reads. */
+/** Load complete source collections; preserve cancellation and recheck an optional owner fence before dependent reads. */
 export async function loadCalendar(
   props: Pick<CalendarWorkspaceProps, 'tripId' | 'client'>,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  assertCurrent?: () => void
 ): Promise<CalendarSnapshot> {
+  assertCurrent?.();
   const options = { client: props.client, path: { tripId: props.tripId }, signal };
   const [journeys, groups, stays, events] = await Promise.all([
     journeysList(options).then((response) => unwrap(response)),
@@ -29,6 +31,7 @@ export async function loadCalendar(
     events: events.events,
     journeys: await Promise.all(
       journeys.journeys.map(async (journey) => {
+        assertCurrent?.();
         const snapshot = unwrap(
           await journeysWorkspace({ ...options, path: { ...options.path, id: journey.id } })
         );

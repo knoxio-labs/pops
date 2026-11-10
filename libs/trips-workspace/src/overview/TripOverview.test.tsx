@@ -1,51 +1,15 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { captureSource } from '../capture/test-utils';
 import { sourceJourney, sourceLeg } from '../journey/test-utils';
+import { routeRead } from '../route/test-utils';
 import { sourceStay, sourceVisits } from '../stay/test-utils';
-import { createClient } from '../trips-api/client';
-import { overviewProps, overviewResponses, overviewTrip } from './test-utils';
-import { TripOverview } from './TripOverview';
-
-import type { TripOverviewProps } from './types';
+import { mountOverview as mount } from './render.test-utils';
+import { overviewResponses, overviewTrip } from './test-utils';
 
 afterEach(cleanup);
-
-function mount(
-  responses = overviewResponses(),
-  wait?: { path: string; until: Promise<void> },
-  props: Partial<TripOverviewProps> = {}
-) {
-  const requests: string[] = [];
-  const client = createClient({
-    baseUrl: 'http://overview.test',
-    fetch: async (input, init) => {
-      const request = new Request(input, init);
-      const path = new URL(request.url).pathname;
-      requests.push(path);
-      if (path === wait?.path) await wait.until;
-      return new Response(
-        JSON.stringify(
-          responses.get(path) ?? {
-            code: 'trips.source.unavailable',
-            message: 'Source read failed',
-            retryable: true,
-          }
-        ),
-        { status: responses.has(path) ? 200 : 503, headers: { 'content-type': 'application/json' } }
-      );
-    },
-  });
-  const cache = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  render(
-    <QueryClientProvider client={cache}>
-      <TripOverview {...overviewProps} {...props} client={client} />
-    </QueryClientProvider>
-  );
-  return { requests, cache };
-}
 
 describe('source-backed TripOverview', () => {
   it('opens the published Documents workspace even before the first association exists', async () => {
@@ -121,9 +85,19 @@ describe('source-backed TripOverview', () => {
   it('keeps repeated towns distinct and does not assign an independent journey to matching places', async () => {
     const responses = overviewResponses();
     responses.set('/trips/7/visits', {
-      visits: [{ ...sourceVisits[0]!, id: 32, timing: {} }, sourceVisits[0]!],
+      visits: [sourceVisits[0]!, { ...sourceVisits[0]!, id: 32, timing: {} }],
     });
+    responses.set(
+      '/trips/7/route',
+      routeRead({
+        order: [
+          { kind: 'visit', id: 32 },
+          { kind: 'visit', id: 31 },
+        ],
+      })
+    );
     mount(responses);
+    await screen.findByRole('list', { name: 'Route' });
     await screen.findAllByRole('heading', { name: /Wellington/ });
     const occurrences = document.querySelectorAll('[data-visit-id]');
     expect(occurrences).toHaveLength(2);
@@ -135,7 +109,7 @@ describe('source-backed TripOverview', () => {
     expect(occurrences[0]).not.toHaveTextContent('Cedar guesthouse');
     expect(occurrences[1]).toHaveTextContent('Cedar guesthouse');
     expect(occurrences[1]).toHaveTextContent('Harbour festival');
-    const journeys = await screen.findByRole('region', { name: 'Journeys' });
+    const journeys = await screen.findByRole('region', { name: 'unplaced' });
     expect(within(journeys).getByText('Harbour connection')).toBeVisible();
     expect(
       within(screen.getByRole('region', { name: 'Route' })).queryByText('Harbour connection')
@@ -200,16 +174,17 @@ describe('source-backed TripOverview', () => {
     expect(await screen.findByRole('link', { name: /Harbour connection/ })).toBeVisible();
   });
 
-  it('distinguishes a failed route from empty and preserves readable stays, events and error diagnostics', async () => {
+  it('distinguishes failed Visit context from an empty route and retains linked facts at explicit canonical references', async () => {
     const responses = overviewResponses();
     responses.delete('/trips/7/visits');
     mount(responses);
     await screen.findByText('trips.source.unavailable');
     expect(screen.queryByText('No route entries.')).not.toBeInTheDocument();
-    const unassociated = screen.getByRole('region', { name: 'Unassociated' });
-    expect(within(unassociated).getByText('Cedar guesthouse')).toBeVisible();
-    expect(within(unassociated).getByText('Harbour festival')).toBeVisible();
-    expect(within(unassociated).getAllByText('visit #31')).toHaveLength(2);
+    const root = await screen.findByRole('list', { name: 'Route' });
+    expect(within(root).getByText('Cedar guesthouse')).toBeVisible();
+    expect(within(root).getByText('Harbour festival')).toBeVisible();
+    expect(within(root).getByText('visit #31 · Source unavailable')).toBeVisible();
+    expect(within(root).queryByText('Wellington')).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Trip settings' })).toBeVisible();
   });
 
@@ -287,6 +262,9 @@ describe('source-backed TripOverview', () => {
       if (key === 'journey-groups') key = 'groups';
       responses.set(path, { [key]: [] });
     }
+    responses.set('/trips/7/route', routeRead({ order: [] }));
+    responses.set('/trips/7/capture-workspace', captureSource());
+    responses.set('/trips/7/meeting-plans', { meetingPlans: [] });
     mount(responses);
     expect(await screen.findByText('No route entries.')).toBeVisible();
     cleanup();

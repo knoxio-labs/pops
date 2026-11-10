@@ -50,7 +50,17 @@ export type {
   PeopleTextKey,
 } from './people/types';
 export { TripOverview } from './overview/TripOverview';
-export type { TripOverviewProps, OverviewLabels, OverviewKind } from './overview/types';
+export type {
+  TripOverviewProps,
+  OverviewLabels,
+  OverviewKind,
+  OverviewPlacementTarget,
+  OverviewLinkKind,
+  OverviewSource,
+  OverviewTool,
+  OverviewCalendarSelection,
+  OverviewCalendarControl,
+} from './overview/types';
 export { ArrangementsWorkspace } from './arrangements/ArrangementsWorkspace';
 export type { ArrangementsWorkspaceProps, ArrangementLabels } from './arrangements/types';
 export { RentalWorkspace as RentalContextEditor } from './arrangements/RentalWorkspace';

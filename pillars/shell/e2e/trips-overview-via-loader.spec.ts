@@ -4,6 +4,30 @@ import { resolve } from 'node:path';
 import { expect, test } from './fixtures/pillar-rest-guard';
 import { json, stubShellBoot } from './helpers/pillar-rest';
 
+const timelineReads = {
+  'meeting-plans': { meetingPlans: [] },
+  'capture-workspace': {
+    captures: [],
+    ideas: [],
+    associations: [],
+    memberships: [],
+    events: [],
+    journeys: [],
+    stays: [],
+  },
+  rentals: { rentals: [] },
+  route: {
+    tripId: 7,
+    revision: 0,
+    order: [
+      { kind: 'visit' as const, id: 31 },
+      { kind: 'visit' as const, id: 32 },
+    ],
+    paths: [],
+    missingSources: [],
+  },
+};
+
 for (const viewport of [
   { width: 1440, height: 1000 },
   { width: 390, height: 844 },
@@ -70,6 +94,9 @@ for (const viewport of [
     };
     await stubShellBoot(page, ['trips']);
     const responses = new Map<string, unknown>([
+      ...Object.entries(timelineReads).map(
+        ([collection, response]) => [`/trips/7/${collection}`, response] as const
+      ),
       ['/trips', { trips: [trip] }],
       ['/trips/7', trip],
       ['/places', { places: [{ id: 51, name: 'Wellington', sourceLinks: [], ...audit }] }],

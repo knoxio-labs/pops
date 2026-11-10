@@ -26,17 +26,38 @@ export function visitRecords(
 ): VisitRecord[] {
   return visits.map((visit) => ({
     visit,
-    stays: stays.filter((stay) => stay.visitId === visit.id),
-    events: events.filter((event) => event.visitId === visit.id),
+    ...visitFacts(visit.id, stays, events),
   }));
+}
+/** Link independent accommodation and events by literal Visit identity, including unavailable occurrences. */
+export function visitFacts(
+  visitId: number,
+  stays: Stay[],
+  events: OverviewEvent[]
+): Pick<VisitRecord, 'stays' | 'events'> {
+  return {
+    stays: stays.filter((stay) => stay.visitId === visitId),
+    events: events.filter((event) => event.visitId === visitId),
+  };
 }
 /** Keep absent and unavailable visit references visible without guessing a place association. */
 export function detachedRecords<T extends { visitId: number | null }>(
   records: T[],
-  visits: Visit[]
+  visits: readonly Pick<Visit, 'id'>[]
+): T[] {
+  return detachedByVisit(records, visits, (record) => record.visitId);
+}
+/** Apply the same exact Visit membership test to canonical sources wrapped in a view reference. */
+export function detachedByVisit<T>(
+  records: T[],
+  visits: readonly Pick<Visit, 'id'>[],
+  visitId: (record: T) => number | null
 ): T[] {
   const identities = new Set(visits.map((visit) => visit.id));
-  return records.filter((record) => record.visitId === null || !identities.has(record.visitId));
+  return records.filter((record) => {
+    const id = visitId(record);
+    return id === null || !identities.has(id);
+  });
 }
 /** Explicit groups retain current and alternative identities, including unavailable sources. */
 export function journeyRecords(journeys: Journey[], groups: JourneyGroup[]): JourneyRecords {

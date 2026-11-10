@@ -1,4 +1,15 @@
-import { ArrowUpRight, BedDouble, CircleHelp, MapPin, Route, Ticket } from 'lucide-react';
+import {
+  ArrowUpRight,
+  BedDouble,
+  CarFront,
+  CircleHelp,
+  FileText,
+  Lightbulb,
+  MapPin,
+  Route,
+  Ticket,
+  Users,
+} from 'lucide-react';
 
 import { Badge, cn } from '@pops/ui';
 
@@ -11,6 +22,7 @@ interface SourceCardProps {
   kind: OverviewKind;
   title: string;
   href?: string;
+  onOpen?: () => void;
   purchased?: boolean;
   statuses?: (string | null)[];
   labels: OverviewLabels;
@@ -23,6 +35,10 @@ const icons = {
   event: Ticket,
   journey: Route,
   decision: CircleHelp,
+  meeting: Users,
+  capture: FileText,
+  idea: Lightbulb,
+  rental: CarFront,
 };
 
 /** Compact source fact card; only explicit purchase evidence receives a solid constraint border. */
@@ -30,6 +46,7 @@ export function SourceCard({
   kind,
   title,
   href,
+  onOpen,
   purchased = false,
   statuses = noStatuses,
   labels,
@@ -44,23 +61,30 @@ export function SourceCard({
     'block min-h-11 space-y-2 rounded-lg border p-3 text-sm',
     purchased ? 'border-solid border-l-4 border-l-app-accent' : 'border-dashed border-border'
   );
-  return (
-    <article data-constraint={purchased ? 'hard' : 'soft'}>
-      {href ? (
-        <a
-          href={href}
-          className={cn(
-            className,
-            'hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
-          )}
-        >
-          {content}
-        </a>
-      ) : (
-        <div className={className}>{content}</div>
-      )}
-    </article>
+  const actionClass = cn(
+    className,
+    'hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
   );
+  let body: JSX.Element;
+  if (onOpen)
+    body = (
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-label={title}
+        className={cn(actionClass, 'w-full text-left')}
+      >
+        {content}
+      </button>
+    );
+  else if (href)
+    body = (
+      <a href={href} className={actionClass}>
+        {content}
+      </a>
+    );
+  else body = <div className={className}>{content}</div>;
+  return <article data-constraint={purchased ? 'hard' : 'soft'}>{body}</article>;
 }
 
 function CardContent({

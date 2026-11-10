@@ -1,99 +1,85 @@
-import { useQuery } from '@tanstack/react-query';
-
 import { unwrap } from '@pops/pillar-sdk/client';
 import { Badge, ErrorState } from '@pops/ui';
 
+import { useSourceQuery } from '../shared/use-source-query';
 import { requestProblem } from '../stay/api';
 import { journeyLegsList } from '../trips-api/sdk.gen';
-import { journeyRecords } from './model';
+import { sourceAction } from './source-action';
+import { readOverviewSource } from './source-read';
 import { SourceCard } from './SourceCard';
 
 import type { JSX } from 'react';
 
 import type { Journey, JourneyLeg } from '../journey/types';
+import type { SourceQuery } from '../shared/use-source-query';
 import type { OverviewViewProps } from './types';
 
-/** Independent journeys and explicit alternatives remain outside the visit rail until placement has a contract. */
+/** Historical Journey group references remain distinct from active route placement. */
 export function OverviewJourneys(props: OverviewViewProps): JSX.Element | null {
-  const projection = journeyRecords(props.sources.journeys ?? [], props.sources.groups ?? []);
-  if (!projection.groups.length && !projection.independent.length) return null;
+  const groups = props.sources.groups ?? [];
+  if (!groups.length) return null;
   return (
     <section aria-label={props.labels.journeys} className="min-w-0 space-y-3">
       <h2 className="border-b pb-2 text-lg font-semibold">{props.labels.journeys}</h2>
-      {projection.groups.map(({ group, current, alternatives }) => (
+      {groups.map((group) => (
         <section
           key={group.id}
           className="min-w-0 space-y-3 border-l-2 border-border pl-3"
           aria-label={props.labels.source('group', group.id)}
         >
           <Badge variant="secondary">{props.labels.current}</Badge>
-          {current ? (
-            <JourneyRecord {...props} journey={current} />
-          ) : (
-            <MissingJourney {...props} id={group.currentJourneyId} />
-          )}
-          {alternatives.length > 0 && (
+          <JourneyReference {...props} id={group.currentJourneyId} />
+          {group.alternativeJourneyIds.length > 0 && (
             <details>
               <summary className="min-h-11 cursor-pointer py-3 text-sm text-muted-foreground">
-                {props.labels.alternatives} ({alternatives.length})
+                {props.labels.alternatives} ({group.alternativeJourneyIds.length})
               </summary>
               <div className="space-y-3">
-                {alternatives.map(({ id, journey }) =>
-                  journey ? (
-                    <JourneyRecord key={id} {...props} journey={journey} />
-                  ) : (
-                    <MissingJourney key={id} {...props} id={id} />
-                  )
-                )}
+                {group.alternativeJourneyIds.map((id) => (
+                  <JourneyReference key={id} {...props} id={id} />
+                ))}
               </div>
             </details>
           )}
         </section>
       ))}
-      {projection.independent.map((journey) => (
-        <JourneyRecord key={journey.id} {...props} journey={journey} />
-      ))}
     </section>
   );
 }
 
-function MissingJourney(props: OverviewViewProps & { id: number }): JSX.Element {
+function JourneyReference(props: OverviewViewProps & { id: number }): JSX.Element {
+  const available = props.sources.journeys?.some(
+    (journey) => journey.id === props.id && journey.tripId === props.tripId
+  );
   const title = props.labels.source('journey', props.id);
   return (
     <SourceCard
       kind="journey"
       title={
-        props.sources.journeys === undefined ? title : `${title} · ${props.labels.unavailable}`
+        available || props.sources.journeys === undefined
+          ? title
+          : `${title} · ${props.labels.unavailable}`
       }
-      href={props.href('journey', props.id)}
+      {...sourceAction(props, { kind: 'journey', id: props.id })}
       labels={props.labels}
     />
   );
 }
 
-function JourneyRecord({
+/** Read one canonical Journey and its actual ordered leg facts without assigning it to a Visit. */
+export function JourneyRecord({
   journey,
   ...props
 }: OverviewViewProps & { journey: Journey }): JSX.Element | null {
-  const origin = props.client?.getConfig().baseUrl ?? '/trips-api';
-  const legs = useQuery({
-    queryKey: ['trips', origin, props.tripId, 'journey', journey.id, 'legs'],
-    queryFn: async () =>
-      unwrap(
-        await journeyLegsList({
-          client: props.client,
-          path: { tripId: props.tripId, journeyId: journey.id },
-        })
-      ).legs,
-    retry: false,
-  });
+  const legs = useJourneyLegs(props, journey);
+  if (legs.ownershipError) return <ErrorState error={legs.ownershipError} />;
 
   return (
     <div className="min-w-0 space-y-2">
       <SourceCard
         kind="journey"
         title={journey.name ?? props.labels.source('journey', journey.id)}
-        href={props.href('journey', journey.id)}
+        {...sourceAction(props, { kind: 'journey', id: journey.id })}
         labels={props.labels}
       />
       {legs.isPending && (
@@ -108,6 +94,7 @@ function JourneyRecord({
         <SourceCard
           key={leg.id}
           kind="journey"
+          {...sourceAction(props, { kind: 'journey', id: journey.id })}
           title={
             [leg.mode, leg.operator, leg.service].filter(Boolean).join(' · ') ||
             props.labels.source('leg', leg.id)
@@ -138,5 +125,32 @@ function endpoint(source: JourneyLeg['from'], props: OverviewViewProps): string 
     ]
       .filter(Boolean)
       .join(' · ') || '…'
+  );
+}
+
+function useJourneyLegs(props: OverviewViewProps, journey: Journey): SourceQuery<JourneyLeg[]> {
+  return useSourceQuery(
+    { ...props, kind: 'overview-journey-legs', sourceId: journey.id },
+    (owner) => ({
+      queryKey: [
+        'trips',
+        owner.client.getConfig().baseUrl ?? '/trips-api',
+        owner.tripId,
+        'journey',
+        owner.sourceId,
+        'legs',
+      ],
+      load: () =>
+        readOverviewSource(
+          owner,
+          async () =>
+            unwrap(
+              await journeyLegsList({
+                client: owner.client,
+                path: { tripId: owner.tripId, journeyId: owner.sourceId },
+              })
+            ).legs
+        ),
+    })
   );
 }

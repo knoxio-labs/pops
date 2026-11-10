@@ -1,10 +1,12 @@
 import { Button, cn, ErrorState, PageHeader } from '@pops/ui';
 
+import { projectTripRoute } from '../route/projection';
+import { useTripRoute } from '../route/use-trip-route';
 import { requestProblem } from '../stay/api';
-import { dateRange } from './model';
-import { OverviewJourneys } from './OverviewJourneys';
+import { OverviewCalendar } from './OverviewCalendar';
 import { OverviewDetached, OverviewReferences } from './OverviewReferences';
 import { OverviewRoute } from './OverviewRoute';
+import { routeDateRange } from './route-context';
 import { useOverviewSources } from './use-overview-sources';
 
 import type { JSX } from 'react';
@@ -14,16 +16,21 @@ import type { TripOverviewProps, OverviewViewProps } from './types';
 /** Approved route-first overview, reading each trip-owned source independently through its generated client. */
 export function TripOverview(props: TripOverviewProps): JSX.Element | null {
   return (
-    <OverviewSession
-      key={`${props.client?.getConfig().baseUrl ?? '/trips-api'}:${props.tripId}`}
-      {...props}
-    />
+    <>
+      <OverviewSession {...props} />
+      {props.contextualEditor}
+    </>
   );
 }
 
 function OverviewSession(props: TripOverviewProps): JSX.Element | null {
   const queries = useOverviewSources(props);
+  const route = useTripRoute(props);
   const { trip, ...context } = queries;
+  const ownershipError = Object.values(queries).find(
+    (query) => query.ownershipError
+  )?.ownershipError;
+  if (ownershipError) return <ErrorState error={ownershipError} />;
   if (trip.isPending)
     return (
       <p role="status" className="p-4">
@@ -41,6 +48,9 @@ function OverviewSession(props: TripOverviewProps): JSX.Element | null {
     groups: context.groups.data,
     decisions: context.decisions.data,
     documents: context.documents.data,
+    meetings: context.meetings.data,
+    capture: context.capture.data,
+    rentals: context.rentals.data,
   };
   return (
     <main className="w-full min-w-0 space-y-5 text-sm">
@@ -54,7 +64,13 @@ function OverviewSession(props: TripOverviewProps): JSX.Element | null {
           </section>
         ) : null
       )}
-      <OverviewContent {...props} trip={trip.data} sources={sources} />
+      <OverviewContent
+        {...props}
+        trip={trip.data}
+        sources={sources}
+        route={route}
+        projection={route.view ? projectTripRoute(route.view, sources) : undefined}
+      />
       {Object.values(context).some((query) => query.isPending) && (
         <p role="status" className="text-muted-foreground">
           {props.labels.loading}
@@ -70,10 +86,10 @@ function OverviewContent(props: OverviewViewProps): JSX.Element | null {
   return (
     <>
       <OverviewHeader {...props} />
+      {props.calendar && <OverviewCalendar {...props} calendar={props.calendar} />}
       <div className={cn('grid min-w-0 gap-6', hasReferences && 'xl:grid-cols-3')}>
         <div className={cn('min-w-0 space-y-6', hasReferences && 'xl:col-span-2')}>
           <OverviewRoute {...props} />
-          <OverviewJourneys {...props} />
           <OverviewDetached {...props} />
           {trip.notes && (
             <section className="space-y-2">
@@ -89,13 +105,9 @@ function OverviewContent(props: OverviewViewProps): JSX.Element | null {
 }
 
 function OverviewHeader(props: OverviewViewProps): JSX.Element {
-  const { trip, sources } = props;
+  const { trip } = props;
   const title = trip.name?.trim() || trip.destination.trim() || props.labels.trip;
-  const bounds = dateRange(
-    sources.visits?.[0]?.timing.arrival,
-    sources.visits?.at(-1)?.timing.departure,
-    props.locale
-  );
+  const bounds = routeDateRange(props.projection, props.locale);
   return (
     <>
       <PageHeader
@@ -106,25 +118,36 @@ function OverviewHeader(props: OverviewViewProps): JSX.Element {
           ) : undefined
         }
         backHref={props.backHref}
-        actions={
-          <div className="flex flex-wrap gap-2">
-            {props.calendarLink && (
-              <Button asChild variant="outline" className="min-h-11">
-                <a href={props.calendarLink.href}>{props.calendarLink.label}</a>
-              </Button>
-            )}
-            {props.documentsHref && (
-              <Button asChild variant="outline" className="min-h-11">
-                <a href={props.documentsHref}>{props.labels.documents}</a>
-              </Button>
-            )}
-            <Button asChild variant="outline" className="min-h-11">
-              <a href={props.settingsHref}>{props.labels.settings}</a>
-            </Button>
-          </div>
-        }
+        actions={<OverviewActions {...props} />}
       />
       {bounds && <p className="text-sm text-muted-foreground">{bounds}</p>}
     </>
+  );
+}
+
+function OverviewActions(props: TripOverviewProps): JSX.Element {
+  const legacy =
+    props.controls === undefined &&
+    props.onOpenSource === undefined &&
+    props.calendar === undefined;
+  return (
+    <div className="flex flex-wrap gap-2">
+      {props.controls}
+      {legacy && props.calendarLink && (
+        <Button asChild variant="outline" className="min-h-11">
+          <a href={props.calendarLink.href}>{props.calendarLink.label}</a>
+        </Button>
+      )}
+      {props.documentsHref && (
+        <Button asChild variant="outline" className="min-h-11">
+          <a href={props.documentsHref}>{props.labels.documents}</a>
+        </Button>
+      )}
+      {legacy && props.settingsHref && (
+        <Button asChild variant="outline" className="min-h-11">
+          <a href={props.settingsHref}>{props.labels.settings}</a>
+        </Button>
+      )}
+    </div>
   );
 }

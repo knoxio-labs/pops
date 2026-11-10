@@ -42,13 +42,27 @@ GET. Monotonic read generations and revisions prevent late reads or historical
 own receipt IDs in LIFO order, with the producer validating the untouched route;
 newer foreign revisions and already-undone replay outcomes grant no inverse.
 
-`TripOverview` is the approved route-first read surface. Its host supplies translated
-labels and links to published source pages. Trip, Place, ordered Visit, Journey,
-Journey group, Stay, Event, Decision and document-association reads fail independently;
+`TripOverview` is the shared Trip Timeline. Its host supplies translated labels,
+controlled tools and exact `onOpenSource({ kind, id })` callbacks for existing editors.
+The `controls` slot belongs to that host; `contextualEditor` renders after the Timeline's
+main landmark so a Sheet or Dialog can reuse its existing workspace without nested mains.
+Meetings, captures, Ideas and Rentals retain their canonical identities and independent facts.
+People and Capture reads share the contextual editors' existing query keys and transports.
+All Timeline collection reads capture their actual owner, reject stale dispatch and delivery,
+and stop displaying cached context while the mutable connection no longer matches.
+Calendar rechecks that owner after collection reads before requesting Journey workspaces.
+The optional controlled `calendar` selection embeds the existing date/zone/source-window
+projection and requires a contextual source opener; it adds no Calendar destination.
+Trip, Place, ordered Visit, Journey, Journey group, Stay, Event, Rental, Meeting,
+Capture workspace, Decision and document-association reads fail independently;
 cached successes remain visible during refresh failures. Missing source references
 retain their identities. Only explicit Visit IDs attach stays and events to route
-occurrences. Journeys remain independent of visits, with current and alternative
-identities supplied solely by explicit groups. An Alternative event stays visible.
+occurrences. The shared route reader/projector supplies mixed Visit/Journey root order,
+persisted gaps, complete alternative paths, applied history and unplaced sources.
+Missing references require explicit producer proof; failed reads remain unavailable.
+Journey groups retain their independent current/alternative identities without placing
+sources. Optional `onOpenPlacement` opens exact gap/path identities through the host;
+without it structural references remain read-only. An Alternative event stays visible.
 Only Purchased sources get hard styling. Date-only values never move timezone, and
 partial bounds, approximate months, duration and opaque trip When text stay distinct.
 Document associations identify their originals without claiming external resolution.
