@@ -130,6 +130,18 @@ describe('TripDocumentsWorkspace', () => {
       'Visit documents',
       'Journey · Rail transfer',
     ]);
+    const visitRegion = screen.getByRole('region', { name: 'Porto' });
+    expect(within(visitRegion).getByRole('heading', { name: 'Porto', level: 2 })).toBeVisible();
+    expect(
+      within(visitRegion).getByRole('heading', { name: 'Visit documents', level: 3 })
+    ).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Trip documents', level: 2 })).toBeVisible();
+    expect(
+      screen.getByRole('heading', { name: 'Journey · Rail transfer', level: 2 })
+    ).toBeVisible();
+    expect(
+      within(visitRegion).queryByRole('region', { name: 'Journey · Rail transfer' })
+    ).toBeNull();
     const originalLinks = await screen.findAllByRole('link', { name: 'Open original' });
     expect(
       originalLinks.find((link) => link.getAttribute('href')?.includes('/12/'))

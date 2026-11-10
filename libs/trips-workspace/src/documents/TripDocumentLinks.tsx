@@ -110,6 +110,7 @@ function VisitDocumentGroups({
         <DocumentGroup
           key={`${target.target.kind}:${String(target.target.id)}`}
           title={groupTitle(target.target, data.targetNames)}
+          headingLevel={3}
           associations={target.associations}
           originals={data.originalRows}
           allAssociations={data.associations}

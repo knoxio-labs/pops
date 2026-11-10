@@ -8,9 +8,10 @@ import type { ReactElement } from 'react';
 
 import type { TripDocumentAssociation, PaperlessDocument } from './types';
 
-/** Render one target's links while keeping original deletion in the Documents owner. */
+/** Render target links with a level-three heading when nested beneath a visit; unlink never deletes originals. */
 export function DocumentGroup({
   title,
+  headingLevel = 2,
   associations,
   originals,
   allAssociations,
@@ -18,6 +19,7 @@ export function DocumentGroup({
   busy,
 }: {
   title: string;
+  headingLevel?: 2 | 3;
   associations: readonly TripDocumentAssociation[];
   originals: readonly { document: PaperlessDocument | undefined; failed: boolean }[];
   allAssociations: readonly TripDocumentAssociation[];
@@ -25,9 +27,12 @@ export function DocumentGroup({
   busy: boolean;
 }): ReactElement | null {
   if (associations.length === 0) return null;
+  const Heading = headingLevel === 2 ? 'h2' : 'h3';
   return (
     <section aria-label={title} className="flex flex-col gap-2">
-      <h2 className="text-lg font-medium">{title}</h2>
+      <Heading className={headingLevel === 2 ? 'text-lg font-medium' : 'text-base font-medium'}>
+        {title}
+      </Heading>
       <ul className="divide-y divide-border rounded-lg border border-border">
         {associations.map((association) => (
           <DocumentRow

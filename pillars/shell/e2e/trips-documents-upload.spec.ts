@@ -221,6 +221,16 @@ test('multiple same-name files keep independent owner tasks beside explicit rout
   await expect(page.getByRole('region', { name: 'Stay · Harbour hotel' })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Event · Museum' })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Journey · Independent rail' })).toBeVisible();
+  const visit = page.getByRole('region', { name: 'Porto', exact: true });
+  await expect(visit.getByRole('heading', { level: 3 })).toHaveText([
+    'Visit documents',
+    'Stay · Harbour hotel',
+    'Event · Museum',
+  ]);
+  await expect(
+    page.getByRole('heading', { name: 'Journey · Independent rail', level: 2 })
+  ).toBeVisible();
+  await expect(visit.getByRole('region', { name: 'Journey · Independent rail' })).toHaveCount(0);
   const input = page.locator('input[type="file"]');
   await input.setInputFiles([
     { name: 'same.pdf', mimeType: 'application/pdf', buffer: Buffer.from('first') },
