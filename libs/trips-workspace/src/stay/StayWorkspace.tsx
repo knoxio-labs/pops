@@ -3,6 +3,7 @@ import { RotateCcw } from 'lucide-react';
 
 import { Button, ErrorState, PageHeader } from '@pops/ui';
 
+import { SourceDocuments } from '../shared/SourceDocuments';
 import { loadStay, requestProblem, stayQueryKey } from './api';
 import { StayFields } from './StayFields';
 import { StayReferences } from './StayReferences';
@@ -104,6 +105,12 @@ function StaySession({
           <StayReferences stay={editor.draft} commit={(patch) => void editor.commit(patch)} />
         </StayTimeline>
       </fieldset>
+      <SourceDocuments
+        tripId={identity.tripId}
+        target={{ kind: 'stay', id: identity.stayId }}
+        tripsClient={identity.client}
+        documentsClient={identity.documentsClient}
+      />
     </main>
   );
 }

@@ -63,7 +63,7 @@ visit identity; an unlinked stay implies no accommodation coverage.
 
 Existing host/document/provenance links are displayed and can be removed. Their
 opaque source identifiers remain intact, and the workspace asserts no resolution
-or external booking action. Source-owner picker integration is POPS-6156.
+or external booking action. Typed Documents originals are separate from these opaque references.
 
 `TripDocumentsWorkspace({ tripId, target? })` and `DocumentAssociationPicker` use the
 typed Trips association contract and a separate generated Documents client. Trip-wide
@@ -79,11 +79,15 @@ processing, and attach only after the owner returns a canonical document ID. An
 interrupted upload is treated as an uncertain outcome and requires searching Documents
 before another upload is considered. Existing links remain visible while Documents is
 unavailable; metadata does not imply offline file availability. The Trips app exposes
-the workspace at `/trips/:tripId/documents`; source editors can reuse the picker with
-their explicit target identity. `TripDocumentLinks({ tripId, target?, tripsClient?,
-documentsClient? })` renders only the exact trip, target kind and target ID when a
-target is supplied, without route lookups or another page shell. Editors compose
-it with `TripDocumentUpload` using the same explicit target and owner transports.
+the workspace at `/trips/:tripId/documents`. Journey, Stay and Event editors embed the
+same upload, existing-original picker and links for their explicit persisted source
+identity. Links match the owning trip, target kind and source ID; they never imply
+inheritance from a visit. Document operations retain the independent source draft,
+failed-save retry and persisted Undo history. Hosts may supply `documentsClient`
+separately from the Trips `client`; unavailable originals do not block source edits.
+`TripDocumentLinks({ tripId, target?, tripsClient?, documentsClient? })` renders
+only the exact trip, target kind and target ID when supplied, without route lookups
+or another page shell. Editors compose it with `TripDocumentUpload`.
 
 Run `mise exec -- pnpm --filter @pops/trips-workspace dev` for the standalone development
 harness, then enter real trip/stay IDs. Its proxy targets the local Trips API on
