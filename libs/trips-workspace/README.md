@@ -44,14 +44,24 @@ resolution. Nearby bookings and buffer-safety findings are owned by POPS-6134.
 In visit accommodation workspace. This browser component library owns no service or database and imports no pillar package.
 Its consumers supply source identities and a React Query provider; shell activation
 is tracked separately.
-`EventWorkspace({ tripId, eventId, client? })` implements the approved route-context
+`EventWorkspace({ tripId, eventId, client?, contacts? })` implements the approved route-context
 event detail. It places the editor inside its explicit associated visit and shows
 the immediately neighbouring visits in persisted route order. Missing associations
 remain unlinked; event dates never move visits or create journeys. Intention,
 arrangement and purchase save independently, and only Purchased has hard styling.
 Event dates, clocks and zone remain independent source fields. Source/ticket URLs,
-address, notes and opaque source/venue/organiser/document references are editable;
-no reference is hydrated or treated as an external booking action. Undo persists
+address, notes and opaque source/venue/document references remain editable.
+Organisers use the host-injected Contacts chooser and owner reader. Only an owner-issued
+reference is appended; existing opaque organiser values and exact removals remain intact.
+Passive names and hrefs come from successful owner reads, with separate missing,
+unavailable and read-error states. No person/organisation type restriction is inferred.
+Organiser selection never changes booking responsibility or another Contacts record.
+Owner intents and issued selections survive chooser close, source-write failure and
+route unmount for the Shell QueryClient's mount lifetime, outside its query cache.
+An unresolved owner intent is resumed; a retained issued reference can be explicitly
+reapplied without creating a global contact again. Source/client/capability replacement
+isolates those intents, and late closed-view callbacks do not write into another source.
+The chooser's local Suspense keeps source drafts mounted during owner UI loading. Undo persists
 the previous successful event source snapshot. Failed drafts remain visible and
 retryable; optional context failures do not prevent editing.
 The generated Trips client uses `/trips-api`; an explicit generated `Client`

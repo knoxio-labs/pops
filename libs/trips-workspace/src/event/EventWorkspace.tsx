@@ -6,9 +6,7 @@ import { Button, ErrorState, PageHeader } from '@pops/ui';
 import { SourceDocuments } from '../shared/SourceDocuments';
 import { loadPlaces, loadTrip, loadVisits, requestProblem } from '../stay/api';
 import { eventQueryKey, loadEvent } from './api';
-import { EventFields } from './EventFields';
-import { EventReferences } from './EventReferences';
-import { EventRoute } from './EventRoute';
+import { EventSourceFacts } from './EventSourceFacts';
 import { useEventEditor } from './use-event-editor';
 
 import type { UseQueryResult } from '@tanstack/react-query';
@@ -123,23 +121,12 @@ function EventSession({
         }
       />
       <EditorStatus editor={editor} context={context} />
-      <fieldset disabled={editor.busy} className="min-w-0">
-        <legend className="sr-only">Event source facts</legend>
-        <EventRoute
-          event={editor.draft}
-          visits={context.visits.data ?? []}
-          places={context.places.data ?? []}
-        >
-          <EventFields
-            event={editor.draft}
-            visits={context.visits.data ?? []}
-            places={context.places.data ?? []}
-            edit={editor.edit}
-            commit={(patch) => void editor.commit(patch)}
-          />
-          <EventReferences event={editor.draft} commit={(patch) => void editor.commit(patch)} />
-        </EventRoute>
-      </fieldset>
+      <EventSourceFacts
+        editor={editor}
+        identity={identity}
+        visits={context.visits.data ?? []}
+        places={context.places.data ?? []}
+      />
       <SourceDocuments
         tripId={identity.tripId}
         target={{ kind: 'event', id: identity.eventId }}
