@@ -1,6 +1,9 @@
 name: Route planner
 question: Does direct editing keep the flat route, bookings and complete alternative paths clear?
-status: active
+status: decided
+chosen: direct
+decided: 2026-11-10
+rationale: The reviewer approved direct editing with all city visits at one route level and whole alternative paths moved into the route while competing paths remain. Compact source-backed rows, one warning per conflict and controls revealed by parent-card hover or focus keep the route readable.
 screen: trips/route
 frame: web
 variants:

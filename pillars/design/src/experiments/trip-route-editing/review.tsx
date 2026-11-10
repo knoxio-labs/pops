@@ -5,7 +5,7 @@ export function PlannerReview({ layout }: { layout: 'inline' | 'side-editor' | '
   return (
     <aside className="space-y-3 border-b bg-muted/30 p-3 sm:p-5">
       <div className="flex flex-wrap items-center gap-3">
-        <Badge variant="outline">T03 · Review</Badge>
+        <Badge variant="outline">T03 · Approved</Badge>
         <span className="text-xs text-muted-foreground">
           Fictional data · changes reset on reload
         </span>
@@ -52,7 +52,8 @@ function ReviewDetails() {
           into the main route while keeping the competing alternatives. Undo restores the whole
           move. Try the alternative-paths and flat-return named states. Purchases retain their
           source dates. Controls reveal when their card is hovered or focused and remain available
-          on touch. Overall T03 approval remains open.
+          on touch. Direct editing was approved on 10 November 2026; earlier layouts remain for
+          comparison.
         </p>
         <p>
           Data: place input → reusable place ID; date/month controls → calendar values; duration →

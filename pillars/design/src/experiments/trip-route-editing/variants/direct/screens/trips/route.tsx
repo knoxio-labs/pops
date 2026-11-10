@@ -13,7 +13,7 @@ export const states: ScreenStates = {
   'flat-return': () => <DirectPlanner scenario="flat-return" />,
 };
 
-/** Drag visits and edit their values directly; approval remains pending. */
+/** Approved direct route editing keeps visit occurrences flat and moves complete alternative paths. */
 export default function RouteScreen() {
   return <DirectPlanner />;
 }
