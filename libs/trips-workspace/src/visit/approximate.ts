@@ -1,4 +1,4 @@
-import type { Visit } from './types';
+import type { Visit } from '../stay/types';
 
 /** Raw optional duration capture; blank remains absent rather than zero. */
 export interface DurationDraft {

@@ -1,21 +1,14 @@
-import { useState } from 'react';
+import { useLayoutEffect, useRef } from 'react';
 
 import { selectJourney } from './api';
 
 import type { UseQueryResult } from '@tanstack/react-query';
 
-import type { JourneyGroup, JourneyWorkspaceProps } from './types';
+import type { JourneyGroup } from './types';
 import type { JourneyNavigation } from './use-journey-navigation';
-import type { JourneyOperation } from './use-journey-operation';
+import type { JourneyOperation, JourneySelectionUndo } from './use-journey-operation';
 
-/** Own inverse identity and exact post-write revision, scoped to this workspace instance. */
-export interface JourneySelectionUndo {
-  groupId: number;
-  previousSelection: number;
-  originalViewed: number;
-  postWriteRevision: number;
-  contextVersion: number;
-}
+export type { JourneySelectionUndo } from './use-journey-operation';
 /** Explicit revisioned selection operations without reinterpreting a literal source route. */
 export interface JourneySelection {
   undo: JourneySelectionUndo | undefined;
@@ -24,64 +17,89 @@ export interface JourneySelection {
   undoSelection: () => Promise<void>;
   clearUndo: () => void;
 }
-/** Preserve selection history above source editors; unrelated owner revisions are never adopted for Undo. */
+/** Preserve confirmed grouping history through closure; unrelated owner revisions never lend Undo a guard. */
 export function useJourneySelection({
-  identity,
   navigation,
   query,
   actions,
   update,
   collapse,
 }: {
-  identity: JourneyWorkspaceProps;
   navigation: JourneyNavigation;
   query: UseQueryResult<JourneyGroup[], Error>;
   actions: JourneyOperation;
   update: (group: JourneyGroup) => void;
   collapse: () => void;
 }): JourneySelection {
-  const [storedUndo, setUndo] = useState<JourneySelectionUndo>();
-  const undo = storedUndo?.contextVersion === navigation.contextVersion ? storedUndo : undefined;
-  const ownGroup = query.data?.find((group) => group.id === undo?.groupId);
+  const context = useSelectionContext(navigation.contextVersion, actions);
+  const undo = actions.selectionUndo;
+  const canUndo = canUndoSelection(actions, query, undo);
+  const { owner } = actions;
+  const identity = { client: owner.client, tripId: owner.tripId, journeyId: navigation.viewed };
   return {
     undo,
-    canUndo:
-      undo !== undefined &&
-      !query.isError &&
-      ownGroup?.revision === undo.postWriteRevision &&
-      !(actions.busy || actions.needsReload),
-    clearUndo: (): void => setUndo(undefined),
+    canUndo,
+    clearUndo: (): void => actions.setSelectionUndo(undefined),
     select: (group, id): Promise<void> => {
       const stamp = navigation.stamp();
       return actions.run(async () => {
+        actions.assertCurrent();
         const next = await selectJourney(identity, group, id);
         update(next);
+        if (context.current === navigation.contextVersion)
+          actions.setSelectionUndo({
+            groupId: group.id,
+            previousSelection: group.currentJourneyId,
+            originalViewed: navigation.viewed,
+            postWriteRevision: next.revision,
+          });
         if (!navigation.isCurrent(stamp)) return;
-        setUndo({
-          groupId: group.id,
-          previousSelection: group.currentJourneyId,
-          originalViewed: navigation.viewed,
-          postWriteRevision: next.revision,
-          contextVersion: navigation.contextVersion,
-        });
         collapse();
         navigation.replace(id);
       });
     },
-    undoSelection: (): Promise<void> =>
-      actions.run(async () => {
+    undoSelection: (): Promise<void> => {
+      if (!canUndo) return Promise.resolve();
+      return actions.run(async () => {
         if (!undo) return;
         const stamp = navigation.stamp();
+        actions.assertCurrent();
         const next = await selectJourney(
           identity,
           { id: undo.groupId, revision: undo.postWriteRevision },
           undo.previousSelection
         );
         update(next);
+        actions.setSelectionUndo(undefined);
         if (!navigation.isCurrent(stamp)) return;
-        setUndo(undefined);
         collapse();
         navigation.replace(undo.originalViewed);
-      }),
+      });
+    },
   };
+}
+
+function useSelectionContext(version: number, actions: JourneyOperation): { current: number } {
+  const context = useRef(version);
+  useLayoutEffect(() => {
+    if (context.current !== version) {
+      context.current = version;
+      actions.setSelectionUndo(undefined);
+    }
+  }, [actions, version]);
+  return context;
+}
+
+function canUndoSelection(
+  actions: JourneyOperation,
+  query: UseQueryResult<JourneyGroup[], Error>,
+  undo: JourneySelectionUndo | undefined
+): boolean {
+  const group = query.data?.find((entry) => entry.id === undo?.groupId);
+  return (
+    undo !== undefined &&
+    !query.isError &&
+    group?.revision === undo.postWriteRevision &&
+    !(actions.busy || actions.needsReload)
+  );
 }

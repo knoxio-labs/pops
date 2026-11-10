@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 
 import { Textarea, TextInput } from '@pops/ui';
 
@@ -24,26 +24,26 @@ export function DecisionField({
   multiline?: boolean;
   type?: 'text' | 'date';
 }): JSX.Element {
-  const [draft, setDraft] = useState<string | null>(null);
-  if (draft !== null && draft === value) setDraft(null);
+  const state = useSyncExternalStore(editor.subscribe, editor.getState, editor.getState);
+  const draft = state.drafts[fieldKey];
   useEffect(() => {
-    editor.setDirty(fieldKey, draft !== null && draft !== value);
+    if (draft !== undefined && draft === value) editor.setDraft(fieldKey, undefined);
   }, [draft, editor, fieldKey, value]);
-  useEffect(() => () => editor.setDirty(fieldKey, false), [editor, fieldKey]);
   const change = (next: string): void => {
-    setDraft(next === value ? null : next);
-    editor.setDirty(fieldKey, next !== value);
+    editor.setDraft(fieldKey, next === value ? undefined : next);
   };
-  const cancel = (): void => {
-    setDraft(null);
-    editor.setDirty(fieldKey, false);
-  };
+  const cancel = (): void => editor.setDraft(fieldKey, undefined);
   const common = {
     value: draft ?? value,
     onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
       change(event.currentTarget.value),
     onBlur: async () => {
-      if (draft !== null && (await save(draft))) cancel();
+      if (
+        draft !== undefined &&
+        (await save(draft)) &&
+        editor.getState().drafts[fieldKey] === draft
+      )
+        cancel();
     },
     onKeyDown: (event: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       if (event.key === 'Escape') {

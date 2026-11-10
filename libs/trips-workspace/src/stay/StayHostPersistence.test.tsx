@@ -76,7 +76,9 @@ it('retains owner-issued evidence across a failed source save and route remount 
   await screen.findByText('Changes have not been saved');
   first.unmount();
   mount();
-  fireEvent.click(await screen.findByRole('button', { name: 'Add selected host' }));
+  await screen.findByText('Changes have not been saved');
+  expect(screen.getByRole('button', { name: 'Remove host link 2' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
   await waitFor(() => expect(transport.patches).toHaveLength(2));
   expect(transport.patches).toEqual([
     { hostLinks: changed.hostLinks },

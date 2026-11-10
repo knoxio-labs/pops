@@ -1,5 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
-
+import { useSourceQuery } from '../shared/use-source-query';
 import { loadPlaces, loadStays, loadTrip, loadVisits } from '../stay/api';
 import { loadEvents } from './api';
 
@@ -19,33 +18,54 @@ export interface VisitContext {
 
 /** Independent source context failures do not block direct visit editing. */
 export function useVisitContext(props: VisitWorkspaceProps): VisitContext {
-  const origin = props.client?.getConfig().baseUrl ?? '/trips-api';
-  const base = ['trips', origin, props.tripId];
   return {
-    trip: useQuery({
-      queryKey: base,
-      queryFn: () => loadTrip(props.tripId, props.client),
-      retry: false,
-    }),
-    visits: useQuery({
-      queryKey: [...base, 'visits'],
-      queryFn: () => loadVisits(props.tripId, props.client),
-      retry: false,
-    }),
-    places: useQuery({
-      queryKey: ['trips', origin, 'places'],
-      queryFn: () => loadPlaces(props.client),
-      retry: false,
-    }),
-    stays: useQuery({
-      queryKey: [...base, 'stays'],
-      queryFn: () => loadStays(props.tripId, props.client),
-      retry: false,
-    }),
-    events: useQuery({
-      queryKey: [...base, 'events'],
-      queryFn: () => loadEvents(props),
-      retry: false,
-    }),
+    trip: useSourceQuery(
+      { client: props.client, tripId: props.tripId, kind: 'trip-context', sourceId: 0 },
+      (owner) => {
+        const origin = owner.client.getConfig().baseUrl ?? '/trips-api';
+        return {
+          queryKey: ['trips', origin, owner.tripId],
+          load: () => loadTrip(owner.tripId, owner.client),
+        };
+      }
+    ),
+    visits: useSourceQuery(
+      { client: props.client, tripId: props.tripId, kind: 'visits-context', sourceId: 0 },
+      (owner) => {
+        const origin = owner.client.getConfig().baseUrl ?? '/trips-api';
+        return {
+          queryKey: ['trips', origin, owner.tripId, 'visits'],
+          load: () => loadVisits(owner.tripId, owner.client),
+        };
+      }
+    ),
+    places: useSourceQuery(
+      { client: props.client, tripId: props.tripId, kind: 'places-context', sourceId: 0 },
+      (owner) => {
+        const origin = owner.client.getConfig().baseUrl ?? '/trips-api';
+        return { queryKey: ['trips', origin, 'places'], load: () => loadPlaces(owner.client) };
+      }
+    ),
+    stays: useSourceQuery(
+      { client: props.client, tripId: props.tripId, kind: 'stays-context', sourceId: 0 },
+      (owner) => {
+        const origin = owner.client.getConfig().baseUrl ?? '/trips-api';
+        return {
+          queryKey: ['trips', origin, owner.tripId, 'stays'],
+          load: () => loadStays(owner.tripId, owner.client),
+        };
+      }
+    ),
+    events: useSourceQuery(
+      { client: props.client, tripId: props.tripId, kind: 'events-context', sourceId: 0 },
+      (owner) => {
+        const origin = owner.client.getConfig().baseUrl ?? '/trips-api';
+        return {
+          queryKey: ['trips', origin, owner.tripId, 'events'],
+          load: () =>
+            loadEvents({ client: owner.client, tripId: owner.tripId, visitId: props.visitId }),
+        };
+      }
+    ),
   };
 }

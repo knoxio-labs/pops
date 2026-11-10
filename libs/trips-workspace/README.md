@@ -159,13 +159,24 @@ source reload before another write, preventing blind create retries. Cached sour
 mounted during background failures. Only the owning timing endpoint supplies chronology
 findings and signed minutes; unavailable or incomplete clocks do not imply safety.
 
+Journey drafts, prepared removal IDs/revisions, failed operations, the shared write
+lock and confirmed inverses survive source-view remounts in the same QueryClient and
+exact client/origin/trip/source session. Ambiguous leg creation and grouping recovery
+guards also survive closure and query-cache eviction. Reads and new dispatches are
+fenced against the captured transport; dispatched responses settle only their original
+session and cache keys. An older leg snapshot cannot replace a confirmed newer leg
+aggregate, while independent unversioned Journey metadata still refreshes normally.
+Foreign metadata or leg revisions retain the existing inverse invalidation rules.
+Navigation generations and expanded presentation remain local to each mounted view.
+
 Alternative editors preserve independent journey identities and display every explicit
 matching group. A host with literal source routes supplies `onViewJourney` to replace
 the URL after a successful selection. Undo retains the prior selected identity, original
 viewed source and the operation's exact returned revision above source-editor state;
 unrelated refetches never rebase that inverse. It restores the original viewed source
 only after the inverse succeeds. Manual navigation invalidates the local selection
-history, and no Undo is promised after leaving or reloading the workspace. Late source
+history. Closing and reopening a view retains the confirmed selection inverse in the
+same host QueryClient and exact client/origin/trip session. Late source
 or selection responses cannot replace a manually chosen view. A new option is an empty
 source, never a clone of the working journey. Ambiguous grouping writes block further
 grouping mutations until an explicit canonical reload succeeds; pending or failed reads
@@ -224,6 +235,30 @@ A fresh source invalidates
 stale whole-source Undo history; own mutation echoes retain it. Failed operations keep
 their original confirmed save baseline for retry, including Visit revision guards. Context failures do not block editing the stay. Neighbours share an explicit
 visit identity; an unlinked stay implies no accommodation coverage.
+
+Direct Stay, Event and Visit sessions retain unsaved drafts, failed write baselines,
+serialization and confirmed Undo history when a source view closes and reopens.
+The lifetime belongs to the host QueryClient, independently of query-cache eviction;
+the exact Trips client object, its captured API origin, trip, source kind and source ID
+isolate sessions. This is browser memory, not durable storage or an authenticated-user
+boundary. Each mounted view has a separate dispatch lease. Closing a view blocks its
+stale callbacks, while an already dispatched response may settle only its original
+session and captured cache keys. Another open view shares the same write lock and
+remains usable. Mutable client-origin changes are checked immediately before dispatch;
+asynchronous preparation must check that lease again before sending a request.
+
+Canonical reads and their selector context capture the effective default or explicit
+client and query key at the view boundary. Changing that client's origin cannot send
+another owner's read into the previous cache key. A deferred response may populate
+its original key, but cannot mount an editor while that view's connection differs.
+The query cancellation signal remains unconsumed unless the owning loader already
+uses it, preserving late source caching after manual navigation. Embedded Trips document
+associations use the same captured read scope; unlink invalidates only its original
+association key. Each unlink captures its source ID, mounted view and cache owner before
+asynchronous mutation preparation, so a later render cannot retarget its dispatch or
+settlement. Multi-endpoint target-name reads recheck the owner before each dispatch.
+An upload queue with a known context mismatch reports that error without discarding
+its retained File, task or receipt; restoring the original context restores the queue.
 
 Stay Host references use the same host-injected Contacts chooser and owner reader as
 Event organisers. Selection appends the owner's issued URI; explicit replacement and
@@ -350,6 +385,16 @@ retries keep their original revision, including after an unchanged refresh, and
 cannot silently rebase an uncertain create or inverse. The host supplies the parent
 navigation link and authenticated query/client context.
 
+Decision sessions retain raw field text, incomplete option/link composers, failed
+commands, the shared busy lock and confirmed inverses across source-view remounts.
+The QueryClient, actual client object, captured origin, trip and decision ID isolate
+each browser-memory session. Closing one view cannot deactivate another open view.
+Closed views and changed transport configurations cannot start another command;
+asynchronous query cancellation rechecks the dispatch lease before writing. A request
+already dispatched may settle its original session and captured cache key. Newer
+foreign revisions retain the existing conflict/reload rules; retention never grants
+another writer's revision to a retry or Undo. Browser reloads do not retain sessions.
+
 `@pops/trips-workspace/decision-client` exports the headless decision controller
 and its generated-transport load/apply operations. The owning Trips app runs the
 real editor/HTTP/SQLite integration regression; this extractable library does not
@@ -463,13 +508,25 @@ transport operations for the owning app's HTTP/SQLite integration regression.
 exports the approved direct visit editor and accommodation-period workspace.
 Exact dates, approximate month/part and one-sided duration bounds remain independent.
 Fields persist on blur or explicit selection; optional fields do not acquire defaults.
+Raw approximate month and duration buffers also survive view closure, including
+incomplete numbers, missing units and validation errors that cannot enter a valid
+Visit patch. Unsubmitted Event reference URI/label composers retain their separate
+text in the exact Event owner session. Focus, filters and disclosure visibility stay
+local to each view; retention does not convert incomplete input into a request.
 Visit PATCH and Undo supply the exact confirmed source revision. A foreign canonical
 refresh clears local history; pending or failed drafts retain their original precondition.
-An explicit reload discards local draft/history only after a successful source read.
+Older Visit revisions cannot replace a confirmed successor or clear its own inverse.
+An explicit reload discards local draft/history and raw timing buffers only after a
+successful admitted source read; a failed or older read retains the current session.
 Creating a reusable city retains its acknowledged identity if visit association fails;
 retrying that association never repeats creation. Undo restores the prior association
 without deleting the reusable city. An ambiguous creation failure blocks another POST
 in that session while allowing a canonical city reload and explicit source selection.
+The capture name, acknowledged Place identity and ambiguous outcome survive view
+closure and cache eviction under the exact Visit owner. A creation that completes
+after closure may retain its receipt and original catalogue cache entry, but cannot
+start the Visit association through the closed view. A reopened view associates that
+same Place; neither catalogue reload nor reopening authorizes another uncertain POST.
 
 Accommodation periods use explicit visit IDs and checkout-exclusive stay dates.
 Unknown, partial or contradictory dates remain visible without asserting coverage.

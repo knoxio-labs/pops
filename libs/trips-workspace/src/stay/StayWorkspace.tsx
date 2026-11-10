@@ -1,10 +1,10 @@
-import { useQuery } from '@tanstack/react-query';
 import { RotateCcw } from 'lucide-react';
 
 import { Button, ErrorState, PageHeader } from '@pops/ui';
 
 import { SourceConflict } from '../shared/SourceConflict';
 import { SourceDocuments } from '../shared/SourceDocuments';
+import { useSourceQuery } from '../shared/use-source-query';
 import { loadStay, requestProblem, stayQueryKey } from './api';
 import { StaySourceFacts } from './StaySourceFacts';
 import { useStayContext } from './use-stay-context';
@@ -26,17 +26,24 @@ export function StayWorkspace(props: StayWorkspaceProps): JSX.Element {
         }}
       />
     );
-  return <LoadStay key={`${props.tripId}:${props.stayId}`} {...props} />;
+  return (
+    <LoadStay
+      key={`${props.client?.getConfig().baseUrl ?? '/trips-api'}:${props.tripId}:${props.stayId}`}
+      {...props}
+    />
+  );
 }
 
 function LoadStay(props: StayWorkspaceProps): JSX.Element {
-  const origin = props.client?.getConfig().baseUrl ?? '/trips-api';
   const context = useStayContext(props);
-  const source = useQuery({
-    queryKey: stayQueryKey(props),
-    queryFn: () => loadStay(props),
-    retry: false,
-  });
+  const source = useSourceQuery(
+    { client: props.client, tripId: props.tripId, kind: 'stay', sourceId: props.stayId },
+    (owner) => {
+      const captured = { client: owner.client, tripId: owner.tripId, stayId: owner.sourceId };
+      return { queryKey: stayQueryKey(captured), load: () => loadStay(captured) };
+    }
+  );
+  if (source.ownershipError) return <ErrorState error={source.ownershipError} />;
   if (source.isPending)
     return (
       <p role="status" className="p-6">
@@ -52,7 +59,12 @@ function LoadStay(props: StayWorkspaceProps): JSX.Element {
       {source.isError && (
         <ErrorState error={requestProblem(source.error)} onRetry={() => void source.refetch()} />
       )}
-      <StaySession key={origin} initial={source.data} identity={props} context={context} />
+      <StaySession
+        key={source.owner.origin}
+        initial={source.data}
+        identity={props}
+        context={context}
+      />
     </>
   );
 }

@@ -1,19 +1,23 @@
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Select, TextInput } from '@pops/ui';
 
+import { useSemanticDraft } from '../shared/semantic-draft';
 import { monthValue } from './approximate';
+import { monthDraft } from './timing-drafts';
 
 import type { JSX } from 'react';
 
-import type { MonthDraft } from './approximate';
-import type { Visit, VisitFieldProps } from './types';
+import type { VisitFieldProps } from './types';
 
 /** Approximate source month capture with no implicit year, month or precision. */
-export function VisitMonthFields({ visit, commit }: VisitFieldProps): JSX.Element {
+export function VisitMonthFields({ visit, commit, timingDrafts }: VisitFieldProps): JSX.Element {
   const { t } = useTranslation('trips');
-  const [draft, setDraft] = useState(() => monthDraft(visit.timing.month));
+  const [draft, setDraft] = useSemanticDraft(
+    monthDraft(visit.timing.month),
+    timingDrafts?.month,
+    timingDrafts?.isCurrent
+  );
   const error = monthValue(draft).error;
   const save = (next: typeof draft): void => {
     const parsed = monthValue(next);
@@ -66,12 +70,4 @@ export function VisitMonthFields({ visit, commit }: VisitFieldProps): JSX.Elemen
       )}
     </div>
   );
-}
-
-function monthDraft(month: Visit['timing']['month']): MonthDraft {
-  return {
-    year: month ? String(month.year) : '',
-    month: month ? String(month.month) : '',
-    part: month?.part ?? '',
-  };
 }

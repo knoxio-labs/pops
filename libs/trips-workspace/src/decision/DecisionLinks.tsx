@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useSyncExternalStore } from 'react';
 
 import { Button, TextInput } from '@pops/ui';
 
@@ -55,19 +55,21 @@ function AddLink({
   fieldKey: string;
   save: (link: SourceLink) => Promise<boolean>;
 }): JSX.Element {
-  const [uri, setUri] = useState('');
-  const [label, setLabel] = useState('');
-  useEffect(() => () => editor.setDirty(fieldKey, false), [editor, fieldKey]);
+  const state = useSyncExternalStore(editor.subscribe, editor.getState, editor.getState);
+  const uriKey = `${fieldKey}-uri`;
+  const labelKey = `${fieldKey}-label`;
+  const uri = state.drafts[uriKey] ?? '';
+  const label = state.drafts[labelKey] ?? '';
+  const cancel = (): void => {
+    editor.setDraft(uriKey, undefined);
+    editor.setDraft(labelKey, undefined);
+  };
   return (
     <form
       className="space-y-2"
       onSubmit={async (event) => {
         event.preventDefault();
-        if (await save({ uri, ...(label ? { label } : {}) })) {
-          setUri('');
-          setLabel('');
-          editor.setDirty(fieldKey, false);
-        }
+        await save({ uri, ...(label ? { label } : {}) });
       }}
     >
       <TextInput
@@ -75,28 +77,18 @@ function AddLink({
         value={uri}
         required
         onChange={(event) => {
-          setUri(event.currentTarget.value);
-          editor.setDirty(fieldKey, Boolean(event.currentTarget.value || label));
+          editor.setDraft(uriKey, event.currentTarget.value || undefined);
         }}
       />
       <TextInput
         label="Source label"
         value={label}
         onChange={(event) => {
-          setLabel(event.currentTarget.value);
-          editor.setDirty(fieldKey, Boolean(uri || event.currentTarget.value));
+          editor.setDraft(labelKey, event.currentTarget.value || undefined);
         }}
       />
       <Button type="submit">Add source</Button>
-      <Button
-        type="button"
-        variant="ghost"
-        onClick={() => {
-          setUri('');
-          setLabel('');
-          editor.setDirty(fieldKey, false);
-        }}
-      >
+      <Button type="button" variant="ghost" onClick={cancel}>
         Cancel
       </Button>
     </form>

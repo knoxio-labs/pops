@@ -32,7 +32,11 @@ export function EventSourceFacts({
           edit={editor.edit}
           commit={(patch) => void editor.commit(patch)}
         />
-        <EventReferences event={editor.draft} commit={(patch) => void editor.commit(patch)} />
+        <EventReferences
+          event={editor.draft}
+          drafts={editor.referenceDrafts}
+          commit={(patch) => void editor.commit(patch)}
+        />
         <EventOrganisers
           identity={identity}
           links={editor.draft.organiserLinks}
