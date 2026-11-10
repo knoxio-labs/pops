@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 
+import { sourceOwner } from '../arrangements/source-owner';
 import { loadPlaces, loadTrip, loadVisits } from '../stay/api';
 
 import type { UseQueryResult } from '@tanstack/react-query';
@@ -14,7 +15,7 @@ export interface PeopleContext {
 }
 /** Read independent route context without blocking meeting edits when a catalogue fails. */
 export function usePeopleContext(props: PeopleWorkspaceProps): PeopleContext {
-  const origin = props.client?.getConfig().baseUrl ?? '/trips-api';
+  const origin = sourceOwner(props).origin;
   const visits = useQuery({
     queryKey: ['trips', origin, props.tripId, 'visits'],
     queryFn: () => loadVisits(props.tripId, props.client),

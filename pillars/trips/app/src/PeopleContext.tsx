@@ -5,7 +5,10 @@ import { PeopleWorkspace } from '@pops/trips-workspace';
 import type { PeopleWorkspaceProps } from '@pops/trips-workspace';
 
 /** Timeline-owned trip identity and opaque owner integrations for canonical meeting commands. */
-export type PeopleContextProps = Pick<PeopleWorkspaceProps, 'tripId' | 'contacts' | 'client'>;
+export type PeopleContextProps = Pick<
+  PeopleWorkspaceProps,
+  'tripId' | 'meetingId' | 'contacts' | 'client'
+>;
 
 /** Render canonical meeting plans inside the owning Trip context without a route dependency. */
 export function PeopleContext(props: PeopleContextProps) {

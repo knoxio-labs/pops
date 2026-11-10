@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 
 import { Textarea, TextInput } from '@pops/ui';
 
@@ -24,24 +24,26 @@ export function MeetingField({
   editor: PeopleEditor;
   fieldKey: string;
 }): JSX.Element {
-  const [draft, setDraft] = useState<string | null>(null);
-  if (draft === value) setDraft(null);
+  const state = useSyncExternalStore(editor.subscribe, editor.snapshot);
+  const draft = state.drafts.get(fieldKey) ?? null;
   useEffect(() => {
-    editor.setDirty(fieldKey, draft !== null && draft !== value);
-    return () => editor.setDirty(fieldKey, false);
+    if (draft === value) editor.setDraft(fieldKey, null);
   }, [draft, value, editor, fieldKey]);
   const common = {
     value: draft ?? value,
     className: 'min-h-11',
     onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-      setDraft(event.currentTarget.value),
+      editor.setDraft(
+        fieldKey,
+        event.currentTarget.value === value ? null : event.currentTarget.value
+      ),
     onBlur: () => {
       if (draft !== null && draft !== value) save(draft);
     },
     onKeyDown: (event: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       if (event.key === 'Escape') {
         event.preventDefault();
-        setDraft(null);
+        editor.setDraft(fieldKey, null);
       }
     },
   };

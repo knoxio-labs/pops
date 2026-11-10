@@ -1,5 +1,6 @@
 import { unwrap } from '@pops/pillar-sdk/client';
 
+import { sourceOwner } from '../arrangements/source-owner';
 import { meetingPlansList, meetingPlansOperate } from '../trips-api/sdk.gen';
 
 import type { MeetingOperation, MeetingPlan, MeetingResult, PeopleWorkspaceProps } from './types';
@@ -24,10 +25,5 @@ export async function applyMeetingOperation(
 export function peopleQueryKey(
   props: Pick<PeopleWorkspaceProps, 'tripId' | 'client'>
 ): readonly ['trips', string, number, 'meeting-plans'] {
-  return [
-    'trips',
-    props.client?.getConfig().baseUrl ?? '/trips-api',
-    props.tripId,
-    'meeting-plans',
-  ] as const;
+  return ['trips', sourceOwner(props).origin, props.tripId, 'meeting-plans'] as const;
 }

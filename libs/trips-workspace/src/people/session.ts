@@ -1,3 +1,6 @@
+import { ApiError } from '@pops/pillar-sdk/client';
+
+import { currentSourceOwner, sourceOwner } from '../arrangements/source-owner';
 import { applyMeetingOperation, peopleQueryKey } from './api';
 import { PeopleEditor } from './editor';
 
@@ -13,7 +16,12 @@ export function peopleSession(
   const key = JSON.stringify(peopleQueryKey(props));
   const existing = sessions.get(key);
   if (existing) return existing;
-  const editor = new PeopleEditor(initial, (operation) => applyMeetingOperation(props, operation));
+  const owner = sourceOwner(props);
+  const editor = new PeopleEditor(initial, (operation) => {
+    if (!currentSourceOwner(owner, owner))
+      throw new ApiError('The owning source changed', undefined, 'trips.people.source_changed');
+    return applyMeetingOperation(owner, operation);
+  });
   sessions.set(key, editor);
   return editor;
 }
