@@ -9,6 +9,14 @@
  */
 import { z } from 'zod';
 
+export type {
+  ContactChooserSelection,
+  ContactChooserMountProps,
+  ContactChooserIntent,
+  ContactsHostCapability,
+  RemotePageHostProps,
+} from './contacts.js';
+
 /**
  * Every locale the frontend ships. The shell offers exactly these in its
  * switcher, and a pillar's translations must cover each of them.
