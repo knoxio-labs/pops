@@ -100,14 +100,20 @@ Conditional dialogs, collapses and routes retain a queue above the view with
 `createTripDocumentUploadSession({ tripId, target, tripsClient?, documentsClient? })`
 and pass it through `TripDocumentUpload`'s optional `session` prop on every mount.
 Key host storage by the exact trip, target kind/ID and owner client identities and origins.
-The retaining parent resets storage when authentication or transport context changes;
-reloading the browser releases these in-memory queues.
+A host with a supported authentication-switch path must reset storage on that transition;
+transport changes require a separate queue. Reloading releases these in-memory queues.
 The queue keeps distinct File handles, pending requests, accepted tasks and uncertain
 outcomes across unmounts; overlapping views observe the same selections and upload
 claim. Supplying a different target, client identity or owner origin throws
 `TripDocumentUploadContextError`
 before any owner action. Queues are live browser objects, not serializable drafts.
 Without the prop, the component keeps its existing view-local queue behavior.
+Source upload queues are retained outside the query cache for the Shell QueryClient's
+mount lifetime, including route/card unmounts and query eviction. Exact trip, target
+kind/ID, client instances and owner origins isolate queues; replacing a client or
+origin creates another queue. Full page reload releases browser File handles and
+receipts. This lifetime follows the current Shell, which has no supported in-app
+account-switch/reset contract; it does not establish an authenticated-principal scope.
 `DocumentPicker({ onSelected, documentsClient? })` returns the actual owner original
 without writing a route association. `useDocumentUpload({ session, onSessionChange,
 documentsClient? })` is the same per-file owner workflow used by route uploads.

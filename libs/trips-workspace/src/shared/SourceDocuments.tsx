@@ -1,5 +1,8 @@
+import { useQueryClient } from '@tanstack/react-query';
+
 import { TripDocumentLinks } from '../documents/TripDocumentLinks';
 import { TripDocumentUpload } from '../documents/TripDocumentUpload';
+import { sourceUploadSession } from './source-upload-sessions';
 
 import type { JSX } from 'react';
 
@@ -9,9 +12,10 @@ import type { DocumentAssociationTarget, TripDocumentsWorkspaceProps } from '../
 export function SourceDocuments(
   props: Omit<TripDocumentsWorkspaceProps, 'target'> & { target: DocumentAssociationTarget }
 ): JSX.Element {
+  const session = sourceUploadSession(useQueryClient(), props);
   return (
     <section aria-label="Source documents" className="space-y-4">
-      <TripDocumentUpload {...props} />
+      <TripDocumentUpload {...props} session={session} />
       <TripDocumentLinks {...props} />
     </section>
   );
