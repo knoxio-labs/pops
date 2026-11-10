@@ -13,7 +13,8 @@ Only Purchased receives hard styling. Optional buffer fields have no default.
 Inline field edits and whole-card ordering persist to the owning source endpoints.
 Undo submits guarded inverse PATCH/order writes. Adding a blank leg can be undone
 through a server-owned reversible removal receipt for that newly created identity.
-Existing source legs are not removed by this workspace. Every leg write uses the
+The leg card’s Remove control uses the same receipt and persisted Undo to restore
+the original identity, ordering, purchase and provenance. Every leg write uses the
 atomic leg-list revision. Inverse guards advance only across the editor's own confirmed
 successor revisions; a later refetch or receipt replay cannot lend its revision to Undo.
 Consecutive removals restore in LIFO order with stable identities and exact live ordering.

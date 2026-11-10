@@ -194,4 +194,57 @@ describe('Departure and arrival source workspace', () => {
     expect(screen.queryByLabelText('Transport mode')).toBeNull();
     expect(screen.queryByText('No transport legs recorded')).toBeNull();
   });
+  it('removes an existing purchased source leg and restores its exact identity and provenance through Undo', async () => {
+    const operationId = '11111111-1111-4111-8111-111111111111';
+    vi.spyOn(crypto, 'randomUUID').mockReturnValue(operationId);
+    const initial = sourceLeg({
+      purchase: 'Purchased',
+      sourceLinks: [{ uri: 'pops:documents/document/42', label: 'Original purchase document' }],
+    });
+    const receipt = {
+      operationId,
+      legId: initial.id,
+      state: 'removed',
+      removedRevision: 1,
+      restoredRevision: null,
+    };
+    const transport = journeyTransport({
+      source: { journey: sourceJourney(), legs: [initial], legRevision: 0 },
+      writes: [
+        { status: 200, body: { revision: 1, legs: [], receipt } },
+        {
+          status: 200,
+          body: {
+            revision: 2,
+            legs: [initial],
+            receipt: { ...receipt, state: 'restored', restoredRevision: 2 },
+          },
+        },
+      ],
+    });
+    mount(transport);
+    fireEvent.click(await screen.findByRole('button', { name: 'Remove transport leg 1' }));
+    expect(await screen.findByText('No transport legs recorded')).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(await screen.findByLabelText('Transport mode')).toHaveValue(initial.mode);
+    expect(screen.getByLabelText('Purchase')).toHaveValue('Purchased');
+    expect(screen.getByLabelText('Arrangement')).toHaveValue(initial.arrangement);
+    fireEvent.click(screen.getByText('Operator, reference and sources'));
+    expect(screen.getByText('Original purchase document')).toHaveAttribute(
+      'title',
+      'pops:documents/document/42'
+    );
+    expect(writes(transport)).toEqual([
+      {
+        method: 'POST',
+        path: '/trips/7/journeys/20/legs/40/removals',
+        body: { operationId, expectedRevision: 0 },
+      },
+      {
+        method: 'POST',
+        path: `/trips/7/journeys/20/leg-removals/${operationId}/restore`,
+        body: { expectedRevision: 1 },
+      },
+    ]);
+  });
 });
