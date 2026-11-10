@@ -65,7 +65,7 @@ function AddOption({ editor }: Pick<Props, 'editor'>): JSX.Element {
             'Add option'
           ))
         )
-          cancel();
+          setAdding(false);
       }}
     >
       <TextInput

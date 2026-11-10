@@ -69,9 +69,7 @@ function AddLink({
       className="space-y-2"
       onSubmit={async (event) => {
         event.preventDefault();
-        if (await save({ uri, ...(label ? { label } : {}) })) {
-          cancel();
-        }
+        await save({ uri, ...(label ? { label } : {}) });
       }}
     >
       <TextInput
