@@ -13,9 +13,21 @@ import { TripOverviewPage } from './TripOverviewPage';
 import type { TripOverviewProps } from '@pops/trips-workspace';
 
 vi.mock('@pops/trips-workspace', () => ({
-  TripOverview: ({ calendarLink, documentsHref, labels, href }: TripOverviewProps) => (
+  TripOverview: ({
+    calendarLink,
+    documentsHref,
+    labels,
+    href,
+    onOpenSource,
+  }: TripOverviewProps) => (
     <>
-      <a href={href('visit', 31)}>Visit source</a>
+      {onOpenSource ? (
+        <button type="button" onClick={() => onOpenSource({ kind: 'visit', id: 31 })}>
+          Visit source
+        </button>
+      ) : (
+        <a href={href?.('visit', 31)}>Visit source</a>
+      )}
       {calendarLink && <a href={calendarLink.href}>{calendarLink.label}</a>}
       {documentsHref && <a href={documentsHref}>{labels.documents}</a>}
     </>
