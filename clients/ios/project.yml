@@ -95,7 +95,7 @@ packages:
     path: Packages/DesignPlayground
 
 targets:
-  Pops:
+  Pops: &popsApp
     type: application
     platform: iOS
     preBuildScripts:
@@ -111,11 +111,18 @@ targets:
       # bundle and walks into it as a source directory. Excluded from the glob
       # and named once as a file, which is what makes actool compile it as the
       # icon rather than the app carrying two loose PNGs.
-      - path: App
+      - &appSources
+        path: App
         excludes:
+          - PopsApp.swift
+          - TripsApp.swift
           - AppIcon.icon/**
           - AppIconLocal.icon/**
+          - TripsIcon.icon/**
+          - TripsIconLocal.icon/**
           - Info.plist
+          - Trips-Info.plist
+      - path: App/PopsApp.swift
       - path: App/AppIcon.icon
         type: file
         buildPhase: resources
@@ -213,6 +220,50 @@ targets:
         Release:
           POPS_BFM_BASE_URL: ''
 
+  PopsTrips:
+    <<: *popsApp
+    sources:
+      - *appSources
+      - path: App/TripsApp.swift
+      - path: App/TripsIcon.icon
+        type: file
+        buildPhase: resources
+      - path: App/TripsIconLocal.icon
+        type: file
+        buildPhase: resources
+    preBuildScripts:
+      - path: scripts/prepare-info-plist.sh
+        name: Prepare app Info.plist
+        inputFiles:
+          - $(SRCROOT)/App/Trips-Info.plist
+        outputFiles:
+          - $(DERIVED_FILE_DIR)/Pops-Info.plist
+        basedOnDependencyAnalysis: false
+    scheme: {}
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_FILE: $(DERIVED_FILE_DIR)/Pops-Info.plist
+        POPS_INFO_PLIST: App/Trips-Info.plist
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_NSCameraUsageDescription: Pops Trips uses the camera to scan pairing QR codes.
+        INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
+        PRODUCT_BUNDLE_IDENTIFIER: com.knoxiolabs.pops.trips$(POPS_BUNDLE_ID_SUFFIX_$(POPS_FLAVOR))
+        INFOPLIST_KEY_CFBundleDisplayName: $(POPS_DISPLAY_NAME_$(POPS_FLAVOR))
+        POPS_DISPLAY_NAME_local: Trips Local
+        POPS_DISPLAY_NAME_testflight: Trips
+        MARKETING_VERSION: '0.0.0'
+        CURRENT_PROJECT_VERSION: '0'
+        TARGETED_DEVICE_FAMILY: '1'
+        ASSETCATALOG_COMPILER_APPICON_NAME: TripsIcon$(POPS_APPICON_SUFFIX_$(POPS_FLAVOR))
+        CODE_SIGN_STYLE: Automatic
+      configs:
+        Debug:
+          POPS_BFM_BASE_URL: http://localhost:3014
+        Release:
+          POPS_BFM_BASE_URL: ''
+
   # The app's test target. What belongs here rather than in a package's own
   # suite is argued in AppTests/README.md; the short version is that this is the
   # only place a test runs inside an app bundle, on a simulator, carrying the
@@ -243,6 +294,9 @@ targets:
       # entitlements, which is the environment the data-protection keychain
       # needs and the one `swift test` cannot provide.
       - target: Pops
+      - target: PopsTrips
+        link: false
+        embed: false
       # Linked into the host already; the test bundle needs the module on its
       # import path, not a second static copy of it.
       - package: BFMClient
