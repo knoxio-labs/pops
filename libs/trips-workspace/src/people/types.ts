@@ -65,6 +65,8 @@ export type MeetingContact = ContactReferenceReadResult | { status: 'unverified'
 /** Authenticated source identity, translations, and source-owner integrations supplied by the host. */
 export interface PeopleWorkspaceProps {
   tripId: number;
+  /** Select only this canonical meeting within the owning trip and API origin; missing targets never fall back. */
+  meetingId?: MeetingPlan['id'];
   client?: Client;
   text: PeopleText;
   contacts?: ContactsHostCapability;

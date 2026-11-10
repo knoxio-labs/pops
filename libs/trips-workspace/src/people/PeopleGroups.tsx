@@ -15,7 +15,20 @@ export function PeopleGroups({
   workspace,
   filters,
 }: PeopleSectionProps & { filters: PeopleFilters }): JSX.Element {
-  const plans = useFilteredMeetings(state.plans, filters, { context, workspace });
+  const filtered = useFilteredMeetings(state.plans, filters, { context, workspace });
+  const plans =
+    workspace.meetingId === undefined
+      ? filtered
+      : state.plans.filter(
+          (plan) =>
+            plan.id === workspace.meetingId && plan.tripId === workspace.tripId && !plan.removed
+        );
+  if (workspace.meetingId !== undefined && plans.length === 0)
+    return (
+      <p role="alert" className="text-sm text-destructive">
+        {workspace.text('contextFailed')} <code>trips.people.meeting_unavailable</code>
+      </p>
+    );
   return (
     <div className="space-y-5">
       {groupMeetingPlans(plans, context.visits.data ?? []).map((group) => (

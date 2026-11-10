@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { ApiError } from '@pops/pillar-sdk/client';
 import { Button } from '@pops/ui';
 
-import { loadMeetingPlans } from './api';
+import { loadOwnedMeetingPlans } from './api';
 
 import type { JSX } from 'react';
 
@@ -47,7 +47,7 @@ export function PeopleProblems({
     error.status >= 400 &&
     error.status < 500;
   const reload = (): void => {
-    void loadMeetingPlans(workspace)
+    void loadOwnedMeetingPlans(context.owner)
       .then((plans) => {
         editor.reload(plans);
         setReloadError(undefined);
