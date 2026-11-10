@@ -98,6 +98,32 @@ async function accept(responses: Array<(response: Response) => void>): Promise<v
 }
 
 describe('owner upload intent races through the actual client', () => {
+  it('keeps a retained task in its captured owner cache across unmount and transport mutation', async () => {
+    const owner = harness(pdf('first.pdf'));
+    const first = owner.mount();
+    await waitFor(() => expect(first.result.current.unavailable).toBe(false));
+    act(() => first.result.current.actions.submitUpload());
+    await waitFor(() => expect(owner.responses).toHaveLength(1));
+    await accept(owner.responses);
+    await waitFor(() => expect(first.result.current.documentId).toBe(91));
+    const originalKey = documentQueryKeys.task(owner.client, 'first-task');
+    first.unmount();
+    owner.cache.clear();
+    owner.client.setConfig({ baseUrl: 'https://other.example/documents-api' });
+    const reopened = owner.mount();
+    await waitFor(() => expect(reopened.result.current.taskQuery.fetchStatus).toBe('idle'));
+    expect(
+      owner.cache.getQueryData(documentQueryKeys.task(owner.client, 'first-task'))
+    ).toBeUndefined();
+    expect(reopened.result.current.taskQuery.isError).toBe(true);
+    expect(owner.cache.getQueryData(originalKey)).toEqual({
+      state: 'done',
+      documentId: 91,
+      reason: null,
+    });
+    expect(reopened.result.current.documentId).toBe(91);
+    expect(owner.postCount()).toBe(1);
+  });
   it('preserves a verified original after an older view returns pending, cache eviction and unavailable lookup', async () => {
     const owner = harness(pdf('first.pdf'), true);
     const first = owner.mount();

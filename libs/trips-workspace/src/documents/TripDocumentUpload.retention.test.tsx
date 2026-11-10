@@ -6,6 +6,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { createClient } from '../documents-api/client';
 import { client as defaultDocumentsClient } from '../documents-api/client.gen';
 import { createClient as createTripsClient } from '../trips-api/client';
+import { documentQueryKeys } from './query-keys';
 import { createTripDocumentUploadSession } from './trip-document-upload-session';
 import { TripDocumentUpload } from './TripDocumentUpload';
 
@@ -154,6 +155,37 @@ it('checks the captured Trips owner immediately before linking a completed origi
   await userEvent.click(screen.getByRole('button', { name: 'Link file' }));
   expect(owner.links).toHaveLength(0);
   expect(owner.session.read()[0]?.upload.file).not.toBeNull();
+});
+
+it('does not seed another owner cache with a retained original after a mutable origin changes', async () => {
+  const owner = harness();
+  owner.mount();
+  await selectFile();
+  const respond = owner.responses[0];
+  if (respond === undefined) throw new Error('Upload acceptance missing');
+  await act(async () =>
+    respond(Response.json({ data: { taskId: 'accepted-8' } }, { status: 202 }))
+  );
+  await screen.findByRole('button', { name: 'Link file' });
+  const client = owner.session.context.documentsClient;
+  if (client === undefined) throw new Error('Owner client missing');
+  client.setConfig({ baseUrl: 'https://other.example/documents-api' });
+  await userEvent.click(screen.getByRole('button', { name: 'Link file' }));
+  await screen.findByText('The trip, item or document connection changed for this upload.');
+  expect(owner.cache.getQueryData(documentQueryKeys.task(client, 'accepted-8'))).toBeUndefined();
+  cleanup();
+  owner.cache.clear();
+  client.setConfig({ baseUrl: 'https://pops.example/documents-api' });
+  owner.expireTask();
+  owner.mount();
+  await screen.findByRole('button', { name: 'Retry status check' });
+  expect(owner.session.read()[0]?.upload.taskReceipt?.result.documentId).toBe(91);
+  expect(owner.cache.getQueryData(documentQueryKeys.task(client, 'accepted-8'))).toEqual({
+    state: 'done',
+    documentId: 91,
+    reason: null,
+  });
+  expect(owner.posts()).toBe(1);
 });
 
 it('does not search a changed owner to recover an uncertain original', async () => {
