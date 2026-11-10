@@ -11,11 +11,17 @@ Mode remains open source text, and intention, arrangement and purchase are indep
 Only Purchased receives hard styling. Optional buffer fields have no default.
 
 Inline field edits and whole-card ordering persist to the owning source endpoints.
-Undo submits their inverse PATCH/order; adding a blank leg can be undone by deleting
-that newly created identity. Existing source legs are not removed by this workspace.
-Failed PATCH/order writes retain their draft with explicit retry/discard. Ambiguous
-leg creation/removal failures require a successful canonical source reload before
-another write, preventing blind POST retries. Cached source remains
+Undo submits guarded inverse PATCH/order writes. Adding a blank leg can be undone
+through a server-owned reversible removal receipt for that newly created identity.
+Existing source legs are not removed by this workspace. Every leg write uses the
+atomic leg-list revision. Inverse guards advance only across the editor's own confirmed
+successor revisions; a later refetch or receipt replay cannot lend its revision to Undo.
+Consecutive removals restore in LIFO order with stable identities and exact live ordering.
+
+Failed source edits and receipt-backed removal/restoration retain their exact command
+for explicit retry, including the original operation ID and revision. A revision conflict
+invalidates inverse history. Ambiguous leg creation still requires a successful canonical
+source reload before another write, preventing blind create retries. Cached source remains
 mounted during background failures. Only the owning timing endpoint supplies chronology
 findings and signed minutes; unavailable or incomplete clocks do not imply safety.
 

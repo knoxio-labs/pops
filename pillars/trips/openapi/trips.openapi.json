@@ -6569,6 +6569,11 @@
               "schema": {
                 "additionalProperties": false,
                 "properties": {
+                  "expectedRevision": {
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
                   "legIds": {
                     "items": {
                       "exclusiveMinimum": true,
@@ -6821,6 +6826,366 @@
               }
             },
             "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "409"
+          }
+        },
+        "tags": ["journeyLegs"]
+      }
+    },
+    "/trips/{tripId}/journeys/{journeyId}/leg-removals/{operationId}/restore": {
+      "post": {
+        "operationId": "journeyLegs.restore",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tripId",
+            "required": true,
+            "schema": {
+              "exclusiveMinimum": true,
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "journeyId",
+            "required": true,
+            "schema": {
+              "exclusiveMinimum": true,
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "operationId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "expectedRevision": {
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                },
+                "required": ["expectedRevision"],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "legs": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "arrangement": {
+                            "enum": ["Booked", "Agreed", "Not arranged", "Not needed", null],
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                            "type": "string"
+                          },
+                          "from": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "local": {
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d+)?)?$",
+                                "type": "string"
+                              },
+                              "placeId": {
+                                "exclusiveMinimum": true,
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "sourceLabel": {
+                                "type": "string"
+                              },
+                              "sourceLinks": {
+                                "items": {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "label": {
+                                      "type": "string"
+                                    },
+                                    "uri": {
+                                      "anyOf": [
+                                        {
+                                          "format": "uri",
+                                          "type": "string"
+                                        },
+                                        {
+                                          "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                          "type": "string"
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "required": ["uri"],
+                                  "type": "object"
+                                },
+                                "type": "array"
+                              },
+                              "timeZone": {
+                                "type": "string"
+                              }
+                            },
+                            "type": "object"
+                          },
+                          "id": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "intention": {
+                            "enum": ["In plan", "Considering", "Alternative", null],
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "journeyId": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "mode": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "notes": {
+                            "type": "string"
+                          },
+                          "operator": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "purchase": {
+                            "enum": ["Purchased", null],
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "reference": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "service": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "sourceLinks": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "label": {
+                                  "type": "string"
+                                },
+                                "uri": {
+                                  "anyOf": [
+                                    {
+                                      "format": "uri",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                      "type": "string"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": ["uri"],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "to": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "local": {
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d+)?)?$",
+                                "type": "string"
+                              },
+                              "placeId": {
+                                "exclusiveMinimum": true,
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "sourceLabel": {
+                                "type": "string"
+                              },
+                              "sourceLinks": {
+                                "items": {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "label": {
+                                      "type": "string"
+                                    },
+                                    "uri": {
+                                      "anyOf": [
+                                        {
+                                          "format": "uri",
+                                          "type": "string"
+                                        },
+                                        {
+                                          "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                          "type": "string"
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "required": ["uri"],
+                                  "type": "object"
+                                },
+                                "type": "array"
+                              },
+                              "timeZone": {
+                                "type": "string"
+                              }
+                            },
+                            "type": "object"
+                          },
+                          "updatedAt": {
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "journeyId",
+                          "mode",
+                          "from",
+                          "to",
+                          "intention",
+                          "arrangement",
+                          "purchase",
+                          "operator",
+                          "service",
+                          "reference",
+                          "notes",
+                          "sourceLinks",
+                          "createdAt",
+                          "updatedAt"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "receipt": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "legId": {
+                          "exclusiveMinimum": true,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "operationId": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
+                        "removedRevision": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "restoredRevision": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "state": {
+                          "enum": ["removed", "restored"],
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "operationId",
+                        "legId",
+                        "state",
+                        "removedRevision",
+                        "restoredRevision"
+                      ],
+                      "type": "object"
+                    },
+                    "revision": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "required": ["revision", "legs", "receipt"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "409"
           }
         },
         "tags": ["journeyLegs"]
@@ -7060,9 +7425,14 @@
                         "type": "object"
                       },
                       "type": "array"
+                    },
+                    "revision": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
                     }
                   },
-                  "required": ["legs"],
+                  "required": ["revision", "legs"],
                   "type": "object"
                 }
               }
@@ -7088,6 +7458,16 @@
               }
             },
             "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "409"
           }
         },
         "tags": ["journeyLegs"]
@@ -7128,6 +7508,11 @@
                     "enum": ["Booked", "Agreed", "Not arranged", "Not needed", null],
                     "nullable": true,
                     "type": "string"
+                  },
+                  "expectedRevision": {
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
                   },
                   "from": {
                     "additionalProperties": false,
@@ -7509,6 +7894,16 @@
               }
             },
             "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "409"
           }
         },
         "tags": ["journeyLegs"]
@@ -7575,6 +7970,16 @@
               }
             },
             "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "409"
           }
         },
         "tags": ["journeyLegs"]
@@ -7841,6 +8246,16 @@
               }
             },
             "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "409"
           }
         },
         "tags": ["journeyLegs"]
@@ -7892,6 +8307,11 @@
                     "enum": ["Booked", "Agreed", "Not arranged", "Not needed", null],
                     "nullable": true,
                     "type": "string"
+                  },
+                  "expectedRevision": {
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
                   },
                   "from": {
                     "additionalProperties": false,
@@ -8273,6 +8693,372 @@
               }
             },
             "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "409"
+          }
+        },
+        "tags": ["journeyLegs"]
+      }
+    },
+    "/trips/{tripId}/journeys/{journeyId}/legs/{id}/removals": {
+      "post": {
+        "operationId": "journeyLegs.remove",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tripId",
+            "required": true,
+            "schema": {
+              "exclusiveMinimum": true,
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "journeyId",
+            "required": true,
+            "schema": {
+              "exclusiveMinimum": true,
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "exclusiveMinimum": true,
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "expectedRevision": {
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "operationId": {
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                    "type": "string"
+                  }
+                },
+                "required": ["operationId", "expectedRevision"],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "legs": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "arrangement": {
+                            "enum": ["Booked", "Agreed", "Not arranged", "Not needed", null],
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                            "type": "string"
+                          },
+                          "from": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "local": {
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d+)?)?$",
+                                "type": "string"
+                              },
+                              "placeId": {
+                                "exclusiveMinimum": true,
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "sourceLabel": {
+                                "type": "string"
+                              },
+                              "sourceLinks": {
+                                "items": {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "label": {
+                                      "type": "string"
+                                    },
+                                    "uri": {
+                                      "anyOf": [
+                                        {
+                                          "format": "uri",
+                                          "type": "string"
+                                        },
+                                        {
+                                          "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                          "type": "string"
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "required": ["uri"],
+                                  "type": "object"
+                                },
+                                "type": "array"
+                              },
+                              "timeZone": {
+                                "type": "string"
+                              }
+                            },
+                            "type": "object"
+                          },
+                          "id": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "intention": {
+                            "enum": ["In plan", "Considering", "Alternative", null],
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "journeyId": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "mode": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "notes": {
+                            "type": "string"
+                          },
+                          "operator": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "purchase": {
+                            "enum": ["Purchased", null],
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "reference": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "service": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "sourceLinks": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "label": {
+                                  "type": "string"
+                                },
+                                "uri": {
+                                  "anyOf": [
+                                    {
+                                      "format": "uri",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                      "type": "string"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": ["uri"],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "to": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "local": {
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d+)?)?$",
+                                "type": "string"
+                              },
+                              "placeId": {
+                                "exclusiveMinimum": true,
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "sourceLabel": {
+                                "type": "string"
+                              },
+                              "sourceLinks": {
+                                "items": {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "label": {
+                                      "type": "string"
+                                    },
+                                    "uri": {
+                                      "anyOf": [
+                                        {
+                                          "format": "uri",
+                                          "type": "string"
+                                        },
+                                        {
+                                          "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                          "type": "string"
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "required": ["uri"],
+                                  "type": "object"
+                                },
+                                "type": "array"
+                              },
+                              "timeZone": {
+                                "type": "string"
+                              }
+                            },
+                            "type": "object"
+                          },
+                          "updatedAt": {
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "journeyId",
+                          "mode",
+                          "from",
+                          "to",
+                          "intention",
+                          "arrangement",
+                          "purchase",
+                          "operator",
+                          "service",
+                          "reference",
+                          "notes",
+                          "sourceLinks",
+                          "createdAt",
+                          "updatedAt"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "receipt": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "legId": {
+                          "exclusiveMinimum": true,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "operationId": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
+                        "removedRevision": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "restoredRevision": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "state": {
+                          "enum": ["removed", "restored"],
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "operationId",
+                        "legId",
+                        "state",
+                        "removedRevision",
+                        "restoredRevision"
+                      ],
+                      "type": "object"
+                    },
+                    "revision": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "required": ["revision", "legs", "receipt"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "409"
           }
         },
         "tags": ["journeyLegs"]

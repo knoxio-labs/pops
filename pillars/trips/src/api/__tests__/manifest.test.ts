@@ -69,6 +69,8 @@ describe('Trips manifest', () => {
         'trips.events.delete',
         'trips.stays.update',
         'trips.stays.delete',
+        'trips.journeyLegs.remove',
+        'trips.journeyLegs.restore',
         'trips.journeyGroups.create',
         'trips.journeyGroups.addBlank',
         'trips.journeyGroups.select',
