@@ -1,10 +1,11 @@
 # Trips browser app
 
-The shell loads `dist/remote/trips.js` and `trips.css` from the Trips manifest. The app exposes the grouped home, trip metadata settings, a trip calendar, and route adapters for the `@pops/trips-workspace` stay, journey, event, and options-first decision editors. Event detail is registered at `:tripId/events/:eventId`; invalid route identities fail before making source requests. It owns no database and uses generated Trips and Tags clients at the shell's authenticated same-origin proxy paths.
+The shell loads `dist/remote/trips.js` and `trips.css` from the Trips manifest. The app exposes the grouped home, trip metadata settings, a trip calendar, and route adapters for the `@pops/trips-workspace` stay, journey, event, and options-first decision editors. Event detail is registered at `:tripId/events/:eventId`; invalid route identities fail before making source requests. The `/trips/:tripId/documents` route provides typed document associations and owner uploads. It owns no database and uses generated Trips and Tags clients at the shell's authenticated same-origin proxy paths.
 
 Home selection and successful creation open `/trips/:tripId`, the approved route-first
 overview. It loads the owning library's independent source collections and links only
-to published source routes. Stays and events attach only through explicit visit
+to published source routes. Calendar and Documents navigation remains available even
+when their source collections are empty. Stays and events attach only through explicit visit
 identities; journeys stay separate until a placement contract exists. Missing or
 unassociated facts remain visible, and document associations retain source identities
 without pretending to resolve Documents originals. The overview's When subtitle is

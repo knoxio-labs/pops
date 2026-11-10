@@ -113,6 +113,11 @@ function OverviewHeader(props: OverviewViewProps): JSX.Element {
                 <a href={props.calendarLink.href}>{props.calendarLink.label}</a>
               </Button>
             )}
+            {props.documentsHref && (
+              <Button asChild variant="outline" className="min-h-11">
+                <a href={props.documentsHref}>{props.labels.documents}</a>
+              </Button>
+            )}
             <Button asChild variant="outline" className="min-h-11">
               <a href={props.settingsHref}>{props.labels.settings}</a>
             </Button>

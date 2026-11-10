@@ -48,6 +48,14 @@ function mount(
 }
 
 describe('source-backed TripOverview', () => {
+  it('opens the published Documents workspace even before the first association exists', async () => {
+    mount(overviewResponses(), undefined, { documentsHref: '/trips/7/documents' });
+    expect(await screen.findByRole('link', { name: 'Documents' })).toHaveAttribute(
+      'href',
+      '/trips/7/documents'
+    );
+    expect(screen.queryByRole('region', { name: 'Documents' })).not.toBeInTheDocument();
+  });
   it('renders calendar navigation only when the host supplies its published route and label', async () => {
     mount();
     await screen.findByRole('heading', { name: 'Coast trip' });

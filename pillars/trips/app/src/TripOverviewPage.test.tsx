@@ -13,8 +13,12 @@ import { TripOverviewPage } from './TripOverviewPage';
 import type { TripOverviewProps } from '@pops/trips-workspace';
 
 vi.mock('@pops/trips-workspace', () => ({
-  TripOverview: ({ calendarLink }: TripOverviewProps) =>
-    calendarLink ? <a href={calendarLink.href}>{calendarLink.label}</a> : null,
+  TripOverview: ({ calendarLink, documentsHref, labels }: TripOverviewProps) => (
+    <>
+      {calendarLink && <a href={calendarLink.href}>{calendarLink.label}</a>}
+      {documentsHref && <a href={documentsHref}>{labels.documents}</a>}
+    </>
+  ),
 }));
 
 const translation = createInstance();
@@ -51,9 +55,23 @@ describe('Trip overview navigation', () => {
     );
   });
 
-  it('translates the Calendar label', async () => {
+  it('links the published Documents route using the owning trip identity', () => {
+    mount('/7');
+    const route = TRIPS_PAGES.find((page) => page.bundleSlot === 'trips-documents');
+    expect(route).toBeDefined();
+    expect(screen.getByRole('link', { name: 'Documents' })).toHaveAttribute(
+      'href',
+      `/trips/${route?.path.replace(':tripId', '7')}`
+    );
+  });
+
+  it('translates the Calendar and Documents labels', async () => {
     await translation.changeLanguage('pt-BR');
     mount('/19');
+    expect(screen.getByRole('link', { name: ptBR.overview.documents })).toHaveAttribute(
+      'href',
+      '/trips/19/documents'
+    );
     expect(screen.getByRole('link', { name: ptBR.calendar })).toHaveAttribute(
       'href',
       '/trips/19/calendar'

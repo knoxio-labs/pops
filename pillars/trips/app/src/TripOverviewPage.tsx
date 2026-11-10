@@ -59,6 +59,7 @@ export function TripOverviewPage() {
       locale={i18n.resolvedLanguage ?? i18n.language}
       labels={labels}
       backHref="/trips"
+      documentsHref={`/trips/${tripId}/documents`}
       settingsHref={`/trips/${tripId}/settings`}
       calendarLink={{ href: `/trips/${tripId}/calendar`, label: t('calendar') }}
       href={href}

@@ -1,5 +1,3 @@
-import { Button } from '@pops/ui';
-
 import { EventCard, StayCard } from './ArrangementCards';
 import { dateLabel, detachedRecords } from './model';
 import { SourceCard } from './SourceCard';
@@ -68,11 +66,6 @@ export function OverviewReferences(props: OverviewViewProps): JSX.Element | null
       {!!props.sources.documents?.length && (
         <section aria-label={props.labels.documents} className="space-y-2">
           <h2 className="border-b pb-2 text-lg font-semibold">{props.labels.documents}</h2>
-          {props.documentsHref && (
-            <Button asChild variant="outline" className="min-h-11">
-              <a href={props.documentsHref}>{props.labels.documents}</a>
-            </Button>
-          )}
           <ul className="divide-y divide-border">
             {props.sources.documents.map((document) => {
               const href =
