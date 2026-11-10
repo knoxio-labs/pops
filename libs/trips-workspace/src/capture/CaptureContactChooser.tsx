@@ -26,11 +26,18 @@ export function CaptureContactChooser({
       />
       {choice.selected !== null && !choice.applied ? (
         <section role="status" className="space-y-2 rounded-md border border-border p-3">
-          <p>{choice.selected.name} is retained. The owning Trips source is unavailable.</p>
+          <p>{choice.selected.name} is retained.</p>
+          <p>
+            {choice.linking
+              ? 'Linking the selected contact…'
+              : (choice.linkError ?? 'The Trips link has not been confirmed.')}
+          </p>
           <p className="break-words text-sm text-muted-foreground">
             {choice.selected.reference.uri}
           </p>
-          <Button onClick={() => contacts.applySelection()}>Retry linking selected contact</Button>
+          <Button disabled={choice.linking} onClick={() => void contacts.applySelection()}>
+            Retry linking selected contact
+          </Button>
         </section>
       ) : null}
     </>

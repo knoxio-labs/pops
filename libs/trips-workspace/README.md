@@ -185,3 +185,7 @@ catalogues to the host locale. Each organisation intent retains the owner sessio
 route views, including pending creation and ambiguous outcomes. The canonical reference
 is retained before a Trips association is attempted; retrying the association cannot
 create the Contact again. Removing a Trips reference never deletes a Contacts record.
+An Idea Contact or recommendation link remains explicitly retryable while another
+Trips operation is pending. Its draft entry is prepared once; only confirmation for
+that exact Idea, original revision and submitted fields marks the link applied.
+An uncertain link response resolves through the editor's retained request replay.

@@ -1,3 +1,5 @@
+import { containsFields, sameFields } from './record-field-match';
+
 import type { CaptureEditor } from './editor-types';
 import type {
   Capture,
@@ -173,12 +175,4 @@ export class CaptureRecordDrafts {
       this.changed();
     }
   }
-}
-function sameFields(first: unknown, second: unknown): boolean {
-  return JSON.stringify(first) === JSON.stringify(second);
-}
-function containsFields<Row extends object>(row: Row, fields: Partial<Row>): boolean {
-  return Object.keys(fields).every(
-    (key) => Reflect.has(row, key) && sameFields(Reflect.get(row, key), Reflect.get(fields, key))
-  );
 }
