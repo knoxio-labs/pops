@@ -201,7 +201,25 @@ describe('the iOS analyzer lane', () => {
     const analyze = steps.find(
       (step) => step.name === 'SwiftLint analyzer rules (reuse the test compile)'
     );
-    expect(analyze?.['timeout-minutes']).toBe(75);
+    expect(analyze?.['timeout-minutes']).toBe(100);
+    const analyzerJob = Object.values(workflow.jobs).find(
+      (job) => isMapping(job) && Array.isArray(job.steps) && job.steps.includes(analyze)
+    );
+    if (!isMapping(analyzerJob)) throw new Error('Missing analyzer job');
+    expect(analyzerJob['timeout-minutes']).toBe(
+      "${{ (github.event_name == 'merge_group' || inputs['full-validation'] == true) && 190 || 100 }}"
+    );
+    expect(analyze?.if).toBe(
+      "success() && (github.event_name == 'merge_group' || inputs['full-validation'] == true)"
+    );
+    expect(steps.find((step) => step.name === 'Test (iOS Simulator)')?.['timeout-minutes']).toBe(
+      "${{ (github.event_name == 'merge_group' || inputs['full-validation'] == true) && 35 || 25 }}"
+    );
+    expect(
+      steps.find((step) => step.name === 'UI flow (Maestro, against a real BFM)')?.[
+        'timeout-minutes'
+      ]
+    ).toBe(45);
     expect(analyze?.run).toBe('mise run --skip-deps lint:analyze');
     expect(analyze?.env).toEqual({
       POPS_IOS_ANALYZER_ARTIFACTS: '${{ runner.temp }}/ios-analyzer-diagnostics',

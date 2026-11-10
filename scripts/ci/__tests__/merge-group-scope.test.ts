@@ -237,9 +237,9 @@ describe('the scope job is wired to the workflow it scopes', () => {
   it.each([
     ['pull_request', undefined, 100],
     ['pull_request', false, 100],
-    ['pull_request', true, 165],
-    ['merge_group', undefined, 165],
-    ['merge_group', false, 165],
+    ['pull_request', true, 190],
+    ['merge_group', undefined, 190],
+    ['merge_group', false, 190],
   ])('budgets the %s full=%s iOS job at %s minutes', (event, full, expected) => {
     const expression = jobsOf('ios-quality.yml').get('quality')?.['timeout-minutes'];
     if (typeof expression !== 'string') throw new Error('Missing lane-specific timeout expression');
@@ -272,7 +272,7 @@ describe('the scope job is wired to the workflow it scopes', () => {
       "success() && (github.event_name == 'merge_group' || inputs['full-validation'] == true)"
     );
     expect(fullSuite?.run).toBe('mise run --skip-deps lint:analyze');
-    expect(fullSuite?.['timeout-minutes']).toBe(75);
+    expect(fullSuite?.['timeout-minutes']).toBe(100);
     const debugArtifact = namedStep('Simulator test log and result bundle');
     expect(debugArtifact?.if).toBe('failure()');
     expect(debugArtifact?.uses).toBe('actions/upload-artifact@v7');
