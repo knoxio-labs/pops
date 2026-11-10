@@ -35,7 +35,7 @@ export function refreshSource<Source extends object, Patch extends Partial<Sourc
   return { draft: { ...initial, ...retained }, conflicts };
 }
 
-/** Save reconciliation identifies observed foreign fields that make earlier whole-source inverses unsafe. */
+/** Save reconciliation identifies observed or returned foreign fields that make whole-source inverses unsafe. */
 export interface SavedSourceRefresh<Source, Patch> extends SourceRefresh<Source, Patch> {
   foreign: boolean;
 }
@@ -56,28 +56,36 @@ export function refreshAfterSave<Source extends object, Patch extends Partial<So
 ): SavedSourceRefresh<Source, Patch> {
   const before = source(baseline);
   const confirmed = source(result);
-  const foreign = { ...source(observed) };
-  for (const key in foreign) {
-    if (Object.hasOwn(pending, key) || sameSourceValue(foreign[key], before[key]))
-      delete foreign[key];
-  }
-  const local = { ...source(draft) };
-  for (const key in local) {
-    if (Object.hasOwn(pending, key) || sameSourceValue(local[key], before[key])) delete local[key];
-  }
+  const foreign = untouchedSourceFields(before, source(observed), pending);
+  const local = untouchedSourceFields(before, source(draft), pending);
+  const returnedForeign = untouchedSourceFields(before, confirmed, pending);
   const conflicts = savedConflicts(before, confirmed, foreign, local);
   return {
     draft: { ...result, ...foreign, ...local },
     conflicts: [...new Set(conflicts)],
-    foreign: Object.keys(foreign).length > 0,
+    foreign: Object.keys(foreign).length > 0 || Object.keys(returnedForeign).length > 0,
   };
+}
+
+function untouchedSourceFields<Patch extends object>(
+  before: Patch,
+  current: Patch,
+  pending: Patch
+): Partial<Patch> {
+  const untouched: Partial<Patch> = { ...current };
+  for (const key in untouched) {
+    if (Object.hasOwn(pending, key) || sameSourceValue(untouched[key], before[key])) {
+      delete untouched[key];
+    }
+  }
+  return untouched;
 }
 
 function savedConflicts<Patch extends object>(
   before: Patch,
   confirmed: Patch,
-  foreign: Patch,
-  local: Patch
+  foreign: Partial<Patch>,
+  local: Partial<Patch>
 ): (keyof Patch)[] {
   const conflicts: (keyof Patch)[] = [];
   for (const key in foreign) {

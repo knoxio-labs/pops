@@ -16,7 +16,7 @@ afterEach(() => {
   for (const cache of caches) cache.clear();
   caches.length = 0;
 });
-function setup(links: Stay['hostLinks']) {
+function setup(links: Stay['hostLinks'], failHost = false) {
   const original = sourceStay();
   const fresh = sourceStay({ hostLinks: [...original.hostLinks, foreign] });
   const changed = sourceStay({ address: 'Pending address', hostLinks: links });
@@ -24,8 +24,10 @@ function setup(links: Stay['hostLinks']) {
     stay: original,
     patches: [
       { status: 503, body: problem('trips.temporarily_unavailable') },
-      { status: 200, body: changed },
-      { status: 200, body: fresh },
+      failHost
+        ? { status: 503, body: problem('trips.temporarily_unavailable') }
+        : { status: 200, body: changed },
+      { status: 200, body: failHost ? { ...fresh, address: 'Pending address' } : fresh },
     ],
   });
   const owner = contactOwner();
@@ -107,4 +109,28 @@ it('resumes an unresolved replacement intent after an unrelated canonical Host a
   fireEvent.click(screen.getByRole('button', { name: 'Select owner contact' }));
   await waitFor(() => expect(transport.patches).toHaveLength(2));
   expect(transport.patches[1]).toEqual({ address: 'Pending address', hostLinks: links });
+});
+
+it('requires explicit conflict resolution while preserving the unrelated failed Address and owner receipt', async () => {
+  const original = sourceStay();
+  const links = [...original.hostLinks, { uri: ownerSelection.reference.uri }];
+  const { transport, refresh } = setup(links, true);
+  await failAddress();
+  fireEvent.click(screen.getByRole('button', { name: 'Choose host' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Select owner contact' }));
+  await waitFor(() => expect(transport.patches).toHaveLength(2));
+  await screen.findByText('Changes have not been saved');
+  await refresh();
+  const reset = await screen.findByRole('button', {
+    name: 'Use refreshed values for conflicting fields',
+  });
+  expect(screen.getByRole('button', { name: 'Choose host' })).toBeDisabled();
+  expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Undo' })).toBeDisabled();
+  fireEvent.click(reset);
+  expect(screen.getByLabelText('Address')).toHaveValue('Pending address');
+  expect(screen.getByRole('button', { name: 'Add selected host' })).toBeEnabled();
+  fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+  await waitFor(() => expect(transport.patches).toHaveLength(3));
+  expect(transport.patches[2]).toEqual({ address: 'Pending address' });
 });

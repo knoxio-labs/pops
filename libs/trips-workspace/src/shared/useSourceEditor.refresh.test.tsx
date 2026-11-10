@@ -370,3 +370,25 @@ it('blocks a previously captured whole-source inverse while unrelated local chan
   expect(save).toHaveBeenCalledTimes(1);
   expect(result.current.draft.address).toBe('Pending address');
 });
+
+it('invalidates a whole-source inverse when the successful response first reveals an untouched foreign host append', async () => {
+  const changed = {
+    ...initial,
+    address: 'Saved address',
+    hostLinks: ['original', 'foreign'],
+    revision: 2,
+  };
+  const save = vi.fn<(patch: Patch, saved: Source) => Promise<Source>>().mockResolvedValue(changed);
+  const { result } = setup(save);
+  await act(async () => {
+    await result.current.commit({ address: changed.address });
+  });
+  expect(result.current.saved).toEqual(changed);
+  expect(result.current.draft.hostLinks).toEqual(['original', 'foreign']);
+  expect(result.current.conflict).toBe(false);
+  expect(result.current.canUndo).toBe(false);
+  await act(async () => {
+    await result.current.undo();
+  });
+  expect(save.mock.calls).toEqual([[{ address: changed.address }, initial]]);
+});
