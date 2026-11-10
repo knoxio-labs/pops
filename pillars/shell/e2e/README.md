@@ -72,6 +72,22 @@ unknown loaders and new-document scripts remain pending. Iframe scripts retain t
 existing Playwright lifecycle tracking. All REST requests, including writes and requests
 from earlier documents, still require a terminal event; navigation never clears them.
 
+Script observation uses one public `connectOverCDP` transport. A normal nonpersistent
+launcher owns no Playwright contexts or pages; a disposable, zero-page protocol context
+proves the discovered endpoint belongs to that process before attachment. All test contexts
+use the connected browser, preserving configured context options, routing, downloads and traces.
+Dedicated workers resume only after their own real `Network.enable` and recursive auto-attach
+acknowledgements. Imports retain exact session/request IDs and page/context ownership; failed
+setup, lost transport or a detached session with unfinished work fails visibly.
+
+A worker's bootstrap appears on its parent connection but can finish on the worker session.
+Chromium uses the same worker token for that bootstrap request ID and worker target ID
+([instrumentation](https://chromium.googlesource.com/chromium/src/+/75e56a1506b5688ede4bc5591444fb9c64ee86d8/content/browser/devtools/devtools_instrumentation.cc),
+[target identity](https://chromium.googlesource.com/chromium/src/+/75e56a1506b5688ede4bc5591444fb9c64ee86d8/content/browser/devtools/worker_or_worklet_devtools_agent_host.cc)).
+Only that exact bootstrap is settled by its worker's loaded/failed notification; later imports
+still require their own terminals. This is a Chromium implementation relationship covered by
+real-browser regressions, not a generic CDP guarantee or a URL convention.
+
 A spec whose actual subject is the shell's behaviour when a pillar answers
 nothing (a rail-navigation smoke test, a "mounts even with a dead API" case)
 opts out with `test.use({ allowUnroutedPillarRest: '<why>' })`, scoped as

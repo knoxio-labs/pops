@@ -10,9 +10,12 @@
 import { test as base, expect } from '@playwright/test';
 
 import { PILLAR_REST_URL, REGISTRY_HEALTH_URL } from '../helpers/pillar-rest';
+import { createScriptBrowser } from './script-browser';
 import { observeMainFrameScripts } from './script-requests';
 
 import type { Request, Route } from '@playwright/test';
+
+import type { ScriptBrowser } from './script-browser';
 
 interface UnroutedPillarCall {
   readonly method: string;
@@ -93,12 +96,40 @@ async function settlePendingRequests(settlement: RequestSettlement): Promise<voi
   }
 }
 
-export const test = base.extend<PillarRestGuardOptions>({
+interface ScriptBrowserFixtures {
+  readonly scriptBrowser: ScriptBrowser;
+}
+
+export const test = base.extend<PillarRestGuardOptions, ScriptBrowserFixtures>({
+  scriptBrowser: [
+    async ({ playwright, browserName, launchOptions, headless, channel }, runFixture) => {
+      if (browserName !== 'chromium')
+        throw new Error('Shell script observation requires the configured Chromium projects');
+      const owned = await createScriptBrowser(playwright.chromium, {
+        ...launchOptions,
+        headless,
+        channel,
+      });
+      try {
+        await runFixture(owned);
+        owned.transport.observations.assertHealthy();
+      } finally {
+        await owned.close();
+      }
+    },
+    { scope: 'worker' },
+  ],
+  browser: [
+    async ({ scriptBrowser }, runFixture) => {
+      await runFixture(scriptBrowser.browser);
+    },
+    { scope: 'worker' },
+  ],
   allowUnroutedPillarRest: [false, { option: true }],
   expectedUnroutedPillarRestCalls: [undefined, { option: true }],
 
   page: async (
-    { page, context, allowUnroutedPillarRest, expectedUnroutedPillarRestCalls },
+    { page, context, scriptBrowser, allowUnroutedPillarRest, expectedUnroutedPillarRestCalls },
     runTest
   ) => {
     const unrouted: UnroutedPillarCall[] = [];
@@ -110,10 +141,14 @@ export const test = base.extend<PillarRestGuardOptions>({
       requestRevision += 1;
       for (const wake of requestChangeWaiters) wake();
     };
-    const scripts = await observeMainFrameScripts(page, () => {
-      lastRequestActivity = Date.now();
-      notifyRequestChange();
-    });
+    const scripts = await observeMainFrameScripts(
+      page,
+      scriptBrowser.transport.observations,
+      () => {
+        lastRequestActivity = Date.now();
+        notifyRequestChange();
+      }
+    );
     const trackRequest = (request: Request) => {
       if (!shouldTrackRequest(request)) return;
       if (request.resourceType() === 'script' && !PILLAR_REST_URL.test(request.url())) {
@@ -184,13 +219,16 @@ export const test = base.extend<PillarRestGuardOptions>({
     try {
       await runTest(page);
       await settlePendingRequests({
-        pending: () => [
-          ...[...pendingRequests].map((request) => ({
-            method: request.method(),
-            url: request.url(),
-          })),
-          ...scripts.requests.pending(),
-        ],
+        pending: () => {
+          scripts.requests.assertHealthy();
+          return [
+            ...[...pendingRequests].map((request) => ({
+              method: request.method(),
+              url: request.url(),
+            })),
+            ...scripts.requests.pending(),
+          ];
+        },
         lastActivityAt: () => lastRequestActivity,
         revision: () => requestRevision,
         waitForChange,

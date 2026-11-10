@@ -7,8 +7,15 @@ import type { ServerResponse } from 'node:http';
 
 import type { Request, Route } from '@playwright/test';
 
-test('settles only abandoned main-frame scripts across document replacement', async ({ page }) => {
-  const scripts = await observeMainFrameScripts(page, () => undefined);
+test('settles only abandoned main-frame scripts across document replacement', async ({
+  page,
+  scriptBrowser,
+}) => {
+  const scripts = await observeMainFrameScripts(
+    page,
+    scriptBrowser.transport.observations,
+    () => undefined
+  );
   const held = new Map<ServerResponse, string>();
   const finished = new Set<Request>();
   page.on('requestfinished', (request) => finished.add(request));
