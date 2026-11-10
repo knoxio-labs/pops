@@ -266,6 +266,7 @@ for (const width of [1440, 390]) {
     page.on('pageerror', (error) => errors.push(error.message));
     await page.setViewportSize({ width, height: 900 });
     await stubShellBoot(page, ['trips']);
+    await stubUnavailableSourceDocuments(page, 7);
     await page.route(/\/trips-api\/places$/, (route) => json(route, 200, { places: [] }));
     await page.route(/\/trips-api\/trips\/7\/journey-groups$/, (route) =>
       json(route, 200, { groups: [] })
