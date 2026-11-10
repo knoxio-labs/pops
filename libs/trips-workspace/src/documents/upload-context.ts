@@ -10,10 +10,12 @@ export function uploadSessionKey(
   documentsClient: DocumentsClient | undefined
 ): string {
   return [
-    tripsClient?.getConfig().baseUrl ?? 'default-trips',
-    documentsClient?.getConfig().baseUrl ?? 'default-documents',
+    (tripsClient ?? defaultTripsClient).getConfig().baseUrl ?? '',
+    (documentsClient ?? defaultDocumentsClient).getConfig().baseUrl ?? '',
     String(tripId),
     target.kind,
     String(target.id),
   ].join(':');
 }
+import { client as defaultDocumentsClient } from '../documents-api/client.gen';
+import { client as defaultTripsClient } from '../trips-api/client.gen';

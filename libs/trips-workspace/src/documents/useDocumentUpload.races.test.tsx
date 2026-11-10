@@ -18,9 +18,10 @@ afterEach(() => {
   caches.length = 0;
 });
 
-function harness(file: File) {
+function harness(file: File, deferTasks = false) {
   const responses: Array<(response: Response) => void> = [];
   const failures: Array<(error: Error) => void> = [];
+  const taskResponses: Array<(response: Response) => void> = [];
   let postCount = 0;
   const client = createClient({
     baseUrl: 'https://pops.example/documents-api',
@@ -42,8 +43,10 @@ function harness(file: File) {
             allowedMimeTypes: ['application/pdf'],
           },
         });
-      if (request.url.includes('/paperless/tasks/'))
+      if (request.url.includes('/paperless/tasks/')) {
+        if (deferTasks) return new Promise<Response>((resolve) => taskResponses.push(resolve));
         return Response.json({ data: { state: 'done', documentId: 91, reason: null } });
+      }
       throw new Error('Unexpected owner request');
     }),
   });
@@ -63,7 +66,7 @@ function harness(file: File) {
         }),
       { initialProps: { session: storage.result.current[0] }, wrapper: Wrapper }
     );
-  return { storage, mount, postCount: () => postCount, responses, failures };
+  return { storage, mount, postCount: () => postCount, responses, failures, taskResponses };
 }
 
 function pdf(name: string): File {
@@ -78,6 +81,38 @@ async function accept(responses: Array<(response: Response) => void>): Promise<v
 }
 
 describe('owner upload intent races through the actual client', () => {
+  it('retains a late owner result only on its accepted task and originating File generation', async () => {
+    const file = pdf('first.pdf');
+    const owner = harness(file, true);
+    const view = owner.mount();
+    await waitFor(() => expect(view.result.current.unavailable).toBe(false));
+    const firstSession = owner.storage.result.current[0];
+    act(() => view.result.current.actions.submitUpload());
+    await waitFor(() => expect(owner.responses).toHaveLength(1));
+    await accept(owner.responses);
+    view.rerender({ session: owner.storage.result.current[0] });
+    await waitFor(() => expect(owner.taskResponses).toHaveLength(1));
+    act(() =>
+      view.result.current.fields.setTaskReceipt('different-task', {
+        state: 'done',
+        documentId: 999,
+        reason: null,
+      })
+    );
+    expect(firstSession.taskReceipt).toBeNull();
+    act(() => owner.storage.result.current[1](createDocumentUploadSession(file)));
+    view.rerender({ session: owner.storage.result.current[0] });
+    const complete = owner.taskResponses[0];
+    if (complete === undefined) throw new Error('Owner task was not captured');
+    view.unmount();
+    await act(async () =>
+      complete(Response.json({ data: { state: 'done', documentId: 91, reason: null } }))
+    );
+    await waitFor(() => expect(firstSession.taskReceipt?.result.documentId).toBe(91));
+    expect(firstSession.taskReceipt?.taskId).toBe('first-task');
+    expect(owner.storage.result.current[0].taskReceipt).toBeNull();
+    expect(owner.storage.result.current[0].id).not.toBe(firstSession.id);
+  });
   it.each([false, true])(
     'binds late acceptance to the originating intent, including same-File ABA: %s',
     async (sameFile) => {

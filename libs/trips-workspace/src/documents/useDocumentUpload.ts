@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useEffect } from 'react';
 
 import { loadPaperlessTask, loadPaperlessUploadPolicy } from './api';
 import { uploadFileProblem } from './model';
@@ -47,7 +48,7 @@ export function useDocumentUpload({
 }: DocumentUploadOptions): DocumentUploadController {
   const fields = useUploadFields(session, onSessionChange);
   const policyQuery = useUploadPolicy(documentsClient);
-  const taskQuery = useUploadTask(fields.taskId, documentsClient);
+  const taskQuery = useUploadTask(fields, documentsClient);
   const actions = useOwnerUploadActions(fields, policyQuery.data, documentsClient);
   return {
     fields,
@@ -100,16 +101,26 @@ function useUploadPolicy(
 }
 
 function useUploadTask(
-  taskId: string | null,
+  fields: UploadFields,
   documentsClient: DocumentsClient | undefined
 ): UseQueryResult<PaperlessTask, Error> {
-  return useQuery({
+  const { taskId, taskReceipt, setTaskReceipt } = fields;
+  const query = useQuery({
     queryKey: documentQueryKeys.task(documentsClient, taskId ?? ''),
-    queryFn: () => loadPaperlessTask(taskId ?? '', documentsClient),
+    queryFn: async () => {
+      const result = await loadPaperlessTask(taskId ?? '', documentsClient);
+      if (taskId !== null) setTaskReceipt(taskId, result);
+      return result;
+    },
+    initialData: taskReceipt?.taskId === taskId ? taskReceipt.result : undefined,
     enabled: taskId !== null,
     retry: false,
     refetchInterval: (query) => (query.state.data?.state === 'pending' ? 1500 : false),
   });
+  useEffect(() => {
+    if (taskId !== null && query.data !== undefined) setTaskReceipt(taskId, query.data);
+  }, [query.data, setTaskReceipt, taskId]);
+  return query;
 }
 
 function policyUnavailable(policy: PaperlessUploadPolicy | undefined): boolean {
