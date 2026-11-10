@@ -26,7 +26,8 @@ unverifiable selections return retryable 503 without partially changing trip
 source. Cache refresh never erases a retained trip reference, and independent
 metadata edits do not revalidate omitted associations. Trips owns no shared tag
 names, hierarchy, windows, archive/merge rules or vocabulary writes.
-Outbound reads use a Trips-owned service account granted `tags.tags`. Local
+Outbound reads use a Trips-owned service account granted `tags.tags` and
+`contacts.entities.reference`. Local
 configuration can supply `POPS_INTERNAL_API_KEY`; production supplies only a
 mounted-file path in `POPS_INTERNAL_API_KEY_FILE`. Startup checks configured
 secret-file readability and prefers that file over the local environment. No
@@ -109,10 +110,20 @@ event or rental, never a journey leg. `GET /trips/:tripId/responsibilities` list
 recorded states; `GET/PUT /trips/:tripId/responsibilities/:targetKind/:targetId`
 reads or replaces one target's association. The `responsibility` value is null
 (unset), `{ kind: "self" }`, or `{ kind: "contact", uri }`. Consumers choose the
-Contacts-issued `uri` from `GET /entities/:id/reference`; Trips validates the
-`pops:contacts/contact/` namespace and retains the opaque identity verbatim.
-Trips does not resolve, normalize, copy, mutate or delete the Contact. Unresolved
-identities remain editable and clearable without Contacts availability.
+Contacts-issued `uri` from `GET /entities/:id/reference`. A new or changed
+Contact selection is verified through that same authenticated owner operation;
+Trips stores the returned canonical URI, including an explicit alias redirect,
+without constructing an identity from display text. The response's canonical ID
+and URI must agree. Unknown identities return 400; unavailable, refused or
+malformed owner responses return retryable 503 without changing source state.
+Trips rechecks target ownership and the expected revision in the write transaction
+after the owner read, so concurrent replacement or deletion is preserved.
+
+Reads, self, clear and an unchanged retained Contact URI require no Contacts call.
+A retained unresolved reference remains editable and clearable offline; choosing
+it again after clear is a new selection and requires owner verification. Trips
+never copies, mutates or deletes the Contact. Independent arrangement edits
+remain usable when Contacts is unavailable.
 
 Every target is checked in the same trip transaction. A new target reads as
 unset at revision zero. PUT requires `expectedRevision` and replaces the entire

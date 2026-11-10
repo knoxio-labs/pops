@@ -359,6 +359,16 @@ export const EXPECTATIONS = [
   },
   {
     consumer: 'trips',
+    producer: 'contacts',
+    operationId: 'entities.reference',
+    path: '/entities/{id}/reference',
+    method: 'get',
+    query: [],
+    pathParams: ['id'],
+    usedBy: 'pillars/trips/src/api/rest/contact-reference.ts',
+  },
+  {
+    consumer: 'trips',
     producer: 'tags',
     operationId: 'tags.list',
     path: '/tags',

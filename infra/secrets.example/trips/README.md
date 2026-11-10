@@ -1,10 +1,11 @@
 # Trips outbound credential
 
-Trips reads shared tag identities with its own registry service account. Provision
+Trips reads shared tag identities and verifies new or changed Contact selections
+with its own registry service account. Provision
 one account per environment with this exact request body:
 
 ```json
-{ "name": "trips", "scopes": ["tags.tags"] }
+{ "name": "trips", "scopes": ["tags.tags", "contacts.entities.reference"] }
 ```
 
 Send it to `POST /registry-api/service-accounts` through the deployed shell as an
@@ -26,11 +27,13 @@ prevents API startup.
 
 Provision the host file before starting either compose stack. Deployment of this
 repository does not create the registry account or the host secret. The deployer
-must also run a registered Tags pillar reachable by Trips; the grant alone does
-not supply that service. Host provisioning belongs in the deployer's infra repo.
+must also run registered Tags and Contacts pillars reachable by Trips; the grant
+alone does not supply those services. Host provisioning belongs in the deployer's infra repo.
 
 Verify an unknown explicit tag selection can resolve a valid Tags identity and
 that independent trip metadata edits remain usable if Tags is unavailable.
+Verify a new responsibility Contact selection resolves its canonical identity;
+retained references, self and clear remain usable if Contacts is unavailable.
 Rotate by creating a replacement account with the same scope, replacing the host
-file, restarting Trips and verifying tag resolution before revoking the old
+file, restarting Trips and verifying tag and Contact resolution before revoking the old
 account with `POST /registry-api/service-accounts/:id/revoke`.

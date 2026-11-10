@@ -19,6 +19,7 @@ describe('Rental and responsibility HTTP source boundary', () => {
       tripsDb: opened,
       version: 'test',
       selfBaseUrl: 'http://localhost:3018',
+      resolveContactReference: async (uri) => uri,
       serviceAccountVerifier: async (key) => ({
         outcome: 'authenticated',
         principal: { id: key, name: 'Scoped principal', scopes: [`trips.${key}`] },
