@@ -446,6 +446,11 @@ Creating a reusable city retains its acknowledged identity if visit association 
 retrying that association never repeats creation. Undo restores the prior association
 without deleting the reusable city. An ambiguous creation failure blocks another POST
 in that session while allowing a canonical city reload and explicit source selection.
+The capture name, acknowledged Place identity and ambiguous outcome survive view
+closure and cache eviction under the exact Visit owner. A creation that completes
+after closure may retain its receipt and original catalogue cache entry, but cannot
+start the Visit association through the closed view. A reopened view associates that
+same Place; neither catalogue reload nor reopening authorizes another uncertain POST.
 
 Accommodation periods use explicit visit IDs and checkout-exclusive stay dates.
 Unknown, partial or contradictory dates remain visible without asserting coverage.
