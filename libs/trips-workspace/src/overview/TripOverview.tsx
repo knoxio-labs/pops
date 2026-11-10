@@ -1,4 +1,4 @@
-import { Button, ErrorState, PageHeader } from '@pops/ui';
+import { Button, cn, ErrorState, PageHeader } from '@pops/ui';
 
 import { requestProblem } from '../stay/api';
 import { dateRange } from './model';
@@ -43,7 +43,7 @@ function OverviewSession(props: TripOverviewProps): JSX.Element | null {
     documents: context.documents.data,
   };
   return (
-    <main className="mx-auto max-w-7xl space-y-5 px-4 py-6 text-sm md:px-6">
+    <main className="w-full min-w-0 space-y-5 text-sm">
       {Object.entries(queries).map(([name, query]) =>
         query.isError ? (
           <section key={name} aria-label={props.labels.status(name)} className="space-y-1">
@@ -65,6 +65,30 @@ function OverviewSession(props: TripOverviewProps): JSX.Element | null {
 }
 
 function OverviewContent(props: OverviewViewProps): JSX.Element | null {
+  const { trip, sources } = props;
+  const hasReferences = !!(sources.decisions?.length || sources.documents?.length);
+  return (
+    <>
+      <OverviewHeader {...props} />
+      <div className={cn('grid min-w-0 gap-6', hasReferences && 'xl:grid-cols-3')}>
+        <div className={cn('min-w-0 space-y-6', hasReferences && 'xl:col-span-2')}>
+          <OverviewRoute {...props} />
+          <OverviewJourneys {...props} />
+          <OverviewDetached {...props} />
+          {trip.notes && (
+            <section className="space-y-2">
+              <h2 className="text-base font-semibold">{props.labels.notes}</h2>
+              <p className="whitespace-pre-wrap break-words text-muted-foreground">{trip.notes}</p>
+            </section>
+          )}
+        </div>
+        {hasReferences && <OverviewReferences {...props} />}
+      </div>
+    </>
+  );
+}
+
+function OverviewHeader(props: OverviewViewProps): JSX.Element {
   const { trip, sources } = props;
   const title = trip.name?.trim() || trip.destination.trim() || props.labels.trip;
   const bounds = dateRange(
@@ -89,20 +113,6 @@ function OverviewContent(props: OverviewViewProps): JSX.Element | null {
         }
       />
       {bounds && <p className="text-sm text-muted-foreground">{bounds}</p>}
-      <div className="grid min-w-0 gap-6 xl:grid-cols-3">
-        <div className="min-w-0 space-y-6 xl:col-span-2">
-          <OverviewRoute {...props} />
-          <OverviewJourneys {...props} />
-          <OverviewDetached {...props} />
-          {trip.notes && (
-            <section className="space-y-2">
-              <h2 className="text-base font-semibold">{props.labels.notes}</h2>
-              <p className="whitespace-pre-wrap break-words text-muted-foreground">{trip.notes}</p>
-            </section>
-          )}
-        </div>
-        <OverviewReferences {...props} />
-      </div>
     </>
   );
 }

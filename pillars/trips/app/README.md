@@ -9,6 +9,8 @@ identities; journeys stay separate until a placement contract exists. Missing or
 unassociated facts remain visible, and document associations retain source identities
 without pretending to resolve Documents originals. The overview's When subtitle is
 opaque; its displayed outer dates come from ordered visit bounds.
+The remote stylesheet explicitly scans the overview library's source; the shell
+supplies outer page padding and the shared component styles.
 
 Home groups use the first ordered visit's arrival and the last visit's departure, relative to the viewer's local calendar day. Missing, invalid, or contradictory outer dates remain in Other. Trip titles use trimmed custom name, then trimmed destination, then the translated Trip label. `when` is opaque source text and never supplies route dates.
 

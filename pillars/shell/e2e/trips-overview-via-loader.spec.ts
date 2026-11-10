@@ -79,8 +79,39 @@ for (const viewport of [
       ['/trips/7/events/61', event],
       ['/trips/7/journeys', { journeys: [] }],
       ['/trips/7/journey-groups', { groups: [] }],
-      ['/trips/7/decisions', { decisions: [] }],
-      ['/trips/7/document-associations', { associations: [] }],
+      [
+        '/trips/7/decisions',
+        {
+          decisions: [
+            {
+              id: 9,
+              tripId: 7,
+              question: 'Which harbour transfer?',
+              deadline: '2029-04-20',
+              selectedOptionId: null,
+              revision: 0,
+              notes: '',
+              sourceLinks: [],
+              ...audit,
+            },
+          ],
+        },
+      ],
+      [
+        '/trips/7/document-associations',
+        {
+          associations: [
+            {
+              id: 1,
+              tripId: 7,
+              documentId: 102,
+              targetKind: 'stay',
+              targetId: 13,
+              createdAt: audit.createdAt,
+            },
+          ],
+        },
+      ],
     ]);
     let failEvents = false;
     await page.route(/\/trips-api\//u, (route) => {
@@ -122,6 +153,10 @@ for (const viewport of [
       path: resolve(artifacts, `trips-overview-${viewport.width}.png`),
       fullPage: true,
     });
+    await page.getByRole('link', { name: /Harbour festival/ }).click();
+    await expect(page).toHaveURL(/\/trips\/7\/events\/61$/u);
+    await expect(page.getByLabel('Event name', { exact: true })).toHaveValue('Harbour festival');
+    await page.goto('/trips/7');
     await page.getByRole('link', { name: /Cedar guesthouse/ }).click();
     await expect(page).toHaveURL(/\/trips\/7\/stays\/13$/u);
     await expect(page.getByLabel('Stay name', { exact: true })).toHaveValue('Cedar guesthouse');

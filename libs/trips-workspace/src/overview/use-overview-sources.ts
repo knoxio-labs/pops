@@ -19,7 +19,7 @@ export function useOverviewSources(props: TripOverviewProps): OverviewQueries {
   const key = ['trips', origin, props.tripId];
   const loaders = overviewLoaders(props);
   const trip = useQuery({
-    queryKey: [...key, 'trip'],
+    queryKey: key,
     queryFn: () => loadTrip(props.tripId, props.client),
     retry: false,
   });

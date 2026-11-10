@@ -86,7 +86,9 @@ export function visitTiming(
     ? [
         month.part ? status(month.part) : undefined,
         new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(
-          new Date(Date.UTC(month.year, month.month - 1, 1))
+          new Date(
+            `${String(month.year).padStart(4, '0')}-${String(month.month).padStart(2, '0')}-01T00:00:00Z`
+          )
         ),
       ]
         .filter(Boolean)

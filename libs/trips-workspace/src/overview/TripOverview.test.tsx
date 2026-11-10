@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -11,7 +11,7 @@ import { TripOverview } from './TripOverview';
 
 afterEach(cleanup);
 
-function mount(responses = overviewResponses()) {
+function mount(responses = overviewResponses(), tripWait?: Promise<void>) {
   const requests: string[] = [];
   const client = createClient({
     baseUrl: 'http://overview.test',
@@ -19,6 +19,7 @@ function mount(responses = overviewResponses()) {
       const request = new Request(input, init);
       const path = new URL(request.url).pathname;
       requests.push(path);
+      if (path === '/trips/7') await tripWait;
       return new Response(
         JSON.stringify(
           responses.get(path) ?? {
@@ -41,6 +42,19 @@ function mount(responses = overviewResponses()) {
 }
 
 describe('source-backed TripOverview', () => {
+  it('keeps initial loading distinct from an empty successful route', async () => {
+    let finish = (): void => undefined;
+    const tripWait = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+    mount(overviewResponses(), tripWait);
+    expect(screen.getByRole('status')).toHaveTextContent('Loading trip sources…');
+    expect(screen.queryByText('No route entries.')).not.toBeInTheDocument();
+    await act(async () => {
+      finish();
+    });
+    expect(await screen.findByRole('heading', { name: 'Coast trip' })).toBeVisible();
+  });
   it('renders real facts, independent statuses and only purchased arrangements as hard', async () => {
     const responses = overviewResponses();
     responses.set('/trips/7/stays', { stays: [sourceStay({ status: 'Purchased' })] });
@@ -130,8 +144,29 @@ describe('source-backed TripOverview', () => {
     const unassociated = screen.getByRole('region', { name: 'Unassociated' });
     expect(within(unassociated).getByText('Cedar guesthouse')).toBeVisible();
     expect(within(unassociated).getByText('Harbour festival')).toBeVisible();
-    expect(within(unassociated).getAllByText('visit #31 · Source unavailable')).toHaveLength(2);
+    expect(within(unassociated).getAllByText('visit #31')).toHaveLength(2);
     expect(screen.getByRole('link', { name: 'Trip settings' })).toBeVisible();
+  });
+
+  it('retains cached route facts and successful collections when a later refresh fails, then recovers on Retry', async () => {
+    const responses = overviewResponses();
+    const { cache } = mount(responses);
+    await screen.findByRole('link', { name: /Harbour festival/ });
+    responses.delete('/trips/7/events');
+    await act(async () => {
+      await cache.refetchQueries({
+        queryKey: ['trips', 'http://overview.test', 7, 'events'],
+        exact: true,
+      });
+    });
+    expect(await screen.findByText('trips.source.unavailable')).toBeVisible();
+    expect(screen.getByRole('link', { name: /Harbour festival/ })).toBeVisible();
+    expect(screen.getByRole('link', { name: /Cedar guesthouse/ })).toBeVisible();
+    responses.set('/trips/7/events', { events: [] });
+    await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    await waitFor(() =>
+      expect(screen.queryByRole('link', { name: /Harbour festival/ })).not.toBeInTheDocument()
+    );
   });
 
   it('retains missing document targets and decisions without fabricating document resolution', async () => {

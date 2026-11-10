@@ -43,6 +43,8 @@ export function TripOverviewPage() {
     switch (kind) {
       case 'stay':
         return `/trips/${tripId}/stays/${id}`;
+      case 'event':
+        return `/trips/${tripId}/events/${id}`;
       case 'journey':
         return `/trips/${tripId}/journeys/${id}`;
       case 'decision':

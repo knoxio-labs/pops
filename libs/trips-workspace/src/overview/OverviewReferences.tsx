@@ -36,7 +36,8 @@ export function OverviewDetached(props: OverviewViewProps): JSX.Element | null {
 function MissingVisit(props: OverviewViewProps & { id: number | null }): JSX.Element | null {
   return props.id !== null ? (
     <p className="text-xs text-muted-foreground">
-      {props.labels.source('visit', props.id)} · {props.labels.unavailable}
+      {props.labels.source('visit', props.id)}
+      {props.sources.visits !== undefined && ` · ${props.labels.unavailable}`}
     </p>
   ) : null;
 }

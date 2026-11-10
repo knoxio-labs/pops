@@ -30,9 +30,7 @@ export function OverviewJourneys(props: OverviewViewProps): JSX.Element | null {
           {current ? (
             <JourneyRecord {...props} journey={current} />
           ) : (
-            <p className="text-sm">
-              {props.labels.source('journey', group.currentJourneyId)} · {props.labels.unavailable}
-            </p>
+            <MissingJourney {...props} id={group.currentJourneyId} />
           )}
           {alternatives.length > 0 && (
             <details>
@@ -44,9 +42,7 @@ export function OverviewJourneys(props: OverviewViewProps): JSX.Element | null {
                   journey ? (
                     <JourneyRecord key={id} {...props} journey={journey} />
                   ) : (
-                    <p key={id} className="text-sm">
-                      {props.labels.source('journey', id)} · {props.labels.unavailable}
-                    </p>
+                    <MissingJourney key={id} {...props} id={id} />
                   )
                 )}
               </div>
@@ -58,6 +54,17 @@ export function OverviewJourneys(props: OverviewViewProps): JSX.Element | null {
         <JourneyRecord key={journey.id} {...props} journey={journey} />
       ))}
     </section>
+  );
+}
+
+function MissingJourney(props: OverviewViewProps & { id: number }): JSX.Element {
+  return (
+    <SourceCard
+      kind="journey"
+      title={`${props.labels.source('journey', props.id)} · ${props.labels.unavailable}`}
+      href={props.href('journey', props.id)}
+      labels={props.labels}
+    />
   );
 }
 
