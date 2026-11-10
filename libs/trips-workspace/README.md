@@ -165,6 +165,8 @@ The optional host reader resolves retained Contacts URIs through their owner. Du
 references share a read within this trip session; missing identity, unavailable transport
 and invalid owner responses stay distinct. Explicit read retry does not mutate Trips or
 rewrite historical URIs, and source navigation uses only the owner's returned route.
+Once an owner read completes, pending refreshes cannot reuse earlier chooser evidence
+to mark an unverified association organised.
 Failed row edits and target descriptions survive filters and navigation with their
 original preconditions. Upload views compose the Documents owner's controlled session;
 remounting a pending upload cannot issue another POST.

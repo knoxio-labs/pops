@@ -12,6 +12,7 @@ export class CaptureContactReferenceReads {
     Extract<ContactReferenceReadResult, { status: 'available' }>
   >();
   private pending = new Map<string, Promise<void>>();
+  private completed = new Set<string>();
   private listeners = new Set<() => void>();
   private version = 0;
   constructor(
@@ -34,13 +35,11 @@ export class CaptureContactReferenceReads {
   };
   /** Stable whole-store subscription for Inbox filters that inspect several owner references. */
   getVersion = (): number => this.version;
-  /** Project actual owner presence; failed reads cannot prove missing, and current chooser evidence remains explicit. */
+  /** Project actual owner presence; chooser bootstrap evidence expires after the first completed owner read. */
   availability = (uri: string): 'available' | 'missing' | 'unverified' => {
     const value = this.snapshot(uri);
     if (value.status === 'available' || value.status === 'missing') return value.status;
-    return (value.status === 'unverified' || value.status === 'loading') && this.known(uri)
-      ? 'available'
-      : 'unverified';
+    return !this.completed.has(uri) && this.known(uri) ? 'available' : 'unverified';
   };
   /** Load once per retained URI, or explicitly retry a completed read; overlapping views share the same request. */
   load(uri: string, retry = false): Promise<void> {
@@ -62,6 +61,7 @@ export class CaptureContactReferenceReads {
     return result;
   }
   private publish(uri: string, value: CaptureContactRead): void {
+    if (value.status !== 'loading' && value.status !== 'unverified') this.completed.add(uri);
     if (value.status === 'available') this.verified.set(uri, value);
     this.values.set(uri, value);
     this.version += 1;

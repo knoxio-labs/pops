@@ -75,3 +75,24 @@ it('keeps reads scoped to each owning trip session and never writes or resolves 
   expect(first.contacts.snapshot()).toBeNull();
   expect(first.editor.getState().confirmation).toBeNull();
 });
+
+it.each(['missing', 'unavailable', 'readError'] as const)(
+  'never revives bootstrap chooser evidence while retrying a prior %s owner outcome',
+  async (status) => {
+    const gate = deferred<ContactReferenceReadResult>();
+    const read = vi
+      .fn<() => Promise<ContactReferenceReadResult>>()
+      .mockResolvedValueOnce({ status })
+      .mockImplementationOnce(() => gate.promise);
+    const reads = new CaptureContactReferenceReads(read, () => true);
+    expect(reads.availability(uri)).toBe('available');
+    await reads.load(uri);
+    expect(reads.availability(uri)).toBe(status === 'missing' ? 'missing' : 'unverified');
+    const retry = reads.load(uri, true);
+    expect(reads.snapshot(uri)).toEqual({ status: 'loading' });
+    expect(reads.availability(uri)).toBe('unverified');
+    gate.resolve(available);
+    await retry;
+    expect(reads.availability(uri)).toBe('available');
+  }
+);
