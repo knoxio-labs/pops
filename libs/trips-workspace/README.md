@@ -78,9 +78,17 @@ Successful mutations update the source cache. Fresh source reads replace an unto
 editor; pending drafts survive background reads. Context failures do not block editing the stay. Neighbours share an explicit
 visit identity; an unlinked stay implies no accommodation coverage.
 
-Existing host/document/provenance links are displayed and can be removed. Their
-opaque source identifiers remain intact, and the workspace asserts no resolution
-or external booking action. Typed Documents originals are separate from these opaque references.
+Stay Host references use the same host-injected Contacts chooser and owner reader as
+Event organisers. Selection appends the owner's issued URI; explicit replacement and
+removal affect only the chosen occurrence, preserving all other opaque source values.
+Host choices never rewrite the stay address, provider facts or Contact records, and no
+Contact type or reference-count restriction is inferred. Unknown owner outcomes resume
+their retained intent; issued references survive failed Trips writes and route unmounts.
+A replacement pending against an altered source array cannot write into another row;
+its issued reference remains available for explicit recovery. Source labels are retained
+as provenance details, while names and hrefs require an actual successful owner read.
+Empty read-only Documents/Sources provenance groups are omitted. Stored opaque values
+remain removable; typed Documents originals have their own owner-backed actions.
 
 `TripDocumentsWorkspace({ tripId, target? })` and `DocumentAssociationPicker` use the
 typed Trips association contract and a separate generated Documents client. Trip-wide

@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 
 import type { ContactChooserSelection } from '@pops/pillar-sdk';
 
@@ -16,12 +16,13 @@ export interface SourceContactChooserState {
 /** Guard one visible owner intent while retaining its evidence independently of the source write. */
 export function useSourceContactChooser(
   session: SourceContactSession,
+  intentKey: string,
   disabled: boolean,
   select: (uri: string) => void
 ): SourceContactChooserState {
   const [attempt, setAttempt] = useState<SourceContactAttempt>();
   const [open, setOpen] = useState(false);
-  const [, refresh] = useState(0);
+  useSyncExternalStore(session.subscribe, session.snapshot);
   const mounted = useRef(false);
   const isOpen = useRef(false);
   const current = useRef({ disabled, select });
@@ -40,12 +41,11 @@ export function useSourceContactChooser(
   }
   function start(): void {
     if (!session.isCurrent()) return;
-    setAttempt(session.open());
+    setAttempt(session.open(intentKey));
     changeOpen(true);
   }
   function selectOwner(selection: ContactChooserSelection): void {
     if (!attempt || !session.accept(attempt, selection) || !mounted.current) return;
-    refresh((value) => value + 1);
     if (!isOpen.current || current.current.disabled || !session.isCurrent()) return;
     changeOpen(false);
     current.current.select(selection.reference.uri);

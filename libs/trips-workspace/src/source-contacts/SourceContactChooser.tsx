@@ -11,6 +11,10 @@ import type { SourceContactSession } from './session';
 
 interface ChooserProps {
   session: SourceContactSession;
+  intentKey: string;
+  chooseLabel: string;
+  recoverLabel: string;
+  showRecovery: boolean;
   links: readonly { uri: string }[];
   disabled: boolean;
   select: (uri: string) => void;
@@ -18,7 +22,7 @@ interface ChooserProps {
 /** Retain owner-created references before applying a source write; replaced views cannot apply callbacks. */
 export function SourceContactChooser(props: ChooserProps): JSX.Element {
   const { session, disabled, select } = props;
-  const chooser = useSourceContactChooser(session, disabled, select);
+  const chooser = useSourceContactChooser(session, props.intentKey, disabled, select);
   const Chooser = chooser.attempt?.chooser.Chooser;
   return (
     <div className="space-y-2">
@@ -28,14 +32,14 @@ export function SourceContactChooser(props: ChooserProps): JSX.Element {
         disabled={disabled || !session.context.contacts || !session.isCurrent()}
         onClick={chooser.start}
       >
-        Add organiser
+        {props.chooseLabel}
       </Button>
       {!session.context.contacts && (
         <p role="status" className="text-sm text-muted-foreground">
           Contacts chooser unavailable
         </p>
       )}
-      <RetainedSelections {...props} />
+      {props.showRecovery && <RetainedSelections {...props} />}
       {Chooser && chooser.open && (
         <ErrorBoundary fallback={chooserUnavailable}>
           <Suspense fallback={<p role="status">Loading Contacts chooser…</p>}>
@@ -50,7 +54,13 @@ export function SourceContactChooser(props: ChooserProps): JSX.Element {
     </div>
   );
 }
-function RetainedSelections({ session, links, disabled, select }: ChooserProps): JSX.Element {
+function RetainedSelections({
+  session,
+  links,
+  disabled,
+  select,
+  recoverLabel,
+}: ChooserProps): JSX.Element {
   const receipts = session.receipts.filter(
     (receipt) => !links.some((link) => link.uri === receipt.reference.uri)
   );
@@ -69,7 +79,7 @@ function RetainedSelections({ session, links, disabled, select }: ChooserProps):
               if (session.isCurrent()) select(link.uri);
             }}
           >
-            Add selected organiser
+            {recoverLabel}
           </Button>
         </div>
       ))}

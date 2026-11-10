@@ -5,7 +5,7 @@ import type { Page } from '@playwright/test';
 
 const ownerEntity = {
   id: 'owner-organiser',
-  name: 'New source organiser',
+  name: 'New source contact',
   type: 'organisation',
   aliases: [],
   defaultTags: [],
@@ -36,19 +36,47 @@ const source = {
   documentLinks: [],
   ...audit,
 };
-/** Actual remote and owner REST seams preserve independent Contact creation and Trips source failure. */
-export async function stubEventOrganiserOwners(page: Page): Promise<{
+interface ContactOwnerState {
   created: () => number;
-  writes: unknown[];
   allowReference: () => void;
   reference: typeof ownerReference;
-}> {
+}
+/** Actual remote and owner REST seams preserve independent Contact creation and Trips source failure. */
+export async function stubSourceContactOwners(page: Page, kind: 'event' | 'stay') {
   await stubShellBoot(page, ['trips']);
   await stubUnavailableSourceDocuments(page, 7);
-  let creates = 0;
-  let referenceAllowed = false;
+  const writes = await stubSourceRecord(page, kind);
+  const owner = await stubContactOwner(page);
+  return { ...owner, writes };
+}
+
+async function stubSourceRecord(page: Page, kind: 'event' | 'stay'): Promise<unknown[]> {
   const writes: unknown[] = [];
-  let organiserLinks: { uri: string; label?: string }[] = [];
+  const role =
+    kind === 'event'
+      ? { path: '/trips-api/trips/7/events/19', field: 'organiserLinks', source }
+      : {
+          path: '/trips-api/trips/7/stays/13',
+          field: 'hostLinks',
+          source: {
+            id: 13,
+            tripId: 7,
+            visitId: null,
+            name: 'Source guesthouse',
+            kind: 'hotel',
+            status: 'Considering',
+            timing: { arrival: '2029-04-10', departure: '2029-04-11' },
+            address: '18 Source Lane',
+            reference: null,
+            notes: '',
+            sourceLinks: [],
+            hostLinks: [],
+            documentLinks: [],
+            ...audit,
+          },
+        };
+  let links: { uri: string; label?: string }[] = [];
+  await page.route(/\/trips-api\/trips\/7\/stays$/, (route) => json(route, 200, { stays: [] }));
   await page.route(/\/trips-api\/trips\/7$/, (route) =>
     json(route, 200, {
       id: 7,
@@ -64,7 +92,7 @@ export async function stubEventOrganiserOwners(page: Page): Promise<{
   );
   await page.route(/\/trips-api\/places$/, (route) => json(route, 200, { places: [] }));
   await page.route(/\/trips-api\/trips\/7\/visits$/, (route) => json(route, 200, { visits: [] }));
-  await page.route(/\/trips-api\/trips\/7\/events\/19$/, async (route) => {
+  await page.route(`**${role.path}`, async (route) => {
     if (route.request().method() === 'PATCH') {
       const body: unknown = route.request().postDataJSON();
       writes.push(body);
@@ -74,11 +102,16 @@ export async function stubEventOrganiserOwners(page: Page): Promise<{
           message: 'Source write unavailable',
           retryable: true,
         });
-      if (!isPatch(body)) throw new Error('Expected explicit organiser references');
-      organiserLinks = body.organiserLinks;
+      links = sourceLinks(body, role.field);
     }
-    await json(route, 200, { ...source, organiserLinks });
+    await json(route, 200, { ...role.source, [role.field]: links });
   });
+  return writes;
+}
+
+async function stubContactOwner(page: Page): Promise<ContactOwnerState> {
+  let creates = 0;
+  let referenceAllowed = false;
   await page.route(/\/contacts-api\/entity-types$/, (route) =>
     json(route, 200, { types: ['person', 'organisation'], defaultType: 'organisation' })
   );
@@ -106,27 +139,34 @@ export async function stubEventOrganiserOwners(page: Page): Promise<{
   );
   return {
     created: () => creates,
-    writes,
     allowReference: () => {
       referenceAllowed = true;
     },
     reference: ownerReference,
   };
 }
-function isPatch(value: unknown): value is { organiserLinks: { uri: string; label?: string }[] } {
+function sourceLinks(value: unknown, field: string): { uri: string; label?: string }[] {
   if (
     typeof value !== 'object' ||
     value === null ||
-    !('organiserLinks' in value) ||
-    !Array.isArray(value.organiserLinks)
+    !('organiserLinks' in value || 'hostLinks' in value)
   )
-    return false;
-  return value.organiserLinks.every(
-    (link: unknown) =>
-      typeof link === 'object' &&
-      link !== null &&
-      'uri' in link &&
-      typeof link.uri === 'string' &&
-      (!('label' in link) || typeof link.label === 'string')
+    throw new Error('Expected explicit source contact links');
+  let links: unknown;
+  if (field === 'hostLinks' && 'hostLinks' in value) links = value.hostLinks;
+  else if (field === 'organiserLinks' && 'organiserLinks' in value) links = value.organiserLinks;
+  else throw new Error('Expected the explicit source role');
+  if (!Array.isArray(links)) throw new Error('Expected source reference array');
+  const entries: unknown[] = links;
+  if (!entries.every(isSourceLink)) throw new Error('Expected opaque source references');
+  return entries;
+}
+function isSourceLink(link: unknown): link is { uri: string; label?: string } {
+  return (
+    typeof link === 'object' &&
+    link !== null &&
+    'uri' in link &&
+    typeof link.uri === 'string' &&
+    (!('label' in link) || typeof link.label === 'string')
   );
 }

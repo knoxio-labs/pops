@@ -5,9 +5,7 @@ import { Button, ErrorState, PageHeader } from '@pops/ui';
 
 import { SourceDocuments } from '../shared/SourceDocuments';
 import { loadStay, requestProblem, stayQueryKey } from './api';
-import { StayFields } from './StayFields';
-import { StayReferences } from './StayReferences';
-import { StayTimeline } from './StayTimeline';
+import { StaySourceFacts } from './StaySourceFacts';
 import { useStayContext } from './use-stay-context';
 import { useStayEditor } from './use-stay-editor';
 
@@ -92,19 +90,7 @@ function StaySession({
       <p role="status" className="text-sm text-muted-foreground">
         {saveStatus(editor.busy, editor.failure !== undefined, editor.dirty)}
       </p>
-      <fieldset disabled={editor.busy} className="min-w-0 space-y-4">
-        <legend className="sr-only">Stay source facts</legend>
-        <StayTimeline stay={editor.draft} stays={context.stays.data ?? []}>
-          <StayFields
-            stay={editor.draft}
-            visits={context.visits.data ?? []}
-            places={context.places.data ?? []}
-            edit={editor.edit}
-            commit={(patch) => void editor.commit(patch)}
-          />
-          <StayReferences stay={editor.draft} commit={(patch) => void editor.commit(patch)} />
-        </StayTimeline>
-      </fieldset>
+      <StaySourceFacts editor={editor} identity={identity} context={context} />
       <SourceDocuments
         tripId={identity.tripId}
         target={{ kind: 'stay', id: identity.stayId }}

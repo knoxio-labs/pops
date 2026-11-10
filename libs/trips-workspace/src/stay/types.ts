@@ -1,3 +1,5 @@
+import type { ContactsHostCapability } from '@pops/pillar-sdk';
+
 import type { Client as DocumentsClient } from '../documents-api/client';
 import type { Client } from '../trips-api/client';
 import type {
@@ -23,6 +25,8 @@ export interface StayWorkspaceProps {
   tripId: number;
   stayId: number;
   client?: Client;
+  /** Published Contacts chooser and reader supplied by the owning host. */
+  contacts?: ContactsHostCapability;
   /** Authenticated Documents owner transport, independent of the Trips source client. */
   documentsClient?: DocumentsClient;
 }

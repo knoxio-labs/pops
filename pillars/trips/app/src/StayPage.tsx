@@ -5,8 +5,10 @@ import { ErrorState } from '@pops/ui';
 
 import { sourceId } from './source-id';
 
+import type { RemotePageHostProps } from '@pops/pillar-sdk';
+
 /** Route adapter mounts the existing source-backed stay library with real owning identities. */
-export function StayPage() {
+export function StayPage({ contacts }: RemotePageHostProps) {
   const params = useParams();
   const tripId = sourceId(params.tripId);
   const stayId = sourceId(params.stayId);
@@ -19,6 +21,6 @@ export function StayPage() {
       }}
     />
   ) : (
-    <StayWorkspace tripId={tripId} stayId={stayId} />
+    <StayWorkspace tripId={tripId} stayId={stayId} contacts={contacts} />
   );
 }

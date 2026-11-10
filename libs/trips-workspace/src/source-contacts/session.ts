@@ -25,12 +25,24 @@ export interface SourceContactAttempt {
 export class SourceContactSession {
   readonly id = crypto.randomUUID();
   readonly receipts: ContactChooserSelection[] = [];
-  private attempt: SourceContactAttempt | undefined;
+  private readonly attempts = new Map<string, SourceContactAttempt>();
   private readonly origin: string;
+  private version = 0;
+  private readonly listeners = new Set<() => void>();
 
   constructor(readonly context: SourceContactContext) {
     this.origin = sourceOrigin(context);
   }
+
+  /** Observe issued references retained by another view or a late closed-view callback. */
+  readonly subscribe = (listener: () => void): (() => void) => {
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  };
+  /** Stable external-store revision; owner receipt storage remains outside the query cache. */
+  readonly snapshot = (): number => this.version;
 
   /** Fence source writes if a mutable generated transport changes origin after the view rendered. */
   isCurrent(): boolean {
@@ -38,11 +50,14 @@ export class SourceContactSession {
   }
 
   /** Resume an unresolved owner operation; only a known selection permits a fresh explicit choice. */
-  open(): SourceContactAttempt | undefined {
+  open(key: string): SourceContactAttempt | undefined {
     if (!this.context.contacts || !this.isCurrent()) return undefined;
-    if (!this.attempt || this.attempt.selected)
-      this.attempt = { chooser: this.context.contacts.createIntent() };
-    return this.attempt;
+    let attempt = this.attempts.get(key);
+    if (!attempt || attempt.selected) {
+      attempt = { chooser: this.context.contacts.createIntent() };
+      this.attempts.set(key, attempt);
+    }
+    return attempt;
   }
 
   /** Preserve actual owner evidence even if the source view closed or its subsequent write failed. */
@@ -51,6 +66,8 @@ export class SourceContactSession {
     const retained = { name: selection.name, reference: { ...selection.reference } };
     attempt.selected = retained;
     this.receipts.push(retained);
+    this.version += 1;
+    for (const listener of this.listeners) listener();
     return true;
   }
 }

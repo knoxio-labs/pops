@@ -12,9 +12,11 @@ import type { SourceContactSession } from './session';
 export function ContactReference({
   session,
   uri,
+  label,
 }: {
   session: SourceContactSession;
   uri: string;
+  label?: string;
 }): JSX.Element {
   const reader = session.context.contacts?.readContactReference;
   const query = useQuery({
@@ -36,10 +38,7 @@ export function ContactReference({
             : resultLabel(result?.status, reader !== undefined && query.isFetching)}
         </p>
       )}
-      <details className="text-sm">
-        <summary className="min-h-11 cursor-pointer content-center">Reference details</summary>
-        <code className="block break-all text-xs text-muted-foreground">{uri}</code>
-      </details>
+      <ReferenceDetails uri={uri} label={label} />
       {canRetry(query.isError, result) && (
         <Button variant="ghost" className="min-h-11" onClick={() => void query.refetch()}>
           Retry contact read
@@ -61,4 +60,14 @@ function resultLabel(
 
 function canRetry(failed: boolean, result: ContactReferenceReadResult | undefined): boolean {
   return failed || result?.status === 'unavailable' || result?.status === 'readError';
+}
+
+function ReferenceDetails({ uri, label }: { uri: string; label?: string }): JSX.Element {
+  return (
+    <details className="text-sm">
+      <summary className="min-h-11 cursor-pointer content-center">Reference details</summary>
+      <code className="block break-all text-xs text-muted-foreground">{uri}</code>
+      {label && <p className="text-xs text-muted-foreground">Source label: {label}</p>}
+    </details>
+  );
 }

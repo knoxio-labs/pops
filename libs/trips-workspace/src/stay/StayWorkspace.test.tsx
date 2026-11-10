@@ -74,7 +74,7 @@ describe('Source-backed In visit stay workspace', () => {
     expect(await screen.findByText('Neighbour source')).toBeVisible();
     expect(screen.queryByText('Foreign source')).toBeNull();
     expect(screen.getByRole('article', { name: 'Stay editor' })).toHaveClass('border-dashed');
-    expect(screen.getByText('Cedar host')).toBeVisible();
+    expect(screen.getByText('Source label: Cedar host')).toBeInTheDocument();
     expect(screen.getByText('pops:documents/document/unavailable')).toBeVisible();
     expect(transport.patches).toEqual([]);
   });
@@ -146,13 +146,13 @@ describe('Source-backed In visit stay workspace', () => {
     await edit('Stay name', 'Edited source');
     await saved();
     expect(transport.patches).toEqual([{ name: 'Edited source' }]);
-    expect(screen.getByText('Cedar host')).toBeVisible();
+    expect(screen.getByText('Source label: Cedar host')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Remove host link 1' }));
     await waitFor(() =>
       expect(transport.patches).toEqual([{ name: 'Edited source' }, { hostLinks: [] }])
     );
     await saved();
-    expect(screen.queryByText('Cedar host')).toBeNull();
+    expect(screen.queryByText('Source label: Cedar host')).toBeNull();
     expect(screen.getByText(initial.documentLinks[0]?.uri ?? '')).toBeVisible();
   });
 
