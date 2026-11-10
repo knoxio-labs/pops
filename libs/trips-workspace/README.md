@@ -319,6 +319,16 @@ retries keep their original revision, including after an unchanged refresh, and
 cannot silently rebase an uncertain create or inverse. The host supplies the parent
 navigation link and authenticated query/client context.
 
+Decision sessions retain raw field text, incomplete option/link composers, failed
+commands, the shared busy lock and confirmed inverses across source-view remounts.
+The QueryClient, actual client object, captured origin, trip and decision ID isolate
+each browser-memory session. Closing one view cannot deactivate another open view.
+Closed views and changed transport configurations cannot start another command;
+asynchronous query cancellation rechecks the dispatch lease before writing. A request
+already dispatched may settle its original session and captured cache key. Newer
+foreign revisions retain the existing conflict/reload rules; retention never grants
+another writer's revision to a retry or Undo. Browser reloads do not retain sessions.
+
 `@pops/trips-workspace/decision-client` exports the headless decision controller
 and its generated-transport load/apply operations. The owning Trips app runs the
 real editor/HTTP/SQLite integration regression; this extractable library does not

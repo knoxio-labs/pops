@@ -1,5 +1,6 @@
 import { ApiError } from '@pops/pillar-sdk/client';
 
+import { DecisionDrafts } from './drafts';
 import { isDecisionConflict } from './failure';
 
 import type {
@@ -27,11 +28,11 @@ class SourceEditor implements DecisionEditor {
   private state: DecisionEditorState;
   private history: UndoCommand[] = [];
   private pending: DecisionSource | undefined;
-  private dirty = new Set<string>();
+  private drafts = new DecisionDrafts();
   private listeners = new Set<() => void>();
   constructor(
     initial: DecisionSource,
-    private perform: DecisionPerformer
+    private readonly perform: DecisionPerformer
   ) {
     this.state = {
       source: initial,
@@ -40,10 +41,8 @@ class SourceEditor implements DecisionEditor {
       conflict: false,
       undoCount: 0,
       failures: [],
+      drafts: {},
     };
-  }
-  setPerformer(perform: DecisionPerformer): void {
-    this.perform = perform;
   }
   getState = (): DecisionEditorState => this.state;
   subscribe = (listener: () => void): (() => void) => {
@@ -52,18 +51,28 @@ class SourceEditor implements DecisionEditor {
       this.listeners.delete(listener);
     };
   };
-  commit(command: DecisionCommand, label: string): Promise<boolean> {
+  commit(command: DecisionCommand, label: string, assertCurrent?: () => void): Promise<boolean> {
     const failed = this.state.failures.find(
       (failure) => !failure.undo && JSON.stringify(failure.command) === JSON.stringify(command)
     );
-    return this.run(command, label, false, failed?.expectedRevision);
+    return this.run(command, label, {
+      undo: false,
+      expectedRevision: failed?.expectedRevision,
+      assertCurrent,
+    });
   }
-  undo(): Promise<boolean> {
+  undo(assertCurrent?: () => void): Promise<boolean> {
     const command = this.history.at(-1);
-    return command ? this.run(command, 'Undo', true) : Promise.resolve(false);
+    return command
+      ? this.run(command, 'Undo', { undo: true, assertCurrent })
+      : Promise.resolve(false);
   }
-  retry(failure: DecisionFailure): Promise<boolean> {
-    return this.run(failure.command, failure.label, failure.undo, failure.expectedRevision);
+  retry(failure: DecisionFailure, assertCurrent?: () => void): Promise<boolean> {
+    return this.run(failure.command, failure.label, {
+      undo: failure.undo,
+      expectedRevision: failure.expectedRevision,
+      assertCurrent,
+    });
   }
   receive(source: DecisionSource): void {
     if (
@@ -77,7 +86,7 @@ class SourceEditor implements DecisionEditor {
     }
     if (source.decision.revision > this.state.source.decision.revision) {
       this.history = [];
-      if (this.dirty.size > 0) {
+      if (this.state.dirty) {
         this.pending = source;
         this.publish({ conflict: true });
         return;
@@ -103,12 +112,14 @@ class SourceEditor implements DecisionEditor {
     });
   }
   setDirty(key: string, value: boolean): void {
-    const wasDirty = this.dirty.size > 0;
-    if (value) this.dirty.add(key);
-    else this.dirty.delete(key);
-    const dirty = this.dirty.size > 0;
-    if (wasDirty !== dirty) this.publish({ dirty });
-    if (this.dirty.size === 0 && this.pending && !this.state.busy) this.flush();
+    this.updateDrafts(this.drafts.setDirty(key, value));
+  }
+  setDraft(key: string, value: string | undefined): void {
+    this.updateDrafts(this.drafts.setDraft(key, value));
+  }
+  private updateDrafts(update: Pick<DecisionEditorState, 'drafts' | 'dirty'>): void {
+    this.publish(update);
+    if (!update.dirty && this.pending && !this.state.busy) this.flush();
   }
   private publish(update: Partial<DecisionEditorState>): void {
     this.state = { ...this.state, ...update, undoCount: this.history.length };
@@ -138,18 +149,20 @@ class SourceEditor implements DecisionEditor {
   private async run(
     command: UndoCommand,
     label: string,
-    undo: boolean,
-    expectedRevision = this.state.source.decision.revision
+    options: { undo: boolean; expectedRevision?: number; assertCurrent?: () => void }
   ): Promise<boolean> {
+    const { undo, expectedRevision = this.state.source.decision.revision, assertCurrent } = options;
     if (this.state.busy) return false;
     if (this.state.conflict || expectedRevision !== this.state.source.decision.revision) {
       this.failed({ command, label, undo, expectedRevision }, changedSource());
       return false;
     }
     const previous = this.state.source;
+    const submittedDrafts = this.state.drafts;
     this.publish({ busy: true });
     try {
-      const result = await this.perform(previous, command);
+      assertCurrent?.();
+      const result = await this.perform(previous, command, assertCurrent);
       if (
         result.source.decision.revision !== expectedRevision + 1 ||
         result.source.decision.id !== previous.decision.id ||
@@ -162,6 +175,7 @@ class SourceEditor implements DecisionEditor {
       this.publish({
         source: result.source,
         busy: false,
+        ...this.drafts.acknowledge(command, previous, submittedDrafts, undo),
         failures: this.state.failures.filter(
           (failure) => failure.key !== commandKey(command, undo)
         ),

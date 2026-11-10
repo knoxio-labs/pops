@@ -9,7 +9,7 @@ export interface DecisionFailure {
   expectedRevision: number;
   undo: boolean;
 }
-/** Observable editor state; drafts remain in their fields while canonical source is guarded. */
+/** Observable source state and semantic string drafts retained independently of mounted fields. */
 export interface DecisionEditorState {
   source: DecisionSource;
   busy: boolean;
@@ -17,21 +17,23 @@ export interface DecisionEditorState {
   conflict: boolean;
   undoCount: number;
   failures: DecisionFailure[];
+  drafts: Readonly<Record<string, string>>;
 }
-/** Transport seam invoked once with the exact source revision being changed. */
+/** Execute at the exact source revision; recheck the action guard after preparation and before dispatch. */
 export type DecisionPerformer = (
   source: DecisionSource,
-  command: UndoCommand
+  command: UndoCommand,
+  assertCurrent?: () => void
 ) => Promise<AppliedDecisionChange>;
-/** Serialized source editor; canonical reads never lend another writer's revision to Undo. */
+/** Serialized source editor; action guards belong to each invocation and never rebind retained mutation proof. */
 export interface DecisionEditor {
-  setPerformer: (perform: DecisionPerformer) => void;
   getState: () => DecisionEditorState;
   subscribe: (listener: () => void) => () => void;
-  commit: (command: DecisionCommand, label: string) => Promise<boolean>;
-  undo: () => Promise<boolean>;
-  retry: (failure: DecisionFailure) => Promise<boolean>;
+  commit: (command: DecisionCommand, label: string, assertCurrent?: () => void) => Promise<boolean>;
+  undo: (assertCurrent?: () => void) => Promise<boolean>;
+  retry: (failure: DecisionFailure, assertCurrent?: () => void) => Promise<boolean>;
   receive: (source: DecisionSource) => void;
   reload: (source: DecisionSource) => void;
   setDirty: (key: string, dirty: boolean) => void;
+  setDraft: (key: string, value: string | undefined) => void;
 }
