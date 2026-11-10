@@ -381,6 +381,28 @@ rejected link creates a new intent and removes only its own prepared entry. The 
 receipt remains retained. Discarded link drafts require an explicit restore, which adds
 only the selected canonical link to current edits without restoring discarded fields.
 
+`PeopleWorkspace({ tripId, text, contacts?, client? })` implements
+the approved People grouping by persisted Visit occurrence order. Repeated places
+keep separate occurrence identities; unassociated and unavailable Visit references
+remain separate. Contact identity, title, notes, intention, agreement and date-only
+bounds are independent source fields. Missing and reversed dates remain editable
+facts; no availability, agreement or route placement is inferred.
+
+The host injects the SDK's opaque Contacts chooser capability. Each explicit choice
+retains its owner session across close/reopen and route remount, including unknown
+creation outcomes. The library imports no Contacts implementation. An optional
+owner reader supplies retained Contact names and source links; unread identity stays
+unverified. Resolver-confirmed missing identity remains distinct from unavailable or
+failed metadata reads, which retain any separately proven canonical reference. Existing plans
+remain editable and clearable when owner context cannot be loaded.
+
+Meeting writes use durable operation UUIDs and exact source revisions. Failed writes
+retain the same command across route remounts and retry; uncertain creates cannot
+be released by reload. Definitively rejected writes require an explicit successful
+canonical reload before another command. Undo targets only confirmed own receipts
+in LIFO order, including source removal and restoration of the same identity.
+`@pops/trips-workspace/people-client` exports this headless editor and generated
+transport operations for the owning app's HTTP/SQLite integration regression.
 `VisitWorkspace({ tripId, visitId, client?, onViewVisit?, onViewStay?, onViewEvent? })`
 exports the approved direct visit editor and accommodation-period workspace.
 Exact dates, approximate month/part and one-sided duration bounds remain independent.
