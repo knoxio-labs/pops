@@ -6,7 +6,7 @@ import { EventWorkspace } from '../event/EventWorkspace';
 import { JourneyWorkspace } from '../journey/JourneyWorkspace';
 import { StayWorkspace } from '../stay/StayWorkspace';
 import { arrangementsKey } from './api';
-import { ArrangementDocuments } from './ArrangementDocuments';
+import { arrangementDocumentContext } from './document-context';
 import { arrangementRows } from './projection';
 import { RentalWorkspace } from './RentalWorkspace';
 import { Responsibility } from './Responsibility';
@@ -41,6 +41,8 @@ export function SourceDialog({
   documents,
 }: SourceDialogProps): JSX.Element {
   const queryClient = useQueryClient();
+  const context = arrangementDocumentContext(identity, target);
+  if (documents && context) documents.assertContext(context);
   const savedRental = (confirmed: Rental): void => {
     queryClient.setQueryData<Rental[]>([...arrangementsKey(identity), 'rentals'], (previous) =>
       previous?.map((candidate) => (candidate.id === confirmed.id ? confirmed : candidate))
@@ -75,9 +77,6 @@ export function SourceDialog({
             viewJourney={viewJourney}
           />
         </div>
-        {documents && (
-          <ArrangementDocuments session={documents} identity={identity} target={target} />
-        )}
         <Responsibility
           key={`${target.targetKind}:${target.targetId}`}
           identity={identity}
@@ -101,7 +100,11 @@ function SourceEditor({
   savedRental: (source: Rental) => void;
   viewJourney: (id: number) => void;
 }): JSX.Element {
-  const props = { tripId: identity.tripId, client: identity.client };
+  const props = {
+    tripId: identity.tripId,
+    client: identity.client,
+    documentsClient: identity.documentsClient,
+  };
   return (
     <>
       {target.targetKind === 'stay' && <StayWorkspace {...props} stayId={target.targetId} />}
