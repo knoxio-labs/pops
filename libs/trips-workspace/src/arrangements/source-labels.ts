@@ -4,8 +4,8 @@ import type { ArrangementLabels, ArrangementRow, ArrangementSources } from './ty
 /** Actual ordered Visit occurrence labels never expose database IDs or join sources by matching display names. */
 export function visitTitle(
   visit: Visit,
-  sources: ArrangementSources,
-  labels: ArrangementLabels
+  sources: Pick<ArrangementSources, 'visits' | 'places'>,
+  labels: Pick<ArrangementLabels, 'visit' | 'placeUnavailable'>
 ): string {
   const place = sources.places?.find((candidate) => candidate.id === visit.placeId);
   const index = sources.visits?.findIndex((candidate) => candidate.id === visit.id) ?? -1;

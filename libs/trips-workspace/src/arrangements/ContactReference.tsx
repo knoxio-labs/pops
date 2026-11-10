@@ -59,7 +59,7 @@ export function ReferenceDetails({
   identity,
   value,
 }: {
-  identity: ArrangementResponsibilityContext;
+  identity: { labels: Pick<ArrangementResponsibilityContext['labels'], 'referenceDetails'> };
   value: string | number;
 }): JSX.Element {
   return (

@@ -18,6 +18,6 @@ describe('Visit occurrence labels', () => {
     expect(sources.visits.map((visit) => visit.id)).toEqual([90, 31]);
   });
   it('does not invent occurrence order or assert a resolved place when source context is absent', () => {
-    expect(visitTitle(sourceVisits[0]!, { legs: new Map() }, labels)).toBe('Place unavailable');
+    expect(visitTitle(sourceVisits[0]!, {}, labels)).toBe('Place unavailable');
   });
 });

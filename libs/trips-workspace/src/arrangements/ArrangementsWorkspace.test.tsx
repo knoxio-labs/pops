@@ -619,9 +619,11 @@ describe('Along the route source workspace', () => {
     await user.type(provider, 'Local draft');
     const newer = sourceRental({ provider: 'New canonical provider', revision: 2 });
     transport.setRental(newer);
-    act(() =>
-      queryClient.setQueryData(['trips', 'http://arrangements.test', 7, 'rental', 61], newer)
-    );
+    await act(async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ['trips', 'http://arrangements.test', 7, 'rental', 61],
+      });
+    });
     expect(await screen.findByText('The source changed')).toBeVisible();
     expect(provider).toHaveValue('Local draft');
     expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
