@@ -57,7 +57,12 @@ function DevelopmentWorkspace(): JSX.Element {
             />
             <Button type="submit">Open workspace</Button>
           </form>
-          {identity && <StayWorkspace {...identity} />}
+          {identity && (
+            <StayWorkspace
+              {...identity}
+              formatNights={(count) => `${count} ${count === 1 ? 'night' : 'nights'}`}
+            />
+          )}
         </>
       )}
     </QueryClientProvider>

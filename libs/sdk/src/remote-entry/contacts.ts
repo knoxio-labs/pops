@@ -13,7 +13,10 @@ export interface ContactChooserMountProps {
   onSelect: (selection: ContactChooserSelection) => void;
 }
 
-/** Opaque owner session: retain this component identity across route views, including ambiguous creation. */
+/**
+ * Opaque owner session: retain this component identity across route views, including ambiguous creation.
+ * The view may suspend; place local Suspense inside the caller that retains intent and selection guards.
+ */
 export interface ContactChooserIntent {
   Chooser: ComponentType<ContactChooserMountProps>;
 }
