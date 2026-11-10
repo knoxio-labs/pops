@@ -146,6 +146,39 @@ describe('Canvas activities', () => {
     );
   });
 
+  it('delegates a contained city surface to its path and keeps timing inline', () => {
+    const { container } = mount(<CanvasNode record={visit} contained />);
+    const card = container.querySelector(`[data-canvas-id="${visit.id}"]`);
+    expect(card).not.toHaveClass('border', 'p-3', 'bg-muted/60');
+    const name = screen.getByLabelText('City / region');
+    expect(name).toHaveClass('text-base', 'font-semibold');
+    expect(name.parentElement).toHaveClass('hover:bg-transparent');
+    const timing = screen.getByRole('button', { name: 'Edit timing' });
+    expect(timing).not.toHaveClass('w-full', 'justify-end', 'text-right');
+    expect(timing).toHaveClass('min-h-11', 'hover:bg-transparent');
+  });
+
+  it('keeps unknown timing as an accessible hover or focus icon', () => {
+    mount(<CanvasNode record={{ ...visit, timing: undefined }} />);
+    const timing = screen.getByRole('button', { name: 'Edit timing' });
+    expect(timing).toHaveTextContent('');
+    expect(timing).toHaveClass(
+      'opacity-0',
+      'group-hover/visit:opacity-100',
+      'focus-visible:opacity-100'
+    );
+    expect(timing.querySelector('svg')).not.toBeNull();
+    expect(screen.queryByText('Add dates')).toBeNull();
+  });
+
+  it.each(['event', 'person', 'idea', 'stay'] as const)(
+    'shows the explicit %s booking type icon',
+    (kind) => {
+      mount(<ActivityCard item={{ ...early, kind }} />);
+      expect(screen.getByLabelText(kind).tagName.toLowerCase()).toBe('svg');
+    }
+  );
+
   it('edits an activity title without changing its location, dates or purchase facts', () => {
     const { changes } = mount(<ActivityCard item={early} />);
     fireEvent.blur(screen.getByLabelText('Activity name'), { target: { value: 'Changed title' } });
@@ -171,9 +204,13 @@ describe('Canvas activities', () => {
     const dataTransfer = transfer();
     fireEvent.dragStart(sortable(container, early.id), { dataTransfer });
     fireEvent.dragOver(sortable(container, late.id), { dataTransfer });
-    expect(container.querySelector(`[data-canvas-id="${late.id}"]`)).toHaveClass(
+    expect(container.querySelector(`[data-canvas-id="${early.id}"]`)).toHaveClass(
       'border-destructive'
     );
+    expect(container.querySelector(`[data-canvas-id="${late.id}"]`)).not.toHaveClass(
+      'border-destructive'
+    );
+    expect(screen.getAllByText('2 Jan < 4 Jan')).toHaveLength(1);
     expect(changes).not.toHaveBeenCalled();
     fireEvent.drop(sortable(container, late.id), { dataTransfer });
     expect(changes).toHaveBeenCalledOnce();

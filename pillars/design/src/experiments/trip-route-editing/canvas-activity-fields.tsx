@@ -15,14 +15,14 @@ export function ActivityFields({ item }: { item: TripRecord }) {
   const display = presentTripRecord(item, state.records);
   return (
     <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3">
-      <div className="min-w-32 flex-1">
+      <div className="min-w-0 max-w-full">
         <TextInput
           aria-label={activityNameLabel(item)}
           variant="ghost"
           key={display.title}
           defaultValue={display.title}
-          className="text-sm font-medium md:text-sm"
-          containerClassName="bg-transparent px-0"
+          className="field-sizing-content min-w-0 max-w-full flex-none text-sm font-medium md:text-sm"
+          containerClassName="w-fit bg-transparent px-0 hover:bg-transparent focus-within:bg-transparent"
           onBlur={(event) => {
             const title = event.currentTarget.value;
             if (title === display.title) return;
@@ -75,7 +75,7 @@ function ActivityTiming({ item, title, when }: { item: TripRecord; title: string
           className="min-h-11 px-1 text-sm font-normal text-muted-foreground"
         >
           <CalendarDays className="size-4" aria-hidden />
-          {when || formatCityTiming(timing) || 'Add dates'}
+          {when || formatCityTiming(timing)}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-80">
