@@ -31,3 +31,5 @@ export type {
 export { createDocumentUploadSession } from './documents/useUploadFields';
 export type { DocumentUploadSession } from './documents/useUploadFields';
 export type { PaperlessSearchDocument } from './documents/types';
+export { CalendarWorkspace } from './calendar/CalendarWorkspace';
+export type { CalendarWorkspaceProps, CalendarSource } from './calendar/types';

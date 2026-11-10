@@ -55,6 +55,22 @@ test('Trips loads its real remote, creates permanently, and edits metadata throu
   await expect(page.getByRole('heading', { name: 'Hill country', exact: true })).toBeVisible();
   await expect(page.getByText('Whenever the ferry resumes', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Undo', exact: true })).toHaveCount(0);
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const [name, path] of [
+      ['Calendar', 'calendar'],
+      ['Documents', 'documents'],
+    ]) {
+      const link = page.getByRole('link', { name, exact: true });
+      await expect(link).toBeVisible();
+      await expect(link).toHaveAttribute('href', `/trips/72/${path}`);
+      expect((await link.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+    }
+    await page.screenshot({
+      path: `../../tmp/trips-documents/preview-${width}.png`,
+      fullPage: true,
+    });
+  }
   await page.goto('/trips/72/settings');
   await expect(page.getByRole('textbox', { name: 'Destination', exact: true })).toHaveValue(
     'Hill country'
