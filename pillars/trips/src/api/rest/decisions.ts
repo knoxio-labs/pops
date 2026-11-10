@@ -3,6 +3,7 @@ import { initServer } from '@ts-rest/express';
 import { decisionsContract, decisionOptionsContract } from '../../contract/decisions.js';
 import {
   getDecision,
+  getDecisionWorkspace,
   listDecisions,
   getDecisionOption,
   listDecisionOptions,
@@ -27,6 +28,11 @@ export function makeDecisionHandlers(
   db: TripsDb
 ): ReturnType<typeof server.router<typeof decisionsContract>> {
   return server.router(decisionsContract, {
+    workspace: ({ params }) =>
+      withTripsErrors(() => ({
+        status: 200 as const,
+        body: getDecisionWorkspace(db, params.tripId, params.id),
+      })),
     list: ({ params }) =>
       withTripsErrors(() => ({
         status: 200 as const,
