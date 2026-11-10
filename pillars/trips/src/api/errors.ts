@@ -20,6 +20,19 @@ export const tripsErrors = defineErrors('trips', {
     message: 'The selected shared tag could not be verified. Retry when Tags is available.',
     retryable: true,
   },
+  option_not_removed: {
+    area: 'decision',
+    status: 409,
+    message: 'Only a removed decision option can be restored.',
+    retryable: false,
+  },
+  decision_revision_conflict: {
+    area: 'decision',
+    status: 409,
+    message:
+      'This decision or its options changed. Read its latest revision before editing or selecting.',
+    retryable: false,
+  },
   revision_conflict: {
     area: 'group',
     status: 409,
@@ -44,6 +57,18 @@ export const tripsErrors = defineErrors('trips', {
     status: 400,
     message:
       'Order must contain every existing member of the selected route or journey exactly once.',
+    retryable: false,
+  },
+  association_invalid: {
+    area: 'document',
+    status: 400,
+    message: 'Choose a document target belonging to this trip.',
+    retryable: false,
+  },
+  association_exists: {
+    area: 'document',
+    status: 409,
+    message: 'This document is already linked to the selected trip target.',
     retryable: false,
   },
 });

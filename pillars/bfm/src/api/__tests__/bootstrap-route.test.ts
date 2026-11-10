@@ -193,6 +193,7 @@ describe('a paired device asking what to render', () => {
       { id: 'receipt-capture', reachability: 'unavailable' },
       { id: 'inventory', reachability: 'unavailable' },
       { id: 'ego', reachability: 'healthy' },
+      { id: 'trips', reachability: 'unavailable' },
     ]);
   });
 
@@ -316,6 +317,7 @@ describe('the federation half-broken, seen from the phone', () => {
       { id: 'receipt-capture', reachability: 'unavailable' },
       { id: 'inventory', reachability: 'unavailable' },
       { id: 'ego', reachability: 'unavailable' },
+      { id: 'trips', reachability: 'unavailable' },
     ]);
   });
 
@@ -355,6 +357,7 @@ describe('the session the device holds', () => {
       'receipt-capture',
       'inventory',
       'ego',
+      'trips',
     ]);
   });
 
