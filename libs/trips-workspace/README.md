@@ -183,6 +183,17 @@ stale whole-source Undo history; own mutation echoes retain it. Failed operation
 their original confirmed save baseline for retry, including Visit revision guards. Context failures do not block editing the stay. Neighbours share an explicit
 visit identity; an unlinked stay implies no accommodation coverage.
 
+Direct Stay, Event and Visit sessions retain unsaved drafts, failed write baselines,
+serialization and confirmed Undo history when a source view closes and reopens.
+The lifetime belongs to the host QueryClient, independently of query-cache eviction;
+the exact Trips client object, its captured API origin, trip, source kind and source ID
+isolate sessions. This is browser memory, not durable storage or an authenticated-user
+boundary. Each mounted view has a separate dispatch lease. Closing a view blocks its
+stale callbacks, while an already dispatched response may settle only its original
+session and captured cache keys. Another open view shares the same write lock and
+remains usable. Mutable client-origin changes are checked immediately before dispatch;
+asynchronous preparation must check that lease again before sending a request.
+
 Stay Host references use the same host-injected Contacts chooser and owner reader as
 Event organisers. Selection appends the owner's issued URI; explicit replacement and
 removal affect only the chosen occurrence, preserving all other opaque source values.
