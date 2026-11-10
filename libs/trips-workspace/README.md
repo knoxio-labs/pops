@@ -19,6 +19,8 @@ The consumer's Zod resolver preserves `additionalProperties: false` as strict
 objects, including nested and empty objects; open objects and typed dynamic
 records retain the generator's default behavior. It changes generated schemas,
 not shared transport validation.
+The small resolver stays in the owning generator configuration so the normal
+generation fingerprint includes every change to its behavior.
 
 `useTripRoute({ tripId, client? })` exposes that headless read and a shared retained
 command controller. `routeSession(queryClient, identity)` provides the same binding

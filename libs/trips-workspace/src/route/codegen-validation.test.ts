@@ -1,83 +1,74 @@
-import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import { createClient } from '@hey-api/openapi-ts';
 import { expect, it } from 'vitest';
 import { z } from 'zod';
-
-import { closedResponseObject } from './codegen';
 
 function response(schema: Record<string, unknown>): Record<string, unknown> {
   return { description: 'Generated metadata fixture', content: { 'application/json': { schema } } };
 }
 
-it('generates closed, open and dynamic response objects from their actual OpenAPI metadata', async () => {
+it('generates closed, open and dynamic response objects through the actual owning configuration', async () => {
   const scratch = resolve(import.meta.dirname, '../../../../tmp');
+  const unit = resolve(import.meta.dirname, '../..');
   mkdirSync(scratch, { recursive: true });
   const output = mkdtempSync(join(scratch, 'route-validation-codegen-'));
   try {
-    await createClient({
-      plugins: [
-        {
-          name: 'zod',
-          compatibilityVersion: 4,
-          requests: false,
-          responses: true,
-          $resolvers: { object: closedResponseObject },
-        },
-      ],
-      input: {
-        path: {
-          openapi: '3.0.3',
-          info: { title: 'Response metadata fixture', version: '1' },
-          paths: {
-            '/empty': {
-              get: {
-                operationId: 'empty.get',
-                responses: { 200: response({ type: 'object', additionalProperties: false }) },
-              },
-            },
-            '/closed': {
-              get: {
-                operationId: 'closed.get',
-                responses: {
-                  200: response({
-                    type: 'object',
-                    additionalProperties: false,
-                    required: ['name'],
-                    properties: { name: { type: 'string' } },
-                  }),
-                },
-              },
-            },
-            '/open': {
-              get: {
-                operationId: 'open.get',
-                responses: {
-                  200: response({
-                    type: 'object',
-                    additionalProperties: true,
-                    required: ['name'],
-                    properties: { name: { type: 'string' } },
-                  }),
-                },
-              },
-            },
-            '/dynamic': {
-              get: {
-                operationId: 'dynamic.get',
-                responses: {
-                  200: response({ type: 'object', additionalProperties: { type: 'string' } }),
-                },
-              },
-            },
-          },
+    const schemas: { name: string; schema: Record<string, unknown> }[] = [
+      {
+        name: 'closed',
+        schema: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['name'],
+          properties: { name: { type: 'string' } },
         },
       },
-      output,
-    });
-    const generated: unknown = await import(pathToFileURL(join(output, 'zod.gen.ts')).href);
+      { name: 'empty', schema: { type: 'object', additionalProperties: false } },
+      {
+        name: 'open',
+        schema: {
+          type: 'object',
+          additionalProperties: true,
+          required: ['name'],
+          properties: { name: { type: 'string' } },
+        },
+      },
+      { name: 'dynamic', schema: { type: 'object', additionalProperties: { type: 'string' } } },
+    ];
+    const fixture = join(output, 'fixture.openapi.json');
+    writeFileSync(
+      fixture,
+      JSON.stringify({
+        openapi: '3.0.3',
+        info: { title: 'Response metadata fixture', version: '1' },
+        paths: Object.fromEntries(
+          schemas.map(({ name, schema }) => [
+            `/${name}`,
+            { get: { operationId: `${name}.get`, responses: { 200: response(schema) } } },
+          ])
+        ),
+      })
+    );
+    const generatedDirectory = join(output, 'client');
+    execFileSync(
+      process.execPath,
+      [
+        join(unit, 'node_modules/@hey-api/openapi-ts/bin/run.js'),
+        '-f',
+        join(unit, 'openapi-ts.config.ts'),
+        '-i',
+        fixture,
+        '-o',
+        generatedDirectory,
+      ],
+      { cwd: unit, timeout: 10_000, stdio: 'pipe' }
+    );
+    const generated: unknown = await import(
+      pathToFileURL(join(generatedDirectory, 'zod.gen.ts')).href
+    );
     if (
       typeof generated !== 'object' ||
       generated === null ||
