@@ -32,6 +32,8 @@ export function useArrangementLabels(): ArrangementLabels {
     unset: t('arrangements.unset'),
     clear: t('arrangements.clear'),
     chooseContact: t('arrangements.chooseContact'),
+    reconcileResponsibility: t('arrangements.reconcileResponsibility'),
+    responsibilityUncertain: t('arrangements.responsibilityUncertain'),
     pickup: t('arrangements.pickup'),
     return: t('arrangements.return'),
     provider: t('arrangements.provider'),

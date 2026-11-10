@@ -46,7 +46,14 @@ Contact label until an owner-issued label is supplied. Reference details preserv
 the original URI independently of Contacts availability. The host supplies a
 retained SDK picker intent for each responsibility target. Its controlled owner
 picker supplies the selected canonical URI; no raw URI entry or Contact form is
-implemented here. Closed or unmounted picker views cannot write responsibility.
+implemented here. Closed or unmounted picker views cannot initiate responsibility writes. The
+workspace retains per-target PUT payloads, expected revisions, pending outcomes
+and exact successful receipts above source dialogs. Reloading identical source
+fields never acknowledges a lost response. Retry preserves the original request;
+starting a new responsibility change explicitly reconciles the current source
+without claiming the abandoned write succeeded. A known write receipt or that
+explicit reconciliation permits a fresh owner picker intent on the next Choose
+contact action, while previous owner receipts remain retained.
 
 `JourneyWorkspace({ tripId, journeyId, client? })` exports the source-backed Departure
 and arrival journey editor. It reads ordered legs and independent grouping identities

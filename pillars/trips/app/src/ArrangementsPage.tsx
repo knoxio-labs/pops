@@ -15,7 +15,7 @@ import type { RemotePageHostProps } from '@pops/pillar-sdk';
 export function ArrangementsPage({ contacts }: RemotePageHostProps) {
   const params = useParams();
   const tripId = sourceId(params.tripId);
-  const contactChooserIntent = useArrangementContacts(contacts, tripId);
+  const contactPicker = useArrangementContacts(contacts, tripId);
   const labels = useArrangementLabels();
   const { t, i18n } = useTranslation('trips');
   const locale = i18n.resolvedLanguage ?? i18n.language;
@@ -31,7 +31,7 @@ export function ArrangementsPage({ contacts }: RemotePageHostProps) {
     <ArrangementsWorkspace
       tripId={tripId}
       labels={labels}
-      contactChooserIntent={contactChooserIntent}
+      {...contactPicker}
       formatDate={(value) => formatTripDate(value, locale)}
       backHref={TRIPS_NAV.basePath}
     />

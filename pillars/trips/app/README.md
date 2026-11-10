@@ -10,7 +10,10 @@ Opening an arrangement uses its actual source editor and independent responsibil
 writes; no external booking action is performed. The shell may inject the shared
 Contacts capability through `RemotePageHostProps`. The adapter retains one opaque
 owner picker intent per exact trip/source responsibility target across dialog
-remounts. Only an owner-issued selection supplies the canonical reference; cancelling
+remounts. An acknowledged responsibility PUT or explicit source reconciliation
+allows the next Choose contact action to start a fresh owner intent; prior owner
+receipts remain retained. An owner selection alone never advances the intent.
+Only an owner-issued selection supplies the canonical reference; cancelling
 or reopening does not write Trips. Self and clearing a stored reference remain
 independent of Contacts availability.
 

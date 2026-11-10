@@ -108,7 +108,9 @@
     "referenceDetails": "Detalhes da referência",
     "creationUncertain": "A hospedagem anterior ainda pode ser criada. Abra uma hospedagem existente ou inicie uma nova hospedagem explicitamente.",
     "beginNewStay": "Iniciar uma nova hospedagem",
-    "chooseContact": "Escolher contato"
+    "chooseContact": "Escolher contato",
+    "reconcileResponsibility": "Iniciar uma nova alteração de responsável",
+    "responsibilityUncertain": "A alteração anterior ainda pode ser aplicada. Recarregar não confirma o resultado."
   },
   "calendar": "Calendário"
 }

@@ -1,76 +1,130 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useRef, useState } from 'react';
+import { useSyncExternalStore } from 'react';
 
 import { arrangementsKey, loadResponsibility, replaceResponsibility } from './api';
+import { useResponsibilitySession } from './ResponsibilitySessions';
 
-import type { UseQueryResult } from '@tanstack/react-query';
+import type { QueryClient, UseQueryResult } from '@tanstack/react-query';
 
+import type { ContactChooserIntent } from '@pops/pillar-sdk';
+
+import type { ResponsibilityOperation, ResponsibilityWrite } from './responsibility-session';
 import type {
   ArrangementResponsibility,
   ArrangementTarget,
   ArrangementsWorkspaceProps,
 } from './types';
 
-type Failure = {
-  error: unknown;
-  source: ArrangementResponsibility;
-  value: ArrangementResponsibility['responsibility'];
-};
-/** Independent revisioned responsibility editor; uncertain retries keep their original target, revision and intent. */
+/** Independent revisioned responsibility editor; only an exact retained response acknowledges its operation. */
 export interface ResponsibilityEditor {
   query: UseQueryResult<ArrangementResponsibility, Error>;
   busy: boolean;
-  failure: Failure | undefined;
+  failure: Extract<ResponsibilityOperation, { kind: 'uncertain' }> | undefined;
   save: (
     source: ArrangementResponsibility,
-    value: ArrangementResponsibility['responsibility']
+    value: ArrangementResponsibility['responsibility'],
+    picker?: ContactChooserIntent
   ) => Promise<void>;
+  retry: () => Promise<void>;
   reload: () => Promise<void>;
+  reconcile: () => Promise<void>;
 }
-/** Load and replace only explicit responsibility without validating or changing any Contact source. */
+/** Keep per-target operations above conditional views; a GET never settles an unknown PUT by matching fields. */
 export function useResponsibility(
   identity: ArrangementsWorkspaceProps,
   target: ArrangementTarget
 ): ResponsibilityEditor {
+  const { queryClient, key, query } = useResponsibilitySource(identity, target);
+  const session = useResponsibilitySession(identity, target);
+  const operation = useSyncExternalStore(session.subscribe, session.read, session.read);
+  async function persist(write: ResponsibilityWrite): Promise<void> {
+    if (!session.claim(write)) return;
+    let confirmed: ArrangementResponsibility;
+    try {
+      confirmed = await replaceResponsibility(identity, write.source, write.value);
+      if (!matchesWrite(write, confirmed))
+        throw new Error('Responsibility write receipt does not match its operation');
+    } catch (error) {
+      session.fail(write, error);
+      return;
+    }
+    if (!session.acknowledge(write, confirmed)) return;
+    queryClient.setQueryData<ArrangementResponsibility>(key, (current) =>
+      newerResponsibility(current, confirmed)
+    );
+    if (write.picker) identity.advanceContactChooserIntent?.(target, write.picker);
+    await queryClient.invalidateQueries({
+      queryKey: [...arrangementsKey(identity), 'responsibilities'],
+    });
+  }
+  return {
+    query,
+    busy: operation.kind === 'saving' || query.isFetching,
+    failure: operation.kind === 'uncertain' ? operation : undefined,
+    save: (source, value, picker): Promise<void> =>
+      persist({ source: { ...source }, value: value === null ? null : { ...value }, picker }),
+    retry: async (): Promise<void> => {
+      const current = session.read();
+      if (current.kind === 'uncertain') await persist(current.write);
+    },
+    reload: async (): Promise<void> => {
+      await query.refetch();
+    },
+    reconcile: async (): Promise<void> => {
+      if (session.read().kind !== 'uncertain') return;
+      const result = await query.refetch();
+      if (!result.isSuccess) return;
+      const abandoned = session.reconcile();
+      if (abandoned?.picker) identity.advanceContactChooserIntent?.(target, abandoned.picker);
+    },
+  };
+}
+function matchesWrite(write: ResponsibilityWrite, receipt: ArrangementResponsibility): boolean {
+  return (
+    receipt.tripId === write.source.tripId &&
+    receipt.targetKind === write.source.targetKind &&
+    receipt.targetId === write.source.targetId &&
+    receipt.revision === write.source.revision + 1 &&
+    sameResponsibility(receipt.responsibility, write.value)
+  );
+}
+
+function sameResponsibility(
+  first: ArrangementResponsibility['responsibility'],
+  second: ArrangementResponsibility['responsibility']
+): boolean {
+  if (second === null) return first === null;
+  if (second.kind === 'self') return first?.kind === 'self';
+  return first?.kind === 'contact' && first.uri === second.uri;
+}
+
+function newerResponsibility(
+  current: ArrangementResponsibility | undefined,
+  incoming: ArrangementResponsibility
+): ArrangementResponsibility {
+  return current && current.revision > incoming.revision ? current : incoming;
+}
+
+function useResponsibilitySource(
+  identity: ArrangementsWorkspaceProps,
+  target: ArrangementTarget
+): {
+  queryClient: QueryClient;
+  key: (string | number)[];
+  query: UseQueryResult<ArrangementResponsibility, Error>;
+} {
   const queryClient = useQueryClient();
   const key = [...arrangementsKey(identity), 'responsibility', target.targetKind, target.targetId];
   const query = useQuery({
     queryKey: key,
-    queryFn: () => loadResponsibility(identity, target),
+    queryFn: async () => {
+      const incoming = await loadResponsibility(identity, target);
+      return newerResponsibility(
+        queryClient.getQueryData<ArrangementResponsibility>(key),
+        incoming
+      );
+    },
     retry: false,
   });
-  const busyRef = useRef(false);
-  const [busy, setBusy] = useState(false);
-  const [failure, setFailure] = useState<Failure>();
-  async function save(
-    source: ArrangementResponsibility,
-    value: ArrangementResponsibility['responsibility']
-  ): Promise<void> {
-    if (busyRef.current) return;
-    busyRef.current = true;
-    setBusy(true);
-    try {
-      const confirmed = await replaceResponsibility(identity, source, value);
-      queryClient.setQueryData(key, confirmed);
-      await queryClient.invalidateQueries({
-        queryKey: [...arrangementsKey(identity), 'responsibilities'],
-      });
-      setFailure(undefined);
-    } catch (error) {
-      setFailure({ error, source, value });
-    } finally {
-      busyRef.current = false;
-      setBusy(false);
-    }
-  }
-  return {
-    query,
-    busy,
-    failure,
-    save,
-    reload: async (): Promise<void> => {
-      const result = await query.refetch();
-      if (result.isSuccess) setFailure(undefined);
-    },
-  };
+  return { queryClient, key, query };
 }

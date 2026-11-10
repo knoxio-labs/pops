@@ -39,11 +39,12 @@ export function Responsibility({
       )}
       {editor.failure && (
         <>
+          <p role="status" className="text-sm text-muted-foreground">
+            {labels.responsibilityUncertain}
+          </p>
           <ErrorState
             error={requestProblem(editor.failure.error)}
-            onRetry={() => {
-              if (editor.failure) void editor.save(editor.failure.source, editor.failure.value);
-            }}
+            onRetry={() => void editor.retry()}
           />
           <Button
             variant="ghost"
@@ -52,6 +53,14 @@ export function Responsibility({
             onClick={() => void editor.reload()}
           >
             {labels.reload}
+          </Button>
+          <Button
+            variant="outline"
+            className="min-h-11"
+            disabled={editor.busy}
+            onClick={() => void editor.reconcile()}
+          >
+            {labels.reconcileResponsibility}
           </Button>
         </>
       )}
@@ -102,7 +111,7 @@ function ResponsibilityControls({
         identity={identity}
         target={source}
         disabled={disabled}
-        select={(uri) => void editor.save(source, { kind: 'contact', uri })}
+        select={(uri, intent) => void editor.save(source, { kind: 'contact', uri }, intent)}
       />
     </>
   );

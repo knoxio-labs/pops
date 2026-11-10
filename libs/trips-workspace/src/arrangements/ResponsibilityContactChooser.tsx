@@ -18,7 +18,7 @@ export function ResponsibilityContactChooser({
   identity: ArrangementsWorkspaceProps;
   target: ArrangementTarget;
   disabled: boolean;
-  select: (uri: string) => void;
+  select: (uri: string, intent: ContactChooserIntent) => void;
 }): JSX.Element | null {
   const [intent, setIntent] = useState<ContactChooserIntent>();
   const [open, setOpen] = useState(false);
@@ -54,9 +54,9 @@ export function ResponsibilityContactChooser({
           open={open}
           onOpenChange={changeOpen}
           onSelect={(selection) => {
-            if (!isOpen.current || disabled) return;
+            if (!isOpen.current || disabled || !intent) return;
             changeOpen(false);
-            select(selection.reference.uri);
+            select(selection.reference.uri, intent);
           }}
         />
       )}

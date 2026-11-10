@@ -33,6 +33,9 @@ export const labels: ArrangementLabels = {
   unset: 'Unset',
   clear: 'Clear responsibility',
   chooseContact: 'Choose contact',
+  reconcileResponsibility: 'Start a new responsibility change',
+  responsibilityUncertain:
+    'The previous change may still apply. Reloading does not confirm its outcome.',
   pickup: 'Pickup',
   return: 'Return',
   provider: 'Provider',

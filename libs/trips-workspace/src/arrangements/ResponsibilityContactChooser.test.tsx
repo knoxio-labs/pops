@@ -28,7 +28,7 @@ function setup() {
     },
   };
   const getIntent = vi.fn(() => intent);
-  const select = vi.fn<(uri: string) => void>();
+  const select = vi.fn<(uri: string, intent: ContactChooserIntent) => void>();
   const view = render(
     <ResponsibilityContactChooser
       identity={{ ...identity, contactChooserIntent: getIntent }}
@@ -37,7 +37,7 @@ function setup() {
       select={select}
     />
   );
-  return { ...view, mounts, getIntent, select, user: userEvent.setup() };
+  return { ...view, mounts, getIntent, intent, select, user: userEvent.setup() };
 }
 describe('Responsibility owner picker boundary', () => {
   it('offers no fabricated picker without the host capability', () => {
@@ -52,7 +52,7 @@ describe('Responsibility owner picker boundary', () => {
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
   it('opens only the exact target intent and saves only the owner-issued URI once', async () => {
-    const { getIntent, mounts, select, user } = setup();
+    const { getIntent, mounts, intent, select, user } = setup();
     expect(getIntent).not.toHaveBeenCalled();
     await user.click(screen.getByRole('button', { name: 'Choose contact' }));
     expect(getIntent).toHaveBeenCalledExactlyOnceWith(target);
@@ -61,7 +61,7 @@ describe('Responsibility owner picker boundary', () => {
     const active = mounts.at(-1);
     await user.click(screen.getByRole('button', { name: 'Select issued choice' }));
     active?.onSelect(selection);
-    expect(select).toHaveBeenCalledExactlyOnceWith(selection.reference.uri);
+    expect(select).toHaveBeenCalledExactlyOnceWith(selection.reference.uri, intent);
     expect(screen.queryByRole('button', { name: 'Select issued choice' })).not.toBeInTheDocument();
   });
   it('retains the host intent on reopen while cancelled and unmounted views cannot write', async () => {

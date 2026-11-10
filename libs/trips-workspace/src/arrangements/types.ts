@@ -79,6 +79,8 @@ export interface ArrangementLabels {
   unset: string;
   clear: string;
   chooseContact: string;
+  reconcileResponsibility: string;
+  responsibilityUncertain: string;
   pickup: string;
   return: string;
   provider: string;
@@ -116,5 +118,7 @@ export interface ArrangementsWorkspaceProps {
   formatDate: (date: string) => string;
   backHref?: string;
   contactChooserIntent?: (target: ArrangementTarget) => ContactChooserIntent;
+  /** Advance only after this write's receipt or explicit reconciliation; retain all previous owner receipts. */
+  advanceContactChooserIntent?: (target: ArrangementTarget, intent: ContactChooserIntent) => void;
   ContactLabel?: ComponentType<{ uri: string }>;
 }

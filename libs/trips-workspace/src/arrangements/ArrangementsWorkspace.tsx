@@ -12,6 +12,7 @@ import {
   filterArrangements,
   groupArrangements,
 } from './projection';
+import { ResponsibilitySessions } from './ResponsibilitySessions';
 import { visitTitle } from './source-labels';
 import { SourceDialog } from './SourceDialog';
 import { useArrangements } from './use-arrangements';
@@ -52,38 +53,40 @@ function ArrangementsSession(identity: ArrangementsWorkspaceProps): JSX.Element 
   const rows = filterArrangements(arrangementRows(sources), filters, sources);
   const groups = groupArrangements(rows, sources.visits);
   return (
-    <main className="mx-auto w-full max-w-5xl space-y-5 p-4 md:p-6">
-      <PageHeader
-        title={identity.labels.title}
-        description={sources.trip?.name ?? undefined}
-        backHref={identity.backHref}
-      />
-      <ArrangementFilters value={filters} onChange={setFilters} labels={identity.labels} />
-      <SourceProblems queries={queries} />
-      {pending && <p role="status">{identity.labels.loading}</p>}
-      {complete && rows.length === 0 && <p role="status">{identity.labels.empty}</p>}
-      <GapProblems capture={capture} identity={identity} />
-      <RouteGroups
-        groups={groups}
-        sources={sources}
-        identity={identity}
-        capture={capture}
-        complete={coverageComplete}
-        open={setTarget}
-      />
-      {target && (
-        <SourceDialog
-          target={target}
-          identity={identity}
-          sources={sources}
-          close={() => {
-            setTarget(undefined);
-            void refresh();
-          }}
-          viewJourney={(targetId) => setTarget({ targetKind: 'journey', targetId })}
+    <ResponsibilitySessions>
+      <main className="mx-auto w-full max-w-5xl space-y-5 p-4 md:p-6">
+        <PageHeader
+          title={identity.labels.title}
+          description={sources.trip?.name ?? undefined}
+          backHref={identity.backHref}
         />
-      )}
-    </main>
+        <ArrangementFilters value={filters} onChange={setFilters} labels={identity.labels} />
+        <SourceProblems queries={queries} />
+        {pending && <p role="status">{identity.labels.loading}</p>}
+        {complete && rows.length === 0 && <p role="status">{identity.labels.empty}</p>}
+        <GapProblems capture={capture} identity={identity} />
+        <RouteGroups
+          groups={groups}
+          sources={sources}
+          identity={identity}
+          capture={capture}
+          complete={coverageComplete}
+          open={setTarget}
+        />
+        {target && (
+          <SourceDialog
+            target={target}
+            identity={identity}
+            sources={sources}
+            close={() => {
+              setTarget(undefined);
+              void refresh();
+            }}
+            viewJourney={(targetId) => setTarget({ targetKind: 'journey', targetId })}
+          />
+        )}
+      </main>
+    </ResponsibilitySessions>
   );
 }
 function groupLabel(
