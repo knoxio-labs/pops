@@ -43,11 +43,11 @@ beforeEach(async () => {
         return;
       }
       if (request.url?.endsWith('/leg-order')) {
-        response.end(JSON.stringify({ legs: [sourceLeg({ id: 41 }), sourceLeg()] }));
+        response.end(JSON.stringify({ revision: 0, legs: [sourceLeg({ id: 41 }), sourceLeg()] }));
         return;
       }
       if (request.url?.endsWith('/legs') && request.method === 'GET') {
-        response.end(JSON.stringify({ legs: [sourceLeg()] }));
+        response.end(JSON.stringify({ revision: 0, legs: [sourceLeg()] }));
         return;
       }
       response.end(JSON.stringify(request.url?.includes('/legs/') ? sourceLeg() : sourceJourney()));
@@ -70,7 +70,12 @@ describe('Generated journey client over real HTTP', () => {
     const props = { tripId: 7, journeyId: 20, client: createClient({ baseUrl: origin }) };
     const source = await loadJourney(props);
     const from = { ...source.legs[0]?.from, timeZone: 'Pacific/Auckland' };
-    await changeJourney(props, source, { kind: 'leg', id: 40, patch: { from } });
+    await changeJourney(props, source, {
+      kind: 'leg',
+      id: 40,
+      patch: { from },
+      expectedRevision: 0,
+    });
     expect(
       requests
         .filter((request) => request.method === 'GET')
@@ -80,23 +85,31 @@ describe('Generated journey client over real HTTP', () => {
     expect(requests.at(-1)).toEqual({
       method: 'PATCH',
       path: '/trips/7/journeys/20/legs/40',
-      body: JSON.stringify({ from }),
+      body: JSON.stringify({ from, expectedRevision: 0 }),
     });
     expect(from).toHaveProperty('sourceLinks');
   });
   it('persists complete explicit order and returns the original identity order as inverse', async () => {
     const props = { tripId: 7, journeyId: 20, client: createClient({ baseUrl: origin }) };
-    const source = { journey: sourceJourney(), legs: [sourceLeg(), sourceLeg({ id: 41 })] };
-    const result = await changeJourney(props, source, { kind: 'order', ids: [41, 40] });
+    const source = {
+      legRevision: 0,
+      journey: sourceJourney(),
+      legs: [sourceLeg(), sourceLeg({ id: 41 })],
+    };
+    const result = await changeJourney(props, source, {
+      kind: 'order',
+      ids: [41, 40],
+      expectedRevision: 0,
+    });
     expect(requests).toEqual([
       {
         method: 'PUT',
         path: '/trips/7/journeys/20/leg-order',
-        body: JSON.stringify({ legIds: [41, 40] }),
+        body: JSON.stringify({ legIds: [41, 40], expectedRevision: 0 }),
       },
     ]);
     expect(result.source.legs.map((leg) => leg.id)).toEqual([41, 40]);
-    expect(result.inverse).toEqual({ kind: 'order', ids: [40, 41] });
+    expect(result.inverse).toEqual({ kind: 'order', ids: [40, 41], expectedRevision: 1 });
   });
   it('selects by source identity and expected revision without sending journey copies', async () => {
     const props = { tripId: 7, journeyId: 20, client: createClient({ baseUrl: origin }) };
