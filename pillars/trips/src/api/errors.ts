@@ -2,6 +2,75 @@ import { defineErrors } from '@pops/pillar-express';
 
 /** Stable errors for missing owned records and invalid route permutations. */
 export const tripsErrors = defineErrors('trips', {
+  meeting_revision_conflict: {
+    area: 'meeting_plan',
+    status: 409,
+    message: 'This meeting plan changed. Read its confirmed revision before editing.',
+    retryable: false,
+  },
+  meeting_revision_exhausted: {
+    area: 'meeting_plan',
+    status: 409,
+    message: 'This meeting plan cannot advance beyond its safe source revision.',
+    retryable: false,
+  },
+  meeting_undo_conflict: {
+    area: 'meeting_plan',
+    status: 409,
+    message: 'Undo requires an untouched confirmed meeting-plan operation.',
+    retryable: false,
+  },
+  meeting_operation_mismatch: {
+    area: 'meeting_plan',
+    status: 409,
+    message: 'This operation identifier belongs to a different meeting-plan request.',
+    retryable: false,
+  },
+  meeting_contact_unknown: {
+    area: 'meeting_plan',
+    status: 400,
+    message: 'Choose an existing Contact identity.',
+    retryable: false,
+  },
+  meeting_contact_unavailable: {
+    area: 'meeting_plan',
+    status: 503,
+    message:
+      'The selected Contact identity could not be verified. Retry when Contacts is available.',
+    retryable: true,
+  },
+  source_referenced: {
+    area: 'source',
+    status: 409,
+    message:
+      'Remove active capture associations and Explore memberships before deleting this source.',
+    retryable: false,
+  },
+  source_target_invalid: {
+    area: 'source',
+    status: 400,
+    message: 'Explore membership requires a capture, Idea or Event source.',
+    retryable: false,
+  },
+  source_revision_conflict: {
+    area: 'source',
+    status: 409,
+    message: 'This source or relation changed. Read its current revision before editing.',
+    retryable: false,
+  },
+  source_operation_mismatch: {
+    area: 'source',
+    status: 409,
+    message: 'This operation identifier was already used with different source input.',
+    retryable: false,
+  },
+  source_undo_conflict: {
+    area: 'source',
+    status: 409,
+    message:
+      'This operation cannot be undone because its records changed or are referenced. Nothing was changed.',
+    retryable: false,
+  },
   contact_unknown: {
     area: 'responsibility',
     status: 400,

@@ -17,6 +17,7 @@ import { getJourneyLegSet } from '../services/leg-set.js';
 import { createPlace, getTrip, listVisits } from '../services/records.js';
 import { createRental, getRental } from '../services/rentals.js';
 import { getResponsibility, replaceResponsibility } from '../services/responsibilities.js';
+import { readSourceWorkspace } from '../services/source-queries.js';
 import { createStay, getStay } from '../services/stays.js';
 
 function seedLegacyJourney(
@@ -58,7 +59,7 @@ function seedLegacyJourney(
   };
 }
 
-it.each([1, 2, 3, 4, 11])(
+it.each([1, 2, 3, 4, 11, 12])(
   'upgrades a database with %i source migrations without replacing existing records',
   (migrationCount) => {
     const scratch = fileURLToPath(new URL('../../../../../tmp/', import.meta.url));
@@ -135,7 +136,7 @@ it.each([1, 2, 3, 4, 11])(
       const previous =
         migrationCount >= 2 ? seedLegacyJourney(raw, trip.id, place.id, timestamp) : undefined;
       const rental =
-        migrationCount === 11
+        migrationCount >= 11
           ? createRental(db, trip.id, { provider: 'Independent provider', status: 'Reserved' })
           : undefined;
       const responsibility = rental
@@ -160,6 +161,12 @@ it.each([1, 2, 3, 4, 11])(
           updatedAt: timestamp,
         });
         expect(listVisits(upgraded.db, trip.id)).toEqual([visit]);
+        expect(readSourceWorkspace(upgraded.db, trip.id)).toMatchObject({
+          captures: [],
+          ideas: [],
+          associations: [],
+          memberships: [],
+        });
         if (rental) {
           expect(getRental(upgraded.db, trip.id, rental.id)).toEqual(rental);
           expect(getResponsibility(upgraded.db, trip.id, 'rental', rental.id)).toEqual(

@@ -180,5 +180,9 @@
     "Not arranged": "Não combinado",
     "Not needed": "Não necessário"
   },
+  "stay": {
+    "nights_one": "{{count}} noite",
+    "nights_other": "{{count}} noites"
+  },
   "calendar": "Calendário"
 }

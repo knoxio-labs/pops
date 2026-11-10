@@ -2,6 +2,12 @@
 export class TripsServiceError extends Error {
   constructor(
     readonly code:
+      | 'meeting_revision_conflict'
+      | 'meeting_revision_exhausted'
+      | 'meeting_undo_conflict'
+      | 'meeting_operation_mismatch'
+      | 'meeting_contact_unknown'
+      | 'meeting_contact_unavailable'
       | 'not_found'
       | 'leg_revision_conflict'
       | 'leg_order_conflict'
@@ -21,6 +27,11 @@ export class TripsServiceError extends Error {
       | 'tags_unavailable'
       | 'association_invalid'
       | 'association_exists'
+      | 'source_revision_conflict'
+      | 'source_operation_mismatch'
+      | 'source_undo_conflict'
+      | 'source_target_invalid'
+      | 'source_referenced'
   ) {
     super(code);
     this.name = 'TripsServiceError';

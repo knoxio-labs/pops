@@ -12,5 +12,5 @@ writePillarOpenApi({
   description:
     "OpenAPI projection of the trips pillar's REST contract. Authored as a ts-rest contract " +
     'and consumed by the pillar SDK for operationId route discovery.',
-  hoistRecursiveDefinitions: false,
+  hoistRecursiveDefinitions: true,
 });

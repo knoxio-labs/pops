@@ -227,26 +227,27 @@ describe('Source-backed event workspace', () => {
     expect(screen.getByLabelText('Event name')).toHaveValue('Draft');
   });
   it('adds an opaque reference without hydration and persists its reversible removal', async () => {
-    const initial = sourceEvent();
+    const initial = sourceEvent({ sourceLinks: [] });
     const next = sourceEvent({
-      organiserLinks: [{ uri: 'pops:contacts/person/organiser', label: 'Source organiser' }],
+      sourceLinks: [{ uri: 'https://source.example/new', label: 'Original source' }],
     });
     const transport = eventTransport({
+      source: initial,
       replies: [
         { status: 200, body: next },
         { status: 200, body: initial },
       ],
     });
     mount(transport);
-    fireEvent.change(await screen.findByLabelText('Organiser references URI'), {
-      target: { value: 'pops:contacts/person/organiser' },
+    fireEvent.change(await screen.findByLabelText('Sources URI'), {
+      target: { value: 'https://source.example/new' },
     });
-    fireEvent.change(screen.getByLabelText('Organiser references label'), {
-      target: { value: 'Source organiser' },
+    fireEvent.change(screen.getByLabelText('Sources label'), {
+      target: { value: 'Original source' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Add organiser references link' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add sources link' }));
     await saved();
-    expect(transport.patches).toEqual([{ organiserLinks: next.organiserLinks }]);
+    expect(transport.patches).toEqual([{ sourceLinks: next.sourceLinks }]);
     fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
     await saved();
     expect(transport.patches[1]).toEqual(eventSource(initial));

@@ -1,6 +1,6 @@
 import { sourceEvent } from '../event/test-utils';
 import { sourceJourney, sourceLeg } from '../journey/test-utils';
-import { sourcePlaces, sourceStay, sourceVisits } from '../stay/test-utils';
+import { sourcePlaces, sourceStay, sourceVisits, testNightLabel } from '../stay/test-utils';
 import { createClient } from '../trips-api/client';
 
 import type { ArrangementLabels, ArrangementResponsibility, Rental } from './types';
@@ -28,6 +28,7 @@ export const labels: ArrangementLabels = {
   placeUnavailable: 'Place unavailable',
   journey: 'Journeys',
   stay: 'Stay',
+  stayNights: testNightLabel,
   event: 'Event',
   rental: 'Rental',
   close: 'Close',
