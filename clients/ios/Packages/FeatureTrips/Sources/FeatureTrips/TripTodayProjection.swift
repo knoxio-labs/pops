@@ -12,11 +12,7 @@ internal struct TripTodayProjection {
             guard let start = source.start, let end = source.end, start < end else { return false }
             return start <= instant && instant < end
         }.sorted(by: Self.chronology)
-        next = sources.filter { source in
-            guard let start = source.start, start > instant else { return false }
-            if let end = source.end { return start < end }
-            return true
-        }.sorted(by: Self.chronology)
+        next = sources.filter { $0.isNext(at: instant) }.sorted(by: Self.chronology)
         let classified = Set(now.map(\.id) + next.map(\.id))
         other = sources.filter { source in
             guard !classified.contains(source.id) else { return false }

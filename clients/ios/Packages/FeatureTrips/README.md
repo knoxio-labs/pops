@@ -2,7 +2,7 @@
 
 `TripsRootView(repository:documents:)` contains the approved native Today and trip-navigation content. The app supplies authenticated `TripsReading` and `DocumentsReading`; this package imports neither the generated client nor another feature. `BFMTripsRepository(client:)` implements that seam in BFMClient.
 
-Trip selection is explicit and shared across the native tabs. The selected source snapshot supplies route order, source sheets, the calendar and bookings. Now uses valid active intervals; Next includes known future starts across supported record kinds in chronological order. Missing clocks or zones never acquire a midnight or UTC fallback. Ambiguous and nonexistent local clocks stay unresolved.
+Trip selection is explicit and shared across the native tabs. The selected source snapshot supplies route order, source sheets, the calendar and bookings. Now uses valid active intervals; Next and Now and Next bookings include known future starts across supported record kinds regardless of an unknown or conflicting end. Conflicting recorded times remain visible as warnings; they never form an active interval. Next retains chronological order. Missing clocks or zones never acquire a midnight or UTC fallback. Ambiguous and nonexistent local clocks stay unresolved.
 
 Visits retain the service's order. Today, Plan and Calendar exclude alternatives only through explicit group membership. Bookings and search retain every original, including alternatives; purchase never selects a journey. Booking intention, arrangement and purchase stay independent. Past bookings use explicit source end times, not audit timestamps. Source endpoints and their original zones remain visible in their own record.
 

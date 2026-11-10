@@ -100,6 +100,11 @@ internal func allTripSources(_ snapshot: TripSnapshot) -> [TripSource] {
 }
 
 extension TripSource {
+    internal func isNext(at instant: Date) -> Bool {
+        guard let start else { return false }
+        return start > instant
+    }
+
     internal func isAlternative(in snapshot: TripSnapshot) -> Bool {
         guard case .journey(let journey) = self else { return false }
         let selected = Set(snapshot.journeyGroups.map(\.currentJourneyId))
