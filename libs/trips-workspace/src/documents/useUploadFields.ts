@@ -5,6 +5,7 @@ import { DocumentUploadSession } from './document-upload-session';
 import type { Dispatch, SetStateAction } from 'react';
 
 import type { DocumentUploadSnapshot } from './document-upload-session';
+import type { PaperlessTask } from './types';
 
 export type { DocumentUploadSession } from './document-upload-session';
 
@@ -18,6 +19,7 @@ export interface UploadFields extends DocumentUploadSnapshot {
   setPickerOpen: (value: boolean) => void;
   setOwnerLookupCount: (count: number | null) => void;
   setTaskId: (id: string | null) => void;
+  setTaskReceipt: (taskId: string, result: PaperlessTask) => void;
   clearSelectedFile: () => void;
   canStartUpload: () => boolean;
   claimUpload: () => boolean;
@@ -60,6 +62,14 @@ export function useUploadFields(
     notify();
     return true;
   }, [intent, notify]);
+  const setTaskReceipt = useCallback(
+    (taskId: string, result: PaperlessTask): void => {
+      const current = intent.read();
+      if (current.taskId !== taskId || current.taskReceipt?.result === result) return;
+      setField('taskReceipt', { taskId, result });
+    },
+    [intent, setField]
+  );
   const setters = useUploadSetters(setField);
   const clearSelectedFile = useCallback(() => setFile(null), [setFile]);
   return {
@@ -68,6 +78,7 @@ export function useUploadFields(
     setFile,
     clearSelectedFile,
     claimUpload,
+    setTaskReceipt,
     canStartUpload: intent.canStart,
   };
 }
@@ -79,7 +90,12 @@ function useUploadSetters(
   ) => void
 ): Omit<
   UploadFields,
-  keyof DocumentUploadSnapshot | 'clearSelectedFile' | 'setFile' | 'claimUpload' | 'canStartUpload'
+  | keyof DocumentUploadSnapshot
+  | 'clearSelectedFile'
+  | 'setFile'
+  | 'claimUpload'
+  | 'canStartUpload'
+  | 'setTaskReceipt'
 > {
   const setUploadError = useCallback(
     (value: string | null) => setField('uploadError', value),

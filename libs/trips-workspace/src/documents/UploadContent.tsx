@@ -68,7 +68,7 @@ function ActiveUploadControls({
       unavailable={workflow.unavailable}
       uncertain={fields.uncertain}
       uploadRejected={fields.uploadRejected}
-      uploadPending={actions.uploadMutation.isPending}
+      uploadPending={fields.uploadPending}
       taskId={fields.taskId}
       documentId={workflow.documentId}
       associationPending={actions.associationMutation.isPending}
