@@ -149,7 +149,11 @@ dispatch requests. Changing the transport's mutable origin blocks old reads,
 writes and retries until the original context is restored. Late own PUT receipts
 remain retained for their original context; they cannot update another context's
 cache or advance its picker. The original picker receipt is delivered once after
-that context becomes active again. Keep the provider lifetime within the host's
+that context becomes active again. Changing owner or target closes the picker
+view without replacing the host-retained opaque intent. Returning to the original
+context requires an explicit Choose contact action; it never applies a selection
+automatically. Cancelled or replaced view callbacks remain inactive after an
+A→B→A return or reopening the same intent. Keep the provider lifetime within the host's
 actual authentication/transport lifetime; no principal is inferred by this API.
 
 `JourneyWorkspace({ tripId, journeyId, client? })` exports the source-backed Departure
