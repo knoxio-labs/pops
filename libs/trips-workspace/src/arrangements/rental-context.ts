@@ -37,5 +37,6 @@ export interface RentalContextEditorProps {
   identity: RentalContext;
   id: number;
   sources: RentalSourceContext;
+  /** Deliver only a known own PATCH response while its initiating view remains current. */
   saved?: (rental: Rental) => void;
 }
