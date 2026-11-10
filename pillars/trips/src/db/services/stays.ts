@@ -5,6 +5,7 @@ import { stays } from '../schema.js';
 import { deleteDocumentAssociationsForTarget } from './document-association-cleanup.js';
 import { getTrip, getVisit } from './records.js';
 import { requireOwnedRecord } from './source-record.js';
+import { assertSourceUnreferenced } from './source-references.js';
 
 import type { Stay, StayInput } from '../../contract/stay-schemas.js';
 import type { TripsDb } from '../index.js';
@@ -82,6 +83,7 @@ export function deleteStay(db: TripsDb, tripId: number, id: number): void {
   db.transaction(
     (tx) => {
       getStay(tx, tripId, id);
+      assertSourceUnreferenced(tx, tripId, { kind: 'stay', id });
       deleteDocumentAssociationsForTarget(tx, tripId, 'stay', id);
       requireOwnedRecord(
         tx

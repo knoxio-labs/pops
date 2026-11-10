@@ -5,6 +5,7 @@ import { events } from '../schema.js';
 import { deleteDocumentAssociationsForTarget } from './document-association-cleanup.js';
 import { getTrip, getVisit } from './records.js';
 import { requireOwnedRecord } from './source-record.js';
+import { assertSourceUnreferenced } from './source-references.js';
 
 import type { TripEvent, EventInput } from '../../contract/event-schemas.js';
 import type { TripsDb } from '../index.js';
@@ -82,6 +83,7 @@ export function deleteEvent(db: TripsDb, tripId: number, id: number): void {
   db.transaction(
     (tx) => {
       getEvent(tx, tripId, id);
+      assertSourceUnreferenced(tx, tripId, { kind: 'event', id });
       deleteDocumentAssociationsForTarget(tx, tripId, 'event', id);
       requireOwnedRecord(
         tx

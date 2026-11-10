@@ -43,6 +43,6 @@ export const eventsContract = c.router({
     path: '/trips/:tripId/events/:id',
     pathParams: Event,
     body: c.noBody(),
-    responses: { 204: c.noBody(), ...errors },
+    responses: { 204: c.noBody(), ...errors, 409: ErrorBodySchema },
   },
 });

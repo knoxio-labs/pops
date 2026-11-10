@@ -5,6 +5,7 @@ import { journeys, journeyLegs, journeyGroupMembers } from '../schema.js';
 import { deleteDocumentAssociationsForTarget } from './document-association-cleanup.js';
 import { getTrip } from './records.js';
 import { requireOwnedRecord, TripsServiceError } from './source-record.js';
+import { assertSourceUnreferenced } from './source-references.js';
 
 import type { Journey, JourneyInput } from '../../contract/journey-schemas.js';
 import type { TripsDb } from '../index.js';
@@ -77,6 +78,7 @@ export function deleteJourney(db: TripsDb, tripId: number, id: number): void {
   db.transaction(
     (tx) => {
       getJourney(tx, tripId, id);
+      assertSourceUnreferenced(tx, tripId, { kind: 'journey', id });
       if (
         tx
           .select({ groupId: journeyGroupMembers.groupId })
