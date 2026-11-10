@@ -87,7 +87,7 @@ function UploadIntent({
   );
   const workflow = useTripDocumentUpload({
     ...session.context,
-    storage: { session: intent.upload, onSessionChange },
+    storage: { session: intent.upload, onSessionChange, taskScope: session.taskScope },
     beforeRequest: session.assertCurrentContext,
   });
   if (workflow.fields.file === null) return null;

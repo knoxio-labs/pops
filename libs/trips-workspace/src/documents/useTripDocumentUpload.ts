@@ -40,6 +40,7 @@ export function useTripDocumentUpload({
   storage?: {
     session: DocumentUploadSession;
     onSessionChange: Dispatch<SetStateAction<DocumentUploadSession>>;
+    taskScope?: readonly [string, string];
   };
   beforeRequest?: () => void;
 }): TripDocumentUploadController {
@@ -49,6 +50,7 @@ export function useTripDocumentUpload({
     onSessionChange: storage?.onSessionChange ?? setSession,
     documentsClient,
     beforeRequest,
+    taskScope: storage?.taskScope,
   });
   const queryClient = useQueryClient();
   const associationMutation = useAssociationMutation({
