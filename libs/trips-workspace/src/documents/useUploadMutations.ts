@@ -96,9 +96,7 @@ function finishAssociation(
   tripsClient: TripsClient | undefined,
   tripId: number
 ): void {
-  fields.setTaskId(null);
-  fields.setFile(null);
-  fields.setUploadError(null);
+  fields.clearSelectedFile();
   void queryClient.invalidateQueries({
     queryKey: documentQueryKeys.associations(tripsClient, tripId),
   });

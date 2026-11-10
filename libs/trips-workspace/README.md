@@ -79,7 +79,12 @@ without writing a route association. `useDocumentUpload({ session, onSessionChan
 documentsClient? })` is the same per-file owner workflow used by route uploads.
 Initialize each distinct intent with `createDocumentUploadSession(file)` and keep
 its controlled session above conditional views: its pending POST flag, accepted task
-and uncertain response guard must survive navigation and remount. The session retains
+and uncertain response guard must survive navigation and remount. Each initializer call
+creates an immutable intent identity, even for the same File object. Session fields are
+live receipt getters: retain the session itself for Undo; never spread or serialize it.
+Late results update that originating receipt without selecting it over a replacement.
+Overlapping views share one synchronous POST claim per intent; separate selections
+remain independent. The session retains
 the exact browser File handle; only actual task/document identities belong in persisted
 provenance. Completed and explicit duplicate task results expose the canonical document
 ID while retaining the accepted task ID. The controller never repeats an accepted or

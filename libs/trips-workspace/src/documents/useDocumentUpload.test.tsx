@@ -169,7 +169,7 @@ describe('controlled Documents owner uploads', () => {
     expect(upload).toHaveBeenCalledTimes(1);
     expect(restored.result.current.documentId).toBeUndefined();
     task.mockResolvedValue({ state: 'pending', documentId: 91, reason: null });
-    act(() => storage.result.current[1]((session) => ({ ...session, taskId: 'recovered-task' })));
+    act(() => restored.result.current.fields.setTaskId('recovered-task'));
     restored.rerender({ session: storage.result.current[0] });
     await waitFor(() => expect(task).toHaveBeenCalledWith('recovered-task', undefined));
     expect(restored.result.current.documentId).toBeUndefined();

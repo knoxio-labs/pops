@@ -26,8 +26,5 @@ export function submitSelectedFile(input: {
 /** Clear an ambiguous upload only after an owner search found no matching original. */
 export function recoverAmbiguousUpload(fields: UploadFields): void {
   if (!fields.uncertain) return;
-  fields.setFile(null);
-  fields.setUploadError(null);
-  fields.setUncertain(false);
-  fields.setOwnerLookupCount(null);
+  fields.clearSelectedFile();
 }
