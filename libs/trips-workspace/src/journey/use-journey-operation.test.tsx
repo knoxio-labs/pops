@@ -1,16 +1,26 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, cleanup, renderHook } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import { useJourneyNavigation } from './use-journey-navigation';
 import { useJourneyOperation } from './use-journey-operation';
 
+import type { ReactNode } from 'react';
+
 afterEach(cleanup);
 
 it('blocks programmatic grouping mutations until a successful owner read, including after navigation', async () => {
   const mutation = vi.fn(async () => {});
+  const cache = new QueryClient();
   const { result, rerender } = renderHook(
-    ({ journeyId }) => useJourneyOperation(useJourneyNavigation({ tripId: 7, journeyId })),
-    { initialProps: { journeyId: 20 } }
+    ({ journeyId }) =>
+      useJourneyOperation(useJourneyNavigation({ tripId: 7, journeyId }), { tripId: 7, journeyId }),
+    {
+      initialProps: { journeyId: 20 },
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <QueryClientProvider client={cache}>{children}</QueryClientProvider>
+      ),
+    }
   );
   await act(() => result.current.run(() => Promise.reject(new Error('Unknown commit result'))));
   expect(result.current.needsReload).toBe(true);

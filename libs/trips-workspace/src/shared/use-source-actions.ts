@@ -1,5 +1,3 @@
-import { useLayoutEffect, useRef } from 'react';
-
 import { refreshAfterSave, resetSourceConflicts, sameSourceValue } from './source-refresh';
 
 import type { SourceEditor, SourceEditorOptions, SourceState } from './source-editor-types';
@@ -8,7 +6,8 @@ type Actions<Source, Patch> = Pick<
   SourceEditor<Source, Patch>,
   'commit' | 'edit' | 'undo' | 'retry' | 'reset'
 >;
-interface Context<Source, Patch> {
+/** Mutable session context shared by subscriptions and serialized source actions. */
+export interface SourceActionContext<Source, Patch> {
   state: SourceState<Source, Patch>;
   options: SourceEditorOptions<Source, Patch>;
   initial: Source;
@@ -16,45 +15,43 @@ interface Context<Source, Patch> {
   retainedBaseline: Source | undefined;
 }
 
-/** Bind source actions to the latest rendered state while retaining each failed write's confirmed baseline. */
-export function useSourceActions<Source extends object, Patch extends Partial<Source>>(
-  state: SourceState<Source, Patch>,
-  options: SourceEditorOptions<Source, Patch>,
-  initial: Source
+/** Bind actions to one retained session, with a separate permission check for each view. */
+export function sourceActions<Source extends object, Patch extends Partial<Source>>(
+  context: SourceActionContext<Source, Patch>,
+  assertCurrent: () => void = () => {}
 ): Actions<Source, Patch> {
-  const context = useRef<Context<Source, Patch>>({
-    state,
-    options,
-    initial,
-    lock: false,
-    retainedBaseline: undefined,
-  });
-  useLayoutEffect(() => {
-    context.current.state = state;
-    context.current.options = options;
-    context.current.initial = initial;
-  });
   return {
-    edit: (patch) => editSource(context.current, patch),
-    commit: (patch, undo = false) => commitSource(context.current, patch, undo),
-    reset: () => resetConflicts(context.current),
+    edit: (patch) => {
+      assertCurrent();
+      editSource(context, patch);
+    },
+    commit: async (patch, undo = false) => {
+      assertCurrent();
+      await commitSource(context, patch, undo, assertCurrent);
+    },
+    reset: () => {
+      assertCurrent();
+      resetConflicts(context);
+    },
     undo: () => {
-      const state = context.current.state;
+      assertCurrent();
+      const state = context.state;
       if (state.dirty || state.failure) return;
       const previous = state.history.at(-1);
       return (
-        previous && commitSource(context.current, context.current.options.source(previous), true)
+        previous && commitSource(context, context.options.source(previous), true, assertCurrent)
       );
     },
     retry: () => {
-      const failure = context.current.state.failure;
-      return failure && commitSource(context.current, failure.patch, failure.undo);
+      assertCurrent();
+      const failure = context.state.failure;
+      return failure && commitSource(context, failure.patch, failure.undo, assertCurrent);
     },
   };
 }
 
 function editSource<Source extends object, Patch extends Partial<Source>>(
-  context: Context<Source, Patch>,
+  context: SourceActionContext<Source, Patch>,
   patch: Patch
 ): void {
   const draft = { ...context.state.draft, ...patch };
@@ -67,9 +64,10 @@ function editSource<Source extends object, Patch extends Partial<Source>>(
 }
 
 async function commitSource<Source extends object, Patch extends Partial<Source>>(
-  context: Context<Source, Patch>,
+  context: SourceActionContext<Source, Patch>,
   patch: Patch,
-  undo: boolean
+  undo: boolean,
+  assertCurrent: () => void
 ): Promise<void> {
   const { state, options, initial: readAtStart } = context;
   if (context.lock || state.conflict) return;
@@ -89,6 +87,7 @@ async function commitSource<Source extends object, Patch extends Partial<Source>
   state.setFailure(undefined);
   editSource(context, pending);
   try {
+    assertCurrent();
     const result = await options.save(pending, baseline);
     confirmSource(context, { result, saved: state.saved, pending, readAtStart, undo });
     options.onSaved(result);
@@ -110,7 +109,7 @@ interface Confirmation<Source, Patch> {
   undo: boolean;
 }
 function confirmSource<Source extends object, Patch extends Partial<Source>>(
-  context: Context<Source, Patch>,
+  context: SourceActionContext<Source, Patch>,
   { result, saved, pending, readAtStart, undo }: Confirmation<Source, Patch>
 ): void {
   const { state, options } = context;
@@ -144,7 +143,7 @@ function confirmSource<Source extends object, Patch extends Partial<Source>>(
 }
 
 function resetConflicts<Source extends object, Patch extends Partial<Source>>(
-  context: Context<Source, Patch>
+  context: SourceActionContext<Source, Patch>
 ): void {
   if (context.lock) return;
   const { state, options } = context;

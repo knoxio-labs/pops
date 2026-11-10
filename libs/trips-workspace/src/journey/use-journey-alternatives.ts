@@ -9,6 +9,7 @@ import type { UseQueryResult } from '@tanstack/react-query';
 
 import type { JourneyGroup, JourneyWorkspaceProps } from './types';
 import type { JourneyNavigation } from './use-journey-navigation';
+import type { JourneyOperation } from './use-journey-operation';
 import type { JourneySelection } from './use-journey-selection';
 
 /** Explicit membership and independent source identity of the expanded editor. */
@@ -34,22 +35,18 @@ export function useJourneyAlternatives(
   identity: JourneyWorkspaceProps,
   navigation: JourneyNavigation
 ): JourneyAlternativesModel {
-  const key = [
-    'trips',
-    identity.client?.getConfig().baseUrl ?? '/trips-api',
-    identity.tripId,
-    'journey-groups',
-  ] as const;
-  const query = useQuery({ queryKey: key, queryFn: () => loadGroups(identity), retry: false });
+  const actions = useJourneyOperation(navigation, identity);
+  const { owner } = actions;
+  const captured = { client: owner.client, tripId: owner.tripId, journeyId: identity.journeyId };
+  const key = ['trips', owner.origin, owner.tripId, 'journey-groups'] as const;
+  const query = useQuery({
+    queryKey: key,
+    queryFn: () => readGroups(actions, captured),
+    retry: false,
+  });
   const cache = useQueryClient();
   const [expanded, setExpanded] = useState<ExpandedJourneyOption>();
-  const actions = useJourneyOperation(navigation);
-  const groups =
-    query.data?.filter(
-      (entry) =>
-        entry.currentJourneyId === identity.journeyId ||
-        entry.alternativeJourneyIds.includes(identity.journeyId)
-    ) ?? [];
+  const groups = groupsForJourney(query.data, identity.journeyId);
   const update = (next: JourneyGroup): void => {
     cache.setQueryData<JourneyGroup[]>(key, (previous) => [
       ...(previous ?? []).filter((entry) => entry.id !== next.id),
@@ -57,7 +54,6 @@ export function useJourneyAlternatives(
     ]);
   };
   const selection = useJourneySelection({
-    identity,
     navigation,
     query,
     actions,
@@ -79,9 +75,11 @@ export function useJourneyAlternatives(
     add: (group): Promise<void> =>
       actions.run(async () => {
         const stamp = navigation.stamp();
-        const current = group ?? (await createGroup(identity));
+        actions.assertCurrent();
+        const current = group ?? (await createGroup(captured));
         update(current);
-        const result = await addAlternative(identity, current);
+        actions.assertCurrent();
+        const result = await addAlternative(captured, current);
         update(result.group);
         if (navigation.isCurrent(stamp)) {
           setExpanded({ groupId: current.id, journeyId: result.journey.id });
@@ -89,4 +87,20 @@ export function useJourneyAlternatives(
         }
       }),
   };
+}
+
+function readGroups(
+  actions: JourneyOperation,
+  identity: JourneyWorkspaceProps
+): Promise<JourneyGroup[]> {
+  actions.assertCurrent();
+  return loadGroups(identity);
+}
+function groupsForJourney(groups: JourneyGroup[] | undefined, journeyId: number): JourneyGroup[] {
+  return (
+    groups?.filter(
+      (entry) =>
+        entry.currentJourneyId === journeyId || entry.alternativeJourneyIds.includes(journeyId)
+    ) ?? []
+  );
 }

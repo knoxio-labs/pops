@@ -1,9 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
 import { useCallback, useState, useSyncExternalStore } from 'react';
 
+import { ErrorState } from '@pops/ui';
+
 import { loadPaperlessUploadPolicy } from './api';
 import { documentQueryKeys } from './query-keys';
-import { createTripDocumentUploadSession } from './trip-document-upload-session';
+import {
+  createTripDocumentUploadSession,
+  TripDocumentUploadContextError,
+} from './trip-document-upload-session';
 import { uploadSessionKey } from './upload-context';
 import { UploadContent } from './UploadContent';
 import { UploadEntry } from './UploadEntry';
@@ -33,7 +38,31 @@ export function TripDocumentUpload(props: TripDocumentUploadProps): ReactElement
     activeSession = createTripDocumentUploadSession(props);
     localSessions.set(contextKey, activeSession);
   }
-  activeSession.assertContext(props);
+  const problem = contextProblem(activeSession, props);
+  if (problem)
+    return (
+      <ErrorState error={{ code: problem.code, message: problem.message, retryable: false }} />
+    );
+  return <BoundUpload {...props} session={activeSession} />;
+}
+
+function contextProblem(
+  session: TripDocumentUploadSession,
+  context: TripDocumentUploadContext
+): TripDocumentUploadContextError | undefined {
+  try {
+    session.assertContext(context);
+  } catch (error) {
+    if (error instanceof TripDocumentUploadContextError) return error;
+    throw error;
+  }
+  return undefined;
+}
+
+function BoundUpload(
+  props: TripDocumentUploadProps & { session: TripDocumentUploadSession }
+): ReactElement {
+  const { session: activeSession, documentsClient } = props;
   const policy = useQuery({
     queryKey: documentQueryKeys.status(documentsClient),
     queryFn: () => {

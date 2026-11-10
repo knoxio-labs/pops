@@ -29,12 +29,20 @@ export interface SourceState<Source, Patch> {
   acknowledgeRead: Dispatch<SetStateAction<Source>>;
 }
 
-/** Source projection and persistence supplied by the owning domain; hosts remount at identity/origin boundaries. */
+/** Source projection and persistence supplied by the owning domain. */
 export interface SourceEditorOptions<Source, Patch> {
   source: (value: Source) => Patch;
+  /** The owning producer may reject an older versioned aggregate without discarding its confirmed successor. */
+  acceptRead?: (incoming: Source, confirmed: Source) => boolean;
   /** Persist against the captured confirmed source, including inverse and retry operations. */
   save: (patch: Patch, saved: Source) => Promise<Source>;
   onSaved: (value: Source) => void;
+}
+
+/** One committed view's permission to dispatch writes or deliver canonical reads. */
+export interface SourceEditorView {
+  assertCurrent: () => void;
+  isCurrent: () => boolean;
 }
 
 /** Serialized source editor with retained failures and successful undo snapshots. */

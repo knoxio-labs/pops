@@ -1,18 +1,21 @@
-import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueries } from '@tanstack/react-query';
 
+import { assertSourceOwner } from '../shared/retained-session-store';
+import { useSourceQuery } from '../shared/use-source-query';
 import {
   loadDocumentAssociations,
   loadPaperlessDocument,
   loadTripRouteVisitIds,
   loadTripDocumentTargets,
-  unlinkPaperlessDocument,
 } from './api';
 import { groupDocumentAssociations } from './model';
 import { documentQueryKeys } from './query-keys';
+import { useDocumentUnlink } from './use-document-unlink';
 
 import type { UseMutationResult, UseQueryResult } from '@tanstack/react-query';
 
 import type { Client as DocumentsClient } from '../documents-api/client';
+import type { SourceQuery } from '../shared/use-source-query';
 import type { Client as TripsClient } from '../trips-api/client';
 import type { TripDocumentTargetRecord } from './api';
 import type {
@@ -41,24 +44,11 @@ export function useTripDocumentData(
   documentsClient: DocumentsClient | undefined,
   target?: DocumentAssociationTarget
 ): TripDocumentData {
-  const queryClient = useQueryClient();
-  const associationsQuery = useQuery({
-    queryKey: documentQueryKeys.associations(tripsClient, tripId),
-    queryFn: () => loadDocumentAssociations(tripId, tripsClient),
-    retry: false,
-  });
-  const routeVisitsQuery = useQuery({
-    queryKey: documentQueryKeys.routeVisits(tripsClient, tripId),
-    queryFn: () => loadTripRouteVisitIds(tripId, tripsClient),
-    enabled: target === undefined,
-    retry: false,
-  });
-  const targetNamesQuery = useQuery({
-    queryKey: [...documentQueryKeys.routeVisits(tripsClient, tripId), 'targetNames'],
-    queryFn: () => loadTripDocumentTargets(tripId, tripsClient),
-    enabled: target === undefined,
-    retry: false,
-  });
+  const { associationsQuery, routeVisitsQuery, targetNamesQuery } = useAssociationSources(
+    tripId,
+    tripsClient,
+    target
+  );
   const associations = selectedAssociations(associationsQuery.data ?? [], tripId, target);
   const visitOrder = routeVisitsQuery.data ?? [];
   const targetNames = targetNamesQuery.data ?? new Map();
@@ -66,15 +56,7 @@ export function useTripDocumentData(
   const originals = useQueries({
     queries: associations.map((item) => originalQuery(item.documentId, documentsClient)),
   });
-  const unlinkMutation = useMutation({
-    meta: { errorHandled: true },
-    mutationFn: (associationId: number) =>
-      unlinkPaperlessDocument(tripId, associationId, tripsClient),
-    onSuccess: () =>
-      queryClient.invalidateQueries({
-        queryKey: documentQueryKeys.associations(tripsClient, tripId),
-      }),
-  });
+  const unlinkMutation = useDocumentUnlink(associationsQuery);
   const originalRows = originals.map((query) => ({ document: query.data, failed: query.isError }));
   return {
     associationsQuery,
@@ -87,6 +69,43 @@ export function useTripDocumentData(
     originalRows,
     unlinkMutation,
   };
+}
+
+interface AssociationSources {
+  associationsQuery: SourceQuery<TripDocumentAssociation[]>;
+  routeVisitsQuery: SourceQuery<number[]>;
+  targetNamesQuery: SourceQuery<Map<string, TripDocumentTargetRecord>>;
+}
+function useAssociationSources(
+  tripId: number,
+  tripsClient: TripsClient | undefined,
+  target: DocumentAssociationTarget | undefined
+): AssociationSources {
+  const associationsQuery = useSourceQuery(
+    { client: tripsClient, tripId, kind: 'document-associations', sourceId: 0 },
+    (owner) => ({
+      queryKey: documentQueryKeys.associations(owner.client, owner.tripId),
+      load: () => loadDocumentAssociations(owner.tripId, owner.client),
+    })
+  );
+  const routeVisitsQuery = useSourceQuery(
+    { client: tripsClient, tripId, kind: 'document-route-visits', sourceId: 0 },
+    (owner) => ({
+      queryKey: documentQueryKeys.routeVisits(owner.client, owner.tripId),
+      load: () => loadTripRouteVisitIds(owner.tripId, owner.client),
+    }),
+    { enabled: target === undefined }
+  );
+  const targetNamesQuery = useSourceQuery(
+    { client: tripsClient, tripId, kind: 'document-target-names', sourceId: 0 },
+    (owner) => ({
+      queryKey: [...documentQueryKeys.routeVisits(owner.client, owner.tripId), 'targetNames'],
+      load: () =>
+        loadTripDocumentTargets(owner.tripId, owner.client, () => assertSourceOwner(owner)),
+    }),
+    { enabled: target === undefined }
+  );
+  return { associationsQuery, routeVisitsQuery, targetNamesQuery };
 }
 
 function originalQuery(

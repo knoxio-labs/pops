@@ -1,9 +1,10 @@
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Select, TextInput } from '@pops/ui';
 
+import { useSemanticDraft } from '../shared/semantic-draft';
 import { durationValue } from './approximate';
+import { durationDraft } from './timing-drafts';
 import { VisitMonthFields } from './VisitMonthFields';
 
 import type { JSX } from 'react';
@@ -25,18 +26,16 @@ export function VisitApproximateTiming(props: VisitFieldProps): JSX.Element {
     </details>
   );
 }
-function DurationFields({ visit, commit }: VisitFieldProps): JSX.Element {
+function DurationFields({ visit, commit, timingDrafts }: VisitFieldProps): JSX.Element {
   const { t } = useTranslation('trips');
-  const duration = visit.timing.duration;
-  const [draft, setDraft] = useState({
-    min: duration?.min === undefined ? '' : String(duration.min),
-    max: duration?.max === undefined ? '' : String(duration.max),
-    unit: duration?.unit ?? '',
-  });
-  const [error, setError] = useState<string>();
+  const [draft, setDraft] = useSemanticDraft(
+    durationDraft(visit.timing.duration),
+    timingDrafts?.duration,
+    timingDrafts?.isCurrent
+  );
+  const error = durationValue(draft).error;
   const save = (next: typeof draft): void => {
     const parsed = durationValue(next);
-    setError(parsed.error);
     if (parsed.error) return;
     const timing = { ...visit.timing };
     if (parsed.value) timing.duration = parsed.value;

@@ -74,7 +74,9 @@ it('recovers an issued owner reference after unmounting a failed source save wit
   await screen.findByText('Changes have not been saved');
   first.unmount();
   mount();
-  fireEvent.click(await screen.findByRole('button', { name: 'Add selected organiser' }));
+  await screen.findByText('Changes have not been saved');
+  expect(screen.getByRole('button', { name: 'Remove organiser 2' })).toBeEnabled();
+  fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
   await waitFor(() => expect(transport.patches).toHaveLength(2));
   expect(transport.patches).toEqual([
     { organiserLinks: changed.organiserLinks },

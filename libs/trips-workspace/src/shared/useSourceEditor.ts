@@ -1,12 +1,11 @@
-import { useState } from 'react';
+import { useLayoutEffect, useState, useSyncExternalStore } from 'react';
 
-import { refreshSource, sameSourceValue } from './source-refresh';
-import { useSourceActions } from './use-source-actions';
+import { SourceEditSession } from './source-edit-session';
 
 import type {
-  FailedSourceChange,
   SourceEditor,
   SourceEditorOptions,
+  SourceEditorView,
   SourceState,
 } from './source-editor-types';
 
@@ -17,62 +16,48 @@ export type {
   SourceState,
 } from './source-editor-types';
 
-/** Canonical reads refresh untouched fields, preserve pending fields and invalidate stale inverse history. */
+/** Canonical reads refresh untouched fields while preserving pending drafts and invalidating stale inverses. */
 export function useSourceState<Source extends object, Patch extends Partial<Source>>(
   initial: Source,
   source: (value: Source) => Patch
 ): SourceState<Source, Patch> {
-  const [saved, setSaved] = useState(initial);
-  const [canonical, setCanonical] = useState(() => source(initial));
-  const [draft, setDraft] = useState(initial);
-  const [history, setHistory] = useState<Source[]>([]);
-  const [busy, setBusy] = useState(false);
-  const [failure, setFailure] = useState<FailedSourceChange<Patch>>();
-  const [observed, setObserved] = useState(initial);
-  const [conflicts, setConflicts] = useState<(keyof Patch)[]>([]);
-  const dirty = !sameSourceValue(source(draft), canonical);
-  if (observed !== initial && !busy) {
-    setObserved(initial);
-    if (!sameSourceValue(initial, saved)) {
-      const refreshed = refreshSource(
-        { canonical, draft, initial, failed: failure?.patch },
-        source
-      );
-      setSaved(initial);
-      setCanonical(source(initial));
-      setDraft(refreshed.draft);
-      setHistory([]);
-      setConflicts([...new Set([...conflicts, ...refreshed.conflicts])]);
-    }
-  }
-  return {
-    saved,
-    setSaved,
-    canonical,
-    setCanonical,
-    draft,
-    setDraft,
-    history,
-    setHistory,
-    busy,
-    setBusy,
-    failure,
-    setFailure,
-    dirty,
-    conflict: conflicts.length > 0,
-    conflicts,
-    setConflicts,
-    acknowledgeRead: setObserved,
-  };
+  const [session] = useState(
+    () =>
+      new SourceEditSession(initial, {
+        source,
+        save: () => Promise.reject(new Error('Source state has no persistence binding.')),
+        onSaved: () => {},
+      })
+  );
+  return useSourceSession(initial, session);
 }
 
-/** Persist direct edits serially, retaining failed drafts and successful source snapshots for undo. */
+/** Subscribe a mounted view to an existing controller without taking ownership of its lifetime. */
+export function useSourceSession<Source extends object, Patch extends Partial<Source>>(
+  initial: Source,
+  session: SourceEditSession<Source, Patch>,
+  canReceive?: () => boolean
+): SourceState<Source, Patch> {
+  const state = useSyncExternalStore(session.subscribe, session.getState, session.getState);
+  useLayoutEffect(() => {
+    if (canReceive === undefined || canReceive()) session.receive(initial);
+  }, [initial, session, canReceive]);
+  return state;
+}
+
+/** Persist direct edits serially; supplying a retained session preserves state across view remounts. */
 export function useSourceEditor<Source extends object, Patch extends Partial<Source>>(
   initial: Source,
-  options: SourceEditorOptions<Source, Patch>
+  options: SourceEditorOptions<Source, Patch>,
+  retained?: SourceEditSession<Source, Patch>,
+  view?: SourceEditorView
 ): SourceEditor<Source, Patch> {
-  const state = useSourceState(initial, options.source);
-  const actions = useSourceActions(state, options, initial);
+  const [local] = useState(() => new SourceEditSession(initial, options));
+  const session = retained ?? local;
+  useLayoutEffect(() => {
+    if (!retained) session.bind(options);
+  });
+  const state = useSourceSession(initial, session, view?.isCurrent);
   return {
     draft: state.draft,
     dirty: state.dirty,
@@ -82,6 +67,6 @@ export function useSourceEditor<Source extends object, Patch extends Partial<Sou
     conflict: state.conflict,
     canUndo:
       state.history.length > 0 && !state.busy && !state.failure && !state.conflict && !state.dirty,
-    ...actions,
+    ...session.actions(view === undefined ? undefined : () => view.assertCurrent()),
   };
 }

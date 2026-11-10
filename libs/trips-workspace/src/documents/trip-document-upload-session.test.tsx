@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, render } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, expect, it } from 'vitest';
 
 import { createClient } from '../documents-api/client';
@@ -68,17 +68,16 @@ it('rejects replacement authenticated clients even when their owner origins are 
   expect(() => session.assertContext(captured)).toThrow(TripDocumentUploadContextError);
 });
 
-it('rejects a mismatched view before any target can reuse the retained files', () => {
+it('reports a mismatched view before any target can reuse the retained files', () => {
   const session = createTripDocumentUploadSession(context);
   session.addFiles([new File(['a'], 'a.pdf', { type: 'application/pdf' })]);
   const cache = new QueryClient();
-  expect(() =>
-    render(
-      <QueryClientProvider client={cache}>
-        <TripDocumentUpload {...context} target={{ kind: 'journey', id: 8 }} session={session} />
-      </QueryClientProvider>
-    )
-  ).toThrow(TripDocumentUploadContextError);
+  render(
+    <QueryClientProvider client={cache}>
+      <TripDocumentUpload {...context} target={{ kind: 'journey', id: 8 }} session={session} />
+    </QueryClientProvider>
+  );
+  expect(screen.getByRole('alert')).toHaveTextContent('connection changed');
   expect(cache.getQueryCache().getAll()).toHaveLength(0);
   expect(session.read()[0]?.upload.taskId).toBeNull();
   cache.clear();

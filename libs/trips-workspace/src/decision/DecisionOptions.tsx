@@ -1,5 +1,5 @@
 import { Plus, Trash2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 
 import { Badge, Button, TextInput } from '@pops/ui';
 
@@ -40,14 +40,13 @@ export function DecisionOptions({ editor, state, plans }: Props): JSX.Element {
 }
 function AddOption({ editor }: Pick<Props, 'editor'>): JSX.Element {
   const [adding, setAdding] = useState(false);
-  const [title, setTitle] = useState('');
-  useEffect(() => () => editor.setDirty('new-option', false), [editor]);
+  const state = useSyncExternalStore(editor.subscribe, editor.getState, editor.getState);
+  const title = state.drafts['new-option'] ?? '';
   const cancel = (): void => {
     setAdding(false);
-    setTitle('');
-    editor.setDirty('new-option', false);
+    editor.setDraft('new-option', undefined);
   };
-  if (!adding)
+  if (!adding && title === '')
     return (
       <Button variant="ghost" onClick={() => setAdding(true)}>
         <Plus aria-hidden className="size-4" />
@@ -66,7 +65,7 @@ function AddOption({ editor }: Pick<Props, 'editor'>): JSX.Element {
             'Add option'
           ))
         )
-          cancel();
+          setAdding(false);
       }}
     >
       <TextInput
@@ -74,8 +73,7 @@ function AddOption({ editor }: Pick<Props, 'editor'>): JSX.Element {
         value={title}
         required
         onChange={(event) => {
-          setTitle(event.currentTarget.value);
-          editor.setDirty('new-option', Boolean(event.currentTarget.value));
+          editor.setDraft('new-option', event.currentTarget.value || undefined);
         }}
       />
       <Button type="submit" disabled={!title.trim()}>
