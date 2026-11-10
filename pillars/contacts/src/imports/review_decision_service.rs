@@ -353,7 +353,7 @@ fn validate(input: &ReviewDecisionInput) -> Result<(), ImportError> {
         || input.later_entity_ids.len() > 10_000
         || input.selections.len() + input.incoming_fields.len() > 9
         || input.incoming_fields.len() > 2
-        || input.preferred_point_ids.len() > 4
+        || input.preferred_point_ids.len() > crate::persons::model::ContactPointKind::ALL.len()
         || (input.merge_entity_ids.len() + 1) * input.different_entity_ids.len() > 1000
     {
         return Err(ImportError::Invalid(

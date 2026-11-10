@@ -1,6 +1,6 @@
 # Trips browser app
 
-The shell loads `dist/remote/trips.js` and `trips.css` from the Trips manifest. The app exposes the grouped home, trip metadata settings, a trip calendar, and route adapters for the `@pops/trips-workspace` stay, journey, event, and options-first decision editors. Event detail is registered at `:tripId/events/:eventId`; invalid route identities fail before making source requests. The `/trips/:tripId/documents` route provides typed document associations and owner uploads. It owns no database and uses generated Trips and Tags clients at the shell's authenticated same-origin proxy paths.
+The shell loads `dist/remote/trips.js` and `trips.css` from the Trips manifest. The app exposes the grouped home, trip metadata settings, a trip calendar, and route adapters for the `@pops/trips-workspace` visit, stay, journey, event, and options-first decision editors. Event detail is registered at `:tripId/events/:eventId`; invalid route identities fail before making source requests. The `/trips/:tripId/documents` route provides typed document associations and owner uploads. It owns no database and uses generated Trips and Tags clients at the shell's authenticated same-origin proxy paths.
 
 `:tripId/arrangements` publishes the `trips-arrangements` slot. Its adapter validates
 the owning trip identity and supplies shell-selected translations and calendar locale
@@ -50,6 +50,13 @@ it starts the owning Trips producer fixture and drives the public headless works
 editor through this app's generated client against SQLite. Both dependencies already
 belong to this app's declared graph, so filtered CI installs include the producer's
 native SQLite runtime without adding a lib-to-pillar dependency.
+
+## Visit sources
+
+`/trips/:tripId/visits/:visitId` mounts `VisitWorkspace` with literal source identities.
+The selected-trip preview links each distinct visit occurrence to that route.
+Visit navigation replaces the source URL; accommodation links open the existing stay route.
+Timing edits and Undo write only the visit, guarded by its confirmed source revision.
 
 ## Calendar
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { sourceEvent, sourceStay, sourceVisit } from './period-fixtures';
-import { accommodationPeriods } from './periods';
+import { accommodationPeriods, dateLabel } from './periods';
+import { sourceEvent, sourceStay, sourceVisit } from './test-utils';
 
 describe('Explicit visit accommodation periods', () => {
   it('uses checkout-exclusive periods, retains every intention and never borrows matching city identities', () => {
@@ -80,4 +80,11 @@ describe('Explicit visit accommodation periods', () => {
     ]);
     expect(result.unplacedEvents.map((event) => event.id)).toEqual([1, 2, 3]);
   });
+});
+
+it('formats literal calendar days with the supplied viewer locale without timezone shifts', () => {
+  expect(dateLabel('2030-04-10', 'en-AU')).toBe('10 Apr 2030');
+  expect(dateLabel('2030-04-10', 'pt-BR')).toBe('10 de abr. de 2030');
+  expect(dateLabel('2030-02-30', 'pt-BR')).toBe('2030-02-30');
+  expect(dateLabel(undefined, 'pt-BR')).toBe('');
 });

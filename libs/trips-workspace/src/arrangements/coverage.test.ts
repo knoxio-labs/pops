@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { sourceStay, sourceVisit } from '../visit/period-fixtures';
+import { sourceStay, sourceVisit } from '../visit/test-utils';
 import { arrangementVisitCoverage } from './coverage';
 
 import type { ArrangementSources } from './types';

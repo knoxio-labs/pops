@@ -45,6 +45,7 @@ function visit(id: number, timing: Visit['timing'] = {}): Visit {
     id,
     tripId: 1,
     placeId: id,
+    revision: 0,
     timing,
     notes: '',
     sourceLinks: [],
@@ -163,7 +164,7 @@ describe('TripRows', () => {
 });
 
 describe('TripPreview', () => {
-  it('renders only selected source facts and opens the selected calendar and offers the working back action', async () => {
+  it('renders selected source facts and links visit occurrences, calendar and documents', async () => {
     const onBack = preview(
       trip(4, {
         name: 'Holiday',
@@ -186,6 +187,14 @@ describe('TripPreview', () => {
         .map((item) => item.textContent)
     ).toEqual(['LyonVisit10 Nov 2026 → 12 Nov 2026', 'ParisVisit… → …']);
     expect(screen.queryByText('Unrelated')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Open visit: Lyon' })).toHaveAttribute(
+      'href',
+      '/trips/1/visits/2'
+    );
+    expect(screen.getByRole('link', { name: 'Open visit: Paris' })).toHaveAttribute(
+      'href',
+      '/trips/1/visits/1'
+    );
     expect(screen.getByRole('link', { name: 'Calendar' })).toHaveAttribute(
       'href',
       '/trips/4/calendar'
@@ -198,6 +207,15 @@ describe('TripPreview', () => {
     expect(screen.getAllByRole('button')).toHaveLength(1);
     await userEvent.click(screen.getByRole('button', { name: 'Trips' }));
     expect(onBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps repeated-city visit links distinct by source occurrence ID', () => {
+    preview(trip(1), [visit(1), { ...visit(2), placeId: 1 }]);
+    expect(
+      screen
+        .getAllByRole('link', { name: 'Open visit: Paris' })
+        .map((link) => link.getAttribute('href'))
+    ).toEqual(['/trips/1/visits/1', '/trips/1/visits/2']);
   });
 
   it.each([

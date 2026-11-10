@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { accommodationCoverage, stayProvidesCoverage } from './coverage';
-import { sourceStay, sourceVisit } from './period-fixtures';
+import { sourceStay, sourceVisit } from './test-utils';
 
 import type { Stay } from './types';
 

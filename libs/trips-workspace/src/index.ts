@@ -13,6 +13,8 @@ export { ArrangementsWorkspace } from './arrangements/ArrangementsWorkspace';
 export type { ArrangementsWorkspaceProps, ArrangementLabels } from './arrangements/types';
 /** Locale-aware calendar source formatter; absent clocks never become viewer-local instants. */
 export { dateLabel as formatTripDate } from './visit/periods';
+export { VisitWorkspace } from './visit/VisitWorkspace';
+export type { VisitWorkspaceProps } from './visit/types';
 export { DocumentAssociationPicker } from './documents/DocumentAssociationPicker';
 export { TripDocumentsWorkspace } from './documents/TripDocumentsWorkspace';
 export type {

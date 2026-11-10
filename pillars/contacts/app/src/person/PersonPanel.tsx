@@ -1,15 +1,15 @@
 import { RotateCcw, Save } from 'lucide-react';
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 
 import { Button, PageHeader, Skeleton, Textarea, TextInput } from '@pops/ui';
 
 import { describeContactError } from '../errors';
-import { PersonFacts } from './PersonFacts';
+import { PersonFactsEditor } from './PersonFactsEditor';
 import { usePerson } from './usePerson';
+import { usePersonDraft } from './usePersonDraft';
 
-import type { PersonDraft, PersonGateway, PersonSnapshot } from './contracts';
+import type { PersonGateway, PersonSnapshot } from './contracts';
 
 /** Load a person with explicit recovery and keep the editor mounted while refreshing failed writes. */
 export function PersonPanel({ id, gateway }: { id: string; gateway: PersonGateway }) {
@@ -60,13 +60,8 @@ function PersonEditor({
   model: ReturnType<typeof usePerson>;
 }) {
   const { t } = useTranslation('contacts');
-  const [history, setHistory] = useState<PersonDraft[]>([]);
-  const draft = history.at(-1) ?? { name: data.entity.name, notes: data.entity.notes ?? '' };
-  const dirty = draft.name !== data.entity.name || draft.notes !== (data.entity.notes ?? '');
-  const disabled = model.saving || model.isFetching || model.isError || model.uncertain;
-  async function save() {
-    if (await model.save(draft)) setHistory([]);
-  }
+  const editor = usePersonDraft(data, model);
+  const { draft, disabled } = editor;
   return (
     <>
       <div className="space-y-3 rounded-xl border border-border bg-card p-4">
@@ -75,38 +70,33 @@ function PersonEditor({
           className="text-sm"
           value={draft.name}
           disabled={model.saving}
-          onChange={(event) => setHistory([...history, { ...draft, name: event.target.value }])}
+          onChange={(event) => editor.change({ ...draft, name: event.target.value })}
         />
-        <div className="flex flex-wrap gap-2">
-          <Button
-            className="min-h-11 bg-app-accent text-app-accent-foreground text-sm hover:bg-app-accent/90"
-            disabled={disabled || !dirty || !draft.name.trim()}
-            onClick={() => void save()}
-          >
-            <Save className="size-4" aria-hidden />
-            {t('person.save')}
-          </Button>
+        <PersonActions
+          saveDisabled={editor.saveDisabled}
+          undoDisabled={editor.undoDisabled}
+          save={() => void editor.save()}
+          undo={editor.undo}
+        />
+      </div>
+      {editor.outdated && (
+        <div role="alert" className="space-y-2 rounded-lg border border-border p-4">
+          <p>{t('person.draftChanged')}</p>
           <Button
             variant="outline"
-            className="min-h-11 text-sm"
-            disabled={model.saving || history.length === 0}
-            onClick={() => setHistory(history.slice(0, -1))}
+            className="min-h-11"
+            disabled={model.saving}
+            onClick={editor.discard}
           >
-            <RotateCcw className="size-4" aria-hidden />
-            {t('person.undo')}
+            {t('person.discardDraft')}
           </Button>
         </div>
-      </div>
-      <PersonFacts
-        data={data}
-        disabled={disabled}
-        addPoint={model.addPoint}
-        addAddress={model.addAddress}
-      />
+      )}
+      <PersonFactsEditor data={data} draft={draft} disabled={disabled} change={editor.change} />
       <PersonNotes
         value={draft.notes}
         disabled={model.saving}
-        change={(notes) => setHistory([...history, { ...draft, notes }])}
+        change={(notes) => editor.change({ ...draft, notes })}
       />
     </>
   );
@@ -136,5 +126,35 @@ function PersonNotes({
         onChange={(event) => change(event.target.value)}
       />
     </section>
+  );
+}
+
+function PersonActions({
+  saveDisabled,
+  undoDisabled,
+  save,
+  undo,
+}: {
+  saveDisabled: boolean;
+  undoDisabled: boolean;
+  save: () => void;
+  undo: () => void;
+}) {
+  const { t } = useTranslation('contacts');
+  return (
+    <div className="flex flex-wrap gap-2">
+      <Button
+        className="min-h-11 bg-app-accent text-app-accent-foreground text-sm hover:bg-app-accent/90"
+        disabled={saveDisabled}
+        onClick={save}
+      >
+        <Save className="size-4" aria-hidden />
+        {t('person.save')}
+      </Button>
+      <Button variant="outline" className="min-h-11 text-sm" disabled={undoDisabled} onClick={undo}>
+        <RotateCcw className="size-4" aria-hidden />
+        {t('person.undo')}
+      </Button>
+    </div>
   );
 }

@@ -8,6 +8,8 @@ export class TripsServiceError extends Error {
       | 'leg_removal_conflict'
       | 'order_invalid'
       | 'revision_conflict'
+      | 'visit_revision_conflict'
+      | 'visit_revision_exhausted'
       | 'arrangement_revision_conflict'
       | 'contact_unknown'
       | 'contacts_unavailable'
