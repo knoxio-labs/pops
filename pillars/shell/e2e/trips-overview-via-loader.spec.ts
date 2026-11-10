@@ -142,6 +142,10 @@ for (const viewport of [
       () => document.documentElement.scrollWidth > window.innerWidth
     );
     expect(overflow).toBe(false);
+    if (viewport.width === 390) {
+      const contentBounds = await page.getByRole('main').last().boundingBox();
+      expect(contentBounds?.width).toBeGreaterThanOrEqual(viewport.width - 32);
+    }
     const links = page.getByRole('main').last().getByRole('link');
     for (const link of await links.all()) {
       const box = await link.boundingBox();
