@@ -7,7 +7,14 @@ import { useSessionView } from '../shared/use-session-view';
 import type { RetainedSourceOwner } from '../shared/retained-session-store';
 import type { JourneyWorkspaceProps } from './types';
 import type { JourneyNavigation } from './use-journey-navigation';
-import type { JourneySelectionUndo } from './use-journey-selection';
+
+/** Own inverse identity and exact post-write revision, retained for the original trip grouping owner. */
+export interface JourneySelectionUndo {
+  groupId: number;
+  previousSelection: number;
+  originalViewed: number;
+  postWriteRevision: number;
+}
 
 interface OperationState {
   busy: boolean;

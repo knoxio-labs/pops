@@ -6,15 +6,9 @@ import type { UseQueryResult } from '@tanstack/react-query';
 
 import type { JourneyGroup } from './types';
 import type { JourneyNavigation } from './use-journey-navigation';
-import type { JourneyOperation } from './use-journey-operation';
+import type { JourneyOperation, JourneySelectionUndo } from './use-journey-operation';
 
-/** Own inverse identity and exact post-write revision, retained for the original trip grouping owner. */
-export interface JourneySelectionUndo {
-  groupId: number;
-  previousSelection: number;
-  originalViewed: number;
-  postWriteRevision: number;
-}
+export type { JourneySelectionUndo } from './use-journey-operation';
 /** Explicit revisioned selection operations without reinterpreting a literal source route. */
 export interface JourneySelection {
   undo: JourneySelectionUndo | undefined;
