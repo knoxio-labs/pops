@@ -4,15 +4,14 @@ import { z } from 'zod';
 import { ErrorBodySchema } from '@pops/types';
 
 import { ArrangementRevisionBody, ArrangementRevisionSchema } from './arrangement-revision.js';
+import { ContactUriSchema } from './contact-reference.js';
 
 /** Whole arrangements supported by explicit responsibility; legs are never targets. */
 export const RESPONSIBILITY_TARGET_KINDS = ['journey', 'stay', 'event', 'rental'] as const;
 /** Runtime ownership target vocabulary. */
 export const ResponsibilityTargetKindSchema = z.enum(RESPONSIBILITY_TARGET_KINDS);
-/** An issued Contacts identity, retained verbatim without requiring its source to be available. */
-export const ContactResponsibilityUriSchema = z
-  .string()
-  .regex(/^pops:contacts\/contact\/[^/\s]+$/u, 'Expected a Contacts-issued contact reference');
+/** Contact URI shape; new selections require owner proof, retained values remain usable offline. */
+export const ContactResponsibilityUriSchema = ContactUriSchema;
 /** Explicit self or Contacts responsibility; absence is represented by null. */
 export const ResponsibilitySchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('self') }),
@@ -62,6 +61,6 @@ export const responsibilitiesContract = c.router({
     path: '/trips/:tripId/responsibilities/:targetKind/:targetId',
     pathParams: Target,
     body: ArrangementRevisionBody.extend({ responsibility: ResponsibilitySchema.nullable() }),
-    responses: { 200: ArrangementResponsibilitySchema, ...errors },
+    responses: { 200: ArrangementResponsibilitySchema, 503: ErrorBodySchema, ...errors },
   },
 });

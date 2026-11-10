@@ -34,7 +34,7 @@ export function makeTripsRestHandlers(
   const db = deps.tripsDb.db;
   return server.router(tripsContract, {
     rentals: makeRentalHandlers(db),
-    responsibilities: makeResponsibilityHandlers(db),
+    responsibilities: makeResponsibilityHandlers(deps),
     events: makeEventHandlers(db),
     decisions: makeDecisionHandlers(db),
     decisionOptions: makeDecisionOptionHandlers(db),

@@ -11300,6 +11300,16 @@
               }
             },
             "description": "409"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "503"
           }
         },
         "tags": ["responsibilities"]

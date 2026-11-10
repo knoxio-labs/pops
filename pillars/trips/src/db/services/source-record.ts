@@ -9,6 +9,8 @@ export class TripsServiceError extends Error {
       | 'order_invalid'
       | 'revision_conflict'
       | 'arrangement_revision_conflict'
+      | 'contact_unknown'
+      | 'contacts_unavailable'
       | 'decision_revision_conflict'
       | 'option_not_removed'
       | 'journey_grouped'
