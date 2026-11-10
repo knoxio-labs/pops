@@ -10,7 +10,11 @@ internal struct TripCalendarFact: Identifiable {
 }
 
 internal func tripCalendarFacts(_ snapshot: TripSnapshot, zone: TimeZone) -> [TripCalendarFact] {
-    tripSources(snapshot).flatMap { source -> [TripCalendarFact] in
+    tripCalendarFacts(sources: tripSources(snapshot), zone: zone)
+}
+
+internal func tripCalendarFacts(sources: [TripSource], zone: TimeZone) -> [TripCalendarFact] {
+    sources.flatMap { source -> [TripCalendarFact] in
         switch source {
         case .stay(let stay):
             return [

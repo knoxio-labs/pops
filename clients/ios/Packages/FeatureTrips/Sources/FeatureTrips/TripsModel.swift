@@ -15,6 +15,11 @@ internal final class TripsModel {
 
     internal init(repository: any TripsReading) { self.repository = repository }
 
+    internal func canonicalSource(_ source: TripSource) -> TripSource? {
+        guard let snapshot, snapshot.trip.id == source.tripID else { return nil }
+        return allTripSources(snapshot).first { $0.id == source.id }
+    }
+
     internal func load() async {
         let token = UUID()
         request = token

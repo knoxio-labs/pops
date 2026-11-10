@@ -11,6 +11,14 @@ internal func tripName(_ trip: TripRecord) -> String {
 }
 
 extension TripSource {
+    internal var tripID: Int {
+        switch self {
+        case .stay(let stay): stay.tripId
+        case .journey(let journey): journey.tripId
+        case .event(let event): event.tripId
+        }
+    }
+
     internal func displayName(places: [TripPlace]) -> String {
         if case .journey(let journey) = self, journey.name == nil {
             let route = routeLabel(places: places)

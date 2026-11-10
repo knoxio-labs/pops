@@ -2,66 +2,45 @@ import AppCore
 import DesignSystem
 import SwiftUI
 
-/// Approved native Trips navigation backed only by injected source reads.
+/// One selected-Trip timeline and app-level search backed only by injected source reads.
 /// It performs no trip writes and opens files only after an actual authenticated download.
 public struct TripsRootView: View {
     @State private var model: TripsModel
-    @State private var tab = TripsTab.today
-    @State private var calendar = false
-    @State private var people = false
+    @State private var tab = TripsTab.trips
+    @State private var source: TripSource?
     private let documents: any DocumentsReading
 
     /// Creates the feature with authenticated trip and original-document readers from the composition root.
     public init(repository: any TripsReading, documents: any DocumentsReading) {
+        self.init(model: TripsModel(repository: repository), documents: documents)
+    }
+
+    internal init(model: TripsModel, documents: any DocumentsReading) {
         self.documents = documents
-        _model = State(initialValue: TripsModel(repository: repository))
+        _model = State(initialValue: model)
     }
 
     public var body: some View {
         TabView(selection: $tab) {
-            Tab("Today", systemImage: "sun.max.fill", value: TripsTab.today) {
-                stack("Today") { snapshot in
-                    TripsTodayView(snapshot: snapshot)
-                }
-            }
-            Tab("Plan", systemImage: "map.fill", value: TripsTab.plan) {
-                stack("Plan") { snapshot in
-                    TripsPlanView(snapshot: snapshot, calendar: $calendar)
-                }
-            }
-            Tab("Bookings", systemImage: "ticket.fill", value: TripsTab.bookings) {
-                stack("Bookings") { snapshot in TripsBookingsView(snapshot: snapshot) }
-            }
-            Tab("Documents", systemImage: "doc.fill", value: TripsTab.documents) {
-                stack("Documents") { snapshot in
-                    TripsDocumentsView(snapshot: snapshot, repository: documents)
-                }
+            Tab("Trips", systemImage: "map.fill", value: TripsTab.trips) {
+                stack
             }
             Tab(value: TripsTab.search, role: .search) {
                 NavigationStack {
                     TripsSearchView(trips: model.trips, snapshot: model.snapshot) { id in
-                        Task { await model.select(id) }
-                        tab = .plan
+                        openTrip(id)
+                    } openSource: { source in
+                        guard let id = model.snapshot?.trip.id else { return }
+                        openTrip(id, sourceID: source.id)
                     }
                 }
             }
         }
         .tint(Color.popsAccent)
         .task { await model.load() }
-        .sheet(isPresented: $people) {
-            NavigationStack {
-                ContentUnavailableView(
-                    "People unavailable", systemImage: "person.2",
-                    description: Text("The trip service does not provide linked people yet.")
-                )
-                .navigationTitle("People")
-            }
-        }
     }
 
-    private func stack<Content: View>(
-        _ title: String, @ViewBuilder content: @escaping (TripSnapshot) -> Content
-    ) -> some View {
+    private var stack: some View {
         NavigationStack {
             Group {
                 if model.loading {
@@ -69,25 +48,27 @@ public struct TripsRootView: View {
                 } else if let failure = model.failure {
                     TripsFailureView(failure: failure) { Task { await model.load() } }
                 } else if let snapshot = model.snapshot {
-                    content(snapshot)
+                    TripsTimelineView(snapshot: snapshot)
                 } else {
                     TripsSelectionView(model: model)
                 }
             }
-            .navigationTitle(title)
+            .navigationTitle(model.snapshot == nil ? "Trips" : "Timeline")
             .popsTitleDisplay(large: true)
             .toolbar {
                 ToolbarItem(placement: .principal) { tripMenu }
-                ToolbarItemGroup(placement: .primaryAction) {
-                    if tab == .today {
-                        Button("Calendar", systemImage: "calendar") {
-                            calendar = true
-                            tab = .plan
-                        }
-                        .frame(minHeight: PopsSize.touchTarget)
+                ToolbarItem(placement: .primaryAction) {
+                    if let snapshot = model.snapshot {
+                        TripsDocumentShortcut(snapshot: snapshot, repository: documents)
                     }
-                    Button("People", systemImage: "person.2") { people = true }
-                        .frame(minHeight: PopsSize.touchTarget).disabled(model.snapshot == nil)
+                }
+            }
+            .navigationDestination(item: $source) { source in
+                if let current = model.canonicalSource(source), let snapshot = model.snapshot {
+                    TripsSourceView(source: current, places: snapshot.places)
+                } else {
+                    ContentUnavailableView(
+                        "Recorded source unavailable", systemImage: "exclamationmark.triangle")
                 }
             }
             .refreshable { await model.load() }
@@ -95,11 +76,24 @@ public struct TripsRootView: View {
         .id(model.selectedID)
     }
 
+    private func openTrip(_ id: Int, sourceID: String? = nil) {
+        source = nil
+        tab = .trips
+        Task {
+            await model.select(id)
+            if let sourceID, model.selectedID == id, let snapshot = model.snapshot,
+                snapshot.trip.id == id
+            {
+                source = allTripSources(snapshot).first { $0.id == sourceID }
+            }
+        }
+    }
+
     private var tripMenu: some View {
         Menu {
             ForEach(model.trips) { trip in
                 Button {
-                    Task { await model.select(trip.id) }
+                    openTrip(trip.id)
                 } label: {
                     Text(tripName(trip))
                     if !trip.when.isEmpty { Text(trip.when) }
@@ -116,4 +110,4 @@ public struct TripsRootView: View {
     }
 }
 
-internal enum TripsTab: Hashable { case today, plan, bookings, documents, search }
+internal enum TripsTab: Hashable { case trips, search }
