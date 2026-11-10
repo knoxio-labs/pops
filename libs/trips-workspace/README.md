@@ -337,6 +337,11 @@ to the host QueryClient, effective API origin and owning trip, including the gen
 Every retained write, exact retry and Undo checks that original semantic origin at dispatch;
 changing a mutable client to another origin preserves the pending UUID/draft and blocks the request
 until that owner is restored. Replacing a client at the same origin is supported.
+Read keys and retained-session lookup capture that same per-view semantic owner. Reads check
+ownership before dispatch and after the response, and cached envelopes carry owner proof checked
+before editor delivery. An unavailable restored owner retains its last good source rather than
+accepting another origin's records. Confirmed in-flight write receipts remain valid; their cache
+invalidation targets the captured owner even if the mutable transport changes afterward.
 The optional controlled `selectedSource: CaptureSourceSelection` uses the generated-ID union
 `{ kind: 'capture'; id } | { kind: 'idea'; id }` to open only that exact active source through
 its existing expanded editor. Missing or removed sources show unavailable; no other row or

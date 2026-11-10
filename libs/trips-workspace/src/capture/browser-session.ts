@@ -12,6 +12,7 @@ import type { Dispatch, SetStateAction } from 'react';
 
 import type { ContactsHostCapability } from '@pops/pillar-sdk';
 
+import type { SourceOwner } from '../arrangements/source-owner';
 import type { DocumentUploadSession } from '../documents/useUploadFields';
 import type { CaptureEditor } from './editor-types';
 import type { CaptureIdentity, CapturePerformer, CaptureSource } from './types';
@@ -103,7 +104,14 @@ export function findCaptureSession(
   cache: QueryClient,
   identity: CaptureIdentity
 ): CaptureBrowserSession | undefined {
-  return sessions.get(cache)?.get(sessionKey(identity));
+  return findCaptureSessionForOwner(cache, sourceOwner(identity));
+}
+/** Look up the captured semantic owner without consulting its later mutable transport configuration. */
+export function findCaptureSessionForOwner(
+  cache: QueryClient,
+  owner: Pick<SourceOwner, 'origin' | 'tripId'>
+): CaptureBrowserSession | undefined {
+  return sessions.get(cache)?.get(sessionKey(owner));
 }
 /** Reuse the same session across contextual Capture, Inbox and Explore remounts. */
 export function retainCaptureSession(
@@ -117,7 +125,7 @@ export function retainCaptureSession(
     owned = new Map();
     sessions.set(cache, owned);
   }
-  const key = sessionKey(identity);
+  const key = sessionKey(sourceOwner(identity));
   let session = owned.get(key);
   if (session === undefined) {
     session = new CaptureBrowserSession(source, identity.tripId, options.perform, options.contacts);
@@ -126,7 +134,6 @@ export function retainCaptureSession(
   }
   return session;
 }
-function sessionKey(identity: CaptureIdentity): string {
-  const owner = sourceOwner(identity);
+function sessionKey(owner: Pick<SourceOwner, 'origin' | 'tripId'>): string {
   return JSON.stringify([owner.origin, owner.tripId]);
 }

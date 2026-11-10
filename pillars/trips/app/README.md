@@ -91,3 +91,5 @@ read during refresh failures. Calendar date bounds remain separate from resolved
 source clocks; the optional journey window uses the owning timing endpoint.
 
 The public `CaptureSourceSelection` union selects an exact persisted Capture or Idea ID and opens its existing editor. `selectedSource: undefined` or `null` leaves the ordinary tool view; a missing or removed selected source stays unavailable without falling back to a different row. Contextual source changes retain owner-scoped drafts, unknown operation UUIDs and Undo history. Retained writes/retries/Undo are fenced to the original effective Trips origin, including the default client; a same-origin replacement client is supported.
+
+Each contextual view also captures its read/cache owner. Mutable origin changes cannot refetch another owner beneath the old key or deliver foreign cached data into its editor. Restoring an unavailable owner keeps its last good source and pending commands. An accepted in-flight write is retained, and invalidation stays with that write's original cache scope.

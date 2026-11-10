@@ -1,12 +1,13 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { RotateCcw } from 'lucide-react';
-import { useSyncExternalStore } from 'react';
+import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
 
 import { Button, ErrorState } from '@pops/ui';
 
+import { sourceOwner } from '../arrangements/source-owner';
 import { requestProblem } from '../stay/api';
-import { captureQueryKey, loadCaptureSource, performCaptureRequest } from './api';
-import { findCaptureSession, retainCaptureSession } from './browser-session';
+import { captureQueryKey, performCaptureRequest } from './api';
+import { findCaptureSessionForOwner, retainCaptureSession } from './browser-session';
 import { CaptureComposer } from './CaptureComposer';
 import { CaptureContactChooser } from './CaptureContactChooser';
 import { CaptureExplore } from './CaptureExplore';
@@ -14,12 +15,14 @@ import { CaptureInbox } from './CaptureInbox';
 import { CaptureSelectedSource } from './CaptureSelectedSource';
 import { useCaptureContext } from './use-capture-context';
 import { useCaptureEditor } from './use-capture-editor';
+import { CaptureWorkspaceReadScope } from './workspace-read';
 
 import type { JSX } from 'react';
 
 import type { CaptureBrowserSession } from './browser-session';
 import type { CaptureEditorState } from './editor-types';
 import type { CaptureWorkspaceProps } from './types';
+import type { CaptureWorkspaceRead } from './workspace-read';
 
 /** Contextual Capture tools retain one owning-trip composer and command history across view remounts. */
 export function CaptureWorkspace(props: CaptureWorkspaceProps): JSX.Element {
@@ -33,14 +36,22 @@ export function CaptureWorkspace(props: CaptureWorkspaceProps): JSX.Element {
 }
 function LoadWorkspace(props: CaptureWorkspaceProps): JSX.Element {
   const cache = useQueryClient();
-  const retained = findCaptureSession(cache, props);
+  const [scope] = useState(() => new CaptureWorkspaceReadScope(props));
+  const { client, origin, tripId } = sourceOwner(props);
+  const currentOwner = useMemo(
+    () => Object.freeze({ client, origin, tripId }),
+    [client, origin, tripId]
+  );
+  const select = useCallback(
+    (read: CaptureWorkspaceRead) => scope.select(currentOwner, read),
+    [scope, currentOwner]
+  );
+  const retained = findCaptureSessionForOwner(cache, scope.owner.captured);
   const query = useQuery({
-    queryKey: captureQueryKey(props),
+    queryKey: scope.key,
     retry: false,
-    queryFn: async ({ signal }) => {
-      const generation = findCaptureSession(cache, props)?.editor.getState().generation ?? 0;
-      return { source: await loadCaptureSource(props, signal), generation };
-    },
+    queryFn: ({ signal }) => scope.load(cache, props, signal),
+    select,
   });
   if (retained === undefined && query.data === undefined)
     return query.isError ? (
@@ -58,19 +69,19 @@ function LoadWorkspace(props: CaptureWorkspaceProps): JSX.Element {
         contacts: props.contacts,
       }));
   if (!session) throw new Error('Missing source session');
-  return <WorkspaceSession session={session} query={query} {...props} />;
+  return <WorkspaceSession session={session} query={query} scope={scope} {...props} />;
 }
 function WorkspaceSession({
   session,
   query,
+  scope,
   ...props
 }: CaptureWorkspaceProps & {
   session: CaptureBrowserSession;
-  query: ReturnType<
-    typeof useQuery<{ source: Awaited<ReturnType<typeof loadCaptureSource>>; generation: number }>
-  >;
+  query: ReturnType<typeof useQuery<CaptureWorkspaceRead>>;
+  scope: CaptureWorkspaceReadScope;
 }): JSX.Element {
-  const state = useCaptureEditor(session, props, query.data);
+  const state = useCaptureEditor(session, props, query.data, scope.key);
   const context = useCaptureContext(props);
   return (
     <section aria-label="Capture tools" className="space-y-5">
