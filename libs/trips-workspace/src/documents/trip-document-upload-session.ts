@@ -1,3 +1,4 @@
+import { documentQueryKeys } from './query-keys';
 import { TripDocumentUploadContextError, uploadSessionKey } from './upload-context';
 import { createDocumentUploadSession } from './useUploadFields';
 
@@ -31,6 +32,8 @@ export { TripDocumentUploadContextError } from './upload-context';
  */
 export class TripDocumentUploadSession {
   readonly context: TripDocumentUploadContext;
+  /** Captured owner task namespace; mutable client configuration cannot rebind retained proof. */
+  readonly taskScope: readonly [string, string];
   private readonly key: string;
   private intents: readonly TripDocumentFileIntent[] = [];
   private readonly listeners = new Set<() => void>();
@@ -38,6 +41,8 @@ export class TripDocumentUploadSession {
   private constructor(context: TripDocumentUploadContext) {
     this.context = Object.freeze({ ...context, target: Object.freeze({ ...context.target }) });
     this.key = contextKey(context);
+    const [kind, origin] = documentQueryKeys.task(context.documentsClient, '');
+    this.taskScope = Object.freeze([kind, origin]);
   }
 
   /** Create independent queue storage, including when another queue has the same target. */

@@ -132,6 +132,8 @@ provenance. Completed and explicit duplicate task results expose the canonical d
 ID while retaining the accepted task ID. Verified owner task results also remain in
 the receipt when its query cache is evicted; pending task lookup resumes on remount.
 An older read without a canonical identity cannot erase a verified original.
+Retained task query namespaces stay bound to the file intent's captured owner;
+a mutable client origin change cannot seed that proof into another owner's cache.
 The controller never repeats an accepted or
 uncertain upload; a definite rejection can be retried explicitly.
 
