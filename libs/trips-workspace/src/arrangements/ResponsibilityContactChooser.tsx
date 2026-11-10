@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 
 import { Button } from '@pops/ui';
 
@@ -23,12 +23,13 @@ export function ResponsibilityContactChooser({
   const [intent, setIntent] = useState<ContactChooserIntent>();
   const [open, setOpen] = useState(false);
   const isOpen = useRef(false);
-  useEffect(
-    () => () => {
-      isOpen.current = false;
-    },
-    []
-  );
+  const mounted = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   function changeOpen(value: boolean): void {
     isOpen.current = value;
     setOpen(value);
@@ -49,16 +50,18 @@ export function ResponsibilityContactChooser({
       >
         {identity.labels.chooseContact}
       </Button>
-      {Chooser && (
-        <Chooser
-          open={open}
-          onOpenChange={changeOpen}
-          onSelect={(selection) => {
-            if (!isOpen.current || disabled || !intent) return;
-            changeOpen(false);
-            select(selection.reference.uri, intent);
-          }}
-        />
+      {Chooser && open && (
+        <Suspense fallback={<p role="status">{identity.labels.loading}</p>}>
+          <Chooser
+            open={open}
+            onOpenChange={changeOpen}
+            onSelect={(selection) => {
+              if (!mounted.current || !isOpen.current || disabled || !intent) return;
+              changeOpen(false);
+              select(selection.reference.uri, intent);
+            }}
+          />
+        </Suspense>
       )}
     </>
   );

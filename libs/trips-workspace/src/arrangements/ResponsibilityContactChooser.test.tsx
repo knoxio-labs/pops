@@ -1,5 +1,6 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { lazy, StrictMode, Suspense } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ResponsibilityContactChooser } from './ResponsibilityContactChooser';
@@ -19,12 +20,17 @@ function setup() {
   const intent: ContactChooserIntent = {
     Chooser: (props) => {
       mounts.push(props);
-      return props.open ? (
+      return (
         <>
-          <button onClick={() => props.onSelect(selection)}>Select issued choice</button>
-          <button onClick={() => props.onOpenChange(false)}>Cancel picker</button>
+          <button>Owner trigger</button>
+          {props.open && (
+            <>
+              <button onClick={() => props.onSelect(selection)}>Select issued choice</button>
+              <button onClick={() => props.onOpenChange(false)}>Cancel picker</button>
+            </>
+          )}
         </>
-      ) : null;
+      );
     },
   };
   const getIntent = vi.fn(() => intent);
@@ -63,6 +69,39 @@ describe('Responsibility owner picker boundary', () => {
     active?.onSelect(selection);
     expect(select).toHaveBeenCalledExactlyOnceWith(selection.reference.uri, intent);
     expect(screen.queryByRole('button', { name: 'Select issued choice' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Owner trigger' })).not.toBeInTheDocument();
+  });
+  it('delivers a selection after the opaque owner view suspends on first load', async () => {
+    let resolveOwner: ((module: { default: ContactChooserIntent['Chooser'] }) => void) | undefined;
+    const owner = new Promise<{ default: ContactChooserIntent['Chooser'] }>((resolve) => {
+      resolveOwner = resolve;
+    });
+    const intent = { Chooser: lazy(() => owner) };
+    const select = vi.fn();
+    render(
+      <StrictMode>
+        <Suspense fallback={<p>Host loading</p>}>
+          <ResponsibilityContactChooser
+            identity={{ ...identity, contactChooserIntent: () => intent }}
+            target={target}
+            disabled={false}
+            select={select}
+          />
+        </Suspense>
+      </StrictMode>
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Choose contact' }));
+    expect(screen.queryByText('Host loading')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Choose contact' })).toBeInTheDocument();
+    await act(async () => {
+      resolveOwner?.({
+        default: ({ onSelect }) => (
+          <button onClick={() => onSelect(selection)}>Choose resolved owner</button>
+        ),
+      });
+    });
+    await userEvent.click(await screen.findByRole('button', { name: 'Choose resolved owner' }));
+    expect(select).toHaveBeenCalledExactlyOnceWith(selection.reference.uri, intent);
   });
   it('retains the host intent on reopen while cancelled and unmounted views cannot write', async () => {
     const { mounts, select, getIntent, user, unmount } = setup();
