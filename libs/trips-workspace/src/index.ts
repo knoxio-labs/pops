@@ -53,6 +53,14 @@ export { TripOverview } from './overview/TripOverview';
 export type { TripOverviewProps, OverviewLabels, OverviewKind } from './overview/types';
 export { ArrangementsWorkspace } from './arrangements/ArrangementsWorkspace';
 export type { ArrangementsWorkspaceProps, ArrangementLabels } from './arrangements/types';
+export { RentalWorkspace as RentalContextEditor } from './arrangements/RentalWorkspace';
+export type {
+  RentalContext,
+  RentalContextEditorProps,
+  RentalLabels,
+  RentalSourceContext,
+} from './arrangements/rental-context';
+export type { Rental, RentalPatch } from './arrangements/types';
 export { Responsibility as ArrangementResponsibilityField } from './arrangements/Responsibility';
 export { ResponsibilitySessions as ArrangementResponsibilityProvider } from './arrangements/ResponsibilitySessions';
 export type { ArrangementTarget, ArrangementResponsibility } from './arrangements/types';

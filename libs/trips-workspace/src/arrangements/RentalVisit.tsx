@@ -5,7 +5,7 @@ import { visitTitle } from './source-labels';
 
 import type { JSX } from 'react';
 
-import type { ArrangementSources, ArrangementsWorkspaceProps } from './types';
+import type { RentalContext, RentalSourceContext } from './rental-context';
 
 /** Select only an actual ordered Visit identity; retain and independently clear an unresolved stored reference. */
 export function RentalVisit({
@@ -17,14 +17,14 @@ export function RentalVisit({
 }: {
   label: string;
   value: number | null;
-  sources: ArrangementSources;
-  identity: ArrangementsWorkspaceProps;
+  sources: RentalSourceContext;
+  identity: RentalContext;
   onChange: (id: number | null) => void;
 }): JSX.Element {
-  const visits = sources.visits ?? [];
+  const visits = sources.visits?.filter((visit) => visit.tripId === identity.tripId) ?? [];
   const choices = visits.map((visit) => ({
     value: String(visit.id),
-    label: visitTitle(visit, sources, identity.labels),
+    label: visitTitle(visit, { ...sources, visits }, identity.labels),
   }));
   if (value !== null && !visits.some((visit) => visit.id === value))
     choices.push({ value: String(value), label: identity.labels.visitUnavailable });

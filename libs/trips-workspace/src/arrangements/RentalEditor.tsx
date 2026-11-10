@@ -6,7 +6,8 @@ import { useRentalEditor } from './use-rental-editor';
 
 import type { JSX } from 'react';
 
-import type { ArrangementSources, ArrangementsWorkspaceProps, Rental } from './types';
+import type { RentalContext, RentalSourceContext } from './rental-context';
+import type { Rental } from './types';
 import type { RentalEditorState } from './use-rental-editor';
 
 /** Canonical rental facts save independently, retain failed drafts and retry the original revision without rebasing. */
@@ -17,20 +18,20 @@ export function RentalEditor({
   saved,
   reload,
 }: {
-  identity: ArrangementsWorkspaceProps;
+  identity: RentalContext;
   source: Rental;
-  sources: ArrangementSources;
+  sources: RentalSourceContext;
   saved: (rental: Rental) => void;
   reload: () => Promise<Rental | undefined>;
 }): JSX.Element {
   const labels = identity.labels;
   const editor = useRentalEditor(identity, source, saved);
-  const { failure, busy, changed, run } = editor;
+  const { failure, busy, changed } = editor;
   return (
     <section className="space-y-4">
       {changed && <p role="status">{labels.sourceChanged}</p>}
       {failure && (
-        <ErrorState error={requestProblem(failure.error)} onRetry={() => void run(failure.body)} />
+        <ErrorState error={requestProblem(failure.error)} onRetry={() => void editor.retry()} />
       )}
       <RentalFields identity={identity} sources={sources} editor={editor} />
       {(changed || failure) && (
@@ -55,8 +56,8 @@ function RentalFields({
   sources,
   editor,
 }: {
-  identity: ArrangementsWorkspaceProps;
-  sources: ArrangementSources;
+  identity: RentalContext;
+  sources: RentalSourceContext;
   editor: RentalEditorState;
 }): JSX.Element {
   const { labels } = identity;
@@ -95,8 +96,8 @@ function RentalEndpoints({
   sources,
   editor,
 }: {
-  identity: ArrangementsWorkspaceProps;
-  sources: ArrangementSources;
+  identity: RentalContext;
+  sources: RentalSourceContext;
   editor: RentalEditorState;
 }): JSX.Element {
   const { labels } = identity;
@@ -138,7 +139,7 @@ function RentalActions({
   identity,
   editor,
 }: {
-  identity: ArrangementsWorkspaceProps;
+  identity: RentalContext;
   editor: RentalEditorState;
 }): JSX.Element {
   const { labels } = identity;
@@ -156,9 +157,7 @@ function RentalActions({
         variant="ghost"
         className="min-h-11"
         disabled={!inverse || dirty}
-        onClick={() => {
-          if (inverse) void run({ ...inverse, expectedRevision: confirmed.revision });
-        }}
+        onClick={() => void editor.undo()}
       >
         {labels.undo}
       </Button>

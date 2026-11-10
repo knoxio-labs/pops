@@ -13,6 +13,8 @@ import {
   staysCreate,
 } from '../trips-api/sdk.gen';
 import {
+  zRentalsGetResponse,
+  zRentalsUpdateResponse,
   zResponsibilitiesGetResponse,
   zResponsibilitiesReplaceResponse,
 } from '../trips-api/zod.gen';
@@ -68,7 +70,13 @@ export async function loadRental(
   props: Pick<ArrangementsWorkspaceProps, 'tripId' | 'client'>,
   id: number
 ): Promise<Rental> {
-  return unwrap(await rentalsGet({ client: props.client, path: { tripId: props.tripId, id } }));
+  const result = await rentalsGet({ client: props.client, path: { tripId: props.tripId, id } });
+  const source = unwrap(result);
+  if (result.response?.status !== 200) throw new Error('Unexpected Rental read status');
+  const parsed = zRentalsGetResponse.parse(source);
+  if (parsed.id !== id || parsed.tripId !== props.tripId)
+    throw new Error('Rental source does not match its target');
+  return parsed;
 }
 /** Read explicit assignments; an absent row is an untouched target, never an inferred owner. */
 export async function loadResponsibilities(
@@ -112,9 +120,14 @@ export async function patchRental(
   id: number,
   body: RentalPatch
 ): Promise<Rental> {
-  return unwrap(
-    await rentalsUpdate({ client: props.client, path: { tripId: props.tripId, id }, body })
-  );
+  const result = await rentalsUpdate({
+    client: props.client,
+    path: { tripId: props.tripId, id },
+    body,
+  });
+  const receipt = unwrap(result);
+  if (result.response?.status !== 200) throw new Error('Unconfirmed Rental write status');
+  return zRentalsUpdateResponse.parse(receipt);
 }
 /** Capture a real Stay for the explicitly selected uncovered interval, then open its canonical editor. */
 export async function createGapStay(

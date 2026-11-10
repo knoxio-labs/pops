@@ -72,6 +72,31 @@ Rental edits use the canonical rental revision, preserve failed drafts and exact
 retry bodies, and persist Undo against the confirmed successor revision. A newer
 source requires an explicit canonical reload before further edits.
 
+`RentalContextEditor({ identity: { tripId, client?, labels: RentalLabels }, id,
+sources: { visits?, places? }, saved? })` composes that same canonical Rental form
+inside the Trip context, without navigation, Documents or a second editor.
+Only actual owning-trip Visit IDs become endpoint choices; unresolved stored IDs
+remain visible and independently clearable. Source status and date fields keep
+their existing contract values.
+
+Rental controllers reuse the shared retained-session store, view leases and direct
+editing engine for the host QueryClient lifetime. Exact client instance, captured
+origin, trip and Rental isolate their source caches, drafts and commands. A changed
+connection blocks the old view until it is explicitly reopened; returning to the
+original context restores its draft, unknown request or own successful inverse,
+even after query-cache eviction. Closing one view cannot cancel another view or
+release a pending write claim. Late receipts remain with the original controller
+and cannot invoke a replaced view's callback or seed another context's cache.
+
+The Rental adapter admits passive reads only at the confirmed revision. A newer
+aggregate requires explicit Reload; older reloads cannot replace a confirmed
+successor. GET values and explicit Reload never establish own PATCH proof. Retry
+keeps the original source revision and fields, while successful Undo uses the own
+confirmed successor. Only validated canonical HTTP 200 responses can acknowledge
+writes; malformed, foreign or unexpected-success responses remain uncertain.
+The optional saved callback is delivered only for a known own response while its
+initiating view remains current.
+
 `visit/coverage` is the shared checkout-exclusive accommodation projection. The
 explicit source-state policy is Agreed, Reserved and Purchased covering nights;
 Considering remains an idea. It retains every candidate and activity, including
