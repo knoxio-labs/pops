@@ -4,14 +4,9 @@ import { useRetainedSession } from '../shared/use-retained-session';
 import { useSessionView } from '../shared/use-session-view';
 
 import type { DurationDraft, MonthDraft } from './approximate';
-import type { Visit, VisitWorkspaceProps } from './types';
+import type { Visit, VisitTimingDrafts, VisitWorkspaceProps } from './types';
 
-/** Raw approximate timing buffers and their mounted view's edit permission. */
-export interface VisitTimingDrafts {
-  month: SemanticDraft<MonthDraft>;
-  duration: SemanticDraft<DurationDraft>;
-  isCurrent: () => boolean;
-}
+export type { VisitTimingDrafts } from './types';
 
 const sessions = new RetainedSessionStore<Pick<VisitTimingDrafts, 'month' | 'duration'>>();
 
