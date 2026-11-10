@@ -93,6 +93,9 @@
     "Considering": "Em consideração",
     "Planned": "Planejado",
     "Not agreed": "Não combinado",
-    "Agreed": "Combinado"
+    "Agreed": "Combinado",
+    "contactMissing": "Contato não está mais disponível",
+    "contactReadError": "Não foi possível ler os detalhes do contato",
+    "contactCanonical": "Contato canônico: {{uri}}"
   }
 }

@@ -1,4 +1,4 @@
-import type { ContactsHostCapability } from '@pops/pillar-sdk';
+import type { ContactReferenceReadResult, ContactsHostCapability } from '@pops/pillar-sdk';
 
 import type { Client } from '../trips-api/client';
 import type {
@@ -39,7 +39,10 @@ export type PeopleTextKey =
   | 'visitUnavailable'
   | 'placeUnavailable'
   | 'contactUnverified'
+  | 'contactMissing'
   | 'contactUnavailable'
+  | 'contactReadError'
+  | 'contactCanonical'
   | 'contactCleared'
   | 'chooserUnavailable'
   | 'contact'
@@ -58,15 +61,11 @@ export type PeopleTextKey =
   | 'Not agreed'
   | 'Agreed';
 /** Contacts-owned read result; failed reads never assert that a retained identity is missing. */
-export type MeetingContact =
-  | { status: 'available'; uri: string; name: string; href: string }
-  | { status: 'unavailable' }
-  | { status: 'unverified' };
+export type MeetingContact = ContactReferenceReadResult | { status: 'unverified' };
 /** Authenticated source identity, translations, and source-owner integrations supplied by the host. */
 export interface PeopleWorkspaceProps {
   tripId: number;
   client?: Client;
   text: PeopleText;
   contacts?: ContactsHostCapability;
-  resolveContact?: (uri: string) => Promise<MeetingContact>;
 }

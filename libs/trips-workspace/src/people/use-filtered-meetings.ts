@@ -1,5 +1,7 @@
 import { useQueries } from '@tanstack/react-query';
 
+import { meetingContactQuery } from './contact-query';
+
 import type { PeopleFilters, PeopleSectionProps } from './PeopleControls';
 import type { MeetingPlan } from './types';
 
@@ -15,13 +17,7 @@ export function useFilteredMeetings(
     ),
   ];
   const contacts = useQueries({
-    queries: uris.map((uri) => ({
-      queryKey: ['meeting-contact', uri],
-      queryFn: () =>
-        props.workspace.resolveContact?.(uri) ?? Promise.resolve({ status: 'unverified' as const }),
-      retry: false,
-      enabled: props.workspace.resolveContact !== undefined,
-    })),
+    queries: uris.map((uri) => meetingContactQuery(props.workspace.contacts, uri)),
   });
   const names = new Map(
     uris.map((uri, index) => {

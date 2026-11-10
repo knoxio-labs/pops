@@ -6,7 +6,14 @@ import { PeopleWorkspace } from './PeopleWorkspace';
 import { meetingPlan } from './test-utils';
 import { peopleTransport } from './transport.test-utils';
 
+import type { ContactsHostCapability } from '@pops/pillar-sdk';
+
 import type { PeopleWorkspaceProps } from './types';
+function contactHost(
+  readContactReference: NonNullable<ContactsHostCapability['readContactReference']>
+): ContactsHostCapability {
+  return { createIntent: () => ({ Chooser: () => null }), readContactReference };
+}
 
 afterEach(cleanup);
 function mount(props: PeopleWorkspaceProps) {
@@ -26,12 +33,12 @@ describe('meeting workspace source actions', () => {
       tripId: 7,
       client: api.client,
       text: (key) => key,
-      resolveContact: async () => ({
+      contacts: contactHost(async () => ({
         status: 'available',
-        uri: 'pops:contacts/contact/canonical',
+        reference: { canonicalId: 'canonical', uri: 'pops:contacts/contact/canonical' },
         name: 'Casey Park',
         href: '/contacts/reference/owner-issued',
-      }),
+      })),
     });
     await screen.findByText('Casey Park');
     fireEvent.change(screen.getByLabelText('search'), { target: { value: 'Casey' } });
@@ -43,9 +50,14 @@ describe('meeting workspace source actions', () => {
   it('edits exact association, agreement and independent reversed dates while keeping unavailable identity', async () => {
     const api = peopleTransport();
     const resolveContact = vi
-      .fn<NonNullable<PeopleWorkspaceProps['resolveContact']>>()
+      .fn<NonNullable<ContactsHostCapability['readContactReference']>>()
       .mockResolvedValue({ status: 'unavailable' });
-    mount({ tripId: 7, client: api.client, text: (key) => key, resolveContact });
+    mount({
+      tripId: 7,
+      client: api.client,
+      text: (key) => key,
+      contacts: contactHost(resolveContact),
+    });
     let card = await screen.findByRole('article', { name: 'Coffee' });
     expect(await within(card).findByText('contactUnavailable')).toBeVisible();
     expect(within(card).getByText('pops:contacts/contact/owner-issued')).toBeVisible();
@@ -75,7 +87,9 @@ describe('meeting workspace source actions', () => {
     expect(api.writes[2]).toMatchObject({
       command: { expectedRevision: 3, patch: { startDate: '2030-02-01' } },
     });
-    expect(resolveContact).toHaveBeenCalledWith('pops:contacts/contact/owner-issued');
+    expect(resolveContact).toHaveBeenCalledWith('pops:contacts/contact/owner-issued', {
+      signal: expect.any(AbortSignal),
+    });
   });
 
   it('keeps failed draft and exact operation across workspace unmount before retry', async () => {
@@ -105,9 +119,9 @@ describe('meeting workspace source actions', () => {
       tripId: 7,
       client: api.client,
       text: (key) => key,
-      resolveContact: async () => {
+      contacts: contactHost(async () => {
         throw new Error('offline');
-      },
+      }),
     });
     await screen.findByText('trips.contact.read');
     expect(screen.queryByText('contactUnavailable')).not.toBeInTheDocument();

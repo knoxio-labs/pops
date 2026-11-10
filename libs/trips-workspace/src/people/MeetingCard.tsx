@@ -49,7 +49,7 @@ export function MeetingCard({
         <MeetingContact
           uri={draft.contactUri}
           canChoose={workspace.contacts !== undefined}
-          resolveContact={workspace.resolveContact}
+          contacts={workspace.contacts}
           text={text}
           choose={() => setChoosing(true)}
           clear={() => save({ contactUri: null })}

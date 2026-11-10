@@ -3,11 +3,14 @@ import { ExternalLink, UserRound, UserRoundX } from 'lucide-react';
 
 import { Button } from '@pops/ui';
 
+import { meetingContactQuery } from './contact-query';
+import { ContactReadStatus } from './ContactReadStatus';
+
 import type { JSX } from 'react';
 
-import type { PeopleWorkspaceProps } from './types';
+import type { MeetingContact as ContactState, PeopleWorkspaceProps } from './types';
 
-interface MeetingContactProps extends Pick<PeopleWorkspaceProps, 'resolveContact' | 'text'> {
+interface MeetingContactProps extends Pick<PeopleWorkspaceProps, 'contacts' | 'text'> {
   uri: string | null;
   choose: () => void;
   clear: () => void;
@@ -16,21 +19,13 @@ interface MeetingContactProps extends Pick<PeopleWorkspaceProps, 'resolveContact
 /** Resolve retained identities through the owner; a failed read stays unverified and still permits clear/edit. */
 export function MeetingContact({
   uri,
-  resolveContact,
+  contacts,
   text,
   choose,
   clear,
   canChoose,
 }: MeetingContactProps): JSX.Element {
-  const source = useQuery({
-    queryKey: ['meeting-contact', uri],
-    queryFn: () =>
-      uri && resolveContact
-        ? resolveContact(uri)
-        : Promise.resolve({ status: 'unverified' as const }),
-    enabled: uri !== null,
-    retry: false,
-  });
+  const source = useQuery(meetingContactQuery(contacts, uri));
   const contact = source.data;
   const name = contactName(uri, contact, text);
   return (
@@ -57,7 +52,7 @@ export function MeetingContact({
             {text('clearContact')}
           </Button>
         )}
-        {source.isError && (
+        {canRetry(source.isError, contact) && (
           <Button variant="ghost" className="min-h-11" onClick={() => void source.refetch()}>
             {text('retry')}
           </Button>
@@ -71,19 +66,23 @@ export function MeetingContact({
           {text('failed')} <code>trips.contact.read</code>
         </p>
       )}
+      <ContactReadStatus contact={contact} uri={uri} text={text} />
     </div>
   );
 }
 
+function canRetry(failed: boolean, contact: ContactState | undefined): boolean {
+  return failed || contact?.status === 'unavailable' || contact?.status === 'readError';
+}
+
 function contactName(
   uri: string | null,
-  contact:
-    | Awaited<ReturnType<NonNullable<PeopleWorkspaceProps['resolveContact']>>>
-    | null
-    | undefined,
+  contact: ContactState | null | undefined,
   text: PeopleWorkspaceProps['text']
 ): string {
   if (uri === null) return text('contactCleared');
   if (contact?.status === 'available') return contact.name;
-  return text(contact?.status === 'unavailable' ? 'contactUnavailable' : 'contactUnverified');
+  if (contact?.status === 'missing') return text('contactMissing');
+  if (contact?.status === 'unavailable') return text('contactUnavailable');
+  return text(contact?.status === 'readError' ? 'contactReadError' : 'contactUnverified');
 }

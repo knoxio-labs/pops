@@ -93,6 +93,9 @@
     "Considering": "Considering",
     "Planned": "Planned",
     "Not agreed": "Not agreed",
-    "Agreed": "Agreed"
+    "Agreed": "Agreed",
+    "contactMissing": "Contact no longer available",
+    "contactReadError": "Contact details could not be read",
+    "contactCanonical": "Canonical Contact: {{uri}}"
   }
 }
