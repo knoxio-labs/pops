@@ -2,6 +2,21 @@ import { expect, test } from './fixtures/pillar-rest-guard';
 import { json, stubShellBoot } from './helpers/pillar-rest';
 import { stubUnavailableSourceDocuments } from './helpers/trips-source-documents';
 
+const timelineReads = {
+  'meeting-plans': { meetingPlans: [] },
+  'capture-workspace': {
+    captures: [],
+    ideas: [],
+    associations: [],
+    memberships: [],
+    events: [],
+    journeys: [],
+    stays: [],
+  },
+  rentals: { rentals: [] },
+  route: { tripId: 72, revision: 0, order: [], paths: [], missingSources: [] },
+};
+
 const trip = {
   id: 71,
   name: null,
@@ -27,6 +42,7 @@ test('Trips loads its real remote, creates permanently, and edits metadata throu
   await page.route(/\/trips-api\/places$/, (route) => json(route, 200, { places: [] }));
   await page.route(/\/trips-api\/trips\/\d+\/visits$/, (route) => json(route, 200, { visits: [] }));
   for (const [collection, response] of [
+    ...Object.entries(timelineReads),
     ['stays', { stays: [] }],
     ['events', { events: [] }],
     ['journeys', { journeys: [] }],
