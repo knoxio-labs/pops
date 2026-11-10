@@ -53,6 +53,19 @@ must belong to the trip and appear exactly once. Reordering is atomic and change
 only position, preserving source values and timestamps. No purchase, reservation
 or certainty is inferred from route or timing.
 
+Events belong to trips independently of visits. `GET/POST /trips/:tripId/events`
+and `GET/PATCH/DELETE /trips/:tripId/events/:id` retain event source facts.
+The optional visit must belong to the same trip; changing the association never
+copies dates. Dates, clocks and the source time zone are independently optional.
+Contradictory valid dates remain editable; missing clocks never become midnight.
+Intention, arrangement and purchase use the same independent source vocabulary
+as journey legs. Only `Purchased` records a purchase. Venue, organiser and
+document links are opaque source references, not hydrated external identities.
+Source and ticket URLs accept HTTP(S) only. Patches retain omitted fields,
+clear nullable facts with null, and replace supplied timing objects and arrays.
+Deleting an event never deletes a referenced contact, document or booking.
+Event operations use the projected `trips.events` scope.
+
 Stays belong to trips independently of visits. `GET/POST /trips/:tripId/stays`
 and `GET/PATCH/DELETE /trips/:tripId/stays/:id` manage stable source records;
 lists use identity order, not route or date order. A nullable `visitId` may refer
@@ -71,6 +84,15 @@ are separate from `hostLinks` and `documentLinks`; each reference array uses the
 same explicit URI/optional-label contract. These links are opaque, retained even
 when their source is unavailable, and do not assert contact/document resolution
 or transfer ownership. Deleting a stay removes only that source record.
+
+Trips document associations use `POST/GET /trips/:tripId/document-associations`
+and `DELETE /trips/:tripId/document-associations/:id`. They retain the numeric
+Documents-owned Paperless identity and an explicit trip, visit, journey, stay
+or event target. Targets must belong to the route trip. Deleting an event,
+journey or stay atomically removes associations targeting only that record.
+Unlinking removes only the
+association; it does not modify the original document. Existing stay
+`documentLinks` remain opaque source references and are not rewritten.
 
 A stay patch preserves omitted fields. Supplied `timing` replaces the **complete**
 timing object, so `{}` clears it and `{ arrival: "2028-01-16" }` removes any
@@ -178,3 +200,57 @@ Run `mise exec -- pnpm --filter @pops/trips dev`. `PORT` defaults to 3018;
 `POPS_REGISTRY_ENABLED=true` enables self-registration. Production uses its own
 volume and Litestream sidecar. Generate migrations with
 `mise exec -- pnpm exec drizzle-kit generate` from this directory.
+
+## Decisions and options
+
+Decisions belong to a trip independently of its arrangements. `/trips/:tripId/decisions`
+provides list/create and `/:id` provides get/patch/delete. Source fields are
+`question`, nullable date-only `deadline`, `notes` and `sourceLinks`. An empty
+decision has no selected option or deadline. Options at `/:decisionId/options`
+provide list/create and `/:id` get/patch/delete, retaining `title`, `notes`,
+`sourceLinks` and `affectedSources`. Each affected source is an explicit
+`{ kind: 'visit' | 'journey' | 'stay', id }` identity in the same trip. Creation
+validates every reference. Each option privately retains its validated exact
+kind/ID membership history. PATCH may retain, unlink or restore a historical
+membership after source deletion; genuinely new memberships must currently belong
+to the trip. A currently live source owned by another trip is always rejected.
+Existing live and tombstoned option memberships are backfilled when this provenance
+is migrated, and it survives unlink, option removal and restoration. Historical
+references remain identifiable after source deletion. Duplicate references
+are rejected. Options never own or rewrite arrangements.
+
+Every mutation after decision creation requires `expectedRevision` from the
+owning decision. Immediate transactions reject stale writes with 409 and advance
+the aggregate revision for option edits as well as decision edits. Reads do not
+select. `PUT /trips/:tripId/decisions/:id/selection` accepts a nullable `optionId`;
+null reopens the decision. A selected option must belong to that decision.
+Removing the selected option clears the selection atomically; deleting a decision
+removes only its options and source record. Neither operation cancels bookings.
+
+PATCH omission retains values, null clears the deadline, and supplied arrays
+replace their complete values. Decision/option text may be empty for unfinished
+source capture. Selection and its inverse are explicit revision-guarded writes;
+there is no persisted general Undo log or derived deadline clock.
+
+Option DELETE retains a removed source record rather than destroying its identity;
+ordinary GET/list routes omit removed options. POST
+`/trips/:tripId/decisions/:decisionId/options/:id/restore` requires
+`expectedRevision` and an explicit boolean `select`. False retains the current
+selection; true selects the restored option atomically at that same revision.
+Restoring never revalidates or modifies retained affected sources. Foreign
+ownership and removed decisions return 404; an already-live option returns 409.
+There is no retention expiry or automatic cleanup. This supports identity-preserving
+Undo without creating a replacement option or racing a separate selection write.
+
+The revision progression is part of the mutation protocol: every successful guarded
+decision or option mutation produces exactly `expectedRevision + 1`; failed
+mutations preserve the previous revision. Decision creation starts at zero.
+Option mutation responses do not contain the parent revision and DELETE returns
+204, so consumers may record that exact one-step result for their own operation.
+A later parent read with a different revision must clear local Undo rather than
+adopting another writer's revision for an inverse mutation.
+
+`GET /trips/:tripId/decisions/:id/workspace` reads the decision and its live
+options in one SQLite snapshot, exposing `{ decision, options }` without
+resolving linked arrangements. Consumers can compare the coherent aggregate
+revision after a mutation rather than combining unrelated parent/option reads.

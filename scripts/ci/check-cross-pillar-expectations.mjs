@@ -162,6 +162,114 @@ const repoRoot = resolve(here, '..', '..');
  */
 export const EXPECTATIONS = [
   {
+    consumer: 'bfm',
+    producer: 'trips',
+    operationId: 'documentAssociations.list',
+    path: '/trips/{tripId}/document-associations',
+    method: 'get',
+    query: [],
+    pathParams: ['tripId'],
+    usedBy: 'pillars/bfm/src/api/trips/client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'trips',
+    operationId: 'events.list',
+    path: '/trips/{tripId}/events',
+    method: 'get',
+    query: [],
+    pathParams: ['tripId'],
+    usedBy: 'pillars/bfm/src/api/trips/client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'documents',
+    operationId: 'paperless.get',
+    path: '/paperless/documents/{id}',
+    method: 'get',
+    query: [],
+    pathParams: ['id'],
+    usedBy: 'pillars/bfm/src/api/documents/client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'trips',
+    operationId: 'trips.list',
+    path: '/trips',
+    method: 'get',
+    query: [],
+    usedBy: 'pillars/bfm/src/api/trips/client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'trips',
+    operationId: 'trips.get',
+    path: '/trips/{id}',
+    method: 'get',
+    query: [],
+    pathParams: ['id'],
+    usedBy: 'pillars/bfm/src/api/trips/client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'trips',
+    operationId: 'places.list',
+    path: '/places',
+    method: 'get',
+    query: [],
+    usedBy: 'pillars/bfm/src/api/trips/client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'trips',
+    operationId: 'visits.list',
+    path: '/trips/{tripId}/visits',
+    method: 'get',
+    query: [],
+    pathParams: ['tripId'],
+    usedBy: 'pillars/bfm/src/api/trips/client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'trips',
+    operationId: 'journeys.list',
+    path: '/trips/{tripId}/journeys',
+    method: 'get',
+    query: [],
+    pathParams: ['tripId'],
+    usedBy: 'pillars/bfm/src/api/trips/client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'trips',
+    operationId: 'journeyLegs.list',
+    path: '/trips/{tripId}/journeys/{journeyId}/legs',
+    method: 'get',
+    query: [],
+    pathParams: ['tripId', 'journeyId'],
+    usedBy: 'pillars/bfm/src/api/trips/client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'trips',
+    operationId: 'journeyGroups.list',
+    path: '/trips/{tripId}/journey-groups',
+    method: 'get',
+    query: [],
+    pathParams: ['tripId'],
+    usedBy: 'pillars/bfm/src/api/trips/client.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'trips',
+    operationId: 'stays.list',
+    path: '/trips/{tripId}/stays',
+    method: 'get',
+    query: [],
+    pathParams: ['tripId'],
+    usedBy: 'pillars/bfm/src/api/trips/client.ts',
+  },
+  {
     consumer: 'purchases',
     producer: 'finance',
     operationId: 'transactions.list',
@@ -2883,8 +2991,15 @@ function run() {
 }
 
 function selfTest() {
-  const expectation = EXPECTATIONS[0];
-  assert(expectation !== undefined, 'EXPECTATIONS must not be empty');
+  const expectation = {
+    consumer: 'consumer',
+    producer: 'finance',
+    operationId: 'transactions.list',
+    path: '/transactions',
+    method: 'get',
+    query: ['startDate', 'endDate'],
+    usedBy: 'fixture.ts',
+  };
   const good = {
     paths: {
       '/transactions': {
