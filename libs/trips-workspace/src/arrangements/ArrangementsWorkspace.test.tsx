@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { sourceStay } from '../stay/test-utils';
 import { ArrangementsWorkspace } from './ArrangementsWorkspace';
 import { Responsibility } from './Responsibility';
 import { arrangementsTransport, labels, sourceRental } from './test-utils';
@@ -75,19 +76,19 @@ describe('Along the route source workspace', () => {
   it('keeps repeated visits distinct, one full Rental and independently identifiable unplaced Journeys', async () => {
     setup();
     await screen.findByRole('button', { name: /Harbour cars/ });
-    const first = screen.getByRole('region', { name: 'Wellington · 31' });
-    expect(within(first).getByRole('article', { name: 'Rental · 61' })).toBeVisible();
-    expect(screen.getAllByRole('article', { name: 'Rental · 61' })).toHaveLength(1);
+    const first = screen.getByRole('region', { name: 'Wellington · Visit 1' });
+    expect(within(first).getByRole('article', { name: 'Harbour cars' })).toBeVisible();
+    expect(screen.getAllByRole('article', { name: 'Harbour cars' })).toHaveLength(1);
     expect(within(first).getByText('Pickup')).toBeVisible();
     expect(within(first).getByText('Return')).toBeVisible();
-    expect(within(first).getByText('Wellington · 32')).toBeVisible();
+    expect(within(first).getByText('Wellington · Visit 2')).toBeVisible();
     expect(
       within(screen.getByRole('region', { name: 'Journeys' })).getByRole('article', {
-        name: 'Journeys · 20',
+        name: 'Harbour connection',
       })
     ).toBeVisible();
     expect(
-      screen.getByRole('article', { name: 'Rental · 61' }).querySelector('button')
+      screen.getByRole('article', { name: 'Harbour cars' }).querySelector('button')
     ).not.toHaveClass('border-solid');
   });
   it.each([
@@ -117,7 +118,59 @@ describe('Along the route source workspace', () => {
     await user.click(screen.getByRole('button', { name: 'Use source journey 21' }));
     expect(screen.getByText('Journey source 7:21')).toBeVisible();
     expect(screen.getByText('Selection retained')).toBeVisible();
-    expect(screen.getByRole('heading', { name: 'Journeys · 21' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Journeys' })).toBeVisible();
+  });
+  it('opens a real captured Stay for the exact selected Visit gap without copying a Rental or another town', async () => {
+    const { user, transport } = setup();
+    transport.replies.push({
+      status: 201,
+      body: sourceStay({
+        id: 17,
+        status: null,
+        timing: { arrival: '2029-05-04', departure: '2029-05-09' },
+      }),
+    });
+    const visit = await screen.findByRole('region', { name: 'Wellington · Visit 1' });
+    await user.click(
+      await within(visit).findByRole('button', { name: /Accommodation not arranged/ })
+    );
+    expect(screen.getByText('Stay source 7:17')).toBeVisible();
+    expect(transport.writes).toEqual([
+      {
+        method: 'POST',
+        path: '/trips/7/stays',
+        body: { visitId: 31, timing: { arrival: '2029-05-04', departure: '2029-05-09' } },
+      },
+    ]);
+  });
+  it('retains uncertain Stay creation across source reload until conscious new intent', async () => {
+    const { user, transport } = setup();
+    transport.replies.push({
+      status: 503,
+      body: {
+        code: 'trips.stay.creation_uncertain',
+        message: 'Stay creation response unavailable',
+        retryable: true,
+      },
+    });
+    const visit = await screen.findByRole('region', { name: 'Wellington · Visit 1' });
+    await user.click(
+      await within(visit).findByRole('button', { name: /Accommodation not arranged/ })
+    );
+    expect(await screen.findByText('trips.stay.creation_uncertain')).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument();
+    expect(
+      within(visit).getByRole('button', { name: /Accommodation not arranged/ })
+    ).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: 'Reload source' }));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Start a new stay' })).toBeEnabled()
+    );
+    expect(screen.getByText('trips.stay.creation_uncertain')).toBeVisible();
+    expect(transport.writes).toHaveLength(1);
+    await user.click(screen.getByRole('button', { name: 'Start a new stay' }));
+    expect(screen.queryByText('trips.stay.creation_uncertain')).not.toBeInTheDocument();
+    expect(transport.writes).toHaveLength(1);
   });
   it('retains cached arrangements during refresh failures with a readable diagnostic and retry', async () => {
     const { transport, queryClient } = setup();
@@ -229,6 +282,38 @@ describe('Along the route source workspace', () => {
     expect(screen.queryByRole('button', { name: 'Self' })).not.toBeInTheDocument();
     expect(transport.writes).toEqual([]);
   });
+  it('retains an unresolved Visit identity for unrelated Rental edits without featuring technical IDs', async () => {
+    const transport = arrangementsTransport();
+    transport.setRental(sourceRental({ pickupVisitId: 999 }));
+    transport.replies.push({
+      status: 200,
+      body: sourceRental({ pickupVisitId: 999, provider: 'Retained visit provider', revision: 1 }),
+    });
+    mount(
+      <ArrangementsWorkspace
+        tripId={7}
+        client={transport.client}
+        labels={labels}
+        formatDate={(date) => date}
+      />
+    );
+    const source = await screen.findByRole('article', { name: 'Harbour cars' });
+    expect(within(source).queryByText('999')).not.toBeInTheDocument();
+    expect(within(source).queryByText('pops:contacts/contact/unavailable')).not.toBeInTheDocument();
+    await userEvent.click(within(source).getByRole('button'));
+    expect(await screen.findByLabelText('Pickup')).toHaveValue('999');
+    const provider = screen.getByLabelText('Provider');
+    await userEvent.clear(provider);
+    await userEvent.type(provider, 'Retained visit provider');
+    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+    await waitFor(() => expect(transport.writes).toHaveLength(1));
+    expect(transport.writes[0]?.body).toMatchObject({
+      provider: 'Retained visit provider',
+      pickupVisitId: 999,
+      returnVisitId: 32,
+      expectedRevision: 0,
+    });
+  });
   it('does not present unavailable source collections as an empty catalogue', async () => {
     const transport = arrangementsTransport();
     for (const kind of ['stays', 'events', 'journeys', 'rentals'])
@@ -258,7 +343,9 @@ describe('Along the route source workspace', () => {
         target={{ targetKind: 'rental', targetId: 61 }}
       />
     );
-    expect(await screen.findByText('pops:contacts/contact/unavailable')).toBeVisible();
+    expect(await screen.findByText('Contact')).toBeVisible();
+    await userEvent.click(screen.getByText('Reference details'));
+    expect(screen.getByText('pops:contacts/contact/unavailable')).toBeVisible();
     await userEvent.click(screen.getByRole('button', { name: 'Clear responsibility' }));
     expect(await screen.findByText('Unset')).toBeVisible();
     expect(transport.writes).toEqual([
@@ -270,6 +357,61 @@ describe('Along the route source workspace', () => {
     ]);
     expect(
       transport.requests.every((request) => new URL(request.url).hostname === 'arrangements.test')
+    ).toBe(true);
+  });
+  it('saves owner-issued Contact choice and explicit Self independently using confirmed responsibility revisions', async () => {
+    const transport = arrangementsTransport();
+    const uri = 'pops:contacts/contact/owner-issued';
+    transport.replies.push(
+      {
+        status: 200,
+        body: {
+          tripId: 7,
+          targetKind: 'rental',
+          targetId: 61,
+          responsibility: { kind: 'contact', uri },
+          revision: 5,
+        },
+      },
+      {
+        status: 200,
+        body: {
+          tripId: 7,
+          targetKind: 'rental',
+          targetId: 61,
+          responsibility: { kind: 'self' },
+          revision: 6,
+        },
+      }
+    );
+    mount(
+      <Responsibility
+        identity={{
+          tripId: 7,
+          client: transport.client,
+          labels,
+          formatDate: (date) => date,
+          ContactChooser: ({ onSelect, disabled }) => (
+            <button disabled={disabled} onClick={() => onSelect(uri)}>
+              Select owner-issued contact
+            </button>
+          ),
+        }}
+        target={{ targetKind: 'rental', targetId: 61 }}
+      />
+    );
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Select owner-issued contact' })
+    );
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Self' })).toBeEnabled());
+    await userEvent.click(screen.getByRole('button', { name: 'Self' }));
+    await waitFor(() => expect(transport.writes).toHaveLength(2));
+    expect(transport.writes.map((write) => write.body)).toEqual([
+      { expectedRevision: 4, responsibility: { kind: 'contact', uri } },
+      { expectedRevision: 5, responsibility: { kind: 'self' } },
+    ]);
+    expect(
+      transport.writes.every((write) => write.path === '/trips/7/responsibilities/rental/61')
     ).toBe(true);
   });
 });

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { ErrorState, PageHeader } from '@pops/ui';
+import { Button, ErrorState, PageHeader } from '@pops/ui';
 
 import { requestProblem } from '../stay/api';
 import { arrangementsKey } from './api';
@@ -12,8 +12,11 @@ import {
   filterArrangements,
   groupArrangements,
 } from './projection';
+import { visitTitle } from './source-labels';
 import { SourceDialog } from './SourceDialog';
 import { useArrangements } from './use-arrangements';
+import { useGapCapture } from './use-gap-capture';
+import { VisitCoverage } from './VisitCoverage';
 
 import type { JSX } from 'react';
 
@@ -24,6 +27,7 @@ import type {
   ArrangementTarget,
   ArrangementsWorkspaceProps,
 } from './types';
+import type { GapCapture } from './use-gap-capture';
 
 /** Approved Along the route workspace, grouping only actual ordered Visit occurrences and explicit source associations. */
 export function ArrangementsWorkspace(props: ArrangementsWorkspaceProps): JSX.Element {
@@ -40,9 +44,11 @@ export function ArrangementsWorkspace(props: ArrangementsWorkspaceProps): JSX.El
   return <ArrangementsSession key={arrangementsKey(props).join(':')} {...props} />;
 }
 function ArrangementsSession(identity: ArrangementsWorkspaceProps): JSX.Element | null {
-  const { sources, queries, pending, complete, refresh } = useArrangements(identity);
+  const { sources, queries, pending, complete, coverageComplete, refresh } =
+    useArrangements(identity);
   const [filters, setFilters] = useState<Filters>({ query: '', kind: '', purchase: '' });
   const [target, setTarget] = useState<ArrangementTarget>();
+  const capture = useGapCapture(identity, setTarget);
   const rows = filterArrangements(arrangementRows(sources), filters, sources);
   const groups = groupArrangements(rows, sources.visits);
   return (
@@ -56,28 +62,15 @@ function ArrangementsSession(identity: ArrangementsWorkspaceProps): JSX.Element 
       <SourceProblems queries={queries} />
       {pending && <p role="status">{identity.labels.loading}</p>}
       {complete && rows.length === 0 && <p role="status">{identity.labels.empty}</p>}
-      <div className="space-y-6">
-        {groups
-          .filter((group) => group.rows.length > 0)
-          .map((group) => (
-            <section
-              key={group.id}
-              className="space-y-3"
-              aria-label={groupLabel(group, sources, identity)}
-            >
-              <h2 className="text-base font-medium">{groupLabel(group, sources, identity)}</h2>
-              {group.rows.map((row) => (
-                <ArrangementCard
-                  key={`${row.kind}:${row.source.id}`}
-                  row={row}
-                  sources={sources}
-                  identity={identity}
-                  open={() => setTarget(arrangementTarget(row))}
-                />
-              ))}
-            </section>
-          ))}
-      </div>
+      <GapProblems capture={capture} identity={identity} />
+      <RouteGroups
+        groups={groups}
+        sources={sources}
+        identity={identity}
+        capture={capture}
+        complete={coverageComplete}
+        open={setTarget}
+      />
       {target && (
         <SourceDialog
           target={target}
@@ -99,10 +92,9 @@ function groupLabel(
   identity: ArrangementsWorkspaceProps
 ): string {
   if (group.id === 'journeys') return identity.labels.journey;
-  if (group.unavailableVisitId !== undefined)
-    return `${identity.labels.visitUnavailable} · ${group.unavailableVisitId}`;
+  if (group.unavailableVisitId !== undefined) return identity.labels.visitUnavailable;
   if (!group.visit) return identity.labels.noVisit;
-  return `${sources.places?.find((place) => place.id === group.visit?.placeId)?.name ?? identity.labels.placeUnavailable} · ${group.visit.id}`;
+  return visitTitle(group.visit, sources, identity.labels);
 }
 
 function SourceProblems({
@@ -110,7 +102,6 @@ function SourceProblems({
 }: Pick<ReturnType<typeof useArrangements>, 'queries'>): JSX.Element {
   return (
     <>
-      {' '}
       {queries.map(({ query, id }) =>
         query.isError ? (
           <ErrorState
@@ -119,6 +110,93 @@ function SourceProblems({
             onRetry={() => void query.refetch()}
           />
         ) : null
+      )}
+    </>
+  );
+}
+
+function RouteGroups({
+  groups,
+  sources,
+  identity,
+  capture,
+  complete,
+  open,
+}: {
+  groups: ArrangementGroup[];
+  sources: ArrangementSources;
+  identity: ArrangementsWorkspaceProps;
+  capture: GapCapture;
+  complete: boolean;
+  open: (target: ArrangementTarget) => void;
+}): JSX.Element {
+  return (
+    <div className="space-y-6">
+      {groups
+        .filter((group) => group.rows.length > 0 || group.visit !== undefined)
+        .map((group) => (
+          <section
+            key={group.id}
+            className="space-y-3"
+            aria-label={groupLabel(group, sources, identity)}
+          >
+            <h2 className="text-base font-medium">{groupLabel(group, sources, identity)}</h2>
+            {group.rows.map((row) => (
+              <ArrangementCard
+                key={`${row.kind}:${row.source.id}`}
+                row={row}
+                sources={sources}
+                identity={identity}
+                open={() => open(arrangementTarget(row))}
+              />
+            ))}
+            {group.visit && (
+              <VisitCoverage
+                visit={group.visit}
+                sources={sources}
+                identity={identity}
+                complete={complete}
+                capture={capture}
+              />
+            )}
+          </section>
+        ))}
+    </div>
+  );
+}
+function GapProblems({
+  capture,
+  identity,
+}: {
+  capture: GapCapture;
+  identity: ArrangementsWorkspaceProps;
+}): JSX.Element | null {
+  if (capture.failure === undefined) return null;
+  return (
+    <>
+      <ErrorState error={requestProblem(capture.failure)} />
+      {capture.uncertain && (
+        <p role="status" className="text-sm text-muted-foreground">
+          {identity.labels.creationUncertain}
+        </p>
+      )}
+      <Button
+        variant="ghost"
+        className="min-h-11"
+        disabled={capture.busy}
+        onClick={() => void capture.reload()}
+      >
+        {identity.labels.reload}
+      </Button>
+      {capture.uncertain && (
+        <Button
+          variant="outline"
+          className="min-h-11"
+          disabled={capture.busy}
+          onClick={capture.beginNew}
+        >
+          {identity.labels.beginNewStay}
+        </Button>
       )}
     </>
   );

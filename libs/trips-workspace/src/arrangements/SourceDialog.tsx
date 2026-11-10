@@ -6,8 +6,10 @@ import { EventWorkspace } from '../event/EventWorkspace';
 import { JourneyWorkspace } from '../journey/JourneyWorkspace';
 import { StayWorkspace } from '../stay/StayWorkspace';
 import { arrangementsKey } from './api';
+import { arrangementRows } from './projection';
 import { RentalWorkspace } from './RentalWorkspace';
 import { Responsibility } from './Responsibility';
+import { arrangementTitle } from './source-labels';
 
 import type { JSX } from 'react';
 
@@ -51,9 +53,7 @@ export function SourceDialog({
         aria-describedby={undefined}
       >
         <DialogHeader>
-          <DialogTitle>
-            {identity.labels[target.targetKind]} · {target.targetId}
-          </DialogTitle>
+          <DialogTitle>{sourceTitle(target, sources, identity)}</DialogTitle>
         </DialogHeader>
         <DialogClose asChild>
           <Button variant="ghost" className="min-h-11">
@@ -108,4 +108,15 @@ function SourceEditor({
       )}
     </>
   );
+}
+
+function sourceTitle(
+  target: ArrangementTarget,
+  sources: ArrangementSources,
+  identity: ArrangementsWorkspaceProps
+): string {
+  const source = arrangementRows(sources).find(
+    (row) => row.kind === target.targetKind && row.source.id === target.targetId
+  );
+  return source ? arrangementTitle(source, identity.labels) : identity.labels[target.targetKind];
 }

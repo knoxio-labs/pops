@@ -79,13 +79,44 @@ const leg = {
 };
 
 async function stubSources(page: Page) {
+  const stayCreates: unknown[] = [];
+  const created = {
+    ...stay,
+    id: 14,
+    name: null,
+    kind: null,
+    status: null,
+    timing: { arrival: '2030-04-12', departure: '2030-04-13' },
+  };
+  const staySources: unknown[] = [stay];
   await stubShellBoot(page, ['trips']);
   await page.route(/\/trips-api\/places$/, (route) =>
     json(route, 200, { places: [{ id: 51, name: 'Wellington', sourceLinks: [], ...audit }] })
   );
   await page.route(/\/trips-api\/trips\/7$/, (route) => json(route, 200, trip));
   await page.route(/\/trips-api\/trips\/7\/visits$/, (route) => json(route, 200, { visits }));
-  await page.route(/\/trips-api\/trips\/7\/stays$/, (route) => json(route, 200, { stays: [stay] }));
+  await page.route(/\/trips-api\/trips\/7\/stays$/, async (route) => {
+    if (route.request().method() === 'POST') {
+      const body: unknown = route.request().postDataJSON();
+      expect(body).toEqual({
+        visitId: 31,
+        timing: { arrival: '2030-04-12', departure: '2030-04-13' },
+      });
+      stayCreates.push(body);
+      staySources.push(created);
+      await json(route, 201, created);
+    } else await json(route, 200, { stays: staySources });
+  });
+  await page.route(/\/trips-api\/trips\/7\/stays\/14$/, (route) => json(route, 200, created));
+  await page.route(/\/trips-api\/trips\/7\/responsibilities\/stay\/14$/, (route) =>
+    json(route, 200, {
+      tripId: 7,
+      targetKind: 'stay',
+      targetId: 14,
+      responsibility: null,
+      revision: 0,
+    })
+  );
   await page.route(/\/trips-api\/trips\/7\/events$/, (route) => json(route, 200, { events: [] }));
   await page.route(/\/trips-api\/trips\/7\/journeys$/, (route) =>
     json(route, 200, { journeys: [journey] })
@@ -93,6 +124,7 @@ async function stubSources(page: Page) {
   await page.route(/\/trips-api\/trips\/7\/journeys\/20\/legs$/, (route) =>
     json(route, 200, { legs: [leg], revision: 0 })
   );
+  return { stayCreates };
 }
 
 for (const viewport of [
@@ -119,7 +151,7 @@ for (const viewport of [
       ...audit,
     };
     let responsible = true;
-    await stubSources(page);
+    const context = await stubSources(page);
     await page.route(/\/trips-api\/trips\/7\/rentals$/, (route) =>
       json(route, 200, { rentals: [rental] })
     );
@@ -163,16 +195,18 @@ for (const viewport of [
     });
     await page.goto('/trips/7/arrangements');
     await expect(page.getByRole('heading', { name: 'Arrangements', exact: true })).toBeVisible();
-    const rentalCard = page.getByRole('article', { name: 'Rental · 61' });
+    const rentalCard = page.getByRole('article', { name: 'Harbour cars' });
     await expect(rentalCard).toHaveCount(1);
     await expect(
       page
-        .getByRole('region', { name: 'Wellington · 31' })
-        .getByRole('article', { name: 'Rental · 61' })
+        .getByRole('region', { name: 'Wellington · Visit 1' })
+        .getByRole('article', { name: 'Harbour cars' })
     ).toBeVisible();
-    await expect(rentalCard.getByText('Wellington · 32', { exact: true })).toBeVisible();
+    await expect(rentalCard.getByText('Wellington · Visit 2', { exact: true })).toBeVisible();
     await expect(
-      page.getByRole('region', { name: 'Journeys' }).getByRole('article', { name: 'Journeys · 20' })
+      page
+        .getByRole('region', { name: 'Journeys' })
+        .getByRole('article', { name: 'Harbour connection' })
     ).toBeVisible();
     await expect(rentalCard.getByRole('button')).toHaveCSS('border-style', 'dashed');
     const layout = await page
@@ -231,6 +265,23 @@ for (const viewport of [
     ).toBe(true);
     await page.getByRole('button', { name: 'Close', exact: true }).click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
+    const gap = page
+      .getByRole('region', { name: 'Wellington · Visit 1' })
+      .getByRole('button', { name: /Accommodation not arranged/ });
+    const gapBounds = await gap.boundingBox();
+    expect(gapBounds?.height).toBeGreaterThanOrEqual(44);
+    expect(gapBounds?.width).toBeGreaterThanOrEqual(44);
+    await gap.click();
+    await expect(page.getByLabel('Stay name', { exact: true })).toHaveValue('');
+    await expect(page.getByRole('dialog').getByLabel('Check-in date', { exact: true })).toHaveValue(
+      '2030-04-12'
+    );
+    await expect(
+      page.getByRole('dialog').getByLabel('Check-out date', { exact: true })
+    ).toHaveValue('2030-04-13');
+    expect(context.stayCreates).toEqual([
+      { visitId: 31, timing: { arrival: '2030-04-12', departure: '2030-04-13' } },
+    ]);
     expect(writes.map((write) => write.path)).toEqual([
       '/trips-api/trips/7/rentals/61',
       '/trips-api/trips/7/rentals/61',

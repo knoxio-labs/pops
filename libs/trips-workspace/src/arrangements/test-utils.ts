@@ -18,7 +18,10 @@ export const labels: ArrangementLabels = {
   allPurchases: 'All purchase states',
   notPurchased: 'Not purchased',
   noVisit: 'No visit',
-  visitUnavailable: 'Visit unavailable',
+  visit: 'Visit',
+  contactReference: 'Contact',
+  referenceDetails: 'Reference details',
+  visitUnavailable: 'Visit reference not resolved',
   placeUnavailable: 'Place unavailable',
   journey: 'Journeys',
   stay: 'Stay',
@@ -43,6 +46,9 @@ export const labels: ArrangementLabels = {
   accommodationMissing: 'Accommodation not arranged',
   accommodationOverlap: 'Overlapping accommodation',
   addStay: 'Add stay',
+  creationUncertain:
+    'The previous stay may still be created. Open an existing stay or explicitly start a new stay.',
+  beginNewStay: 'Start a new stay',
   sourceStates: {
     Considering: 'Considering',
     Agreed: 'Agreed',
@@ -86,6 +92,7 @@ export function arrangementsTransport() {
   const requests: Request[] = [];
   const replies: { status: number; body: unknown }[] = [];
   const failures = new Set<string>();
+  const collections = new Map<string, unknown>();
   const fetcher: typeof globalThis.fetch = async (input, init) => {
     const request = new Request(input, init);
     requests.push(request);
@@ -109,6 +116,7 @@ export function arrangementsTransport() {
         { code: 'trips.temporarily_unavailable', message: 'Source unavailable', retryable: true },
         503
       );
+    if (collections.has(path)) return json(collections.get(path));
     return sourceResponse(path, rental, responsibility);
   };
   return {
@@ -117,6 +125,7 @@ export function arrangementsTransport() {
     writes,
     replies,
     failures,
+    collections,
     setRental: (source: Rental): void => {
       rental = source;
     },

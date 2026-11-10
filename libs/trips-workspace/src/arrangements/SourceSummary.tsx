@@ -1,5 +1,7 @@
 import { Badge, cn } from '@pops/ui';
 
+import { visitTitle } from './source-labels';
+
 import type { JSX } from 'react';
 
 import type { ArrangementRow, ArrangementSources, ArrangementsWorkspaceProps } from './types';
@@ -15,7 +17,7 @@ export function JourneySummary({
 }): JSX.Element {
   return (
     <>
-      {row.legs?.map((leg) => (
+      {row.legs?.map((leg, index) => (
         <span
           key={leg.id}
           className={cn(
@@ -24,7 +26,7 @@ export function JourneySummary({
           )}
         >
           <span className="block text-sm">
-            {leg.mode ?? identity.labels.journey} · {leg.id}
+            {leg.mode ?? identity.labels.journey} · {index + 1}
           </span>
           {(leg.from.sourceLabel || leg.to.sourceLabel) && (
             <span className="block break-words text-xs text-muted-foreground">
@@ -112,7 +114,6 @@ export function RentalTimeline({
         },
       ].map((endpoint) => {
         const visit = sources.visits?.find((candidate) => candidate.id === endpoint.id);
-        const place = sources.places?.find((candidate) => candidate.id === visit?.placeId);
         const fallback = visit
           ? identity.labels.placeUnavailable
           : identity.labels.visitUnavailable;
@@ -126,7 +127,7 @@ export function RentalTimeline({
             )}
             {endpoint.id !== null && (
               <span className="block break-words text-muted-foreground">
-                {place?.name ?? fallback} · {endpoint.id}
+                {visit ? visitTitle(visit, sources, identity.labels) : fallback}
               </span>
             )}
           </span>

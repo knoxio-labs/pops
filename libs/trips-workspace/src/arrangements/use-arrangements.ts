@@ -69,7 +69,8 @@ export function useArrangements(props: ArrangementsWorkspaceProps): Arrangements
   return {
     sources,
     queries,
-    coverageComplete: stays.isSuccess && !stays.isFetching && visits.isSuccess,
+    coverageComplete:
+      stays.isSuccess && !stays.isFetching && visits.isSuccess && !visits.isFetching,
     complete: required.every((query) => query.isSuccess) && legs.every((query) => query.isSuccess),
     pending: [...required, visits].some((query) => query.isPending),
     refresh: async (): Promise<void> => {

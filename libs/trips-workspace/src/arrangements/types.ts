@@ -62,6 +62,9 @@ export interface ArrangementLabels {
   allPurchases: string;
   notPurchased: string;
   noVisit: string;
+  visit: string;
+  contactReference: string;
+  referenceDetails: string;
   visitUnavailable: string;
   placeUnavailable: string;
   journey: string;
@@ -87,6 +90,8 @@ export interface ArrangementLabels {
   accommodationMissing: string;
   accommodationOverlap: string;
   addStay: string;
+  creationUncertain: string;
+  beginNewStay: string;
   sourceStates: Record<
     | 'Considering'
     | 'Agreed'
@@ -112,4 +117,5 @@ export interface ArrangementsWorkspaceProps {
     disabled: boolean;
     onSelect: (uri: string) => void;
   }>;
+  ContactLabel?: ComponentType<{ uri: string }>;
 }

@@ -1,6 +1,7 @@
 import { Button, ErrorState, Select, TextInput } from '@pops/ui';
 
 import { requestProblem } from '../stay/api';
+import { RentalVisit } from './RentalVisit';
 import { useRentalEditor } from './use-rental-editor';
 
 import type { JSX } from 'react';
@@ -46,44 +47,6 @@ export function RentalEditor({
         </Button>
       )}
     </section>
-  );
-}
-
-function RentalVisit({
-  label,
-  value,
-  sources,
-  identity,
-  onChange,
-}: {
-  label: string;
-  value: number | null;
-  sources: ArrangementSources;
-  identity: ArrangementsWorkspaceProps;
-  onChange: (id: number | null) => void;
-}): JSX.Element {
-  const visits = sources.visits ?? [];
-  const choices = visits.map((visit) => ({
-    value: String(visit.id),
-    label: `${sources.places?.find((place) => place.id === visit.placeId)?.name ?? identity.labels.placeUnavailable} · ${visit.id}`,
-  }));
-  if (value !== null && !visits.some((visit) => visit.id === value))
-    choices.push({ value: String(value), label: `${identity.labels.visitUnavailable} · ${value}` });
-  return (
-    <Select
-      label={label}
-      className="min-h-11"
-      value={value === null ? '' : String(value)}
-      options={[{ value: '', label: identity.labels.unset }, ...choices]}
-      onChange={(event) => {
-        const selected = event.target.value;
-        if (!selected) onChange(null);
-        else {
-          const visit = visits.find((candidate) => String(candidate.id) === selected);
-          if (visit) onChange(visit.id);
-        }
-      }}
-    />
   );
 }
 

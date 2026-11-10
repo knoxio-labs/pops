@@ -28,6 +28,20 @@ bounds and incomplete source loads prevent unsupported missing-night claims.
 Considering dates never mask a proven gap. Coverage findings use only the real
 bounded Visit interval; no clocks, zones or route placement are inferred.
 
+Arrangements coalesces adjacent identical findings and opens one dotted action per
+proven gap. Selecting it captures a real Stay for that exact Visit and interval,
+then opens the canonical editor. A known creation receipt retains its source ID;
+selecting the same action reopens it rather than repeating POST. A lost creation
+response remains uncertain even after an empty source reload or a matching later
+record. Reload never claims that record as the created source. Existing sources
+remain explicitly selectable, and starting a new capture requires a separate
+conscious action; that action itself performs no POST.
+
+Visit titles and Rental endpoints use persisted route occurrence positions, while
+their actual IDs remain source identities. Opaque Contact references use a neutral
+Contact label until an owner-issued label is supplied. Reference details preserve
+the original URI independently of Contacts availability.
+
 `JourneyWorkspace({ tripId, journeyId, client? })` exports the source-backed Departure
 and arrival journey editor. It reads ordered legs and independent grouping identities
 through the same generated Trips client. Endpoint edits submit complete retained

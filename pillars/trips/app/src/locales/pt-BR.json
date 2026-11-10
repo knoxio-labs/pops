@@ -66,7 +66,7 @@
     "allPurchases": "Todos os estados de compra",
     "notPurchased": "Não comprado",
     "noVisit": "Sem visita",
-    "visitUnavailable": "Visita indisponível",
+    "visitUnavailable": "Referência de visita não resolvida",
     "placeUnavailable": "Local indisponível",
     "journey": "Trajetos",
     "stay": "Hospedagem",
@@ -102,6 +102,11 @@
       "Booked": "Reservado",
       "Not arranged": "Não reservado",
       "Not needed": "Não necessário"
-    }
+    },
+    "visit": "Visita",
+    "contactReference": "Contato",
+    "referenceDetails": "Detalhes da referência",
+    "creationUncertain": "A hospedagem anterior ainda pode ser criada. Abra uma hospedagem existente ou inicie uma nova hospedagem explicitamente.",
+    "beginNewStay": "Iniciar uma nova hospedagem"
   }
 }

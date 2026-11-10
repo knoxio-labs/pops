@@ -17,6 +17,9 @@ export function useArrangementLabels(): ArrangementLabels {
     allPurchases: t('arrangements.allPurchases'),
     notPurchased: t('arrangements.notPurchased'),
     noVisit: t('arrangements.noVisit'),
+    visit: t('arrangements.visit'),
+    contactReference: t('arrangements.contactReference'),
+    referenceDetails: t('arrangements.referenceDetails'),
     visitUnavailable: t('arrangements.visitUnavailable'),
     placeUnavailable: t('arrangements.placeUnavailable'),
     journey: t('arrangements.journey'),
@@ -42,6 +45,8 @@ export function useArrangementLabels(): ArrangementLabels {
     accommodationMissing: t('arrangements.accommodationMissing'),
     accommodationOverlap: t('arrangements.accommodationOverlap'),
     addStay: t('arrangements.addStay'),
+    creationUncertain: t('arrangements.creationUncertain'),
+    beginNewStay: t('arrangements.beginNewStay'),
     sourceStates: {
       Considering: t('arrangements.sourceStates.Considering'),
       Agreed: t('arrangements.sourceStates.Agreed'),

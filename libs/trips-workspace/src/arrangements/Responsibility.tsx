@@ -1,6 +1,7 @@
 import { Button, ErrorState } from '@pops/ui';
 
 import { requestProblem } from '../stay/api';
+import { ContactReference, ReferenceDetails } from './ContactReference';
 import { useResponsibility } from './use-responsibility';
 
 import type { JSX } from 'react';
@@ -70,7 +71,14 @@ function ResponsibilityControls({
   const disabled = editor.busy || editor.failure !== undefined;
   return (
     <>
-      <p className="break-all text-sm">{ownerLabel(owner, identity)}</p>
+      <p className="text-sm">
+        {owner?.kind === 'contact' ? (
+          <ContactReference identity={identity} uri={owner.uri} />
+        ) : (
+          ownerLabel(owner, identity)
+        )}
+      </p>
+      {owner?.kind === 'contact' && <ReferenceDetails identity={identity} value={owner.uri} />}
       <div className="flex flex-wrap gap-2">
         <Button
           variant="outline"
@@ -103,6 +111,6 @@ function ownerLabel(
   owner: ArrangementResponsibility['responsibility'],
   identity: ArrangementsWorkspaceProps
 ): string {
-  if (owner?.kind === 'contact') return owner.uri;
+  if (owner?.kind === 'contact') return identity.labels.contactReference;
   return owner?.kind === 'self' ? identity.labels.self : identity.labels.unset;
 }

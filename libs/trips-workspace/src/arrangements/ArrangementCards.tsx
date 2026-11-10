@@ -2,7 +2,9 @@ import { BedDouble, CalendarDays, CarFront, Route } from 'lucide-react';
 
 import { Button, cn } from '@pops/ui';
 
+import { ContactReference } from './ContactReference';
 import { purchased } from './projection';
+import { arrangementTitle } from './source-labels';
 import { JourneySummary, RentalTimeline, RowStates } from './SourceSummary';
 
 import type { JSX } from 'react';
@@ -23,10 +25,15 @@ export function ArrangementCard({
 }): JSX.Element {
   const { labels, formatDate } = identity;
   const Icon = { stay: BedDouble, event: CalendarDays, rental: CarFront, journey: Route }[row.kind];
-  const name = row.kind === 'rental' ? row.source.provider : row.source.name;
+  const name = arrangementTitle(row, labels);
   const { start, end } = rowDates(row);
   return (
-    <article className="flex min-w-0 gap-3" aria-label={`${labels[row.kind]} · ${row.source.id}`}>
+    <article
+      className="flex min-w-0 gap-3"
+      aria-label={name}
+      data-source-kind={row.kind}
+      data-source-id={row.source.id}
+    >
       <div className="w-20 shrink-0 pt-3 text-right text-xs text-muted-foreground">
         {start && <p>{formatDate(start)}</p>}
         {end && <p>{formatDate(end)}</p>}
@@ -44,9 +51,7 @@ export function ArrangementCard({
             purchased(row) && 'border-solid border-l-4 border-l-app-accent'
           )}
         >
-          <span className="block break-words text-sm font-medium">
-            {name ?? `${labels[row.kind]} · ${row.source.id}`}
-          </span>
+          <span className="block break-words text-sm font-medium">{name}</span>
           <span className="block text-xs text-muted-foreground">{labels[row.kind]}</span>
           <RowStates row={row} identity={identity} />
           <OwnerSummary row={row} sources={sources} identity={identity} />
@@ -74,7 +79,12 @@ function OwnerSummary({
   if (!owner) return null;
   return (
     <span className="mt-1 block break-all text-xs text-muted-foreground">
-      {identity.labels.handledBy} {owner.kind === 'self' ? identity.labels.self : owner.uri}
+      {identity.labels.handledBy}{' '}
+      {owner.kind === 'self' ? (
+        identity.labels.self
+      ) : (
+        <ContactReference identity={identity} uri={owner.uri} />
+      )}
     </span>
   );
 }
