@@ -183,6 +183,7 @@ pub struct LookupResponse {
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/entities", get(list).post(create))
+        .route("/entity-types", get(catalogue))
         .route(
             "/entities/{id}",
             get(get_one).patch(update).delete(delete_one),
@@ -206,6 +207,26 @@ pub fn router() -> Router<AppState> {
         // consistent error; a request larger than that still gets axum's
         // built-in (non-panicking) rejection.
         .layer(DefaultBodyLimit::max(ASSET_MAX_BYTES * 2))
+}
+
+/// Entity creation choices and default, sourced from the same definitions as request validation.
+#[derive(Debug, Clone, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct EntityCatalogue {
+    pub types: Vec<String>,
+    pub default_type: String,
+}
+
+/// Publish the owning entity type catalogue without requiring clients to copy backend constants.
+#[utoipa::path(get, path="/entity-types", operation_id="entities.catalogue", responses((status=200,body=EntityCatalogue)))]
+pub async fn catalogue() -> Json<EntityCatalogue> {
+    Json(EntityCatalogue {
+        types: ENTITY_TYPES
+            .iter()
+            .map(|value| (*value).to_string())
+            .collect(),
+        default_type: super::model::DEFAULT_ENTITY_TYPE.to_string(),
+    })
 }
 
 #[utoipa::path(

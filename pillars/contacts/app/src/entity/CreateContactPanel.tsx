@@ -2,35 +2,38 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router';
 
-import { Button, PageHeader, Select, TextInput } from '@pops/ui';
+import { Button, PageHeader } from '@pops/ui';
 
 import { describeContactError } from '../errors';
 import { contactGateway } from './api';
+import { ContactIdentityFields } from './ContactIdentityFields';
+import { useEntityCatalogue } from './useEntityCatalogue';
 
-import type { ContactGateway } from './api';
-
-const entityTypes = ['person', 'company', 'organisation'];
+import type { Entity } from '../contacts-api/types.gen';
+import type { ContactCreationGateway } from './api';
 
 /** Create one explicitly typed entity, then continue to its add-as-needed contact editor. */
-export function CreateContactPanel({ gateway = contactGateway }: { gateway?: ContactGateway }) {
+export function CreateContactPanel({
+  gateway = contactGateway,
+}: {
+  gateway?: ContactCreationGateway;
+}) {
   const { t } = useTranslation('contacts');
   const navigate = useNavigate();
   const [name, setName] = useState('');
-  const [type, setType] = useState('person');
+  const [selectedType, setType] = useState<string | null>(null);
+  const catalogue = useEntityCatalogue(gateway);
+  const type = selectedType ?? catalogue.data?.defaultType ?? '';
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
   async function create() {
-    if (saving || !name.trim()) return;
+    if (saving || !name.trim() || !catalogue.isSuccess) return;
     setSaving(true);
     setError(null);
     try {
       const entity = await gateway.create(name.trim(), type);
-      await navigate(
-        entity.type === 'person'
-          ? `/contacts/people/${entity.id}`
-          : `/contacts/entities/${entity.id}`
-      );
+      await navigate(contactPath(entity));
     } catch (failure) {
       setError(failure instanceof Error ? failure : new Error(t('errors.saveFailed')));
     } finally {
@@ -44,26 +47,25 @@ export function CreateContactPanel({ gateway = contactGateway }: { gateway?: Con
       <section className="space-y-4 rounded-xl border border-border bg-card p-4">
         <p className="text-sm text-muted-foreground">{t('create.description')}</p>
         {error && <p role="alert">{describeContactError(error, t)}</p>}
-        <TextInput
-          label={t('entity.name')}
-          className="text-sm"
-          containerClassName="min-h-11"
-          value={name}
-          disabled={saving}
-          onChange={(event) => setName(event.target.value)}
-        />
-        <Select
-          aria-label={t('create.type')}
-          className="min-h-11 text-sm"
-          value={type}
-          options={entityTypes.map((value) => ({ value, label: t(`entityTypes.${value}`) }))}
-          onChange={(event) => {
-            if (entityTypes.includes(event.target.value)) setType(event.target.value);
-          }}
+        {catalogue.isError && (
+          <p role="alert">
+            {describeContactError(catalogue.error, t)}{' '}
+            <Button variant="outline" onClick={() => void catalogue.refetch()}>
+              {t('chooser.retryTypes')}
+            </Button>
+          </p>
+        )}
+        <ContactIdentityFields
+          name={name}
+          type={type}
+          disabled={saving || !catalogue.isSuccess}
+          types={catalogue.data?.types ?? []}
+          changeName={setName}
+          changeType={setType}
         />
         <Button
           className="min-h-11"
-          disabled={saving || !name.trim()}
+          disabled={saving || !name.trim() || !catalogue.isSuccess}
           onClick={() => void create()}
         >
           {t('create.submit')}
@@ -71,4 +73,11 @@ export function CreateContactPanel({ gateway = contactGateway }: { gateway?: Con
       </section>
     </main>
   );
+}
+
+function contactPath(entity: Entity): string {
+  if (entity.type === 'person') return `/contacts/people/${entity.id}`;
+  if (entity.type === 'company' || entity.type === 'organisation')
+    return `/contacts/entities/${entity.id}`;
+  return `/contacts/${entity.id}`;
 }

@@ -224,6 +224,12 @@ export async function stubCompanyDetail(page: Page): Promise<void> {
 
 /** Stub contact creation, entity details, and local contact-point writes for the create workflow. */
 export async function stubContactCreation(page: Page): Promise<void> {
+  await page.route(/\/contacts-api\/entity-types$/, (route) =>
+    json(route, 200, {
+      types: ['company', 'person', 'government', 'bank', 'place', 'brand', 'organisation'],
+      defaultType: 'company',
+    })
+  );
   let created: z.infer<typeof EntitySchema> | null = null;
   await page.route(/\/contacts-api\/entities$/, async (route) => {
     if (route.request().method() === 'POST') {

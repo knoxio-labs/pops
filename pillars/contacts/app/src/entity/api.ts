@@ -1,4 +1,5 @@
 import {
+  entitiesCatalogue,
   entitiesAddressesCreate,
   entitiesAddressesList,
   entitiesCreate,
@@ -12,7 +13,13 @@ import {
 import { ContactError } from '../errors';
 import { contactRequest } from '../request';
 
-import type { Address, ContactPoint, ContactPointInput, Entity } from '../contacts-api/types.gen';
+import type {
+  Address,
+  ContactPoint,
+  ContactPointInput,
+  Entity,
+  EntityCatalogue,
+} from '../contacts-api/types.gen';
 
 /** Business or organisation details loaded through Contacts-owned fact routes. */
 export interface ContactSnapshot {
@@ -44,8 +51,14 @@ export interface ContactGateway {
   addAddress: (id: string, value: string) => Promise<Address>;
 }
 
+/** Creation consumers load the owning type catalogue instead of copying type choices or defaults. */
+export interface ContactCreationGateway extends ContactGateway {
+  catalogue: () => Promise<EntityCatalogue>;
+}
+
 /** Bind entity-level contact workflows to published Contacts routes. */
-export const contactGateway: ContactGateway = {
+export const contactGateway: ContactCreationGateway = {
+  catalogue: () => contactRequest(() => entitiesCatalogue()),
   async search(query, type) {
     const result = await contactRequest(() => entitiesList({ query: { search: query, type } }));
     return result.data;

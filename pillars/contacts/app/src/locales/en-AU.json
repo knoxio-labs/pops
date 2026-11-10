@@ -254,8 +254,18 @@
     "methods": "Contact methods",
     "addresses": "Addresses"
   },
-  "entityTypes": { "person": "Person", "company": "Company", "organisation": "Organisation" },
-  "reference": { "type": "Contact type" },
+  "entityTypes": {
+    "person": "Person",
+    "company": "Company",
+    "organisation": "Organisation",
+    "government": "Government",
+    "bank": "Bank",
+    "place": "Place",
+    "brand": "Brand"
+  },
+  "reference": {
+    "type": "Contact type"
+  },
   "create": {
     "open": "Create contact",
     "title": "Create contact",
@@ -268,7 +278,7 @@
     "title": "Choose a contact",
     "description": "Search existing contacts or start a new contact.",
     "search": "Search contacts",
-    "minimum": "Type at least 2 characters to search.",
+    "minimum": "Enter a name to search.",
     "empty": "No matching contacts.",
     "failed": "Could not search contacts.",
     "create": "Create new"
@@ -294,5 +304,12 @@
     "apply": "Merge contacts",
     "cancel": "Go back",
     "saved": "The merge is applied. Source records and addresses remain attached to the original records."
+  },
+  "chooser": {
+    "existing": "Choose an existing contact",
+    "useCreated": "Use created contact",
+    "duplicate": "Choose the existing contact explicitly, or edit the name before creating another.",
+    "uncertain": "The create outcome is unknown. This draft is retained and will not be submitted again. Search existing contacts to check what was saved.",
+    "retryTypes": "Reload contact types"
   }
 }

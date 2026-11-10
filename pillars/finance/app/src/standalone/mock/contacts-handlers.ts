@@ -18,6 +18,7 @@ import type {
   AddressMutation,
   EntitiesLookupResponses,
   EntityResponse,
+  EntityCatalogue,
   EntityReferenceResponse,
   HealthResponse,
   IdentityGroup,
@@ -114,6 +115,10 @@ export const contactsHandlers: MockHandlers = {
     status: 'ready',
     ts: '2026-09-05T08:00:00.000Z',
     version: 'standalone',
+  }),
+  'GET /entity-types': ok<EntityCatalogue>({
+    types: ['company', 'person', 'government', 'bank', 'place', 'brand', 'organisation'],
+    defaultType: 'company',
   }),
   'GET /entities': listEntities,
   'POST /entities': created(mutation),

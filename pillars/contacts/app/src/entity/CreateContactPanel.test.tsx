@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { expect, it, vi } from 'vitest';
@@ -6,7 +7,7 @@ import { expect, it, vi } from 'vitest';
 import { CreateContactPanel } from './CreateContactPanel';
 
 import type { Entity } from '../contacts-api/types.gen';
-import type { ContactGateway } from './api';
+import type { ContactCreationGateway } from './api';
 
 const company: Entity = {
   id: 'company-1',
@@ -17,21 +18,26 @@ const company: Entity = {
   lastEditedTime: '2026-11-10T00:00:00Z',
 };
 
-function mount(gateway: ContactGateway) {
+function mount(gateway: ContactCreationGateway) {
   render(
-    <MemoryRouter initialEntries={['/contacts/new']}>
-      <Routes>
-        <Route path="/contacts/new" element={<CreateContactPanel gateway={gateway} />} />
-        <Route path="/contacts/entities/:entityId" element={<p>Contact detail route</p>} />
-        <Route path="/contacts/people/:personId" element={<p>Person detail route</p>} />
-      </Routes>
-    </MemoryRouter>
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter initialEntries={['/contacts/new']}>
+        <Routes>
+          <Route path="/contacts/new" element={<CreateContactPanel gateway={gateway} />} />
+          <Route path="/contacts/entities/:entityId" element={<p>Contact detail route</p>} />
+          <Route path="/contacts/people/:personId" element={<p>Person detail route</p>} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>
   );
 }
 
 it('creates only the explicitly typed entity before opening its progressive editor', async () => {
   const user = userEvent.setup();
-  const gateway: ContactGateway = {
+  const gateway: ContactCreationGateway = {
+    catalogue: vi
+      .fn()
+      .mockResolvedValue({ types: ['person', 'company', 'organisation'], defaultType: 'company' }),
     search: vi.fn(),
     resolve: vi.fn(),
     create: vi.fn().mockResolvedValue(company),
@@ -41,6 +47,7 @@ it('creates only the explicitly typed entity before opening its progressive edit
     addAddress: vi.fn(),
   };
   mount(gateway);
+  await waitFor(() => expect(screen.getByRole('textbox', { name: 'Contact name' })).toBeEnabled());
   await user.type(screen.getByRole('textbox', { name: 'Contact name' }), 'Harbour Books');
   await user.selectOptions(screen.getByRole('combobox', { name: 'Contact type' }), 'company');
   await user.click(screen.getByRole('button', { name: 'Create contact' }));
@@ -52,7 +59,10 @@ it('creates only the explicitly typed entity before opening its progressive edit
 
 it('keeps the draft and does not navigate when create fails', async () => {
   const user = userEvent.setup();
-  const gateway: ContactGateway = {
+  const gateway: ContactCreationGateway = {
+    catalogue: vi
+      .fn()
+      .mockResolvedValue({ types: ['person', 'company', 'organisation'], defaultType: 'company' }),
     search: vi.fn(),
     resolve: vi.fn(),
     create: vi.fn().mockRejectedValue(new Error('Create failed')),
@@ -62,6 +72,7 @@ it('keeps the draft and does not navigate when create fails', async () => {
     addAddress: vi.fn(),
   };
   mount(gateway);
+  await waitFor(() => expect(screen.getByRole('textbox', { name: 'Contact name' })).toBeEnabled());
   await user.type(screen.getByRole('textbox', { name: 'Contact name' }), 'New person');
   await user.click(screen.getByRole('button', { name: 'Create contact' }));
   expect(await screen.findByRole('alert')).toHaveTextContent('Create failed');

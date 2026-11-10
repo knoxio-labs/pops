@@ -21,6 +21,8 @@ export interface ContactPickerProps {
   entityType?: string;
   allowCreate?: boolean;
   gateway?: ContactGateway;
+  /** Search text restored when a host returns from its creation step. */
+  initialSearch?: string;
 }
 
 /** Search existing contacts or hand an explicit create intent to the owning flow. */
@@ -32,15 +34,16 @@ export function ContactPicker({
   entityType,
   allowCreate = true,
   gateway = contactGateway,
+  initialSearch = '',
 }: ContactPickerProps) {
   const { t } = useTranslation('contacts');
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(initialSearch);
   const [selecting, setSelecting] = useState(false);
   const [failedSelection, setFailedSelection] = useState<Entity | null>(null);
   const query = useQuery({
     queryKey: ['contacts-picker-search', search.trim(), entityType],
     queryFn: () => gateway.search(search.trim(), entityType),
-    enabled: open && search.trim().length >= 2,
+    enabled: open && search.trim().length > 0,
     retry: false,
   });
 
@@ -131,7 +134,7 @@ function ContactPickerDialog({
       searchLabel={t('picker.search')}
       search={search}
       onSearchChange={onSearchChange}
-      minChars={2}
+      minChars={1}
       minCharsMessage={t('picker.minimum')}
       isLoading={isLoading}
       results={results}
@@ -161,7 +164,7 @@ function CreateContactAction({
       type="button"
       variant="outline"
       className="min-h-11 whitespace-nowrap"
-      disabled={search.trim().length < 2}
+      disabled={search.trim().length === 0}
       onClick={() => onCreate(search.trim())}
     >
       {t('picker.create')}

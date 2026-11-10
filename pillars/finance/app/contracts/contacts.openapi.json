@@ -443,6 +443,25 @@
         ],
         "type": "object"
       },
+      "EntityCatalogue": {
+        "description": "Entity creation choices and default, sourced from the same definitions as request validation.",
+        "properties": {
+          "defaultType": {
+            "type": "string"
+          },
+          "types": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "types",
+          "defaultType"
+        ],
+        "type": "object"
+      },
       "EntityListResponse": {
         "description": "`GET /entities` response body.",
         "properties": {
@@ -3684,6 +3703,26 @@
         "summary": "List provenance for one canonical person, including inactive sources.",
         "tags": [
           "crate::sources::routes"
+        ]
+      }
+    },
+    "/entity-types": {
+      "get": {
+        "operationId": "entities.catalogue",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntityCatalogue"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Publish the owning entity type catalogue without requiring clients to copy backend constants.",
+        "tags": [
+          "crate::entities::routes"
         ]
       }
     },

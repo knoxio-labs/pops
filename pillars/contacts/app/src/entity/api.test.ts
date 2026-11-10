@@ -87,3 +87,11 @@ it('rejects person entity details before requesting business facts', async () =>
   });
   expect(requests).toHaveLength(1);
 });
+
+it('loads entity types and the source default through the published catalogue route', async () => {
+  const catalogue = { types: ['government', 'bank'], defaultType: 'bank' };
+  const requests = intercept(() => Response.json(catalogue));
+  expect(await contactGateway.catalogue()).toEqual(catalogue);
+  expect(requests[0]?.method).toBe('GET');
+  expect(new URL(requests[0]?.url ?? '').pathname).toBe('/contacts-api/entity-types');
+});

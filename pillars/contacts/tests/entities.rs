@@ -971,3 +971,55 @@ async fn patch_ignoring_avatar_asset_id_leaves_it_untouched() {
     let (status, _, _) = send_raw(&app, get(&format!("/entities/{id}/avatar"))).await;
     assert_eq!(status, StatusCode::OK, "the blob is still there");
 }
+
+#[tokio::test]
+async fn entity_catalogue_matches_validation_and_accepts_single_character_unicode_names() {
+    let app = app().await;
+    let (status, catalogue) = send(&app, get("/entity-types")).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        catalogue["types"],
+        json!(contacts::entities::model::ENTITY_TYPES)
+    );
+    assert_eq!(
+        catalogue["defaultType"],
+        contacts::entities::model::DEFAULT_ENTITY_TYPE
+    );
+    let (status, default_created) = send(&app, post("/entities", json!({"name":"元"}))).await;
+    assert_eq!(status, StatusCode::CREATED);
+    assert_eq!(default_created["data"]["type"], catalogue["defaultType"]);
+    for (index, kind) in contacts::entities::model::ENTITY_TYPES
+        .into_iter()
+        .enumerate()
+    {
+        let name = char::from_u32(0x4e00 + u32::try_from(index).unwrap())
+            .unwrap()
+            .to_string();
+        let (status, created) =
+            send(&app, post("/entities", json!({"name":name,"type":kind}))).await;
+        assert_eq!(status, StatusCode::CREATED, "{kind}: {created}");
+        let query = url::form_urlencoded::Serializer::new(String::new())
+            .append_pair("search", &name)
+            .append_pair("type", kind)
+            .finish();
+        let (status, listed) = send(&app, get(&format!("/entities?{query}"))).await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(listed["data"][0]["id"], created["data"]["id"]);
+    }
+}
+
+#[tokio::test]
+async fn entity_catalogue_does_not_reserve_an_opaque_entity_id() {
+    let (app, pool) = app_with_pool().await;
+    sqlx::query("INSERT INTO entities(id,name,type,last_edited_time) VALUES(?1,?2,?3,?4)")
+        .bind("catalogue")
+        .bind("Opaque ID")
+        .bind("person")
+        .bind("2026-11-10T00:00:00Z")
+        .execute(&pool)
+        .await
+        .unwrap();
+    let (status, body) = send(&app, get("/entities/catalogue")).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["data"]["id"], "catalogue");
+}

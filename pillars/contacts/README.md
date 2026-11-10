@@ -28,7 +28,29 @@ number without inferring a country.
 The app also supports creating people, companies and organisations, and editing
 company and organisation contact methods, addresses, name and notes. Its dialog
 picker returns the selected entity and the canonical Contacts URI to its host;
-creation is an explicit callback. Duplicate review selects both existing entities
+`ContactPicker` retains its explicit creation-intent callback for existing hosts.
+`ContactChooser` owns progressive in-place creation and returns a real canonical
+entity/reference through the same selection callback. Keep it mounted while
+closed to retain its name, type and creation outcome. Hosts whose routes unmount
+the chooser retain one `ContactChooserSession` per creation intent outside those
+views and pass it through `session`; its draft and asynchronous outcome survive
+remounting. Replace the session only for a new explicit intent. Once a create succeeds,
+retrying resolves that known entity without repeating POST. An unknown create
+outcome retains and locks the attempted draft; the user can explicitly search
+existing contacts. A duplicate conflict requires explicit existing selection,
+never a guessed identity match. Dismissing a pending request prevents its result
+from being delivered to the host automatically.
+
+Embedded hosts import `contactsI18n` from `@pops/app-contacts` and install that
+`RemotePillarI18n` metadata through their sanctioned shared-instance translation
+registration before rendering `ContactChooser`. The host must register both
+supported catalogues even when the Contacts remote has never mounted; no copied
+locale resources or separate i18next instance are required.
+
+`GET /entity-types` publishes choices and the default from the backend's actual
+validation constants. Both creation surfaces consume that catalogue; retained
+unknown choices stay visible instead of being silently replaced. Search and
+creation accept a single nonempty Unicode character. Duplicate review selects both existing entities
 and requires an explicit preview and merge action.
 
 The global “Import resolved contacts” action applies the server’s complete-batch
@@ -66,6 +88,7 @@ The HTTP surface:
 | Path                                                 | What it serves                                                                                                                                  |
 | ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | `/`                                                  | Stub root — a plain-text identity banner so `GET /` is not a 404.                                                                               |
+| `/entity-types`                                      | Owning entity type choices and creation default (`GET`).                                                                                        |
 | `/entities`                                          | Contact CRUD + paginated/filtered list (`GET`/`POST`).                                                                                          |
 | `/entities/{id}`                                     | Single-entity read/update/delete (`GET`/`PATCH`/`DELETE`).                                                                                      |
 | `/entities/{id}/reference`                           | Canonical `pops:contacts/contact/{id}` URI, resolving merged historical IDs (`GET`).                                                            |

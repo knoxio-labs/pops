@@ -254,8 +254,18 @@
     "methods": "Formas de contato",
     "addresses": "Endereços"
   },
-  "entityTypes": { "person": "Pessoa", "company": "Empresa", "organisation": "Organização" },
-  "reference": { "type": "Tipo de contato" },
+  "entityTypes": {
+    "person": "Pessoa",
+    "company": "Empresa",
+    "organisation": "Organização",
+    "government": "Governo",
+    "bank": "Banco",
+    "place": "Local",
+    "brand": "Marca"
+  },
+  "reference": {
+    "type": "Tipo de contato"
+  },
   "create": {
     "open": "Criar contato",
     "title": "Criar contato",
@@ -268,7 +278,7 @@
     "title": "Escolher um contato",
     "description": "Pesquise contatos existentes ou comece um novo contato.",
     "search": "Pesquisar contatos",
-    "minimum": "Digite pelo menos 2 caracteres para pesquisar.",
+    "minimum": "Digite um nome para buscar.",
     "empty": "Nenhum contato correspondente.",
     "failed": "Não foi possível pesquisar contatos.",
     "create": "Criar novo"
@@ -294,5 +304,12 @@
     "apply": "Mesclar contatos",
     "cancel": "Voltar",
     "saved": "A mesclagem foi aplicada. Os registros de origem e endereços permanecem nos registros originais."
+  },
+  "chooser": {
+    "existing": "Escolher um contato existente",
+    "useCreated": "Usar contato criado",
+    "duplicate": "Escolha explicitamente o contato existente ou altere o nome antes de criar outro.",
+    "uncertain": "Não foi possível confirmar o resultado da criação. O rascunho foi mantido e não será enviado novamente. Busque nos contatos existentes para verificar o que foi salvo.",
+    "retryTypes": "Recarregar tipos de contato"
   }
 }
