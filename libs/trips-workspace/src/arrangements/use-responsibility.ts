@@ -35,14 +35,16 @@ export function useResponsibility(
   target: ArrangementTarget
 ): ResponsibilityEditor {
   const { queryClient, key, query } = useResponsibilitySource(identity, target);
-  const session = useResponsibilitySession(identity, target);
+  const binding = useResponsibilitySession(identity, target);
+  const session = binding.session;
   const operation = useSyncExternalStore(session.subscribe, session.read, session.read);
   async function persist(candidate: ResponsibilityWrite): Promise<void> {
+    if (!binding.isCurrent() || !binding.matchesSource(candidate.source)) return;
     const write = session.claim(candidate);
     if (!write) return;
     let confirmed: ArrangementResponsibility;
     try {
-      confirmed = await replaceResponsibility(identity, write.source, write.value);
+      confirmed = await replaceResponsibility(binding.identity, write.source, write.value);
       if (!matchesWrite(write, confirmed))
         throw new Error('Responsibility write receipt does not match its operation');
     } catch (error) {
@@ -50,10 +52,11 @@ export function useResponsibility(
       return;
     }
     if (!session.acknowledge(write, confirmed)) return;
+    if (write.picker) identity.advanceContactChooserIntent?.(target, write.picker);
+    if (!binding.isCurrent()) return;
     queryClient.setQueryData<ArrangementResponsibility>(key, (current) =>
       newerResponsibility(current, confirmed)
     );
-    if (write.picker) identity.advanceContactChooserIntent?.(target, write.picker);
     await queryClient.invalidateQueries({
       queryKey: [...arrangementsKey(identity), 'responsibilities'],
     });
@@ -68,12 +71,13 @@ export function useResponsibility(
       if (current.kind === 'uncertain') await persist(current.write);
     },
     reload: async (): Promise<void> => {
+      if (!binding.isCurrent()) return;
       await query.refetch();
     },
     reconcile: async (): Promise<void> => {
-      if (session.read().kind !== 'uncertain') return;
+      if (!binding.isCurrent() || session.read().kind !== 'uncertain') return;
       const result = await query.refetch();
-      if (!result.isSuccess) return;
+      if (!result.isSuccess || !binding.isCurrent()) return;
       const abandoned = session.reconcile();
       if (abandoned?.picker) identity.advanceContactChooserIntent?.(target, abandoned.picker);
     },

@@ -1,32 +1,42 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useLayoutEffect, useState } from 'react';
 
-import { arrangementsKey } from './api';
-import { ResponsibilitySession } from './responsibility-session';
+import { ResponsibilityRegistry } from './responsibility-registry';
 
 import type { JSX, ReactNode } from 'react';
 
+import type { ResponsibilityBinding } from './responsibility-registry';
 import type { ArrangementTarget, ArrangementsWorkspaceProps } from './types';
 
-const Sessions = createContext<Map<string, ResponsibilitySession> | undefined>(undefined);
+const Sessions = createContext<ResponsibilityRegistry | undefined>(undefined);
 
-/** Scope retained responsibility operations to one mounted owning-trip/API workspace, above conditional dialogs. */
-export function ResponsibilitySessions({ children }: { children: ReactNode }): JSX.Element {
-  const [sessions] = useState(() => new Map<string, ResponsibilitySession>());
+/** Retain exact owner responsibility controllers for the mounted host lifetime, above keyed trip/origin views. */
+export function ResponsibilitySessions({
+  children,
+  identity,
+}: {
+  children: ReactNode;
+  identity: ArrangementsWorkspaceProps;
+}): JSX.Element {
+  const [sessions] = useState(() => new ResponsibilityRegistry(identity));
+  useLayoutEffect(() => {
+    sessions.activate(identity);
+    return () => sessions.deactivate();
+  });
   return <Sessions.Provider value={sessions}>{children}</Sessions.Provider>;
 }
 
-/** Return the same operation controller for the exact API origin, trip, source kind and source identity. */
+/** Resolve an exact client/origin/trip/target controller with a live guard against the committed host context. */
 export function useResponsibilitySession(
   identity: ArrangementsWorkspaceProps,
   target: ArrangementTarget
-): ResponsibilitySession {
+): ResponsibilityBinding {
   const shared = useContext(Sessions);
-  const [local] = useState(() => new Map<string, ResponsibilitySession>());
+  const [local] = useState(() => new ResponsibilityRegistry(identity));
+  useLayoutEffect(() => {
+    if (shared) return;
+    local.activate(identity);
+    return () => local.deactivate();
+  });
   const sessions = shared ?? local;
-  const key = JSON.stringify([...arrangementsKey(identity), target.targetKind, target.targetId]);
-  const retained = sessions.get(key);
-  if (retained) return retained;
-  const session = new ResponsibilitySession();
-  sessions.set(key, session);
-  return session;
+  return sessions.get(identity, target);
 }

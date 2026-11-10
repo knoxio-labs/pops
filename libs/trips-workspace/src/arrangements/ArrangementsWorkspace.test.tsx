@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createClient as createDocumentsClient } from '../documents-api/client';
 import { sourceStay } from '../stay/test-utils';
+import { createClient } from '../trips-api/client';
 import { ArrangementsWorkspace } from './ArrangementsWorkspace';
 import { Responsibility } from './Responsibility';
 import { arrangementsTransport, labels, sourceRental } from './test-utils';
@@ -15,6 +16,24 @@ import type { ReactElement } from 'react';
 import type { TripDocumentUploadSession } from '../documents/trip-document-upload-session';
 
 const documentViews = vi.hoisted(() => vi.fn<(session: TripDocumentUploadSession) => void>());
+const gapRequests = vi.hoisted(() => vi.fn<(promise: Promise<void>) => void>());
+vi.mock('./use-gap-capture', async (original) => {
+  const actual = await original<typeof import('./use-gap-capture')>();
+  return {
+    ...actual,
+    useGapCapture: (...args: Parameters<typeof actual.useGapCapture>) => {
+      const capture = actual.useGapCapture(...args);
+      return {
+        ...capture,
+        create: (...input: Parameters<typeof capture.create>): Promise<void> => {
+          const promise = capture.create(...input);
+          gapRequests(promise);
+          return promise;
+        },
+      };
+    },
+  };
+});
 vi.mock('./ArrangementDocuments', () => ({
   ArrangementDocuments: ({ session }: { session: TripDocumentUploadSession }) => {
     documentViews(session);
@@ -73,6 +92,7 @@ vi.mock('../journey/JourneyWorkspace', () => ({
 afterEach(() => {
   cleanup();
   documentViews.mockClear();
+  gapRequests.mockClear();
 });
 function mount(element: ReactElement): QueryClient {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
@@ -89,6 +109,37 @@ function setup() {
   };
   const queryClient = mount(<ArrangementsWorkspace {...identity} />);
   return { transport, identity, queryClient, user: userEvent.setup() };
+}
+function deferredGap(transport: ReturnType<typeof arrangementsTransport>) {
+  const originalFetch = transport.client.getConfig().fetch;
+  if (!originalFetch) throw new Error('Expected the actual source transport');
+  let accept: (() => void) | undefined;
+  let started: (() => void) | undefined;
+  const gate = new Promise<void>((resolve) => {
+    accept = resolve;
+  });
+  const requestStarted = new Promise<void>((resolve) => {
+    started = resolve;
+  });
+  const client = createClient({
+    baseUrl: 'http://arrangements.test',
+    fetch: async (input, init) => {
+      const request = new Request(input, init);
+      if (request.method === 'POST') {
+        started?.();
+        await gate;
+      }
+      return originalFetch(request);
+    },
+  });
+  return {
+    client,
+    requestStarted,
+    accept: (): void => {
+      if (!accept) throw new Error('Expected the pending source gate');
+      accept();
+    },
+  };
 }
 describe('Along the route source workspace', () => {
   it('keeps repeated visits distinct, one full Rental and independently identifiable unplaced Journeys', async () => {
@@ -215,49 +266,58 @@ describe('Along the route source workspace', () => {
     expect(screen.getByText('Reserved')).toBeVisible();
     expect(transport.writes).toEqual([]);
   });
-  it('retains an uncertain source responsibility operation while a client replacement closes its view', async () => {
-    const first = arrangementsTransport();
-    const second = arrangementsTransport();
-    first.replies.push({
-      status: 503,
-      body: {
-        code: 'trips.responsibility.unknown',
-        message: 'Unknown write outcome',
-        retryable: true,
-      },
-    });
-    const identity = {
-      tripId: 7,
-      client: first.client,
-      labels,
-      formatDate: (date: string): string => date,
-    };
-    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    const view = render(
-      <QueryClientProvider client={queryClient}>
-        <ArrangementsWorkspace {...identity} />
-      </QueryClientProvider>
-    );
-    await userEvent.click(await screen.findByRole('button', { name: /Cedar guesthouse/ }));
-    await userEvent.click(await screen.findByRole('button', { name: 'Self' }));
-    await screen.findByText('trips.responsibility.unknown');
-    view.rerender(
-      <QueryClientProvider client={queryClient}>
-        <ArrangementsWorkspace {...identity} client={second.client} />
-      </QueryClientProvider>
-    );
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    view.rerender(
-      <QueryClientProvider client={queryClient}>
-        <ArrangementsWorkspace {...identity} />
-      </QueryClientProvider>
-    );
-    await userEvent.click(await screen.findByRole('button', { name: /Cedar guesthouse/ }));
-    expect(screen.getByText(labels.responsibilityUncertain)).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Self' })).toBeDisabled();
-    expect(first.writes).toHaveLength(1);
-    expect(second.writes).toEqual([]);
-  });
+  it.each(['instance', 'origin', 'trip'] as const)(
+    'retains an uncertain source responsibility operation across a client %s A→B→A transition',
+    async (change) => {
+      const first = arrangementsTransport();
+      const second = arrangementsTransport();
+      first.replies.push({
+        status: 503,
+        body: {
+          code: 'trips.responsibility.unknown',
+          message: 'Unknown write outcome',
+          retryable: true,
+        },
+      });
+      const identity = {
+        tripId: 7,
+        client: first.client,
+        labels,
+        formatDate: (date: string): string => date,
+      };
+      const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      const view = render(
+        <QueryClientProvider client={queryClient}>
+          <ArrangementsWorkspace {...identity} />
+        </QueryClientProvider>
+      );
+      await userEvent.click(await screen.findByRole('button', { name: /Harbour cars/ }));
+      await userEvent.click(await screen.findByRole('button', { name: 'Self' }));
+      await screen.findByText('trips.responsibility.unknown');
+      if (change === 'origin') first.client.setConfig({ baseUrl: 'https://other-trips.example' });
+      view.rerender(
+        <QueryClientProvider client={queryClient}>
+          <ArrangementsWorkspace
+            {...identity}
+            client={change === 'instance' ? second.client : first.client}
+            tripId={change === 'trip' ? 8 : 7}
+          />
+        </QueryClientProvider>
+      );
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      first.client.setConfig({ baseUrl: 'http://arrangements.test' });
+      view.rerender(
+        <QueryClientProvider client={queryClient}>
+          <ArrangementsWorkspace {...identity} />
+        </QueryClientProvider>
+      );
+      await userEvent.click(await screen.findByRole('button', { name: /Harbour cars/ }));
+      expect(screen.getByText(labels.responsibilityUncertain)).toBeVisible();
+      expect(screen.getByRole('button', { name: 'Self' })).toBeDisabled();
+      expect(first.writes).toHaveLength(1);
+      expect(second.writes).toEqual([]);
+    }
+  );
   it('keeps the canonical Journey editor mounted when its selected source changes', async () => {
     const { user } = setup();
     await user.click(await screen.findByRole('button', { name: /Harbour connection/ }));
@@ -318,6 +378,151 @@ describe('Along the route source workspace', () => {
     expect(screen.queryByText('trips.stay.creation_uncertain')).not.toBeInTheDocument();
     expect(transport.writes).toHaveLength(1);
   });
+  it.each([false, true])(
+    'keeps a newer Rental draft when a gap creation settles after host replacement (ABA: %s)',
+    async (returnBeforeReceipt) => {
+      const first = arrangementsTransport();
+      const second = arrangementsTransport();
+      const { client, accept, requestStarted } = deferredGap(first);
+      first.replies.push({
+        status: 201,
+        body: sourceStay({
+          id: 17,
+          status: 'Considering',
+          timing: { arrival: '2029-05-04', departure: '2029-05-09' },
+        }),
+      });
+      const identity = { tripId: 7, client, labels, formatDate: (date: string): string => date };
+      const cache = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      const view = render(
+        <QueryClientProvider client={cache}>
+          <ArrangementsWorkspace {...identity} />
+        </QueryClientProvider>
+      );
+      const visit = await screen.findByRole('region', { name: 'Wellington · Visit 1' });
+      const gap = await within(visit).findByRole('button', { name: /Accommodation not arranged/ });
+      await userEvent.click(gap);
+      await requestStarted;
+      const creating = gapRequests.mock.calls.at(-1)?.[0];
+      if (!creating) throw new Error('Expected the actual parent capture operation');
+      view.rerender(
+        <QueryClientProvider client={cache}>
+          <ArrangementsWorkspace {...identity} client={second.client} />
+        </QueryClientProvider>
+      );
+      if (returnBeforeReceipt)
+        view.rerender(
+          <QueryClientProvider client={cache}>
+            <ArrangementsWorkspace {...identity} />
+          </QueryClientProvider>
+        );
+      await userEvent.click(await screen.findByRole('button', { name: /Harbour cars/ }));
+      await userEvent.clear(await screen.findByLabelText('Provider'));
+      await userEvent.type(screen.getByLabelText('Provider'), 'Replacement context draft');
+      await act(async () => {
+        accept();
+        await creating;
+      });
+      expect(first.writes).toHaveLength(1);
+      expect(screen.getByLabelText('Provider')).toHaveValue('Replacement context draft');
+      expect(screen.queryByText('Stay source 7:17')).not.toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: 'Close' }));
+      if (!returnBeforeReceipt)
+        view.rerender(
+          <QueryClientProvider client={cache}>
+            <ArrangementsWorkspace {...identity} />
+          </QueryClientProvider>
+        );
+      const originalVisit = await screen.findByRole('region', { name: 'Wellington · Visit 1' });
+      await userEvent.click(
+        await within(originalVisit).findByRole('button', { name: /Accommodation not arranged/ })
+      );
+      expect(screen.getByText('Stay source 7:17')).toBeVisible();
+      expect(first.writes).toHaveLength(1);
+      expect(second.writes).toEqual([]);
+    }
+  );
+  it.each([
+    { context: 'origin', known: false },
+    { context: 'origin', known: true },
+    { context: 'trip', known: false },
+    { context: 'trip', known: true },
+  ] as const)(
+    'retains a late gap receipt through $context remounts (known: $known)',
+    async ({ context, known }) => {
+      const transport = arrangementsTransport();
+      const { client, accept, requestStarted } = deferredGap(transport);
+      transport.replies.push(
+        known
+          ? {
+              status: 201,
+              body: sourceStay({
+                id: 17,
+                status: 'Considering',
+                timing: { arrival: '2029-05-04', departure: '2029-05-09' },
+              }),
+            }
+          : {
+              status: 503,
+              body: {
+                code: 'trips.creation.unknown',
+                message: 'Creation outcome unknown',
+                retryable: true,
+              },
+            }
+      );
+      const identity = { tripId: 7, client, labels, formatDate: (date: string): string => date };
+      const cache = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      const view = render(
+        <QueryClientProvider client={cache}>
+          <ArrangementsWorkspace {...identity} />
+        </QueryClientProvider>
+      );
+      const firstVisit = await screen.findByRole('region', { name: 'Wellington · Visit 1' });
+      await userEvent.click(
+        await within(firstVisit).findByRole('button', { name: /Accommodation not arranged/ })
+      );
+      await requestStarted;
+      const creating = gapRequests.mock.calls.at(-1)?.[0];
+      if (!creating) throw new Error('Expected the actual source creation operation');
+      if (context === 'origin') client.setConfig({ baseUrl: 'https://other-trips.example' });
+      view.rerender(
+        <QueryClientProvider client={cache}>
+          <ArrangementsWorkspace {...identity} tripId={context === 'trip' ? 8 : 7} />
+        </QueryClientProvider>
+      );
+      await act(async () => {
+        accept();
+        await creating;
+      });
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(
+        cache
+          .getQueryData<{ id: number }[]>(['trips', 'http://arrangements.test', 7, 'stays'])
+          ?.some((stay) => stay.id === 17)
+      ).toBe(false);
+      client.setConfig({ baseUrl: 'http://arrangements.test' });
+      view.rerender(
+        <QueryClientProvider client={cache}>
+          <ArrangementsWorkspace {...identity} />
+        </QueryClientProvider>
+      );
+      const originalVisit = await screen.findByRole('region', { name: 'Wellington · Visit 1' });
+      if (!known) expect(await screen.findByText('trips.creation.unknown')).toBeVisible();
+      await userEvent.click(
+        await within(originalVisit).findByRole('button', { name: /Accommodation not arranged/ })
+      );
+      if (known) expect(await screen.findByText('Stay source 7:17')).toBeVisible();
+      else expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(transport.writes).toHaveLength(1);
+      expect(transport.writes[0]?.path).toBe('/trips/7/stays');
+      expect(
+        transport.requests
+          .filter((request) => request.method === 'POST')
+          .every((request) => new URL(request.url).origin === 'http://arrangements.test')
+      ).toBe(true);
+    }
+  );
   it('retains cached arrangements during refresh failures with a readable diagnostic and retry', async () => {
     const { transport, queryClient } = setup();
     await screen.findByRole('button', { name: /Harbour cars/ });

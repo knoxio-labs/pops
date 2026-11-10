@@ -8,7 +8,8 @@ import type { useArrangementDocuments } from './use-arrangement-documents';
 
 type Selection = { target: ArrangementTarget; documents?: TripDocumentUploadSession };
 type ActiveSource = {
-  selection: Selection;
+  selection?: Selection;
+  generation: number;
   scope: string;
   client: ArrangementsWorkspaceProps['client'];
   documentsClient: ArrangementsWorkspaceProps['documentsClient'];
@@ -23,29 +24,49 @@ export function useArrangementSource(
   open: (target: ArrangementTarget) => void;
   close: () => void;
 } {
-  const [active, setActive] = useState<ActiveSource>();
-  const scope = uploadSessionKey(
+  const scope = sourceScope(identity);
+  const [active, setActive] = useState<ActiveSource>({
+    scope,
+    generation: 0,
+    client: identity.client,
+    documentsClient: identity.documentsClient,
+  });
+  const current =
+    active.scope === scope &&
+    active.client === identity.client &&
+    active.documentsClient === identity.documentsClient
+      ? active
+      : {
+          scope,
+          generation: active.generation + 1,
+          client: identity.client,
+          documentsClient: identity.documentsClient,
+        };
+  if (active !== current) setActive(current);
+  return {
+    selection: current.selection,
+    open: (target): void => {
+      if (sourceScope(identity) !== current.scope) return;
+      const selection = { target, documents: documents(target) };
+      setActive((latest) =>
+        latest.generation === current.generation
+          ? { ...latest, generation: latest.generation + 1, selection }
+          : latest
+      );
+    },
+    close: (): void =>
+      setActive((latest) =>
+        latest.generation === current.generation
+          ? { ...latest, generation: latest.generation + 1, selection: undefined }
+          : latest
+      ),
+  };
+}
+function sourceScope(identity: ArrangementsWorkspaceProps): string {
+  return uploadSessionKey(
     identity.tripId,
     { kind: 'trip', id: identity.tripId },
     identity.client,
     identity.documentsClient
   );
-  const current =
-    active?.scope === scope &&
-    active.client === identity.client &&
-    active.documentsClient === identity.documentsClient
-      ? active.selection
-      : undefined;
-  if (active && !current) setActive(undefined);
-  return {
-    selection: current,
-    open: (target): void =>
-      setActive({
-        scope,
-        client: identity.client,
-        documentsClient: identity.documentsClient,
-        selection: { target, documents: documents(target) },
-      }),
-    close: (): void => setActive(undefined),
-  };
 }

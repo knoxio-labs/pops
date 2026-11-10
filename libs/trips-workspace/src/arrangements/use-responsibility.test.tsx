@@ -52,7 +52,7 @@ function setup() {
   const hook = renderHook(() => useResponsibility(identity, selected), {
     wrapper: ({ children }: { children: ReactNode }) => (
       <QueryClientProvider client={cache}>
-        <ResponsibilitySessions>
+        <ResponsibilitySessions identity={identity}>
           <div key={`${selected.targetKind}:${selected.targetId}`}>{visible ? children : null}</div>
         </ResponsibilitySessions>
       </QueryClientProvider>

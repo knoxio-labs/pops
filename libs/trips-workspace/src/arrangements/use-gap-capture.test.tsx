@@ -3,6 +3,8 @@ import { act, cleanup, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { sourceStay } from '../stay/test-utils';
+import { createClient } from '../trips-api/client';
+import { GapCaptureSessions } from './GapCaptureSessions';
 import { arrangementsTransport, labels } from './test-utils';
 import { useGapCapture } from './use-gap-capture';
 
@@ -38,6 +40,111 @@ function setup() {
   return { transport, cache, open, result };
 }
 describe('Gap Stay source capture identity', () => {
+  it('keeps reload busy/error state with its current source owner when an older read settles', async () => {
+    const first = arrangementsTransport();
+    const second = arrangementsTransport();
+    const fetchOriginal = first.client.getConfig().fetch;
+    if (!fetchOriginal) throw new Error('Expected the source transport');
+    first.failures.add('/trips/7/stays');
+    let finish: (() => void) | undefined;
+    const gate = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+    const firstClient = createClient({
+      baseUrl: 'http://arrangements.test',
+      fetch: async (input, init) => {
+        const request = new Request(input, init);
+        await gate;
+        return fetchOriginal(request);
+      },
+    });
+    let identity = {
+      tripId: 7,
+      client: firstClient,
+      labels,
+      formatDate: (date: string): string => date,
+    };
+    const cache = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const { result, rerender } = renderHook(() => useGapCapture(identity, vi.fn()), {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <QueryClientProvider client={cache}>
+          <GapCaptureSessions identity={identity}>{children}</GapCaptureSessions>
+        </QueryClientProvider>
+      ),
+    });
+    let reading: Promise<void> | undefined;
+    act(() => {
+      reading = result.current.reload();
+    });
+    expect(result.current.busy).toBe(true);
+    identity = { ...identity, client: second.client };
+    rerender();
+    expect(result.current.busy).toBe(false);
+    await act(async () => {
+      await result.current.reload();
+    });
+    await act(async () => {
+      finish?.();
+      await reading;
+    });
+    expect(result.current.busy).toBe(false);
+    expect(result.current.failure).toBeUndefined();
+    expect(first.writes).toEqual([]);
+    expect(second.writes).toEqual([]);
+  });
+  it('keeps old unknown outcomes dormant and rejects stale create/reset/reload callbacks in another owner context', async () => {
+    const first = arrangementsTransport();
+    const second = arrangementsTransport();
+    first.replies.push({
+      status: 503,
+      body: { code: 'trips.creation.unknown', message: 'Response lost', retryable: true },
+    });
+    const cache = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    let identity = {
+      tripId: 7,
+      client: first.client,
+      labels,
+      formatDate: (date: string): string => date,
+    };
+    const open = vi.fn();
+    const { result, rerender } = renderHook(() => useGapCapture(identity, open), {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <QueryClientProvider client={cache}>
+          <GapCaptureSessions identity={identity}>{children}</GapCaptureSessions>
+        </QueryClientProvider>
+      ),
+    });
+    await act(async () => {
+      await result.current.create(31, gap);
+    });
+    const original = result.current;
+    first.client.setConfig({ baseUrl: 'https://other-trips.example' });
+    act(() => original.beginNew());
+    await act(async () => {
+      await original.create(32, gap);
+      await original.reload();
+    });
+    expect(first.requests).toHaveLength(1);
+    first.client.setConfig({ baseUrl: 'http://arrangements.test' });
+    identity = { ...identity, client: second.client };
+    rerender();
+    expect(result.current.uncertain).toBe(false);
+    act(() => original.beginNew());
+    await act(async () => {
+      await original.create(32, gap);
+      await original.reload();
+    });
+    expect(first.requests).toHaveLength(1);
+    expect(second.requests).toEqual([]);
+    identity = { ...identity, client: first.client };
+    rerender();
+    expect(result.current.uncertain).toBe(true);
+    await act(async () => {
+      await result.current.create(31, gap);
+    });
+    expect(first.writes).toHaveLength(1);
+    expect(open).not.toHaveBeenCalled();
+  });
   it('retains a known 201 identity and opens it again without repeating the source creation', async () => {
     const { transport, result, open } = setup();
     transport.replies.push({ status: 201, body: sourceStay({ id: 17 }) });

@@ -50,6 +50,13 @@ Changing either owner client instance, owner origin or trip closes the active
 source view. Its queue remains dormant for that exact original context; only an
 explicit reopen under the same context restores its files. Document controls
 validate the current host context against the retained owner's queue before mounting.
+Gap creation and responsibility controllers also remain above keyed source views,
+scoped to the exact original client, origin and trip. An inactive context cannot
+retry, reset or reload its operation through the current owner. Late responses
+retain their own receipts without updating another context's cache or selection.
+Source-opening callbacks are fenced by host and selection generations, so a late
+Stay response cannot close a newer source editor or discard its draft, including
+after an A→B→A transition.
 
 Visit titles and Rental endpoints use persisted route occurrence positions, while
 their actual IDs remain source identities. Opaque Contact references use a neutral

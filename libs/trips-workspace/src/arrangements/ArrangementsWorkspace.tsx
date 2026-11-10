@@ -6,6 +6,7 @@ import { requestProblem } from '../stay/api';
 import { arrangementsKey } from './api';
 import { ArrangementCard } from './ArrangementCards';
 import { ArrangementFilters } from './ArrangementFilters';
+import { GapCaptureSessions } from './GapCaptureSessions';
 import { GapProblems } from './GapProblems';
 import {
   arrangementRows,
@@ -50,11 +51,15 @@ export function ArrangementsWorkspace(props: ArrangementsWorkspaceProps): JSX.El
 function ArrangementOwners(identity: ArrangementsWorkspaceProps): JSX.Element {
   const documents = useArrangementDocuments(identity);
   return (
-    <ArrangementsSession
-      key={arrangementsKey(identity).join(':')}
-      identity={identity}
-      documents={documents}
-    />
+    <ResponsibilitySessions identity={identity}>
+      <GapCaptureSessions identity={identity}>
+        <ArrangementsSession
+          key={arrangementsKey(identity).join(':')}
+          identity={identity}
+          documents={documents}
+        />
+      </GapCaptureSessions>
+    </ResponsibilitySessions>
   );
 }
 function ArrangementsSession({
@@ -72,41 +77,39 @@ function ArrangementsSession({
   const rows = filterArrangements(arrangementRows(sources), filters, sources);
   const groups = groupArrangements(rows, sources.visits);
   return (
-    <ResponsibilitySessions>
-      <main className="mx-auto w-full max-w-5xl space-y-5 p-4 md:p-6">
-        <PageHeader
-          title={identity.labels.title}
-          description={sources.trip?.name ?? undefined}
-          backHref={identity.backHref}
-        />
-        <ArrangementFilters value={filters} onChange={setFilters} labels={identity.labels} />
-        <SourceProblems queries={queries} />
-        {pending && <p role="status">{identity.labels.loading}</p>}
-        {complete && rows.length === 0 && <p role="status">{identity.labels.empty}</p>}
-        <GapProblems capture={capture} identity={identity} />
-        <RouteGroups
-          groups={groups}
-          sources={sources}
+    <main className="mx-auto w-full max-w-5xl space-y-5 p-4 md:p-6">
+      <PageHeader
+        title={identity.labels.title}
+        description={sources.trip?.name ?? undefined}
+        backHref={identity.backHref}
+      />
+      <ArrangementFilters value={filters} onChange={setFilters} labels={identity.labels} />
+      <SourceProblems queries={queries} />
+      {pending && <p role="status">{identity.labels.loading}</p>}
+      {complete && rows.length === 0 && <p role="status">{identity.labels.empty}</p>}
+      <GapProblems capture={capture} identity={identity} />
+      <RouteGroups
+        groups={groups}
+        sources={sources}
+        identity={identity}
+        capture={capture}
+        complete={coverageComplete}
+        open={source.open}
+      />
+      {source.selection && (
+        <SourceDialog
+          target={source.selection.target}
           identity={identity}
-          capture={capture}
-          complete={coverageComplete}
-          open={source.open}
+          sources={sources}
+          close={() => {
+            source.close();
+            void refresh();
+          }}
+          viewJourney={(targetId) => source.open({ targetKind: 'journey', targetId })}
+          documents={source.selection.documents}
         />
-        {source.selection && (
-          <SourceDialog
-            target={source.selection.target}
-            identity={identity}
-            sources={sources}
-            close={() => {
-              source.close();
-              void refresh();
-            }}
-            viewJourney={(targetId) => source.open({ targetKind: 'journey', targetId })}
-            documents={source.selection.documents}
-          />
-        )}
-      </main>
-    </ResponsibilitySessions>
+      )}
+    </main>
   );
 }
 function groupLabel(
