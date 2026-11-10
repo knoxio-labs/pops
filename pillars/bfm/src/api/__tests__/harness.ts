@@ -24,6 +24,7 @@ import { createPillarGateway } from '../pillars/gateway.js';
 import { createMobilePurchasesClient } from '../purchases/client.js';
 import { createRateLimiter, type RateLimiter } from '../rate-limit.js';
 import { createMobileTripsClient, type MobileTripsClient } from '../trips/client.js';
+import { documentsDeps, type DocumentTestOptions } from './documents-deps.js';
 import {
   inventoryDocumentDeps,
   type InventoryDocumentTestOptions,
@@ -90,7 +91,7 @@ export interface TestApp {
   cleanup: () => void;
 }
 
-export interface TestAppOptions extends InventoryDocumentTestOptions {
+export interface TestAppOptions extends InventoryDocumentTestOptions, DocumentTestOptions {
   version?: string;
   /** Drives the operator identity middleware. See {@link PRODUCTION_ENV}. */
   env?: NodeJS.ProcessEnv;
@@ -286,6 +287,7 @@ export function createTestApp(options: TestAppOptions = {}): TestApp {
     version: options.version ?? '0.0.1-test',
     ...clientDeps(options),
     ...inventoryDocumentDeps(options),
+    ...documentsDeps(options, unreachableHandleFactory),
     db: opened.db,
     accessTokenSigningKey,
     publicBaseUrl: options.publicBaseUrl ?? TEST_PUBLIC_BASE_URL,

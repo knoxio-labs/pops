@@ -140,6 +140,8 @@ describe('the granted scopes', () => {
       'inventory.items.removePart',
       'barcode.lookup',
       'cerebrum.ego',
+      'documents.paperless.get',
+      'documents.paperless.download',
       'trips.trips.list',
       'trips.trips.get',
       'trips.places.list',
@@ -148,6 +150,8 @@ describe('the granted scopes', () => {
       'trips.journeyLegs.list',
       'trips.journeyGroups.list',
       'trips.stays.list',
+      'trips.events.list',
+      'trips.documentAssociations.list',
     ]);
   });
 

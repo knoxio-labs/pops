@@ -34,16 +34,31 @@ describe('source-backed native Trips reader', () => {
     expect(result).toEqual({ kind: 'ok', value: { ...detail, places: [] } });
   });
 
-  it.each(['places', 'visits', 'journeys', 'groups', 'stays', 'legs'] as const)(
-    'does not turn an unavailable %s source into an empty success',
-    async (operation) => {
-      const responses: TripsResponses = { [operation]: { kind: 'unavailable', pillar: 'trips' } };
-      const result = await tripsClientOver(tripsFixture(), responses).client.getTrip(7);
-      expect(result).toMatchObject({ kind: 'unavailable', pillar: 'trips', status: 503 });
-    }
-  );
+  it.each([
+    'places',
+    'visits',
+    'journeys',
+    'groups',
+    'stays',
+    'legs',
+    'events',
+    'associations',
+  ] as const)('does not turn an unavailable %s source into an empty success', async (operation) => {
+    const responses: TripsResponses = { [operation]: { kind: 'unavailable', pillar: 'trips' } };
+    const result = await tripsClientOver(tripsFixture(), responses).client.getTrip(7);
+    expect(result).toMatchObject({ kind: 'unavailable', pillar: 'trips', status: 503 });
+  });
 
-  it.each(['places', 'visits', 'journeys', 'groups', 'stays', 'legs'] as const)(
+  it.each([
+    'places',
+    'visits',
+    'journeys',
+    'groups',
+    'stays',
+    'legs',
+    'events',
+    'associations',
+  ] as const)(
     'does not report the selected trip missing when its %s collection cannot be read',
     async (operation) => {
       const responses: TripsResponses = { [operation]: { kind: 'not-found', pillar: 'trips' } };

@@ -120,6 +120,16 @@ async fn selected_subset_projects_fields_and_preserves_original_ids_and_ownershi
     body.preferred_point_ids.push(point.id.clone());
     let merged = service::merge(&pool, body).await.expect("merge");
     assert_eq!(merged.member_ids.len(), 2);
+    let (status, reference) = api(
+        &pool,
+        Method::GET,
+        &format!("/entities/{b}/reference"),
+        Value::Null,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(reference["canonicalId"], a);
+    assert_eq!(reference["uri"], format!("pops:contacts/contact/{a}"));
     let (rows, total) = entities::list(&pool, None, None, 100, 0)
         .await
         .expect("list");
