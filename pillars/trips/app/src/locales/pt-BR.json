@@ -54,5 +54,6 @@
     "notes": "Notas",
     "visit": "Visita"
   },
-  "referenceUnavailable": "Referência de origem indisponível: {{value}}"
+  "referenceUnavailable": "Referência de origem indisponível: {{value}}",
+  "calendar": "Calendário"
 }

@@ -160,7 +160,7 @@ describe('TripRows', () => {
 });
 
 describe('TripPreview', () => {
-  it('renders only selected source facts and offers only the working back action', async () => {
+  it('renders only selected source facts and opens the selected calendar and offers the working back action', async () => {
     const onBack = preview(
       trip(4, {
         name: 'Holiday',
@@ -183,7 +183,10 @@ describe('TripPreview', () => {
         .map((item) => item.textContent)
     ).toEqual(['LyonVisit10 Nov 2026 → 12 Nov 2026', 'ParisVisit… → …']);
     expect(screen.queryByText('Unrelated')).not.toBeInTheDocument();
-    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Calendar' })).toHaveAttribute(
+      'href',
+      '/trips/4/calendar'
+    );
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
     expect(screen.getAllByRole('button')).toHaveLength(1);
     await userEvent.click(screen.getByRole('button', { name: 'Trips' }));
