@@ -37,6 +37,67 @@ async function saved() {
 }
 
 describe('Source-backed event workspace', () => {
+  it('persists Associated visit changes and clearing, moves route placement, and restores association through Undo', async () => {
+    const linked = sourceEvent({ visitId: 90 });
+    const transport = eventTransport({
+      replies: [
+        { status: 200, body: linked },
+        { status: 200, body: sourceEvent({ visitId: null }) },
+        { status: 200, body: linked },
+      ],
+    });
+    mount(transport);
+    await screen.findByRole('heading', { name: 'Wellington' });
+    fireEvent.change(screen.getByLabelText('Associated visit'), { target: { value: '90' } });
+    await saved();
+    const route = screen.getByRole('region', { name: 'Event route context' });
+    expect(
+      within(route)
+        .getAllByRole('heading', { level: 2 })
+        .map((heading) => heading.textContent)
+    ).toEqual(['North inlet', 'Wellington']);
+    expect(route.firstElementChild).toContainElement(
+      screen.getByRole('article', { name: 'Event editor' })
+    );
+    fireEvent.change(screen.getByLabelText('Associated visit'), { target: { value: '' } });
+    await saved();
+    expect(screen.getByText('No visit linked', { selector: 'p' })).toBeVisible();
+    expect(within(route).queryAllByRole('heading', { level: 2 })).toEqual([]);
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
+    await saved();
+    expect(screen.getByLabelText('Associated visit')).toHaveValue('90');
+    expect(
+      within(route)
+        .getAllByRole('heading', { level: 2 })
+        .map((heading) => heading.textContent)
+    ).toEqual(['North inlet', 'Wellington']);
+    expect(transport.patches).toEqual([{ visitId: 90 }, { visitId: null }, eventSource(linked)]);
+  });
+
+  it('preserves an unavailable Associated visit on unrelated edits and only unlinks on explicit selection', async () => {
+    const initial = sourceEvent({ visitId: 999 });
+    const changed = sourceEvent({ visitId: 999, address: 'East quay' });
+    const transport = eventTransport({
+      source: initial,
+      replies: [
+        { status: 200, body: changed },
+        { status: 200, body: { ...changed, visitId: null } },
+      ],
+    });
+    mount(transport);
+    expect(await screen.findByLabelText('Associated visit')).toHaveValue('999');
+    expect(screen.getByRole('option', { name: 'Visit 999 unavailable' })).toBeVisible();
+    expect(screen.getByText('Linked visit 999 is unavailable')).toBeVisible();
+    await edit('Address', 'East quay');
+    await saved();
+    expect(screen.getByLabelText('Associated visit')).toHaveValue('999');
+    expect(transport.patches).toEqual([{ address: 'East quay' }]);
+    fireEvent.change(screen.getByLabelText('Associated visit'), { target: { value: '' } });
+    await saved();
+    expect(transport.patches).toEqual([{ address: 'East quay' }, { visitId: null }]);
+    expect(screen.queryByRole('option', { name: 'Visit 999 unavailable' })).toBeNull();
+  });
+
   it('preserves a draft and its editor through a failed background refresh and recovery', async () => {
     const transport = eventTransport();
     const cache = mount(transport);

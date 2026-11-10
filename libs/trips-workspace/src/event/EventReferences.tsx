@@ -72,7 +72,13 @@ function ReferenceGroup({
         variant="outline"
         disabled={!uri.trim()}
         onClick={() => {
-          commit({ [field]: [...event[field], { uri, ...(name ? { label: name } : {}) }] });
+          const sourceLabel = name.trim();
+          commit({
+            [field]: [
+              ...event[field],
+              { uri: uri.trim(), ...(sourceLabel ? { label: sourceLabel } : {}) },
+            ],
+          });
           setUri('');
           setName('');
         }}
