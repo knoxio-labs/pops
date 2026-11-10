@@ -14,6 +14,8 @@ export class TripsServiceError extends Error {
       | 'parent_invalid'
       | 'tag_unknown'
       | 'tags_unavailable'
+      | 'association_invalid'
+      | 'association_exists'
   ) {
     super(code);
     this.name = 'TripsServiceError';

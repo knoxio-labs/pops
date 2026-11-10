@@ -94,3 +94,24 @@ it('exposes coherent receipts, exact replay, stale errors and legacy DELETE over
     (await call(`/leg-removals/${operationId}/restore`, 'POST', { expectedRevision: 2 })).status
   ).toBe(404);
 });
+
+it('allows exactly one concurrent order/removal writer at the same source revision', async () => {
+  const results = await Promise.all([
+    call('/leg-order', 'PUT', { legIds: [legId], expectedRevision: 1 }),
+    call(`/legs/${legId}/removals`, 'POST', { operationId, expectedRevision: 1 }),
+  ]);
+  expect(results.map((response) => response.status).toSorted()).toEqual([200, 409]);
+  const current = JourneyLegSetSchema.parse(await (await call('/legs')).json());
+  expect(current.revision).toBe(2);
+  if (results[1]?.status === 200) {
+    expect(current.legs).toEqual([]);
+    expect(
+      (await call(`/leg-removals/${operationId}/restore`, 'POST', { expectedRevision: 2 })).status
+    ).toBe(200);
+  } else {
+    expect(current.legs).toEqual([expect.objectContaining({ id: legId, notes: 'source' })]);
+    expect(
+      (await call(`/leg-removals/${operationId}/restore`, 'POST', { expectedRevision: 2 })).status
+    ).toBe(404);
+  }
+});

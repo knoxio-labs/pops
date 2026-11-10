@@ -14,7 +14,8 @@ import {
   updateJourneyLeg,
   reorderJourneyLegs,
 } from '../services/journey-legs.js';
-import { createJourney } from '../services/journeys.js';
+import { getJourneyTiming } from '../services/journey-timing.js';
+import { createJourney, deleteJourney } from '../services/journeys.js';
 import { removeJourneyLeg, restoreJourneyLeg } from '../services/leg-removals.js';
 import { getJourneyLegSet } from '../services/leg-set.js';
 import { createTrip } from '../services/records.js';
@@ -53,6 +54,9 @@ describe('identity-preserving leg removal receipts', () => {
       receipt: { state: 'removed', legId: first.id },
     });
     expect(() => getJourneyLeg(db, owner.tripId, owner.journeyId, first.id)).toThrow('not_found');
+    expect(
+      getJourneyTiming(db, owner.tripId, owner.journeyId).legs.map((leg) => leg.legId)
+    ).toEqual([second.id]);
     expect(removeJourneyLeg(db, { ...owner, id: first.id }, input)).toEqual(removed);
     const restored = restoreJourneyLeg(db, { ...owner, operationId }, 3);
     expect(restored).toMatchObject({
@@ -191,5 +195,28 @@ describe('identity-preserving leg removal receipts', () => {
       revision: Number.MAX_SAFE_INTEGER,
       legs: [second],
     });
+  });
+  it('retains exact receipts and archived identity across database reopen', () => {
+    const { db, owner, first, second } = fixture();
+    removeJourneyLeg(db, { ...owner, id: first.id }, { operationId, expectedRevision: 2 });
+    opened.raw.close();
+    opened = openTripsDb(join(directory, 'trips.db'));
+    const restored = restoreJourneyLeg(opened.db, { ...owner, operationId }, 3);
+    expect(restored).toMatchObject({ revision: 4, legs: [first, second] });
+    expect(restoreJourneyLeg(opened.db, { ...owner, operationId }, 3)).toEqual(restored);
+    expect(opened.db.select().from(legRemovals).all()).toHaveLength(1);
+  });
+
+  it('purges only the explicitly deleted parent source and refuses its old receipts', () => {
+    const { db, owner, first } = fixture();
+    removeJourneyLeg(db, { ...owner, id: first.id }, { operationId, expectedRevision: 2 });
+    const otherJourney = createJourney(db, owner.tripId, {});
+    const otherLeg = createJourneyLeg(db, owner.tripId, otherJourney.id, {});
+    deleteJourney(db, owner.tripId, owner.journeyId);
+    expect(db.select().from(legRemovals).all()).toEqual([]);
+    expect(db.select().from(journeyLegs).all()).toEqual([
+      expect.objectContaining({ id: otherLeg.id }),
+    ]);
+    expect(() => restoreJourneyLeg(db, { ...owner, operationId }, 3)).toThrow('not_found');
   });
 });
