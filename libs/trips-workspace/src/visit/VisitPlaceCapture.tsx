@@ -9,9 +9,8 @@ import { usePlaceCapture } from './use-place-capture';
 
 import type { JSX } from 'react';
 
-import type { VisitWorkspaceProps } from './types';
+import type { VisitWorkspaceProps, VisitFieldProps } from './types';
 import type { PlaceCapture } from './use-place-capture';
-import type { VisitFieldProps } from './VisitFields';
 
 /** Retain acknowledged place creation independently of a failed visit association. */
 export function VisitPlaceCapture({

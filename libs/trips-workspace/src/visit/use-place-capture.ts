@@ -7,8 +7,7 @@ import { createVisitPlace } from './api';
 
 import type { QueryClient } from '@tanstack/react-query';
 
-import type { Place, VisitWorkspaceProps } from './types';
-import type { VisitFieldProps } from './VisitFields';
+import type { Place, VisitWorkspaceProps, VisitFieldProps } from './types';
 
 /** Independent place creation receipt; a failed association never retries the creation. */
 export interface PlaceCapture {

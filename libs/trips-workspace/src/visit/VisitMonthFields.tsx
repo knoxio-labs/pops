@@ -8,8 +8,7 @@ import { monthValue } from './approximate';
 import type { JSX } from 'react';
 
 import type { MonthDraft } from './approximate';
-import type { Visit } from './types';
-import type { VisitFieldProps } from './VisitFields';
+import type { Visit, VisitFieldProps } from './types';
 
 /** Approximate source month capture with no implicit year, month or precision. */
 export function VisitMonthFields({ visit, commit }: VisitFieldProps): JSX.Element {

@@ -6,14 +6,8 @@ import { VisitApproximateTiming } from './VisitApproximateTiming';
 
 import type { JSX } from 'react';
 
-import type { Place, Visit, VisitPatch } from './types';
+import type { Place, Visit, VisitFieldProps } from './types';
 
-/** Explicit direct-edit controls; unavailable optional context never blocks independent source facts. */
-export interface VisitFieldProps {
-  visit: Visit;
-  edit: (patch: VisitPatch) => void;
-  commit: (patch: VisitPatch) => Promise<void> | void;
-}
 /** Source-owned visit fields preserve independent exact and approximate timing. */
 export function VisitFields({
   places,

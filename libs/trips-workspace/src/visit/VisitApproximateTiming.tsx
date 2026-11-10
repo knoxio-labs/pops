@@ -8,7 +8,7 @@ import { VisitMonthFields } from './VisitMonthFields';
 
 import type { JSX } from 'react';
 
-import type { VisitFieldProps } from './VisitFields';
+import type { VisitFieldProps } from './types';
 
 /** Approximate source facts have no implicit month, unit or duration bounds. */
 export function VisitApproximateTiming(props: VisitFieldProps): JSX.Element {
