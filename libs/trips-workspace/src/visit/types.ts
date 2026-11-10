@@ -1,6 +1,7 @@
 import type { Visit } from '../stay/types';
 import type { Client } from '../trips-api/client';
 import type { EventsListResponses, VisitsUpdateData } from '../trips-api/types.gen';
+import type { VisitTimingDrafts } from './timing-drafts';
 
 export type { Visit, Stay, Place } from '../stay/types';
 /** Independent event source, including every explicit intention. */
@@ -11,6 +12,8 @@ export type VisitPatch = NonNullable<VisitsUpdateData['body']>;
 export type GuardedVisitPatch = VisitPatch & { expectedRevision: number };
 /** Explicit direct-edit controls; unavailable optional context never blocks independent source facts. */
 export interface VisitFieldProps {
+  /** Retained semantic buffers supplied by the canonical source editor. */
+  timingDrafts?: VisitTimingDrafts;
   visit: Visit;
   edit: (patch: VisitPatch) => void;
   commit: (patch: VisitPatch) => Promise<void> | void;

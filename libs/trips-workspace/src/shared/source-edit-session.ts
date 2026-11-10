@@ -56,6 +56,7 @@ export class SourceEditSession<Source extends object, Patch extends Partial<Sour
 
   /** Observe a canonical read without replacing pending edits or acknowledging another writer's inverse. */
   receive(initial: Source): void {
+    if (this.context.options.acceptRead?.(initial, this.context.state.saved) === false) return;
     this.context.initial = initial;
     const state = this.context.state;
     if (this.observed === initial || state.busy) return;
@@ -80,6 +81,29 @@ export class SourceEditSession<Source extends object, Patch extends Partial<Sour
   /** Each view supplies its own dispatch permission; an in-flight write remains owned by this session. */
   actions(assertCurrent?: () => void): ReturnType<typeof sourceActions<Source, Patch>> {
     return sourceActions(this.context, assertCurrent);
+  }
+
+  /** Discard against an admitted canonical read; active writes and older aggregate reads return undefined. */
+  discard(source: Source): Source | undefined {
+    if (
+      this.context.lock ||
+      this.context.options.acceptRead?.(source, this.context.state.saved) === false
+    )
+      return;
+    this.observed = source;
+    this.context.initial = source;
+    this.context.retainedBaseline = undefined;
+    this.context.state = {
+      ...this.context.state,
+      saved: source,
+      canonical: this.context.options.source(source),
+      draft: source,
+      history: [],
+      failure: undefined,
+      conflicts: [],
+    };
+    this.publish();
+    return source;
   }
 
   private set<Key extends keyof SourceState<Source, Patch>>(

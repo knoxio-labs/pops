@@ -32,6 +32,8 @@ export interface SourceState<Source, Patch> {
 /** Source projection and persistence supplied by the owning domain. */
 export interface SourceEditorOptions<Source, Patch> {
   source: (value: Source) => Patch;
+  /** The owning producer may reject an older versioned aggregate without discarding its confirmed successor. */
+  acceptRead?: (incoming: Source, confirmed: Source) => boolean;
   /** Persist against the captured confirmed source, including inverse and retry operations. */
   save: (patch: Patch, saved: Source) => Promise<Source>;
   onSaved: (value: Source) => void;

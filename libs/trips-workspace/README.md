@@ -439,9 +439,16 @@ transport operations for the owning app's HTTP/SQLite integration regression.
 exports the approved direct visit editor and accommodation-period workspace.
 Exact dates, approximate month/part and one-sided duration bounds remain independent.
 Fields persist on blur or explicit selection; optional fields do not acquire defaults.
+Raw approximate month and duration buffers also survive view closure, including
+incomplete numbers, missing units and validation errors that cannot enter a valid
+Visit patch. Unsubmitted Event reference URI/label composers retain their separate
+text in the exact Event owner session. Focus, filters and disclosure visibility stay
+local to each view; retention does not convert incomplete input into a request.
 Visit PATCH and Undo supply the exact confirmed source revision. A foreign canonical
 refresh clears local history; pending or failed drafts retain their original precondition.
-An explicit reload discards local draft/history only after a successful source read.
+Older Visit revisions cannot replace a confirmed successor or clear its own inverse.
+An explicit reload discards local draft/history and raw timing buffers only after a
+successful admitted source read; a failed or older read retains the current session.
 Creating a reusable city retains its acknowledged identity if visit association fails;
 retrying that association never repeats creation. Undo restores the prior association
 without deleting the reusable city. An ambiguous creation failure blocks another POST

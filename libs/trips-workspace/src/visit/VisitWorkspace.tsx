@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ErrorState } from '@pops/ui';
@@ -41,7 +40,6 @@ function LoadVisit(props: VisitWorkspaceProps): JSX.Element {
     queryFn: () => loadVisit(props),
     retry: false,
   });
-  const [session, setSession] = useState(0);
   if (source.isPending)
     return (
       <p role="status" className="p-4">
@@ -58,13 +56,12 @@ function LoadVisit(props: VisitWorkspaceProps): JSX.Element {
         <ErrorState error={requestProblem(source.error)} onRetry={() => void source.refetch()} />
       )}
       <VisitSession
-        key={session}
         initial={source.data}
         identity={props}
         context={context}
         reload={async () => {
           const result = await source.refetch();
-          if (result.isSuccess) setSession((value) => value + 1);
+          return result.isSuccess ? result.data : undefined;
         }}
       />
     </>
