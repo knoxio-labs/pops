@@ -163,7 +163,7 @@ describe('TripRows', () => {
 });
 
 describe('TripPreview', () => {
-  it('renders only selected source facts and offers only the working back action', async () => {
+  it('renders selected source facts and links only the owning trip workspaces', async () => {
     const onBack = preview(
       trip(4, {
         name: 'Holiday',
@@ -189,6 +189,15 @@ describe('TripPreview', () => {
     expect(screen.getByRole('link', { name: 'Documents' })).toHaveAttribute(
       'href',
       '/trips/4/documents'
+    );
+    expect(screen.getByRole('link', { name: 'Capture' })).toHaveAttribute(
+      'href',
+      '/trips/4/capture'
+    );
+    expect(screen.getByRole('link', { name: 'Inbox' })).toHaveAttribute('href', '/trips/4/inbox');
+    expect(screen.getByRole('link', { name: 'Explore' })).toHaveAttribute(
+      'href',
+      '/trips/4/explore'
     );
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
     expect(screen.getAllByRole('button')).toHaveLength(1);

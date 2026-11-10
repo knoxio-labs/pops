@@ -32,6 +32,33 @@ export function sourceCapture(fields: Partial<Capture> = {}): Capture {
     ...fields,
   };
 }
+/** An independent source Idea with no implicit classification, dates or route membership. */
+export function sourceIdea(
+  fields: Partial<CaptureSource['ideas'][number]> = {}
+): CaptureSource['ideas'][number] {
+  return {
+    id: 1,
+    tripId: 1,
+    name: null,
+    kind: null,
+    purpose: null,
+    status: null,
+    reason: '',
+    notes: '',
+    address: null,
+    placeId: null,
+    visitId: null,
+    timing: { mode: 'none' },
+    sourceLinks: [],
+    contactLinks: [],
+    recommendations: [],
+    revision: 1,
+    removedAt: null,
+    createdAt: '2026-11-10T00:00:00.000Z',
+    updatedAt: '2026-11-10T00:00:00.000Z',
+    ...fields,
+  };
+}
 /** Return one request-bound receipt while letting tests distinguish original outcome from current state. */
 export function captureResult(
   request: CaptureRequest,

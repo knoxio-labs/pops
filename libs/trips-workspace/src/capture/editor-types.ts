@@ -40,6 +40,7 @@ export interface CaptureEditorState {
   composerLocked: boolean;
   undoCount: number;
   failure: CaptureFailure | null;
+  confirmation: { request: CaptureRequest; result: CaptureResult } | null;
 }
 /** Serialized source operations with original draft recovery and exact request replay. */
 export interface CaptureEditor {

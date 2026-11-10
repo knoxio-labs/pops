@@ -138,3 +138,24 @@ empty. The composer stays reserved during an uncertain inverse. Recapture create
 new operation UUID while reusing accepted references, without another upload. No file
 bytes or Undo history survive a browser reload. Organisation, source edits and collection
 removal use the producer's guarded inverses without restoring an old whole workspace.
+
+`CaptureWorkspace({ tripId, view, client?, documentsClient?, backHref?, onViewEvent? })`
+provides the text-first Capture, inline Inbox and Explore views. Its session is scoped
+to the host QueryClient, API origin and owning trip. Optional catalogue failures stay
+separate from the source read. Inbox keeps raw material visible while saving explicit
+fields and typed existing/new Idea, Event, Journey or Stay organisation. Classification
+alone stays unorganised; unresolved external references retain their canonical identity.
+Failed row edits and target descriptions survive filters and navigation with their
+original preconditions. Upload views compose the Documents owner's controlled session;
+remounting a pending upload cannot issue another POST.
+Hosts supply `renderLink` and optional `navigation` for client-side transitions; a full
+page reload ends the browser session and cannot restore File handles.
+
+Explore reads actual Capture, Idea or Event membership identities and groups by the
+current source's recorded place, or an Event's explicitly selected visit place. Identical
+place names remain distinct. Unassigned and unavailable references remain separate.
+Inline detail edits the recorded Capture or independent Idea; Event opening is delegated
+to the host's published source route. Removing a membership never deletes its source.
+Explicit Idea kind selection in the composer creates and associates that subtype in
+the same owner operation, preserving both IDs and verbatim raw text. Its explicitly
+selected place/visit is submitted on both records; later edits do not synchronize them.

@@ -1,4 +1,4 @@
-import { ArrowLeft, FileText } from 'lucide-react';
+import { ArrowLeft, Compass, FileText, Inbox, Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 
@@ -45,12 +45,7 @@ export function TripPreview({
           </p>
         )}
       </header>
-      <Button asChild variant="outline" className="min-h-11">
-        <Link to={`/trips/${trip.id}/documents`}>
-          <FileText className="size-4" aria-hidden />
-          Documents
-        </Link>
-      </Button>
+      <TripWorkspaceLinks tripId={trip.id} />
       <PreviewRoute visits={visits} places={places} locale={locale} />
       {trip.notes && (
         <section className="space-y-2 rounded-xl border border-border bg-card p-4">
@@ -98,5 +93,36 @@ function PreviewRoute({
         ))}
       </ol>
     </section>
+  );
+}
+
+function TripWorkspaceLinks({ tripId }: { tripId: number }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      <Button asChild variant="outline" className="min-h-11">
+        <Link to={`/trips/${tripId}/capture`}>
+          <Plus className="size-4" aria-hidden />
+          Capture
+        </Link>
+      </Button>
+      <Button asChild variant="outline" className="min-h-11">
+        <Link to={`/trips/${tripId}/inbox`}>
+          <Inbox className="size-4" aria-hidden />
+          Inbox
+        </Link>
+      </Button>
+      <Button asChild variant="outline" className="min-h-11">
+        <Link to={`/trips/${tripId}/explore`}>
+          <Compass className="size-4" aria-hidden />
+          Explore
+        </Link>
+      </Button>
+      <Button asChild variant="outline" className="min-h-11">
+        <Link to={`/trips/${tripId}/documents`}>
+          <FileText className="size-4" aria-hidden />
+          Documents
+        </Link>
+      </Button>
+    </div>
   );
 }

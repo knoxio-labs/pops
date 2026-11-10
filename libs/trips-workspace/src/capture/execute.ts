@@ -21,6 +21,7 @@ function confirmed(
       busy: false,
       composerLocked: false,
       failure: { label: intent.label, error: alreadyUndoneCapture(), canRetry: false },
+      confirmation: { request: intent.request, result },
     });
     return false;
   }
@@ -53,6 +54,7 @@ function confirmed(
     busy: false,
     composerLocked: false,
     failure: null,
+    confirmation: { request: intent.request, result },
   });
   return true;
 }

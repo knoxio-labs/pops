@@ -1,3 +1,8 @@
+import type { ComponentProps, ReactNode } from 'react';
+
+import type { PageHeader } from '@pops/ui';
+
+import type { Client as DocumentsClient } from '../documents-api/client';
 import type { Client } from '../trips-api/client';
 import type {
   CaptureWorkspaceGetResponses,
@@ -80,3 +85,12 @@ export type CaptureRequest =
     };
 /** Injected owner transport used by the headless editor and its integration tests. */
 export type CapturePerformer = (request: CaptureRequest) => Promise<CaptureResult>;
+/** Approved source surfaces share one browser session for an owning trip. */
+export interface CaptureWorkspaceProps extends CaptureIdentity {
+  view: 'capture' | 'inbox' | 'explore';
+  backHref?: string;
+  documentsClient?: DocumentsClient;
+  onViewEvent?: (eventId: number) => void;
+  renderLink?: ComponentProps<typeof PageHeader>['renderLink'];
+  navigation?: ReactNode;
+}

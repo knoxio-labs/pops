@@ -38,6 +38,7 @@ export class CaptureEditorStore {
       composerLocked: false,
       undoCount: 0,
       failure: null,
+      confirmation: null,
     };
   }
   /** Notify all mounted views of one atomic session-state update. */

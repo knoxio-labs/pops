@@ -29,3 +29,7 @@ export type {
 export { createDocumentUploadSession } from './documents/useUploadFields';
 export type { DocumentUploadSession } from './documents/useUploadFields';
 export type { PaperlessSearchDocument } from './documents/types';
+
+/** Shared text-first Capture, inline Inbox and Explore source surfaces. */
+export { CaptureWorkspace } from './capture/CaptureWorkspace';
+export type { CaptureWorkspaceProps } from './capture/types';
