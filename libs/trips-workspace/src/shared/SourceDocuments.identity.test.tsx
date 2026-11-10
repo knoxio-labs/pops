@@ -8,7 +8,7 @@ import { eventTransport } from '../event/test-utils';
 import { JourneyWorkspace } from '../journey/JourneyWorkspace';
 import { journeyTransport } from '../journey/test-utils';
 import { StayWorkspace } from '../stay/StayWorkspace';
-import { problem, workspaceTransport } from '../stay/test-utils';
+import { testNightLabel, problem, workspaceTransport } from '../stay/test-utils';
 
 vi.mock('../documents/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../documents/api')>()),
@@ -32,7 +32,9 @@ it.each(['event', 'stay', 'journey'] as const)(
     const journey = journeyTransport({ sourceFailure: 404 });
     const hosts = {
       event: <EventWorkspace tripId={7} eventId={19} client={event.client} />,
-      stay: <StayWorkspace tripId={7} stayId={13} client={stay.client} />,
+      stay: (
+        <StayWorkspace formatNights={testNightLabel} tripId={7} stayId={13} client={stay.client} />
+      ),
       journey: <JourneyWorkspace tripId={7} journeyId={20} client={journey.client} />,
     };
     const cache = new QueryClient({ defaultOptions: { queries: { retry: false } } });

@@ -55,6 +55,8 @@ describe('Arrangement source route', () => {
     expect(props.tripId).toBe(7);
     expect(props.backHref).toBe('/trips');
     expect(props.formatDate('2030-04-10')).toBe('pt-BR:2030-04-10');
+    expect(props.labels.stayNights(1)).toBe('1 noite');
+    expect(props.labels.stayNights(2)).toBe('2 noites');
     expect(props.labels.sourceStates.Reserved).toBe('Reservado');
   });
   it('forwards the injected Contacts owner as a lazy retained picker capability', () => {

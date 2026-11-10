@@ -29,6 +29,7 @@ export function useArrangementLabels(): ArrangementLabels {
     placeUnavailable: t('arrangements.placeUnavailable'),
     journey: t('arrangements.journey'),
     stay: t('arrangements.stay'),
+    stayNights: (count) => t('stay.nights', { count }),
     event: t('arrangements.event'),
     rental: t('arrangements.rental'),
     close: t('arrangements.close'),

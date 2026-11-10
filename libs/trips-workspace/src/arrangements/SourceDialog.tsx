@@ -107,8 +107,17 @@ function SourceEditor({
   };
   return (
     <>
-      {target.targetKind === 'stay' && <StayWorkspace {...props} stayId={target.targetId} />}
-      {target.targetKind === 'event' && <EventWorkspace {...props} eventId={target.targetId} />}
+      {target.targetKind === 'stay' && (
+        <StayWorkspace
+          {...props}
+          stayId={target.targetId}
+          contacts={identity.contacts}
+          formatNights={identity.labels.stayNights}
+        />
+      )}
+      {target.targetKind === 'event' && (
+        <EventWorkspace {...props} eventId={target.targetId} contacts={identity.contacts} />
+      )}
       {target.targetKind === 'journey' && (
         <JourneyWorkspace {...props} journeyId={target.targetId} onViewJourney={viewJourney} />
       )}

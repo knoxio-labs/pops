@@ -10,14 +10,14 @@ import {
 } from '../trips-api/sdk.gen';
 
 import type { Client } from '../trips-api/client';
-import type { Stay, Visit, Place, Trip, StayPatch, StayWorkspaceProps } from './types';
+import type { Stay, Visit, Place, Trip, StayPatch, StaySourceIdentity } from './types';
 
 /** Load one stay through its owning trip without borrowing context fields. */
-export async function loadStay({ tripId, stayId, client }: StayWorkspaceProps): Promise<Stay> {
+export async function loadStay({ tripId, stayId, client }: StaySourceIdentity): Promise<Stay> {
   return unwrap(await staysGet({ client, path: { tripId, id: stayId } }));
 }
 /** Persist only explicit fields; no external booking or source owner is modified. */
-export async function patchStay(props: StayWorkspaceProps, body: StayPatch): Promise<Stay> {
+export async function patchStay(props: StaySourceIdentity, body: StayPatch): Promise<Stay> {
   return unwrap(
     await staysUpdate({
       client: props.client,
@@ -60,7 +60,7 @@ export function stayQueryKey({
   tripId,
   stayId,
   client,
-}: StayWorkspaceProps): readonly ['trips', string, number, 'stay', number] {
+}: StaySourceIdentity): readonly ['trips', string, number, 'stay', number] {
   return ['trips', client?.getConfig().baseUrl ?? '/trips-api', tripId, 'stay', stayId] as const;
 }
 
@@ -68,6 +68,6 @@ export function stayQueryKey({
 export function stayListQueryKey({
   tripId,
   client,
-}: Pick<StayWorkspaceProps, 'tripId' | 'client'>): readonly ['trips', string, number, 'stays'] {
+}: Pick<StaySourceIdentity, 'tripId' | 'client'>): readonly ['trips', string, number, 'stays'] {
   return ['trips', client?.getConfig().baseUrl ?? '/trips-api', tripId, 'stays'] as const;
 }
