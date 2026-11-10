@@ -34,7 +34,7 @@ const leg = {
 };
 
 const legConflict = {
-  code: 'trips.journeyLeg.leg_revision_conflict',
+  code: 'trips.journey_leg.leg_revision_conflict',
   message: 'Legs changed',
   retryable: false,
 };
