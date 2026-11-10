@@ -159,9 +159,9 @@ describe('Along the route source workspace', () => {
     );
     expect(await screen.findByText('trips.stay.creation_uncertain')).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument();
-    expect(
-      within(visit).getByRole('button', { name: /Accommodation not arranged/ })
-    ).toBeDisabled();
+    expect(within(visit).getByRole('button', { name: /Accommodation not arranged/ })).toBeEnabled();
+    await user.click(within(visit).getByRole('button', { name: /Accommodation not arranged/ }));
+    expect(transport.writes).toHaveLength(1);
     await user.click(screen.getByRole('button', { name: 'Reload source' }));
     await waitFor(() =>
       expect(screen.getByRole('button', { name: 'Start a new stay' })).toBeEnabled()

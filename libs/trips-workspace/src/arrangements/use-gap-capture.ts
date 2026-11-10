@@ -23,21 +23,39 @@ export interface GapCapture {
   reload: () => Promise<void>;
   beginNew: () => void;
 }
-/** Explicit capture state is mirrored only for immediate event-handler guards, never for rendering. */
+/** Retain per-intent receipts and mirror the active view for immediate event-handler guards. */
 interface CaptureState {
   state: Operation;
-  current: () => Operation;
-  update: (operation: Operation) => void;
+  pending: () => boolean;
+  select: (intent: Intent) => Operation;
+  update: (operation: Exclude<Operation, { kind: 'ready' }>) => void;
+  beginNew: () => void;
 }
 function useCaptureState(): CaptureState {
   const [state, setState] = useState<Operation>({ kind: 'ready' });
-  const operation = useRef<Operation>({ kind: 'ready' });
+  const operations = useRef(new Map<string, Operation>());
+  const active = useRef<Operation>({ kind: 'ready' });
+  function select(next: Operation): void {
+    active.current = next;
+    setState(next);
+  }
   return {
     state,
-    current: (): Operation => operation.current,
+    pending: (): boolean =>
+      [...operations.current.values()].some((item) => item.kind === 'creating'),
+    select: (intent): Operation => {
+      const operation = operations.current.get(intentKey(intent)) ?? { kind: 'ready' };
+      select(operation);
+      return operation;
+    },
     update: (next): void => {
-      operation.current = next;
-      setState(next);
+      operations.current.set(intentKey(next.intent), next);
+      select(next);
+    },
+    beginNew: (): void => {
+      if (active.current.kind !== 'uncertain') return;
+      operations.current.delete(intentKey(active.current.intent));
+      select({ kind: 'ready' });
     },
   };
 }
@@ -51,10 +69,11 @@ export function useGapCapture(
   const capture = useCaptureState();
   const reads = useGapReads(identity);
   async function create(visitId: number, interval: ArrangementCoverageFinding): Promise<void> {
-    const current = capture.current();
-    if (current.kind === 'creating' || current.kind === 'uncertain') return;
+    if (capture.pending()) return;
     const intent = { visitId, arrival: interval.arrival, departure: interval.departure };
-    if (current.kind === 'acknowledged' && sameIntent(current.intent, intent)) {
+    const current = capture.select(intent);
+    if (current.kind === 'uncertain') return;
+    if (current.kind === 'acknowledged') {
       open({ targetKind: 'stay', targetId: current.source.id });
       return;
     }
@@ -80,17 +99,11 @@ export function useGapCapture(
       reads.failure ?? (capture.state.kind === 'uncertain' ? capture.state.error : undefined),
     create,
     reload: reads.reload,
-    beginNew: (): void => {
-      if (capture.current().kind === 'uncertain') capture.update({ kind: 'ready' });
-    },
+    beginNew: capture.beginNew,
   };
 }
-function sameIntent(first: Intent, second: Intent): boolean {
-  return (
-    first.visitId === second.visitId &&
-    first.arrival === second.arrival &&
-    first.departure === second.departure
-  );
+function intentKey(intent: Intent): string {
+  return JSON.stringify([intent.visitId, intent.arrival, intent.departure]);
 }
 function useGapReads(identity: ArrangementsWorkspaceProps): {
   busy: boolean;

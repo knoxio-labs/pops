@@ -31,11 +31,14 @@ bounded Visit interval; no clocks, zones or route placement are inferred.
 Arrangements coalesces adjacent identical findings and opens one dotted action per
 proven gap. Selecting it captures a real Stay for that exact Visit and interval,
 then opens the canonical editor. A known creation receipt retains its source ID;
-selecting the same action reopens it rather than repeating POST. A lost creation
+selecting the same action reopens it rather than repeating POST, including after
+capturing other gaps. Receipts belong to each explicit Visit/date action for the
+current owning-trip/API session. A lost creation
 response remains uncertain even after an empty source reload or a matching later
 record. Reload never claims that record as the created source. Existing sources
 remain explicitly selectable, and starting a new capture requires a separate
-conscious action; that action itself performs no POST.
+conscious action for the currently selected uncertain gap; that action itself
+performs no POST and preserves every other gap receipt.
 
 Visit titles and Rental endpoints use persisted route occurrence positions, while
 their actual IDs remain source identities. Opaque Contact references use a neutral

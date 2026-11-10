@@ -51,7 +51,7 @@ export function VisitCoverage({
               <Button
                 variant="ghost"
                 className="h-auto min-h-11 w-full justify-between whitespace-normal border border-dotted border-border text-left text-xs font-normal"
-                disabled={capture.busy || capture.failure !== undefined}
+                disabled={capture.busy}
                 onClick={() => void capture.create(visit.id, finding)}
               >
                 <span className="text-muted-foreground">{labels.accommodationMissing}</span>

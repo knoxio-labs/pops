@@ -53,6 +53,63 @@ describe('Gap Stay source capture identity', () => {
       [{ targetKind: 'stay', targetId: 17 }],
     ]);
   });
+  it('retains each acknowledged intent after another gap creates a different source', async () => {
+    const { transport, result, open } = setup();
+    transport.replies.push(
+      { status: 201, body: sourceStay({ id: 17 }) },
+      { status: 201, body: sourceStay({ id: 18 }) }
+    );
+    await act(async () => {
+      await result.current.create(31, gap);
+    });
+    await act(async () => {
+      await result.current.create(32, gap);
+    });
+    await act(async () => {
+      await result.current.create(31, gap);
+    });
+    expect(transport.writes).toHaveLength(2);
+    expect(open.mock.calls).toEqual([
+      [{ targetKind: 'stay', targetId: 17 }],
+      [{ targetKind: 'stay', targetId: 18 }],
+      [{ targetKind: 'stay', targetId: 17 }],
+    ]);
+  });
+  it('keeps uncertainty per selected intent across other captures and resets only the chosen intent', async () => {
+    const { transport, result, open } = setup();
+    const unknown = {
+      status: 503,
+      body: { code: 'trips.creation.unknown', message: 'Response lost', retryable: true },
+    };
+    transport.replies.push(unknown, { status: 201, body: sourceStay({ id: 18 }) }, unknown);
+    await act(async () => {
+      await result.current.create(31, gap);
+    });
+    await act(async () => {
+      await result.current.create(32, gap);
+    });
+    expect(open).toHaveBeenCalledExactlyOnceWith({ targetKind: 'stay', targetId: 18 });
+    await act(async () => {
+      await result.current.create(33, gap);
+    });
+    await act(async () => {
+      await result.current.create(31, gap);
+    });
+    expect(result.current.uncertain).toBe(true);
+    expect(transport.writes).toHaveLength(3);
+    act(() => result.current.beginNew());
+    expect(transport.writes).toHaveLength(3);
+    await act(async () => {
+      await result.current.create(33, gap);
+    });
+    expect(result.current.uncertain).toBe(true);
+    expect(transport.writes).toHaveLength(3);
+    await act(async () => {
+      await result.current.create(32, gap);
+    });
+    expect(transport.writes).toHaveLength(3);
+    expect(open).toHaveBeenLastCalledWith({ targetKind: 'stay', targetId: 18 });
+  });
   it.each([17, 88])(
     'never settles a lost response using an empty reload or matching later source %s',
     async (laterId) => {
