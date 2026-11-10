@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef } from 'react';
 
 import { refreshAfterSave, resetSourceConflicts, sameSourceValue } from './source-refresh';
 
-import type { SourceEditor, SourceEditorOptions, SourceState } from './useSourceEditor';
+import type { SourceEditor, SourceEditorOptions, SourceState } from './source-editor-types';
 
 type Actions<Source, Patch> = Pick<
   SourceEditor<Source, Patch>,
