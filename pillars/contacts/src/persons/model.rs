@@ -70,7 +70,8 @@ impl ContactPointKind {
     }
 }
 
-/// A local or imported point. `sourceRecordId: null` identifies an explicit local value.
+/// A local or imported point. `sourceRecordId: null` identifies an explicit local value, which
+/// may belong to a person, company or organisation; source-backed points remain person-owned.
 /// Preferred observations survive source refresh/deactivation, including their original value.
 #[derive(Debug, Clone, Serialize, ToSchema, sqlx::FromRow)]
 #[serde(rename_all = "camelCase")]

@@ -21,7 +21,7 @@ pub struct PersonProfileResponse {
     pub data: Option<PersonProfile>,
 }
 
-/// Contact point observations, including inactive audit values and preferred selections.
+/// Contact point observations for a person, company or organisation, including inactive audit values and preferred selections.
 #[derive(Debug, Serialize, ToSchema)]
 pub struct ContactPointListResponse {
     pub data: Vec<ContactPoint>,
@@ -80,14 +80,14 @@ pub async fn put_profile(
     }))
 }
 
-/// Read all local and source points, with their provenance and preference flags.
+/// Read local points for a person, company or organisation and source points for persons, retaining provenance and preference flags.
 #[utoipa::path(get,path="/entities/{id}/contact-points",operation_id="entities.points.list",params(("id"=String,Path)),responses((status=200,body=ContactPointListResponse),(status=400,body=crate::api::ErrorBody),(status=404,body=crate::api::ErrorBody)))]
 pub async fn list_points(
     State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> Result<Json<ContactPointListResponse>, ApiError> {
     let mut conn = state.pool.acquire().await.map_err(ApiError::database)?;
-    repo::require_person(&mut conn, &id)
+    repo::require_contact_owner(&mut conn, &id)
         .await
         .map_err(|error| person_error(error, &id))?;
     drop(conn);
@@ -128,7 +128,7 @@ pub async fn prefer_point(
 
 pub(crate) fn person_error(error: PersonError, id: &str) -> ApiError {
     match error {
-        PersonError::NotFound => ApiError::not_found("Person or contact point", id),
+        PersonError::NotFound => ApiError::not_found("Entity or contact point", id),
         PersonError::Retired(canonical) => {
             ApiError::identity_conflict("Entity ID is retired; use its canonical identity")
                 .with_details(serde_json::json!({"canonicalId": canonical}))

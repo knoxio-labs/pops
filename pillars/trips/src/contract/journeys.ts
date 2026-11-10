@@ -11,6 +11,7 @@ import {
   ReorderJourneyLegsBody,
 } from './journey-schemas.js';
 import { JourneyTimingSchema } from './journey-timing.js';
+import { JourneyWorkspaceSchema } from './journey-workspace.js';
 import {
   JourneyLegSetSchema,
   LegRemovalInputSchema,
@@ -28,6 +29,12 @@ const errors = { 400: ErrorBodySchema, 404: ErrorBodySchema };
 
 /** Trip-owned journey source operations; nothing infers visit placement or changes bookings. */
 export const journeysContract = c.router({
+  workspace: {
+    method: 'GET',
+    path: '/trips/:tripId/journeys/:id/workspace',
+    pathParams: Journey,
+    responses: { 200: JourneyWorkspaceSchema, ...errors },
+  },
   timing: {
     method: 'GET',
     path: '/trips/:tripId/journeys/:id/timing',

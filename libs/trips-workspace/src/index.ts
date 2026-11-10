@@ -13,3 +13,27 @@ export { ArrangementsWorkspace } from './arrangements/ArrangementsWorkspace';
 export type { ArrangementsWorkspaceProps, ArrangementLabels } from './arrangements/types';
 /** Locale-aware calendar source formatter; absent clocks never become viewer-local instants. */
 export { dateLabel as formatTripDate } from './visit/periods';
+export { DocumentAssociationPicker } from './documents/DocumentAssociationPicker';
+export { TripDocumentsWorkspace } from './documents/TripDocumentsWorkspace';
+export type {
+  DocumentAssociationTarget,
+  TripDocumentsWorkspaceProps,
+  TripDocumentAssociation,
+} from './documents/types';
+
+export { TripDocumentLinks } from './documents/TripDocumentLinks';
+export { TripDocumentUpload } from './documents/TripDocumentUpload';
+export type { TripDocumentUploadProps } from './documents/TripDocumentUpload';
+
+export { DocumentPicker } from './documents/DocumentPicker';
+export type { DocumentPickerProps } from './documents/DocumentPicker';
+export { useDocumentUpload } from './documents/useDocumentUpload';
+export type {
+  DocumentUploadController,
+  DocumentUploadOptions,
+} from './documents/useDocumentUpload';
+export { createDocumentUploadSession } from './documents/useUploadFields';
+export type { DocumentUploadSession } from './documents/useUploadFields';
+export type { PaperlessSearchDocument } from './documents/types';
+export { CalendarWorkspace } from './calendar/CalendarWorkspace';
+export type { CalendarWorkspaceProps, CalendarSource } from './calendar/types';

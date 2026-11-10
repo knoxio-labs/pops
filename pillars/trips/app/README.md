@@ -1,6 +1,6 @@
 # Trips browser app
 
-The shell loads `dist/remote/trips.js` and `trips.css` from the Trips manifest. The app exposes the grouped home, trip metadata settings, and route adapters for the `@pops/trips-workspace` stay, journey, event, and options-first decision editors. Event detail is registered at `:tripId/events/:eventId`; invalid route identities fail before making source requests. It owns no database and uses generated Trips and Tags clients at the shell's authenticated same-origin proxy paths.
+The shell loads `dist/remote/trips.js` and `trips.css` from the Trips manifest. The app exposes the grouped home, trip metadata settings, a trip calendar, and route adapters for the `@pops/trips-workspace` stay, journey, event, and options-first decision editors. Event detail is registered at `:tripId/events/:eventId`; invalid route identities fail before making source requests. The `/trips/:tripId/documents` route provides typed document associations and owner uploads. It owns no database and uses generated Trips and Tags clients at the shell's authenticated same-origin proxy paths.
 
 `:tripId/arrangements` publishes the `trips-arrangements` slot. Its adapter validates
 the owning trip identity and supplies shell-selected translations and calendar locale
@@ -42,3 +42,12 @@ it starts the owning Trips producer fixture and drives the public headless works
 editor through this app's generated client against SQLite. Both dependencies already
 belong to this app's declared graph, so filtered CI installs include the producer's
 native SQLite runtime without adding a lib-to-pillar dependency.
+
+## Calendar
+
+The selected trip preview links to `/trips/:tripId/calendar`. Its exported calendar
+workspace reads independent journey, stay and event sources through the generated
+Trips transport, requires an explicit display zone, and opens exact owning editor
+routes. Unavailable collections render retryable errors, retaining a prior complete
+read during refresh failures. Calendar date bounds remain separate from resolved
+source clocks; the optional journey window uses the owning timing endpoint.

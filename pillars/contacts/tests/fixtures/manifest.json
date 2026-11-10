@@ -54,6 +54,22 @@
     {
       "bundleSlot": "contacts-person",
       "path": "people/:personId"
+    },
+    {
+      "bundleSlot": "contacts-create",
+      "path": "new"
+    },
+    {
+      "bundleSlot": "contacts-duplicates",
+      "path": "duplicates"
+    },
+    {
+      "bundleSlot": "contacts-entity",
+      "path": "entities/:entityId"
+    },
+    {
+      "bundleSlot": "contacts-reference",
+      "path": ":entityId"
     }
   ],
   "pillar": "contacts",
