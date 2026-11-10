@@ -39,10 +39,10 @@ usable and an unknown explicit tag selection returns retryable 503.
 
 Equivalent `/places` routes manage reusable names and source links.
 `GET/POST /trips/:tripId/visits` and `GET/PATCH /trips/:tripId/visits/:id` manage
-visit facts. A new visit appends to that trip's route with revision zero. Visit
+visit facts. A new visit appends to that trip's mixed root route with revision zero. Visit
 responses include a monotonic safe-integer `revision`. PATCH accepts optional
 `expectedRevision` for compatibility; editors and Undo supply it. A stale write
-returns 409 atomically. Every successful PATCH and route-order row write advances
+returns 409 atomically. Every successful PATCH and legacy Visit-order row write advances
 revision by exactly one, including unchanged values. Exhausted revisions reject
 the complete mutation without advancing any row.
 
@@ -55,10 +55,53 @@ for later conflict presentation. No date is inferred from route position or a
 different visit. A timing update replaces the complete timing value; `{}` clears
 it. Omitted metadata fields retain their values; `null` clears an optional name.
 
-`PUT /trips/:tripId/visit-order` accepts the complete `visitIds` array. Each visit
-must belong to the trip and appear exactly once. Reordering is atomic and changes
-position and revision, preserving source values and timestamps. No purchase, reservation
-or certainty is inferred from route or timing.
+`GET /trips/:tripId/route` is the authoritative flat mixed route and ordered
+complete-path membership, guarded by its own safe-integer aggregate revision.
+Items name canonical Visit/Journey IDs or persisted structural gap IDs. Repeated
+cities use distinct Visit IDs; one canonical source has at most one active
+placement across root and alternatives. Journeys remain unplaced until explicitly
+moved; labels, dates, source IDs and endpoints never infer transport position.
+Migration seeds only the previously persisted Visit order. Reads retain missing
+source references in membership and report them in `missingSources`.
+
+`POST /trips/:tripId/route/operations` accepts an `operationId` UUID,
+`expectedRevision` and a typed command. `gap.create` and `source.move` require an
+explicit `before` anchor; null means the container's end. A move detaches the
+source from its previous active container. `path.create` names an existing root
+gap and complete ordered members, moving any root members into the alternative;
+members in competing alternatives are rejected. Empty alternatives may be built
+progressively. `route.reorder` and `path.reorder` require complete unique
+permutations of their existing memberships.
+
+`path.apply` atomically moves the entire alternative immediately before its
+explicit gap, preserves all existing root rows and competing alternatives, and
+retains the selected path as applied history. Historical members are not duplicate
+active placements. Applying an already applied path is a no-op with no revision
+advance; retrying the original UUID returns its immutable original receipt. An
+empty path, absent gap, foreign/missing adopted source, stale revision or invalid
+permutation changes nothing. Source records, linked Stays/Events, document links,
+booking dates, purchase facts, revisions and transport endpoints remain untouched.
+
+All new route mutations CAS the single aggregate inside an immediate SQLite
+transaction. UUID reuse with different input returns 409. Exact retries return
+immutable `before`/`after` snapshots alongside the current route, replay flag and
+Undo state. `undo` names a confirmed operation; only its untouched route outcome
+may be restored. Proven own LIFO inverses advance a separate predecessor guard;
+foreign writes, even restored identical fields, do not prove ownership. Undo
+restores original path/gap identities without recreating source records or
+rewriting independent source edits. No-op receipts cannot be undone. These routes
+use the projected `trips.route` scope for both UI and MCP callers.
+
+`PUT /trips/:tripId/visit-order` retains its complete unique canonical `visitIds`
+permutation contract. It ranks only Visit slots **within each current container**;
+Journey/gap tokens, their endpoints and root/alternative membership stay fixed.
+Explicit route commands move membership between containers. `listVisits` projects
+root Visits first, then active alternatives in persisted path order, followed by
+any unplaced canonical records in their existing source order. It never drops an
+unplaced record. This projection and the legacy `position` compatibility field are
+not another writable route order. Legacy reorder is atomic, advances every Visit
+revision once and preserves source values and timestamps. No purchase,
+reservation or certainty is inferred from route or timing.
 
 Events belong to trips independently of visits. `GET/POST /trips/:tripId/events`
 and `GET/PATCH/DELETE /trips/:tripId/events/:id` retain event source facts.

@@ -1,7 +1,10 @@
 import { defineErrors } from '@pops/pillar-express';
 
+import { routeErrorDefinitions } from './route-errors.js';
+
 /** Stable errors for missing owned records and invalid route permutations. */
 export const tripsErrors = defineErrors('trips', {
+  ...routeErrorDefinitions,
   meeting_revision_conflict: {
     area: 'meeting_plan',
     status: 409,

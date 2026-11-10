@@ -17986,6 +17986,1298 @@
         "tags": ["responsibilities"]
       }
     },
+    "/trips/{tripId}/route": {
+      "get": {
+        "operationId": "route.get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tripId",
+            "required": true,
+            "schema": {
+              "exclusiveMinimum": true,
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "missingSources": {
+                      "items": {
+                        "oneOf": [
+                          {
+                            "additionalProperties": false,
+                            "properties": {
+                              "id": {
+                                "exclusiveMinimum": true,
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "kind": {
+                                "enum": ["visit"],
+                                "type": "string"
+                              }
+                            },
+                            "required": ["kind", "id"],
+                            "type": "object"
+                          },
+                          {
+                            "additionalProperties": false,
+                            "properties": {
+                              "id": {
+                                "exclusiveMinimum": true,
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "kind": {
+                                "enum": ["journey"],
+                                "type": "string"
+                              }
+                            },
+                            "required": ["kind", "id"],
+                            "type": "object"
+                          }
+                        ]
+                      },
+                      "type": "array"
+                    },
+                    "order": {
+                      "items": {
+                        "anyOf": [
+                          {
+                            "oneOf": [
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "id": {
+                                    "exclusiveMinimum": true,
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  },
+                                  "kind": {
+                                    "enum": ["visit"],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["kind", "id"],
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "id": {
+                                    "exclusiveMinimum": true,
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  },
+                                  "kind": {
+                                    "enum": ["journey"],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["kind", "id"],
+                                "type": "object"
+                              }
+                            ]
+                          },
+                          {
+                            "additionalProperties": false,
+                            "properties": {
+                              "id": {
+                                "exclusiveMinimum": true,
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "kind": {
+                                "enum": ["gap"],
+                                "type": "string"
+                              }
+                            },
+                            "required": ["kind", "id"],
+                            "type": "object"
+                          }
+                        ]
+                      },
+                      "type": "array"
+                    },
+                    "paths": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "gapId": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "id": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "members": {
+                            "items": {
+                              "oneOf": [
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "id": {
+                                      "exclusiveMinimum": true,
+                                      "maximum": 9007199254740991,
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    },
+                                    "kind": {
+                                      "enum": ["visit"],
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": ["kind", "id"],
+                                  "type": "object"
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "id": {
+                                      "exclusiveMinimum": true,
+                                      "maximum": 9007199254740991,
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    },
+                                    "kind": {
+                                      "enum": ["journey"],
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": ["kind", "id"],
+                                  "type": "object"
+                                }
+                              ]
+                            },
+                            "type": "array"
+                          },
+                          "state": {
+                            "enum": ["alternative", "applied"],
+                            "type": "string"
+                          },
+                          "title": {
+                            "type": "string"
+                          }
+                        },
+                        "required": ["id", "title", "gapId", "state", "members"],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "revision": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "tripId": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "required": ["tripId", "revision", "order", "paths", "missingSources"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "409"
+          }
+        },
+        "tags": ["route"]
+      }
+    },
+    "/trips/{tripId}/route/operations": {
+      "post": {
+        "operationId": "route.operate",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tripId",
+            "required": true,
+            "schema": {
+              "exclusiveMinimum": true,
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "command": {
+                    "oneOf": [
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "before": {
+                            "anyOf": [
+                              {
+                                "oneOf": [
+                                  {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "id": {
+                                        "exclusiveMinimum": true,
+                                        "maximum": 9007199254740991,
+                                        "minimum": 0,
+                                        "type": "integer"
+                                      },
+                                      "kind": {
+                                        "enum": ["visit"],
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": ["kind", "id"],
+                                    "type": "object"
+                                  },
+                                  {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "id": {
+                                        "exclusiveMinimum": true,
+                                        "maximum": 9007199254740991,
+                                        "minimum": 0,
+                                        "type": "integer"
+                                      },
+                                      "kind": {
+                                        "enum": ["journey"],
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": ["kind", "id"],
+                                    "type": "object"
+                                  }
+                                ]
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "id": {
+                                    "exclusiveMinimum": true,
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  },
+                                  "kind": {
+                                    "enum": ["gap"],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["kind", "id"],
+                                "type": "object"
+                              }
+                            ],
+                            "nullable": true
+                          },
+                          "kind": {
+                            "enum": ["gap.create"],
+                            "type": "string"
+                          }
+                        },
+                        "required": ["kind", "before"],
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "destination": {
+                            "oneOf": [
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "before": {
+                                    "anyOf": [
+                                      {
+                                        "oneOf": [
+                                          {
+                                            "additionalProperties": false,
+                                            "properties": {
+                                              "id": {
+                                                "exclusiveMinimum": true,
+                                                "maximum": 9007199254740991,
+                                                "minimum": 0,
+                                                "type": "integer"
+                                              },
+                                              "kind": {
+                                                "enum": ["visit"],
+                                                "type": "string"
+                                              }
+                                            },
+                                            "required": ["kind", "id"],
+                                            "type": "object"
+                                          },
+                                          {
+                                            "additionalProperties": false,
+                                            "properties": {
+                                              "id": {
+                                                "exclusiveMinimum": true,
+                                                "maximum": 9007199254740991,
+                                                "minimum": 0,
+                                                "type": "integer"
+                                              },
+                                              "kind": {
+                                                "enum": ["journey"],
+                                                "type": "string"
+                                              }
+                                            },
+                                            "required": ["kind", "id"],
+                                            "type": "object"
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "id": {
+                                            "exclusiveMinimum": true,
+                                            "maximum": 9007199254740991,
+                                            "minimum": 0,
+                                            "type": "integer"
+                                          },
+                                          "kind": {
+                                            "enum": ["gap"],
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": ["kind", "id"],
+                                        "type": "object"
+                                      }
+                                    ],
+                                    "nullable": true
+                                  },
+                                  "kind": {
+                                    "enum": ["route"],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["kind", "before"],
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "before": {
+                                    "nullable": true,
+                                    "oneOf": [
+                                      {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "id": {
+                                            "exclusiveMinimum": true,
+                                            "maximum": 9007199254740991,
+                                            "minimum": 0,
+                                            "type": "integer"
+                                          },
+                                          "kind": {
+                                            "enum": ["visit"],
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": ["kind", "id"],
+                                        "type": "object"
+                                      },
+                                      {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "id": {
+                                            "exclusiveMinimum": true,
+                                            "maximum": 9007199254740991,
+                                            "minimum": 0,
+                                            "type": "integer"
+                                          },
+                                          "kind": {
+                                            "enum": ["journey"],
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": ["kind", "id"],
+                                        "type": "object"
+                                      }
+                                    ]
+                                  },
+                                  "kind": {
+                                    "enum": ["path"],
+                                    "type": "string"
+                                  },
+                                  "pathId": {
+                                    "exclusiveMinimum": true,
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": ["kind", "pathId", "before"],
+                                "type": "object"
+                              }
+                            ]
+                          },
+                          "kind": {
+                            "enum": ["source.move"],
+                            "type": "string"
+                          },
+                          "source": {
+                            "oneOf": [
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "id": {
+                                    "exclusiveMinimum": true,
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  },
+                                  "kind": {
+                                    "enum": ["visit"],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["kind", "id"],
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "id": {
+                                    "exclusiveMinimum": true,
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  },
+                                  "kind": {
+                                    "enum": ["journey"],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["kind", "id"],
+                                "type": "object"
+                              }
+                            ]
+                          }
+                        },
+                        "required": ["kind", "source", "destination"],
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "kind": {
+                            "enum": ["route.reorder"],
+                            "type": "string"
+                          },
+                          "order": {
+                            "items": {
+                              "anyOf": [
+                                {
+                                  "oneOf": [
+                                    {
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "id": {
+                                          "exclusiveMinimum": true,
+                                          "maximum": 9007199254740991,
+                                          "minimum": 0,
+                                          "type": "integer"
+                                        },
+                                        "kind": {
+                                          "enum": ["visit"],
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": ["kind", "id"],
+                                      "type": "object"
+                                    },
+                                    {
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "id": {
+                                          "exclusiveMinimum": true,
+                                          "maximum": 9007199254740991,
+                                          "minimum": 0,
+                                          "type": "integer"
+                                        },
+                                        "kind": {
+                                          "enum": ["journey"],
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": ["kind", "id"],
+                                      "type": "object"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "id": {
+                                      "exclusiveMinimum": true,
+                                      "maximum": 9007199254740991,
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    },
+                                    "kind": {
+                                      "enum": ["gap"],
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": ["kind", "id"],
+                                  "type": "object"
+                                }
+                              ]
+                            },
+                            "type": "array"
+                          }
+                        },
+                        "required": ["kind", "order"],
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "gapId": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "kind": {
+                            "enum": ["path.create"],
+                            "type": "string"
+                          },
+                          "members": {
+                            "items": {
+                              "oneOf": [
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "id": {
+                                      "exclusiveMinimum": true,
+                                      "maximum": 9007199254740991,
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    },
+                                    "kind": {
+                                      "enum": ["visit"],
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": ["kind", "id"],
+                                  "type": "object"
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "id": {
+                                      "exclusiveMinimum": true,
+                                      "maximum": 9007199254740991,
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    },
+                                    "kind": {
+                                      "enum": ["journey"],
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": ["kind", "id"],
+                                  "type": "object"
+                                }
+                              ]
+                            },
+                            "type": "array"
+                          },
+                          "title": {
+                            "type": "string"
+                          }
+                        },
+                        "required": ["kind", "title", "gapId", "members"],
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "kind": {
+                            "enum": ["path.reorder"],
+                            "type": "string"
+                          },
+                          "members": {
+                            "items": {
+                              "oneOf": [
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "id": {
+                                      "exclusiveMinimum": true,
+                                      "maximum": 9007199254740991,
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    },
+                                    "kind": {
+                                      "enum": ["visit"],
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": ["kind", "id"],
+                                  "type": "object"
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "id": {
+                                      "exclusiveMinimum": true,
+                                      "maximum": 9007199254740991,
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    },
+                                    "kind": {
+                                      "enum": ["journey"],
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": ["kind", "id"],
+                                  "type": "object"
+                                }
+                              ]
+                            },
+                            "type": "array"
+                          },
+                          "pathId": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          }
+                        },
+                        "required": ["kind", "pathId", "members"],
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "kind": {
+                            "enum": ["path.apply"],
+                            "type": "string"
+                          },
+                          "pathId": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          }
+                        },
+                        "required": ["kind", "pathId"],
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "kind": {
+                            "enum": ["undo"],
+                            "type": "string"
+                          },
+                          "targetOperationId": {
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                            "type": "string"
+                          }
+                        },
+                        "required": ["kind", "targetOperationId"],
+                        "type": "object"
+                      }
+                    ]
+                  },
+                  "expectedRevision": {
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "operationId": {
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                    "type": "string"
+                  }
+                },
+                "required": ["operationId", "expectedRevision", "command"],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "current": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "order": {
+                          "items": {
+                            "anyOf": [
+                              {
+                                "oneOf": [
+                                  {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "id": {
+                                        "exclusiveMinimum": true,
+                                        "maximum": 9007199254740991,
+                                        "minimum": 0,
+                                        "type": "integer"
+                                      },
+                                      "kind": {
+                                        "enum": ["visit"],
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": ["kind", "id"],
+                                    "type": "object"
+                                  },
+                                  {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "id": {
+                                        "exclusiveMinimum": true,
+                                        "maximum": 9007199254740991,
+                                        "minimum": 0,
+                                        "type": "integer"
+                                      },
+                                      "kind": {
+                                        "enum": ["journey"],
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": ["kind", "id"],
+                                    "type": "object"
+                                  }
+                                ]
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "id": {
+                                    "exclusiveMinimum": true,
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  },
+                                  "kind": {
+                                    "enum": ["gap"],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["kind", "id"],
+                                "type": "object"
+                              }
+                            ]
+                          },
+                          "type": "array"
+                        },
+                        "paths": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "gapId": {
+                                "exclusiveMinimum": true,
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "id": {
+                                "exclusiveMinimum": true,
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "members": {
+                                "items": {
+                                  "oneOf": [
+                                    {
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "id": {
+                                          "exclusiveMinimum": true,
+                                          "maximum": 9007199254740991,
+                                          "minimum": 0,
+                                          "type": "integer"
+                                        },
+                                        "kind": {
+                                          "enum": ["visit"],
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": ["kind", "id"],
+                                      "type": "object"
+                                    },
+                                    {
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "id": {
+                                          "exclusiveMinimum": true,
+                                          "maximum": 9007199254740991,
+                                          "minimum": 0,
+                                          "type": "integer"
+                                        },
+                                        "kind": {
+                                          "enum": ["journey"],
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": ["kind", "id"],
+                                      "type": "object"
+                                    }
+                                  ]
+                                },
+                                "type": "array"
+                              },
+                              "state": {
+                                "enum": ["alternative", "applied"],
+                                "type": "string"
+                              },
+                              "title": {
+                                "type": "string"
+                              }
+                            },
+                            "required": ["id", "title", "gapId", "state", "members"],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "revision": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "tripId": {
+                          "exclusiveMinimum": true,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": ["tripId", "revision", "order", "paths"],
+                      "type": "object"
+                    },
+                    "receipt": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "after": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "order": {
+                              "items": {
+                                "anyOf": [
+                                  {
+                                    "oneOf": [
+                                      {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "id": {
+                                            "exclusiveMinimum": true,
+                                            "maximum": 9007199254740991,
+                                            "minimum": 0,
+                                            "type": "integer"
+                                          },
+                                          "kind": {
+                                            "enum": ["visit"],
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": ["kind", "id"],
+                                        "type": "object"
+                                      },
+                                      {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "id": {
+                                            "exclusiveMinimum": true,
+                                            "maximum": 9007199254740991,
+                                            "minimum": 0,
+                                            "type": "integer"
+                                          },
+                                          "kind": {
+                                            "enum": ["journey"],
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": ["kind", "id"],
+                                        "type": "object"
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "id": {
+                                        "exclusiveMinimum": true,
+                                        "maximum": 9007199254740991,
+                                        "minimum": 0,
+                                        "type": "integer"
+                                      },
+                                      "kind": {
+                                        "enum": ["gap"],
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": ["kind", "id"],
+                                    "type": "object"
+                                  }
+                                ]
+                              },
+                              "type": "array"
+                            },
+                            "paths": {
+                              "items": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "gapId": {
+                                    "exclusiveMinimum": true,
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  },
+                                  "id": {
+                                    "exclusiveMinimum": true,
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  },
+                                  "members": {
+                                    "items": {
+                                      "oneOf": [
+                                        {
+                                          "additionalProperties": false,
+                                          "properties": {
+                                            "id": {
+                                              "exclusiveMinimum": true,
+                                              "maximum": 9007199254740991,
+                                              "minimum": 0,
+                                              "type": "integer"
+                                            },
+                                            "kind": {
+                                              "enum": ["visit"],
+                                              "type": "string"
+                                            }
+                                          },
+                                          "required": ["kind", "id"],
+                                          "type": "object"
+                                        },
+                                        {
+                                          "additionalProperties": false,
+                                          "properties": {
+                                            "id": {
+                                              "exclusiveMinimum": true,
+                                              "maximum": 9007199254740991,
+                                              "minimum": 0,
+                                              "type": "integer"
+                                            },
+                                            "kind": {
+                                              "enum": ["journey"],
+                                              "type": "string"
+                                            }
+                                          },
+                                          "required": ["kind", "id"],
+                                          "type": "object"
+                                        }
+                                      ]
+                                    },
+                                    "type": "array"
+                                  },
+                                  "state": {
+                                    "enum": ["alternative", "applied"],
+                                    "type": "string"
+                                  },
+                                  "title": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["id", "title", "gapId", "state", "members"],
+                                "type": "object"
+                              },
+                              "type": "array"
+                            },
+                            "revision": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "tripId": {
+                              "exclusiveMinimum": true,
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            }
+                          },
+                          "required": ["tripId", "revision", "order", "paths"],
+                          "type": "object"
+                        },
+                        "before": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "order": {
+                              "items": {
+                                "anyOf": [
+                                  {
+                                    "oneOf": [
+                                      {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "id": {
+                                            "exclusiveMinimum": true,
+                                            "maximum": 9007199254740991,
+                                            "minimum": 0,
+                                            "type": "integer"
+                                          },
+                                          "kind": {
+                                            "enum": ["visit"],
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": ["kind", "id"],
+                                        "type": "object"
+                                      },
+                                      {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "id": {
+                                            "exclusiveMinimum": true,
+                                            "maximum": 9007199254740991,
+                                            "minimum": 0,
+                                            "type": "integer"
+                                          },
+                                          "kind": {
+                                            "enum": ["journey"],
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": ["kind", "id"],
+                                        "type": "object"
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "id": {
+                                        "exclusiveMinimum": true,
+                                        "maximum": 9007199254740991,
+                                        "minimum": 0,
+                                        "type": "integer"
+                                      },
+                                      "kind": {
+                                        "enum": ["gap"],
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": ["kind", "id"],
+                                    "type": "object"
+                                  }
+                                ]
+                              },
+                              "type": "array"
+                            },
+                            "paths": {
+                              "items": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "gapId": {
+                                    "exclusiveMinimum": true,
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  },
+                                  "id": {
+                                    "exclusiveMinimum": true,
+                                    "maximum": 9007199254740991,
+                                    "minimum": 0,
+                                    "type": "integer"
+                                  },
+                                  "members": {
+                                    "items": {
+                                      "oneOf": [
+                                        {
+                                          "additionalProperties": false,
+                                          "properties": {
+                                            "id": {
+                                              "exclusiveMinimum": true,
+                                              "maximum": 9007199254740991,
+                                              "minimum": 0,
+                                              "type": "integer"
+                                            },
+                                            "kind": {
+                                              "enum": ["visit"],
+                                              "type": "string"
+                                            }
+                                          },
+                                          "required": ["kind", "id"],
+                                          "type": "object"
+                                        },
+                                        {
+                                          "additionalProperties": false,
+                                          "properties": {
+                                            "id": {
+                                              "exclusiveMinimum": true,
+                                              "maximum": 9007199254740991,
+                                              "minimum": 0,
+                                              "type": "integer"
+                                            },
+                                            "kind": {
+                                              "enum": ["journey"],
+                                              "type": "string"
+                                            }
+                                          },
+                                          "required": ["kind", "id"],
+                                          "type": "object"
+                                        }
+                                      ]
+                                    },
+                                    "type": "array"
+                                  },
+                                  "state": {
+                                    "enum": ["alternative", "applied"],
+                                    "type": "string"
+                                  },
+                                  "title": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["id", "title", "gapId", "state", "members"],
+                                "type": "object"
+                              },
+                              "type": "array"
+                            },
+                            "revision": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "tripId": {
+                              "exclusiveMinimum": true,
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            }
+                          },
+                          "required": ["tripId", "revision", "order", "paths"],
+                          "type": "object"
+                        },
+                        "operationId": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
+                        "undoneOperationId": {
+                          "format": "uuid",
+                          "nullable": true,
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        }
+                      },
+                      "required": ["operationId", "undoneOperationId", "before", "after"],
+                      "type": "object"
+                    },
+                    "replayed": {
+                      "type": "boolean"
+                    },
+                    "undone": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["receipt", "current", "undone", "replayed"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "409"
+          }
+        },
+        "tags": ["route"]
+      }
+    },
     "/trips/{tripId}/stays": {
       "get": {
         "operationId": "stays.list",
