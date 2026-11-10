@@ -15,6 +15,9 @@ const CalendarPage = lazy(() =>
   import('./CalendarPage').then((module) => ({ default: module.CalendarPage }))
 );
 const StayPage = lazy(() => import('./StayPage').then((module) => ({ default: module.StayPage })));
+const TripOverviewPage = lazy(() =>
+  import('./TripOverviewPage').then((module) => ({ default: module.TripOverviewPage }))
+);
 const ArrangementsPage = lazy(() =>
   import('./ArrangementsPage').then((module) => ({ default: module.ArrangementsPage }))
 );
@@ -36,6 +39,7 @@ const SettingsPage = lazy(() =>
 /** Implemented source-backed slots resolved by the shell's registry-driven remote loader. */
 export const bundles = {
   'trips-home': HomePage,
+  'trips-overview': TripOverviewPage,
   'trips-calendar': CalendarPage,
   'trips-stay': StayPage,
   'trips-arrangements': ArrangementsPage,
@@ -49,6 +53,7 @@ export const bundles = {
 /** Local route projection used only by component hosts and development integration. */
 export const routes: RouteObject[] = [
   { index: true, element: <HomePage /> },
+  { path: ':tripId', element: <TripOverviewPage /> },
   { path: ':tripId/visits/:visitId', element: <VisitPage /> },
   { path: ':tripId/calendar', element: <CalendarPage /> },
   { path: ':tripId/stays/:stayId', element: <StayPage /> },
