@@ -103,6 +103,22 @@ describe('canvas capture and graph placement', () => {
     expect(state.sections[0]?.cards).toContain(id);
   });
 
+  it('creates a path transport between explicit alternative visit occurrences', () => {
+    let state = initialCanvas('alternative-paths');
+    const section = state.sections[0];
+    const first = section?.cards[0];
+    if (!section || !first) throw new Error('Missing complete path fixture');
+    state = captureCard(state, 'transport', 'New connection', {
+      sectionId: section.id,
+      after: first,
+    });
+    const journey = state.records.find((record) => record.title === 'New connection');
+    if (!journey) throw new Error('Missing captured transport');
+    expect(state.transitLinks[journey.id]).toEqual({ from: 'coast-maceio', to: 'coast-salvador' });
+    expect(state.sections[0]?.cards.slice(0, 2)).toEqual([first, journey.id]);
+    expect(state.order).not.toContain(journey.id);
+  });
+
   it('moves sections across existing gaps and creates a gap when moved to the root', () => {
     let state = captureCard(withCities(), 'section', 'First option', {});
     state = captureCard(state, 'section', 'Second option', { after: named(state, 'Second city') });
@@ -118,20 +134,16 @@ describe('canvas capture and graph placement', () => {
     expect(rooted.sections).toHaveLength(2);
   });
 
-  it('moves nested visits back to the route and rejects self-drops and ancestry cycles', () => {
+  it('keeps cities flat and rejects city drops into another visit', () => {
     const state = withCities();
     const first = named(state, 'First city');
     const second = named(state, 'Second city');
-    const nested = moveCard(state, second, { visitId: first });
-    expect(nested.order).not.toContain(second);
-    expect(nested.parents[second]).toBe(first);
-    expect(moveCard(nested, first, { visitId: second })).toBe(nested);
-    expect(moveCard(nested, second, { visitId: second })).toBe(nested);
-    expect(moveCard(nested, first, { after: first })).toBe(nested);
-    const rooted = moveCard(nested, second, {});
-    expect(rooted.parents[second]).toBeUndefined();
-    expect(rooted.order[0]).toBe(second);
-    expect(rooted.records).toEqual(state.records);
+    expect(moveCard(state, second, { visitId: first })).toBe(state);
+    expect(moveCard(state, second, { visitId: second })).toBe(state);
+    expect(captureCard(state, 'city', 'Nested city', { visitId: first })).toBe(state);
+    const moved = moveCard(state, second, {});
+    expect(moved.order[0]).toBe(second);
+    expect(moved.records).toEqual(state.records);
   });
 
   it('retains purchased arrangement facts and independent names when moving and relocating cards', () => {

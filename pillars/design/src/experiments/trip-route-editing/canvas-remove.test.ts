@@ -27,8 +27,6 @@ function fixture(): CanvasState {
       record('before'),
       record('removed'),
       record('after'),
-      record('nested'),
-      record('descendant'),
       record('event', {
         kind: 'event',
         visitId: 'removed',
@@ -43,25 +41,23 @@ function fixture(): CanvasState {
         arrangement: 'Booked',
         schedule: { start: '2028-01-01', end: '2028-01-05' },
       }),
-      record('nested-event', {
+      record('other-event', {
         kind: 'event',
-        visitId: 'nested',
+        visitId: 'after',
         schedule: { start: '2028-01-03' },
       }),
     ],
-    parents: { nested: 'removed', descendant: 'nested' },
-    itemOrders: { 'nested:removed': ['nested'], source: ['event', 'stay'] },
+    itemOrders: { source: ['event', 'stay'] },
     activityStays: { event: 'stay' },
   };
 }
 
 describe('removeCanvasVisit', () => {
-  it('replaces a root visit with visible children while preserving purchased and descendant facts', () => {
+  it('replaces a root visit with linked booking items while preserving their paid facts', () => {
     const state = fixture();
     const original = structuredClone(state);
     const next = removeCanvasVisit(state, 'removed');
-    expect(next.order).toEqual(['before', 'nested', 'event', 'stay', 'after']);
-    expect(next.parents).toEqual({ descendant: 'nested' });
+    expect(next.order).toEqual(['before', 'event', 'stay', 'after']);
     expect(next.records.find((item) => item.id === 'removed')).toEqual(record('removed'));
     for (const id of ['event', 'stay']) {
       expect(next.records.find((item) => item.id === id)).toEqual({
@@ -69,36 +65,12 @@ describe('removeCanvasVisit', () => {
         visitId: undefined,
       });
     }
-    expect(next.records.find((item) => item.id === 'nested-event')).toEqual(
-      state.records.find((item) => item.id === 'nested-event')
+    expect(next.records.find((item) => item.id === 'other-event')).toEqual(
+      state.records.find((item) => item.id === 'other-event')
     );
     expect(next.activityStays).toEqual({});
     expect(next.itemOrders.source).toEqual([]);
-    expect(next.itemOrders['nested:removed']).toBeUndefined();
     expect(state).toEqual(original);
-  });
-
-  it('lifts nested cities into their parent order and reparents activities and stays together', () => {
-    const source = fixture();
-    const state: CanvasState = {
-      ...source,
-      order: ['before', 'after'],
-      records: [...source.records, record('left'), record('right')],
-      parents: { ...source.parents, removed: 'before', left: 'before', right: 'before' },
-      itemOrders: { ...source.itemOrders, 'nested:before': ['left', 'removed', 'right'] },
-    };
-    const next = removeCanvasVisit(state, 'removed');
-    expect(next.order).toEqual(['before', 'after']);
-    expect(next.itemOrders['nested:before']).toEqual(['left', 'nested', 'right']);
-    expect(next.parents).toEqual({
-      nested: 'before',
-      descendant: 'nested',
-      left: 'before',
-      right: 'before',
-    });
-    expect(next.records.find((item) => item.id === 'event')?.visitId).toBe('before');
-    expect(next.records.find((item) => item.id === 'stay')?.visitId).toBe('before');
-    expect(next.activityStays.event).toBe('stay');
   });
 
   it('lifts children into the removed visit alternative section and refreshes its gap membership', () => {
@@ -118,28 +90,24 @@ describe('removeCanvasVisit', () => {
     };
     const next = removeCanvasVisit(state, 'removed');
     expect(next.order).toEqual(['gap']);
-    expect(next.sections[0]?.cards).toEqual(['before', 'nested', 'event', 'stay', 'after']);
+    expect(next.sections[0]?.cards).toEqual(['before', 'event', 'stay', 'after']);
     expect(next.records.find((item) => item.id === 'gap')?.optionIds).toEqual(
       next.sections[0]?.cards
     );
-    expect(next.parents).toEqual({ descendant: 'nested' });
     expect(next.activityStays).toEqual({});
-  });
-
-  it('lifts each direct child once when it has duplicate placement edges', () => {
-    const source = fixture();
-    const state = { ...source, parents: { ...source.parents, event: 'removed' } };
-    const next = removeCanvasVisit(state, 'removed');
-    expect(next.order.filter((id) => id === 'event')).toEqual(['event']);
-    expect(next.parents.event).toBeUndefined();
-    expect(next.records.find((item) => item.id === 'event')?.visitId).toBeUndefined();
+    for (const id of ['event', 'stay']) {
+      expect(next.records.find((item) => item.id === id)).toEqual({
+        ...state.records.find((item) => item.id === id),
+        visitId: undefined,
+      });
+    }
   });
 
   it('clears affected invalid assignments while preserving unrelated assignments', () => {
     const source = fixture();
     const state = {
       ...source,
-      activityStays: { ...source.activityStays, 'nested-event': 'stay', unrelated: 'other-stay' },
+      activityStays: { ...source.activityStays, 'other-event': 'stay', unrelated: 'other-stay' },
     };
     const next = removeCanvasVisit(state, 'removed');
     expect(next.activityStays).toEqual({ unrelated: 'other-stay' });
@@ -150,7 +118,6 @@ describe('removeCanvasVisit', () => {
     const next = removeCanvasVisit(state, 'before');
     expect(next.order).toEqual(['removed', 'after']);
     expect(next.records).toEqual(state.records);
-    expect(next.parents).toEqual(state.parents);
     expect(next.activityStays).toEqual(state.activityStays);
   });
 
@@ -159,5 +126,10 @@ describe('removeCanvasVisit', () => {
     const state = { ...source, records: [...source.records, record('unplaced')] };
     for (const id of ['unknown', 'unplaced', 'event'])
       expect(removeCanvasVisit(state, id)).toBe(state);
+    const unplacedSection = {
+      ...state,
+      sections: [{ id: 'section', gapId: 'missing-gap', title: 'Unplaced', cards: ['unplaced'] }],
+    };
+    expect(removeCanvasVisit(unplacedSection, 'unplaced')).toBe(unplacedSection);
   });
 });

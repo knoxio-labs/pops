@@ -1,5 +1,5 @@
 name: Route planner
-question: Should route edits happen inline or in a focused editor beside the route?
+question: Does direct editing keep the flat route, bookings and complete alternative paths clear?
 status: active
 screen: trips/route
 frame: web

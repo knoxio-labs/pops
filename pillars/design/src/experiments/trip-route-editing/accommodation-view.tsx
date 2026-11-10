@@ -42,18 +42,6 @@ function periodActivities(
   return [...new Map([...automatic, ...assigned].map((item) => [item.id, item])).values()];
 }
 
-function PeriodDates({ period }: { period: AccommodationPeriod }) {
-  if ((!period.start && !period.end) || (period.missing && (!period.start || !period.end)))
-    return null;
-  return (
-    <div className="text-xs font-medium text-foreground">
-      {period.start && formatTripDate(period.start)}
-      {period.start && period.end && ' → '}
-      {period.end && formatTripDate(period.end)}
-    </div>
-  );
-}
-
 /** A stay interval retains its activities and missing coverage in route or visit timelines. */
 export function AccommodationPeriodView({
   visit,
@@ -70,7 +58,6 @@ export function AccommodationPeriodView({
   const stayId = period.stays.length === 1 ? period.stays[0]?.id : undefined;
   return (
     <section className={cn('space-y-0.5', invalid && 'border-l-2 border-destructive pl-2')}>
-      {!datesInRail && period.stays.length === 0 && <PeriodDates period={period} />}
       <PeriodWarnings visit={visit} period={period} />
       {period.stays.map((stay) => (
         <AccommodationStay
@@ -80,20 +67,16 @@ export function AccommodationPeriodView({
         />
       ))}
       {period.missing && (
-        <div
-          className={datesInRail ? 'min-h-11' : 'flex min-h-11 items-center justify-between gap-2'}
-        >
-          {!datesInRail && (
-            <span className="text-sm font-medium text-foreground">Accommodation needed</span>
-          )}
-          <CanvasInsert
-            target={{ visitId: visit.id, start: period.start, end: period.end }}
-            label="Add accommodation"
-            defaultKind="stay"
-            line={datesInRail}
-            slotLabel={datesInRail ? 'Accommodation' : undefined}
-          />
-        </div>
+        <CanvasInsert
+          target={{ visitId: visit.id, start: period.start, end: period.end }}
+          label="Add accommodation"
+          defaultKind="stay"
+          slotLabel={
+            period.start && period.end
+              ? `Accommodation · ${formatTripDate(period.start)} → ${formatTripDate(period.end)}`
+              : 'Accommodation'
+          }
+        />
       )}
       <CanvasItemGroup
         visit={visit}
@@ -136,7 +119,7 @@ export function AccommodationView({ visit }: { visit: TripRecord }) {
     ) : null;
   }
   return (
-    <div className="space-y-2 border-l border-dotted border-app-accent/40 pl-3">
+    <div className="space-y-1">
       {keyedAccommodationPeriods(accommodationPeriods(visit, state.records)).map(
         ({ key, period }) => (
           <AccommodationPeriodView key={key} visit={visit} period={period} />

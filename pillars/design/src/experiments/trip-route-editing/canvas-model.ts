@@ -1,24 +1,17 @@
 import { tripPlaces } from '@/fixtures/trip-places';
 
 import { initialPlanner } from './model';
+import { pathPlaces, pathRecords, pathSections, pathTransit } from './path-fixtures';
 
 import type { TripRecord } from '@/fixtures/trip-overview-model';
 import type { TripPlace } from '@/fixtures/trip-places';
 
+import type { RouteSection, TransitLink } from './canvas-path-types';
+
+export type { RouteSection, TransitLink } from './canvas-path-types';
+
 import type { PlannerScenario, PlannerState } from './model';
 
-/** A user-owned alternative section contains any number of movable visits. */
-export interface RouteSection {
-  id: string;
-  gapId: string;
-  title: string;
-  cards: string[];
-}
-/** Transport retains explicit visit endpoints independently of its display position. */
-export interface TransitLink {
-  from: string;
-  to: string;
-}
 /** A car hire period spans visits and retains its own pickup/return dates. */
 export interface RentalPeriod {
   id: string;
@@ -33,6 +26,8 @@ export interface RentalPeriod {
 export interface CanvasState extends PlannerState {
   places: TripPlace[];
   sections: RouteSection[];
+  /** Applied path source receipts retain identity after exclusive placement moves into root order. */
+  appliedPaths: RouteSection[];
   transitLinks: Record<string, TransitLink>;
   rentals: RentalPeriod[];
   itemOrders: Record<string, string[]>;
@@ -117,24 +112,27 @@ export function initialCanvas(scenario: PlannerScenario): CanvasState {
       .filter(([, link]) => link.from === id)
       .map(([key]) => key),
   ]);
-  const sections = base.records
-    .filter((r) => r.kind === 'gap')
-    .flatMap((gap) =>
-      (gap.optionIds ?? []).map((id) => ({
-        id: `section-${id}`,
-        gapId: gap.id,
-        title:
-          places.find((p) => p.id === base.records.find((r) => r.id === id)?.placeId)?.name ?? '',
-        cards: [id],
-      }))
-    );
   return {
     ...base,
-    records: [...base.records, ...(scenario === 'empty' ? [] : structuredClone(extraRecords))],
+    records: [
+      ...base.records.map((record) =>
+        record.kind === 'gap'
+          ? {
+              ...record,
+              optionIds: pathSections
+                .filter((section) => section.gapId === record.id)
+                .flatMap((section) => section.cards),
+            }
+          : record
+      ),
+      ...(scenario === 'empty' ? [] : structuredClone(extraRecords)),
+      ...(scenario === 'empty' ? [] : structuredClone(pathRecords)),
+    ],
     order,
-    places,
-    sections,
-    transitLinks,
+    places: [...places, ...(scenario === 'empty' ? [] : structuredClone(pathPlaces))],
+    sections: scenario === 'empty' ? [] : structuredClone(pathSections),
+    appliedPaths: [],
+    transitLinks: { ...transitLinks, ...(scenario === 'empty' ? {} : pathTransit) },
     itemOrders: {},
     activityStays: {},
     homePlaces: ['sydney'],

@@ -32,7 +32,7 @@ export function PlannerCanvas({ scenario = 'default' }: { scenario?: PlannerScen
     <CanvasContext.Provider value={actions}>
       <PlannerReview layout="direct" />
       <main
-        className="mx-auto max-w-5xl space-y-4 p-5 md:p-8"
+        className="mx-auto max-w-5xl space-y-4 p-3 sm:p-8"
         onDragStartCapture={(e) => {
           const target = e.target;
           if (!(target instanceof Element)) return;
