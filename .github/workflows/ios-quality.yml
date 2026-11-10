@@ -275,11 +275,11 @@ jobs:
           !startsWith(github.head_ref, 'integration/'))
       ) }}
     runs-on: xcode-27
-    # Analyzer observations: 50m03s for 1,551 files, 43m09s for 1,558, and
-    # 66m47s for 1,584 in the current promotion run.
+    # Run 42751509516 attempt 2 reached 1,755/1,935 analyzer files at 75 minutes
+    # with continuous progress, projecting 82.7 minutes; 100 adds about 20% headroom.
     # The full job limit also covers host/simulator tests and Release/UI validation;
     # these measurements are not a duration guarantee.
-    timeout-minutes: ${{ (github.event_name == 'merge_group' || inputs['full-validation'] == true) && 165 || 100 }}
+    timeout-minutes: ${{ (github.event_name == 'merge_group' || inputs['full-validation'] == true) && 190 || 100 }}
     defaults:
       run:
         working-directory: clients/ios
@@ -470,7 +470,7 @@ jobs:
         if: >-
           success() &&
           (github.event_name == 'merge_group' || inputs['full-validation'] == true)
-        timeout-minutes: 75
+        timeout-minutes: 100
         env:
           POPS_IOS_ANALYZER_ARTIFACTS: ${{ runner.temp }}/ios-analyzer-diagnostics
         run: mise run --skip-deps lint:analyze
