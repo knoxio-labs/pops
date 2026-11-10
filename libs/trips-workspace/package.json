@@ -6,7 +6,8 @@
   "main": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./decision-client": "./src/decision/client.ts"
+    "./decision-client": "./src/decision/client.ts",
+    "./people-client": "./src/people/client.ts"
   },
   "scripts": {
     "build": "tsc --noEmit && vite build",

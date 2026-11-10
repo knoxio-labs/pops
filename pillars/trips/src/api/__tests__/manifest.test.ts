@@ -47,6 +47,7 @@ describe('Trips manifest', () => {
       { path: ':tripId/decisions/:decisionId', bundleSlot: 'trips-decision' },
       { path: ':tripId/journeys/:journeyId', bundleSlot: 'trips-journey' },
       { path: ':tripId/settings', bundleSlot: 'trips-settings' },
+      { path: ':tripId/people', bundleSlot: 'trips-people' },
     ]);
     expect(manifest.pages).toEqual(TRIPS_PAGES);
     expect(manifest.assetsBaseUrl).toBe('/trips-ui/trips.js');

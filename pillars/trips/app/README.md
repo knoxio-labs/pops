@@ -30,3 +30,11 @@ it starts the owning Trips producer fixture and drives the public headless works
 editor through this app's generated client against SQLite. Both dependencies already
 belong to this app's declared graph, so filtered CI installs include the producer's
 native SQLite runtime without adding a lib-to-pillar dependency.
+
+`/trips/:tripId/people` publishes the `trips-people` remote slot. Its adapter validates
+the owning trip, supplies Trips translations and forwards the shell's opaque
+Contacts host capability. The shared workspace owns exact Visit grouping,
+independent meeting edits, durable retry and confirmed source Undo. It imports
+no Contacts implementation into this app. The meeting persistence regression
+drives the public headless editor through the generated HTTP client and the
+owning SQLite producer, including a lost response after a committed create.

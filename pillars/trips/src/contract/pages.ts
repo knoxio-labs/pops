@@ -6,6 +6,7 @@ export const TRIPS_PAGES = [
   { path: ':tripId/decisions/:decisionId', bundleSlot: 'trips-decision' },
   { path: ':tripId/journeys/:journeyId', bundleSlot: 'trips-journey' },
   { path: ':tripId/settings', bundleSlot: 'trips-settings' },
+  { path: ':tripId/people', bundleSlot: 'trips-people' },
 ] as const;
 
 /** Component slots the Trips remote bundle must export. */

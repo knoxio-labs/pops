@@ -9,3 +9,12 @@ export { DecisionWorkspace } from './decision/DecisionWorkspace';
 export type { DecisionWorkspaceProps } from './decision/types';
 export { JourneyWorkspace } from './journey/JourneyWorkspace';
 export type { JourneyWorkspaceProps } from './journey/types';
+
+/** Trip-owned meeting plans grouped by exact route Visit occurrences. */
+export { PeopleWorkspace } from './people/PeopleWorkspace';
+export type {
+  PeopleWorkspaceProps,
+  MeetingContact,
+  PeopleText,
+  PeopleTextKey,
+} from './people/types';

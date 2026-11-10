@@ -97,3 +97,25 @@ navigation link and authenticated query/client context.
 and its generated-transport load/apply operations. The owning Trips app runs the
 real editor/HTTP/SQLite integration regression; this extractable library does not
 install or start a pillar runtime in its own unit tests.
+
+`PeopleWorkspace({ tripId, text, contacts?, resolveContact?, client? })` implements
+the approved People grouping by persisted Visit occurrence order. Repeated places
+keep separate occurrence identities; unassociated and unavailable Visit references
+remain separate. Contact identity, title, notes, intention, agreement and date-only
+bounds are independent source fields. Missing and reversed dates remain editable
+facts; no availability, agreement or route placement is inferred.
+
+The host injects the SDK's opaque Contacts chooser capability. Each explicit choice
+retains its owner session across close/reopen and route remount, including unknown
+creation outcomes. The library imports no Contacts implementation. An optional
+owner resolver supplies retained Contact names and source links; missing proof stays
+unverified, distinct from an owner-confirmed unavailable identity. Existing plans
+remain editable and clearable when owner context cannot be loaded.
+
+Meeting writes use durable operation UUIDs and exact source revisions. Failed writes
+retain the same command across route remounts and retry; uncertain creates cannot
+be released by reload. Definitively rejected writes require an explicit successful
+canonical reload before another command. Undo targets only confirmed own receipts
+in LIFO order, including source removal and restoration of the same identity.
+`@pops/trips-workspace/people-client` exports this headless editor and generated
+transport operations for the owning app's HTTP/SQLite integration regression.
