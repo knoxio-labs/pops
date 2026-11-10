@@ -105,6 +105,25 @@ reference, notes, source links and optional configured buffers. Under a journey,
 `GET/POST .../:journeyId/legs` and `GET/PATCH/DELETE .../:journeyId/legs/:id` manage
 stable source legs. `PUT .../:journeyId/leg-order` accepts complete `legIds`
 membership, with the same atomic source-preserving ordering rule as visits.
+Leg lists return an atomic `{revision, legs}` snapshot. Create, PATCH and complete-order
+writes accept an optional `expectedRevision` for existing consumers; the editor supplies
+it for every write. Each first successful leg write advances this collection exactly once,
+including legacy hard DELETE; metadata edits do not. Revisions use JSON/JavaScript safe
+integers. New writes reject an exhausted counter atomically; reads and exact receipt
+replays remain available.
+
+`POST .../:journeyId/legs/:id/removals` accepts `{operationId, expectedRevision}`;
+`POST .../:journeyId/leg-removals/:operationId/restore` accepts `{expectedRevision}`.
+Both return the current atomic collection and a persisted lifecycle receipt. Exact retries
+reuse the original intent and never repeat an old removal or restore a later lifecycle.
+Removed source rows retain identity, facts and audit timestamps; ordinary reads and timing
+omit them. Restore requires the guarded revision and exact post-removal live order, then
+inserts the original identity at its prior position. It does not revalidate historical optional
+endpoint facts as new input. Restore and removal do not silently merge concurrent edits.
+Receipt revisions identify an operation's own outcome; a replay observing a later revision
+cannot lend that revision to Undo. Parent hard deletion removes its own retained rows and
+receipts. Legacy DELETE remains an irreversible 204 operation.
+
 Deleting an ungrouped journey removes its own legs atomically; grouped sources
 return `409` until their grouping is explicitly removed. Neither deletion cancels
 an external booking.

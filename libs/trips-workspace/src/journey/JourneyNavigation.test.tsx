@@ -23,6 +23,7 @@ const group = {
   updatedAt: '2029-01-01T00:00:00Z',
 };
 const source = (id: number, name: string) => ({
+  legRevision: 0,
   journey: sourceJourney({ id, name }),
   legs: [sourceLeg({ id: id + 100, journeyId: id })],
 });
