@@ -6,3 +6,5 @@ export { tripDocumentAssociations } from './schema/document-associations.js';
 export { sharedTagIds } from './schema/shared-tag-ids.js';
 export { events } from './schema/events.js';
 export { decisions, decisionOptions } from './schema/decisions.js';
+export { rentals } from './schema/rentals.js';
+export { arrangementResponsibilities } from './schema/responsibilities.js';

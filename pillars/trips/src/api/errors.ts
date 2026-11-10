@@ -2,6 +2,13 @@ import { defineErrors } from '@pops/pillar-express';
 
 /** Stable errors for missing owned records and invalid route permutations. */
 export const tripsErrors = defineErrors('trips', {
+  arrangement_revision_conflict: {
+    area: 'arrangement',
+    status: 409,
+    message:
+      'The arrangement changed or its revision cannot advance. Read its latest revision before editing.',
+    retryable: false,
+  },
   parent_invalid: {
     area: 'trip',
     status: 400,
