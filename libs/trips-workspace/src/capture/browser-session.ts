@@ -97,7 +97,7 @@ export function findCaptureSession(
 ): CaptureBrowserSession | undefined {
   return sessions.get(cache)?.get(sessionKey(identity));
 }
-/** Reuse the same session across Capture, Inbox and Explore route remounts. */
+/** Reuse the same session across contextual Capture, Inbox and Explore remounts. */
 export function retainCaptureSession(
   cache: QueryClient,
   identity: CaptureIdentity,

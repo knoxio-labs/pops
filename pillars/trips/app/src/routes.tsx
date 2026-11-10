@@ -33,15 +33,6 @@ const JourneyPage = lazy(() =>
 const DocumentsPage = lazy(() =>
   import('./DocumentsPage').then((module) => ({ default: module.DocumentsPage }))
 );
-const CapturePage = lazy(() =>
-  import('./CapturePage').then((module) => ({ default: module.CaptureHomePage }))
-);
-const InboxPage = lazy(() =>
-  import('./CapturePage').then((module) => ({ default: module.InboxPage }))
-);
-const ExplorePage = lazy(() =>
-  import('./CapturePage').then((module) => ({ default: module.ExplorePage }))
-);
 const SettingsPage = lazy(() =>
   import('./settings/TripSettingsPage').then((module) => ({ default: module.TripSettingsPage }))
 );
@@ -57,9 +48,6 @@ export const bundles = {
   'trips-visit': VisitPage,
   'trips-journey': JourneyPage,
   'trips-documents': DocumentsPage,
-  'trips-capture': CapturePage,
-  'trips-inbox': InboxPage,
-  'trips-explore': ExplorePage,
   'trips-settings': SettingsPage,
 } satisfies Record<TripsPageSlot, ComponentType>;
 /** Local route projection used only by component hosts and development integration. */
@@ -74,8 +62,5 @@ export const routes: RouteObject[] = [
   { path: ':tripId/decisions/:decisionId', element: <DecisionPage /> },
   { path: ':tripId/journeys/:journeyId', element: <JourneyPage /> },
   { path: ':tripId/documents', element: <DocumentsPage /> },
-  { path: ':tripId/capture', element: <CapturePage /> },
-  { path: ':tripId/inbox', element: <InboxPage /> },
-  { path: ':tripId/explore', element: <ExplorePage /> },
   { path: ':tripId/settings', element: <SettingsPage /> },
 ];

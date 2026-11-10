@@ -1,7 +1,4 @@
-import type { ComponentProps, ReactNode } from 'react';
-
 import type { ContactsHostCapability } from '@pops/pillar-sdk';
-import type { PageHeader } from '@pops/ui';
 
 import type { Client as DocumentsClient } from '../documents-api/client';
 import type { Client } from '../trips-api/client';
@@ -91,9 +88,6 @@ export interface CaptureWorkspaceProps extends CaptureIdentity {
   view: 'capture' | 'inbox' | 'explore';
   /** Optional host-owned Contacts chooser and reader; absent capabilities leave retained references unverified. */
   contacts?: ContactsHostCapability;
-  backHref?: string;
   documentsClient?: DocumentsClient;
   onViewEvent?: (eventId: number) => void;
-  renderLink?: ComponentProps<typeof PageHeader>['renderLink'];
-  navigation?: ReactNode;
 }

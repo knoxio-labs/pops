@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { RotateCcw } from 'lucide-react';
 import { useSyncExternalStore } from 'react';
 
-import { Button, ErrorState, PageHeader } from '@pops/ui';
+import { Button, ErrorState } from '@pops/ui';
 
 import { requestProblem } from '../stay/api';
 import { captureQueryKey, loadCaptureSource, performCaptureRequest } from './api';
@@ -19,7 +19,7 @@ import type { JSX } from 'react';
 import type { CaptureBrowserSession } from './browser-session';
 import type { CaptureWorkspaceProps } from './types';
 
-/** Approved source-backed Capture surfaces retain one composer and operation history across navigation. */
+/** Contextual Capture tools retain one owning-trip composer and command history across view remounts. */
 export function CaptureWorkspace(props: CaptureWorkspaceProps): JSX.Element {
   if (!Number.isSafeInteger(props.tripId) || props.tripId < 1)
     return (
@@ -72,23 +72,20 @@ function WorkspaceSession({
   const state = useCaptureEditor(session, props, query.data);
   const context = useCaptureContext(props);
   return (
-    <main className="mx-auto w-full max-w-4xl space-y-5 p-4 md:p-6">
-      <PageHeader
-        title={{ capture: 'Capture', inbox: 'Inbox', explore: 'Explore' }[props.view]}
-        backHref={props.backHref}
-        renderLink={props.renderLink}
-        actions={
-          <Button
-            variant="ghost"
-            disabled={state.busy || state.undoCount === 0}
-            onClick={() => void editor.undo()}
-          >
-            <RotateCcw className="size-4" aria-hidden />
-            Undo
-          </Button>
-        }
-      />
-      {props.navigation}
+    <section aria-label="Capture tools" className="space-y-5">
+      <header className="flex items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold">
+          {{ capture: 'Capture', inbox: 'Inbox', explore: 'Explore' }[props.view]}
+        </h2>
+        <Button
+          variant="ghost"
+          disabled={state.busy || state.undoCount === 0}
+          onClick={() => void editor.undo()}
+        >
+          <RotateCcw className="size-4" aria-hidden />
+          Undo
+        </Button>
+      </header>
       <CaptureContactChooser session={session} />
       {query.isError ? (
         <ErrorState error={requestProblem(query.error)} onRetry={() => void query.refetch()} />
@@ -114,7 +111,7 @@ function WorkspaceSession({
         />
       ) : null}
       {state.busy ? <p role="status">Saving…</p> : null}
-    </main>
+    </section>
   );
 }
 

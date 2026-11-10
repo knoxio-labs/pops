@@ -329,8 +329,10 @@ new operation UUID while reusing accepted references, without another upload. No
 bytes or Undo history survive a browser reload. Organisation, source edits and collection
 removal use the producer's guarded inverses without restoring an old whole workspace.
 
-`CaptureWorkspace({ tripId, view, client?, documentsClient?, backHref?, onViewEvent? })`
-provides the text-first Capture, inline Inbox and Explore views. Its session is scoped
+`CaptureWorkspace({ tripId, view, client?, documentsClient?, contacts?, onViewEvent? })`
+provides embedded text-first Capture, inline Inbox and Explore tool views for the owning
+Trip workspace. The host controls the view and Event callback; the tool renders no
+page landmark, back navigation or destination links. Its session is scoped
 to the host QueryClient, API origin and owning trip. Optional catalogue failures stay
 separate from the source read. Inbox keeps raw material visible while saving explicit
 fields and typed existing/new Idea, Event, Journey or Stay organisation. Classification
@@ -349,8 +351,8 @@ original preconditions. Upload views compose the Documents owner's controlled se
 remounting a pending upload cannot issue another POST.
 Ambiguous-upload recovery searches and selections use that same session's published
 owner-context guard, so changing its Documents transport cannot accept another owner's original.
-Hosts supply `renderLink` and optional `navigation` for client-side transitions; a full
-page reload ends the browser session and cannot restore File handles.
+The host may unmount or change the controlled tool view without replacing its QueryClient.
+A full page reload ends the browser session and cannot restore File handles.
 
 Explore reads actual Capture, Idea or Event membership identities and groups by the
 current source's recorded place, or an Event's explicitly selected visit place. Identical

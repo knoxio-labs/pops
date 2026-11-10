@@ -51,9 +51,6 @@ describe('Trips manifest', () => {
       { path: ':tripId/decisions/:decisionId', bundleSlot: 'trips-decision' },
       { path: ':tripId/journeys/:journeyId', bundleSlot: 'trips-journey' },
       { path: ':tripId/documents', bundleSlot: 'trips-documents' },
-      { path: ':tripId/capture', bundleSlot: 'trips-capture' },
-      { path: ':tripId/inbox', bundleSlot: 'trips-inbox' },
-      { path: ':tripId/explore', bundleSlot: 'trips-explore' },
       { path: ':tripId/settings', bundleSlot: 'trips-settings' },
     ]);
     expect(manifest.pages).toEqual(TRIPS_PAGES);
