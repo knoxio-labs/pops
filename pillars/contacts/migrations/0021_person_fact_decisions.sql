@@ -69,6 +69,7 @@ CREATE VIEW entity_identity_lookup AS
 SELECT e.id,
        CASE WHEN local_details.value IS NOT NULL THEN json_extract(local_details.value,'$.name')
             WHEN selected_name.source_history_id IS NOT NULL THEN json_extract(history.observation,'$.displayName')
+            WHEN chosen_details.value IS NOT NULL THEN json_extract(chosen_details.value,'$.name')
             WHEN selected_name.owner_entity_id IS NOT NULL THEN chosen_name.name
             ELSE e.name END AS name,
        e.type,
@@ -77,6 +78,7 @@ FROM entities e
 LEFT JOIN person_fact_decisions local_details ON local_details.entity_id=e.id AND local_details.target='entity:name'
 LEFT JOIN merge_selections selected_name ON selected_name.canonical_id=e.id AND selected_name.field='name'
 LEFT JOIN entities chosen_name ON chosen_name.id=selected_name.owner_entity_id
+LEFT JOIN person_fact_decisions chosen_details ON chosen_details.entity_id=chosen_name.id AND chosen_details.target='entity:name'
 LEFT JOIN source_record_history history ON history.id=selected_name.source_history_id
 LEFT JOIN merge_selections selected_aliases ON selected_aliases.canonical_id=e.id AND selected_aliases.field='aliases'
 LEFT JOIN entities chosen_aliases ON chosen_aliases.id=selected_aliases.owner_entity_id

@@ -14,9 +14,10 @@ pub async fn entity(
 ) -> Result<EntityRow, sqlx::Error> {
     for selection in repo::selections(conn, &row.id).await? {
         if let Some(owner) = selection.owner_entity_id {
-            let source = get_stored(conn, &owner)
+            let mut source = get_stored(conn, &owner)
                 .await?
                 .ok_or(sqlx::Error::RowNotFound)?;
+            crate::persons::facts_projection::entity(conn, &mut source).await?;
             let field: MergeField = decode_field(&selection.field)?;
             match field {
                 MergeField::Name => row.name = source.name,

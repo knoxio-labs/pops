@@ -613,3 +613,53 @@ async fn selections_accept_every_supported_kind_including_opaque_other() {
     let other = points.iter().find(|point| point.kind == "other").unwrap();
     assert_eq!(other.normalized_value, None);
 }
+
+#[tokio::test]
+async fn merge_field_selection_uses_the_selected_members_effective_local_facts() {
+    let (app, pool, member) = app().await;
+    let (status, created) = send(
+        &app,
+        "POST",
+        "/entities",
+        json!({"name":"Canonical person","type":"person"}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    let canonical = created["data"]["id"].as_str().unwrap();
+    let saved = apply(
+        &app,
+        &member,
+        "selected-local-member",
+        json!([{"action":"setEntity","name":"Chosen member name","notes":"Chosen member notes"}]),
+    )
+    .await;
+    let (status, merged) = send(&app, "POST", "/merges", json!({
+        "canonicalId":canonical,"memberIds":[member],"expectedRevision":saved["data"]["version"],"idempotencyKey":"merge-effective-member","evidence":"explicit local field selection",
+        "selections":[{"kind":"entity","field":"name","entityId":member},{"kind":"entity","field":"notes","entityId":member}]
+    })).await;
+    assert_eq!(status, StatusCode::OK, "{merged}");
+    let projected = facts(&app, canonical).await;
+    assert_eq!(projected["entity"]["name"], "Chosen member name");
+    assert_eq!(projected["entity"]["notes"], "Chosen member notes");
+    let (status, directory) = send(
+        &app,
+        "GET",
+        "/entities?search=Chosen%20member%20name",
+        Value::Null,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(directory["data"].as_array().unwrap().len(), 1);
+    assert_eq!(directory["data"][0]["id"], canonical);
+    assert_eq!(directory["data"][0]["name"], "Chosen member name");
+    let (status, lookup) = send(&app, "POST", "/entities/lookup", json!({"ids":[canonical]})).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(lookup["entities"][0]["name"], "Chosen member name");
+    let stored: (String, Option<String>) =
+        sqlx::query_as("SELECT name,notes FROM entities WHERE id=?1")
+            .bind(&member)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert_eq!(stored, ("Original person".into(), None));
+}

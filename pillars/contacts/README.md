@@ -371,8 +371,9 @@ manual review remains available. Any late failure rolls the whole action back.
 A merge changes canonical membership, preserving every original entity, source,
 address and blob. The request names only the roots to merge; another plausible
 candidate is never included implicitly. The selected canonical root supplies
-scalar defaults. Explicit field references select a retained member's original
-value, and preferred point references select one group observation per kind.
+scalar defaults. Explicit entity field references select the retained member's
+effective local value, including acknowledged fact edits; its original row stays
+unchanged. Preferred point references select one group observation per kind.
 Selectors are tagged: `{kind: "entity", field: "name", entityId}` selects a
 retained entity; `{kind: "sourceRecord", field: "personProfile", sourceRecordId}`
 selects imported name evidence. Source selectors support only `name` and
@@ -410,8 +411,11 @@ decision; source replay cannot clear a rejection.
 Undo is deliberately conservative: **any subsequent directory mutation**, even
 outside the group, blocks it. SQLite triggers fence entity, profile, point,
 source/history, address, asset, selection and separation changes. Identical source
-replay does not write or advance that revision. Undo restores previous membership
-and selections only at the exact untouched post-merge revision. References written
+replay does not write or advance that revision. Undo restores previous membership,
+selections, local fact decisions and preference ownership only at the exact
+untouched post-merge revision. Preference counters remain monotonic. A legacy
+merge without a retained fact snapshot returns `409` when affected local fact
+history exists, rather than guessing its previous decisions. References written
 in another pillar after a merge still name the chosen canonical UUID after undo;
 contacts cannot reconstruct an external writer's intended former member.
 
