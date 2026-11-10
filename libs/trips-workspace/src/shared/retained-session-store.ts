@@ -108,6 +108,10 @@ export class SourceSessionView {
     return this.active;
   }
 
+  /** Ignore reads or draft callbacks when their committed view or captured transport is no longer current. */
+  isCurrent = (): boolean =>
+    this.active && (this.owner.client.getConfig().baseUrl ?? '') === this.owner.origin;
+
   /** Recheck after asynchronous preparation and immediately before any request dispatch. */
   assertCurrent(): void {
     assertSourceOwner(this.owner);

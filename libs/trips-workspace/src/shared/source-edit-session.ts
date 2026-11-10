@@ -96,6 +96,7 @@ export class SourceEditSession<Source extends object, Patch extends Partial<Sour
     if (Object.is(previous, next)) return;
     this.context.state = { ...this.context.state, [key]: next };
     this.publish();
+    if (key === 'busy' && next === false) this.receive(this.context.initial);
   }
 
   private publish(): void {

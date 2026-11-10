@@ -32,6 +32,40 @@ function deferred<Value>() {
 }
 
 describe('Stay source view retention', () => {
+  it("does not adopt another origin's read into an already bound view", () => {
+    const initial = sourceStay();
+    const transport = workspaceTransport();
+    const owner = scope();
+    const identity = { client: transport.client, tripId: 7, stayId: 13 };
+    const view = renderHook(({ source }) => useStayEditor(source, identity), {
+      ...owner,
+      initialProps: { source: initial },
+    });
+    transport.client.setConfig({ baseUrl: 'https://other.example' });
+    view.rerender({ source: sourceStay({ name: 'Other owner' }) });
+    expect(view.result.current.saved).toEqual(initial);
+    expect(view.result.current.draft).toEqual(initial);
+    expect(transport.requests).toEqual([]);
+  });
+
+  it("does not replay either mounted view's unchanged canonical read after a shared successful write", async () => {
+    const initial = sourceStay();
+    const otherViewRead = { ...initial };
+    const edited = sourceStay({ name: 'Shared acknowledgement' });
+    const transport = workspaceTransport({ patches: [{ status: 200, body: edited }] });
+    const owner = scope();
+    const identity = { client: transport.client, tripId: 7, stayId: 13 };
+    const first = renderHook(() => useStayEditor(initial, identity), owner);
+    const second = renderHook(() => useStayEditor(otherViewRead, identity), owner);
+    await act(async () => {
+      await first.result.current.commit({ name: edited.name });
+    });
+    expect(first.result.current.saved.name).toBe(edited.name);
+    expect(second.result.current.saved.name).toBe(edited.name);
+    expect(first.result.current.canUndo).toBe(true);
+    expect(second.result.current.canUndo).toBe(true);
+  });
+
   it('retains unsaved edits through unmount and query-cache eviction', () => {
     const initial = sourceStay();
     const owner = scope();
@@ -92,7 +126,8 @@ describe('Stay source view retention', () => {
     const owner = scope();
     const identity = { client: transport.client, tripId: 7, stayId: 13 };
     const first = renderHook(() => useStayEditor(initial, identity), owner);
-    const second = renderHook(() => useStayEditor(initial, identity), owner);
+    const otherViewRead = { ...initial };
+    const second = renderHook(() => useStayEditor(otherViewRead, identity), owner);
     let pending: Promise<void> = Promise.resolve();
     act(() => {
       pending = first.result.current.commit({ name: edited.name });
@@ -112,6 +147,7 @@ describe('Stay source view retention', () => {
       await pending;
     });
     expect(second.result.current.saved.name).toBe(edited.name);
+    expect(second.result.current.canUndo).toBe(true);
     await act(async () => {
       await second.result.current.commit({ notes: 'Still open' });
     });

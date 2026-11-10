@@ -23,7 +23,5 @@ export function useRetainedSourceEditor<Source extends object, Patch extends Par
     (owner) => new SourceEditSession(initial, options(owner))
   );
   const view = useSessionView(retained.owner);
-  return useSourceEditor(initial, retained.session.context.options, retained.session, () =>
-    view.assertCurrent()
-  );
+  return useSourceEditor(initial, retained.session.context.options, retained.session, view);
 }
