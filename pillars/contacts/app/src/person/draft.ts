@@ -1,7 +1,11 @@
 import { ContactError } from '../errors';
 
-import type { Address, ContactPoint, ContactPointInput } from '../contacts-api/types.gen';
-import type { PersonSnapshot } from './contracts';
+import type {
+  Address,
+  ContactPoint,
+  ContactPointInput,
+  FactsSnapshot,
+} from '../contacts-api/types.gen';
 
 /** Editable method identity stays attached to the exact observation selected by the user. */
 export interface PointDraft extends ContactPointInput {
@@ -51,7 +55,7 @@ export function addressDraft(address: Address): AddressDraft {
 }
 
 /** Project an acknowledged snapshot to an isolated draft without discarding source observations. */
-export function personDraft(data: PersonSnapshot): PersonDraft {
+export function personDraft(data: FactsSnapshot): PersonDraft {
   return {
     name: data.entity.name,
     notes: data.entity.notes ?? '',
