@@ -55,6 +55,36 @@ Existing host/document/provenance links are displayed and can be removed. Their
 opaque source identifiers remain intact, and the workspace asserts no resolution
 or external booking action. Source-owner picker integration is POPS-6156.
 
+`TripDocumentsWorkspace({ tripId, target? })` and `DocumentAssociationPicker` use the
+typed Trips association contract and a separate generated Documents client. Trip-wide
+originals are listed first, followed by groups for their exact visit, journey, stay or
+event identities. Search and metadata come from Documents; opening an original uses
+its authenticated download route. Unlink removes only the Trips association. Uploads
+use the current Documents MIME and size policy. The always-visible multi-file drop area
+sits beside the square existing-original picker. Each selected file has its own task,
+error and captured target, including distinct files with identical names. Accepted tasks
+remain mounted when switching source context, and completed files are never resent when
+another file fails. Uploads retain the accepted task identity while
+processing, and attach only after the owner returns a canonical document ID. An
+interrupted upload is treated as an uncertain outcome and requires searching Documents
+before another upload is considered. Existing links remain visible while Documents is
+unavailable; metadata does not imply offline file availability. The Trips app exposes
+the workspace at `/trips/:tripId/documents`; source editors can reuse the picker with
+their explicit target identity. `TripDocumentLinks({ tripId, target?, tripsClient?,
+documentsClient? })` renders only the exact trip, target kind and target ID when a
+target is supplied, without route lookups or another page shell. Editors compose
+it with `TripDocumentUpload` using the same explicit target and owner transports.
+`DocumentPicker({ onSelected, documentsClient? })` returns the actual owner original
+without writing a route association. `useDocumentUpload({ session, onSessionChange,
+documentsClient? })` is the same per-file owner workflow used by route uploads.
+Initialize each distinct intent with `createDocumentUploadSession(file)` and keep
+its controlled session above conditional views: its pending POST flag, accepted task
+and uncertain response guard must survive navigation and remount. The session retains
+the exact browser File handle; only actual task/document identities belong in persisted
+provenance. Completed and explicit duplicate task results expose the canonical document
+ID while retaining the accepted task ID. The controller never repeats an accepted or
+uncertain upload; a definite rejection can be retried explicitly.
+
 Run `mise exec -- pnpm --filter @pops/trips-workspace dev` for the standalone development
 harness, then enter real trip/stay IDs. Its proxy targets the local Trips API on
 3018, configurable with `TRIPS_DEV_API_ORIGIN`; API authentication remains required.

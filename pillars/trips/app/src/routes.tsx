@@ -15,6 +15,9 @@ const DecisionPage = lazy(() =>
 const JourneyPage = lazy(() =>
   import('./JourneyPage').then((module) => ({ default: module.JourneyPage }))
 );
+const DocumentsPage = lazy(() =>
+  import('./DocumentsPage').then((module) => ({ default: module.DocumentsPage }))
+);
 const SettingsPage = lazy(() =>
   import('./settings/TripSettingsPage').then((module) => ({ default: module.TripSettingsPage }))
 );
@@ -24,6 +27,7 @@ export const bundles = {
   'trips-stay': StayPage,
   'trips-decision': DecisionPage,
   'trips-journey': JourneyPage,
+  'trips-documents': DocumentsPage,
   'trips-settings': SettingsPage,
 } satisfies Record<TripsPageSlot, ComponentType>;
 /** Local route projection used only by component hosts and development integration. */
@@ -32,5 +36,6 @@ export const routes: RouteObject[] = [
   { path: ':tripId/stays/:stayId', element: <StayPage /> },
   { path: ':tripId/decisions/:decisionId', element: <DecisionPage /> },
   { path: ':tripId/journeys/:journeyId', element: <JourneyPage /> },
+  { path: ':tripId/documents', element: <DocumentsPage /> },
   { path: ':tripId/settings', element: <SettingsPage /> },
 ];
