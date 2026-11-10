@@ -95,7 +95,7 @@ test('Calendar loads the configured remote, filters independent sources, and dir
     json(route, 200, { journey, legs: [leg], timing })
   );
   await page.route(/\/trips-api\/trips\/7\/journeys\/20\/legs$/, (route) =>
-    json(route, 200, { legs: [leg] })
+    json(route, 200, { revision: 0, legs: [leg] })
   );
   await page.route(/\/trips-api\/trips\/7\/journeys\/20\/timing$/, (route) =>
     json(route, 200, timing)

@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -11,6 +12,8 @@ import * as schema from '../schema.js';
 import { createJourneyLeg, updateJourneyLeg } from '../services/journey-legs.js';
 import { getJourneyWorkspace } from '../services/journey-workspace.js';
 import { createJourney, updateJourney } from '../services/journeys.js';
+import { removeJourneyLeg, restoreJourneyLeg } from '../services/leg-removals.js';
+import { getJourneyLegSet } from '../services/leg-set.js';
 import { createTrip } from '../services/records.js';
 
 import type { OpenedTripsDb } from '../index.js';
@@ -77,4 +80,30 @@ it('rejects foreign or missing identities and returns an existing empty source w
     legs: [],
     timing: { journeyId: journey.id, legs: [], connections: [], window: null, findings: [] },
   });
+});
+
+it('projects only live source membership and restores the same leg timing after Undo', () => {
+  const trip = createTrip(opened.db, {});
+  const journey = createJourney(opened.db, trip.id, {});
+  const leg = createJourneyLeg(opened.db, trip.id, journey.id, {
+    from: { local: '2029-02-01T20:30', timeZone: 'Pacific/Auckland' },
+    to: { local: '2029-02-02T01:00', timeZone: 'Pacific/Auckland' },
+  });
+  const owner = { tripId: trip.id, journeyId: journey.id };
+  const operationId = randomUUID();
+  const removed = removeJourneyLeg(
+    opened.db,
+    { ...owner, id: leg.id },
+    {
+      operationId,
+      expectedRevision: getJourneyLegSet(opened.db, trip.id, journey.id).revision,
+    }
+  );
+  const snapshot = getJourneyWorkspace(opened.db, trip.id, journey.id);
+  expect(snapshot.legs).toEqual([]);
+  expect(snapshot.timing).toEqual(deriveJourneyTiming(journey.id, []));
+  restoreJourneyLeg(opened.db, { ...owner, operationId }, removed.revision);
+  const restored = getJourneyWorkspace(opened.db, trip.id, journey.id);
+  expect(restored.legs).toEqual([leg]);
+  expect(restored.timing).toEqual(deriveJourneyTiming(journey.id, [leg]));
 });
