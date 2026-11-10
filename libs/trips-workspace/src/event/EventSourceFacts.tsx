@@ -22,7 +22,7 @@ export function EventSourceFacts({
   places: Place[];
 }): JSX.Element {
   return (
-    <fieldset disabled={editor.busy} className="min-w-0">
+    <fieldset disabled={editor.busy || editor.conflict} className="min-w-0">
       <legend className="sr-only">Event source facts</legend>
       <EventRoute event={editor.draft} visits={visits} places={places}>
         <EventFields
@@ -36,7 +36,7 @@ export function EventSourceFacts({
         <EventOrganisers
           identity={identity}
           links={editor.draft.organiserLinks}
-          disabled={editor.busy}
+          disabled={editor.busy || editor.conflict}
           commit={(patch) => void editor.commit(patch)}
         />
       </EventRoute>

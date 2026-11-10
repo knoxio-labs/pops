@@ -20,7 +20,7 @@ export function StaySourceFacts({
   context: StayContext;
 }): JSX.Element {
   return (
-    <fieldset disabled={editor.busy} className="min-w-0 space-y-4">
+    <fieldset disabled={editor.busy || editor.conflict} className="min-w-0 space-y-4">
       <legend className="sr-only">Stay source facts</legend>
       <StayTimeline stay={editor.draft} stays={context.stays.data ?? []}>
         <StayFields
@@ -33,7 +33,7 @@ export function StaySourceFacts({
         <StayHost
           identity={identity}
           links={editor.draft.hostLinks}
-          disabled={editor.busy}
+          disabled={editor.busy || editor.conflict}
           commit={(patch) => void editor.commit(patch)}
         />
         <StayReferences stay={editor.draft} commit={(patch) => void editor.commit(patch)} />

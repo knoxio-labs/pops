@@ -1,4 +1,7 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
+
+import { refreshSource, sameSourceValue } from './source-refresh';
+import { useSourceActions } from './use-source-actions';
 
 import type { Dispatch, SetStateAction } from 'react';
 
@@ -9,8 +12,8 @@ export interface FailedSourceChange<Patch> {
   error: unknown;
 }
 
-/** Fresh source reads reset an untouched editor's history; pending drafts survive background reads. */
-export function useSourceState<Source, Patch>(
+/** Canonical reads refresh untouched fields, preserve pending fields and invalidate stale inverse history. */
+export function useSourceState<Source extends object, Patch extends Partial<Source>>(
   initial: Source,
   source: (value: Source) => Patch
 ): SourceState<Source, Patch> {
@@ -20,13 +23,16 @@ export function useSourceState<Source, Patch>(
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<FailedSourceChange<Patch>>();
   const [observed, setObserved] = useState(initial);
-  const dirty = JSON.stringify(source(draft)) !== JSON.stringify(source(saved));
-  if (observed !== initial) {
+  const [conflicts, setConflicts] = useState<(keyof Patch)[]>([]);
+  const dirty = !sameSourceValue(source(draft), source(saved));
+  if (observed !== initial && !busy) {
     setObserved(initial);
-    if (!busy && !failure && !dirty && JSON.stringify(initial) !== JSON.stringify(saved)) {
+    if (!sameSourceValue(initial, saved)) {
+      const refreshed = refreshSource({ saved, draft, initial, failed: failure?.patch }, source);
       setSaved(initial);
-      setDraft(initial);
+      setDraft(refreshed.draft);
       setHistory([]);
+      setConflicts([...new Set([...conflicts, ...refreshed.conflicts])]);
     }
   }
   return {
@@ -41,6 +47,10 @@ export function useSourceState<Source, Patch>(
     failure,
     setFailure,
     dirty,
+    conflict: conflicts.length > 0,
+    conflicts,
+    setConflicts,
+    acknowledgeRead: setObserved,
   };
 }
 
@@ -57,6 +67,10 @@ export interface SourceState<Source, Patch> {
   failure: FailedSourceChange<Patch> | undefined;
   setFailure: Dispatch<SetStateAction<FailedSourceChange<Patch> | undefined>>;
   dirty: boolean;
+  conflict: boolean;
+  conflicts: (keyof Patch)[];
+  setConflicts: Dispatch<SetStateAction<(keyof Patch)[]>>;
+  acknowledgeRead: Dispatch<SetStateAction<Source>>;
 }
 
 /** Source projection and persistence supplied by the owning domain; hosts remount at identity/origin boundaries. */
@@ -72,60 +86,18 @@ export function useSourceEditor<Source extends object, Patch extends Partial<Sou
   initial: Source,
   options: SourceEditorOptions<Source, Patch>
 ): SourceEditor<Source, Patch> {
-  const {
-    saved,
-    setSaved,
-    draft,
-    setDraft,
-    history,
-    setHistory,
-    busy,
-    setBusy,
-    failure,
-    setFailure,
-    dirty,
-  } = useSourceState(initial, options.source);
-  const lock = useRef(false);
-
-  const edit = (patch: Patch): void => setDraft((previous) => ({ ...previous, ...patch }));
-  const commit = async (patch: Patch, undo = false): Promise<void> => {
-    if (lock.current) return;
-    const pending = failure ? { ...failure.patch, ...patch } : patch;
-    const next = { ...saved, ...pending };
-    if (JSON.stringify(options.source(next)) === JSON.stringify(options.source(saved))) {
-      setDraft(saved);
-      setFailure(undefined);
-      return;
-    }
-    lock.current = true;
-    setBusy(true);
-    setFailure(undefined);
-    edit(pending);
-    try {
-      const result = await options.save(pending, saved);
-      options.onSaved(result);
-      setHistory((previous) => (undo ? previous.slice(0, -1) : [...previous, saved]));
-      setSaved(result);
-      setDraft(result);
-    } catch (error) {
-      setFailure({ patch: pending, undo, error });
-    } finally {
-      lock.current = false;
-      setBusy(false);
-    }
-  };
-  const previous = history.at(-1);
+  const state = useSourceState(initial, options.source);
+  const actions = useSourceActions(state, options, initial);
   return {
-    draft,
-    dirty,
-    saved,
-    edit,
-    commit,
-    busy,
-    failure,
-    canUndo: previous !== undefined && !busy && failure === undefined,
-    undo: (): Promise<void> | undefined => previous && commit(options.source(previous), true),
-    retry: (): Promise<void> | undefined => failure && commit(failure.patch, failure.undo),
+    draft: state.draft,
+    dirty: state.dirty,
+    saved: state.saved,
+    busy: state.busy,
+    failure: state.failure,
+    conflict: state.conflict,
+    canUndo:
+      state.history.length > 0 && !state.busy && !state.failure && !state.conflict && !state.dirty,
+    ...actions,
   };
 }
 
@@ -138,6 +110,10 @@ export interface SourceEditor<Source, Patch> {
   commit: (patch: Patch, undo?: boolean) => Promise<void>;
   busy: boolean;
   failure: FailedSourceChange<Patch> | undefined;
+  /** An observed canonical update overlapped a pending field; writes require an explicit reset. */
+  conflict: boolean;
+  /** Discard only conflicted draft fields against canonical values, retaining unrelated edits and retry baselines. */
+  reset: () => void;
   canUndo: boolean;
   undo: () => Promise<void> | undefined;
   retry: () => Promise<void> | undefined;

@@ -3,6 +3,7 @@ import { RotateCcw } from 'lucide-react';
 
 import { Button, ErrorState, PageHeader } from '@pops/ui';
 
+import { SourceConflict } from '../shared/SourceConflict';
 import { SourceDocuments } from '../shared/SourceDocuments';
 import { loadPlaces, loadTrip, loadVisits, requestProblem } from '../stay/api';
 import { eventQueryKey, loadEvent } from './api';
@@ -165,10 +166,11 @@ function EditorStatus({
 }): JSX.Element {
   return (
     <>
+      <SourceConflict conflict={editor.conflict} reset={editor.reset} />
       {editor.failure && (
         <ErrorState
           error={requestProblem(editor.failure.error)}
-          onRetry={() => void editor.retry()}
+          onRetry={editor.conflict ? undefined : () => void editor.retry()}
         />
       )}
       <ContextProblems context={context} />

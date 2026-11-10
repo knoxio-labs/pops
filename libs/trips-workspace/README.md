@@ -75,7 +75,12 @@ Empty scalar choices clear to null. No visit dates or default clocks/zones are
 copied. Only Purchased receives hard styling. Undo persists the previous successful
 source snapshot; failed drafts remain visible with safe diagnostic codes and retry.
 Successful mutations update the source cache. Fresh source reads replace an untouched
-editor; pending drafts survive background reads. Context failures do not block editing the stay. Neighbours share an explicit
+editor; pending drafts survive background reads. Untouched top-level fields adopt fresh
+canonical values, including complete Host arrays. Overlapping local and canonical changes
+block source writes until the user explicitly discards only the conflicting draft fields.
+Unrelated pending edits and owner receipts remain retained. A fresh source invalidates
+stale whole-source Undo history; own mutation echoes retain it. Failed operations keep
+their original confirmed save baseline for retry, including Visit revision guards. Context failures do not block editing the stay. Neighbours share an explicit
 visit identity; an unlinked stay implies no accommodation coverage.
 
 Stay Host references use the same host-injected Contacts chooser and owner reader as

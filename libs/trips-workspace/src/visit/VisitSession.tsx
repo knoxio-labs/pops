@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Button, ErrorState, PageHeader, Select } from '@pops/ui';
 
 import { SourceReferences } from '../journey/SourceReferences';
+import { SourceConflict } from '../shared/SourceConflict';
 import { requestProblem } from '../stay/api';
 import { useVisitEditor } from './use-visit-editor';
 import { VisitFields } from './VisitFields';
@@ -37,7 +38,7 @@ export function VisitSession({
       <VisitHeader identity={identity} editor={editor} context={context} />
       <VisitStatus context={context} editor={editor} reload={reload} />
       <fieldset
-        disabled={editor.busy}
+        disabled={editor.busy || editor.conflict}
         className="min-w-0 rounded-xl border border-app-accent/30 bg-app-accent/10 p-3"
       >
         <legend className="sr-only">{t('visitWorkspace.sourceFacts')}</legend>
@@ -134,11 +135,12 @@ function VisitStatus({
   const problems = Object.entries(context).filter(([, query]) => query.isError);
   return (
     <>
+      <SourceConflict conflict={editor.conflict} reset={editor.reset} />
       {editor.failure && (
         <div className="space-y-2">
           <ErrorState
             error={requestProblem(editor.failure.error)}
-            onRetry={() => void editor.retry()}
+            onRetry={editor.conflict ? undefined : () => void editor.retry()}
           />
           <Button variant="ghost" onClick={() => void reload()}>
             {t('visitWorkspace.reload')}

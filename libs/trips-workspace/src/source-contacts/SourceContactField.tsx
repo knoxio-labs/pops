@@ -49,7 +49,7 @@ export function SourceContactField(props: FieldProps): JSX.Element {
               session={session}
               links={links}
               disabled={disabled}
-              intentKey={`replace:${revision}:${index}`}
+              intentKey={`replace:${key}`}
               chooseLabel={labels.replace(index + 1)}
               recoverLabel={labels.recover}
               showRecovery={false}
