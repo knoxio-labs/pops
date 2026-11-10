@@ -117,3 +117,19 @@ navigation link and authenticated query/client context.
 and its generated-transport load/apply operations. The owning Trips app runs the
 real editor/HTTP/SQLite integration regression; this extractable library does not
 install or start a pillar runtime in its own unit tests.
+
+`@pops/trips-workspace/capture-client` exports the headless shared Capture, Inbox
+and Explore editor. It submits finite action-specific owner commands with retained
+operation UUIDs. An uncertain response blocks a new operation until the same request
+is resolved; retry never substitutes revisions from a newer read. Receipts distinguish
+the immutable original outcome from current affected rows and an already-undone replay.
+Reads started before a confirmed mutation cannot replace its current source state.
+
+The composer retains verbatim source text, explicit optional selections and distinct
+File handles in this browser session. Every selected file needs an accepted Documents
+task or original identity before capture; later task completion retains both identities.
+Confirmed capture Undo restores its submitted draft only when the current composer is
+empty. The composer stays reserved during an uncertain inverse. Recapture creates a
+new operation UUID while reusing accepted references, without another upload. No file
+bytes or Undo history survive a browser reload. Organisation, source edits and collection
+removal use the producer's guarded inverses without restoring an old whole workspace.
