@@ -60,12 +60,12 @@ export interface TestResponse {
   body: unknown;
 }
 
-/** Generated-client transport seam that records real Request bodies and preserves explicit response ordering. */
+/** Generated-client transport seam recording real Request bodies with ordered, optionally deferred replies. */
 export function workspaceTransport(
   options: {
     stay?: Stay;
     neighbours?: Stay[];
-    patches?: TestResponse[];
+    patches?: (TestResponse | Promise<TestResponse>)[];
     gets?: TestResponse[];
     failContext?: boolean;
   } = {}
@@ -84,7 +84,7 @@ export function workspaceTransport(
         const body: unknown = await request.json();
         patches.push(body);
         const response = patchResponses.shift() ?? { status: 200, body: source };
-        return jsonResponse(response);
+        return jsonResponse(await response);
       }
       return jsonResponse(getResponses.shift() ?? { status: 200, body: source });
     }

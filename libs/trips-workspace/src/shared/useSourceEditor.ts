@@ -23,18 +23,23 @@ export function useSourceState<Source extends object, Patch extends Partial<Sour
   source: (value: Source) => Patch
 ): SourceState<Source, Patch> {
   const [saved, setSaved] = useState(initial);
+  const [canonical, setCanonical] = useState(() => source(initial));
   const [draft, setDraft] = useState(initial);
   const [history, setHistory] = useState<Source[]>([]);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<FailedSourceChange<Patch>>();
   const [observed, setObserved] = useState(initial);
   const [conflicts, setConflicts] = useState<(keyof Patch)[]>([]);
-  const dirty = !sameSourceValue(source(draft), source(saved));
+  const dirty = !sameSourceValue(source(draft), canonical);
   if (observed !== initial && !busy) {
     setObserved(initial);
     if (!sameSourceValue(initial, saved)) {
-      const refreshed = refreshSource({ saved, draft, initial, failed: failure?.patch }, source);
+      const refreshed = refreshSource(
+        { canonical, draft, initial, failed: failure?.patch },
+        source
+      );
       setSaved(initial);
+      setCanonical(source(initial));
       setDraft(refreshed.draft);
       setHistory([]);
       setConflicts([...new Set([...conflicts, ...refreshed.conflicts])]);
@@ -43,6 +48,8 @@ export function useSourceState<Source extends object, Patch extends Partial<Sour
   return {
     saved,
     setSaved,
+    canonical,
+    setCanonical,
     draft,
     setDraft,
     history,

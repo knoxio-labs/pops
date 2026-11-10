@@ -6,7 +6,7 @@ export interface SourceRefresh<Source, Patch> {
 
 /** Source fields and optional failed action used to reconcile a canonical refresh. */
 export interface SourceRefreshInput<Source, Patch> {
-  saved: Source;
+  canonical: Patch;
   draft: Source;
   initial: Source;
   failed?: Patch;
@@ -14,10 +14,9 @@ export interface SourceRefreshInput<Source, Patch> {
 
 /** Reconcile untouched top-level source fields while preserving explicit pending values. */
 export function refreshSource<Source extends object, Patch extends Partial<Source>>(
-  { saved, draft, initial, failed }: SourceRefreshInput<Source, Patch>,
+  { canonical: baseline, draft, initial, failed }: SourceRefreshInput<Source, Patch>,
   source: (value: Source) => Patch
 ): SourceRefresh<Source, Patch> {
-  const baseline = source(saved);
   const canonical = source(initial);
   const retained = { ...source(draft) };
   const conflicts: (keyof Patch)[] = [];
@@ -38,32 +37,40 @@ export function refreshSource<Source extends object, Patch extends Partial<Sourc
 /** Save reconciliation identifies observed or returned foreign fields that make whole-source inverses unsafe. */
 export interface SavedSourceRefresh<Source, Patch> extends SourceRefresh<Source, Patch> {
   foreign: boolean;
+  canonical: Patch;
 }
 
 /** Confirmed write and observations needed to preserve unrelated pending and foreign source fields. */
 export interface SourceSaveInput<Source, Patch> {
   baseline: Source;
+  canonical: Patch;
   draft: Source;
   result: Source;
-  observed: Source;
+  observed: Patch;
   pending: Patch;
 }
 
 /** Preserve unrelated drafts and observed foreign fields without acknowledging them as a saved result. */
 export function refreshAfterSave<Source extends object, Patch extends Partial<Source>>(
-  { baseline, draft, result, observed, pending }: SourceSaveInput<Source, Patch>,
+  { baseline, canonical, draft, result, observed, pending }: SourceSaveInput<Source, Patch>,
   source: (value: Source) => Patch
 ): SavedSourceRefresh<Source, Patch> {
   const before = source(baseline);
   const confirmed = source(result);
-  const foreign = untouchedSourceFields(before, source(observed), pending);
-  const local = untouchedSourceFields(before, source(draft), pending);
-  const returnedForeign = untouchedSourceFields(before, confirmed, pending);
-  const conflicts = savedConflicts(before, confirmed, foreign, local);
+  const inherited = untouchedSourceFields(before, canonical, pending);
+  const incoming = untouchedSourceFields(canonical, observed, pending);
+  const foreign = { ...inherited, ...incoming };
+  const local = untouchedSourceFields(canonical, source(draft), pending);
+  const returnedForeign = untouchedSourceFields(canonical, confirmed, pending);
+  const conflicts = savedConflicts(canonical, confirmed, foreign, local);
   return {
     draft: { ...result, ...foreign, ...local },
     conflicts: [...new Set(conflicts)],
-    foreign: Object.keys(foreign).length > 0 || Object.keys(returnedForeign).length > 0,
+    canonical: { ...confirmed, ...foreign },
+    foreign:
+      !sameSourceValue(canonical, before) ||
+      Object.keys(foreign).length > 0 ||
+      Object.keys(returnedForeign).length > 0,
   };
 }
 
@@ -103,14 +110,13 @@ function savedConflicts<Patch extends object>(
   return conflicts;
 }
 
-/** Replace only explicitly conflicted draft fields with the corresponding confirmed canonical fields. */
+/** Replace only explicitly conflicted draft fields with corresponding observed canonical field facts. */
 export function resetSourceConflicts<Source extends object, Patch extends Partial<Source>>(
-  saved: Source,
+  canonical: Patch,
   draft: Source,
-  conflicts: readonly (keyof Patch)[],
-  source: (value: Source) => Patch
+  conflicts: readonly (keyof Patch)[]
 ): Source {
-  const replacements = { ...source(saved) };
+  const replacements = { ...canonical };
   for (const key in replacements) {
     if (!conflicts.includes(key)) delete replacements[key];
   }

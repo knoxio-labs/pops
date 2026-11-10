@@ -392,3 +392,199 @@ it('invalidates a whole-source inverse when the successful response first reveal
   });
   expect(save.mock.calls).toEqual([[{ address: changed.address }, initial]]);
 });
+
+it('resets conflicting fields to observed canonical facts after an older successful response without discarding unrelated edits', async () => {
+  let resolve: ((value: Source) => void) | undefined;
+  const confirmed = { ...initial, address: 'Saved address', revision: 1 };
+  const observed = { ...confirmed, hostLinks: ['original', 'foreign'], revision: 2 };
+  const save = vi.fn<(patch: Patch, saved: Source) => Promise<Source>>(
+    () =>
+      new Promise((resolveWrite) => {
+        resolve = resolveWrite;
+      })
+  );
+  const { result, rerender } = setup(save);
+  act(() => result.current.edit({ timing: { zone: 'Pacific/Auckland' } }));
+  let pending: Promise<void> | undefined;
+  act(() => {
+    pending = result.current.commit({ address: confirmed.address });
+  });
+  rerender({ value: observed });
+  await act(async () => {
+    resolve?.(confirmed);
+    await pending;
+  });
+  expect(result.current.conflict).toBe(true);
+  act(() => result.current.reset());
+  expect(result.current.saved).toEqual(confirmed);
+  expect(result.current.draft.hostLinks).toEqual(observed.hostLinks);
+  expect(result.current.draft.timing).toEqual({ zone: 'Pacific/Auckland' });
+  expect(result.current.conflict).toBe(false);
+  expect(result.current.dirty).toBe(true);
+});
+
+it('does not snapshot an older confirmed source into Undo after retaining canonical facts across reset and another save', async () => {
+  let resolve: ((value: Source) => void) | undefined;
+  const confirmed = { ...initial, address: 'Saved address', revision: 1 };
+  const observed = { ...confirmed, hostLinks: ['original', 'foreign'], revision: 2 };
+  const replaced = { ...observed, hostLinks: ['replacement', 'foreign'], revision: 3 };
+  const renamed = { ...replaced, address: 'Later address', revision: 4 };
+  const inverse = { ...replaced, revision: 5 };
+  const save = vi
+    .fn<(patch: Patch, saved: Source) => Promise<Source>>()
+    .mockImplementationOnce(
+      () =>
+        new Promise((resolveWrite) => {
+          resolve = resolveWrite;
+        })
+    )
+    .mockResolvedValueOnce(replaced)
+    .mockResolvedValueOnce(renamed)
+    .mockResolvedValueOnce(inverse);
+  const { result, rerender } = setup(save);
+  let pending: Promise<void> | undefined;
+  act(() => {
+    pending = result.current.commit({ address: confirmed.address });
+  });
+  rerender({ value: observed });
+  await act(async () => {
+    resolve?.(confirmed);
+    await pending;
+  });
+  act(() => result.current.reset());
+  expect(result.current.dirty).toBe(false);
+  await act(async () => {
+    await result.current.commit({ hostLinks: replaced.hostLinks });
+  });
+  expect(result.current.canUndo).toBe(false);
+  await act(async () => {
+    await result.current.undo();
+  });
+  expect(save).toHaveBeenCalledTimes(2);
+  await act(async () => {
+    await result.current.commit({ address: renamed.address });
+  });
+  expect(result.current.canUndo).toBe(true);
+  await act(async () => {
+    await result.current.undo();
+  });
+  expect(save.mock.calls).toEqual([
+    [{ address: confirmed.address }, initial],
+    [{ hostLinks: replaced.hostLinks }, confirmed],
+    [{ address: renamed.address }, replaced],
+    [source(replaced), renamed],
+  ]);
+  expect(result.current.saved).toEqual(inverse);
+  expect(result.current.draft.hostLinks).toEqual(['replacement', 'foreign']);
+});
+
+it('persists a new explicit choice that equals an older saved value but differs from retained canonical facts', async () => {
+  let resolve: ((value: Source) => void) | undefined;
+  const confirmed = { ...initial, hostLinks: ['replacement'], revision: 1 };
+  const observed = { ...confirmed, address: 'Foreign address', revision: 2 };
+  const restored = { ...confirmed, revision: 3 };
+  const save = vi
+    .fn<(patch: Patch, saved: Source) => Promise<Source>>()
+    .mockImplementationOnce(
+      () =>
+        new Promise((resolveWrite) => {
+          resolve = resolveWrite;
+        })
+    )
+    .mockResolvedValueOnce(restored);
+  const { result, rerender } = setup(save);
+  let pending: Promise<void> | undefined;
+  act(() => {
+    pending = result.current.commit({ hostLinks: confirmed.hostLinks });
+  });
+  rerender({ value: observed });
+  await act(async () => {
+    resolve?.(confirmed);
+    await pending;
+  });
+  act(() => result.current.reset());
+  expect(result.current.draft.address).toBe('Foreign address');
+  await act(async () => {
+    await result.current.commit({ address: initial.address });
+  });
+  expect(save.mock.calls[1]).toEqual([{ address: initial.address }, confirmed]);
+  expect(result.current.saved).toEqual(restored);
+  expect(result.current.draft.address).toBe(initial.address);
+  expect(result.current.canUndo).toBe(false);
+});
+
+it('retains observed canonical facts across reset and a later unrelated success until a response confirms them', async () => {
+  let resolve: ((value: Source) => void) | undefined;
+  const first = { ...initial, address: 'Saved address', revision: 1 };
+  const observed = { ...first, hostLinks: ['original', 'foreign'], revision: 2 };
+  const second = { ...first, timing: { zone: 'Pacific/Auckland' }, revision: 3 };
+  const save = vi
+    .fn<(patch: Patch, saved: Source) => Promise<Source>>()
+    .mockImplementationOnce(
+      () =>
+        new Promise((resolveWrite) => {
+          resolve = resolveWrite;
+        })
+    )
+    .mockResolvedValueOnce(second);
+  const { result, rerender } = setup(save);
+  let pending: Promise<void> | undefined;
+  act(() => {
+    pending = result.current.commit({ address: first.address });
+  });
+  rerender({ value: observed });
+  await act(async () => {
+    resolve?.(first);
+    await pending;
+  });
+  act(() => result.current.reset());
+  await act(async () => {
+    await result.current.commit({ timing: second.timing });
+  });
+  expect(result.current.saved).toEqual(second);
+  expect(result.current.draft.hostLinks).toEqual(observed.hostLinks);
+  expect(result.current.conflict).toBe(true);
+  act(() => result.current.reset());
+  expect(result.current.draft.hostLinks).toEqual(observed.hostLinks);
+  expect(result.current.dirty).toBe(false);
+  expect(result.current.canUndo).toBe(false);
+});
+
+it('retains the exact failed write revision after resolving observed facts and receiving a later foreign read', async () => {
+  let resolve: ((value: Source) => void) | undefined;
+  const confirmed = { ...initial, address: 'Saved address', revision: 1 };
+  const observed = { ...confirmed, hostLinks: ['original', 'foreign'], revision: 2 };
+  const save = vi
+    .fn<(patch: Patch, saved: Source) => Promise<Source>>()
+    .mockImplementationOnce(
+      () =>
+        new Promise((resolveWrite) => {
+          resolve = resolveWrite;
+        })
+    )
+    .mockRejectedValue(new Error('Revision mismatch'));
+  const { result, rerender } = setup(save);
+  let pending: Promise<void> | undefined;
+  act(() => {
+    pending = result.current.commit({ address: confirmed.address });
+  });
+  rerender({ value: observed });
+  await act(async () => {
+    resolve?.(confirmed);
+    await pending;
+  });
+  act(() => result.current.reset());
+  const patch = { hostLinks: ['replacement', 'foreign'] };
+  await act(async () => {
+    await result.current.commit(patch);
+  });
+  rerender({ value: { ...observed, revision: 3 } });
+  await act(async () => {
+    await result.current.retry();
+  });
+  expect(save.mock.calls.slice(1)).toEqual([
+    [patch, confirmed],
+    [patch, confirmed],
+  ]);
+  expect(result.current.failure?.error).toEqual(new Error('Revision mismatch'));
+});

@@ -10,6 +10,9 @@ export interface FailedSourceChange<Patch> {
 /** Editable source state, retaining drafts while fresh canonical reads arrive. */
 export interface SourceState<Source, Patch> {
   saved: Source;
+  /** Observed source-field facts, retained separately from confirmed write metadata and user edits. */
+  canonical: Patch;
+  setCanonical: Dispatch<SetStateAction<Patch>>;
   setSaved: Dispatch<SetStateAction<Source>>;
   draft: Source;
   setDraft: Dispatch<SetStateAction<Source>>;

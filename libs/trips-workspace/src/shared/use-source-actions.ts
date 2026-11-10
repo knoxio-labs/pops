@@ -62,10 +62,7 @@ function editSource<Source extends object, Patch extends Partial<Source>>(
   context.state = {
     ...context.state,
     draft,
-    dirty: !sameSourceValue(
-      context.options.source(draft),
-      context.options.source(context.state.saved)
-    ),
+    dirty: !sameSourceValue(context.options.source(draft), context.state.canonical),
   };
 }
 
@@ -78,8 +75,8 @@ async function commitSource<Source extends object, Patch extends Partial<Source>
   if (context.lock || state.conflict) return;
   const pending = state.failure ? { ...state.failure.patch, ...patch } : patch;
   const baseline = state.failure ? (context.retainedBaseline ?? state.saved) : state.saved;
-  const next = { ...state.saved, ...pending };
-  if (!state.failure && sameSourceValue(options.source(next), options.source(state.saved))) {
+  const next = { ...state.canonical, ...pending };
+  if (!state.failure && sameSourceValue(next, state.canonical)) {
     editSource(context, pending);
     state.setFailure(undefined);
     context.state = { ...context.state, failure: undefined };
@@ -117,9 +114,10 @@ function confirmSource<Source extends object, Patch extends Partial<Source>>(
   { result, saved, pending, readAtStart, undo }: Confirmation<Source, Patch>
 ): void {
   const { state, options } = context;
-  const observed = context.initial === readAtStart ? saved : context.initial;
+  const observed =
+    context.initial === readAtStart ? state.canonical : options.source(context.initial);
   const refreshed = refreshAfterSave(
-    { baseline: saved, draft: state.draft, result, observed, pending },
+    { baseline: saved, canonical: state.canonical, draft: state.draft, result, observed, pending },
     options.source
   );
   let history = [...state.history, saved];
@@ -128,13 +126,15 @@ function confirmSource<Source extends object, Patch extends Partial<Source>>(
   state.acknowledgeRead(context.initial);
   state.setHistory(history);
   state.setSaved(result);
+  state.setCanonical(refreshed.canonical);
   state.setDraft(refreshed.draft);
   state.setConflicts(refreshed.conflicts);
   context.state = {
     ...state,
     saved: result,
+    canonical: refreshed.canonical,
     draft: refreshed.draft,
-    dirty: !sameSourceValue(options.source(refreshed.draft), options.source(result)),
+    dirty: !sameSourceValue(options.source(refreshed.draft), refreshed.canonical),
     history,
     failure: undefined,
     conflict: refreshed.conflicts.length > 0,
@@ -148,7 +148,7 @@ function resetConflicts<Source extends object, Patch extends Partial<Source>>(
 ): void {
   if (context.lock) return;
   const { state, options } = context;
-  const draft = resetSourceConflicts(state.saved, state.draft, state.conflicts, options.source);
+  const draft = resetSourceConflicts(state.canonical, state.draft, state.conflicts);
   let failure = state.failure;
   if (failure) {
     const patch = { ...failure.patch };
@@ -167,6 +167,6 @@ function resetConflicts<Source extends object, Patch extends Partial<Source>>(
     conflicts: [],
     conflict: false,
     history: [],
-    dirty: !sameSourceValue(options.source(draft), options.source(state.saved)),
+    dirty: !sameSourceValue(options.source(draft), state.canonical),
   };
 }

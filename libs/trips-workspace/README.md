@@ -81,7 +81,10 @@ Successful mutations update the source cache. Fresh source reads replace an unto
 editor; pending drafts survive background reads. Untouched top-level fields adopt fresh
 canonical values, including complete Host arrays. Overlapping local and canonical changes
 block source writes until the user explicitly discards only the conflicting draft fields.
-Unrelated pending edits and owner receipts remain retained. A fresh source invalidates
+Unrelated pending edits and owner receipts remain retained. If an older save response
+arrives after a fresh read, conflict resolution keeps the observed field facts separately
+from the exact write acknowledgement and never grants its revision to a failed retry.
+A fresh source invalidates
 stale whole-source Undo history; own mutation echoes retain it. Failed operations keep
 their original confirmed save baseline for retry, including Visit revision guards. Context failures do not block editing the stay. Neighbours share an explicit
 visit identity; an unlinked stay implies no accommodation coverage.
