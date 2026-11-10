@@ -10,6 +10,26 @@ another active placement. Unplaced records retain their source collection order.
 Captured transport identity, origin and trip fence every request; changing a
 client's origin cannot retarget a retained reader or command.
 
+`useTripRoute({ tripId, client? })` exposes that headless read and a shared retained
+command controller. `routeSession(queryClient, identity)` provides the same binding
+without a view. The registry lasts for the supplied QueryClient's lifetime, outside
+query-cache eviction; hosts replace that lifetime when their actual authentication
+or transport lifecycle requires it. Exact client references, captured origins and
+trip IDs isolate both controllers and cache namespaces. Unsubscribing one view does
+not deactivate another view or discard an in-flight response. Old view callbacks
+cannot submit after unmount or a context switch, including a return to the old owner.
+
+Commands synchronously claim one fresh UUID and the observed aggregate revision.
+Pending or failed operations block another intention; retry retains the original
+UUID, revision and nested payload. A GET can neither acknowledge nor release an
+unknown outcome. Explicit successful reload can release a definitively rejected
+400/404/409 request. Only the matching own POST or exact UUID replay establishes a
+receipt. Source metadata remains unknown after a mutation until proven by an actual
+GET. Monotonic read generations and revisions prevent late reads or historical
+`receipt.current` facts from replacing newer context. Undo targets only confirmed
+own receipt IDs in LIFO order, with the producer validating the untouched route;
+newer foreign revisions and already-undone replay outcomes grant no inverse.
+
 `TripOverview` is the approved route-first read surface. Its host supplies translated
 labels and links to published source pages. Trip, Place, ordered Visit, Journey,
 Journey group, Stay, Event, Decision and document-association reads fail independently;

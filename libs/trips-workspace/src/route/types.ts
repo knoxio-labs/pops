@@ -12,6 +12,8 @@ export type TripRouteRead = RouteGetResponses[200];
 export type RouteOperation = NonNullable<RouteOperateData['body']>;
 /** Explicit placement operation; source dates and booking facts are outside this contract. */
 export type RouteCommand = RouteOperation['command'];
+/** New explicit placement intent; Undo is available only through confirmed own controller history. */
+export type RouteEditCommand = Exclude<RouteCommand, { kind: 'undo' }>;
 /** Own response proof, distinct from its potentially newer current route. */
 export type RouteOperationResult = RouteOperateResponses[200];
 /** Canonical mixed order and complete paths at one aggregate revision. */

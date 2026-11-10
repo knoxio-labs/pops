@@ -54,3 +54,14 @@ export function routeJson(value: unknown, status = 200): Response {
     headers: { 'content-type': 'application/json' },
   });
 }
+
+/** Explicitly controlled response delivery without changing the consumer's supported ECMAScript library. */
+export function deferredRouteResponse() {
+  let resolve: (response: Response) => void = () => {
+    throw new Error('Uninitialized response');
+  };
+  const promise = new Promise<Response>((accept) => {
+    resolve = accept;
+  });
+  return { promise, resolve };
+}
