@@ -6,7 +6,13 @@ import type { CanvasState, TransitLink } from './canvas-model';
 /** Generate a collision-free local identity without depending on collection lengths. */
 export function nextCanvasId(state: CanvasState, prefix = 'card'): string {
   const used = new Set(
-    [...state.records, ...state.sections, ...state.rentals, ...state.places].map((item) => item.id)
+    [
+      ...state.records,
+      ...state.sections,
+      ...state.appliedPaths,
+      ...state.rentals,
+      ...state.places,
+    ].map((item) => item.id)
   );
   let index = 1;
   while (used.has(`${prefix}-${index}`)) index += 1;
@@ -15,8 +21,10 @@ export function nextCanvasId(state: CanvasState, prefix = 'card'): string {
 
 /** Resolve only known city neighbours; empty endpoints remain explicitly unknown. */
 export function canvasNeighbours(state: CanvasState, target: CaptureTarget): TransitLink {
+  const membership =
+    state.sections.find((section) => section.id === target.sectionId)?.cards ?? state.order;
   const anchor = target.visitId ?? target.after;
-  const index = anchor ? state.order.indexOf(anchor) + 1 : 0;
+  const index = anchor ? membership.indexOf(anchor) + 1 : 0;
   const cities = (ids: string[]): TripRecord[] =>
     ids.flatMap((id) =>
       state.records.filter((record) => record.id === id && record.kind === 'city')
@@ -25,22 +33,18 @@ export function canvasNeighbours(state: CanvasState, target: CaptureTarget): Tra
     (record) => record.id === target.visitId && record.kind === 'city'
   );
   return {
-    from: selected?.id ?? cities(state.order.slice(0, index)).at(-1)?.id ?? '',
-    to: cities(state.order.slice(index)).at(0)?.id ?? '',
+    from: selected?.id ?? cities(membership.slice(0, index)).at(-1)?.id ?? '',
+    to: cities(membership.slice(index)).at(0)?.id ?? '',
   };
 }
 
 function placedVisit(state: CanvasState, id: string): boolean {
-  const seen = new Set<string>();
-  let current: string | undefined = id;
-  while (current && !seen.has(current)) {
-    if (state.order.includes(current)) return true;
-    const section = state.sections.find((item) => item.cards.includes(current ?? ''));
-    if (section && state.order.includes(section.gapId)) return true;
-    seen.add(current);
-    current = state.parents[current];
-  }
-  return false;
+  return (
+    state.order.includes(id) ||
+    state.sections.some(
+      (section) => section.cards.includes(id) && state.order.includes(section.gapId)
+    )
+  );
 }
 
 function validRecordDestination(state: CanvasState, target: CaptureTarget): boolean {
@@ -78,19 +82,7 @@ export function validCanvasTarget(state: CanvasState, target: CaptureTarget): bo
   return membership.includes(target.after);
 }
 
-/** Check ancestry through identities, including corrupt existing cycles, before nesting. */
-export function wouldCycle(state: CanvasState, id: string, parentId: string): boolean {
-  const seen = new Set([id]);
-  let current: string | undefined = parentId;
-  while (current) {
-    if (seen.has(current)) return true;
-    seen.add(current);
-    current = state.parents[current];
-  }
-  return false;
-}
-
-/** Remove placement edges while retaining records and descendant/source facts for undo. */
+/** Remove placement edges while retaining records and source facts for undo. */
 export function detachCanvasCard(state: CanvasState, id: string): CanvasState {
   return {
     ...state,
@@ -101,7 +93,6 @@ export function detachCanvasCard(state: CanvasState, id: string): CanvasState {
     activityStays: Object.fromEntries(
       Object.entries(state.activityStays).filter(([key]) => key !== id)
     ),
-    parents: Object.fromEntries(Object.entries(state.parents).filter(([key]) => key !== id)),
     sections: state.sections.map((section) => ({
       ...section,
       cards: section.cards.filter((key) => key !== id),
@@ -191,8 +182,6 @@ export function attachCanvasCard(
           : section
       ),
     };
-  if (target.visitId && record.kind === 'city')
-    return { ...state, parents: { ...state.parents, [record.id]: target.visitId } };
   if (target.visitId && !['transport', 'gap'].includes(record.kind))
     return {
       ...state,

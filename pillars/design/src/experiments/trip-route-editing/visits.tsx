@@ -6,7 +6,7 @@ import type { ReactNode } from 'react';
 
 import type { PlannerState } from './model';
 
-/** Render ordered visits, grouped alternatives and their nested excursions. */
+/** Render flat ordered visits and grouped alternatives. */
 export function PlannerVisits({
   state,
   layout,
@@ -53,35 +53,9 @@ export function PlannerVisits({
               onAdd={() => onAdd(id)}
             />
             {layout === 'inline' && selected === id && editor}
-            <NestedVisits parentId={id} state={state} onEdit={onSelect} />
-            {layout === 'inline' && selected && state.parents[selected] === id && editor}
           </div>
         );
       })}
     </div>
   );
-}
-
-function NestedVisits({
-  parentId,
-  state,
-  onEdit,
-}: {
-  parentId: string;
-  state: PlannerState;
-  onEdit: (id: string) => void;
-}) {
-  return state.records
-    .filter((r) => state.parents[r.id] === parentId)
-    .map((record) => (
-      <RouteRow
-        key={record.id}
-        record={record}
-        state={state}
-        index={0}
-        onEdit={() => onEdit(record.id)}
-        onMove={() => {}}
-        onAdd={() => {}}
-      />
-    ));
 }

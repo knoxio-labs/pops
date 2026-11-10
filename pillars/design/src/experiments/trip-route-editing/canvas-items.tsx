@@ -1,6 +1,15 @@
 import { formatTripDate, presentTripRecord } from '@/fixtures/trip-overview-format';
 import { isPurchasedArrangement, tripItemTier } from '@/fixtures/trip-overview-model';
-import { GripVertical } from 'lucide-react';
+import {
+  BedDouble,
+  GripVertical,
+  Lightbulb,
+  MapPin,
+  Plane,
+  GitBranch,
+  Ticket,
+  Users,
+} from 'lucide-react';
 import { useState } from 'react';
 
 import { SortableGrid, cn } from '@pops/ui';
@@ -11,6 +20,16 @@ import { useCanvas, canvasDragType } from './canvas-context';
 import { outsideVisit } from './constraints';
 
 import type { TripDate, TripRecord } from '@/fixtures/trip-overview-model';
+
+const activityIcons = {
+  city: MapPin,
+  transport: Plane,
+  gap: GitBranch,
+  stay: BedDouble,
+  event: Ticket,
+  person: Users,
+  idea: Lightbulb,
+};
 
 interface PeriodTarget {
   start?: TripDate;
@@ -27,7 +46,6 @@ function dateOrderIssues(items: TripRecord[]): Record<string, string[]> {
     if (previous && start < previous.start) {
       const message = `${formatTripDate(start)} < ${formatTripDate(previous.start)}`;
       issues[item.id] = [...(issues[item.id] ?? []), message];
-      issues[previous.id] = [...(issues[previous.id] ?? []), message];
     }
     previous = { id: item.id, start };
   }
@@ -54,7 +72,7 @@ export function CanvasItemGroup({
   const messages = dateOrderIssues(preview ?? ordered);
   return (
     <div
-      className="min-h-4"
+      className="min-w-0"
       onDragOver={(e) => {
         if (!e.dataTransfer.types.includes(canvasDragType)) return;
         e.preventDefault();
@@ -111,6 +129,7 @@ export function ActivityCard({
   const { state } = canvas;
   const display = presentTripRecord(item, state.records);
   const paid = isPurchasedArrangement(item);
+  const Icon = activityIcons[item.kind];
   const hovered =
     item.id === canvas.dragged
       ? state.records.find((record) => record.id === canvas.hoverVisit)
@@ -131,12 +150,17 @@ export function ActivityCard({
       )}
     >
       <div className="flex min-h-11 items-center gap-2">
-        <GripVertical
-          className="size-3.5 shrink-0 cursor-grab text-muted-foreground opacity-0 group-hover/item:opacity-100 group-focus-within/item:opacity-100 pointer-coarse:opacity-100"
+        <span
+          className="flex size-11 shrink-0 cursor-grab items-center justify-center text-muted-foreground opacity-0 group-hover/item:opacity-100 group-focus-within/item:opacity-100 pointer-coarse:opacity-100"
           aria-hidden
-        />
-        <ActivityFields item={item} />
-        <span className="shrink-0 text-xs text-muted-foreground">{tripItemTier(item)}</span>
+        >
+          <GripVertical className="size-3.5" />
+        </span>
+        <Icon className="size-3.5 shrink-0 text-muted-foreground" aria-label={item.kind} />
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2">
+          <ActivityFields item={item} />
+          <span className="text-xs text-muted-foreground">{tripItemTier(item)}</span>
+        </div>
       </div>
       <BookingFindings recordId={item.id} />
       {messages.map((message) => (

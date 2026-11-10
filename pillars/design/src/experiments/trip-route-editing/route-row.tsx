@@ -1,6 +1,5 @@
 import { presentTripRecord } from '@/fixtures/trip-overview-format';
 import { isPurchasedArrangement, tripItemTier } from '@/fixtures/trip-overview-model';
-import { tripPlaceName } from '@/fixtures/trip-places';
 import { ArrowDown, ArrowUp, Pencil, Plus } from 'lucide-react';
 
 import { Badge, Button, cn } from '@pops/ui';
@@ -28,10 +27,9 @@ export function RouteRow({
   onAdd: () => void;
 }) {
   const display = presentTripRecord(record, state.records);
-  const nested = Boolean(state.parents[record.id]);
   return (
     <article
-      className={cn('space-y-3 rounded-xl border border-dashed bg-card p-4', nested && 'ml-6')}
+      className="space-y-3 rounded-xl border border-dashed bg-card p-4"
       aria-label={display.title}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -45,7 +43,6 @@ export function RouteRow({
         </button>
         <RowActions
           title={display.title}
-          nested={nested}
           first={index === 0}
           last={index === state.order.length - 1}
           onEdit={onEdit}
@@ -53,20 +50,10 @@ export function RouteRow({
         />
       </div>
       <VisitLinks record={record} records={state.records} />
-      {nested && (
-        <Badge variant="outline">
-          Side trip ·{' '}
-          {tripPlaceName(
-            state.records.find((r) => r.id === state.parents[record.id])?.placeId ?? ''
-          )}
-        </Badge>
-      )}
-      {!nested && (
-        <Button variant="ghost" onClick={onAdd}>
-          <Plus className="size-4" aria-hidden />
-          Add side trip
-        </Button>
-      )}
+      <Button variant="ghost" onClick={onAdd}>
+        <Plus className="size-4" aria-hidden />
+        Add visit after {display.title}
+      </Button>
     </article>
   );
 }
@@ -108,14 +95,12 @@ export function VisitLinks({ record, records }: { record: TripRecord; records: T
 
 function RowActions({
   title,
-  nested,
   first,
   last,
   onEdit,
   onMove,
 }: {
   title: string;
-  nested: boolean;
   first: boolean;
   last: boolean;
   onEdit: () => void;
@@ -123,28 +108,24 @@ function RowActions({
 }) {
   return (
     <div className="flex gap-1">
-      {!nested && (
-        <>
-          <Button
-            variant="ghost"
-            className="min-h-11 min-w-11"
-            aria-label={`Move ${title} up`}
-            disabled={first}
-            onClick={() => onMove(-1)}
-          >
-            <ArrowUp className="size-4" aria-hidden />
-          </Button>
-          <Button
-            variant="ghost"
-            className="min-h-11 min-w-11"
-            aria-label={`Move ${title} down`}
-            disabled={last}
-            onClick={() => onMove(1)}
-          >
-            <ArrowDown className="size-4" aria-hidden />
-          </Button>
-        </>
-      )}
+      <Button
+        variant="ghost"
+        className="min-h-11 min-w-11"
+        aria-label={`Move ${title} up`}
+        disabled={first}
+        onClick={() => onMove(-1)}
+      >
+        <ArrowUp className="size-4" aria-hidden />
+      </Button>
+      <Button
+        variant="ghost"
+        className="min-h-11 min-w-11"
+        aria-label={`Move ${title} down`}
+        disabled={last}
+        onClick={() => onMove(1)}
+      >
+        <ArrowDown className="size-4" aria-hidden />
+      </Button>
       <Button
         variant="ghost"
         className="min-h-11 min-w-11"

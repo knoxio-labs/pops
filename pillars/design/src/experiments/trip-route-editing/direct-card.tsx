@@ -1,7 +1,7 @@
 import { tripPlaceName } from '@/fixtures/trip-places';
 import { GripVertical, Trash2 } from 'lucide-react';
 
-import { Badge, Button } from '@pops/ui';
+import { Button } from '@pops/ui';
 
 import { DirectFields } from './direct-fields';
 import { DirectItems, tripItemDragType } from './direct-items';
@@ -22,7 +22,7 @@ interface DirectCardProps {
   onMove: (delta: number) => void;
 }
 
-/** A route node accepts direct edits, arrangement drops and a one-step nested visit picker. */
+/** A route node accepts direct edits, arrangement drops and a picker to insert the next visit. */
 export function DirectCard({
   record,
   state,
@@ -50,11 +50,7 @@ export function DirectCard({
       }}
     >
       <div className="flex items-start gap-1">
-        {state.parents[record.id] ? (
-          <Badge variant="outline">Side trip</Badge>
-        ) : (
-          <VisitGrip index={index} onMove={onMove} />
-        )}
+        <VisitGrip index={index} onMove={onMove} />
         <DirectFields record={record} onChange={onEdit} />
         <Button
           variant="ghost"
@@ -70,7 +66,7 @@ export function DirectCard({
         <span />
         <InsertVisit
           subtle
-          label={`Add side trip to ${tripPlaceName(record.placeId)}`}
+          label={`Add visit after ${tripPlaceName(record.placeId)}`}
           onAdd={onAdd}
         />
       </div>

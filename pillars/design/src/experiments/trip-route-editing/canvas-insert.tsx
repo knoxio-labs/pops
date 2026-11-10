@@ -58,7 +58,7 @@ export function CanvasInsert({
       {line && !slotLabel && (
         <div
           aria-hidden
-          className="absolute inset-x-0 top-1/2 border-t border-dotted border-app-accent/50"
+          className="absolute inset-x-0 top-1/2 border-t border-dotted border-border"
         />
       )}
       <Popover open={open} onOpenChange={setOpen}>
@@ -67,7 +67,7 @@ export function CanvasInsert({
             aria-label={label}
             title={label}
             variant="outline"
-            className={insertButtonClasses(slotLabel)}
+            className={insertButtonClasses(slotLabel, target)}
           >
             {slotLabel ?? <Plus className="size-4" aria-hidden />}
           </Button>
@@ -127,11 +127,22 @@ function CaptureForm({
   );
 }
 
-function insertButtonClasses(slotLabel?: string) {
+function insertButtonClasses(slotLabel: string | undefined, target: CaptureTarget) {
+  const base = 'relative z-10 min-h-11 min-w-11 bg-background';
+  if (slotLabel)
+    return cn(
+      base,
+      'w-full rounded-lg border-dashed border-border px-3 text-sm font-normal text-muted-foreground hover:bg-muted'
+    );
+  let reveal =
+    'group-hover/route:opacity-100 group-focus-within/route:opacity-100 group-hover/insert:opacity-100 group-focus-within/insert:opacity-100';
+  if (target.visitId) reveal = 'group-hover/visit:opacity-100 group-focus-within/visit:opacity-100';
+  else if (target.gapId) reveal = 'group-hover/gap:opacity-100 group-focus-within/gap:opacity-100';
+  else if (target.sectionId)
+    reveal = 'group-hover/section:opacity-100 group-focus-within/section:opacity-100';
   return cn(
-    'relative z-10 min-h-11 min-w-11 bg-background',
-    slotLabel
-      ? 'w-full rounded-lg border-dashed border-app-accent/50 bg-app-accent/10 px-3 text-sm font-semibold text-foreground hover:bg-app-accent/20'
-      : 'size-11 rounded-full border-app-accent/40 p-0 text-app-accent opacity-0 group-hover/insert:opacity-100 group-focus-within/insert:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100'
+    base,
+    'size-11 rounded-full border-border p-0 text-muted-foreground opacity-0 focus-visible:opacity-100 pointer-coarse:opacity-100',
+    reveal
   );
 }

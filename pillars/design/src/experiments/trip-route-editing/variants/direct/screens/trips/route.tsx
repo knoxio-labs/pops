@@ -5,14 +5,15 @@ import type { ScreenMeta, ScreenStates } from '@/contract';
 /** Direct manipulation using the same fictional route as the earlier proposals. */
 export const meta: ScreenMeta = { title: 'Route planner', order: 2, frame: 'web' };
 
-/** Empty, repeated-city and nested routes retain direct editing. */
+/** Empty, repeated-city and flat return routes retain direct editing. */
 export const states: ScreenStates = {
   empty: () => <DirectPlanner scenario="empty" />,
   'repeat-visit': () => <DirectPlanner scenario="repeat-visit" />,
-  'nested-trip': () => <DirectPlanner scenario="nested-trip" />,
+  'alternative-paths': () => <DirectPlanner scenario="alternative-paths" />,
+  'flat-return': () => <DirectPlanner scenario="flat-return" />,
 };
 
-/** Drag visits and edit their values directly; approval remains pending. */
+/** Approved direct route editing keeps visit occurrences flat and moves complete alternative paths. */
 export default function RouteScreen() {
   return <DirectPlanner />;
 }
