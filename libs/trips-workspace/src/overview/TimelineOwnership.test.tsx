@@ -9,23 +9,28 @@ import { overviewResponses } from './test-utils';
 
 afterEach(cleanup);
 
-it.each([
+const sourceCases = [
   {
     path: '/trips/7/meeting-plans',
     key: 'meeting-plans',
+    code: 'trips.people.source_changed',
     body: (name: string) => ({ meetingPlans: [meetingPlan({ title: name })] }),
   },
   {
     path: '/trips/7/capture-workspace',
     key: 'capture_workspace',
+    code: 'web.source.context_changed',
     body: (name: string) => captureSource([sourceCapture({ tripId: 7, title: name })]),
   },
   {
     path: '/trips/7/rentals',
     key: 'rentals',
+    code: 'web.source.context_changed',
     body: (name: string) => ({ rentals: [sourceRental({ provider: name })] }),
   },
-])(
+];
+
+it.each(sourceCases)(
   'does not adopt mutable transport B under the captured A $key query',
   async ({ path, key, body }) => {
     const responses = overviewResponses();
@@ -63,24 +68,22 @@ it('does not adopt a mutable origin during an ordinary host rerender', async () 
   expect(screen.queryByText('Foreign origin')).not.toBeInTheDocument();
 });
 
-it('rejects a collection response delivered after its captured transport changes', async () => {
-  const responses = overviewResponses();
-  responses.set('/trips/7/meeting-plans', {
-    meetingPlans: [meetingPlan({ title: 'Late source' })],
-  });
-  const barrier = deferred<void>();
-  const { cache, client, requests } = mountOverview(responses, {
-    path: '/trips/7/meeting-plans',
-    until: barrier.promise,
-  });
-  await waitFor(() => expect(requests).toContain('/trips/7/meeting-plans'));
-  client.setConfig({ baseUrl: 'http://owner-b.test' });
-  const key = ['trips', 'http://overview.test', 7, 'meeting-plans'];
-  await act(async () => {
-    barrier.resolve();
-    await cache.refetchQueries({ queryKey: key, exact: true });
-  });
-  expect(cache.getQueryData(key)).toBeUndefined();
-  expect(cache.getQueryState(key)?.error).toMatchObject({ code: 'web.source.context_changed' });
-  expect(screen.queryByText('Late source')).not.toBeInTheDocument();
-});
+it.each(sourceCases)(
+  'rejects a $key response delivered after its captured transport changes',
+  async ({ path, key, body, code }) => {
+    const responses = overviewResponses();
+    responses.set(path, body('Late source'));
+    const barrier = deferred<void>();
+    const { cache, client, requests } = mountOverview(responses, { path, until: barrier.promise });
+    await waitFor(() => expect(requests).toContain(path));
+    client.setConfig({ baseUrl: 'http://owner-b.test' });
+    const capturedKey = ['trips', 'http://overview.test', 7, key];
+    await act(async () => {
+      barrier.resolve();
+      await cache.refetchQueries({ queryKey: capturedKey, exact: true });
+    });
+    expect(cache.getQueryData(capturedKey)).toBeUndefined();
+    expect(cache.getQueryState(capturedKey)?.error).toMatchObject({ code });
+    expect(screen.queryByText('Late source')).not.toBeInTheDocument();
+  }
+);
