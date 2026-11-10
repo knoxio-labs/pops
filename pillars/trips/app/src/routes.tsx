@@ -15,6 +15,9 @@ const CalendarPage = lazy(() =>
   import('./CalendarPage').then((module) => ({ default: module.CalendarPage }))
 );
 const StayPage = lazy(() => import('./StayPage').then((module) => ({ default: module.StayPage })));
+const ArrangementsPage = lazy(() =>
+  import('./ArrangementsPage').then((module) => ({ default: module.ArrangementsPage }))
+);
 const EventPage = lazy(() =>
   import('./EventPage').then((module) => ({ default: module.EventPage }))
 );
@@ -35,6 +38,7 @@ export const bundles = {
   'trips-home': HomePage,
   'trips-calendar': CalendarPage,
   'trips-stay': StayPage,
+  'trips-arrangements': ArrangementsPage,
   'trips-event': EventPage,
   'trips-decision': DecisionPage,
   'trips-visit': VisitPage,
@@ -48,6 +52,7 @@ export const routes: RouteObject[] = [
   { path: ':tripId/visits/:visitId', element: <VisitPage /> },
   { path: ':tripId/calendar', element: <CalendarPage /> },
   { path: ':tripId/stays/:stayId', element: <StayPage /> },
+  { path: ':tripId/arrangements', element: <ArrangementsPage /> },
   { path: ':tripId/events/:eventId', element: <EventPage /> },
   { path: ':tripId/decisions/:decisionId', element: <DecisionPage /> },
   { path: ':tripId/journeys/:journeyId', element: <JourneyPage /> },
