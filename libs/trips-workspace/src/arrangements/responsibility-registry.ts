@@ -16,6 +16,7 @@ export interface ResponsibilityBinding {
   readonly session: ResponsibilitySession;
   readonly identity: Readonly<{ client: Client; tripId: number }>;
   readonly target: Readonly<ArrangementTarget>;
+  readonly queryKey: readonly (string | number)[];
   readonly isCurrent: () => boolean;
   readonly matchesSource: (source: ArrangementResponsibility) => boolean;
 }
@@ -55,6 +56,15 @@ export class ResponsibilityRegistry {
       session: new ResponsibilitySession(),
       identity: Object.freeze({ client: captured.client, tripId: captured.tripId }),
       target: source,
+      queryKey: Object.freeze([
+        'trips',
+        captured.origin,
+        captured.tripId,
+        'responsibility',
+        source.targetKind,
+        source.targetId,
+        crypto.randomUUID(),
+      ]),
       isCurrent: () => currentSourceOwner(captured, this.current),
       matchesSource: (value: ArrangementResponsibility) =>
         value.tripId === captured.tripId &&

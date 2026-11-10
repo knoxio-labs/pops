@@ -8,7 +8,7 @@ import type { JSX } from 'react';
 
 import type { ContactReferenceReadResult } from '@pops/pillar-sdk';
 
-import type { ArrangementLabels, ArrangementsWorkspaceProps } from './types';
+import type { ArrangementResponsibilityContext } from './responsibility-context';
 
 /** Read display facts only through the owner capability; unresolved identities remain clearable opaque source values. */
 export function ContactReference({
@@ -16,7 +16,7 @@ export function ContactReference({
   uri,
   interactive = false,
 }: {
-  identity: ArrangementsWorkspaceProps;
+  identity: ArrangementResponsibilityContext;
   uri: string;
   interactive?: boolean;
 }): JSX.Element {
@@ -40,7 +40,7 @@ export function ContactReference({
 }
 function contactLabel(
   status: Exclude<ContactReferenceReadResult['status'], 'available'> | undefined,
-  labels: ArrangementLabels
+  labels: ArrangementResponsibilityContext['labels']
 ): string {
   switch (status) {
     case 'missing':
@@ -59,7 +59,7 @@ export function ReferenceDetails({
   identity,
   value,
 }: {
-  identity: ArrangementsWorkspaceProps;
+  identity: ArrangementResponsibilityContext;
   value: string | number;
 }): JSX.Element {
   return (

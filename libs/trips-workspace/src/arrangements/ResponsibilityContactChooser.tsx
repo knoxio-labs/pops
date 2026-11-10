@@ -6,7 +6,8 @@ import type { JSX } from 'react';
 
 import type { ContactChooserIntent } from '@pops/pillar-sdk';
 
-import type { ArrangementTarget, ArrangementsWorkspaceProps } from './types';
+import type { ArrangementResponsibilityContext } from './responsibility-context';
+import type { ArrangementTarget } from './types';
 
 /** Mount the owner's retained picker intent; only its issued selection can replace responsibility. */
 export function ResponsibilityContactChooser({
@@ -15,7 +16,7 @@ export function ResponsibilityContactChooser({
   disabled,
   select,
 }: {
-  identity: ArrangementsWorkspaceProps;
+  identity: ArrangementResponsibilityContext;
   target: ArrangementTarget;
   disabled: boolean;
   select: (uri: string, intent: ContactChooserIntent) => void;

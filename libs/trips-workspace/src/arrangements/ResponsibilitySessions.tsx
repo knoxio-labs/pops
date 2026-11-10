@@ -2,10 +2,14 @@ import { createContext, useContext, useLayoutEffect, useState } from 'react';
 
 import { ResponsibilityRegistry } from './responsibility-registry';
 
-import type { JSX, ReactNode } from 'react';
+import type { JSX } from 'react';
 
+import type {
+  ArrangementResponsibilityProviderProps,
+  ArrangementResponsibilityContext,
+} from './responsibility-context';
 import type { ResponsibilityBinding } from './responsibility-registry';
-import type { ArrangementTarget, ArrangementsWorkspaceProps } from './types';
+import type { ArrangementTarget } from './types';
 
 const Sessions = createContext<ResponsibilityRegistry | undefined>(undefined);
 
@@ -13,10 +17,7 @@ const Sessions = createContext<ResponsibilityRegistry | undefined>(undefined);
 export function ResponsibilitySessions({
   children,
   identity,
-}: {
-  children: ReactNode;
-  identity: ArrangementsWorkspaceProps;
-}): JSX.Element {
+}: ArrangementResponsibilityProviderProps): JSX.Element {
   const [sessions] = useState(() => new ResponsibilityRegistry(identity));
   useLayoutEffect(() => {
     sessions.activate(identity);
@@ -27,7 +28,7 @@ export function ResponsibilitySessions({
 
 /** Resolve an exact client/origin/trip/target controller with a live guard against the committed host context. */
 export function useResponsibilitySession(
-  identity: ArrangementsWorkspaceProps,
+  identity: Pick<ArrangementResponsibilityContext, 'tripId' | 'client'>,
   target: ArrangementTarget
 ): ResponsibilityBinding {
   const shared = useContext(Sessions);

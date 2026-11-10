@@ -12,6 +12,10 @@ import {
   responsibilitiesReplace,
   staysCreate,
 } from '../trips-api/sdk.gen';
+import {
+  zResponsibilitiesGetResponse,
+  zResponsibilitiesReplaceResponse,
+} from '../trips-api/zod.gen';
 
 import type { TripEvent } from '../event/types';
 import type { Journey, JourneyLeg } from '../journey/types';
@@ -79,9 +83,13 @@ export async function loadResponsibility(
   props: Pick<ArrangementsWorkspaceProps, 'tripId' | 'client'>,
   target: ArrangementTarget
 ): Promise<ArrangementResponsibility> {
-  return unwrap(
-    await responsibilitiesGet({ client: props.client, path: { tripId: props.tripId, ...target } })
-  );
+  const result = await responsibilitiesGet({
+    client: props.client,
+    path: { tripId: props.tripId, ...target },
+  });
+  const source = unwrap(result);
+  if (result.response?.status !== 200) throw new Error('Unexpected responsibility read status');
+  return zResponsibilitiesGetResponse.parse(source);
 }
 /** Replace only responsibility, pinned to the confirmed assignment revision and exact target identity. */
 export async function replaceResponsibility(
@@ -89,13 +97,14 @@ export async function replaceResponsibility(
   source: ArrangementResponsibility,
   responsibility: ArrangementResponsibility['responsibility']
 ): Promise<ArrangementResponsibility> {
-  return unwrap(
-    await responsibilitiesReplace({
-      client: props.client,
-      path: { tripId: props.tripId, targetKind: source.targetKind, targetId: source.targetId },
-      body: { expectedRevision: source.revision, responsibility },
-    })
-  );
+  const result = await responsibilitiesReplace({
+    client: props.client,
+    path: { tripId: props.tripId, targetKind: source.targetKind, targetId: source.targetId },
+    body: { expectedRevision: source.revision, responsibility },
+  });
+  const receipt = unwrap(result);
+  if (result.response?.status !== 200) throw new Error('Unconfirmed responsibility write status');
+  return zResponsibilitiesReplaceResponse.parse(receipt);
 }
 /** Explicit partial rental write; retries retain the same optimistic precondition. */
 export async function patchRental(
