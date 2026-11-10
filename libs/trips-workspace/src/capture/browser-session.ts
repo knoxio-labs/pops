@@ -1,5 +1,6 @@
 import { createDocumentUploadSession } from '../documents/useUploadFields';
 import { CaptureContactChoices } from './contact-choices';
+import { CaptureContactReferenceReads } from './contact-reference-reads';
 import { createCaptureEditor } from './editor';
 import { CaptureRecordDrafts } from './record-drafts';
 import { CaptureReferenceIdentities } from './reference-identities';
@@ -26,6 +27,7 @@ export class CaptureBrowserSession {
   readonly editor: CaptureEditor;
   readonly records: CaptureRecordDrafts;
   readonly contacts: CaptureContactChoices;
+  readonly contactReads: CaptureContactReferenceReads;
   readonly references = new CaptureReferenceIdentities();
   private uploads = new Map<string, DocumentUploadSession>();
   private listeners = new Set<() => void>();
@@ -39,6 +41,10 @@ export class CaptureBrowserSession {
     this.editor = createCaptureEditor({ source, tripId, perform });
     this.records = new CaptureRecordDrafts(this.editor);
     this.contacts = new CaptureContactChoices(this.editor, this.records, contacts);
+    this.contactReads = new CaptureContactReferenceReads(
+      contacts?.readContactReference,
+      this.contacts.hasKnownReference
+    );
   }
   /** Observe retained upload changes without storing bytes outside this browser session. */
   subscribe = (listener: () => void): (() => void) => {

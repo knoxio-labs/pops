@@ -15,6 +15,9 @@ function HostProbe({ contacts }: RemotePageHostProps) {
   return (
     <p>
       {typeof contacts?.createIntent === 'function' ? 'Contacts host available' : 'Missing host'}
+      {typeof contacts?.readContactReference === 'function'
+        ? 'Owner reader available'
+        : 'Missing reader'}
     </p>
   );
 }
@@ -37,5 +40,5 @@ it('forwards the structural host capability through actual remote page compositi
       <Routes routes={entry.manifest.frontend.routes} />
     </MemoryRouter>
   );
-  expect(await screen.findByText('Contacts host available')).toBeVisible();
+  expect(await screen.findByText('Contacts host availableOwner reader available')).toBeVisible();
 });

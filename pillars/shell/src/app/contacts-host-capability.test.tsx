@@ -34,7 +34,24 @@ function OwnerChooser({ session, onSelect }: ContactChooserProps) {
     </button>
   );
 }
-const owner = { ContactChooserSession, ContactChooser: OwnerChooser };
+const readContactReference = vi.fn(async () => ({
+  status: 'missing' as const,
+  diagnostic: 'missing',
+}));
+const owner = { ContactChooserSession, ContactChooser: OwnerChooser, readContactReference };
+
+it('forwards retained reads lazily through the public owner with the exact URI and cancellation signal', async () => {
+  const load = vi.fn(async () => owner);
+  const capability = createContactsHostCapability(load);
+  expect(load).not.toHaveBeenCalled();
+  if (!capability.readContactReference) throw new Error('Missing public reader');
+  const options = { signal: new AbortController().signal };
+  await expect(
+    capability.readContactReference('pops:contacts/contact/historical', options)
+  ).resolves.toMatchObject({ status: 'missing' });
+  expect(load).toHaveBeenCalledTimes(1);
+  expect(readContactReference).toHaveBeenCalledWith('pops:contacts/contact/historical', options);
+});
 
 it('loads lazily and retains one opaque owner session through remount, with independent new intents', async () => {
   sessions.length = 0;

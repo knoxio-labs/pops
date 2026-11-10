@@ -161,6 +161,10 @@ alone stays unorganised; unresolved external references retain their canonical i
 An unverified external owner is distinct from a missing local target. Canonical Contact
 selection supplies evidence for its retained browser intent; after reload the owner
 availability stays unverified until an owner read confirms it.
+The optional host reader resolves retained Contacts URIs through their owner. Duplicate
+references share a read within this trip session; missing identity, unavailable transport
+and invalid owner responses stay distinct. Explicit read retry does not mutate Trips or
+rewrite historical URIs, and source navigation uses only the owner's returned route.
 Failed row edits and target descriptions survive filters and navigation with their
 original preconditions. Upload views compose the Documents owner's controlled session;
 remounting a pending upload cannot issue another POST.

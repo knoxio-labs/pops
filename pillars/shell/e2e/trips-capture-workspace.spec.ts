@@ -7,14 +7,14 @@ import { captureWorkspace, stubCaptureWorkspace } from './helpers/trips-capture-
 
 import type { Page } from '@playwright/test';
 
-async function bootCapture(page: Page, locale = 'en-AU'): Promise<void> {
+async function bootCapture(page: Page, locale = 'en-AU', retainedContact = false): Promise<void> {
   const resources: string[] = [];
   page.on('request', (request) => {
     if (request.resourceType() === 'script') resources.push(request.url());
   });
   await page.addInitScript((value) => localStorage.setItem('pops-locale', value), locale);
   await stubShellBoot(page, ['trips']);
-  await stubCaptureWorkspace(page);
+  await stubCaptureWorkspace(page, retainedContact);
   await page.goto('/trips/71/capture');
   await expect(page.getByRole('textbox', { name: 'Capture text' })).toBeVisible();
   const sourceMode = test.info().project.metadata.remoteMode === 'source';
@@ -36,6 +36,59 @@ function capturePath(name: string): string {
     directory,
     `${test.info().project.metadata.remoteMode === 'source' ? 'source' : 'built'}-${name}`
   );
+}
+
+for (const metadataStatus of [404, 503]) {
+  test(`reads a retained Contact after metadata ${metadataStatus} through the real owner adapter without replacing source identity`, async ({
+    page,
+  }) => {
+    await bootCapture(page, 'en-AU', true);
+    let referenceReads = 0;
+    let entityReads = 0;
+    const tripsWrites: string[] = [];
+    page.on('request', (request) => {
+      if (request.url().includes('/trips-api/') && request.method() !== 'GET')
+        tripsWrites.push(request.url());
+    });
+    await page.route(/\/contacts-api\/entities\/old-id\/reference$/, async (route) => {
+      referenceReads += 1;
+      await json(route, 200, { canonicalId: 'actual-id', uri: 'pops:contacts/contact/actual-id' });
+    });
+    await page.route(/\/contacts-api\/entities\/actual-id$/, async (route) => {
+      entityReads += 1;
+      if (entityReads === 1)
+        return json(route, metadataStatus, { error: 'Temporarily unavailable' });
+      return json(route, 200, {
+        data: {
+          id: 'actual-id',
+          name: 'Verified owner name',
+          type: 'person',
+          aliases: [],
+          defaultTags: [],
+          lastEditedTime: '2026-11-10T00:00:00.000Z',
+        },
+      });
+    });
+    await page.getByRole('link', { name: 'Inbox' }).click();
+    const row = page.getByRole('article', { name: 'Capture 701' });
+    await row.getByText('Organise', { exact: true }).click();
+    await expect(row.getByText('Contacts is unavailable.')).toBeVisible();
+    await expect(row.getByText('unverified', { exact: true })).toBeVisible();
+    await expect(row.getByText('pops:contacts/contact/old-id', { exact: true })).toBeVisible();
+    await row.getByRole('button', { name: 'Retry Contact read' }).click();
+    await expect(row.getByRole('link', { name: 'Verified owner name' })).toHaveAttribute(
+      'href',
+      '/contacts/actual-id'
+    );
+    await expect(row.getByText('organised', { exact: true })).toBeVisible();
+    await page.getByRole('link', { name: 'Explore' }).click();
+    await page.getByRole('link', { name: 'Capture', exact: true }).click();
+    await page.getByRole('link', { name: 'Inbox' }).click();
+    await expect(row.getByText('organised', { exact: true })).toBeVisible();
+    expect(referenceReads).toBe(2);
+    expect(entityReads).toBe(2);
+    expect(tripsWrites).toEqual([]);
+  });
 }
 
 test('keeps raw text, distinct selected files, and an accepted Documents task across source views', async ({

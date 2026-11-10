@@ -1,4 +1,4 @@
-import { useState, useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 
 import { Button, Select } from '@pops/ui';
 
@@ -26,16 +26,12 @@ export function CaptureInbox({
     session.editor.getState
   );
   const [filter, setFilter] = useState('all');
-  useSyncExternalStore(
-    session.contacts.subscribe,
-    session.contacts.snapshot,
-    session.contacts.snapshot
-  );
+  useInboxContactReads(session, state.source);
   const captures = state.source.captures.filter(
     (row) =>
       row.removedAt === null &&
       (filter === 'all' ||
-        captureOrganisation(row, state.source, session.contacts.hasKnownReference) === filter)
+        captureOrganisation(row, state.source, session.contactReads.availability) === filter)
   );
   return (
     <section aria-label="Inbox sources" className="space-y-4">
@@ -68,6 +64,23 @@ export function CaptureInbox({
     </section>
   );
 }
+function useInboxContactReads(session: CaptureBrowserSession, source: CaptureSource): void {
+  useSyncExternalStore(
+    session.contacts.subscribe,
+    session.contacts.snapshot,
+    session.contacts.snapshot
+  );
+  useSyncExternalStore(
+    session.contactReads.subscribe,
+    session.contactReads.getVersion,
+    session.contactReads.getVersion
+  );
+  useEffect(() => {
+    for (const row of source.associations)
+      if (row.removedAt === null && row.target.kind === 'contact')
+        void session.contactReads.load(row.target.reference.uri);
+  }, [session.contactReads, source.associations]);
+}
 function CaptureInboxRow({
   session,
   capture,
@@ -94,7 +107,7 @@ function CaptureInboxRow({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="font-semibold">{capture.title ?? `Capture ${capture.id}`}</h2>
         <span className="text-sm text-muted-foreground">
-          {captureOrganisation(capture, source, session.contacts.hasKnownReference)}
+          {captureOrganisation(capture, source, session.contactReads.availability)}
         </span>
       </div>
       <p className="whitespace-pre-wrap break-words">{capture.originalText}</p>

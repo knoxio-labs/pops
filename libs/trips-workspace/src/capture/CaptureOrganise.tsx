@@ -2,7 +2,7 @@ import { useSyncExternalStore } from 'react';
 
 import { Button, Select, Textarea, TextInput } from '@pops/ui';
 
-import { captureTargetAvailability } from './inbox-model';
+import { CaptureContactReference } from './CaptureContactReference';
 import { organisationChoices, selectedValue } from './organisation-choices';
 
 import type { JSX } from 'react';
@@ -129,12 +129,14 @@ function ExistingAssociations({ source, capture, session, busy }: Props): JSX.El
         .filter((row) => row.captureId === capture.id && row.removedAt === null)
         .map((row) => (
           <div className="flex flex-wrap items-center gap-3" key={row.id}>
-            <span>
-              {row.target.kind === 'contact'
-                ? `${captureTargetAvailability(row.target, source, session.contacts.hasKnownReference) === 'available' ? 'Contact' : 'Unverified contact'}: ${row.target.reference.label ?? row.target.reference.uri}`
-                : `${row.target.kind} ${row.target.id}`}{' '}
-              · {row.provenance}
-            </span>
+            {row.target.kind === 'contact' ? (
+              <CaptureContactReference session={session} reference={row.target.reference} />
+            ) : (
+              <span>
+                {row.target.kind} {row.target.id}
+              </span>
+            )}
+            <span>· {row.provenance}</span>
             <Button
               variant="ghost"
               disabled={busy}

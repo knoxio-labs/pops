@@ -24,8 +24,11 @@ it('classification alone stays unorganised while Contacts availability remains e
   if (!association) throw new Error('Missing association');
   expect(captureTargetAvailability(association.target, source)).toBe('unverified');
   expect(
-    captureOrganisation(capture, source, (uri) => uri === 'pops:contacts/contact/opaque')
+    captureOrganisation(capture, source, (uri) =>
+      uri === 'pops:contacts/contact/opaque' ? 'available' : 'unverified'
+    )
   ).toBe('organised');
+  expect(captureOrganisation(capture, source, () => 'missing')).toBe('unresolved');
   expect(captureOrganisation(capture, source)).toBe('unverified');
   association.target = { kind: 'idea', id: 999 };
   expect(captureTargetAvailability(association.target, source)).toBe('missing');

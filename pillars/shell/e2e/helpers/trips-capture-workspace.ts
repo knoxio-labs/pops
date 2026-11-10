@@ -41,7 +41,23 @@ const sourceWorkspaceSchema = z
       })
     ),
     ideas: z.array(z.never()),
-    associations: z.array(z.never()),
+    associations: z.array(
+      z.strictObject({
+        id: z.number().int().positive(),
+        tripId: z.number().int().positive(),
+        captureId: z.number().int().positive(),
+        target: z.strictObject({
+          kind: z.literal('contact'),
+          reference: z.strictObject({ uri: z.string() }),
+        }),
+        provenance: z.enum(['existing', 'created']),
+        sourceRevision: z.number().int().positive(),
+        revision: z.number().int().positive(),
+        removedAt: z.iso.datetime().nullable(),
+        createdAt: z.iso.datetime(),
+        updatedAt: z.iso.datetime(),
+      })
+    ),
     memberships: z.array(z.never()),
     events: z.array(z.never()),
     journeys: z.array(z.never()),
@@ -77,8 +93,26 @@ export const captureWorkspace = {
 };
 
 /** Validate and install focused owner fixtures while keeping Contacts' bundled chooser real. */
-export async function stubCaptureWorkspace(page: Page): Promise<void> {
-  const source = sourceWorkspaceSchema.parse(captureWorkspace);
+export async function stubCaptureWorkspace(page: Page, retainedContact = false): Promise<void> {
+  const source = sourceWorkspaceSchema.parse({
+    ...captureWorkspace,
+    associations: retainedContact
+      ? [
+          {
+            id: 701,
+            tripId: 71,
+            captureId: 701,
+            target: { kind: 'contact', reference: { uri: 'pops:contacts/contact/old-id' } },
+            provenance: 'existing',
+            sourceRevision: 1,
+            revision: 1,
+            removedAt: null,
+            createdAt: '2026-11-10T00:00:00.000Z',
+            updatedAt: '2026-11-10T00:00:00.000Z',
+          },
+        ]
+      : [],
+  });
   await page.route(workspaceUrl, (route) => json(route, 200, source));
   await page.route(placesUrl, (route) => json(route, 200, { places: [] }));
   await page.route(visitsUrl, (route) => json(route, 200, { visits: [] }));

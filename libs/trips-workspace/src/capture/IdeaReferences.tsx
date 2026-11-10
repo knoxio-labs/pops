@@ -3,6 +3,7 @@ import { useSyncExternalStore } from 'react';
 import { Button, Textarea, TextInput } from '@pops/ui';
 
 import { referenceEntries } from '../reference-entries';
+import { CaptureContactReference } from './CaptureContactReference';
 
 import type { JSX } from 'react';
 
@@ -110,9 +111,7 @@ function ContactLinks({
       <h4 className="text-sm font-medium">Contacts</h4>
       {referenceEntries(links).map(({ link, index, key }) => (
         <div key={key} className="flex flex-wrap items-center justify-between gap-2">
-          <span className="break-all text-sm" title={link.uri}>
-            {link.label ?? link.uri}
-          </span>
+          <CaptureContactReference session={session} reference={link} />
           <Button
             variant="ghost"
             aria-label={`Remove contact reference ${index + 1}`}
@@ -160,9 +159,7 @@ function Recommendations({
           key={session.references.key(item)}
           className="space-y-2 rounded-md border border-border p-3"
         >
-          <p className="break-all text-sm" title={item.contact.uri}>
-            {item.contact.label ?? item.contact.uri}
-          </p>
+          <CaptureContactReference session={session} reference={item.contact} />
           <Textarea
             aria-label={`Recommendation note ${index + 1}`}
             value={item.note}

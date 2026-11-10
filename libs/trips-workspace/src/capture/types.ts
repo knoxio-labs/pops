@@ -89,7 +89,7 @@ export type CapturePerformer = (request: CaptureRequest) => Promise<CaptureResul
 /** Approved source surfaces share one browser session for an owning trip. */
 export interface CaptureWorkspaceProps extends CaptureIdentity {
   view: 'capture' | 'inbox' | 'explore';
-  /** Optional owner-provided Contacts chooser; absent capabilities do not create local contact identities. */
+  /** Optional host-owned Contacts chooser and reader; absent capabilities leave retained references unverified. */
   contacts?: ContactsHostCapability;
   backHref?: string;
   documentsClient?: DocumentsClient;
