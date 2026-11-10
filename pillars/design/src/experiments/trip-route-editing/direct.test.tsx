@@ -18,6 +18,28 @@ function transfer() {
 }
 
 describe('direct route editing', () => {
+  it('moves a complete path once and restores its exact source placement with Undo', () => {
+    const { container } = render(<DirectPlanner scenario="alternative-paths" />);
+    const before = [...container.querySelectorAll('[data-timeline-record]')].map((node) =>
+      node.getAttribute('data-timeline-record')
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Use Coastal route' }));
+    const moved = [...container.querySelectorAll('[data-timeline-record]')].map((node) =>
+      node.getAttribute('data-timeline-record')
+    );
+    const gap = moved.indexOf('open-january');
+    expect(moved.slice(gap - 3, gap)).toEqual(['coast-maceio', 'coast-flight', 'coast-salvador']);
+    expect(screen.queryByRole('button', { name: 'Use Coastal route' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Use Minas route' })).toBeDefined();
+    expect(screen.getAllByRole('group', { name: 'Casa do Farol' })).toHaveLength(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(
+      [...container.querySelectorAll('[data-timeline-record]')].map((node) =>
+        node.getAttribute('data-timeline-record')
+      )
+    ).toEqual(before);
+    expect(screen.getByRole('button', { name: 'Use Coastal route' })).toBeDefined();
+  });
   it('drags visits and restores the previous order with undo', () => {
     render(<DirectPlanner />);
     const dataTransfer = transfer();
@@ -67,7 +89,7 @@ describe('direct route editing', () => {
     fireEvent.input(screen.getByLabelText('Arrival'), { target: { value: '2027-12-14' } });
     expect(visit.getByRole('button', { name: 'Edit timing' }).textContent).toContain('14 Dec');
     fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
-    expect(visit.getByRole('button', { name: 'Edit timing' }).textContent).toContain('Add dates');
+    expect(visit.getByRole('button', { name: 'Edit timing' }).textContent).toBe('');
   });
   it('creates a freely named city at the chosen position', () => {
     render(<DirectPlanner />);
@@ -82,8 +104,12 @@ describe('direct route editing', () => {
   it('shows arranged hotel periods and uncovered nights without nesting flights in visits', () => {
     render(<DirectPlanner />);
     const recife = within(screen.getByRole('article', { name: 'Recife / Olinda' }));
-    expect(recife.getByText('5 Jan → 6 Jan')).toBeDefined();
-    expect(recife.getByText('Accommodation needed')).toBeDefined();
+    expect(
+      recife
+        .getAllByRole('button', { name: 'Add accommodation' })
+        .some((button) => button.textContent?.includes('5 Jan → 6 Jan'))
+    ).toBe(true);
+    expect(recife.getAllByRole('button', { name: 'Add accommodation' }).length).toBeGreaterThan(0);
     expect(recife.queryByText('POA → REC')).toBeNull();
     expect(screen.queryByLabelText('Pickup')).toBeNull();
     expect(

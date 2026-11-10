@@ -12,13 +12,13 @@ import type { TripRecord } from '@/fixtures/trip-overview-model';
 
 import type { CanvasState } from './canvas-model';
 
-/** Record-linked timing warnings refresh from actual instants and configured buffer values. */
+/** Timing warnings appear once on their first surviving linked record, preserving source edge order. */
 export function BookingFindings({ recordId }: { recordId: string }) {
   const { state } = useCanvas();
   const findings = useMemo(
     () =>
-      timingFindings(canvasCalendar(state), canvasTimingRules(state)).filter((finding) =>
-        finding.recordIds.includes(recordId)
+      timingFindings(canvasCalendar(state), canvasTimingRules(state)).filter(
+        (finding) => finding.recordIds[0] === recordId
       ),
     [state, recordId]
   );
@@ -26,7 +26,7 @@ export function BookingFindings({ recordId }: { recordId: string }) {
     <p
       key={finding.id}
       role="status"
-      className="rounded-lg border border-destructive bg-destructive/10 px-3 py-2 text-xs text-foreground"
+      className="border-l-2 border-destructive pl-2 text-xs text-destructive"
     >
       {finding.message}
     </p>

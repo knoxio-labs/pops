@@ -22,9 +22,9 @@ export function CanvasVisitEndpoint({
 }) {
   const { state } = useCanvas();
   const visit = state.records.find((record) => record.id === value);
-  const visits = state.order.flatMap((id) =>
-    state.records.filter((record) => record.id === id && record.kind === 'city')
-  );
+  const visits = [
+    ...new Set([...state.order, ...state.sections.flatMap((section) => section.cards)]),
+  ].flatMap((id) => state.records.filter((record) => record.id === id && record.kind === 'city'));
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -91,22 +91,40 @@ function TransportSchedule({ record }: { record: TripRecord }) {
 export function TransportName({ record }: { record: TripRecord }) {
   const { state, change } = useCanvas();
   const title = record.title ?? presentTripRecord(record, state.records).title;
+  const [editing, setEditing] = useState(false);
+  if (!editing)
+    return (
+      <Button
+        variant="ghost"
+        aria-label="Edit transport name"
+        className="h-auto min-h-11 w-full justify-start whitespace-normal break-words px-0 text-left text-sm font-medium hover:bg-transparent"
+        onClick={() => setEditing(true)}
+      >
+        {title}
+      </Button>
+    );
   return (
     <TextInput
       key={title}
+      autoFocus
       aria-label="Transport name"
       variant="ghost"
       defaultValue={title}
-      containerClassName="bg-transparent px-0 hover:bg-accent/40 focus-within:bg-accent/40"
-      className="font-semibold"
-      onBlur={(event) =>
+      containerClassName="w-fit max-w-full bg-transparent px-0 hover:bg-transparent"
+      className="field-sizing-content min-h-11 min-w-0 max-w-full flex-none text-sm font-medium"
+      onBlur={(event) => {
+        setEditing(false);
         change({
           ...state,
           records: state.records.map((item) =>
             item.id === record.id ? { ...item, title: event.currentTarget.value } : item
           ),
-        })
-      }
+        });
+      }}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') event.currentTarget.blur();
+        if (event.key === 'Escape') setEditing(false);
+      }}
     />
   );
 }

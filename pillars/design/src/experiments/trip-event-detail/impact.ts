@@ -10,19 +10,13 @@ export function eventVisitPlacement(
   state: CanvasState,
   visitId: string
 ): 'Working route' | 'Alternative' | 'Outside route' {
-  const seen = new Set<string>();
-  let current: string | undefined = visitId;
-  while (current && !seen.has(current)) {
-    if (state.order.includes(current)) return 'Working route';
-    if (
-      state.sections.some(
-        (section) => section.cards.includes(current ?? '') && state.order.includes(section.gapId)
-      )
+  if (state.order.includes(visitId)) return 'Working route';
+  if (
+    state.sections.some(
+      (section) => section.cards.includes(visitId) && state.order.includes(section.gapId)
     )
-      return 'Alternative';
-    seen.add(current);
-    current = state.parents[current];
-  }
+  )
+    return 'Alternative';
   return 'Outside route';
 }
 

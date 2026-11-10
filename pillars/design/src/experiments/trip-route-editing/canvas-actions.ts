@@ -6,7 +6,6 @@ import {
   nextCanvasId,
   refreshCanvasGaps,
   validCanvasTarget,
-  wouldCycle,
 } from './canvas-graph';
 
 import type { TripRecord } from '@/fixtures/trip-overview-model';
@@ -120,7 +119,8 @@ export function captureCard(
   target: CaptureTarget
 ): CanvasState {
   const title = name.trim();
-  if (!title || !validCanvasTarget(state, target)) return state;
+  if (!title || !validCanvasTarget(state, target) || (kind === 'city' && target.visitId))
+    return state;
   if (kind === 'section') return refreshCanvasGaps(captureSection(state, title, target));
   if (kind === 'rental') return captureRental(state, title, target);
   return refreshCanvasGaps(captureRecord(state, kind, title, target));
@@ -137,13 +137,13 @@ function moveSection(state: CanvasState, id: string, target: CaptureTarget): Can
   });
 }
 
-/** Move existing cards or sections across containers while retaining source facts and descendants. */
+/** Move existing cards or sections across containers while retaining source facts. */
 export function moveCard(state: CanvasState, id: string, target: CaptureTarget): CanvasState {
   if (!validCanvasTarget(state, target) || target.after === id || target.visitId === id)
     return state;
   if (state.sections.some((section) => section.id === id)) return moveSection(state, id, target);
   const record = state.records.find((item) => item.id === id);
-  if (!record || (target.visitId && wouldCycle(state, id, target.visitId))) return state;
+  if (!record || (target.visitId && record.kind === 'city')) return state;
   if (target.gapId || (record.kind === 'gap' && (target.visitId || target.sectionId))) return state;
   return refreshCanvasGaps(attachCanvasCard(detachCanvasCard(state, id), record, target));
 }

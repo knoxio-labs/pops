@@ -10,11 +10,11 @@ import { reorderCards } from './canvas-actions';
 import { canvasCalendar, canvasTimingRules } from './canvas-calendar';
 import { CanvasContext, canvasDragType, useCanvas } from './canvas-context';
 import { CanvasInsert } from './canvas-insert';
-import { initialCanvas } from './canvas-model';
 import { RentalSections } from './canvas-rentals';
 import { useCanvasActions, useRouteState } from './canvas-state';
 import { RouteTimelineItem } from './canvas-timeline';
 import { CanvasToolbar } from './canvas-toolbar';
+import { initialRouteCanvas } from './path-fixtures';
 import { PlannerReview } from './review';
 
 import type { CanvasState } from './canvas-model';
@@ -23,7 +23,7 @@ import type { PlannerScenario } from './model';
 
 /** One editable source graph projects into city, booking, day-range and flight-window views. */
 export function PlannerCanvas({ scenario = 'default' }: { scenario?: PlannerScenario }) {
-  const route = useRouteState(() => initialCanvas(scenario));
+  const route = useRouteState(() => initialRouteCanvas(scenario));
   const { state, change } = route;
   const [scale, setScale] = useState<CanvasScale>('bookings');
   const [range, setRange] = useState(() => initialRange(state));
@@ -32,7 +32,7 @@ export function PlannerCanvas({ scenario = 'default' }: { scenario?: PlannerScen
     <CanvasContext.Provider value={actions}>
       <PlannerReview layout="direct" />
       <main
-        className="mx-auto max-w-5xl space-y-4 p-5 md:p-8"
+        className="mx-auto max-w-5xl space-y-4 p-3 sm:p-8"
         onDragStartCapture={(e) => {
           const target = e.target;
           if (!(target instanceof Element)) return;

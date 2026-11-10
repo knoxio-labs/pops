@@ -70,7 +70,11 @@ export function RentalEditor({ rental, update }: RentalEditorProps) {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="ghost" className="size-11 shrink-0 p-0" aria-label="Edit rental">
+        <Button
+          variant="ghost"
+          className="size-11 shrink-0 p-0 opacity-0 group-hover/rental:opacity-100 group-focus-within/rental:opacity-100 pointer-coarse:opacity-100"
+          aria-label="Edit rental"
+        >
           <Pencil className="size-4" aria-hidden />
         </Button>
       </PopoverTrigger>
@@ -117,7 +121,7 @@ function RentalPickup({ rental }: { rental: RentalPeriod }) {
     <section
       aria-label="Car rental"
       className={cn(
-        'border-l pl-3',
+        'group/rental border-l pl-3',
         rental.status === 'Purchased' ? 'border-solid border-l-app-accent' : 'border-dashed'
       )}
     >
@@ -128,7 +132,7 @@ function RentalPickup({ rental }: { rental: RentalPeriod }) {
           aria-label="Rental provider"
           variant="ghost"
           defaultValue={rental.provider}
-          containerClassName="min-w-0 flex-1 bg-transparent px-0 hover:bg-accent/40 focus-within:bg-accent/40"
+          containerClassName="min-w-0 flex-1 bg-transparent px-0 hover:bg-transparent focus-within:bg-transparent"
           className="min-w-0 w-full bg-transparent"
           onBlur={(event) => update({ ...rental, provider: event.currentTarget.value })}
         />
