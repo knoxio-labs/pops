@@ -1,27 +1,25 @@
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 
-/** Isolated upload state for one explicit trip, target and owner-client session. */
-export interface UploadFields {
-  file: File | null;
+import type { Dispatch, SetStateAction } from 'react';
+
+/** Stable state operations for one browser-file intent and its owner task. */
+export interface UploadFields extends DocumentUploadSession {
   setFile: (file: File | null) => void;
-  uploadError: string | null;
   setUploadError: (message: string | null) => void;
-  uploadRejected: boolean;
+  setUploadPending: (value: boolean) => void;
   setUploadRejected: (value: boolean) => void;
-  uncertain: boolean;
   setUncertain: (value: boolean) => void;
-  pickerOpen: boolean;
   setPickerOpen: (value: boolean) => void;
-  ownerLookupCount: number | null;
   setOwnerLookupCount: (count: number | null) => void;
-  taskId: string | null;
   setTaskId: (id: string | null) => void;
   clearSelectedFile: () => void;
 }
 
-interface UploadSession {
+/** Session-owned file handle and owner response state; File bytes are never serializable provenance. */
+export interface DocumentUploadSession {
   file: File | null;
   uploadError: string | null;
+  uploadPending: boolean;
   uploadRejected: boolean;
   uncertain: boolean;
   pickerOpen: boolean;
@@ -29,46 +27,53 @@ interface UploadSession {
   taskId: string | null;
 }
 
-/** Keep one selected file's accepted task and recovery state within its mounted intent. */
-export function useUploadFields(file: File | null): UploadFields {
-  const [session, setSession] = useState<UploadSession>(() => ({
+/** Initialize one distinct selected file; keep this session above any view that may unmount. */
+export function createDocumentUploadSession(file: File | null): DocumentUploadSession {
+  return {
     file,
     uploadError: null,
+    uploadPending: false,
     uploadRejected: false,
     uncertain: false,
     pickerOpen: false,
     ownerLookupCount: null,
     taskId: null,
-  }));
+  };
+}
+
+/** Bind a controlled file session to stable setters, retaining task acceptance across view remounts. */
+export function useUploadFields(
+  session: DocumentUploadSession,
+  setSession: Dispatch<SetStateAction<DocumentUploadSession>>
+): UploadFields {
   const setField = useCallback(
-    <K extends keyof UploadSession>(field: K, value: UploadSession[K]): void => {
+    <K extends keyof DocumentUploadSession>(field: K, value: DocumentUploadSession[K]): void => {
       setSession((previous) =>
         Object.is(previous[field], value) ? previous : { ...previous, [field]: value }
       );
     },
-    []
+    [setSession]
   );
   const setters = useUploadSetters(setField);
   const clearSelectedFile = useCallback(() => {
-    setSession({
-      file: null,
-      uploadError: null,
-      uploadRejected: false,
-      uncertain: false,
-      pickerOpen: false,
-      ownerLookupCount: null,
-      taskId: null,
-    });
-  }, []);
+    setSession(createDocumentUploadSession(null));
+  }, [setSession]);
   return { ...session, ...setters, clearSelectedFile };
 }
 
 function useUploadSetters(
-  setField: <K extends keyof UploadSession>(field: K, value: UploadSession[K]) => void
-): Omit<UploadFields, keyof UploadSession | 'clearSelectedFile'> {
+  setField: <K extends keyof DocumentUploadSession>(
+    field: K,
+    value: DocumentUploadSession[K]
+  ) => void
+): Omit<UploadFields, keyof DocumentUploadSession | 'clearSelectedFile'> {
   const setFile = useCallback((value: File | null) => setField('file', value), [setField]);
   const setUploadError = useCallback(
     (value: string | null) => setField('uploadError', value),
+    [setField]
+  );
+  const setUploadPending = useCallback(
+    (value: boolean) => setField('uploadPending', value),
     [setField]
   );
   const setUploadRejected = useCallback(
@@ -85,6 +90,7 @@ function useUploadSetters(
   return {
     setFile,
     setUploadError,
+    setUploadPending,
     setUploadRejected,
     setUncertain,
     setPickerOpen,

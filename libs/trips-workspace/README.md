@@ -74,6 +74,16 @@ their explicit target identity. `TripDocumentLinks({ tripId, target?, tripsClien
 documentsClient? })` renders only the exact trip, target kind and target ID when a
 target is supplied, without route lookups or another page shell. Editors compose
 it with `TripDocumentUpload` using the same explicit target and owner transports.
+`DocumentPicker({ onSelected, documentsClient? })` returns the actual owner original
+without writing a route association. `useDocumentUpload({ session, onSessionChange,
+documentsClient? })` is the same per-file owner workflow used by route uploads.
+Initialize each distinct intent with `createDocumentUploadSession(file)` and keep
+its controlled session above conditional views: its pending POST flag, accepted task
+and uncertain response guard must survive navigation and remount. The session retains
+the exact browser File handle; only actual task/document identities belong in persisted
+provenance. Completed and explicit duplicate task results expose the canonical document
+ID while retaining the accepted task ID. The controller never repeats an accepted or
+uncertain upload; a definite rejection can be retried explicitly.
 
 Run `mise exec -- pnpm --filter @pops/trips-workspace dev` for the standalone development
 harness, then enter real trip/stay IDs. Its proxy targets the local Trips API on

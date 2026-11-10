@@ -17,6 +17,7 @@ import {
   staysList,
   visitsList,
 } from '../trips-api/sdk.gen';
+import { readAcceptedTaskId, readPaperlessTask } from './owner-responses';
 
 import type { Client as DocumentsClient } from '../documents-api/client';
 import type { Client as TripsClient } from '../trips-api/client';
@@ -121,7 +122,7 @@ export async function loadPaperlessTask(
   taskId: string,
   client?: DocumentsClient
 ): Promise<PaperlessTask> {
-  return unwrap(await paperlessTask({ client, path: { taskId } })).data;
+  return readPaperlessTask(unwrap(await paperlessTask({ client, path: { taskId } })).data);
 }
 
 /** Send the original file body to Documents and return its accepted task identity. */
@@ -139,7 +140,7 @@ export async function uploadPaperlessDocument(
     bodySerializer: null,
     headers: { 'Content-Type': file.type || 'application/octet-stream' },
   });
-  return unwrap(result).data.taskId;
+  return readAcceptedTaskId(unwrap(result));
 }
 
 /** Create an explicit link while keeping the Documents original untouched. */

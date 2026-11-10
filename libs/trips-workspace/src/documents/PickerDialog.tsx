@@ -4,10 +4,10 @@ import { Button, SearchPickerDialog } from '@pops/ui';
 
 import { paperlessThumbnailUrl } from './api';
 
-import type { UseMutationResult, UseQueryResult } from '@tanstack/react-query';
+import type { UseQueryResult } from '@tanstack/react-query';
 import type { ReactElement, ReactNode } from 'react';
 
-import type { PaperlessSearchDocument, TripDocumentAssociation } from './types';
+import type { PaperlessSearchDocument } from './types';
 
 /** Present owner search results and the selection action for each original. */
 export function PickerDialog({
@@ -17,7 +17,10 @@ export function PickerDialog({
   noResultsAction,
   hideTrigger,
   query,
-  mutation,
+  pending,
+  onSelect,
+  selectionLabel,
+  pendingSelectionLabel,
   onOpenChange,
   onSearchChange,
 }: {
@@ -27,7 +30,10 @@ export function PickerDialog({
   noResultsAction: ReactNode;
   hideTrigger?: boolean;
   query: UseQueryResult<PaperlessSearchDocument[], Error>;
-  mutation: UseMutationResult<TripDocumentAssociation, Error, number, unknown>;
+  pending: boolean;
+  onSelect: (document: PaperlessSearchDocument) => void;
+  selectionLabel: string;
+  pendingSelectionLabel: string;
   onOpenChange: (open: boolean) => void;
   onSearchChange: (value: string) => void;
 }): ReactElement {
@@ -35,19 +41,9 @@ export function PickerDialog({
     <SearchPickerDialog
       open={open}
       onOpenChange={onOpenChange}
-      trigger={
-        <Button
-          hidden={hideTrigger}
-          variant="outline"
-          className="size-32 shrink-0 flex-col gap-2 whitespace-normal border-2 border-dashed border-foreground/30 bg-background px-3 text-sm"
-          aria-label="Choose existing document"
-        >
-          <Search className="size-8 text-muted-foreground" />
-          Choose existing
-        </Button>
-      }
+      trigger={pickerTrigger(hideTrigger)}
       title="Choose existing"
-      description="Search Documents and attach an existing original to this trip source."
+      description="Search Documents to choose an original file."
       searchPlaceholder="Search documents..."
       search={search}
       onSearchChange={onSearchChange}
@@ -59,7 +55,13 @@ export function PickerDialog({
       getResultKey={(document) => document.id}
       emptyMessage="No matching originals found."
       renderResult={(document) => (
-        <PickerResult document={document} pending={mutation.isPending} onSelect={mutation.mutate} />
+        <PickerResult
+          document={document}
+          pending={pending}
+          onSelect={onSelect}
+          selectionLabel={selectionLabel}
+          pendingSelectionLabel={pendingSelectionLabel}
+        />
       )}
     />
   );
@@ -89,10 +91,14 @@ function PickerResult({
   document,
   pending,
   onSelect,
+  selectionLabel,
+  pendingSelectionLabel,
 }: {
   document: PaperlessSearchDocument;
   pending: boolean;
-  onSelect: (documentId: number) => void;
+  onSelect: (document: PaperlessSearchDocument) => void;
+  selectionLabel: string;
+  pendingSelectionLabel: string;
 }): ReactElement {
   return (
     <div className="flex items-center gap-3 rounded-md p-2.5 hover:bg-accent">
@@ -109,9 +115,23 @@ function PickerResult({
         <p className="truncate text-sm font-medium">{document.title}</p>
         <p className="truncate text-xs text-muted-foreground">{document.originalFileName}</p>
       </div>
-      <Button variant="outline" size="sm" disabled={pending} onClick={() => onSelect(document.id)}>
-        {pending ? 'Linking…' : 'Link'}
+      <Button variant="outline" size="sm" disabled={pending} onClick={() => onSelect(document)}>
+        {pending ? pendingSelectionLabel : selectionLabel}
       </Button>
     </div>
+  );
+}
+
+function pickerTrigger(hidden: boolean | undefined): ReactElement {
+  return (
+    <Button
+      hidden={hidden}
+      variant="outline"
+      className="size-32 shrink-0 flex-col gap-2 whitespace-normal border-2 border-dashed border-foreground/30 bg-background px-3 text-sm"
+      aria-label="Choose existing document"
+    >
+      <Search className="size-8 text-muted-foreground" />
+      Choose existing
+    </Button>
   );
 }
