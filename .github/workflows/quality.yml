@@ -381,7 +381,28 @@ jobs:
       # (measured 2026-06-23 with these exact flags), so threshold 5 is a real
       # gate that is green now with headroom. NO `--exitCode 0` override — that
       # would pin the exit to 0 and make this required check unable to fail.
-      - run: npx jscpd@^4 --threshold 5 --min-lines 8 --min-tokens 70 --ignore "**/*.test.{ts,tsx},**/*.spec.{ts,tsx},**/dist/**,**/node_modules/**,**/*.snap,**/*.d.ts,**/generated.ts,**/src/*-api/**,**/db/schema.ts,**/db/seeder.ts" --reporters "console" .
+      - name: Measure duplication runtime and scan
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
+        run: |
+          node --input-type=module <<'NODE'
+          import { totalmem } from 'node:os';
+          import { getHeapStatistics } from 'node:v8';
+
+          const constrainedMemoryBytes = process.constrainedMemory();
+          const runnerMemoryBytes = totalmem();
+          console.log(JSON.stringify({
+            runnerMemoryBytes,
+            constrainedMemoryBytes,
+            effectiveMemoryBytes: constrainedMemoryBytes > 0
+              ? Math.min(runnerMemoryBytes, constrainedMemoryBytes)
+              : runnerMemoryBytes,
+            availableMemoryBytes: process.availableMemory(),
+            effectiveV8HeapLimitBytes: getHeapStatistics().heap_size_limit,
+            nodeVersion: process.version,
+          }));
+          NODE
+          /usr/bin/time --format='duplication_peak_rss_kib=%M duplication_exit_code=%x' -- npx jscpd@^4 --threshold 5 --min-lines 8 --min-tokens 70 --ignore "**/*.test.{ts,tsx},**/*.spec.{ts,tsx},**/dist/**,**/node_modules/**,**/*.snap,**/*.d.ts,**/generated.ts,**/src/*-api/**,**/db/schema.ts,**/db/seeder.ts" --reporters "console" .
 
   # --- Extractability fast gates (EX-1 / EX-3) -------------------------------
   # These surface phantom-dependency and baseline-growth regressions. Like every
