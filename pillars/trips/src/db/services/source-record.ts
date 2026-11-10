@@ -3,10 +3,16 @@ export class TripsServiceError extends Error {
   constructor(
     readonly code:
       | 'not_found'
+      | 'leg_revision_conflict'
+      | 'leg_order_conflict'
+      | 'leg_removal_conflict'
       | 'order_invalid'
       | 'revision_conflict'
       | 'visit_revision_conflict'
       | 'visit_revision_exhausted'
+      | 'arrangement_revision_conflict'
+      | 'contact_unknown'
+      | 'contacts_unavailable'
       | 'decision_revision_conflict'
       | 'option_not_removed'
       | 'journey_grouped'

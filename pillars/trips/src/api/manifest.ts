@@ -10,6 +10,10 @@ import type {
 const TRIPS_WIRE_NAV = { ...TRIPS_NAV, items: [...TRIPS_NAV.items] } satisfies NavConfigDescriptor;
 const TRIPS_WIRE_PAGES = [...TRIPS_PAGES] satisfies PageDescriptor[];
 const TRIPS_QUERIES = [
+  'trips.rentals.list',
+  'trips.rentals.get',
+  'trips.responsibilities.list',
+  'trips.responsibilities.get',
   'trips.events.list',
   'trips.events.get',
   'trips.decisions.list',
@@ -25,6 +29,7 @@ const TRIPS_QUERIES = [
   'trips.journeys.list',
   'trips.journeys.get',
   'trips.journeys.timing',
+  'trips.journeys.workspace',
   'trips.journeyLegs.list',
   'trips.journeyLegs.get',
   'trips.trips.list',
@@ -35,6 +40,10 @@ const TRIPS_QUERIES = [
   'trips.visits.get',
 ] as const;
 const TRIPS_MUTATIONS = [
+  'trips.rentals.create',
+  'trips.rentals.update',
+  'trips.rentals.delete',
+  'trips.responsibilities.replace',
   'trips.events.create',
   'trips.events.update',
   'trips.events.delete',
@@ -61,6 +70,8 @@ const TRIPS_MUTATIONS = [
   'trips.journeyLegs.create',
   'trips.journeyLegs.update',
   'trips.journeyLegs.delete',
+  'trips.journeyLegs.remove',
+  'trips.journeyLegs.restore',
   'trips.journeyLegs.reorder',
   'trips.trips.create',
   'trips.trips.update',

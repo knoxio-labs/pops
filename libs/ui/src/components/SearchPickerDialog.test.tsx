@@ -24,6 +24,15 @@ function renderPicker(overrides: Partial<SearchPickerDialogProps<string>> = {}) 
 }
 
 describe('SearchPickerDialog error state', () => {
+  it('gives the search input an accessible name', () => {
+    renderPicker({ searchPlaceholder: 'Find records', searchLabel: 'Search records' });
+
+    expect(screen.getByRole('textbox', { name: 'Search records' })).toHaveAttribute(
+      'placeholder',
+      'Find records'
+    );
+  });
+
   it('shows the search error instead of the empty-results message', () => {
     renderPicker({ errorMessage: 'Search failed. Try again.', onRetry: vi.fn() });
 

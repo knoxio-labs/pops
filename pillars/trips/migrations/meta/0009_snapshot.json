@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "d863107f-ac5d-459f-89f0-ad9d5b7f7b8d",
+  "id": "db1a6a73-78e1-4bd7-a3fc-f82453b2dc33",
   "prevId": "412e2317-444c-46f9-90ac-c02145806606",
   "tables": {
     "decision_options": {
@@ -530,6 +530,20 @@
           "notNull": true,
           "autoincrement": false
         },
+        "removed_at": {
+          "name": "removed_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "removal_operation_id": {
+          "name": "removal_operation_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "mode": {
           "name": "mode",
           "type": "text",
@@ -665,6 +679,14 @@
           "notNull": true,
           "autoincrement": false
         },
+        "leg_revision": {
+          "name": "leg_revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
         "name": {
           "name": "name",
           "type": "text",
@@ -733,6 +755,125 @@
           "columnsFrom": ["trip_id"],
           "columnsTo": ["id"],
           "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "journey_leg_removals": {
+      "name": "journey_leg_removals",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "journey_id": {
+          "name": "journey_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "leg_id": {
+          "name": "leg_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "operation_id": {
+          "name": "operation_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expected_revision": {
+          "name": "expected_revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "removed_revision": {
+          "name": "removed_revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "ordinal": {
+          "name": "ordinal",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "remaining_leg_ids": {
+          "name": "remaining_leg_ids",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "removed_at": {
+          "name": "removed_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "restored_expected_revision": {
+          "name": "restored_expected_revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "restored_revision": {
+          "name": "restored_revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "restored_at": {
+          "name": "restored_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "idx_leg_removal_operation": {
+          "name": "idx_leg_removal_operation",
+          "columns": ["journey_id", "operation_id"],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "journey_leg_removals_journey_id_journeys_id_fk": {
+          "name": "journey_leg_removals_journey_id_journeys_id_fk",
+          "tableFrom": "journey_leg_removals",
+          "tableTo": "journeys",
+          "columnsFrom": ["journey_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "journey_leg_removals_leg_id_journey_legs_id_fk": {
+          "name": "journey_leg_removals_leg_id_journey_legs_id_fk",
+          "tableFrom": "journey_leg_removals",
+          "tableTo": "journey_legs",
+          "columnsFrom": ["leg_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
@@ -1152,14 +1293,6 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
-        },
-        "revision": {
-          "name": "revision",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
         },
         "timing": {
           "name": "timing",

@@ -2,6 +2,7 @@ import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createInstance } from 'i18next';
 import { I18nextProvider } from 'react-i18next';
+import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import enAU from '../locales/en-AU.json';
@@ -90,13 +91,15 @@ function preview(source: Trip, visits: Visit[] | undefined, allTrips: Trip[] = [
   const onBack = vi.fn();
   render(
     <I18nextProvider i18n={translation}>
-      <TripPreview
-        trip={source}
-        visits={visits}
-        allTrips={allTrips}
-        places={places}
-        onBack={onBack}
-      />
+      <MemoryRouter>
+        <TripPreview
+          trip={source}
+          visits={visits}
+          allTrips={allTrips}
+          places={places}
+          onBack={onBack}
+        />
+      </MemoryRouter>
     </I18nextProvider>
   );
   return onBack;
@@ -161,7 +164,7 @@ describe('TripRows', () => {
 });
 
 describe('TripPreview', () => {
-  it('renders selected source facts and links each literal visit occurrence', async () => {
+  it('renders selected source facts and links visit occurrences, calendar and documents', async () => {
     const onBack = preview(
       trip(4, {
         name: 'Holiday',
@@ -191,6 +194,14 @@ describe('TripPreview', () => {
     expect(screen.getByRole('link', { name: 'Open visit: Paris' })).toHaveAttribute(
       'href',
       '/trips/1/visits/1'
+    );
+    expect(screen.getByRole('link', { name: 'Calendar' })).toHaveAttribute(
+      'href',
+      '/trips/4/calendar'
+    );
+    expect(screen.getByRole('link', { name: 'Documents' })).toHaveAttribute(
+      'href',
+      '/trips/4/documents'
     );
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
     expect(screen.getAllByRole('button')).toHaveLength(1);

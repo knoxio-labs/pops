@@ -140,7 +140,8 @@
     "invalidChoices": "Invalid review choices.",
     "stageFailed": "The export could not be read.",
     "providerChanged": "The connection changed or the selected account does not match. Reload connections and reconnect the intended account.",
-    "notPerson": "This record is not a person."
+    "notPerson": "This record is not a person.",
+    "entityType": "This record is not a company or organisation."
   },
   "connections": {
     "title": "Contact connections",
@@ -218,6 +219,7 @@
   },
   "person": {
     "title": "Person details",
+    "details": "Details",
     "name": "Person name",
     "notes": "Notes",
     "methods": "Contact methods",
@@ -245,5 +247,69 @@
     "loading": "Loading person",
     "uncertain": "The write outcome is unknown. Reload and check the saved facts before submitting again. Your entered values are retained.",
     "open": "Person details (new tab)"
+  },
+  "entity": {
+    "title": "Contact details",
+    "name": "Contact name",
+    "methods": "Contact methods",
+    "addresses": "Addresses"
+  },
+  "entityTypes": {
+    "person": "Person",
+    "company": "Company",
+    "organisation": "Organisation",
+    "government": "Government",
+    "bank": "Bank",
+    "place": "Place",
+    "brand": "Brand"
+  },
+  "reference": {
+    "type": "Contact type"
+  },
+  "create": {
+    "open": "Create contact",
+    "title": "Create contact",
+    "description": "Create the contact first. Add contact methods and addresses only when you have them.",
+    "type": "Contact type",
+    "submit": "Create contact"
+  },
+  "picker": {
+    "open": "Choose contact",
+    "title": "Choose a contact",
+    "description": "Search existing contacts or start a new contact.",
+    "search": "Search contacts",
+    "minimum": "Enter a name to search.",
+    "empty": "No matching contacts.",
+    "failed": "Could not search contacts.",
+    "create": "Create new"
+  },
+  "duplicates": {
+    "open": "Review duplicate contacts",
+    "title": "Review duplicate contacts",
+    "description": "Choose two existing contacts. Review available source records and contact methods before merging.",
+    "source": "Contact to merge",
+    "keep": "Contact to keep",
+    "chooseSource": "Choose contact to merge",
+    "chooseKeep": "Choose contact to keep",
+    "sources": "Source records",
+    "methods": "Contact methods",
+    "noSources": "No source records are linked to this contact.",
+    "sourcesLimited": "Imported source records are available for person contacts.",
+    "active": "Active source",
+    "loading": "Loading source evidence…",
+    "reason": "Why do these records belong to the same contact?",
+    "preview": "Preview merge",
+    "confirmation": "Merge confirmation",
+    "confirm": "Merge {{source}} into {{canonical}}. Source records and addresses remain attached to their original records.",
+    "apply": "Merge contacts",
+    "cancel": "Go back",
+    "saved": "The merge is applied. Source records and addresses remain attached to the original records."
+  },
+  "chooser": {
+    "existing": "Choose an existing contact",
+    "useCreated": "Use created contact",
+    "duplicate": "Choose the existing contact explicitly, or edit the name before creating another.",
+    "uncertain": "The create outcome is unknown. This draft is retained and will not be submitted again. Search existing contacts to check what was saved.",
+    "retryTypes": "Reload contact types"
   }
 }

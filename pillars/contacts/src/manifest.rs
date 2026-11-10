@@ -87,7 +87,11 @@ pub fn build_contacts_manifest(version: &str) -> Value {
             { "path": "", "index": true, "bundleSlot": "contacts-import-review" },
             { "path": "imports/:batchId", "bundleSlot": "contacts-import-review" },
             { "path": "connections", "bundleSlot": "contacts-connections" },
-            { "path": "people/:personId", "bundleSlot": "contacts-person" }
+            { "path": "people/:personId", "bundleSlot": "contacts-person" },
+            { "path": "new", "bundleSlot": "contacts-create" },
+            { "path": "duplicates", "bundleSlot": "contacts-duplicates" },
+            { "path": "entities/:entityId", "bundleSlot": "contacts-entity" },
+            { "path": ":entityId", "bundleSlot": "contacts-reference" }
         ],
         "healthcheck": { "path": "/health" },
     })
@@ -181,10 +185,14 @@ mod tests {
     }
 
     #[test]
-    fn person_details_are_a_drill_down_page_without_an_unapproved_directory() {
+    fn approved_contact_pages_are_registered_without_a_directory_route() {
         let manifest = build_contacts_manifest("0.0.0-dev");
         assert_eq!(manifest["pages"][3]["path"], json!("people/:personId"));
         assert_eq!(manifest["pages"][3]["bundleSlot"], json!("contacts-person"));
+        assert_eq!(manifest["pages"][4]["path"], json!("new"));
+        assert_eq!(manifest["pages"][5]["path"], json!("duplicates"));
+        assert_eq!(manifest["pages"][6]["path"], json!("entities/:entityId"));
+        assert_eq!(manifest["pages"][7]["path"], json!(":entityId"));
         assert_eq!(manifest["nav"]["items"].as_array().unwrap().len(), 2);
     }
 

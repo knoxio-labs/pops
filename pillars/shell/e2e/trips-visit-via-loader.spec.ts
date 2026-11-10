@@ -91,7 +91,16 @@ for (const width of [1440, 390]) {
     await page.getByLabel('Arrival', { exact: true }).fill('2030-04-11');
     await page.getByLabel('Arrival', { exact: true }).blur();
     await expect(page.getByRole('button', { name: 'Undo', exact: true })).toBeEnabled();
+    const undoResponse = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'PATCH' &&
+        new URL(response.url()).pathname === '/trips-api/trips/7/visits/31'
+    );
     await page.getByRole('button', { name: 'Undo', exact: true }).click();
+    const acknowledgedUndo = await undoResponse;
+    expect(acknowledgedUndo.status()).toBe(200);
+    await acknowledgedUndo.finished();
+    await expect(page.getByText('Changes saved', { exact: true })).toBeVisible();
     await expect(page.getByLabel('Arrival', { exact: true })).toHaveValue(source.timing.arrival);
     expect(writes).toHaveLength(2);
     await page.reload();

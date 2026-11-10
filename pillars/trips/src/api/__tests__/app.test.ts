@@ -361,7 +361,7 @@ describe('Journey HTTP source contract', () => {
         })
       ).status
     ).toBe(404);
-    expect(await (await call(legs)).json()).toEqual({ legs: [first] });
+    expect(await (await call(legs)).json()).toEqual({ revision: 1, legs: [first] });
   });
 
   it('rejects malformed typed source facts with the stable validation envelope', async () => {
@@ -458,7 +458,10 @@ describe('Journey alternatives HTTP contract', () => {
       revision: 2,
     });
     expect(await (await call(`${sourceBase}/${current.id}`)).json()).toEqual(current);
-    expect(await (await call(`${sourceBase}/${current.id}/legs`)).json()).toEqual({ legs: [leg] });
+    expect(await (await call(`${sourceBase}/${current.id}/legs`)).json()).toEqual({
+      revision: 1,
+      legs: [leg],
+    });
     const blankResponse = await call(`${path}/alternatives`, 'POST', { expectedRevision: 2 });
     expect(blankResponse.status).toBe(201);
     const blank: unknown = await blankResponse.json();
@@ -480,7 +483,10 @@ describe('Journey alternatives HTTP contract', () => {
     expect((await call(path, 'DELETE', { expectedRevision: 3 })).status).toBe(204);
     expect((await call(path)).status).toBe(404);
     expect(await (await call(`${sourceBase}/${current.id}`)).json()).toEqual(current);
-    expect(await (await call(`${sourceBase}/${current.id}/legs`)).json()).toEqual({ legs: [leg] });
+    expect(await (await call(`${sourceBase}/${current.id}/legs`)).json()).toEqual({
+      revision: 1,
+      legs: [leg],
+    });
   });
 
   it('enforces group scopes, validates explicit inputs and returns stable stale/missing-member errors without mutation', async () => {
