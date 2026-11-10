@@ -13,7 +13,7 @@ import { guardSourceInverse, restoreSourceInverse } from './source-undo-row.js';
 
 import type { SourceCommand } from '../../contract/source-workspace.js';
 import type { SourceInverse } from './source-inverse-types.js';
-import type { SourceWrite } from './source-write.js';
+import type { SourceWrite } from './source-write-types.js';
 
 function restoreSources(write: SourceWrite, inverse: SourceInverse): void {
   for (const entry of inverse.captures) {

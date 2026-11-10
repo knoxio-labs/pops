@@ -5,7 +5,8 @@ import {
   ExploreMembershipSchema,
 } from '../../contract/source-workspace.js';
 import { captureAssociations, exploreMemberships } from '../schema.js';
-import { requireCaptureTarget, sameCaptureTarget } from './capture-targets.js';
+import { sameCaptureTarget } from './capture-target-identity.js';
+import { requireCaptureTarget } from './capture-targets.js';
 import {
   getCaptureAssociation,
   getExploreMembership,
@@ -16,7 +17,7 @@ import { acknowledgeSourceInverse } from './source-undo-lineage.js';
 import { guardSourceInverse, restoreSourceInverse } from './source-undo-row.js';
 
 import type { SourceInverse } from './source-inverse-types.js';
-import type { SourceWrite } from './source-write.js';
+import type { SourceWrite } from './source-write-types.js';
 
 /** Reverse only owned relation rows after checking current identities and uniqueness dependencies. */
 export function restoreSourceRelations(write: SourceWrite, inverse: SourceInverse): void {

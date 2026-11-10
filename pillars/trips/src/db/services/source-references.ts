@@ -9,7 +9,7 @@ import {
   journeyLegs,
   journeyGroupMembers,
 } from '../schema.js';
-import { sameCaptureTarget } from './capture-targets.js';
+import { sameCaptureTarget } from './capture-target-identity.js';
 import { hasResponsibilityForTarget } from './responsibility-references.js';
 import { TripsServiceError } from './source-record.js';
 

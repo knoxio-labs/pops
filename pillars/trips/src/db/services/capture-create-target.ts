@@ -5,7 +5,7 @@ import { createIdeaSource } from './source-row-write.js';
 import { createStay } from './stays.js';
 
 import type { CaptureTarget, SourceCommand } from '../../contract/source-workspace.js';
-import type { SourceWrite } from './source-write.js';
+import type { SourceWrite } from './source-write-types.js';
 
 /** Resolve an explicitly selected target or create exactly the supplied source through its canonical producer. */
 export function resolveOrganisationTarget(

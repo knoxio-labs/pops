@@ -6,7 +6,7 @@ import {
 } from '../../contract/source-workspace.js';
 import { captureAssociations, exploreMemberships } from '../schema.js';
 import { resolveOrganisationTarget } from './capture-create-target.js';
-import { sameCaptureTarget } from './capture-targets.js';
+import { sameCaptureTarget } from './capture-target-identity.js';
 import {
   getCapture,
   getCaptureAssociation,
@@ -18,7 +18,7 @@ import { TripsServiceError } from './source-record.js';
 import { changeCaptureSource, nextSourceRevision } from './source-row-write.js';
 
 import type { SourceCommand, ExploreSource } from '../../contract/source-workspace.js';
-import type { SourceWrite } from './source-write.js';
+import type { SourceWrite } from './source-write-types.js';
 
 /** Insert explicit collection membership after validating the source's current ownership. */
 export function addExploreMembership(write: SourceWrite, source: ExploreSource): void {

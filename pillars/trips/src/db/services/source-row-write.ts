@@ -8,7 +8,7 @@ import { recordSourceWrite } from './source-write-record.js';
 
 import type { CaptureInput, CapturePatch, TripCapture } from '../../contract/capture-schemas.js';
 import type { IdeaInput, TripIdea } from '../../contract/idea-schemas.js';
-import type { SourceWrite } from './source-write.js';
+import type { SourceWrite } from './source-write-types.js';
 
 /** Advance one owned row revision with a fresh audit timestamp. */
 export function nextSourceRevision(record: { revision: number }): {
