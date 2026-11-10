@@ -52,7 +52,7 @@ describe('Trips manifest', () => {
       version: '1.2.3',
       tag: 'contract-trips@v1.2.3',
     });
-    expect(manifest.routes.queries).toHaveLength(22);
+    expect(manifest.routes.queries).toHaveLength(23);
     expect(manifest.routes.queries).toContain('trips.documentAssociations.list');
     expect(manifest.routes.mutations).toEqual(
       expect.arrayContaining([
