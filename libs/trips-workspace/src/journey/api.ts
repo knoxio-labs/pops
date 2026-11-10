@@ -1,25 +1,23 @@
-import { unwrap } from '@pops/pillar-sdk/client';
+import { unwrap, ApiError } from '@pops/pillar-sdk/client';
 
 import {
   journeysGet,
   journeysUpdate,
   journeysTiming,
   journeyLegsList,
-  journeyLegsUpdate,
-  journeyLegsReorder,
-  journeyLegsCreate,
-  journeyLegsDelete,
   journeyGroupsList,
   journeyGroupsSelect,
   journeyGroupsCreate,
   journeyGroupsAddBlank,
 } from '../trips-api/sdk.gen';
-import { journeySource, legSource } from './model';
+import { applyLegCommand } from './leg-api';
+import { journeySource } from './model';
 
 import type {
   JourneyWorkspaceProps,
   JourneySource,
-  JourneyChange,
+  JourneyCommand,
+  JourneyChangeResult,
   JourneyGroup,
   JourneyTiming,
   Journey,
@@ -47,7 +45,14 @@ export async function loadJourney(props: JourneyWorkspaceProps): Promise<Journey
       path: { tripId: props.tripId, journeyId: props.journeyId },
     }).then((response) => unwrap(response)),
   ]);
-  return { journey, legs: response.legs };
+  if (!Number.isSafeInteger(response.revision) || response.revision < 0)
+    throw new ApiError({
+      code: 'trips.journey_leg.source_invalid',
+      kind: 'client',
+      message: 'The leg source did not provide a valid revision. Reload before editing.',
+      retryable: true,
+    });
+  return { journey, legs: response.legs, legRevision: response.revision };
 }
 /** Read signed chronology only from the owning deterministic projection. */
 export async function loadTiming(props: JourneyWorkspaceProps): Promise<JourneyTiming> {
@@ -100,77 +105,22 @@ export async function addAlternative(
     })
   );
 }
-/** Execute one source operation and return the inverse that preserves existing source identity. */
+/** Execute a prepared source operation; inverse preconditions come only from confirmed owned writes. */
 export async function changeJourney(
   props: JourneyWorkspaceProps,
   source: JourneySource,
-  change: JourneyChange
-): Promise<{ source: JourneySource; inverse?: JourneyChange }> {
-  const common = {
-    client: props.client,
-    path: { tripId: props.tripId, journeyId: props.journeyId },
-  };
-  switch (change.kind) {
-    case 'journey': {
-      const journey = unwrap(
-        await journeysUpdate({
-          client: props.client,
-          path: { tripId: props.tripId, id: props.journeyId },
-          body: change.patch,
-        })
-      );
-      return {
-        source: { ...source, journey },
-        inverse: { kind: 'journey', patch: journeySource(source.journey) },
-      };
-    }
-    case 'leg': {
-      const previous = source.legs.find((leg) => leg.id === change.id);
-      if (!previous) throw new Error('Missing source leg');
-      const leg = unwrap(
-        await journeyLegsUpdate({
-          ...common,
-          path: { ...common.path, id: change.id },
-          body: change.patch,
-        })
-      );
-      return {
-        source: {
-          ...source,
-          legs: source.legs.map((entry) => (entry.id === leg.id ? leg : entry)),
-        },
-        inverse: { kind: 'leg', id: leg.id, patch: legSource(previous) },
-      };
-    }
-    case 'order': {
-      const result = unwrap(await journeyLegsReorder({ ...common, body: { legIds: change.ids } }));
-      return {
-        source: { ...source, legs: result.legs },
-        inverse: { kind: 'order', ids: source.legs.map((leg) => leg.id) },
-      };
-    }
-    case 'create': {
-      const leg = unwrap(await journeyLegsCreate({ ...common, body: change.patch }));
-      return {
-        source: { ...source, legs: [...source.legs, leg] },
-        inverse: { kind: 'remove', id: leg.id },
-      };
-    }
-    case 'remove':
-      return removeLeg(props, source, change.id);
-  }
-}
-
-async function removeLeg(
-  props: JourneyWorkspaceProps,
-  source: JourneySource,
-  id: number
-): Promise<{ source: JourneySource }> {
-  unwrap(
-    await journeyLegsDelete({
+  change: JourneyCommand
+): Promise<JourneyChangeResult> {
+  if (change.kind !== 'journey') return applyLegCommand(props, source, change);
+  const journey = unwrap(
+    await journeysUpdate({
       client: props.client,
-      path: { tripId: props.tripId, journeyId: props.journeyId, id },
+      path: { tripId: props.tripId, id: props.journeyId },
+      body: change.patch,
     })
   );
-  return { source: { ...source, legs: source.legs.filter((leg) => leg.id !== id) } };
+  return {
+    source: { ...source, journey },
+    inverse: { kind: 'journey', patch: journeySource(source.journey) },
+  };
 }

@@ -1,6 +1,8 @@
 import type { PersonGateway, PersonSnapshot } from './contracts';
 
 const snapshot: PersonSnapshot = {
+  version: 1,
+  operations: [],
   entity: {
     id: 'person',
     name: 'Marina Duarte',
@@ -75,12 +77,34 @@ export function personSnapshot(): PersonSnapshot {
 export function personTestGateway(data = personSnapshot()): PersonGateway {
   return {
     load: async () => data,
-    save: async (_id, draft) => ({ ...data.entity, ...draft }),
-    addPoint: async () => {
-      throw new Error('Unexpected point write');
-    },
-    addAddress: async () => {
-      throw new Error('Unexpected address write');
-    },
+    save: async (_id, draft) => ({
+      data: {
+        ...data,
+        version: data.version + 1,
+        entity: { ...data.entity, name: draft.name, notes: draft.notes },
+        points: draft.points.map((point) => ({
+          ...point,
+          entityId: data.entity.id,
+          active: true,
+          preferred: false,
+          createdAt: '2026-11-10T00:00:00Z',
+        })),
+        addresses: draft.addresses.map((address) => ({
+          ...address,
+          entityId: data.entity.id,
+          lastEditedTime: '2026-11-10T00:00:00Z',
+        })),
+        operations: [
+          {
+            id: 'operation',
+            undoneOperationId: null,
+            createdAt: '2026-11-10T00:00:00Z',
+            canUndo: true,
+          },
+        ],
+      },
+      operation: { id: 'operation', undoneOperationId: null },
+    }),
+    undo: async () => ({ data, operation: { id: 'undo', undoneOperationId: 'operation' } }),
   };
 }

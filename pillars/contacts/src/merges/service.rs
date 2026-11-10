@@ -50,7 +50,7 @@ pub async fn merge_in_transaction(
     if body.member_ids.is_empty()
         || body.member_ids.len() > 499
         || body.selections.len() > 9
-        || body.preferred_point_ids.len() > 4
+        || body.preferred_point_ids.len() > crate::persons::model::ContactPointKind::ALL.len()
     {
         return Err(MergeError::Invalid(
             "Merge requires 1..499 other roots and bounded selections".into(),
@@ -105,6 +105,7 @@ pub async fn merge_in_transaction(
         &all_members,
     )
     .await?;
+    let before_facts = super::facts::snapshot(conn, &all_members).await?;
     for member in &all_members {
         if let Some(previous) = repo::redirect(conn, member).await? {
             before_redirects.push(previous);
@@ -132,10 +133,10 @@ pub async fn merge_in_transaction(
     let revision = repo::revision(conn).await?;
     let id = uuid::Uuid::new_v4().to_string();
     let member_ids: Vec<String> = all_members.into_iter().collect();
-    sqlx::query("INSERT INTO merge_operations(id,canonical_id,member_ids,before_redirects,before_selections,request_body,post_revision,created_at) VALUES(?1,?2,?3,?4,?5,?6,?7,?8)")
+    sqlx::query("INSERT INTO merge_operations(id,canonical_id,member_ids,before_redirects,before_selections,request_body,post_revision,created_at,before_facts) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9)")
         .bind(&id).bind(&body.canonical_id).bind(repo::encode(&member_ids)?)
         .bind(repo::encode(&before_redirects)?).bind(repo::encode(&before_selections)?)
-        .bind(request_body).bind(revision).bind(now_rfc3339()).execute(&mut *conn).await?;
+        .bind(request_body).bind(revision).bind(now_rfc3339()).bind(repo::encode(&before_facts)?).execute(&mut *conn).await?;
     let result = MergeResult {
         operation_id: id,
         canonical_id: body.canonical_id,
@@ -155,7 +156,9 @@ pub async fn select_in_transaction(
     selections: &[FieldSelection],
     preferred_point_ids: &[String],
 ) -> Result<Vec<AppliedSelection>, MergeError> {
-    if selections.len() > 9 || preferred_point_ids.len() > 4 {
+    if selections.len() > 9
+        || preferred_point_ids.len() > crate::persons::model::ContactPointKind::ALL.len()
+    {
         return Err(MergeError::Invalid(
             "Field selections exceed supported limits".into(),
         ));
@@ -195,10 +198,10 @@ pub async fn undo(
         return Ok(result);
     }
     repo::expect_revision(&mut tx, body.expected_revision).await?;
-    let operation: Option<(String,String,String,i64)> = sqlx::query_as(
-        "SELECT member_ids,before_redirects,before_selections,post_revision FROM merge_operations WHERE id=?1")
+    let operation: Option<(String,String,String,Option<String>,i64)> = sqlx::query_as(
+        "SELECT member_ids,before_redirects,before_selections,before_facts,post_revision FROM merge_operations WHERE id=?1")
         .bind(operation_id).fetch_optional(&mut *tx).await?;
-    let (member_ids, redirects, selections, post_revision) =
+    let (member_ids, redirects, selections, facts, post_revision) =
         operation.ok_or_else(|| MergeError::NotFound(operation_id.into()))?;
     if post_revision != body.expected_revision {
         return Err(conflict(
@@ -216,6 +219,11 @@ pub async fn undo(
     let restored_ids: Vec<String> = repo::decode(&member_ids)?;
     let previous_redirects: Vec<RedirectRow> = repo::decode(&redirects)?;
     let previous_selections: Vec<SelectionRow> = repo::decode(&selections)?;
+    let previous_facts: Option<super::facts::FactSnapshot> =
+        facts.as_deref().map(repo::decode).transpose()?;
+    if previous_facts.is_none() {
+        super::facts::require_legacy_safe(&mut tx, &restored_ids).await?;
+    }
     for id in &restored_ids {
         sqlx::query("DELETE FROM entity_redirects WHERE member_id=?1")
             .bind(id)
@@ -235,6 +243,9 @@ pub async fn undo(
     }
     for selection in previous_selections {
         repo::put_selection(&mut tx, &selection).await?;
+    }
+    if let Some(previous_facts) = previous_facts {
+        super::facts::restore(&mut tx, &restored_ids, previous_facts).await?;
     }
     let id = uuid::Uuid::new_v4().to_string();
     sqlx::query("INSERT INTO merge_undo_operations(id,merge_id,request_body,created_at) VALUES(?1,?2,?3,?4)")

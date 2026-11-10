@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "7cb66572-a887-4979-b7cb-e4420ad1f856",
+  "id": "db1a6a73-78e1-4bd7-a3fc-f82453b2dc33",
   "prevId": "412e2317-444c-46f9-90ac-c02145806606",
   "tables": {
     "decision_options": {
@@ -530,6 +530,20 @@
           "notNull": true,
           "autoincrement": false
         },
+        "removed_at": {
+          "name": "removed_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "removal_operation_id": {
+          "name": "removal_operation_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "mode": {
           "name": "mode",
           "type": "text",
@@ -665,6 +679,14 @@
           "notNull": true,
           "autoincrement": false
         },
+        "leg_revision": {
+          "name": "leg_revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
         "name": {
           "name": "name",
           "type": "text",
@@ -740,8 +762,8 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
-    "meeting_plan_operations": {
-      "name": "meeting_plan_operations",
+    "journey_leg_removals": {
+      "name": "journey_leg_removals",
       "columns": {
         "id": {
           "name": "id",
@@ -750,8 +772,15 @@
           "notNull": true,
           "autoincrement": true
         },
-        "trip_id": {
-          "name": "trip_id",
+        "journey_id": {
+          "name": "journey_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "leg_id": {
+          "name": "leg_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
@@ -764,29 +793,57 @@
           "notNull": true,
           "autoincrement": false
         },
-        "request": {
-          "name": "request",
+        "expected_revision": {
+          "name": "expected_revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "removed_revision": {
+          "name": "removed_revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "ordinal": {
+          "name": "ordinal",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "remaining_leg_ids": {
+          "name": "remaining_leg_ids",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
-        "receipt": {
-          "name": "receipt",
+        "removed_at": {
+          "name": "removed_at",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
-        "expected_after": {
-          "name": "expected_after",
-          "type": "text",
+        "restored_expected_revision": {
+          "name": "restored_expected_revision",
+          "type": "integer",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
           "autoincrement": false
         },
-        "undone_by": {
-          "name": "undone_by",
+        "restored_revision": {
+          "name": "restored_revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "restored_at": {
+          "name": "restored_at",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
@@ -794,150 +851,29 @@
         }
       },
       "indexes": {
-        "idx_meeting_plan_operations_identity": {
-          "name": "idx_meeting_plan_operations_identity",
-          "columns": ["trip_id", "operation_id"],
+        "idx_leg_removal_operation": {
+          "name": "idx_leg_removal_operation",
+          "columns": ["journey_id", "operation_id"],
           "isUnique": true
         }
       },
       "foreignKeys": {
-        "meeting_plan_operations_trip_id_trips_id_fk": {
-          "name": "meeting_plan_operations_trip_id_trips_id_fk",
-          "tableFrom": "meeting_plan_operations",
-          "tableTo": "trips",
-          "columnsFrom": ["trip_id"],
+        "journey_leg_removals_journey_id_journeys_id_fk": {
+          "name": "journey_leg_removals_journey_id_journeys_id_fk",
+          "tableFrom": "journey_leg_removals",
+          "tableTo": "journeys",
+          "columnsFrom": ["journey_id"],
           "columnsTo": ["id"],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "meeting_plans": {
-      "name": "meeting_plans",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "integer",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": true
         },
-        "trip_id": {
-          "name": "trip_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "revision": {
-          "name": "revision",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 1
-        },
-        "removed": {
-          "name": "removed",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": false
-        },
-        "contact_uri": {
-          "name": "contact_uri",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "visit_id": {
-          "name": "visit_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "title": {
-          "name": "title",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "''"
-        },
-        "notes": {
-          "name": "notes",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "''"
-        },
-        "intention": {
-          "name": "intention",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "'Considering'"
-        },
-        "agreement": {
-          "name": "agreement",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "'Not agreed'"
-        },
-        "start_date": {
-          "name": "start_date",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "end_date": {
-          "name": "end_date",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "idx_meeting_plans_trip": {
-          "name": "idx_meeting_plans_trip",
-          "columns": ["trip_id"],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "meeting_plans_trip_id_trips_id_fk": {
-          "name": "meeting_plans_trip_id_trips_id_fk",
-          "tableFrom": "meeting_plans",
-          "tableTo": "trips",
-          "columnsFrom": ["trip_id"],
+        "journey_leg_removals_leg_id_journey_legs_id_fk": {
+          "name": "journey_leg_removals_leg_id_journey_legs_id_fk",
+          "tableFrom": "journey_leg_removals",
+          "tableTo": "journey_legs",
+          "columnsFrom": ["leg_id"],
           "columnsTo": ["id"],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },

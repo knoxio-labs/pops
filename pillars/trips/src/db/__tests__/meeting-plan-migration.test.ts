@@ -14,6 +14,8 @@ import * as schema from '../schema.js';
 import { getMeetingPlan } from '../services/meeting-plan-queries.js';
 import { operateMeetingPlan } from '../services/meeting-plans.js';
 import { createPlace, createTrip, createVisit, getTrip, listVisits } from '../services/records.js';
+import { readSourceWorkspace } from '../services/source-queries.js';
+import { send as operateCapture } from './capture-test-utils.js';
 
 import type { MeetingPlanReceipt } from '../../contract/meeting-plan-schemas.js';
 
@@ -59,6 +61,14 @@ it('upgrades an existing trip database without changing its route and persists r
     createVisit(db, trip.id, { placeId: place.id });
     const second = createVisit(db, trip.id, { placeId: place.id });
     const route = listVisits(db, trip.id);
+    const captureOperationId = randomUUID();
+    const captureCommand = {
+      kind: 'capture.create',
+      input: { originalText: 'Retained capture source', visitId: second.id },
+      explore: true,
+    } as const;
+    const captureReceipt = operateCapture(db, trip.id, captureCommand, captureOperationId).receipt;
+    const captured = readSourceWorkspace(db, trip.id);
     raw.close();
     const upgraded = openTripsDb(path);
     const operation = {
@@ -72,6 +82,13 @@ it('upgrades an existing trip database without changing its route and persists r
     try {
       expect(getTrip(upgraded.db, trip.id)).toEqual(trip);
       expect(listVisits(upgraded.db, trip.id)).toEqual(route);
+      expect(readSourceWorkspace(upgraded.db, trip.id)).toEqual(captured);
+      expect(
+        operateCapture(upgraded.db, trip.id, captureCommand, captureOperationId)
+      ).toMatchObject({
+        receipt: captureReceipt,
+        replayed: true,
+      });
       receipt = operateMeetingPlan(
         upgraded.db,
         trip.id,
@@ -86,6 +103,13 @@ it('upgrades an existing trip database without changing its route and persists r
       expect(getMeetingPlan(reopened.db, trip.id, receipt.after.id)).toEqual(receipt.after);
       expect(operateMeetingPlan(reopened.db, trip.id, operation).receipt).toEqual(receipt);
       expect(listVisits(reopened.db, trip.id)).toEqual(route);
+      expect(readSourceWorkspace(reopened.db, trip.id)).toEqual(captured);
+      expect(
+        operateCapture(reopened.db, trip.id, captureCommand, captureOperationId)
+      ).toMatchObject({
+        receipt: captureReceipt,
+        replayed: true,
+      });
     } finally {
       reopened.raw.close();
     }

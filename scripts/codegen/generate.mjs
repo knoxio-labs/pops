@@ -94,6 +94,7 @@ export const EXPECTED_TARGETS = Object.freeze([
   { pkgName: '@pops/app-trips', scriptName: 'generate:trips-client' },
   { pkgName: '@pops/app-trips', scriptName: 'generate:tags-client' },
   { pkgName: '@pops/trips-workspace', scriptName: 'generate:trips-client' },
+  { pkgName: '@pops/trips-workspace', scriptName: 'generate:documents-client' },
   { pkgName: '@pops/shell', scriptName: 'generate:registry-client' },
   { pkgName: '@pops/overlay-ego', scriptName: 'generate:ego-client' },
   { pkgName: '@pops/ai', scriptName: API_TYPES_SCRIPT },

@@ -62,7 +62,8 @@ export interface SourceState<Source, Patch> {
 /** Source projection and persistence supplied by the owning domain; hosts remount at identity/origin boundaries. */
 export interface SourceEditorOptions<Source, Patch> {
   source: (value: Source) => Patch;
-  save: (patch: Patch) => Promise<Source>;
+  /** Persist against the captured confirmed source, including inverse and retry operations. */
+  save: (patch: Patch, saved: Source) => Promise<Source>;
   onSaved: (value: Source) => void;
 }
 
@@ -101,7 +102,7 @@ export function useSourceEditor<Source extends object, Patch extends Partial<Sou
     setFailure(undefined);
     edit(pending);
     try {
-      const result = await options.save(pending);
+      const result = await options.save(pending, saved);
       options.onSaved(result);
       setHistory((previous) => (undo ? previous.slice(0, -1) : [...previous, saved]));
       setSaved(result);

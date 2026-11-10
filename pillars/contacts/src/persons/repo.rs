@@ -33,12 +33,44 @@ pub async fn require_person(conn: &mut SqliteConnection, id: &str) -> Result<(),
     }
 }
 
+/// Require an entity type that may own an explicitly entered contact point.
+pub async fn require_contact_owner(
+    conn: &mut SqliteConnection,
+    id: &str,
+) -> Result<(), PersonError> {
+    let ty: Option<String> = sqlx::query_scalar("SELECT type FROM entities WHERE id = ?1")
+        .bind(id)
+        .fetch_optional(conn)
+        .await?;
+    match ty.as_deref() {
+        None => Err(PersonError::NotFound),
+        Some("person" | "company" | "organisation") => Ok(()),
+        Some(_) => Err(PersonError::Invalid(
+            "Entity must be a person, company or organisation".to_string(),
+        )),
+    }
+}
+
 /// Require a current canonical person for local edits and new source links; recognized source refreshes retain their original owner.
 pub async fn require_writable_person(
     conn: &mut SqliteConnection,
     id: &str,
 ) -> Result<(), PersonError> {
     require_person(conn, id).await?;
+    if let Some(canonical) = crate::merges::repo::resolve_one(conn, id).await? {
+        if canonical != id {
+            return Err(PersonError::Retired(canonical));
+        }
+    }
+    Ok(())
+}
+
+/// Require a canonical contact owner before creating a local contact point.
+pub async fn require_writable_contact_owner(
+    conn: &mut SqliteConnection,
+    id: &str,
+) -> Result<(), PersonError> {
+    require_contact_owner(conn, id).await?;
     if let Some(canonical) = crate::merges::repo::resolve_one(conn, id).await? {
         if canonical != id {
             return Err(PersonError::Retired(canonical));
@@ -171,7 +203,7 @@ pub async fn insert_point(
 ) -> Result<ContactPoint, PersonError> {
     validate_point(point)?;
     if source_record_id.is_none() {
-        require_writable_person(conn, id).await?;
+        require_writable_contact_owner(conn, id).await?;
     } else {
         require_person(conn, id).await?;
     }
@@ -182,7 +214,9 @@ pub async fn insert_point(
             Some(country) => crate::identity::normalize_phone_for_country(&point.value, country),
             None => crate::identity::normalize_phone(&point.value),
         },
-        super::model::ContactPointKind::Social | super::model::ContactPointKind::Url => None,
+        super::model::ContactPointKind::Social
+        | super::model::ContactPointKind::Url
+        | super::model::ContactPointKind::Other => None,
     };
     let now = now_rfc3339();
     sqlx::query("INSERT INTO contact_points(id,entity_id,kind,value,normalized_value,label,country_code,source_record_id,created_at) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9)")
@@ -202,10 +236,10 @@ pub async fn insert_point(
     })
 }
 
-/// Select one point for a person/kind atomically. A point belonging to another person is never selected.
+/// Select one point for an eligible entity/kind atomically. A point belonging to another entity is never selected.
 pub async fn prefer_point(pool: &SqlitePool, id: &str, point_id: &str) -> Result<(), PersonError> {
     let mut tx = pool.begin().await?;
-    require_writable_person(&mut tx, id).await?;
+    require_writable_contact_owner(&mut tx, id).await?;
     if !crate::merges::projection::prefer_point(&mut tx, id, point_id).await? {
         return Err(PersonError::NotFound);
     }

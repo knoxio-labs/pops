@@ -52,6 +52,7 @@ import { lazy, Suspense, type ComponentType, type ReactNode } from 'react';
  */
 import { ErrorBoundary } from '@pops/ui';
 
+import { createContactsHostCapability } from './contacts-host-capability';
 import { navConfigFromDescriptor } from './nav/nav-from-descriptor';
 import { entryUrlForThisLoad, uncachedProbeUrl } from './remote-entry-url';
 import { installRemoteStylesheet } from './remote-stylesheet';
@@ -177,6 +178,8 @@ const RemoteSuspenseFallback = (
   <div className="flex items-center justify-center h-64 text-muted-foreground">Loading…</div>
 );
 
+const contactsHostCapability = createContactsHostCapability();
+
 interface SlotFallbacks {
   readonly loading: ReactNode;
   readonly error: ReactNode;
@@ -218,7 +221,7 @@ function remotePageElement(
       staleChunkProbeUrl={() => uncachedProbeUrl(descriptor.assetsBaseUrl)}
     >
       <Suspense fallback={RemoteSuspenseFallback}>
-        <LazyComponent />
+        <LazyComponent contacts={contactsHostCapability} />
       </Suspense>
     </ErrorBoundary>
   );

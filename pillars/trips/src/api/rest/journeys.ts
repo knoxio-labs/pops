@@ -5,11 +5,11 @@ import {
   createJourneyLeg,
   deleteJourneyLeg,
   getJourneyLeg,
-  listJourneyLegs,
   reorderJourneyLegs,
   updateJourneyLeg,
 } from '../../db/services/journey-legs.js';
 import { getJourneyTiming } from '../../db/services/journey-timing.js';
+import { getJourneyWorkspace } from '../../db/services/journey-workspace.js';
 import {
   createJourney,
   deleteJourney,
@@ -17,6 +17,8 @@ import {
   listJourneys,
   updateJourney,
 } from '../../db/services/journeys.js';
+import { removeJourneyLeg, restoreJourneyLeg } from '../../db/services/leg-removals.js';
+import { getJourneyLegSet } from '../../db/services/leg-set.js';
 import { withTripsErrors } from './with-errors.js';
 
 import type { TripsDb } from '../../db/index.js';
@@ -28,6 +30,11 @@ export function makeJourneyHandlers(
   db: TripsDb
 ): ReturnType<typeof server.router<typeof journeysContract>> {
   return server.router(journeysContract, {
+    workspace: ({ params }) =>
+      withTripsErrors(() => ({
+        status: 200 as const,
+        body: getJourneyWorkspace(db, params.tripId, params.id),
+      })),
     timing: ({ params }) =>
       withTripsErrors(() => ({
         status: 200 as const,
@@ -69,13 +76,32 @@ export function makeJourneyLegHandlers(
     list: ({ params }) =>
       withTripsErrors(() => ({
         status: 200 as const,
-        body: { legs: listJourneyLegs(db, params.tripId, params.journeyId) },
+        body: getJourneyLegSet(db, params.tripId, params.journeyId),
       })),
     get: ({ params }) =>
       withTripsErrors(() => ({
         status: 200 as const,
         body: getJourneyLeg(db, params.tripId, params.journeyId, params.id),
       })),
+    delete: ({ params }) =>
+      withTripsErrors(() => {
+        deleteJourneyLeg(db, params.tripId, params.journeyId, params.id);
+        return { status: 204 as const, body: undefined };
+      }),
+    ...legWriters(db),
+    remove: ({ params, body }) =>
+      withTripsErrors(() => ({ status: 200 as const, body: removeJourneyLeg(db, params, body) })),
+    restore: ({ params, body }) =>
+      withTripsErrors(() => ({
+        status: 200 as const,
+        body: restoreJourneyLeg(db, params, body.expectedRevision),
+      })),
+  });
+}
+
+type LegHandlers = ReturnType<typeof server.router<typeof journeyLegsContract>>;
+function legWriters(db: TripsDb): Pick<LegHandlers, 'create' | 'update' | 'reorder'> {
+  return {
     create: ({ params, body }) =>
       withTripsErrors(() => ({
         status: 201 as const,
@@ -86,15 +112,10 @@ export function makeJourneyLegHandlers(
         status: 200 as const,
         body: updateJourneyLeg(db, params, body),
       })),
-    delete: ({ params }) =>
-      withTripsErrors(() => {
-        deleteJourneyLeg(db, params.tripId, params.journeyId, params.id);
-        return { status: 204 as const, body: undefined };
-      }),
     reorder: ({ params, body }) =>
       withTripsErrors(() => ({
         status: 200 as const,
-        body: { legs: reorderJourneyLegs(db, params.tripId, params.journeyId, body.legIds) },
+        body: { legs: reorderJourneyLegs(db, params.tripId, params.journeyId, body) },
       })),
-  });
+  };
 }

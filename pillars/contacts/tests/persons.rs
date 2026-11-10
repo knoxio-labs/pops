@@ -146,6 +146,8 @@ async fn homonyms_coexist_with_merchants_and_type_transitions_check_effective_id
 async fn local_profiles_and_points_reject_wrong_types_and_cross_person_preferences() {
     let (app, pool) = app().await;
     let company = create(&app, "Business", "company").await;
+    let organisation = create(&app, "Community group", "organisation").await;
+    let bank = create(&app, "Bank", "bank").await;
     let person = create(&app, "Alex", "person").await;
     let other = create(&app, "Alex", "person").await;
     assert_eq!(
@@ -154,6 +156,70 @@ async fn local_profiles_and_points_reject_wrong_types_and_cross_person_preferenc
             "PUT",
             &format!("/entities/{company}/person"),
             json!({})
+        )
+        .await
+        .0,
+        StatusCode::BAD_REQUEST
+    );
+    for entity in [&company, &organisation] {
+        let (status, created) = send(
+            &app,
+            "POST",
+            &format!("/entities/{entity}/contact-points"),
+            json!({"kind":"url","value":"https://example.test/contact"}),
+        )
+        .await;
+        assert_eq!(status, StatusCode::CREATED, "{created}");
+        assert_eq!(created["data"]["entityId"].as_str(), Some(entity.as_str()));
+        let point_id = created["data"]["id"].as_str().unwrap();
+        assert_eq!(
+            send(
+                &app,
+                "GET",
+                &format!("/entities/{entity}/contact-points"),
+                Value::Null,
+            )
+            .await
+            .0,
+            StatusCode::OK
+        );
+        assert_eq!(
+            send(
+                &app,
+                "PUT",
+                &format!("/entities/{entity}/contact-points/{point_id}/preferred"),
+                Value::Null,
+            )
+            .await
+            .0,
+            StatusCode::NO_CONTENT
+        );
+    }
+    assert_eq!(
+        send(
+            &app,
+            "PATCH",
+            &format!("/entities/{organisation}"),
+            json!({"type":"bank"}),
+        )
+        .await
+        .0,
+        StatusCode::BAD_REQUEST
+    );
+    let (_, unchanged) = send(
+        &app,
+        "GET",
+        &format!("/entities/{organisation}"),
+        Value::Null,
+    )
+    .await;
+    assert_eq!(unchanged["data"]["type"], "organisation");
+    assert_eq!(
+        send(
+            &app,
+            "POST",
+            &format!("/entities/{bank}/contact-points"),
+            json!({"kind":"url","value":"https://example.test/contact"}),
         )
         .await
         .0,

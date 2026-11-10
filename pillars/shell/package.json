@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "@hey-api/client-fetch": "^0.13.1",
+    "@pops/app-contacts": "workspace:*",
     "@pops/locales": "workspace:*",
     "@pops/module-registry": "workspace:*",
     "@pops/navigation": "workspace:*",
