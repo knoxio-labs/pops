@@ -85,6 +85,23 @@ test('Calendar loads the configured remote, filters independent sources, and dir
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await stubShellBoot(page, ['trips']);
+  await page.route(/\/documents-api\/paperless\/status$/, (route) =>
+    route.request().method() === 'GET'
+      ? json(route, 200, {
+          data: {
+            configured: true,
+            available: true,
+            baseUrl: 'https://paperless.example',
+            documentCount: 0,
+            maxUploadBytes: 1000,
+            allowedMimeTypes: ['application/pdf'],
+          },
+        })
+      : route.fallback()
+  );
+  await page.route(/\/trips-api\/trips\/7\/document-associations$/, (route) =>
+    route.request().method() === 'GET' ? json(route, 200, { associations: [] }) : route.fallback()
+  );
   await page.route(/\/trips-api\/trips\/7\/journeys$/, (route) =>
     json(route, 200, { journeys: [journey] })
   );
