@@ -34,7 +34,9 @@ Opaque source references display their original labels/URIs without asserting do
 resolution. Nearby bookings and buffer-safety findings are owned by POPS-6134.
 
 `@pops/trips-workspace` exports `StayWorkspace({ tripId, stayId, client? })`, the approved
-In visit accommodation workspace. This browser component library owns no service or database and imports no pillar package.
+In visit accommodation workspace. This browser component library owns no service or
+database. Its Contacts chooser uses the owning app’s public UI API; persisted Trips
+types come from this library’s generated client.
 Its consumers supply source identities and a React Query provider; shell activation
 is tracked separately.
 `EventWorkspace({ tripId, eventId, client? })` implements the approved route-context
@@ -169,3 +171,13 @@ to the host's published source route. Removing a membership never deletes its so
 Explicit Idea kind selection in the composer creates and associates that subtype in
 the same owner operation, preserving both IDs and verbatim raw text. Its explicitly
 selected place/visit is submitted on both records; later edits do not synchronize them.
+
+Idea detail retains source links, canonical Contacts references and recommendation
+notes as explicit fields. Optional timing and location discrepancies produce findings
+without blocking unrelated edits. Mutable reference text keeps its editing identity
+while typing; failed writes retain the exact draft and original source revision.
+Contact selection and creation use the Contacts-owned chooser, which supplies its own
+catalogues to the host locale. Each organisation intent retains the owner session above
+route views, including pending creation and ambiguous outcomes. The canonical reference
+is retained before a Trips association is attempted; retrying the association cannot
+create the Contact again. Removing a Trips reference never deletes a Contacts record.

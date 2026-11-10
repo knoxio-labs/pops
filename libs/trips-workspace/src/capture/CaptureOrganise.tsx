@@ -2,12 +2,13 @@ import { useSyncExternalStore } from 'react';
 
 import { Button, Select, Textarea, TextInput } from '@pops/ui';
 
+import { organisationChoices, selectedValue } from './organisation-choices';
+
 import type { JSX } from 'react';
 
 import type { CaptureBrowserSession } from './browser-session';
 import type { Capture, CaptureSource, CaptureTargetInput } from './types';
 
-type Choice = { value: string; label: string; target: CaptureTargetInput };
 type Props = {
   session: CaptureBrowserSession;
   capture: Capture;
@@ -24,12 +25,8 @@ export function CaptureOrganise(props: Props): JSX.Element {
     session.records.getVersion
   );
   const selected = session.records.organisation(capture.id)?.target;
-  const choices = targetChoices(source);
-  const value =
-    selected?.mode === 'existing'
-      ? (choices.find((choice) => JSON.stringify(choice.target) === JSON.stringify(selected))
-          ?.value ?? '')
-      : (selected?.mode ?? '');
+  const choices = organisationChoices(source, selected);
+  const value = selectedValue(selected, choices);
   return (
     <details>
       <summary className="min-h-11 cursor-pointer py-3 text-sm">Organise</summary>
@@ -50,6 +47,7 @@ export function CaptureOrganise(props: Props): JSX.Element {
           }
         />
         <NewTargetFields {...props} selected={selected} />
+        <ContactChoice {...props} selected={selected} />
         <div className="flex flex-wrap gap-2">
           <Button
             disabled={busy || selected === undefined}
@@ -153,37 +151,24 @@ function ExistingAssociations({ source, capture, session, busy }: Props): JSX.El
     </div>
   );
 }
-function targetChoices(source: CaptureSource): Choice[] {
-  return [
-    ...source.ideas
-      .filter((row) => row.removedAt === null)
-      .map((row): Choice => ({
-        value: `idea:${row.id}`,
-        label: `Idea ${row.id}${row.name ? `: ${row.name}` : ''}`,
-        target: { mode: 'existing', target: { kind: 'idea', id: row.id } },
-      })),
-    ...source.events.map((row): Choice => ({
-      value: `event:${row.id}`,
-      label: `Event ${row.id}${row.name ? `: ${row.name}` : ''}`,
-      target: { mode: 'existing', target: { kind: 'event', id: row.id } },
-    })),
-    ...source.journeys.map((row): Choice => ({
-      value: `journey:${row.id}`,
-      label: `Journey ${row.id}${row.name ? `: ${row.name}` : ''}`,
-      target: { mode: 'existing', target: { kind: 'journey', id: row.id } },
-    })),
-    ...source.stays.map((row): Choice => ({
-      value: `stay:${row.id}`,
-      label: `Stay ${row.id}${row.name ? `: ${row.name}` : ''}`,
-      target: { mode: 'existing', target: { kind: 'stay', id: row.id } },
-    })),
-    { value: 'createIdea', label: 'Create Idea', target: { mode: 'createIdea', input: {} } },
-    { value: 'createEvent', label: 'Create Event', target: { mode: 'createEvent', input: {} } },
-    {
-      value: 'createJourney',
-      label: 'Create Journey',
-      target: { mode: 'createJourney', input: {} },
-    },
-    { value: 'createStay', label: 'Create Stay', target: { mode: 'createStay', input: {} } },
-  ];
+function ContactChoice({
+  session,
+  capture,
+  busy,
+  selected,
+}: Props & { selected: CaptureTargetInput }): JSX.Element {
+  return (
+    <>
+      <Button
+        variant="outline"
+        disabled={busy}
+        onClick={() => session.contacts.open({ kind: 'capture', id: capture.id }, true)}
+      >
+        Choose contact
+      </Button>
+      {selected?.mode === 'existing' && selected.target.kind === 'contact' ? (
+        <p className="break-words text-sm">{selected.target.reference.uri}</p>
+      ) : null}
+    </>
+  );
 }

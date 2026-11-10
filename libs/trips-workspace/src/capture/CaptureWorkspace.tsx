@@ -8,6 +8,7 @@ import { requestProblem } from '../stay/api';
 import { captureQueryKey, loadCaptureSource, performCaptureRequest } from './api';
 import { findCaptureSession, retainCaptureSession } from './browser-session';
 import { CaptureComposer } from './CaptureComposer';
+import { CaptureContactChooser } from './CaptureContactChooser';
 import { CaptureExplore } from './CaptureExplore';
 import { CaptureInbox } from './CaptureInbox';
 import { useCaptureContext } from './use-capture-context';
@@ -87,6 +88,7 @@ function WorkspaceSession({
         }
       />
       {props.navigation}
+      <CaptureContactChooser session={session} />
       {query.isError ? (
         <ErrorState error={requestProblem(query.error)} onRetry={() => void query.refetch()} />
       ) : null}

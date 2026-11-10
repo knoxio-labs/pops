@@ -77,11 +77,6 @@ function IdeaDateBounds({ session, row, value, busy }: IdeaFieldProps): JSX.Elem
           onBlur={() => void session.records.saveIdea(row.id)}
         />
       </div>
-      {timing.from && timing.to && timing.from > timing.to ? (
-        <p role="alert" className="text-sm text-destructive">
-          The end date is before the start date. Both values remain editable.
-        </p>
-      ) : null}
     </div>
   );
 }

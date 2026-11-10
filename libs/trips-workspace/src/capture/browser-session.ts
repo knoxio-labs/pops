@@ -1,6 +1,8 @@
 import { createDocumentUploadSession } from '../documents/useUploadFields';
+import { CaptureContactChoices } from './contact-choices';
 import { createCaptureEditor } from './editor';
 import { CaptureRecordDrafts } from './record-drafts';
+import { CaptureReferenceIdentities } from './reference-identities';
 
 import type { QueryClient } from '@tanstack/react-query';
 import type { Dispatch, SetStateAction } from 'react';
@@ -15,12 +17,15 @@ const sessions = new WeakMap<QueryClient, Map<string, CaptureBrowserSession>>();
 export class CaptureBrowserSession {
   readonly editor: CaptureEditor;
   readonly records: CaptureRecordDrafts;
+  readonly contacts: CaptureContactChoices;
+  readonly references = new CaptureReferenceIdentities();
   private uploads = new Map<string, DocumentUploadSession>();
   private listeners = new Set<() => void>();
   private version = 0;
   constructor(source: CaptureSource, tripId: number, perform: CapturePerformer) {
     this.editor = createCaptureEditor({ source, tripId, perform });
     this.records = new CaptureRecordDrafts(this.editor);
+    this.contacts = new CaptureContactChoices(this.editor, this.records);
   }
   /** Observe retained upload changes without storing bytes outside this browser session. */
   subscribe = (listener: () => void): (() => void) => {
