@@ -69,6 +69,8 @@ const TRIPS_MUTATIONS = [
   'trips.journeyLegs.create',
   'trips.journeyLegs.update',
   'trips.journeyLegs.delete',
+  'trips.journeyLegs.remove',
+  'trips.journeyLegs.restore',
   'trips.journeyLegs.reorder',
   'trips.trips.create',
   'trips.trips.update',

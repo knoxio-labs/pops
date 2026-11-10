@@ -35,6 +35,7 @@ describe('Trips manifest', () => {
     expect(manifest.pages).toEqual([
       { path: '', index: true, bundleSlot: 'trips-home' },
       { path: ':tripId/stays/:stayId', bundleSlot: 'trips-stay' },
+      { path: ':tripId/events/:eventId', bundleSlot: 'trips-event' },
       { path: ':tripId/decisions/:decisionId', bundleSlot: 'trips-decision' },
       { path: ':tripId/journeys/:journeyId', bundleSlot: 'trips-journey' },
       { path: ':tripId/settings', bundleSlot: 'trips-settings' },
@@ -93,6 +94,8 @@ describe('Trips manifest', () => {
         'trips.events.delete',
         'trips.stays.update',
         'trips.stays.delete',
+        'trips.journeyLegs.remove',
+        'trips.journeyLegs.restore',
         'trips.journeyGroups.create',
         'trips.journeyGroups.addBlank',
         'trips.journeyGroups.select',

@@ -8,3 +8,4 @@ export { events } from './schema/events.js';
 export { decisions, decisionOptions } from './schema/decisions.js';
 export { rentals } from './schema/rentals.js';
 export { arrangementResponsibilities } from './schema/responsibilities.js';
+export { legRemovals } from './schema/leg-removals.js';

@@ -11,11 +11,18 @@ Mode remains open source text, and intention, arrangement and purchase are indep
 Only Purchased receives hard styling. Optional buffer fields have no default.
 
 Inline field edits and whole-card ordering persist to the owning source endpoints.
-Undo submits their inverse PATCH/order; adding a blank leg can be undone by deleting
-that newly created identity. Existing source legs are not removed by this workspace.
-Failed PATCH/order writes retain their draft with explicit retry/discard. Ambiguous
-leg creation/removal failures require a successful canonical source reload before
-another write, preventing blind POST retries. Cached source remains
+Undo submits guarded inverse PATCH/order writes. Adding a blank leg can be undone
+through a server-owned reversible removal receipt for that newly created identity.
+The leg card’s Remove control uses the same receipt and persisted Undo to restore
+the original identity, ordering, purchase and provenance. Every leg write uses the
+atomic leg-list revision. Inverse guards advance only across the editor's own confirmed
+successor revisions; a later refetch or receipt replay cannot lend its revision to Undo.
+Consecutive removals restore in LIFO order with stable identities and exact live ordering.
+
+Failed source edits and receipt-backed removal/restoration retain their exact command
+for explicit retry, including the original operation ID and revision. A revision conflict
+invalidates inverse history. Ambiguous leg creation still requires a successful canonical
+source reload before another write, preventing blind create retries. Cached source remains
 mounted during background failures. Only the owning timing endpoint supplies chronology
 findings and signed minutes; unavailable or incomplete clocks do not imply safety.
 
@@ -37,6 +44,16 @@ resolution. Nearby bookings and buffer-safety findings are owned by POPS-6134.
 In visit accommodation workspace. This browser component library owns no service or database and imports no pillar package.
 Its consumers supply source identities and a React Query provider; shell activation
 is tracked separately.
+`EventWorkspace({ tripId, eventId, client? })` implements the approved route-context
+event detail. It places the editor inside its explicit associated visit and shows
+the immediately neighbouring visits in persisted route order. Missing associations
+remain unlinked; event dates never move visits or create journeys. Intention,
+arrangement and purchase save independently, and only Purchased has hard styling.
+Event dates, clocks and zone remain independent source fields. Source/ticket URLs,
+address, notes and opaque source/venue/organiser/document references are editable;
+no reference is hydrated or treated as an external booking action. Undo persists
+the previous successful event source snapshot. Failed drafts remain visible and
+retryable; optional context failures do not prevent editing.
 The generated Trips client uses `/trips-api`; an explicit generated `Client`
 may be supplied for a separate transport. No backend contract types are imported
 into the browser: the committed Trips OpenAPI snapshot owns the generated types.

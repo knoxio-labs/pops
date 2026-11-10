@@ -5,7 +5,9 @@ import { openTripsDb } from '../index.js';
 import { arrangementResponsibilities } from '../schema.js';
 import { createEvent, deleteEvent, getEvent } from '../services/events.js';
 import { createJourneyGroup } from '../services/journey-groups.js';
+import { createJourneyLeg } from '../services/journey-legs.js';
 import { createJourney, deleteJourney, getJourney } from '../services/journeys.js';
+import { removeJourneyLeg, restoreJourneyLeg } from '../services/leg-removals.js';
 import { createTrip } from '../services/records.js';
 import { createRental, deleteRental, getRental, updateRental } from '../services/rentals.js';
 import {
@@ -278,6 +280,34 @@ describe('Explicit arrangement responsibility persistence', () => {
       expect(() => deleteJourney(db, trip.id, journey.id)).toThrow('journey_grouped');
       expect(getResponsibility(db, trip.id, 'journey', journey.id)).toEqual(state);
       expect(hasResponsibilityForTarget(db, trip.id, 'journey', journey.id)).toBe(true);
+    } finally {
+      opened.raw.close();
+    }
+  });
+  it('keeps responsibility on the whole journey through leg removal and identity-preserving restore', () => {
+    const opened = openTripsDb(':memory:');
+    try {
+      const db = opened.db;
+      const trip = createTrip(db, {});
+      const journey = createJourney(db, trip.id, {});
+      const leg = createJourneyLeg(db, trip.id, journey.id, { expectedRevision: 0 });
+      const state = replaceResponsibility(
+        db,
+        trip.id,
+        { kind: 'journey', id: journey.id },
+        {
+          expectedRevision: 0,
+          responsibility: { kind: 'contact', uri: 'pops:contacts/contact/retained-handler' },
+        }
+      );
+      const owner = { tripId: trip.id, journeyId: journey.id };
+      const operationId = 'c84716e2-51fa-4bf5-95d3-4fbb9fb619dc';
+      removeJourneyLeg(db, { ...owner, id: leg.id }, { expectedRevision: 1, operationId });
+      expect(getResponsibility(db, trip.id, 'journey', journey.id)).toEqual(state);
+      restoreJourneyLeg(db, { ...owner, operationId }, 2);
+      expect(listResponsibilities(db, trip.id)).toEqual([state]);
+      deleteJourney(db, trip.id, journey.id);
+      expect(listResponsibilities(db, trip.id)).toEqual([]);
     } finally {
       opened.raw.close();
     }
