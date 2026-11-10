@@ -1,6 +1,7 @@
 import { Button } from '@pops/ui';
 
 import { DocumentAssociationPicker } from './DocumentAssociationPicker';
+import { runUploadContextAction } from './upload-context';
 import { UploadControls } from './UploadControls';
 
 import type { ReactElement } from 'react';
@@ -14,6 +15,7 @@ import type { useTripDocumentUpload } from './useTripDocumentUpload';
 export function UploadContent({
   workflow,
   active,
+  beforeRequest,
   ...context
 }: {
   workflow: ReturnType<typeof useTripDocumentUpload>;
@@ -22,14 +24,16 @@ export function UploadContent({
   tripsClient?: TripsClient;
   documentsClient?: DocumentsClient;
   active: boolean;
+  beforeRequest?: () => void;
 }): ReactElement {
   const fields = workflow.fields;
   return (
     <>
-      <ActiveUploadControls workflow={workflow} />
+      <ActiveUploadControls workflow={workflow} beforeRequest={beforeRequest} />
       {fields.uncertain ? (
         <DocumentAssociationPicker
           {...context}
+          beforeRequest={beforeRequest}
           open={active && fields.pickerOpen}
           onOpenChange={fields.setPickerOpen}
           initialSearch={fields.file?.name}
@@ -37,7 +41,12 @@ export function UploadContent({
           onAssociated={workflow.actions.recoverAssociation}
           noResultsAction={
             fields.ownerLookupCount === 0 ? (
-              <Button variant="ghost" onClick={fields.clearSelectedFile}>
+              <Button
+                variant="ghost"
+                onClick={() =>
+                  runUploadContextAction(fields, beforeRequest, fields.clearSelectedFile)
+                }
+              >
                 No original found; choose a different file
               </Button>
             ) : undefined
@@ -51,8 +60,10 @@ export function UploadContent({
 
 function ActiveUploadControls({
   workflow,
+  beforeRequest,
 }: {
   workflow: ReturnType<typeof useTripDocumentUpload>;
+  beforeRequest?: () => void;
 }): ReactElement {
   const fields = workflow.fields;
   const actions = workflow.actions;
@@ -68,15 +79,21 @@ function ActiveUploadControls({
       unavailable={workflow.unavailable}
       uncertain={fields.uncertain}
       uploadRejected={fields.uploadRejected}
-      uploadPending={actions.uploadMutation.isPending}
+      uploadPending={fields.uploadPending}
       taskId={fields.taskId}
       documentId={workflow.documentId}
       associationPending={actions.associationMutation.isPending}
-      onRemoveFile={removeAllowed ? fields.clearSelectedFile : undefined}
+      onRemoveFile={
+        removeAllowed
+          ? () => runUploadContextAction(fields, beforeRequest, fields.clearSelectedFile)
+          : undefined
+      }
       onUpload={actions.submitUpload}
       onSearchOwner={() => {
-        fields.setOwnerLookupCount(null);
-        fields.setPickerOpen(true);
+        runUploadContextAction(fields, beforeRequest, () => {
+          fields.setOwnerLookupCount(null);
+          fields.setPickerOpen(true);
+        });
       }}
       onAssociate={() => {
         if (workflow.documentId !== undefined)

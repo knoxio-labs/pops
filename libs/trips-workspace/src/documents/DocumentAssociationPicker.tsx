@@ -25,6 +25,7 @@ export function DocumentAssociationPicker(props: DocumentAssociationPickerProps)
   const queryClient = useQueryClient();
   const onSelected = async (document: PaperlessSearchDocument): Promise<void> => {
     try {
+      props.beforeRequest?.();
       await associatePaperlessDocument(props.tripId, document.id, props.target, props.tripsClient);
     } catch (error) {
       if (!(error instanceof ApiError && error.code === 'trips.document.association_exists'))
