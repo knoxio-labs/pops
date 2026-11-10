@@ -112,6 +112,7 @@ function RecoverOriginal({
   return (
     <DocumentPicker
       documentsClient={documentsClient}
+      beforeRequest={workflow.assertOwnerContext}
       open={fields.pickerOpen}
       onOpenChange={fields.setPickerOpen}
       initialSearch={fields.file?.name}

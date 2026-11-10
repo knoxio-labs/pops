@@ -216,6 +216,8 @@ to mark an unverified association organised.
 Failed row edits and target descriptions survive filters and navigation with their
 original preconditions. Upload views compose the Documents owner's controlled session;
 remounting a pending upload cannot issue another POST.
+Ambiguous-upload recovery searches and selections use that same session's published
+owner-context guard, so changing its Documents transport cannot accept another owner's original.
 Hosts supply `renderLink` and optional `navigation` for client-side transitions; a full
 page reload ends the browser session and cannot restore File handles.
 
