@@ -245,7 +245,7 @@ describe('TripDocumentsWorkspace', () => {
         <TripDocumentsWorkspace tripId={4} target={{ kind: 'event', id: 9 }} />
       </QueryClientProvider>
     );
-    expect(screen.queryByRole('button', { name: 'Attach original to this source' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Link file' })).toBeNull();
     await userEvent.upload(
       fileInput(),
       new File(['other'], 'other.pdf', { type: 'application/pdf' })
@@ -262,9 +262,7 @@ describe('TripDocumentsWorkspace', () => {
     );
     await waitFor(() => expect(loadTask).toHaveBeenCalledWith('task-8', undefined));
     expect(screen.queryByRole('article', { name: 'Selected file other.pdf' })).toBeNull();
-    await userEvent.click(
-      await screen.findByRole('button', { name: 'Attach original to this source' })
-    );
+    await userEvent.click(await screen.findByRole('button', { name: 'Link file' }));
     await waitFor(() =>
       expect(associate).toHaveBeenCalledWith(4, 87, { kind: 'event', id: 8 }, undefined)
     );
@@ -348,7 +346,7 @@ describe('independent file intents', () => {
     ).toBeDisabled();
     await userEvent.click(
       await within(requiredRow(rows, 0)).findByRole('button', {
-        name: 'Attach original to this source',
+        name: 'Link file',
       })
     );
     await waitFor(() =>
@@ -423,9 +421,7 @@ describe('independent file intents', () => {
     await userEvent.upload(fileInput(), new File(['a'], 'a.pdf', { type: 'application/pdf' }));
     await userEvent.click(screen.getByRole('button', { name: 'Send to Documents' }));
     await userEvent.click(await screen.findByRole('button', { name: 'Retry status check' }));
-    await userEvent.click(
-      await screen.findByRole('button', { name: 'Attach original to this source' })
-    );
+    await userEvent.click(await screen.findByRole('button', { name: 'Link file' }));
     expect(await screen.findByText(/The original is safe in Documents/)).toBeVisible();
     await userEvent.click(screen.getByRole('button', { name: 'Retry linking original' }));
     await waitFor(() => expect(associate).toHaveBeenCalledTimes(2));
@@ -449,9 +445,7 @@ describe('independent file intents', () => {
     expect(
       await screen.findByText('Documents returned a completed task without an original identity.')
     ).toBeVisible();
-    expect(
-      screen.queryByRole('button', { name: 'Attach original to this source' })
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Link file' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Send to Documents' })).not.toBeInTheDocument();
     expect(associate).not.toHaveBeenCalled();
     expect(upload).toHaveBeenCalledTimes(1);

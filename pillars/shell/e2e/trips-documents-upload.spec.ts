@@ -117,8 +117,8 @@ test('Trips Documents uploads, retries a rejected file, resolves the owner task 
   await page.getByRole('button', { name: 'Send to Documents' }).click();
   await expect(page.getByText('Documents is processing the upload…')).toBeVisible();
   await page.screenshot({ path: capturePath('upload-pending-wide.png'), fullPage: true });
-  await expect(page.getByRole('button', { name: 'Attach original to this source' })).toBeVisible();
-  await page.getByRole('button', { name: 'Attach original to this source' }).click();
+  await expect(page.getByRole('button', { name: 'Link file' })).toBeVisible();
+  await page.getByRole('button', { name: 'Link file' }).click();
   await expect(page.getByRole('heading', { name: 'Trip documents' })).toBeVisible();
   await expect(page.getByText('booking.pdf')).toBeVisible();
   const originalLink = page.getByRole('link', { name: 'Open original' });
@@ -230,9 +230,7 @@ test('multiple same-name files keep independent owner tasks beside explicit rout
   await expect(rows).toHaveCount(2);
   await rows.nth(0).getByRole('button', { name: 'Send to Documents' }).click();
   await rows.nth(1).getByRole('button', { name: 'Send to Documents' }).click();
-  await expect(
-    rows.nth(0).getByRole('button', { name: 'Attach original to this source' })
-  ).toBeVisible();
+  await expect(rows.nth(0).getByRole('button', { name: 'Link file' })).toBeVisible();
   await expect(rows.nth(1).getByText(/Documents rejected this file/)).toBeVisible();
   await page.screenshot({ path: capturePath('queue-wide.png'), fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
@@ -249,11 +247,11 @@ test('multiple same-name files keep independent owner tasks beside explicit rout
     .click();
   await page
     .getByRole('article', { name: 'Selected file same.pdf' })
-    .getByRole('button', { name: 'Attach original to this source' })
+    .getByRole('button', { name: 'Link file' })
     .click();
   await page
     .getByRole('article', { name: 'Selected file replacement.png' })
-    .getByRole('button', { name: 'Attach original to this source' })
+    .getByRole('button', { name: 'Link file' })
     .click();
   await expect(page.getByRole('button', { name: 'Unlink Original 721' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Unlink Original 723' })).toBeVisible();

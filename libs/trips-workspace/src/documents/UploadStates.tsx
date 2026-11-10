@@ -56,7 +56,7 @@ function linkLabel(error: string | null, pending: boolean): string {
   if (pending && error !== null) return 'Retrying link…';
   if (pending) return 'Linking original…';
   if (error !== null) return 'Retry linking original';
-  return 'Attach original to this source';
+  return 'Link file';
 }
 
 /** Display a file or owner error from the current upload attempt. */
