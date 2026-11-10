@@ -1,5 +1,15 @@
 # Trips workspace components
 
+The headless `route` reader consumes the generated `routeGet` and `routeOperate`
+contract. Root rows, gaps and complete paths retain their explicit identities and
+persisted order. Source context resolves only matching kind, ID and trip; absent
+or failed source collections remain unavailable, while only the route GET's
+`missingSources` proves a missing reference. POST responses do not contain that
+availability proof. Applied paths retain historical membership without creating
+another active placement. Unplaced records retain their source collection order.
+Captured transport identity, origin and trip fence every request; changing a
+client's origin cannot retarget a retained reader or command.
+
 `TripOverview` is the approved route-first read surface. Its host supplies translated
 labels and links to published source pages. Trip, Place, ordered Visit, Journey,
 Journey group, Stay, Event, Decision and document-association reads fail independently;
