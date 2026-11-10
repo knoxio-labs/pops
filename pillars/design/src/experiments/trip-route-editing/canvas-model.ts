@@ -1,7 +1,6 @@
 import { tripPlaces } from '@/fixtures/trip-places';
 
 import { initialPlanner } from './model';
-import { pathPlaces, pathRecords, pathSections, pathTransit } from './path-fixtures';
 
 import type { TripRecord } from '@/fixtures/trip-overview-model';
 import type { TripPlace } from '@/fixtures/trip-places';
@@ -112,27 +111,27 @@ export function initialCanvas(scenario: PlannerScenario): CanvasState {
       .filter(([, link]) => link.from === id)
       .map(([key]) => key),
   ]);
+  const sections = base.records
+    .filter((record) => record.kind === 'gap')
+    .flatMap((gap) =>
+      (gap.optionIds ?? []).map((id) => ({
+        id: `section-${id}`,
+        gapId: gap.id,
+        title:
+          places.find(
+            (place) => place.id === base.records.find((record) => record.id === id)?.placeId
+          )?.name ?? '',
+        cards: [id],
+      }))
+    );
   return {
     ...base,
-    records: [
-      ...base.records.map((record) =>
-        record.kind === 'gap'
-          ? {
-              ...record,
-              optionIds: pathSections
-                .filter((section) => section.gapId === record.id)
-                .flatMap((section) => section.cards),
-            }
-          : record
-      ),
-      ...(scenario === 'empty' ? [] : structuredClone(extraRecords)),
-      ...(scenario === 'empty' ? [] : structuredClone(pathRecords)),
-    ],
+    records: [...base.records, ...(scenario === 'empty' ? [] : structuredClone(extraRecords))],
     order,
-    places: [...places, ...(scenario === 'empty' ? [] : structuredClone(pathPlaces))],
-    sections: scenario === 'empty' ? [] : structuredClone(pathSections),
+    places,
+    sections,
     appliedPaths: [],
-    transitLinks: { ...transitLinks, ...(scenario === 'empty' ? {} : pathTransit) },
+    transitLinks,
     itemOrders: {},
     activityStays: {},
     homePlaces: ['sydney'],

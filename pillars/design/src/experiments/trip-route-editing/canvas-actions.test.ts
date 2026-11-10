@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { captureCard, moveCard, renamePlace, reorderCards } from './canvas-actions';
 import { canvasName, initialCanvas } from './canvas-model';
+import { initialRouteCanvas } from './path-fixtures';
 
 import type { CanvasState } from './canvas-model';
 
@@ -104,7 +105,7 @@ describe('canvas capture and graph placement', () => {
   });
 
   it('creates a path transport between explicit alternative visit occurrences', () => {
-    let state = initialCanvas('alternative-paths');
+    let state = initialRouteCanvas('alternative-paths');
     const section = state.sections[0];
     const first = section?.cards[0];
     if (!section || !first) throw new Error('Missing complete path fixture');

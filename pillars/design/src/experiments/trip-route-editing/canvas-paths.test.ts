@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { initialCanvas } from './canvas-model';
 import { activateAlternativePath } from './canvas-paths';
+import { initialRouteCanvas } from './path-fixtures';
 
 describe('complete alternative path move', () => {
   it('moves ordered city and transport identities, keeps linked bookings and competing paths unchanged', () => {
-    const state = initialCanvas('alternative-paths');
+    const state = initialRouteCanvas('alternative-paths');
     const original = structuredClone(state);
     const section = state.sections[0];
     if (!section) throw new Error('Missing fixture path');
@@ -25,7 +25,7 @@ describe('complete alternative path move', () => {
   });
 
   it('rejects duplicate placement and missing source identities atomically', () => {
-    const state = initialCanvas('alternative-paths');
+    const state = initialRouteCanvas('alternative-paths');
     const section = state.sections[0];
     if (!section) throw new Error('Missing fixture path');
     const first = section.cards[0];

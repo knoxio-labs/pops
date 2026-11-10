@@ -1,7 +1,11 @@
+import { initialCanvas } from './canvas-model';
+
 import type { TripRecord } from '@/fixtures/trip-overview-model';
 import type { TripPlace } from '@/fixtures/trip-places';
 
+import type { CanvasState } from './canvas-model';
 import type { RouteSection, TransitLink } from './canvas-path-types';
+import type { PlannerScenario } from './model';
 
 /** Fictional complete paths have explicit occurrence, booking and transport identities. */
 export const pathPlaces: TripPlace[] = [
@@ -137,3 +141,28 @@ export const pathTransit: Record<string, TransitLink> = {
   'coast-flight': { from: 'coast-maceio', to: 'coast-salvador' },
   'minas-bus': { from: 'minas-bh', to: 'minas-ouro' },
 };
+
+/** Build the approved Direct route examples without replacing other prototypes’ shared source fixtures. */
+export function initialRouteCanvas(scenario: PlannerScenario): CanvasState {
+  const base = initialCanvas(scenario);
+  if (scenario === 'empty') return base;
+  return {
+    ...base,
+    records: [
+      ...base.records.map((record) =>
+        record.kind === 'gap'
+          ? {
+              ...record,
+              optionIds: pathSections
+                .filter((section) => section.gapId === record.id)
+                .flatMap((section) => section.cards),
+            }
+          : record
+      ),
+      ...structuredClone(pathRecords),
+    ],
+    places: [...base.places, ...structuredClone(pathPlaces)],
+    sections: structuredClone(pathSections),
+    transitLinks: { ...base.transitLinks, ...structuredClone(pathTransit) },
+  };
+}
