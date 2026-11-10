@@ -1,3 +1,4 @@
+import type { Client as DocumentsClient } from '../documents-api/client';
 import type { Client } from '../trips-api/client';
 import type {
   JourneysGetResponses,
@@ -26,6 +27,8 @@ export interface JourneyWorkspaceProps {
   tripId: number;
   journeyId: number;
   client?: Client;
+  /** Authenticated Documents owner transport, independent of the Trips source client. */
+  documentsClient?: DocumentsClient;
   /** Hosts with literal source routes replace their URL when an explicit selection changes the viewed source. */
   onViewJourney?: (journeyId: number) => void;
 }

@@ -73,7 +73,7 @@ visit identity; an unlinked stay implies no accommodation coverage.
 
 Existing host/document/provenance links are displayed and can be removed. Their
 opaque source identifiers remain intact, and the workspace asserts no resolution
-or external booking action. Source-owner picker integration is POPS-6156.
+or external booking action. Typed Documents originals are separate from these opaque references.
 
 `TripDocumentsWorkspace({ tripId, target? })` and `DocumentAssociationPicker` use the
 typed Trips association contract and a separate generated Documents client. Trip-wide
@@ -94,12 +94,17 @@ their explicit target identity. `TripDocumentLinks({ tripId, target?, tripsClien
 documentsClient? })` renders only the exact trip, target kind and target ID when a
 target is supplied, without route lookups or another page shell. Editors compose
 it with `TripDocumentUpload` using the same explicit target and owner transports.
+Journey, Stay and Event editors embed these owner components for their explicit
+persisted source identity. Links never imply inheritance from a visit. Document
+operations retain the independent source draft, failed-save retry and persisted
+Undo history. Hosts may supply `documentsClient` separately from the Trips `client`;
+unavailable originals do not block source edits.
 Conditional dialogs, collapses and routes retain a queue above the view with
 `createTripDocumentUploadSession({ tripId, target, tripsClient?, documentsClient? })`
 and pass it through `TripDocumentUpload`'s optional `session` prop on every mount.
 Key host storage by the exact trip, target kind/ID and owner client identities and origins.
-The retaining parent resets storage when authentication or transport context changes;
-reloading the browser releases these in-memory queues.
+A host with a supported authentication-switch path must reset storage on that transition;
+transport changes require a separate queue. Reloading releases these in-memory queues.
 The queue keeps distinct File handles, pending requests, accepted tasks and uncertain
 outcomes across unmounts; overlapping views observe the same selections and upload
 claim. Supplying a different target, client identity or owner origin throws
@@ -108,6 +113,12 @@ before any owner action. Queues are live browser objects, not serializable draft
 Uploads, task reads, picker searches, linking and recovery recheck that captured
 context immediately before the operation, including mutable default clients.
 Without the prop, the component keeps its existing view-local queue behavior.
+Source upload queues are retained outside the query cache for the Shell QueryClient's
+mount lifetime, including route/card unmounts and query eviction. Exact trip, target
+kind/ID, client instances and owner origins isolate queues; replacing a client or
+origin creates another queue. Full page reload releases browser File handles and
+receipts. This lifetime follows the current Shell, which has no supported in-app
+account-switch/reset contract; it does not establish an authenticated-principal scope.
 `DocumentPicker({ onSelected, documentsClient? })` returns the actual owner original
 without writing a route association. `useDocumentUpload({ session, onSessionChange,
 documentsClient? })` is the same per-file owner workflow used by route uploads.

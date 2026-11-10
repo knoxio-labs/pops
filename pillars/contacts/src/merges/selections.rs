@@ -140,21 +140,17 @@ pub(crate) async fn validate(
     }
     let mut kinds = BTreeSet::new();
     for point_id in preferred_point_ids {
-        let point: Option<(String, String)> =
-            sqlx::query_as("SELECT entity_id,kind FROM contact_points WHERE id=?1")
-                .bind(point_id)
-                .fetch_optional(&mut *conn)
-                .await?;
-        let (owner, kind) = point
+        let point = crate::persons::facts_projection::selectable_point(conn, point_id)
+            .await?
             .ok_or_else(|| MergeError::Invalid("Selected contact point does not exist".into()))?;
-        if !members.contains(&owner) || !kinds.insert(kind.clone()) {
+        if !members.contains(&point.entity_id) || !kinds.insert(point.kind.clone()) {
             return Err(MergeError::Invalid(
                 "Select at most one group contact point per kind".into(),
             ));
         }
         rows.push(SelectionRow {
             canonical_id: canonical_id.into(),
-            field: format!("point:{kind}"),
+            field: format!("point:{}", point.kind),
             owner_entity_id: None,
             point_id: Some(point_id.clone()),
             source_history_id: None,
