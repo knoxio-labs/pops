@@ -5,11 +5,11 @@ import type { ScreenMeta, ScreenStates } from '@/contract';
 /** Route editing on the same fictional trip as the approved overview. */
 export const meta: ScreenMeta = { title: 'Route planner', order: 2, frame: 'web' };
 
-/** Review additions to empty, repeated-city and nested-trip routes. */
+/** Review additions to empty, repeated-city and flat-return routes. */
 export const states: ScreenStates = {
   empty: () => <RoutePlanner layout="inline" scenario="empty" />,
   'repeat-visit': () => <RoutePlanner layout="inline" scenario="repeat-visit" />,
-  'nested-trip': () => <RoutePlanner layout="inline" scenario="nested-trip" />,
+  'flat-return': () => <RoutePlanner layout="inline" scenario="flat-return" />,
 };
 
 /** inline proposal, pending approval. */

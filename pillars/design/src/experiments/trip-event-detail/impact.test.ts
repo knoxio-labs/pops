@@ -158,16 +158,17 @@ describe('eventRouteImpact', () => {
 });
 
 describe('eventVisitPlacement', () => {
-  it('follows alternative and nested graph membership rather than intention', () => {
+  it('uses only explicit flat route or alternative membership rather than intention', () => {
     const source = state();
     source.order = ['gap'];
     source.sections = [{ id: 'options', gapId: 'gap', title: 'Options', cards: [city.id] }];
     expect(eventVisitPlacement(source, city.id)).toBe('Alternative');
-    source.parents.child = city.id;
-    expect(eventVisitPlacement(source, 'child')).toBe('Alternative');
+    expect(eventVisitPlacement(source, 'child')).toBe('Outside route');
     source.order = [];
     expect(eventVisitPlacement(source, city.id)).toBe('Outside route');
-    source.parents[city.id] = 'child';
+    source.order = [city.id];
+    expect(eventVisitPlacement(source, city.id)).toBe('Working route');
+    source.order = [];
     expect(eventVisitPlacement(source, city.id)).toBe('Outside route');
   });
 

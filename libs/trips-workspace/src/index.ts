@@ -9,6 +9,8 @@ export { DecisionWorkspace } from './decision/DecisionWorkspace';
 export type { DecisionWorkspaceProps } from './decision/types';
 export { JourneyWorkspace } from './journey/JourneyWorkspace';
 export type { JourneyWorkspaceProps } from './journey/types';
+export { TripOverview } from './overview/TripOverview';
+export type { TripOverviewProps, OverviewLabels, OverviewKind } from './overview/types';
 export { ArrangementsWorkspace } from './arrangements/ArrangementsWorkspace';
 export type { ArrangementsWorkspaceProps, ArrangementLabels } from './arrangements/types';
 /** Locale-aware calendar source formatter; absent clocks never become viewer-local instants. */

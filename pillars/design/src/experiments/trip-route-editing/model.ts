@@ -2,16 +2,20 @@ import { tripOverviewRecords } from '@/fixtures/trip-overview';
 
 import type { TripRecord } from '@/fixtures/trip-overview-model';
 
-/** Local planner state keeps visits, alternatives and nested excursions distinct. */
+/** Local planner state keeps flat visit occurrences and alternative selections distinct. */
 export interface PlannerState {
   records: TripRecord[];
   order: string[];
   choices: Record<string, string>;
-  parents: Record<string, string>;
 }
 
 /** Named review scenarios share the same fictional source records. */
-export type PlannerScenario = 'default' | 'empty' | 'repeat-visit' | 'nested-trip';
+export type PlannerScenario =
+  | 'default'
+  | 'empty'
+  | 'repeat-visit'
+  | 'flat-return'
+  | 'alternative-paths';
 
 /** Build independent local state; no mutation reaches the shared fixtures. */
 export function initialPlanner(scenario: PlannerScenario): PlannerState {
@@ -20,9 +24,27 @@ export function initialPlanner(scenario: PlannerScenario): PlannerState {
     .filter((r) => r.sequence !== undefined)
     .toSorted((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0))
     .map((r) => r.id);
-  const state: PlannerState = { records, order, choices: {}, parents: {} };
+  const state: PlannerState = { records, order, choices: {} };
   if (scenario === 'repeat-visit') return addVisit(state, 'curitiba', 'rio');
-  if (scenario === 'nested-trip') return addVisit(state, 'es', 'recife', 'recife');
+  if (scenario === 'flat-return') {
+    const outward = addVisit(state, 'es', 'recife');
+    const index = outward.order.indexOf('recife') + 1;
+    const excursion = outward.records.find((record) => record.id === outward.order[index]);
+    if (!excursion) return state;
+    const dated = updateVisit(outward, {
+      ...excursion,
+      timing: { arrival: '2028-01-06', departure: '2028-01-10' },
+    });
+    const returned = addVisit(dated, 'recife-olinda', excursion.id);
+    const returnVisit = returned.records.find((record) => record.id === returned.order[index + 1]);
+    return returnVisit
+      ? updateVisit(returned, {
+          ...returnVisit,
+          timing: { arrival: '2028-01-10', departure: '2028-01-12' },
+        })
+      : state;
+  }
+
   return state;
 }
 
@@ -37,14 +59,11 @@ export function moveVisit(state: PlannerState, id: string, delta: number): Plann
   return withOrder(state, order);
 }
 
-/** Repeated places receive a new visit identity; nested visits do not alter the main order. */
-export function addVisit(
-  state: PlannerState,
-  placeId: string,
-  afterId?: string,
-  parentId?: string
-): PlannerState {
-  const id = `visit-${state.records.length + 1}`;
+/** Insert a new visit occurrence after an existing route entry, or append when it is absent. */
+export function addVisit(state: PlannerState, placeId: string, afterId?: string): PlannerState {
+  let ordinal = state.records.length + 1;
+  while (state.records.some((record) => record.id === `visit-${ordinal}`)) ordinal += 1;
+  const id = `visit-${ordinal}`;
   const record: TripRecord = {
     id,
     kind: 'city',
@@ -55,12 +74,12 @@ export function addVisit(
     notes: '',
   };
   const order = [...state.order];
-  if (!parentId) order.splice(afterId ? order.indexOf(afterId) + 1 : order.length, 0, id);
+  const afterIndex = afterId ? order.indexOf(afterId) : -1;
+  order.splice(afterIndex < 0 ? order.length : afterIndex + 1, 0, id);
   return withOrder(
     {
       ...state,
       records: [...state.records, record],
-      parents: parentId ? { ...state.parents, [id]: parentId } : state.parents,
     },
     order
   );

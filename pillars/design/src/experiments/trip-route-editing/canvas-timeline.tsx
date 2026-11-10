@@ -24,12 +24,15 @@ export function RouteTimelineItem({ record, index }: { record: TripRecord; index
   const Icon = markers[record.kind];
   const when = presentTripRecord(record, state.records).when;
   return (
-    <div data-timeline-record={record.id} className="flex gap-5">
+    <div
+      data-timeline-record={record.id}
+      className="group/route flex flex-col gap-1 sm:flex-row sm:gap-4"
+    >
       <aside
         aria-label="Route date"
-        className="relative w-24 shrink-0 border-r border-dotted border-app-accent/60 pr-6 pt-2 text-right text-sm text-foreground sm:w-32"
+        className="relative w-full shrink-0 border-l border-dotted border-border pl-6 text-left text-sm text-foreground sm:w-32 sm:border-l-0 sm:border-r sm:pl-0 sm:pr-6 sm:pt-2 sm:text-right"
       >
-        <span className="absolute -right-4 top-3 z-10 flex size-8 items-center justify-center rounded-full border border-app-accent bg-app-accent text-app-accent-foreground">
+        <span className="absolute -left-4 top-3 sm:left-auto sm:-right-4 z-10 flex size-8 items-center justify-center rounded-full border border-border bg-background text-muted-foreground">
           <Icon className="size-4" aria-hidden />
         </span>
         {record.kind === 'city' ? (
@@ -38,7 +41,7 @@ export function RouteTimelineItem({ record, index }: { record: TripRecord; index
           when && <p className="py-3 font-medium">{when}</p>
         )}
       </aside>
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 border-l border-dotted border-border pl-3 sm:border-0 sm:pl-0">
         <CanvasNode record={record} index={index} datesInRail />
         <MissingTransit from={record.id} index={index} />
       </div>
