@@ -5,8 +5,10 @@ import { ErrorState } from '@pops/ui';
 
 import { sourceId } from './source-id';
 
+import type { RemotePageHostProps } from '@pops/pillar-sdk';
+
 /** Bind the source-backed event workspace to its validated owning route identities. */
-export function EventPage() {
+export function EventPage({ contacts }: RemotePageHostProps) {
   const params = useParams();
   const tripId = sourceId(params.tripId);
   const eventId = sourceId(params.eventId);
@@ -19,6 +21,6 @@ export function EventPage() {
       }}
     />
   ) : (
-    <EventWorkspace tripId={tripId} eventId={eventId} />
+    <EventWorkspace tripId={tripId} eventId={eventId} contacts={contacts} />
   );
 }

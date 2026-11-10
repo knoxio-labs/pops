@@ -6,7 +6,7 @@ import type { JSX } from 'react';
 
 import type { Stay, StayPatch } from './types';
 
-/** Display/remove opaque references without claiming that their source owner resolved them. */
+/** Show stored opaque provenance separately from owner-backed Host and Documents actions; absent groups add no empty rows. */
 export function StayReferences({
   stay,
   commit,
@@ -16,12 +16,11 @@ export function StayReferences({
 }): JSX.Element {
   return (
     <div className="space-y-3">
-      {groups.map(({ field, label }) => (
-        <section key={field} aria-label={label} className="space-y-2">
-          <h2 className="text-sm font-medium">{label}</h2>
-          {stay[field].length === 0 ? (
-            <p className="text-sm text-muted-foreground">No links recorded</p>
-          ) : (
+      {groups
+        .filter(({ field }) => stay[field].length > 0)
+        .map(({ field, label }) => (
+          <section key={field} aria-label={label} className="space-y-2">
+            <h2 className="text-sm font-medium">{label}</h2>
             <div className="flex flex-wrap gap-3">
               {referenceEntries(stay[field]).map(({ link, index, key }) => (
                 <Chip
@@ -38,15 +37,12 @@ export function StayReferences({
                 </Chip>
               ))}
             </div>
-          )}
-        </section>
-      ))}
+          </section>
+        ))}
     </div>
   );
 }
-
 const groups = [
-  { field: 'hostLinks', label: 'Host' },
-  { field: 'documentLinks', label: 'Documents' },
+  { field: 'documentLinks', label: 'Document references' },
   { field: 'sourceLinks', label: 'Sources' },
-] satisfies { field: 'hostLinks' | 'documentLinks' | 'sourceLinks'; label: string }[];
+] satisfies { field: 'documentLinks' | 'sourceLinks'; label: string }[];

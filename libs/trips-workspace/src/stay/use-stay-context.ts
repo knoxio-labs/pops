@@ -4,10 +4,10 @@ import { loadPlaces, loadStays, loadTrip, loadVisits, stayListQueryKey } from '.
 
 import type { UseQueryResult } from '@tanstack/react-query';
 
-import type { Stay, Visit, Place, Trip, StayWorkspaceProps } from './types';
+import type { Stay, Visit, Place, Trip, StaySourceIdentity } from './types';
 
 /** Load optional source context independently so its failure never prevents stay editing. */
-export function useStayContext({ tripId, client }: StayWorkspaceProps): StayContext {
+export function useStayContext({ tripId, client }: StaySourceIdentity): StayContext {
   const origin = client?.getConfig().baseUrl ?? '/trips-api';
   const trip = useQuery({
     queryKey: ['trips', origin, tripId],

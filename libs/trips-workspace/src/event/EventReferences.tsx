@@ -9,7 +9,6 @@ import type { EventPatch, TripEvent } from './types';
 const groups = [
   { field: 'sourceLinks', label: 'Sources' },
   { field: 'venueLinks', label: 'Venue references' },
-  { field: 'organiserLinks', label: 'Organiser references' },
   { field: 'documentLinks', label: 'Document references' },
 ] as const;
 
