@@ -1,0 +1,111 @@
+import { useQueryClient } from '@tanstack/react-query';
+
+import { Button, Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle } from '@pops/ui';
+
+import { EventWorkspace } from '../event/EventWorkspace';
+import { JourneyWorkspace } from '../journey/JourneyWorkspace';
+import { StayWorkspace } from '../stay/StayWorkspace';
+import { arrangementsKey } from './api';
+import { RentalWorkspace } from './RentalWorkspace';
+import { Responsibility } from './Responsibility';
+
+import type { JSX } from 'react';
+
+import type {
+  ArrangementSources,
+  ArrangementTarget,
+  ArrangementsWorkspaceProps,
+  Rental,
+} from './types';
+
+/** Opens the actual owning source editor; no arrangement form or source identity is copied or fabricated. */
+export function SourceDialog({
+  target,
+  identity,
+  sources,
+  close,
+  viewJourney,
+}: {
+  target: ArrangementTarget;
+  identity: ArrangementsWorkspaceProps;
+  sources: ArrangementSources;
+  close: () => void;
+  viewJourney: (id: number) => void;
+}): JSX.Element {
+  const queryClient = useQueryClient();
+  const savedRental = (confirmed: Rental): void => {
+    queryClient.setQueryData<Rental[]>([...arrangementsKey(identity), 'rentals'], (previous) =>
+      previous?.map((candidate) => (candidate.id === confirmed.id ? confirmed : candidate))
+    );
+  };
+  return (
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) close();
+      }}
+    >
+      <DialogContent
+        className="max-h-screen overflow-y-auto sm:max-w-5xl"
+        showCloseButton={false}
+        aria-describedby={undefined}
+      >
+        <DialogHeader>
+          <DialogTitle>
+            {identity.labels[target.targetKind]} · {target.targetId}
+          </DialogTitle>
+        </DialogHeader>
+        <DialogClose asChild>
+          <Button variant="ghost" className="min-h-11">
+            {identity.labels.close}
+          </Button>
+        </DialogClose>
+        <SourceEditor
+          target={target}
+          identity={identity}
+          sources={sources}
+          savedRental={savedRental}
+          viewJourney={viewJourney}
+        />
+        <Responsibility
+          key={`${target.targetKind}:${target.targetId}`}
+          identity={identity}
+          target={target}
+        />
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function SourceEditor({
+  target,
+  identity,
+  sources,
+  savedRental,
+  viewJourney,
+}: {
+  target: ArrangementTarget;
+  identity: ArrangementsWorkspaceProps;
+  sources: ArrangementSources;
+  savedRental: (source: Rental) => void;
+  viewJourney: (id: number) => void;
+}): JSX.Element {
+  const props = { tripId: identity.tripId, client: identity.client };
+  return (
+    <>
+      {target.targetKind === 'stay' && <StayWorkspace {...props} stayId={target.targetId} />}
+      {target.targetKind === 'event' && <EventWorkspace {...props} eventId={target.targetId} />}
+      {target.targetKind === 'journey' && (
+        <JourneyWorkspace {...props} journeyId={target.targetId} onViewJourney={viewJourney} />
+      )}
+      {target.targetKind === 'rental' && (
+        <RentalWorkspace
+          identity={identity}
+          id={target.targetId}
+          sources={sources}
+          saved={savedRental}
+        />
+      )}
+    </>
+  );
+}

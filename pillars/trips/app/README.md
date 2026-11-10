@@ -2,6 +2,13 @@
 
 The shell loads `dist/remote/trips.js` and `trips.css` from the Trips manifest. The app exposes the grouped home, trip metadata settings, and route adapters for the `@pops/trips-workspace` stay, journey, event, and options-first decision editors. Event detail is registered at `:tripId/events/:eventId`; invalid route identities fail before making source requests. It owns no database and uses generated Trips and Tags clients at the shell's authenticated same-origin proxy paths.
 
+`:tripId/arrangements` publishes the `trips-arrangements` slot. Its adapter validates
+the owning trip identity and supplies shell-selected translations and calendar locale
+to the route-grouped workspace. Only explicit Visit associations group sources;
+Journeys remain separately identifiable until their producer owns Visit placement.
+Opening an arrangement uses its actual source editor and independent responsibility
+writes; no external booking action is performed.
+
 Home groups use the first ordered visit's arrival and the last visit's departure, relative to the viewer's local calendar day. Missing, invalid, or contradictory outer dates remain in Other. Trip titles use trimmed custom name, then trimmed destination, then the translated Trip label. `when` is opaque source text and never supplies route dates.
 
 Creation is permanent: a successful POST selects the returned trip and offers no Undo. Failures and background refresh errors preserve the draft; explicit Cancel clears it. Settings save with PATCH, omit source links, and offer Undo of successful metadata edits using another PATCH. Blank optional associations and unchanged stored references do not require their catalogues to be available. Settings PATCH omits unchanged references; unavailable stored identities remain visible without claiming resolution. Explicit parent and tag selections must be valid source choices; the server remains authoritative for cycle and tag validation.

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { ComponentType } from 'react';
 
 import type { TripEvent } from '../event/types';
 import type { Journey, JourneyLeg } from '../journey/types';
@@ -52,6 +52,7 @@ export interface ArrangementFilters {
 /** Host-translated necessary control labels, including every actual source-state enum value. */
 export interface ArrangementLabels {
   title: string;
+  invalidIdentity: string;
   loading: string;
   empty: string;
   search: string;
@@ -106,9 +107,9 @@ export interface ArrangementsWorkspaceProps {
   labels: ArrangementLabels;
   formatDate: (date: string) => string;
   backHref?: string;
-  renderContactChooser?: (props: {
+  ContactChooser?: ComponentType<{
     value: string | null;
     disabled: boolean;
     onSelect: (uri: string) => void;
-  }) => ReactNode;
+  }>;
 }

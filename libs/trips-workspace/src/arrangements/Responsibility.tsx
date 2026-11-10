@@ -1,0 +1,108 @@
+import { Button, ErrorState } from '@pops/ui';
+
+import { requestProblem } from '../stay/api';
+import { useResponsibility } from './use-responsibility';
+
+import type { JSX } from 'react';
+
+import type {
+  ArrangementResponsibility,
+  ArrangementTarget,
+  ArrangementsWorkspaceProps,
+} from './types';
+import type { ResponsibilityEditor } from './use-responsibility';
+
+/** Edit responsibility independently; clearing a stale contact never contacts its owner. */
+export function Responsibility({
+  identity,
+  target,
+}: {
+  identity: ArrangementsWorkspaceProps;
+  target: ArrangementTarget;
+}): JSX.Element {
+  const labels = identity.labels;
+  const editor = useResponsibility(identity, target);
+  return (
+    <section className="space-y-2 border-t border-border pt-4" aria-label={labels.handledBy}>
+      <h2 className="text-sm font-medium">{labels.handledBy}</h2>
+      {editor.query.isPending && <p role="status">{labels.loading}</p>}
+      {editor.query.isError && (
+        <ErrorState
+          error={requestProblem(editor.query.error)}
+          onRetry={() => void editor.query.refetch()}
+        />
+      )}
+      {editor.query.data && (
+        <ResponsibilityControls identity={identity} source={editor.query.data} editor={editor} />
+      )}
+      {editor.failure && (
+        <>
+          <ErrorState
+            error={requestProblem(editor.failure.error)}
+            onRetry={() => {
+              if (editor.failure) void editor.save(editor.failure.source, editor.failure.value);
+            }}
+          />
+          <Button
+            variant="ghost"
+            className="min-h-11"
+            disabled={editor.busy}
+            onClick={() => void editor.reload()}
+          >
+            {labels.reload}
+          </Button>
+        </>
+      )}
+    </section>
+  );
+}
+function ResponsibilityControls({
+  identity,
+  source,
+  editor,
+}: {
+  identity: ArrangementsWorkspaceProps;
+  source: ArrangementResponsibility;
+  editor: ResponsibilityEditor;
+}): JSX.Element {
+  const { labels, ContactChooser } = identity;
+  const owner = source.responsibility;
+  const disabled = editor.busy || editor.failure !== undefined;
+  return (
+    <>
+      <p className="break-all text-sm">{ownerLabel(owner, identity)}</p>
+      <div className="flex flex-wrap gap-2">
+        <Button
+          variant="outline"
+          className="min-h-11"
+          disabled={disabled}
+          onClick={() => void editor.save(source, { kind: 'self' })}
+        >
+          {labels.self}
+        </Button>
+        <Button
+          variant="ghost"
+          className="min-h-11"
+          disabled={disabled || owner === null}
+          onClick={() => void editor.save(source, null)}
+        >
+          {labels.clear}
+        </Button>
+      </div>
+      {ContactChooser && (
+        <ContactChooser
+          value={owner?.kind === 'contact' ? owner.uri : null}
+          disabled={disabled}
+          onSelect={(uri) => void editor.save(source, { kind: 'contact', uri })}
+        />
+      )}
+    </>
+  );
+}
+function ownerLabel(
+  owner: ArrangementResponsibility['responsibility'],
+  identity: ArrangementsWorkspaceProps
+): string {
+  if (owner?.kind === 'contact') return owner.uri;
+  return owner?.kind === 'self' ? identity.labels.self : identity.labels.unset;
+}

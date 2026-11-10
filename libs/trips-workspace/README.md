@@ -1,5 +1,24 @@
 # Trips workspace components
 
+`ArrangementsWorkspace({ tripId, labels, formatDate, client?, ContactChooser? })`
+groups independent Stay, Event and Rental sources by their explicit Visit occurrence
+in persisted route order. Repeated places retain separate occurrences. A Rental
+appears once at pickup, with an internal pickup/return timeline. Unavailable Visit
+references and unset associations remain visible separately. Journeys retain their
+own section because their contract has no Visit binding; matching endpoints, places
+and dates never place one on the route. Journey purchase styling belongs to each
+ordered leg, and only an explicit Purchased source receives hard styling.
+
+The host supplies translated controls and locale-aware calendar formatting. Search
+and filters preserve the source collections. Source requests fail independently and
+retain cached rows; an unavailable collection never becomes an empty catalogue.
+Opening a row composes the existing Stay, Event or Journey editor with independent
+revisioned responsibility controls. A stale Contacts URI can be cleared without
+Contacts, and optional assignment failures never block those source editors.
+Rental edits use the canonical rental revision, preserve failed drafts and exact
+retry bodies, and persist Undo against the confirmed successor revision. A newer
+source requires an explicit canonical reload before further edits.
+
 `JourneyWorkspace({ tripId, journeyId, client? })` exports the source-backed Departure
 and arrival journey editor. It reads ordered legs and independent grouping identities
 through the same generated Trips client. Endpoint edits submit complete retained
