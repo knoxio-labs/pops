@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { createInstance } from 'i18next';
 import { I18nextProvider } from 'react-i18next';
 import { afterEach, expect, it } from 'vitest';
@@ -92,14 +92,16 @@ it('loads Visit directly with real Portuguese translations and reacts to host la
     interpolation: { escapeValue: false },
   });
   const writes: Request[] = [];
+  let currentVisit = visit;
+  let currentStays = stays;
   const fetcher: typeof fetch = async (input, init) => {
     const request = new Request(input, init);
     if (request.method !== 'GET') writes.push(request);
     const path = new URL(request.url).pathname;
     const sources: Record<string, unknown> = {
-      '/trips/7/visits/31': visit,
-      '/trips/7/visits': { visits: [visit] },
-      '/trips/7/stays': stays,
+      '/trips/7/visits/31': currentVisit,
+      '/trips/7/visits': { visits: [currentVisit] },
+      '/trips/7/stays': currentStays,
       '/trips/7/events': events,
       '/places': {
         places: [
@@ -164,5 +166,25 @@ it('loads Visit directly with real Portuguese translations and reacts to host la
   expect(screen.getByRole('region', { name: 'Accommodation timeline' })).toHaveTextContent(
     '10 Apr 2030'
   );
+  currentVisit = {
+    ...visit,
+    revision: 1,
+    timing: { arrival: '2030-04-10', departure: '2030-04-16' },
+  };
+  currentStays = {
+    stays: stays.stays.map((stay) => ({
+      ...stay,
+      status: 'Considering',
+      timing: currentVisit.timing,
+    })),
+  };
+  await act(() => locale.changeLanguage('pt-BR'));
+  await act(() => cache.invalidateQueries());
+  await waitFor(() =>
+    expect(
+      screen.getByText('Sem hospedagem: 10 de abr. de 2030 – 16 de abr. de 2030')
+    ).toBeVisible()
+  );
+  expect(screen.getByText('Em consideração')).toBeVisible();
   expect(writes).toEqual([]);
 });

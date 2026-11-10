@@ -80,7 +80,7 @@
     "timeline": "Cronologia de hospedagem",
     "wholeVisit": "Toda a visita",
     "day": "Dia",
-    "noAccommodation": "Sem hospedagem",
+    "noAccommodation": "Sem hospedagem: {{arrival}} – {{departure}}",
     "stay": "Hospedagem",
     "event": "Evento",
     "sourceFacts": "Dados da visita",

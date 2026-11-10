@@ -3,13 +3,15 @@ import { useTranslation } from 'react-i18next';
 
 import { Button, TextInput } from '@pops/ui';
 
-import { accommodationPeriods, dateLabel, validDate } from './periods';
+import { accommodationCoverage } from './coverage';
+import { dateLabel, validDate } from './periods';
 import { EventRow, StayRow } from './VisitSourceRows';
 import { VisitTimelineRow } from './VisitTimelineRow';
 
 import type { JSX } from 'react';
 
-import type { AccommodationPeriod, AccommodationProjection } from './periods';
+import type { AccommodationCoveragePeriod } from './coverage';
+import type { AccommodationProjection } from './periods';
 import type { Stay, TripEvent, Visit, VisitWorkspaceProps } from './types';
 
 interface TimelineProps {
@@ -24,7 +26,7 @@ export function VisitTimeline(props: TimelineProps): JSX.Element {
   const { t } = useTranslation('trips');
   const [day, setDay] = useState('');
   const { visit, stays, events, identity, accommodationAvailable } = props;
-  const projection = accommodationPeriods(visit, stays, events, accommodationAvailable);
+  const projection = accommodationCoverage(visit, stays, events, accommodationAvailable);
   const periods = projection.periods.filter(
     (period) => !day || (day >= period.arrival && day < period.departure)
   );
@@ -58,6 +60,7 @@ export function VisitTimeline(props: TimelineProps): JSX.Element {
         <PeriodRow
           key={`${period.arrival}:${period.departure}`}
           period={period}
+          day={day}
           identity={identity}
           events={day ? visibleEvents : period.events}
         />
@@ -73,10 +76,12 @@ export function VisitTimeline(props: TimelineProps): JSX.Element {
 }
 function PeriodRow({
   period,
+  day,
   identity,
   events,
 }: {
-  period: AccommodationPeriod;
+  period: AccommodationCoveragePeriod;
+  day: string;
   identity: VisitWorkspaceProps;
   events: TripEvent[];
 }): JSX.Element {
@@ -96,9 +101,18 @@ function PeriodRow({
         {period.stays.map((stay) => (
           <StayRow key={stay.id} stay={stay} identity={identity} />
         ))}
-        {!period.stays.length && (
-          <p className="text-sm text-muted-foreground">{t('visitWorkspace.noAccommodation')}</p>
-        )}
+        {period.coverage.state === 'missing' &&
+          (!day || (day >= period.coverage.arrival && day < period.coverage.departure)) && (
+            <p className="text-sm text-muted-foreground">
+              {t('visitWorkspace.noAccommodation', {
+                arrival: dateLabel(period.coverage.arrival, i18n.resolvedLanguage ?? i18n.language),
+                departure: dateLabel(
+                  period.coverage.departure,
+                  i18n.resolvedLanguage ?? i18n.language
+                ),
+              })}
+            </p>
+          )}
         {events.map((event) => (
           <EventRow key={event.id} event={event} identity={identity} />
         ))}

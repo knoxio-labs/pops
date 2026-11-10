@@ -112,9 +112,12 @@ in that session while allowing a canonical city reload and explicit source selec
 
 Accommodation periods use explicit visit IDs and checkout-exclusive stay dates.
 Unknown, partial or contradictory dates remain visible without asserting coverage.
-Missing accommodation is shown only with complete valid visit bounds and completely
-dated accommodation context. Activity placement uses its explicit visit ID and start
-date, includes every intention, and retains uncertain/outside-period sources separately.
+Agreed, Reserved and Purchased accommodation covers nights; Considering stays remain
+visible as ideas without covering them. Only Purchased has a solid boundary. Missing
+accommodation uses the shared coverage classifier and names only the proven interval
+inside valid visit bounds. Unknown dates or context prevent unsupported missing-night
+claims without weakening coverage established by independently dated arranged stays.
+Activity placement uses its explicit visit ID and start date, includes every intention, and retains uncertain/outside-period sources separately.
 Source arrangement dates are never clipped or rewritten to match visit dates. Day focus
 accepts any valid calendar date and only changes the projection. Journeys without an
 explicit visit association remain outside this view; no place-label/date matching is used.

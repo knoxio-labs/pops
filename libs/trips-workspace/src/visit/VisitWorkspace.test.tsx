@@ -211,7 +211,7 @@ describe('Direct visit editing and accommodation workspace', () => {
     mount(transport);
     expect(await screen.findByLabelText('Minimum duration')).toHaveValue(null);
     expect(screen.getByLabelText('Maximum duration')).toHaveValue(0);
-    expect(screen.queryByText('No accommodation')).toBeNull();
+    expect(screen.queryByText(/^No accommodation:/u)).toBeNull();
     await edit('Visit notes', 'Independent edit');
     await saved();
     expect(transport.patches).toEqual([{ notes: 'Independent edit', expectedRevision: 0 }]);
@@ -228,4 +228,56 @@ describe('Direct visit editing and accommodation workspace', () => {
     expect(onViewVisit).toHaveBeenCalledWith(32);
     expect(transport.patches).toEqual([]);
   });
+});
+
+it.each(['Agreed', 'Reserved', 'Purchased'] as const)(
+  'counts %s accommodation as covering nights while Purchased alone has a solid boundary',
+  async (status) => {
+    mount(visitTransport({ stays: [sourceStay({ status, timing: sourceVisit().timing })] }));
+    const stay = await screen.findByRole('heading', { name: 'Cedar guesthouse' });
+    expect(stay.closest('article')).toHaveClass(
+      status === 'Purchased' ? 'border-solid' : 'border-dashed'
+    );
+    expect(screen.queryByText(/^No accommodation:/u)).toBeNull();
+  }
+);
+it('keeps a dated Considering idea visible without letting it hide missing accommodation', async () => {
+  const transport = visitTransport({
+    stays: [
+      sourceStay({
+        status: 'Considering',
+        timing: { arrival: '2030-04-08', departure: '2030-04-18' },
+      }),
+    ],
+  });
+  mount(transport);
+  expect(await screen.findByRole('heading', { name: 'Cedar guesthouse' })).toBeVisible();
+  expect(screen.getByText('Considering')).toBeVisible();
+  expect(screen.getByText('No accommodation: 10 Apr 2030 – 16 Apr 2030')).toBeVisible();
+  expect(screen.getByRole('region', { name: 'Accommodation timeline' })).toHaveTextContent(
+    '8 Apr 2030'
+  );
+  expect(screen.getByRole('region', { name: 'Accommodation timeline' })).toHaveTextContent(
+    '18 Apr 2030'
+  );
+  fireEvent.change(screen.getByLabelText('Day'), { target: { value: '2030-04-08' } });
+  expect(screen.queryByText(/^No accommodation:/u)).toBeNull();
+  fireEvent.change(screen.getByLabelText('Day'), { target: { value: '2030-04-10' } });
+  expect(screen.getByText('No accommodation: 10 Apr 2030 – 16 Apr 2030')).toBeVisible();
+  fireEvent.change(screen.getByLabelText('Day'), { target: { value: '2030-04-16' } });
+  expect(screen.queryByText(/^No accommodation:/u)).toBeNull();
+  expect(transport.patches).toEqual([]);
+});
+it('keeps missing accommodation unasserted when a same-visit source has unknown bounds', async () => {
+  mount(
+    visitTransport({
+      stays: [
+        sourceStay({ status: 'Considering', timing: sourceVisit().timing }),
+        sourceStay({ id: 14, name: 'Undated agreement', status: 'Agreed', timing: {} }),
+      ],
+    })
+  );
+  expect(await screen.findByRole('heading', { name: 'Cedar guesthouse' })).toBeVisible();
+  expect(screen.getByRole('heading', { name: 'Undated agreement' })).toBeVisible();
+  expect(screen.queryByText(/^No accommodation:/u)).toBeNull();
 });

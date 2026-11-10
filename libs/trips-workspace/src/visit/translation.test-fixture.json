@@ -22,7 +22,7 @@
   "timeline": "Accommodation timeline",
   "wholeVisit": "Whole visit",
   "day": "Day",
-  "noAccommodation": "No accommodation",
+  "noAccommodation": "No accommodation: {{arrival}} \u2013 {{departure}}",
   "stay": "Stay",
   "event": "Event",
   "sourceFacts": "Visit source facts",
