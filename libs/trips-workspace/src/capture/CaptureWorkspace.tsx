@@ -1,10 +1,9 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { RotateCcw } from 'lucide-react';
-import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
+import { useCallback, useState, useSyncExternalStore } from 'react';
 
 import { Button, ErrorState } from '@pops/ui';
 
-import { sourceOwner } from '../arrangements/source-owner';
 import { requestProblem } from '../stay/api';
 import { captureQueryKey, performCaptureRequest } from './api';
 import { findCaptureSessionForOwner, retainCaptureSession } from './browser-session';
@@ -15,6 +14,7 @@ import { CaptureInbox } from './CaptureInbox';
 import { CaptureSelectedSource } from './CaptureSelectedSource';
 import { useCaptureContext } from './use-capture-context';
 import { useCaptureEditor } from './use-capture-editor';
+import { useCaptureQueryOwner } from './use-capture-owner';
 import { CaptureWorkspaceReadScope } from './workspace-read';
 
 import type { JSX } from 'react';
@@ -37,11 +37,7 @@ export function CaptureWorkspace(props: CaptureWorkspaceProps): JSX.Element {
 function LoadWorkspace(props: CaptureWorkspaceProps): JSX.Element {
   const cache = useQueryClient();
   const [scope] = useState(() => new CaptureWorkspaceReadScope(props));
-  const { client, origin, tripId } = sourceOwner(props);
-  const currentOwner = useMemo(
-    () => Object.freeze({ client, origin, tripId }),
-    [client, origin, tripId]
-  );
+  const currentOwner = useCaptureQueryOwner(props);
   const select = useCallback(
     (read: CaptureWorkspaceRead) => scope.select(currentOwner, read),
     [scope, currentOwner]
@@ -82,7 +78,7 @@ function WorkspaceSession({
   scope: CaptureWorkspaceReadScope;
 }): JSX.Element {
   const state = useCaptureEditor(session, props, query.data, scope.key);
-  const context = useCaptureContext(props);
+  const context = useCaptureContext(props, scope);
   return (
     <section aria-label="Capture tools" className="space-y-5">
       <WorkspaceHeader session={session} view={props.view} state={state} />

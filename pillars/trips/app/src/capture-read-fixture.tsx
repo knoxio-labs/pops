@@ -2,10 +2,13 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render } from '@testing-library/react';
 import { z } from 'zod';
 
+import {
+  captureReadSource as source,
+  captureReadPlaces,
+  captureReadVisits,
+} from './capture-owner-fixtures';
 import { CaptureContext } from './index';
 import { createClient } from './trips-api/client';
-
-import type { CaptureSource } from '@pops/trips-workspace/capture-client';
 
 import type { CaptureContextProps } from './index';
 
@@ -24,36 +27,24 @@ interface State {
   writes: { url: string; body: unknown }[];
   failA: boolean;
   failWrites: boolean;
+  contextReads: string[];
+  failContextA: boolean;
+  context: Partial<Record<'places' | 'visits', Gate>>;
   read?: Gate;
   write?: Gate;
 }
-function source(title: string): CaptureSource {
-  return {
-    captures: [
-      {
-        id: 19,
-        tripId: 1,
-        originalText: 'Raw source',
-        originalUrl: null,
-        title,
-        notes: '',
-        classification: null,
-        placeId: null,
-        visitId: null,
-        attachments: [],
-        revision: 1,
-        removedAt: null,
-        createdAt: '',
-        updatedAt: '',
-      },
-    ],
-    ideas: [],
-    associations: [],
-    memberships: [],
-    events: [],
-    journeys: [],
-    stays: [],
-  };
+async function catalogueResponse(state: State, request: Request, host: string): Promise<Response> {
+  const kind = request.url.endsWith('/places') ? 'places' : 'visits';
+  state.contextReads.push(request.url);
+  const hold = state.context[kind];
+  delete state.context[kind];
+  if (hold) await hold.promise;
+  if (host === 'owner-a.test' && state.failContextA) return Response.json({}, { status: 503 });
+  return Response.json(
+    kind === 'places'
+      ? { places: captureReadPlaces(host) }
+      : { visits: captureReadVisits(host === 'owner-a.test' ? 11 : 29) }
+  );
 }
 function transport(state: State): typeof fetch {
   return async (input, init) => {
@@ -83,13 +74,24 @@ function transport(state: State): typeof fetch {
       if (host === 'owner-a.test' && state.failA) return Response.json({}, { status: 503 });
       return Response.json(source(host));
     }
-    return Response.json({ places: [], visits: [] });
+    return request.url.endsWith('/places') || request.url.endsWith('/visits')
+      ? catalogueResponse(state, request, host)
+      : Response.json({});
   };
 }
 
 /** Generated-client context with independently controlled read/write responses and one owning cache. */
 export function captureReadOwner() {
-  const state: State = { reads: [], writes: [], failA: false, failWrites: false };
+  const state: State = {
+    reads: [],
+    writes: [],
+    failA: false,
+    failWrites: false,
+    contextReads: [],
+    failContextA: false,
+    context: {},
+  };
+  const gates = new Set<Gate>();
   const client = createClient({ baseUrl: 'http://owner-a.test', fetch: transport(state) });
   const cache = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const view = (props: Partial<CaptureContextProps> = {}) => (
@@ -112,17 +114,24 @@ export function captureReadOwner() {
     mount: (props: Partial<CaptureContextProps> = {}) => render(view(props)),
     holdRead: () => {
       const gate = deferred();
+      gates.add(gate);
       state.read = gate;
       return gate;
     },
     holdWrite: () => {
       const gate = deferred();
+      gates.add(gate);
       state.write = gate;
       return gate;
     },
+    holdCatalogue: (kind: 'places' | 'visits') => {
+      const gate = deferred();
+      gates.add(gate);
+      state.context[kind] = gate;
+      return gate;
+    },
     close: () => {
-      state.read?.release();
-      state.write?.release();
+      for (const gate of gates) gate.release();
       cache.clear();
     },
   };

@@ -1,4 +1,4 @@
-import { cleanup, screen, waitFor } from '@testing-library/react';
+import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
@@ -26,7 +26,9 @@ it('does not retarget the mounted context unknown request when its generated cli
   owner.client.setConfig({ baseUrl: owner.alternateClient.getConfig().baseUrl });
   await user.click(screen.getByRole('button', { name: 'Retry Capture' }));
   expect(
-    await screen.findByText('Restore the original Trips owner before retrying this operation.')
+    within(await screen.findByRole('region', { name: 'Capture failed' })).getByText(
+      'Restore the original Trips owner before retrying this operation.'
+    )
   ).toBeVisible();
   expect(owner.requests.filter((request) => request.method === 'POST')).toEqual(original);
   expect(screen.getByRole('textbox', { name: 'Capture text' })).toHaveValue('  Owner A 東京  ');

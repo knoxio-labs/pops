@@ -342,6 +342,10 @@ ownership before dispatch and after the response, and cached envelopes carry own
 before editor delivery. An unavailable restored owner retains its last good source rather than
 accepting another origin's records. Confirmed in-flight write receipts remain valid; their cache
 invalidation targets the captured owner even if the mutable transport changes afterward.
+Place and Visit catalogues use owner-proved entries beneath that same workspace key,
+with checks at dispatch, completion and option delivery. Last verified same-owner options
+remain available through a failed refresh; another origin's labels or occurrences are never
+substituted. Catalogue failure remains independent of raw capture and its confirmed receipt.
 The optional controlled `selectedSource: CaptureSourceSelection` uses the generated-ID union
 `{ kind: 'capture'; id } | { kind: 'idea'; id }` to open only that exact active source through
 its existing expanded editor. Missing or removed sources show unavailable; no other row or
