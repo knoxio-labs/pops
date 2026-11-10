@@ -3,6 +3,7 @@ import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, expect, it, vi } from 'vitest';
 
+import { createClient as createDocumentsClient } from '../documents-api/client';
 import {
   associatePaperlessDocument,
   loadDocumentAssociations,
@@ -10,8 +11,11 @@ import {
   loadPaperlessUploadPolicy,
   uploadPaperlessDocument,
 } from '../documents/api';
+import { createClient as createTripsClient } from '../trips-api/client';
+import { sourceUploadSession } from './source-upload-sessions';
 import { SourceDocuments } from './SourceDocuments';
 
+import type { TripDocumentUploadContext } from '../documents/trip-document-upload-session';
 import type { DocumentAssociationTarget } from '../documents/types';
 
 vi.mock('../documents/api', async (importOriginal) => ({
@@ -96,3 +100,59 @@ it('retains a late accepted upload across host unmount and cache eviction withou
   expect(uploadPaperlessDocument).toHaveBeenCalledTimes(1);
   expect(vi.mocked(uploadPaperlessDocument).mock.calls[0]?.[0]).toBe(file);
 });
+
+it.each(['trips', 'documents'] as const)(
+  'hides retained files when the active %s client changes at the same origin, restoring only the original context',
+  async (owner) => {
+    vi.mocked(loadPaperlessUploadPolicy).mockResolvedValue({
+      configured: true,
+      available: true,
+      maxUploadBytes: 1000,
+      allowedMimeTypes: ['application/pdf'],
+    });
+    vi.mocked(loadDocumentAssociations).mockResolvedValue([]);
+    const original: TripDocumentUploadContext = {
+      tripId: 7,
+      target: { kind: 'event', id: 19 },
+      tripsClient: createTripsClient({ baseUrl: 'https://trips.example' }),
+      documentsClient: createDocumentsClient({ baseUrl: 'https://documents.example' }),
+    };
+    const replacement = {
+      ...original,
+      ...(owner === 'trips'
+        ? { tripsClient: createTripsClient({ baseUrl: 'https://trips.example' }) }
+        : { documentsClient: createDocumentsClient({ baseUrl: 'https://documents.example' }) }),
+    };
+    const content = (context: TripDocumentUploadContext) => (
+      <QueryClientProvider client={cache}>
+        <SourceDocuments {...context} />
+      </QueryClientProvider>
+    );
+    const view = render(content(original));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /^Upload a file/ })).not.toHaveAttribute(
+        'aria-disabled',
+        'true'
+      )
+    );
+    const input = document.querySelector<HTMLInputElement>('input[type="file"]');
+    if (input === null) throw new Error('Source file input is missing');
+    const file = new File(['private A'], 'private-a.pdf', { type: 'application/pdf' });
+    await userEvent.upload(input, file);
+    expect(
+      await screen.findByRole('article', { name: 'Selected file private-a.pdf' })
+    ).toBeVisible();
+    view.rerender(content(replacement));
+    expect(
+      screen.queryByRole('article', { name: 'Selected file private-a.pdf' })
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Send to Documents' })).not.toBeInTheDocument();
+    view.rerender(content(original));
+    expect(
+      await screen.findByRole('article', { name: 'Selected file private-a.pdf' })
+    ).toBeVisible();
+    expect(sourceUploadSession(cache, original).read()[0]?.file).toBe(file);
+    expect(uploadPaperlessDocument).not.toHaveBeenCalled();
+    expect(associatePaperlessDocument).not.toHaveBeenCalled();
+  }
+);
