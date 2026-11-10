@@ -1,5 +1,47 @@
 # Trips workspace components
 
+The headless `route` reader consumes the generated `routeGet` and `routeOperate`
+contract. Root rows, gaps and complete paths retain their explicit identities and
+persisted order. Source context resolves only matching kind, ID and trip; absent
+or failed source collections remain unavailable, while only the route GET's
+`missingSources` proves a missing reference. POST responses do not contain that
+availability proof. Applied paths retain historical membership without creating
+another active placement. Unplaced records retain their source collection order.
+Captured transport identity, origin and trip fence every request; changing a
+client's origin cannot retarget a retained reader or command.
+Route GET and operation HTTP 200 bodies are parsed against Zod response schemas
+generated from the owning OpenAPI snapshot before entering controller state.
+Missing required fields, invalid discriminants, UUIDs and numeric bounds fail the
+read or leave the exact submitted operation uncertain. The operation controller
+also checks its own UUID, trip, expected revision and Undo target against the
+validated receipt. Other generated SDK operations retain their existing behavior.
+The consumer's Zod resolver preserves `additionalProperties: false` as strict
+objects, including nested and empty objects; open objects and typed dynamic
+records retain the generator's default behavior. It changes generated schemas,
+not shared transport validation.
+The small resolver stays in the owning generator configuration so the normal
+generation fingerprint includes every change to its behavior.
+
+`useTripRoute({ tripId, client? })` exposes that headless read and a shared retained
+command controller. `routeSession(queryClient, identity)` provides the same binding
+without a view. The registry lasts for the supplied QueryClient's lifetime, outside
+query-cache eviction; hosts replace that lifetime when their actual authentication
+or transport lifecycle requires it. Exact client references, captured origins and
+trip IDs isolate both controllers and cache namespaces. Unsubscribing one view does
+not deactivate another view or discard an in-flight response. Old view callbacks
+cannot submit after unmount or a context switch, including a return to the old owner.
+
+Commands synchronously claim one fresh UUID and the observed aggregate revision.
+Pending or failed operations block another intention; retry retains the original
+UUID, revision and nested payload. A GET can neither acknowledge nor release an
+unknown outcome. Explicit successful reload can release a definitively rejected
+400/404/409 request. Only the matching own POST or exact UUID replay establishes a
+receipt. Source metadata remains unknown after a mutation until proven by an actual
+GET. Monotonic read generations and revisions prevent late reads or historical
+`receipt.current` facts from replacing newer context. Undo targets only confirmed
+own receipt IDs in LIFO order, with the producer validating the untouched route;
+newer foreign revisions and already-undone replay outcomes grant no inverse.
+
 `TripOverview` is the approved route-first read surface. Its host supplies translated
 labels and links to published source pages. Trip, Place, ordered Visit, Journey,
 Journey group, Stay, Event, Decision and document-association reads fail independently;

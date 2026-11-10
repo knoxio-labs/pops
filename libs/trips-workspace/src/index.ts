@@ -1,4 +1,35 @@
 /** Source-backed Trips workspace components; shell activation is owned by its host. */
+export { loadTripRoute, applyRouteOperation, RouteContextError } from './route/api';
+export { projectTripRoute } from './route/projection';
+export type {
+  ProjectedRouteSource,
+  ProjectedRouteItem,
+  ProjectedRoutePath,
+  RouteProjection,
+  RouteSourceContext,
+} from './route/projection';
+export { routeSession } from './route/registry';
+export type { RouteBinding } from './route/registry';
+export { RouteSession } from './route/session';
+export type { RouteFailure, RouteSessionSnapshot } from './route/session-state';
+export { useTripRoute } from './route/use-trip-route';
+export type { TripRouteController } from './route/use-trip-route';
+export type {
+  TripRouteRead,
+  TripRoute,
+  RouteOperation,
+  RouteCommand,
+  RouteEditCommand,
+  RouteOperationResult,
+  RouteReceipt,
+  RouteIdentity,
+  RouteOwner,
+  RouteItem,
+  RouteSource,
+  RoutePath,
+  RouteView,
+} from './route/types';
+
 export { StayWorkspace } from './stay/StayWorkspace';
 export type { StayWorkspaceProps } from './stay/types';
 export { EventWorkspace } from './event/EventWorkspace';
