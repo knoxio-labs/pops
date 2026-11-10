@@ -2,6 +2,7 @@ import { useRef } from 'react';
 
 import { createTripDocumentUploadSession } from '../documents/trip-document-upload-session';
 import { uploadSessionKey } from '../documents/upload-context';
+import { arrangementDocumentContext } from './document-context';
 
 import type { TripDocumentUploadSession } from '../documents/trip-document-upload-session';
 import type { ArrangementTarget, ArrangementsWorkspaceProps } from './types';
@@ -14,13 +15,8 @@ export function useArrangementDocuments(
 ): (target: ArrangementTarget) => TripDocumentUploadSession | undefined {
   const queues = useRef<Queue[]>([]);
   return (target): TripDocumentUploadSession | undefined => {
-    if (target.targetKind === 'rental') return undefined;
-    const context = {
-      tripId: identity.tripId,
-      target: { kind: target.targetKind, id: target.targetId },
-      tripsClient: identity.client,
-      documentsClient: identity.documentsClient,
-    };
+    const context = arrangementDocumentContext(identity, target);
+    if (!context) return undefined;
     const key = uploadSessionKey(
       context.tripId,
       context.target,

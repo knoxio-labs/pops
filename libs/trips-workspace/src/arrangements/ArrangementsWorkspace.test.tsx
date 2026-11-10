@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { createClient as createDocumentsClient } from '../documents-api/client';
 import { sourceStay } from '../stay/test-utils';
 import { ArrangementsWorkspace } from './ArrangementsWorkspace';
 import { Responsibility } from './Responsibility';
@@ -141,6 +142,67 @@ describe('Along the route source workspace', () => {
     expect(screen.queryByText(/Documents source/)).not.toBeInTheDocument();
     expect(first.read()[0]?.file).toBe(file);
   });
+  it.each(['trips-instance', 'documents-instance', 'trips-origin', 'documents-origin'] as const)(
+    'closes the active source on %s changes and retains its queue only for the original context',
+    async (change) => {
+      const first = arrangementsTransport();
+      const second = arrangementsTransport();
+      const documents = createDocumentsClient({ baseUrl: 'https://documents.example' });
+      const otherDocuments = createDocumentsClient({ baseUrl: 'https://documents.example' });
+      const identity = {
+        tripId: 7,
+        client: first.client,
+        documentsClient: documents,
+        labels,
+        formatDate: (date: string): string => date,
+      };
+      const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      const view = render(
+        <QueryClientProvider client={queryClient}>
+          <ArrangementsWorkspace {...identity} />
+        </QueryClientProvider>
+      );
+      await userEvent.click(await screen.findByRole('button', { name: /Cedar guesthouse/ }));
+      const original = documentViews.mock.calls.at(-1)?.[0];
+      if (!original) throw new Error('Expected the original owner queue');
+      const file = new File(['original'], 'booking.pdf', { type: 'application/pdf' });
+      original.addFiles([file]);
+      const changed = {
+        ...identity,
+        client: change === 'trips-instance' ? second.client : first.client,
+        documentsClient: change === 'documents-instance' ? otherDocuments : documents,
+      };
+      if (change === 'trips-origin')
+        first.client.setConfig({ baseUrl: 'https://other-trips.example' });
+      if (change === 'documents-origin')
+        documents.setConfig({ baseUrl: 'https://other-documents.example' });
+      view.rerender(
+        <QueryClientProvider client={queryClient}>
+          <ArrangementsWorkspace {...changed} />
+        </QueryClientProvider>
+      );
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      await userEvent.click(await screen.findByRole('button', { name: /Cedar guesthouse/ }));
+      const current = documentViews.mock.calls.at(-1)?.[0];
+      expect(current).not.toBe(original);
+      expect(current?.read()).toHaveLength(0);
+      expect(current?.context.tripsClient).toBe(changed.client);
+      expect(current?.context.documentsClient).toBe(changed.documentsClient);
+      first.client.setConfig({ baseUrl: 'http://arrangements.test' });
+      documents.setConfig({ baseUrl: 'https://documents.example' });
+      view.rerender(
+        <QueryClientProvider client={queryClient}>
+          <ArrangementsWorkspace {...identity} />
+        </QueryClientProvider>
+      );
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      await userEvent.click(await screen.findByRole('button', { name: /Cedar guesthouse/ }));
+      expect(documentViews.mock.calls.at(-1)?.[0]).toBe(original);
+      expect(original.read()[0]?.file).toBe(file);
+      expect(first.writes).toEqual([]);
+      expect(second.writes).toEqual([]);
+    }
+  );
   it('filters source facts without changing reservations or the source collections', async () => {
     const { user, transport } = setup();
     await screen.findByRole('button', { name: /Harbour cars/ });
@@ -152,6 +214,49 @@ describe('Along the route source workspace', () => {
     expect(screen.getAllByRole('article')).toHaveLength(1);
     expect(screen.getByText('Reserved')).toBeVisible();
     expect(transport.writes).toEqual([]);
+  });
+  it('retains an uncertain source responsibility operation while a client replacement closes its view', async () => {
+    const first = arrangementsTransport();
+    const second = arrangementsTransport();
+    first.replies.push({
+      status: 503,
+      body: {
+        code: 'trips.responsibility.unknown',
+        message: 'Unknown write outcome',
+        retryable: true,
+      },
+    });
+    const identity = {
+      tripId: 7,
+      client: first.client,
+      labels,
+      formatDate: (date: string): string => date,
+    };
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const view = render(
+      <QueryClientProvider client={queryClient}>
+        <ArrangementsWorkspace {...identity} />
+      </QueryClientProvider>
+    );
+    await userEvent.click(await screen.findByRole('button', { name: /Cedar guesthouse/ }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Self' }));
+    await screen.findByText('trips.responsibility.unknown');
+    view.rerender(
+      <QueryClientProvider client={queryClient}>
+        <ArrangementsWorkspace {...identity} client={second.client} />
+      </QueryClientProvider>
+    );
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    view.rerender(
+      <QueryClientProvider client={queryClient}>
+        <ArrangementsWorkspace {...identity} />
+      </QueryClientProvider>
+    );
+    await userEvent.click(await screen.findByRole('button', { name: /Cedar guesthouse/ }));
+    expect(screen.getByText(labels.responsibilityUncertain)).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Self' })).toBeDisabled();
+    expect(first.writes).toHaveLength(1);
+    expect(second.writes).toEqual([]);
   });
   it('keeps the canonical Journey editor mounted when its selected source changes', async () => {
     const { user } = setup();

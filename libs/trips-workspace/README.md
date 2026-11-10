@@ -46,6 +46,10 @@ and transport-bound session across dialog close, source switches and query-cache
 eviction. File handles and accepted task identities stay with the original target;
 Rental has no document association target. The workspace does not copy upload
 forms, pollers or recovery rules.
+Changing either owner client instance, owner origin or trip closes the active
+source view. Its queue remains dormant for that exact original context; only an
+explicit reopen under the same context restores its files. Document controls
+validate the current host context against the retained owner's queue before mounting.
 
 Visit titles and Rental endpoints use persisted route occurrence positions, while
 their actual IDs remain source identities. Opaque Contact references use a neutral

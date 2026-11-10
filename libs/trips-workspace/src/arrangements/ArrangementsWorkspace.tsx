@@ -1,11 +1,12 @@
 import { useState } from 'react';
 
-import { Button, ErrorState, PageHeader } from '@pops/ui';
+import { ErrorState, PageHeader } from '@pops/ui';
 
 import { requestProblem } from '../stay/api';
 import { arrangementsKey } from './api';
 import { ArrangementCard } from './ArrangementCards';
 import { ArrangementFilters } from './ArrangementFilters';
+import { GapProblems } from './GapProblems';
 import {
   arrangementRows,
   arrangementTarget,
@@ -15,6 +16,7 @@ import {
 import { ResponsibilitySessions } from './ResponsibilitySessions';
 import { visitTitle } from './source-labels';
 import { SourceDialog } from './SourceDialog';
+import { useArrangementDocuments } from './use-arrangement-documents';
 import { useArrangementSource } from './use-arrangement-source';
 import { useArrangements } from './use-arrangements';
 import { useGapCapture } from './use-gap-capture';
@@ -43,13 +45,29 @@ export function ArrangementsWorkspace(props: ArrangementsWorkspaceProps): JSX.El
         }}
       />
     );
-  return <ArrangementsSession key={arrangementsKey(props).join(':')} {...props} />;
+  return <ArrangementOwners {...props} />;
 }
-function ArrangementsSession(identity: ArrangementsWorkspaceProps): JSX.Element | null {
+function ArrangementOwners(identity: ArrangementsWorkspaceProps): JSX.Element {
+  const documents = useArrangementDocuments(identity);
+  return (
+    <ArrangementsSession
+      key={arrangementsKey(identity).join(':')}
+      identity={identity}
+      documents={documents}
+    />
+  );
+}
+function ArrangementsSession({
+  identity,
+  documents,
+}: {
+  identity: ArrangementsWorkspaceProps;
+  documents: ReturnType<typeof useArrangementDocuments>;
+}): JSX.Element | null {
   const { sources, queries, pending, complete, coverageComplete, refresh } =
     useArrangements(identity);
   const [filters, setFilters] = useState<Filters>({ query: '', kind: '', purchase: '' });
-  const source = useArrangementSource(identity);
+  const source = useArrangementSource(identity, documents);
   const capture = useGapCapture(identity, source.open);
   const rows = filterArrangements(arrangementRows(sources), filters, sources);
   const groups = groupArrangements(rows, sources.visits);
@@ -167,42 +185,5 @@ function RouteGroups({
           </section>
         ))}
     </div>
-  );
-}
-function GapProblems({
-  capture,
-  identity,
-}: {
-  capture: GapCapture;
-  identity: ArrangementsWorkspaceProps;
-}): JSX.Element | null {
-  if (capture.failure === undefined) return null;
-  return (
-    <>
-      <ErrorState error={requestProblem(capture.failure)} />
-      {capture.uncertain && (
-        <p role="status" className="text-sm text-muted-foreground">
-          {identity.labels.creationUncertain}
-        </p>
-      )}
-      <Button
-        variant="ghost"
-        className="min-h-11"
-        disabled={capture.busy}
-        onClick={() => void capture.reload()}
-      >
-        {identity.labels.reload}
-      </Button>
-      {capture.uncertain && (
-        <Button
-          variant="outline"
-          className="min-h-11"
-          disabled={capture.busy}
-          onClick={capture.beginNew}
-        >
-          {identity.labels.beginNewStay}
-        </Button>
-      )}
-    </>
   );
 }

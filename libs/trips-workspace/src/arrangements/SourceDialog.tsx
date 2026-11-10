@@ -22,6 +22,15 @@ import type {
   Rental,
 } from './types';
 
+type SourceDialogProps = {
+  target: ArrangementTarget;
+  identity: ArrangementsWorkspaceProps;
+  sources: ArrangementSources;
+  close: () => void;
+  viewJourney: (id: number) => void;
+  documents?: TripDocumentUploadSession;
+};
+
 /** Opens the actual owning source editor; no arrangement form or source identity is copied or fabricated. */
 export function SourceDialog({
   target,
@@ -30,14 +39,7 @@ export function SourceDialog({
   close,
   viewJourney,
   documents,
-}: {
-  target: ArrangementTarget;
-  identity: ArrangementsWorkspaceProps;
-  sources: ArrangementSources;
-  close: () => void;
-  viewJourney: (id: number) => void;
-  documents?: TripDocumentUploadSession;
-}): JSX.Element {
+}: SourceDialogProps): JSX.Element {
   const queryClient = useQueryClient();
   const savedRental = (confirmed: Rental): void => {
     queryClient.setQueryData<Rental[]>([...arrangementsKey(identity), 'rentals'], (previous) =>
@@ -73,7 +75,9 @@ export function SourceDialog({
             viewJourney={viewJourney}
           />
         </div>
-        {documents && <ArrangementDocuments session={documents} />}
+        {documents && (
+          <ArrangementDocuments session={documents} identity={identity} target={target} />
+        )}
         <Responsibility
           key={`${target.targetKind}:${target.targetId}`}
           identity={identity}
