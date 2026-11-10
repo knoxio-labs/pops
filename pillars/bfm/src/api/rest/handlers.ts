@@ -24,6 +24,10 @@ import {
   makeMobileContactsHandlers,
   type MobileContactsHandlerDeps,
 } from './mobile-contacts-handlers.js';
+import {
+  makeMobileDocumentsHandlers,
+  type MobileDocumentsHandlerDeps,
+} from './mobile-document-handlers.js';
 import { makeMobileEgoHandlers, type MobileEgoHandlerDeps } from './mobile-ego-handlers.js';
 import {
   makeMobileFinanceHandlers,
@@ -58,6 +62,7 @@ export interface BfmRestHandlerDeps
     MobileBarcodeHandlerDeps,
     MobileEgoHandlerDeps,
     MobileTripsHandlerDeps,
+    MobileDocumentsHandlerDeps,
     MobileFinanceHandlerDeps,
     MobileInventoryHandlerDeps,
     MobileInventoryDocumentHandlerDeps,
@@ -171,6 +176,7 @@ export function makeBfmRestHandlers(
     mobileContacts: makeMobileContactsHandlers(deps),
     mobileEgo: makeMobileEgoHandlers(deps),
     mobileTrips: makeMobileTripsHandlers(deps),
+    mobileDocuments: makeMobileDocumentsHandlers(deps),
     mobileBarcode: makeMobileBarcodeHandlers(deps),
     mobileFinance: makeMobileFinanceHandlers(deps),
     mobileInventory: {

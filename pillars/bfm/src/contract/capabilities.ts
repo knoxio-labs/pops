@@ -133,6 +133,7 @@ export const MOBILE_CAPABILITIES = [
   /** Decide proposed-write batches and allow tools for the conversation. */
   'ego.actions',
   'trips.read',
+  'documents.read',
 ] as const;
 
 export type MobileCapability = (typeof MOBILE_CAPABILITIES)[number];
@@ -260,6 +261,7 @@ export const MOBILE_CAPABILITY_SCOPES: Readonly<Record<MobileCapability, readonl
   'ego.chat': ['cerebrum.ego'],
   'ego.actions': ['cerebrum.ego'],
   /** Exact published read operations; no Trips mutation authority is granted. */
+  'documents.read': ['documents.paperless.get', 'documents.paperless.download'],
   'trips.read': [
     'trips.trips.list',
     'trips.trips.get',
@@ -269,6 +271,8 @@ export const MOBILE_CAPABILITY_SCOPES: Readonly<Record<MobileCapability, readonl
     'trips.journeyLegs.list',
     'trips.journeyGroups.list',
     'trips.stays.list',
+    'trips.events.list',
+    'trips.documentAssociations.list',
   ],
 };
 

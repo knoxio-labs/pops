@@ -141,8 +141,17 @@ describe('decision source contracts', () => {
         .affectedSources
     ).toEqual(affectedSources);
     expect(getDecision(db, tripId, id).revision).toBe(2);
-    expect(() =>
+    expect(
       updateDecisionOption(db, { tripId, decisionId: id, id: option.id }, { affectedSources }, 2)
+        .affectedSources
+    ).toEqual(affectedSources);
+    expect(() =>
+      updateDecisionOption(
+        db,
+        { tripId, decisionId: id, id: option.id },
+        { affectedSources: [{ kind: 'journey', id: journey.id + 1 }] },
+        3
+      )
     ).toThrow('not_found');
   });
   it('rejects competing selections and stale child writes without rewriting sources', () => {

@@ -43,11 +43,18 @@ function LoadStay(props: StayWorkspaceProps): JSX.Element {
         Loading stay…
       </p>
     );
-  if (source.isError)
+  if (source.data === undefined)
     return (
       <ErrorState error={requestProblem(source.error)} onRetry={() => void source.refetch()} />
     );
-  return <StaySession key={origin} initial={source.data} identity={props} context={context} />;
+  return (
+    <>
+      {source.isError && (
+        <ErrorState error={requestProblem(source.error)} onRetry={() => void source.refetch()} />
+      )}
+      <StaySession key={origin} initial={source.data} identity={props} context={context} />
+    </>
+  );
 }
 
 function StaySession({

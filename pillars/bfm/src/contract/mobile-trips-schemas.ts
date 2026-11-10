@@ -25,6 +25,8 @@ export const MobileTripTimeZoneSchema = z.string().refine((value) => {
     return false;
   }
 }, 'Expected a supported IANA time zone');
+/** Explicit minute-precision source clock, independent of dates and zone. */
+export const MobileTripClockSchema = z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/u);
 /** Source audit timestamps carry no trip completion or visit semantics. */
 export const MobileTripAuditFields = { createdAt: z.iso.datetime(), updatedAt: z.iso.datetime() };
 /** Published Trips optional timing precision, retained independently of route order. */
@@ -40,11 +42,12 @@ export const MobileVisitTimingSchema = z.object({
     .optional(),
   duration: z
     .object({
-      min: z.number().nonnegative(),
-      max: z.number().nonnegative(),
+      min: z.number().nonnegative().optional(),
+      max: z.number().nonnegative().optional(),
       unit: z.enum(['days', 'weeks']),
     })
-    .refine((value) => value.max >= value.min)
+    .refine((value) => value.min !== undefined || value.max !== undefined)
+    .refine((value) => value.min === undefined || value.max === undefined || value.max >= value.min)
     .optional(),
 });
 /** Original trip metadata; When is opaque and nullable associations remain nullable. */
