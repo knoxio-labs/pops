@@ -411,6 +411,10 @@ Every write, retry and Undo checks the captured transport's current API origin a
 point of use. A changed origin sends nothing and retains the exact command and
 receipt history; restoring the original origin permits explicit exact retry.
 The generated default transport uses its actual configured origin as well.
+Meeting queries and optional Trip/Visit/Place context retain that same immutable
+view owner. Reads check it before dispatch and after completion; a changed transport
+cannot seed another owner's source into the retained query cache or editor. Explicit
+reload uses the captured editor owner too. Failures preserve the last good source.
 `@pops/trips-workspace/people-client` exports this headless editor and generated
 transport operations for the owning app's HTTP/SQLite integration regression.
 `VisitWorkspace({ tripId, visitId, client?, onViewVisit?, onViewStay?, onViewEvent? })`
