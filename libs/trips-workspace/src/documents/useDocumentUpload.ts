@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query';
-import { useRef } from 'react';
 
 import { loadPaperlessTask, loadPaperlessUploadPolicy } from './api';
 import { uploadFileProblem } from './model';
@@ -69,25 +68,14 @@ function useOwnerUploadActions(
   client: DocumentsClient | undefined
 ): DocumentUploadController['actions'] {
   const uploadMutation = useUploadMutation(client);
-  const sending = useRef(false);
   const submitUpload = (): void => {
-    if (fields.taskId !== null || fields.uncertain || fields.uploadPending || sending.current)
-      return;
+    if (!fields.canStartUpload()) return;
     submitSelectedFile({
       file: fields.file,
       policy,
       upload: (file) => {
-        sending.current = true;
-        fields.setUploadError(null);
-        fields.setUploadPending(true);
-        uploadMutation.mutate(
-          { file, fields },
-          {
-            onSettled: () => {
-              sending.current = false;
-            },
-          }
-        );
+        if (!fields.claimUpload()) return;
+        uploadMutation.mutate({ file, fields });
       },
       setError: fields.setUploadError,
       setRejected: fields.setUploadRejected,
