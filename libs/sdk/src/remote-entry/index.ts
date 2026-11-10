@@ -13,6 +13,8 @@ export type {
   ContactChooserSelection,
   ContactChooserMountProps,
   ContactChooserIntent,
+  ContactReferenceReadOptions,
+  ContactReferenceReadResult,
   ContactsHostCapability,
   RemotePageHostProps,
 } from './contacts.js';
