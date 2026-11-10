@@ -33,6 +33,8 @@ export interface DocumentUploadOptions {
 
 /** The owner upload task and canonical result, without any Trips route association. */
 export interface DocumentUploadController {
+  /** Fence a separate owner picker or recovery callback with this intent's transport and parent context. */
+  assertOwnerContext: () => void;
   fields: UploadFields;
   actions: {
     uploadMutation: UseMutationResult<string, Error, { file: File; fields: UploadFields }, unknown>;
@@ -78,6 +80,7 @@ export function useDocumentUpload({
     beforeRequest: assertOwner,
   });
   return {
+    assertOwnerContext: assertOwner,
     fields,
     actions,
     policyQuery,
