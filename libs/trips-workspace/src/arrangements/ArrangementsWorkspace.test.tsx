@@ -1,10 +1,12 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createClient as createDocumentsClient } from '../documents-api/client';
+import { sourceUploadSession } from '../shared/source-upload-sessions';
+import { SourceDocuments } from '../shared/SourceDocuments';
 import { sourceStay } from '../stay/test-utils';
 import { createClient } from '../trips-api/client';
 import { ArrangementsWorkspace } from './ArrangementsWorkspace';
@@ -14,6 +16,9 @@ import { arrangementsTransport, labels, sourceRental } from './test-utils';
 import type { ReactElement } from 'react';
 
 import type { TripDocumentUploadSession } from '../documents/trip-document-upload-session';
+import type { EventWorkspaceProps } from '../event/types';
+import type { JourneyWorkspaceProps } from '../journey/types';
+import type { StayWorkspaceProps } from '../stay/types';
 
 const documentViews = vi.hoisted(() => vi.fn<(session: TripDocumentUploadSession) => void>());
 const gapRequests = vi.hoisted(() => vi.fn<(promise: Promise<void>) => void>());
@@ -34,8 +39,9 @@ vi.mock('./use-gap-capture', async (original) => {
     },
   };
 });
-vi.mock('./ArrangementDocuments', () => ({
-  ArrangementDocuments: ({ session }: { session: TripDocumentUploadSession }) => {
+vi.mock('../shared/SourceDocuments', () => ({
+  SourceDocuments: (context: Parameters<typeof SourceDocuments>[0]) => {
+    const session = sourceUploadSession(useQueryClient(), context);
     documentViews(session);
     return (
       <p>
@@ -46,17 +52,33 @@ vi.mock('./ArrangementDocuments', () => ({
 }));
 
 vi.mock('../stay/StayWorkspace', () => ({
-  StayWorkspace: ({ tripId, stayId }: { tripId: number; stayId: number }) => (
-    <p>
-      Stay source {tripId}:{stayId}
-    </p>
+  StayWorkspace: ({ tripId, stayId, client, documentsClient }: StayWorkspaceProps) => (
+    <>
+      <p>
+        Stay source {tripId}:{stayId}
+      </p>
+      <SourceDocuments
+        tripId={tripId}
+        target={{ kind: 'stay', id: stayId }}
+        tripsClient={client}
+        documentsClient={documentsClient}
+      />
+    </>
   ),
 }));
 vi.mock('../event/EventWorkspace', () => ({
-  EventWorkspace: ({ tripId, eventId }: { tripId: number; eventId: number }) => (
-    <p>
-      Event source {tripId}:{eventId}
-    </p>
+  EventWorkspace: ({ tripId, eventId, client, documentsClient }: EventWorkspaceProps) => (
+    <>
+      <p>
+        Event source {tripId}:{eventId}
+      </p>
+      <SourceDocuments
+        tripId={tripId}
+        target={{ kind: 'event', id: eventId }}
+        tripsClient={client}
+        documentsClient={documentsClient}
+      />
+    </>
   ),
 }));
 vi.mock('../journey/JourneyWorkspace', () => ({
@@ -64,11 +86,9 @@ vi.mock('../journey/JourneyWorkspace', () => ({
     tripId,
     journeyId,
     onViewJourney,
-  }: {
-    tripId: number;
-    journeyId: number;
-    onViewJourney?: (id: number) => void;
-  }) => {
+    client,
+    documentsClient,
+  }: JourneyWorkspaceProps) => {
     const [selection, setSelection] = useState('Original selection');
     return (
       <>
@@ -76,6 +96,12 @@ vi.mock('../journey/JourneyWorkspace', () => ({
           Journey source {tripId}:{journeyId}
         </p>
         <p>{selection}</p>
+        <SourceDocuments
+          tripId={tripId}
+          target={{ kind: 'journey', id: journeyId }}
+          tripsClient={client}
+          documentsClient={documentsClient}
+        />
         <button
           onClick={() => {
             setSelection('Selection retained');
@@ -321,7 +347,15 @@ describe('Along the route source workspace', () => {
   it('keeps the canonical Journey editor mounted when its selected source changes', async () => {
     const { user } = setup();
     await user.click(await screen.findByRole('button', { name: /Harbour connection/ }));
+    expect(documentViews.mock.calls.at(-1)?.[0].context.target).toEqual({
+      kind: 'journey',
+      id: 20,
+    });
     await user.click(screen.getByRole('button', { name: 'Use source journey 21' }));
+    expect(documentViews.mock.calls.at(-1)?.[0].context.target).toEqual({
+      kind: 'journey',
+      id: 21,
+    });
     expect(screen.getByText('Journey source 7:21')).toBeVisible();
     expect(screen.getByText('Selection retained')).toBeVisible();
     expect(screen.getByRole('heading', { name: 'Journeys' })).toBeVisible();

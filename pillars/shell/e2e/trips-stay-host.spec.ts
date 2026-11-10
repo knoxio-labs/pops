@@ -37,6 +37,18 @@ for (const width of [1440, 390]) {
       { hostLinks: [{ uri: owner.reference.uri }] },
       { hostLinks: [{ uri: owner.reference.uri }] },
     ]);
+    await expect(page.getByText('1 night', { exact: true })).toBeVisible();
+    const viewport = page.viewportSize();
+    expect(viewport).not.toBeNull();
+    for (const locator of [
+      page.getByRole('article', { name: 'Stay editor', exact: true }),
+      page.getByRole('button', { name: 'Choose existing document', exact: true }),
+    ]) {
+      const bounds = await locator.boundingBox();
+      expect(bounds).not.toBeNull();
+      expect(bounds!.x).toBeGreaterThanOrEqual(0);
+      expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(viewport!.width);
+    }
     await page.screenshot({ path: testInfo.outputPath(`stay-host-${width}.png`), fullPage: true });
     await page.getByRole('button', { name: 'Undo', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Remove host link 1', exact: true })).toHaveCount(

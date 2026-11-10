@@ -73,6 +73,8 @@ export interface ArrangementLabels {
   placeUnavailable: string;
   journey: string;
   stay: string;
+  /** Formats the nested Stay editor count in the same active host locale. */
+  stayNights: (count: number) => string;
   event: string;
   rental: string;
   close: string;
