@@ -80,7 +80,10 @@ interrupted upload is treated as an uncertain outcome and requires searching Doc
 before another upload is considered. Existing links remain visible while Documents is
 unavailable; metadata does not imply offline file availability. The Trips app exposes
 the workspace at `/trips/:tripId/documents`; source editors can reuse the picker with
-their explicit target identity.
+their explicit target identity. `TripDocumentLinks({ tripId, target?, tripsClient?,
+documentsClient? })` renders only the exact trip, target kind and target ID when a
+target is supplied, without route lookups or another page shell. Editors compose
+it with `TripDocumentUpload` using the same explicit target and owner transports.
 
 Run `mise exec -- pnpm --filter @pops/trips-workspace dev` for the standalone development
 harness, then enter real trip/stay IDs. Its proxy targets the local Trips API on

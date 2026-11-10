@@ -7,36 +7,39 @@ import { useTripDocumentData } from './useTripDocumentData';
 import type { UseQueryResult } from '@tanstack/react-query';
 import type { ReactElement } from 'react';
 
-import type { Client as DocumentsClient } from '../documents-api/client';
-import type { Client as TripsClient } from '../trips-api/client';
 import type { TripDocumentTargetRecord } from './api';
-import type { DocumentAssociationTarget, TripDocumentAssociation } from './types';
+import type {
+  DocumentAssociationTarget,
+  TripDocumentAssociation,
+  TripDocumentsWorkspaceProps,
+} from './types';
 import type { TripDocumentData } from './useTripDocumentData';
 
-/** List explicit Trips links grouped by trip and route target. */
+/** List route-grouped links, or only the exact trip/kind/id target when embedded in an editor. */
 export function TripDocumentLinks({
   tripId,
+  target,
   tripsClient,
   documentsClient,
-}: {
-  tripId: number;
-  tripsClient?: TripsClient;
-  documentsClient?: DocumentsClient;
-}): ReactElement {
-  const data = useTripDocumentData(tripId, tripsClient, documentsClient);
+}: TripDocumentsWorkspaceProps): ReactElement {
+  const data = useTripDocumentData(tripId, tripsClient, documentsClient, target);
   const hasVisitLinks = data.associations.some((item) => item.targetKind === 'visit');
   return (
     <>
       <LinkLoading pending={data.associationsQuery.isPending} />
       <LinkLoadError query={data.associationsQuery} />
       <UnlinkError visible={data.unlinkMutation.isError} />
-      <RouteOrderError visible={data.routeVisitsQuery.isError && hasVisitLinks} />
+      <RouteOrderError
+        visible={target === undefined && data.routeVisitsQuery.isError && hasVisitLinks}
+      />
       <DocumentGroups
         data={data}
+        target={target}
         onUnlink={data.unlinkMutation.mutate}
         busy={data.unlinkMutation.isPending}
       />
       <EmptyLinks
+        scoped={target !== undefined}
         visible={
           !data.associationsQuery.isPending &&
           !data.associationsQuery.isError &&
@@ -49,13 +52,26 @@ export function TripDocumentLinks({
 
 function DocumentGroups({
   data,
+  target,
   onUnlink,
   busy,
 }: {
   data: TripDocumentData;
+  target?: DocumentAssociationTarget;
   onUnlink: (id: number) => void;
   busy: boolean;
-}): ReactElement {
+}): ReactElement | null {
+  if (target !== undefined)
+    return (
+      <DocumentGroup
+        title="Documents"
+        associations={data.associations}
+        originals={data.originalRows}
+        allAssociations={data.associations}
+        onUnlink={onUnlink}
+        busy={busy}
+      />
+    );
   return (
     <>
       <DocumentGroup
@@ -167,10 +183,16 @@ function RouteOrderError({ visible }: { visible: boolean }): ReactElement | null
   ) : null;
 }
 
-function EmptyLinks({ visible }: { visible: boolean }): ReactElement | null {
+function EmptyLinks({
+  visible,
+  scoped,
+}: {
+  visible: boolean;
+  scoped: boolean;
+}): ReactElement | null {
   return visible ? (
     <p className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-      No trip documents are linked yet.
+      {scoped ? 'No files linked yet.' : 'No trip documents are linked yet.'}
     </p>
   ) : null;
 }

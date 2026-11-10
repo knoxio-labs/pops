@@ -14,21 +14,22 @@ import type { Client as DocumentsClient } from '../documents-api/client';
 import type { Client as TripsClient } from '../trips-api/client';
 import type { DocumentAssociationTarget } from './types';
 
-interface UploadContext {
+/** An explicit Trips target and optional authenticated transports for original uploads. */
+export interface TripDocumentUploadProps {
   tripId: number;
   target: DocumentAssociationTarget;
   tripsClient?: TripsClient;
   documentsClient?: DocumentsClient;
 }
 
-interface FileIntent extends UploadContext {
+interface FileIntent extends TripDocumentUploadProps {
   id: string;
   contextKey: string;
   file: File;
 }
 
 /** Queue distinct browser files and retain each captured target until its owner task is linked. */
-export function TripDocumentUpload(props: UploadContext): ReactElement {
+export function TripDocumentUpload(props: TripDocumentUploadProps): ReactElement {
   const { tripId, target, tripsClient, documentsClient } = props;
   const contextKey = uploadSessionKey(tripId, target, tripsClient, documentsClient);
   const [intents, setIntents] = useState<FileIntent[]>([]);

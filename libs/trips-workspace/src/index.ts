@@ -16,3 +16,7 @@ export type {
   TripDocumentsWorkspaceProps,
   TripDocumentAssociation,
 } from './documents/types';
+
+export { TripDocumentLinks } from './documents/TripDocumentLinks';
+export { TripDocumentUpload } from './documents/TripDocumentUpload';
+export type { TripDocumentUploadProps } from './documents/TripDocumentUpload';
