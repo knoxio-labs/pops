@@ -31,6 +31,7 @@ export function useArrangementLabels(): ArrangementLabels {
     self: t('arrangements.self'),
     unset: t('arrangements.unset'),
     clear: t('arrangements.clear'),
+    chooseContact: t('arrangements.chooseContact'),
     pickup: t('arrangements.pickup'),
     return: t('arrangements.return'),
     provider: t('arrangements.provider'),

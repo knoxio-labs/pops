@@ -5,13 +5,17 @@ import { ArrangementsWorkspace, formatTripDate } from '@pops/trips-workspace';
 import { TRIPS_NAV } from '@pops/trips/nav';
 import { ErrorState } from '@pops/ui';
 
+import { useArrangementContacts } from './arrangements/use-arrangement-contacts';
 import { useArrangementLabels } from './arrangements/use-arrangement-labels';
 import { sourceId } from './source-id';
 
+import type { RemotePageHostProps } from '@pops/pillar-sdk';
+
 /** Mount the approved arrangement workspace with real owning identity and shell-selected language. */
-export function ArrangementsPage() {
+export function ArrangementsPage({ contacts }: RemotePageHostProps) {
   const params = useParams();
   const tripId = sourceId(params.tripId);
+  const contactChooserIntent = useArrangementContacts(contacts, tripId);
   const labels = useArrangementLabels();
   const { t, i18n } = useTranslation('trips');
   const locale = i18n.resolvedLanguage ?? i18n.language;
@@ -27,6 +31,7 @@ export function ArrangementsPage() {
     <ArrangementsWorkspace
       tripId={tripId}
       labels={labels}
+      contactChooserIntent={contactChooserIntent}
       formatDate={(value) => formatTripDate(value, locale)}
       backHref={TRIPS_NAV.basePath}
     />

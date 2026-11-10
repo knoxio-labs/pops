@@ -8,6 +8,7 @@ import { ArrangementsPage } from './ArrangementsPage';
 import enAU from './locales/en-AU.json';
 import ptBR from './locales/pt-BR.json';
 
+import type { RemotePageHostProps } from '@pops/pillar-sdk';
 import type { ArrangementsWorkspaceProps } from '@pops/trips-workspace';
 
 const workspace = vi.hoisted(() => vi.fn<(props: ArrangementsWorkspaceProps) => void>());
@@ -34,12 +35,12 @@ afterEach(() => {
   cleanup();
   workspace.mockClear();
 });
-function mount(path: string) {
+function mount(path: string, host: RemotePageHostProps = {}) {
   render(
     <I18nextProvider i18n={translation}>
       <MemoryRouter initialEntries={[path]}>
         <Routes>
-          <Route path="/:tripId/arrangements" element={<ArrangementsPage />} />
+          <Route path="/:tripId/arrangements" element={<ArrangementsPage {...host} />} />
         </Routes>
       </MemoryRouter>
     </I18nextProvider>
@@ -55,6 +56,16 @@ describe('Arrangement source route', () => {
     expect(props.backHref).toBe('/trips');
     expect(props.formatDate('2030-04-10')).toBe('pt-BR:2030-04-10');
     expect(props.labels.sourceStates.Reserved).toBe('Reservado');
+  });
+  it('forwards the injected Contacts owner as a lazy retained picker capability', () => {
+    const intent = { Chooser: () => null };
+    const contacts = { createIntent: vi.fn(() => intent) };
+    mount('/7/arrangements', { contacts });
+    const props = workspace.mock.calls[0]?.[0];
+    expect(contacts.createIntent).not.toHaveBeenCalled();
+    expect(props?.contactChooserIntent?.({ targetKind: 'rental', targetId: 61 })).toBe(intent);
+    expect(props?.contactChooserIntent?.({ targetKind: 'rental', targetId: 61 })).toBe(intent);
+    expect(contacts.createIntent).toHaveBeenCalledTimes(1);
   });
   it.each([
     '/0/arrangements',

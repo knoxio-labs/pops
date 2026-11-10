@@ -391,15 +391,27 @@ describe('Along the route source workspace', () => {
           client: transport.client,
           labels,
           formatDate: (date) => date,
-          ContactChooser: ({ onSelect, disabled }) => (
-            <button disabled={disabled} onClick={() => onSelect(uri)}>
-              Select owner-issued contact
-            </button>
-          ),
+          contactChooserIntent: () => ({
+            Chooser: ({ open, onSelect }) =>
+              open ? (
+                <button
+                  onClick={() =>
+                    onSelect({
+                      name: 'Issued owner',
+                      reference: { canonicalId: 'owner-issued', uri },
+                    })
+                  }
+                >
+                  Select owner-issued contact
+                </button>
+              ) : null,
+          }),
         }}
         target={{ targetKind: 'rental', targetId: 61 }}
       />
     );
+    await userEvent.click(await screen.findByRole('button', { name: 'Choose contact' }));
+    expect(transport.writes).toHaveLength(0);
     await userEvent.click(
       await screen.findByRole('button', { name: 'Select owner-issued contact' })
     );

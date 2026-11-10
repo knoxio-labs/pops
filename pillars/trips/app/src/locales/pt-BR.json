@@ -107,6 +107,7 @@
     "contactReference": "Contato",
     "referenceDetails": "Detalhes da referência",
     "creationUncertain": "A hospedagem anterior ainda pode ser criada. Abra uma hospedagem existente ou inicie uma nova hospedagem explicitamente.",
-    "beginNewStay": "Iniciar uma nova hospedagem"
+    "beginNewStay": "Iniciar uma nova hospedagem",
+    "chooseContact": "Escolher contato"
   }
 }

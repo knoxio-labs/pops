@@ -107,6 +107,7 @@
     "contactReference": "Contact",
     "referenceDetails": "Reference details",
     "creationUncertain": "The previous stay may still be created. Open an existing stay or explicitly start a new stay.",
-    "beginNewStay": "Start a new stay"
+    "beginNewStay": "Start a new stay",
+    "chooseContact": "Choose contact"
   }
 }

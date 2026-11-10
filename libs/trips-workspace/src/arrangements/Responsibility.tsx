@@ -2,6 +2,7 @@ import { Button, ErrorState } from '@pops/ui';
 
 import { requestProblem } from '../stay/api';
 import { ContactReference, ReferenceDetails } from './ContactReference';
+import { ResponsibilityContactChooser } from './ResponsibilityContactChooser';
 import { useResponsibility } from './use-responsibility';
 
 import type { JSX } from 'react';
@@ -66,7 +67,7 @@ function ResponsibilityControls({
   source: ArrangementResponsibility;
   editor: ResponsibilityEditor;
 }): JSX.Element {
-  const { labels, ContactChooser } = identity;
+  const { labels } = identity;
   const owner = source.responsibility;
   const disabled = editor.busy || editor.failure !== undefined;
   return (
@@ -97,13 +98,12 @@ function ResponsibilityControls({
           {labels.clear}
         </Button>
       </div>
-      {ContactChooser && (
-        <ContactChooser
-          value={owner?.kind === 'contact' ? owner.uri : null}
-          disabled={disabled}
-          onSelect={(uri) => void editor.save(source, { kind: 'contact', uri })}
-        />
-      )}
+      <ResponsibilityContactChooser
+        identity={identity}
+        target={source}
+        disabled={disabled}
+        select={(uri) => void editor.save(source, { kind: 'contact', uri })}
+      />
     </>
   );
 }

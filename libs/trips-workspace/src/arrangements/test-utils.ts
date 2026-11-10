@@ -32,6 +32,7 @@ export const labels: ArrangementLabels = {
   self: 'Self',
   unset: 'Unset',
   clear: 'Clear responsibility',
+  chooseContact: 'Choose contact',
   pickup: 'Pickup',
   return: 'Return',
   provider: 'Provider',

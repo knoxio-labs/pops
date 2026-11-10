@@ -1,5 +1,7 @@
 import type { ComponentType } from 'react';
 
+import type { ContactChooserIntent } from '@pops/pillar-sdk';
+
 import type { TripEvent } from '../event/types';
 import type { Journey, JourneyLeg } from '../journey/types';
 import type { Place, Stay, Trip, Visit } from '../stay/types';
@@ -76,6 +78,7 @@ export interface ArrangementLabels {
   self: string;
   unset: string;
   clear: string;
+  chooseContact: string;
   pickup: string;
   return: string;
   provider: string;
@@ -112,10 +115,6 @@ export interface ArrangementsWorkspaceProps {
   labels: ArrangementLabels;
   formatDate: (date: string) => string;
   backHref?: string;
-  ContactChooser?: ComponentType<{
-    value: string | null;
-    disabled: boolean;
-    onSelect: (uri: string) => void;
-  }>;
+  contactChooserIntent?: (target: ArrangementTarget) => ContactChooserIntent;
   ContactLabel?: ComponentType<{ uri: string }>;
 }

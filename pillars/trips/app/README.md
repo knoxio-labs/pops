@@ -7,7 +7,12 @@ the owning trip identity and supplies shell-selected translations and calendar l
 to the route-grouped workspace. Only explicit Visit associations group sources;
 Journeys remain separately identifiable until their producer owns Visit placement.
 Opening an arrangement uses its actual source editor and independent responsibility
-writes; no external booking action is performed.
+writes; no external booking action is performed. The shell may inject the shared
+Contacts capability through `RemotePageHostProps`. The adapter retains one opaque
+owner picker intent per exact trip/source responsibility target across dialog
+remounts. Only an owner-issued selection supplies the canonical reference; cancelling
+or reopening does not write Trips. Self and clearing a stored reference remain
+independent of Contacts availability.
 
 Home groups use the first ordered visit's arrival and the last visit's departure, relative to the viewer's local calendar day. Missing, invalid, or contradictory outer dates remain in Other. Trip titles use trimmed custom name, then trimmed destination, then the translated Trip label. `when` is opaque source text and never supplies route dates.
 

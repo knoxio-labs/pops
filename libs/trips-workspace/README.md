@@ -43,7 +43,10 @@ performs no POST and preserves every other gap receipt.
 Visit titles and Rental endpoints use persisted route occurrence positions, while
 their actual IDs remain source identities. Opaque Contact references use a neutral
 Contact label until an owner-issued label is supplied. Reference details preserve
-the original URI independently of Contacts availability.
+the original URI independently of Contacts availability. The host supplies a
+retained SDK picker intent for each responsibility target. Its controlled owner
+picker supplies the selected canonical URI; no raw URI entry or Contact form is
+implemented here. Closed or unmounted picker views cannot write responsibility.
 
 `JourneyWorkspace({ tripId, journeyId, client? })` exports the source-backed Departure
 and arrival journey editor. It reads ordered legs and independent grouping identities
