@@ -1,15 +1,11 @@
-import { and, eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 
-import {
-  DecisionInputSchema,
-  DecisionOptionInputSchema,
-  DecisionOptionSchema,
-} from '../../contract/decision-schemas.js';
+import { DecisionInputSchema, DecisionOptionInputSchema } from '../../contract/decision-schemas.js';
 import { decisions, decisionOptions } from '../schema.js';
 import { getDecision, getDecisionOption, requireDecisionRevision } from './decision-queries.js';
 import { advanceDecision, validateDecisionSources } from './decision-write.js';
 import { getTrip } from './records.js';
-import { requireOwnedRecord, TripsServiceError } from './source-record.js';
+import { requireOwnedRecord } from './source-record.js';
 
 import type {
   Decision,
@@ -96,11 +92,11 @@ export function createDecisionOption(
   return db.transaction(
     (tx) => {
       const decision = requireDecisionRevision(tx, identity.tripId, identity.id, expectedRevision);
-      validateDecisionSources(tx, identity.tripId, fields.affectedSources);
+      const validatedSources = validateDecisionSources(tx, identity.tripId, fields.affectedSources);
       const row = requireOwnedRecord(
         tx
           .insert(decisionOptions)
-          .values({ ...fields, decisionId: identity.id })
+          .values({ ...fields, validatedSources, decisionId: identity.id })
           .returning()
           .get()
       );
@@ -127,9 +123,21 @@ export function updateDecisionOption(
         expectedRevision
       );
       getDecisionOption(tx, identity.tripId, identity.decisionId, identity.id);
-      validateDecisionSources(tx, identity.tripId, fields.affectedSources);
+      const previous = requireOwnedRecord(
+        tx
+          .select({ validatedSources: decisionOptions.validatedSources })
+          .from(decisionOptions)
+          .where(eq(decisionOptions.id, identity.id))
+          .get()
+      );
+      const validatedSources = validateDecisionSources(
+        tx,
+        identity.tripId,
+        fields.affectedSources,
+        previous.validatedSources
+      );
       tx.update(decisionOptions)
-        .set({ ...fields, updatedAt: new Date().toISOString() })
+        .set({ ...fields, validatedSources, updatedAt: new Date().toISOString() })
         .where(eq(decisionOptions.id, identity.id))
         .run();
       advanceDecision(tx, decision);
@@ -167,45 +175,5 @@ export function deleteDecisionOption(
   );
 }
 
-/** Restore an owned removed option at the aggregate revision; selection changes only when explicitly requested. */
-export function restoreDecisionOption(
-  db: TripsDb,
-  identity: OptionIdentity,
-  expectedRevision: number,
-  select: boolean
-): DecisionOption {
-  return db.transaction(
-    (tx) => {
-      const decision = requireDecisionRevision(
-        tx,
-        identity.tripId,
-        identity.decisionId,
-        expectedRevision
-      );
-      const removed = requireOwnedRecord(
-        tx
-          .select()
-          .from(decisionOptions)
-          .where(
-            and(
-              eq(decisionOptions.decisionId, identity.decisionId),
-              eq(decisionOptions.id, identity.id)
-            )
-          )
-          .get()
-      );
-      if (removed.removedAt === null) throw new TripsServiceError('option_not_removed');
-      tx.update(decisionOptions)
-        .set({ removedAt: null, updatedAt: new Date().toISOString() })
-        .where(eq(decisionOptions.id, identity.id))
-        .run();
-      advanceDecision(tx, decision, select ? { selectedOptionId: identity.id } : {});
-      return DecisionOptionSchema.parse(
-        requireOwnedRecord(
-          tx.select().from(decisionOptions).where(eq(decisionOptions.id, identity.id)).get()
-        )
-      );
-    },
-    { behavior: 'immediate' }
-  );
-}
+/** Restore an option without changing source arrangements. */
+export { restoreDecisionOption } from './decision-option-restore.js';
