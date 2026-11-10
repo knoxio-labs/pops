@@ -75,7 +75,7 @@ it('exposes coherent receipts, exact replay, stale errors and legacy DELETE over
   ).toEqual(receipt);
   const stale = await call(`/leg-removals/${operationId}/restore`, 'POST', { expectedRevision: 1 });
   expect(stale.status).toBe(409);
-  expect(await stale.json()).toMatchObject({ code: 'trips.journeyLeg.leg_revision_conflict' });
+  expect(await stale.json()).toMatchObject({ code: 'trips.journey_leg.leg_revision_conflict' });
   const restored = await call(`/leg-removals/${operationId}/restore`, 'POST', {
     expectedRevision: 2,
   });

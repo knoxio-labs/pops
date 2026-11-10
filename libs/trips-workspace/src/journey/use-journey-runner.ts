@@ -45,7 +45,7 @@ export function useJourneyRunner(
       if (result.clearHistory)
         state.setFailure({
           error: new ApiError({
-            code: 'trips.journeyLeg.operation_superseded',
+            code: 'trips.journey_leg.operation_superseded',
             kind: 'client',
             message:
               'This removal lifecycle changed. The current source is loaded; review it before editing again.',

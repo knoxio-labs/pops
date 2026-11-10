@@ -47,7 +47,7 @@ export async function loadJourney(props: JourneyWorkspaceProps): Promise<Journey
   ]);
   if (!Number.isSafeInteger(response.revision) || response.revision < 0)
     throw new ApiError({
-      code: 'trips.journeyLeg.source_invalid',
+      code: 'trips.journey_leg.source_invalid',
       kind: 'client',
       message: 'The leg source did not provide a valid revision. Reload before editing.',
       retryable: true,

@@ -8,7 +8,7 @@ export function prepareJourneyChange(source: JourneySource, change: JourneyChang
   const expectedRevision = change.expectedRevision ?? source.legRevision;
   if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 0)
     throw new ApiError({
-      code: 'trips.journeyLeg.source_invalid',
+      code: 'trips.journey_leg.source_invalid',
       kind: 'client',
       message: 'Reload a versioned leg source before editing.',
       retryable: true,
@@ -21,7 +21,7 @@ export function prepareJourneyChange(source: JourneySource, change: JourneyChang
 export function legConflict(error: unknown): boolean {
   return (
     error instanceof ApiError &&
-    (error.code === 'trips.journeyLeg.leg_revision_conflict' ||
-      error.code === 'trips.journeyLeg.leg_order_conflict')
+    (error.code === 'trips.journey_leg.leg_revision_conflict' ||
+      error.code === 'trips.journey_leg.leg_order_conflict')
   );
 }

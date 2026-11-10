@@ -97,7 +97,7 @@ describe('receipt-backed editor inverse transport', () => {
     const transport = journeyTransport({
       writes: [
         { status: 200, body: removed() },
-        { status: 409, body: sourceProblem('trips.journeyLeg.leg_revision_conflict') },
+        { status: 409, body: sourceProblem('trips.journey_leg.leg_revision_conflict') },
       ],
     });
     const editor = mount(transport, source);
