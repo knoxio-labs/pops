@@ -8,6 +8,7 @@ import {
   routeJson,
   routeRead,
   routeResult,
+  routeSnapshot,
   routeTransport,
 } from './test-utils';
 
@@ -65,7 +66,7 @@ describe('retained exact route operations', () => {
       accepted(session, routeRead(), routeRead({ revision: 1 }), (result) => ({
         ...result,
         replayed: true,
-        current: routeRead({ revision: 9 }),
+        current: routeSnapshot(routeRead({ revision: 9 })),
       }))
     );
     await session.retry();
@@ -155,7 +156,7 @@ describe('retained exact route operations', () => {
           ...result,
           replayed: true,
           undone,
-          current: routeRead({ revision: undone ? 1 : 5 }),
+          current: routeSnapshot(routeRead({ revision: undone ? 1 : 5 })),
         }))
       );
       await session.run({ kind: 'path.apply', pathId: 4 });

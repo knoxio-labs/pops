@@ -2,6 +2,7 @@ import { unwrap } from '@pops/pillar-sdk/client';
 
 import { currentSourceOwner } from '../arrangements/source-owner';
 import { routeGet, routeOperate } from '../trips-api/sdk.gen';
+import { zRouteGetResponse, zRouteOperateResponse } from '../trips-api/zod.gen';
 
 import type { RouteOperation, RouteOperationResult, RouteOwner, TripRouteRead } from './types';
 
@@ -22,8 +23,8 @@ export async function loadTripRoute(
   signal?: AbortSignal
 ): Promise<TripRouteRead> {
   assertRouteOwner(owner);
-  const read = await unwrap(
-    routeGet({ client: owner.client, path: { tripId: owner.tripId }, signal })
+  const read = zRouteGetResponse.parse(
+    await unwrap(routeGet({ client: owner.client, path: { tripId: owner.tripId }, signal }))
   );
   if (read.tripId !== owner.tripId) throw new Error('Foreign route response');
   return read;
@@ -34,5 +35,7 @@ export async function applyRouteOperation(
   body: RouteOperation
 ): Promise<RouteOperationResult> {
   assertRouteOwner(owner);
-  return unwrap(routeOperate({ client: owner.client, path: { tripId: owner.tripId }, body }));
+  return zRouteOperateResponse.parse(
+    await unwrap(routeOperate({ client: owner.client, path: { tripId: owner.tripId }, body }))
+  );
 }

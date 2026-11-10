@@ -22,14 +22,23 @@ export function routeResult(
   return {
     receipt: {
       operationId: operation.operationId,
-      before,
-      after,
+      before: routeSnapshot(before),
+      after: routeSnapshot(after),
       undoneOperationId:
         operation.command.kind === 'undo' ? operation.command.targetOperationId : null,
     },
-    current: after,
+    current: routeSnapshot(after),
     replayed: false,
     undone: false,
+  };
+}
+/** Mutation wire snapshots exclude GET-only availability metadata. */
+export function routeSnapshot(source: TripRoute): TripRoute {
+  return {
+    tripId: source.tripId,
+    revision: source.revision,
+    order: source.order,
+    paths: source.paths,
   };
 }
 /** Real generated client with inspectable requests and explicit, optionally deferred replies. */

@@ -9,6 +9,16 @@ availability proof. Applied paths retain historical membership without creating
 another active placement. Unplaced records retain their source collection order.
 Captured transport identity, origin and trip fence every request; changing a
 client's origin cannot retarget a retained reader or command.
+Route GET and operation HTTP 200 bodies are parsed against Zod response schemas
+generated from the owning OpenAPI snapshot before entering controller state.
+Missing required fields, invalid discriminants, UUIDs and numeric bounds fail the
+read or leave the exact submitted operation uncertain. The operation controller
+also checks its own UUID, trip, expected revision and Undo target against the
+validated receipt. Other generated SDK operations retain their existing behavior.
+The consumer's Zod resolver preserves `additionalProperties: false` as strict
+objects, including nested and empty objects; open objects and typed dynamic
+records retain the generator's default behavior. It changes generated schemas,
+not shared transport validation.
 
 `useTripRoute({ tripId, client? })` exposes that headless read and a shared retained
 command controller. `routeSession(queryClient, identity)` provides the same binding
