@@ -62,6 +62,7 @@ it('reports an explicit existing selection to its controlled host', async () => 
   const result = await screen.findByText('Harbour Books');
   const resultButton = result.closest('button');
   if (!resultButton) throw new Error('Contact result is not selectable');
+  expect(resultButton).toHaveClass('min-h-11', 'min-w-11');
   await user.click(resultButton);
   expect(api.search).toHaveBeenLastCalledWith('Harbour', undefined);
   await waitFor(() => expect(api.resolve).toHaveBeenCalledExactlyOnceWith(company.id));

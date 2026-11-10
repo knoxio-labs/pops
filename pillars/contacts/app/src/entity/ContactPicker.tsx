@@ -179,14 +179,15 @@ function ContactPickerResult({
   onSelect: (entity: Entity) => void;
 }) {
   return (
-    <button
+    <Button
       type="button"
+      variant="ghost"
       disabled={selecting}
-      className="flex min-h-11 w-full items-center justify-between gap-3 rounded-md px-3 text-left hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+      className="min-h-11 min-w-11 w-full justify-between gap-3 px-3 text-left"
       onClick={() => onSelect(entity)}
     >
       <span className="min-w-0 truncate">{entity.name}</span>
       <span className="shrink-0 text-xs text-muted-foreground">{entity.type}</span>
-    </button>
+    </Button>
   );
 }
