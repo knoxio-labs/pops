@@ -123,6 +123,9 @@ the receipt when its query cache is evicted; pending task lookup resumes on remo
 An older read without a canonical identity cannot erase a verified original.
 Retained task query namespaces stay bound to the file intent's captured owner;
 a mutable client origin change cannot seed that proof into another owner's cache.
+Separate recovery pickers pass the controller's `assertOwnerContext` to
+`DocumentPicker.beforeRequest`, preserving the same transport and retaining-parent guard
+for owner searches and cached selection callbacks.
 The controller never repeats an accepted or
 uncertain upload; a definite rejection can be retried explicitly.
 
