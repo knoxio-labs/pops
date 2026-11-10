@@ -6,8 +6,6 @@ import SwiftUI
 /// It performs no trip writes and opens files only after an actual authenticated download.
 public struct TripsRootView: View {
     @State private var model: TripsModel
-    @State private var tab = TripsTab.trips
-    @State private var source: TripSource?
     private let documents: any DocumentsReading
 
     /// Creates the feature with authenticated trip and original-document readers from the composition root.
@@ -21,7 +19,7 @@ public struct TripsRootView: View {
     }
 
     public var body: some View {
-        TabView(selection: $tab) {
+        TabView(selection: $model.tab) {
             Tab("Trips", systemImage: "map.fill", value: TripsTab.trips) {
                 stack
             }
@@ -30,8 +28,7 @@ public struct TripsRootView: View {
                     TripsSearchView(trips: model.trips, snapshot: model.snapshot) { id in
                         openTrip(id)
                     } openSource: { source in
-                        guard let id = model.snapshot?.trip.id else { return }
-                        openTrip(id, sourceID: source.id)
+                        openTrip(source.tripID, sourceID: source.id)
                     }
                 }
             }
@@ -63,7 +60,7 @@ public struct TripsRootView: View {
                     }
                 }
             }
-            .navigationDestination(item: $source) { source in
+            .navigationDestination(item: $model.source) { source in
                 if let current = model.canonicalSource(source), let snapshot = model.snapshot {
                     TripsSourceView(source: current, places: snapshot.places)
                 } else {
@@ -77,16 +74,7 @@ public struct TripsRootView: View {
     }
 
     private func openTrip(_ id: Int, sourceID: String? = nil) {
-        source = nil
-        tab = .trips
-        Task {
-            await model.select(id)
-            if let sourceID, model.selectedID == id, let snapshot = model.snapshot,
-                snapshot.trip.id == id
-            {
-                source = allTripSources(snapshot).first { $0.id == sourceID }
-            }
-        }
+        model.openTrip(id, sourceID: sourceID)
     }
 
     private var tripMenu: some View {
