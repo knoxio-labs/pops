@@ -1,77 +1,9 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "daf8e7c7-64ac-4e90-8cc5-bb083bb0fe4c",
+  "id": "412e2317-444c-46f9-90ac-c02145806606",
   "prevId": "2dee33f2-4c8d-4a83-9f48-dd3830717223",
   "tables": {
-    "arrangement_responsibilities": {
-      "name": "arrangement_responsibilities",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "integer",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": true
-        },
-        "trip_id": {
-          "name": "trip_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "target_kind": {
-          "name": "target_kind",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "target_id": {
-          "name": "target_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "responsibility": {
-          "name": "responsibility",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "revision": {
-          "name": "revision",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "uq_arrangement_responsibility_target": {
-          "name": "uq_arrangement_responsibility_target",
-          "columns": ["trip_id", "target_kind", "target_id"],
-          "isUnique": true
-        }
-      },
-      "foreignKeys": {
-        "arrangement_responsibilities_trip_id_trips_id_fk": {
-          "name": "arrangement_responsibilities_trip_id_trips_id_fk",
-          "tableFrom": "arrangement_responsibilities",
-          "tableTo": "trips",
-          "columnsFrom": ["trip_id"],
-          "columnsTo": ["id"],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
     "decision_options": {
       "name": "decision_options",
       "columns": {
@@ -114,6 +46,14 @@
         },
         "affected_sources": {
           "name": "affected_sources",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'[]'"
+        },
+        "validated_sources": {
+          "name": "validated_sources",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -842,110 +782,6 @@
       },
       "indexes": {},
       "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "rentals": {
-      "name": "rentals",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "integer",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": true
-        },
-        "trip_id": {
-          "name": "trip_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "provider": {
-          "name": "provider",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "pickup_visit_id": {
-          "name": "pickup_visit_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "return_visit_id": {
-          "name": "return_visit_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "start": {
-          "name": "start",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "end": {
-          "name": "end",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "status": {
-          "name": "status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "revision": {
-          "name": "revision",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "idx_rentals_trip": {
-          "name": "idx_rentals_trip",
-          "columns": ["trip_id"],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "rentals_trip_id_trips_id_fk": {
-          "name": "rentals_trip_id_trips_id_fk",
-          "tableFrom": "rentals",
-          "tableTo": "trips",
-          "columnsFrom": ["trip_id"],
-          "columnsTo": ["id"],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {}
