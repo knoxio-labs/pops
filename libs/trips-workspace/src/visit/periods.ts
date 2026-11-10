@@ -19,17 +19,30 @@ export function validDate(value: string | undefined): value is string {
   const date = new Date(`${value}T00:00:00Z`);
   return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }
-/** Group explicit visit memberships by accommodation boundaries; incomplete sources never assert gaps. */
+/** Source-list certainty and optional bounded periods whose coverage has not yet been classified. */
+export interface AccommodationPeriodOptions {
+  accommodationComplete: boolean;
+  includeUnknownVisitPeriods?: boolean;
+}
+/**
+ * Group explicit Visit memberships by accommodation boundaries. Incomplete sources do not
+ * assert gaps. Coverage classifiers may request unknown Visit periods for explicit classification;
+ * their empty membership never itself asserts missing accommodation.
+ */
 export function accommodationPeriods(
   visit: Visit,
   candidates: Stay[],
   activities: TripEvent[],
-  accommodationComplete = true
+  context: boolean | AccommodationPeriodOptions = true
 ): AccommodationProjection {
+  const { accommodationComplete, includeUnknownVisitPeriods = false } =
+    typeof context === 'boolean' ? { accommodationComplete: context } : context;
   const associated = candidates.filter((stay) => stay.visitId === visit.id);
   const dated = associated.filter((stay) => bounded(stay.timing));
   const unplacedStays = associated.filter((stay) => !bounded(stay.timing));
-  const gapsKnown = accommodationComplete && bounded(visit.timing) && unplacedStays.length === 0;
+  const gapsKnown =
+    bounded(visit.timing) &&
+    (includeUnknownVisitPeriods || (accommodationComplete && unplacedStays.length === 0));
   const periods = buildPeriods(visit, dated, gapsKnown);
   const unplacedEvents: TripEvent[] = [];
   for (const event of activities.filter((item) => item.visitId === visit.id)) {

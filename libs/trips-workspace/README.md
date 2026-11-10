@@ -19,6 +19,15 @@ Rental edits use the canonical rental revision, preserve failed drafts and exact
 retry bodies, and persist Undo against the confirmed successor revision. A newer
 source requires an explicit canonical reload before further edits.
 
+`visit/coverage` is the shared checkout-exclusive accommodation projection. The
+explicit source-state policy is Agreed, Reserved and Purchased covering nights;
+Considering remains an idea. It retains every candidate and activity, including
+unplaced sources. Valid arranged stays prove coverage even when neighbouring
+sources have uncertain dates. Uncertain arranged or unset sources, unknown Visit
+bounds and incomplete source loads prevent unsupported missing-night claims.
+Considering dates never mask a proven gap. Coverage findings use only the real
+bounded Visit interval; no clocks, zones or route placement are inferred.
+
 `JourneyWorkspace({ tripId, journeyId, client? })` exports the source-backed Departure
 and arrival journey editor. It reads ordered legs and independent grouping identities
 through the same generated Trips client. Endpoint edits submit complete retained
