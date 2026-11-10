@@ -38,6 +38,7 @@
   "contextUnavailable": "Não foi possível carregar parte do contexto do itinerário.",
   "subtitle": "Subtítulo da viagem",
   "homeRows": {
+    "openVisit": "Abrir visita: {{name}}",
     "empty": "Nenhuma viagem encontrada.",
     "current": "Atuais",
     "upcoming": "Próximas",

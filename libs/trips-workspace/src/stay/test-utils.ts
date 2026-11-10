@@ -36,6 +36,7 @@ export const sourceVisits: Visit[] = [
     id: 31,
     tripId: 7,
     placeId: 51,
+    revision: 0,
     timing: { arrival: '2029-05-01', departure: '2029-05-09' },
     notes: '',
     sourceLinks: [],

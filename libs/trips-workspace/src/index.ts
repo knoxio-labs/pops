@@ -9,3 +9,5 @@ export { DecisionWorkspace } from './decision/DecisionWorkspace';
 export type { DecisionWorkspaceProps } from './decision/types';
 export { JourneyWorkspace } from './journey/JourneyWorkspace';
 export type { JourneyWorkspaceProps } from './journey/types';
+export { VisitWorkspace } from './visit/VisitWorkspace';
+export type { VisitWorkspaceProps } from './visit/types';

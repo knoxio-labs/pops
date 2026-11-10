@@ -41,6 +41,7 @@ const visits: Visit[] = [13, 2].map((id) => ({
   id,
   tripId: 7,
   placeId: id,
+  revision: 0,
   timing: {},
   notes: '',
   sourceLinks: [],

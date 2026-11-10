@@ -192,8 +192,8 @@ while any group membership remains.
 Domain routes require their projected service-account scope: `trips.trips`,
 `trips.places`, `trips.visits`, `trips.journeys`, `trips.journeyLegs`,
 `trips.journeyGroups` or `trips.stays`; a `trips` grant covers all domains. Discovery and
-health probes remain open. The pillar advertises `/trips`,
-`/trips/:tripId/stays/:stayId`, and `/trips/:tripId/settings` shell pages. The home
+health probes remain open. The pillar advertises trip home, visit, stay, journey, event, decision and settings
+shell pages through its published page descriptor. The home
 page groups source-backed trips and opens a selected-trip preview; stay links use the persisted trip and
 stay identities. Source-backed stay
 [workspace components](../../libs/trips-workspace/README.md) and their standalone

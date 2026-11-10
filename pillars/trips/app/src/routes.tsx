@@ -8,6 +8,9 @@ import type { TripsPageSlot } from '@pops/trips/pages';
 const HomePage = lazy(() =>
   import('./home/HomePage').then((module) => ({ default: module.HomePage }))
 );
+const VisitPage = lazy(() =>
+  import('./VisitPage').then((module) => ({ default: module.VisitPage }))
+);
 const StayPage = lazy(() => import('./StayPage').then((module) => ({ default: module.StayPage })));
 const EventPage = lazy(() =>
   import('./EventPage').then((module) => ({ default: module.EventPage }))
@@ -27,12 +30,14 @@ export const bundles = {
   'trips-stay': StayPage,
   'trips-event': EventPage,
   'trips-decision': DecisionPage,
+  'trips-visit': VisitPage,
   'trips-journey': JourneyPage,
   'trips-settings': SettingsPage,
 } satisfies Record<TripsPageSlot, ComponentType>;
 /** Local route projection used only by component hosts and development integration. */
 export const routes: RouteObject[] = [
   { index: true, element: <HomePage /> },
+  { path: ':tripId/visits/:visitId', element: <VisitPage /> },
   { path: ':tripId/stays/:stayId', element: <StayPage /> },
   { path: ':tripId/events/:eventId', element: <EventPage /> },
   { path: ':tripId/decisions/:decisionId', element: <DecisionPage /> },

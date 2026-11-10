@@ -38,6 +38,7 @@
   "contextUnavailable": "Some route context could not be loaded.",
   "subtitle": "Trip subtitle",
   "homeRows": {
+    "openVisit": "Open visit: {{name}}",
     "empty": "No trips found.",
     "current": "Current",
     "upcoming": "Upcoming",

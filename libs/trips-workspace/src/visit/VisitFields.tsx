@@ -1,0 +1,78 @@
+import { Select, Textarea, TextInput } from '@pops/ui';
+
+import { VisitApproximateTiming } from './VisitApproximateTiming';
+
+import type { JSX } from 'react';
+
+import type { Place, Visit, VisitPatch } from './types';
+
+/** Explicit direct-edit controls; unavailable optional context never blocks independent source facts. */
+export interface VisitFieldProps {
+  visit: Visit;
+  edit: (patch: VisitPatch) => void;
+  commit: (patch: VisitPatch) => Promise<void> | void;
+}
+/** Source-owned visit fields preserve independent exact and approximate timing. */
+export function VisitFields({
+  places,
+  ...props
+}: VisitFieldProps & { places: Place[] }): JSX.Element {
+  const { visit, edit, commit } = props;
+  const hasPlace = places.some((place) => place.id === visit.placeId);
+  return (
+    <div className="space-y-3">
+      <Select
+        label="City"
+        value={String(visit.placeId)}
+        className="min-h-11"
+        options={[
+          ...(!hasPlace ? [{ value: String(visit.placeId), label: 'City unavailable' }] : []),
+          ...places.map((place) => ({ value: String(place.id), label: place.name })),
+        ]}
+        onChange={(event) => {
+          const place = places.find((item) => String(item.id) === event.currentTarget.value);
+          if (place) void commit({ placeId: place.id });
+        }}
+      />
+      <div className="grid grid-cols-2 gap-3">
+        {(['arrival', 'departure'] as const).map((field) => (
+          <TextInput
+            key={field}
+            label={field === 'arrival' ? 'Arrival' : 'Departure'}
+            type="date"
+            className="min-h-11"
+            value={visit.timing[field] ?? ''}
+            onChange={(event) =>
+              edit({ timing: changeDate(visit.timing, field, event.currentTarget.value) })
+            }
+            onBlur={(event) =>
+              commit({ timing: changeDate(visit.timing, field, event.currentTarget.value) })
+            }
+          />
+        ))}
+      </div>
+      <VisitApproximateTiming {...props} />
+      <details>
+        <summary className="min-h-11 cursor-pointer content-center text-sm font-medium">
+          Notes
+        </summary>
+        <Textarea
+          aria-label="Visit notes"
+          value={visit.notes}
+          onChange={(event) => edit({ notes: event.currentTarget.value })}
+          onBlur={(event) => commit({ notes: event.currentTarget.value })}
+        />
+      </details>
+    </div>
+  );
+}
+function changeDate(
+  timing: Visit['timing'],
+  field: 'arrival' | 'departure',
+  value: string
+): Visit['timing'] {
+  const next = { ...timing };
+  if (value) next[field] = value;
+  else delete next[field];
+  return next;
+}
