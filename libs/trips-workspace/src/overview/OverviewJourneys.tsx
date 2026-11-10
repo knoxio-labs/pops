@@ -58,10 +58,13 @@ export function OverviewJourneys(props: OverviewViewProps): JSX.Element | null {
 }
 
 function MissingJourney(props: OverviewViewProps & { id: number }): JSX.Element {
+  const title = props.labels.source('journey', props.id);
   return (
     <SourceCard
       kind="journey"
-      title={`${props.labels.source('journey', props.id)} · ${props.labels.unavailable}`}
+      title={
+        props.sources.journeys === undefined ? title : `${title} · ${props.labels.unavailable}`
+      }
       href={props.href('journey', props.id)}
       labels={props.labels}
     />

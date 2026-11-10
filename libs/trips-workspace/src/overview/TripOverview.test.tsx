@@ -11,7 +11,7 @@ import { TripOverview } from './TripOverview';
 
 afterEach(cleanup);
 
-function mount(responses = overviewResponses(), tripWait?: Promise<void>) {
+function mount(responses = overviewResponses(), wait?: { path: string; until: Promise<void> }) {
   const requests: string[] = [];
   const client = createClient({
     baseUrl: 'http://overview.test',
@@ -19,7 +19,7 @@ function mount(responses = overviewResponses(), tripWait?: Promise<void>) {
       const request = new Request(input, init);
       const path = new URL(request.url).pathname;
       requests.push(path);
-      if (path === '/trips/7') await tripWait;
+      if (path === wait?.path) await wait.until;
       return new Response(
         JSON.stringify(
           responses.get(path) ?? {
@@ -47,7 +47,7 @@ describe('source-backed TripOverview', () => {
     const tripWait = new Promise<void>((resolve) => {
       finish = resolve;
     });
-    mount(overviewResponses(), tripWait);
+    mount(overviewResponses(), { path: '/trips/7', until: tripWait });
     expect(screen.getByRole('status')).toHaveTextContent('Loading trip sources…');
     expect(screen.queryByText('No route entries.')).not.toBeInTheDocument();
     await act(async () => {
@@ -133,6 +133,35 @@ describe('source-backed TripOverview', () => {
     expect(screen.getByRole('link', { name: /Other ferry/ })).toBeVisible();
     expect(screen.getByText('journey #999 · Source unavailable')).toBeVisible();
     expect(screen.getByRole('link', { name: /Harbour festival/ })).toBeVisible();
+  });
+
+  it('distinguishes an unresolved journey read from an unavailable referenced source', async () => {
+    const responses = overviewResponses();
+    responses.set('/trips/7/journey-groups', {
+      groups: [
+        {
+          id: 2,
+          tripId: 7,
+          currentJourneyId: 20,
+          alternativeJourneyIds: [],
+          revision: 0,
+          createdAt: '',
+          updatedAt: '',
+        },
+      ],
+    });
+    let finish = (): void => undefined;
+    const until = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+    mount(responses, { path: '/trips/7/journeys', until });
+    await screen.findByText('Current journey');
+    expect(screen.getByRole('link', { name: 'journey #20' })).toBeVisible();
+    expect(screen.queryByText(/Source unavailable/)).not.toBeInTheDocument();
+    await act(async () => {
+      finish();
+    });
+    expect(await screen.findByRole('link', { name: /Harbour connection/ })).toBeVisible();
   });
 
   it('distinguishes a failed route from empty and preserves readable stays, events and error diagnostics', async () => {
