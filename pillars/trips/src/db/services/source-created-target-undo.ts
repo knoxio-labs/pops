@@ -6,7 +6,7 @@ import { assertCreatedTargetUnreferenced } from './source-references.js';
 import { deleteStay, getStay } from './stays.js';
 
 import type { SourceInverse } from './source-inverse-types.js';
-import type { SourceWrite } from './source-write.js';
+import type { SourceWrite } from './source-write-types.js';
 
 function requireUnchanged(actual: unknown, expected: unknown): void {
   if (canonicalSourceValue(actual) !== canonicalSourceValue(expected))

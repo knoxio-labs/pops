@@ -5,7 +5,7 @@ import { canonicalSourceValue } from './source-canonical.js';
 import { TripsServiceError } from './source-record.js';
 
 import type { SourceInverse } from './source-inverse-types.js';
-import type { SourceWrite } from './source-write.js';
+import type { SourceWrite } from './source-write-types.js';
 
 type InverseRow<T> = { before: T | null; after: T };
 
