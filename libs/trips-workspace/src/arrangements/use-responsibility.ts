@@ -37,8 +37,9 @@ export function useResponsibility(
   const { queryClient, key, query } = useResponsibilitySource(identity, target);
   const session = useResponsibilitySession(identity, target);
   const operation = useSyncExternalStore(session.subscribe, session.read, session.read);
-  async function persist(write: ResponsibilityWrite): Promise<void> {
-    if (!session.claim(write)) return;
+  async function persist(candidate: ResponsibilityWrite): Promise<void> {
+    const write = session.claim(candidate);
+    if (!write) return;
     let confirmed: ArrangementResponsibility;
     try {
       confirmed = await replaceResponsibility(identity, write.source, write.value);
@@ -60,9 +61,8 @@ export function useResponsibility(
   return {
     query,
     busy: operation.kind === 'saving' || query.isFetching,
-    failure: operation.kind === 'uncertain' ? operation : undefined,
-    save: (source, value, picker): Promise<void> =>
-      persist({ source: { ...source }, value: value === null ? null : { ...value }, picker }),
+    failure: session.failure(),
+    save: (source, value, picker): Promise<void> => persist({ source, value, picker }),
     retry: async (): Promise<void> => {
       const current = session.read();
       if (current.kind === 'uncertain') await persist(current.write);

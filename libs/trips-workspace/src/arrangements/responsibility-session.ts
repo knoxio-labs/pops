@@ -21,8 +21,15 @@ export class ResponsibilitySession {
   private history: ResponsibilityOperation[] = [];
   private listeners = new Set<() => void>();
 
-  /** Read the stable snapshot for the current explicit operation. */
+  /** Read the stable immutable owned snapshot for the current explicit operation. */
   read = (): ResponsibilityOperation => this.state;
+
+  /** Expose detached failure data so a consumer cannot rewrite the retained retry request. */
+  failure(): Extract<ResponsibilityOperation, { kind: 'uncertain' }> | undefined {
+    return this.state.kind === 'uncertain'
+      ? { ...this.state, write: copyWrite(this.state.write) }
+      : undefined;
+  }
 
   /** Observe operation changes, including outcomes delivered while its view is unmounted. */
   subscribe = (listener: () => void): (() => void) => {
@@ -33,22 +40,27 @@ export class ResponsibilitySession {
   };
 
   private update(state: ResponsibilityOperation): void {
-    this.state = state;
+    this.state = Object.freeze(state);
     for (const listener of this.listeners) listener();
   }
 
   /** Start a new write or retry only the exact retained uncertain operation. */
-  claim(write: ResponsibilityWrite): boolean {
-    if (this.state.kind === 'saving') return false;
-    if (this.state.kind === 'uncertain' && this.state.write !== write) return false;
+  claim(candidate: ResponsibilityWrite): ResponsibilityWrite | undefined {
+    if (this.state.kind === 'saving') return undefined;
+    if (this.state.kind === 'uncertain' && this.state.write !== candidate) return undefined;
+    const write = this.state.kind === 'uncertain' ? this.state.write : ownedWrite(candidate);
     this.update({ kind: 'saving', write });
-    return true;
+    return write;
   }
 
   /** Keep the exact successful response as application proof; field equality from a later read is insufficient. */
   acknowledge(write: ResponsibilityWrite, receipt: ArrangementResponsibility): boolean {
     if (this.state.kind !== 'saving' || this.state.write !== write) return false;
-    const outcome: ResponsibilityOperation = { kind: 'acknowledged', write, receipt };
+    const outcome: ResponsibilityOperation = {
+      kind: 'acknowledged',
+      write,
+      receipt: ownedSource(receipt),
+    };
     this.history.push(outcome);
     this.update(outcome);
     return true;
@@ -68,4 +80,30 @@ export class ResponsibilitySession {
     this.update({ kind: 'ready' });
     return write;
   }
+}
+
+function copyWrite(write: ResponsibilityWrite): ResponsibilityWrite {
+  return {
+    source: copySource(write.source),
+    value: write.value === null ? null : { ...write.value },
+    picker: write.picker,
+  };
+}
+function copySource(source: ArrangementResponsibility): ArrangementResponsibility {
+  return {
+    ...source,
+    responsibility: source.responsibility === null ? null : { ...source.responsibility },
+  };
+}
+function ownedSource(source: ArrangementResponsibility): ArrangementResponsibility {
+  const owned = copySource(source);
+  if (owned.responsibility) Object.freeze(owned.responsibility);
+  return Object.freeze(owned);
+}
+function ownedWrite(write: ResponsibilityWrite): ResponsibilityWrite {
+  return Object.freeze({
+    source: ownedSource(write.source),
+    value: write.value === null ? null : Object.freeze({ ...write.value }),
+    picker: write.picker,
+  });
 }
