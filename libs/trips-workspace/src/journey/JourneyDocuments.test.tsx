@@ -39,6 +39,7 @@ it('scopes expanded alternative documents to that journey while retaining the vi
     ],
     alternatives: [
       {
+        legRevision: 0,
         journey: sourceJourney({ id: 21, name: 'Ferry alternative' }),
         legs: [sourceLeg({ id: 41, journeyId: 21 })],
       },

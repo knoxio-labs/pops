@@ -1,74 +1,92 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useSyncExternalStore } from 'react';
 
-/** Isolated upload state for one explicit trip, target and owner-client session. */
-export interface UploadFields {
-  file: File | null;
+import { DocumentUploadSession } from './document-upload-session';
+
+import type { Dispatch, SetStateAction } from 'react';
+
+import type { DocumentUploadSnapshot } from './document-upload-session';
+
+export type { DocumentUploadSession } from './document-upload-session';
+
+/** Stable operations bound to one intent; file replacement creates a distinct session generation. */
+export interface UploadFields extends DocumentUploadSnapshot {
   setFile: (file: File | null) => void;
-  uploadError: string | null;
   setUploadError: (message: string | null) => void;
-  uploadRejected: boolean;
+  setUploadPending: (value: boolean) => void;
   setUploadRejected: (value: boolean) => void;
-  uncertain: boolean;
   setUncertain: (value: boolean) => void;
-  pickerOpen: boolean;
   setPickerOpen: (value: boolean) => void;
-  ownerLookupCount: number | null;
   setOwnerLookupCount: (count: number | null) => void;
-  taskId: string | null;
   setTaskId: (id: string | null) => void;
   clearSelectedFile: () => void;
+  canStartUpload: () => boolean;
+  claimUpload: () => boolean;
 }
 
-interface UploadSession {
-  file: File | null;
-  uploadError: string | null;
-  uploadRejected: boolean;
-  uncertain: boolean;
-  pickerOpen: boolean;
-  ownerLookupCount: number | null;
-  taskId: string | null;
+/** Initialize a distinct live file receipt; retain it above conditional views and alongside Undo history. */
+export function createDocumentUploadSession(file: File | null): DocumentUploadSession {
+  return DocumentUploadSession.create(file);
 }
 
-/** Keep one selected file's accepted task and recovery state within its mounted intent. */
-export function useUploadFields(file: File | null): UploadFields {
-  const [session, setSession] = useState<UploadSession>(() => ({
-    file,
-    uploadError: null,
-    uploadRejected: false,
-    uncertain: false,
-    pickerOpen: false,
-    ownerLookupCount: null,
-    taskId: null,
-  }));
+/** Bind all state writes to their originating generation, never to the currently selected replacement. */
+export function useUploadFields(
+  session: DocumentUploadSession,
+  setSession: Dispatch<SetStateAction<DocumentUploadSession>>
+): UploadFields {
+  const intent = session.intent;
+  const snapshot = useSyncExternalStore(intent.subscribe, intent.read, intent.read);
+  const notify = useCallback(() => {
+    setSession((current) => (current.id === intent.id ? current.view() : current));
+  }, [intent, setSession]);
   const setField = useCallback(
-    <K extends keyof UploadSession>(field: K, value: UploadSession[K]): void => {
-      setSession((previous) =>
-        Object.is(previous[field], value) ? previous : { ...previous, [field]: value }
+    <K extends Exclude<keyof DocumentUploadSnapshot, 'file'>>(
+      field: K,
+      value: DocumentUploadSnapshot[K]
+    ): void => {
+      if (intent.update(field, value)) notify();
+    },
+    [intent, notify]
+  );
+  const setFile = useCallback(
+    (file: File | null) => {
+      setSession((current) =>
+        current.id === intent.id ? createDocumentUploadSession(file) : current
       );
     },
-    []
+    [intent, setSession]
   );
+  const claimUpload = useCallback(() => {
+    if (!intent.claim()) return false;
+    notify();
+    return true;
+  }, [intent, notify]);
   const setters = useUploadSetters(setField);
-  const clearSelectedFile = useCallback(() => {
-    setSession({
-      file: null,
-      uploadError: null,
-      uploadRejected: false,
-      uncertain: false,
-      pickerOpen: false,
-      ownerLookupCount: null,
-      taskId: null,
-    });
-  }, []);
-  return { ...session, ...setters, clearSelectedFile };
+  const clearSelectedFile = useCallback(() => setFile(null), [setFile]);
+  return {
+    ...snapshot,
+    ...setters,
+    setFile,
+    clearSelectedFile,
+    claimUpload,
+    canStartUpload: intent.canStart,
+  };
 }
 
 function useUploadSetters(
-  setField: <K extends keyof UploadSession>(field: K, value: UploadSession[K]) => void
-): Omit<UploadFields, keyof UploadSession | 'clearSelectedFile'> {
-  const setFile = useCallback((value: File | null) => setField('file', value), [setField]);
+  setField: <K extends Exclude<keyof DocumentUploadSnapshot, 'file'>>(
+    field: K,
+    value: DocumentUploadSnapshot[K]
+  ) => void
+): Omit<
+  UploadFields,
+  keyof DocumentUploadSnapshot | 'clearSelectedFile' | 'setFile' | 'claimUpload' | 'canStartUpload'
+> {
   const setUploadError = useCallback(
     (value: string | null) => setField('uploadError', value),
+    [setField]
+  );
+  const setUploadPending = useCallback(
+    (value: boolean) => setField('uploadPending', value),
     [setField]
   );
   const setUploadRejected = useCallback(
@@ -83,8 +101,8 @@ function useUploadSetters(
   );
   const setTaskId = useCallback((value: string | null) => setField('taskId', value), [setField]);
   return {
-    setFile,
     setUploadError,
+    setUploadPending,
     setUploadRejected,
     setUncertain,
     setPickerOpen,

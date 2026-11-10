@@ -54,6 +54,18 @@ describe('uploadPaperlessDocument', () => {
   });
 });
 
+describe('malformed owner upload acceptance', () => {
+  it('rejects an incomplete 202 rather than allowing another unguarded upload', async () => {
+    const client = createClient({
+      baseUrl: 'https://pops.example/documents-api',
+      fetch: vi.fn<typeof fetch>(async () => Response.json({ data: {} }, { status: 202 })),
+    });
+    await expect(
+      uploadPaperlessDocument(new File(['a'], 'a.pdf', { type: 'application/pdf' }), client)
+    ).rejects.toThrow('valid upload task identity');
+  });
+});
+
 describe('loadTripDocumentTargets', () => {
   it('labels owner records and only associates events and stays with their declared visit', async () => {
     const client = createTripsClient({

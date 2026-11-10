@@ -19,9 +19,11 @@ export function useUploadMutation(
 ): UseMutationResult<string, Error, { file: File; fields: UploadFields }, unknown> {
   return useMutation({
     meta: { errorHandled: true },
+    retry: false,
     mutationFn: ({ file }) => uploadPaperlessDocument(file, documentsClient),
     onSuccess: (id, variables) => {
       variables.fields.setTaskId(id);
+      variables.fields.setUploadPending(false);
       variables.fields.setUploadError(null);
     },
     onError: (error, variables) => setUploadFailure(error, variables.fields),
@@ -44,6 +46,7 @@ export function useAssociationMutation({
 }): UseMutationResult<TripDocumentAssociation, Error, number, unknown> {
   return useMutation({
     meta: { errorHandled: true },
+    retry: false,
     mutationFn: (documentId: number) =>
       associatePaperlessDocument(tripId, documentId, target, tripsClient),
     onSuccess: () => finishAssociation(fields, queryClient, tripsClient, tripId),
@@ -62,6 +65,7 @@ function setUploadFailure(error: Error, fields: UploadFields): void {
       : `Documents rejected this file: ${error.message}`
   );
   fields.setUploadRejected(!uncertain);
+  fields.setUploadPending(false);
 }
 
 function handleAssociationFailure({
@@ -92,9 +96,7 @@ function finishAssociation(
   tripsClient: TripsClient | undefined,
   tripId: number
 ): void {
-  fields.setTaskId(null);
-  fields.setFile(null);
-  fields.setUploadError(null);
+  fields.clearSelectedFile();
   void queryClient.invalidateQueries({
     queryKey: documentQueryKeys.associations(tripsClient, tripId),
   });

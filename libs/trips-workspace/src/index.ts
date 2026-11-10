@@ -20,3 +20,16 @@ export type {
 export { TripDocumentLinks } from './documents/TripDocumentLinks';
 export { TripDocumentUpload } from './documents/TripDocumentUpload';
 export type { TripDocumentUploadProps } from './documents/TripDocumentUpload';
+
+export { DocumentPicker } from './documents/DocumentPicker';
+export type { DocumentPickerProps } from './documents/DocumentPicker';
+export { useDocumentUpload } from './documents/useDocumentUpload';
+export type {
+  DocumentUploadController,
+  DocumentUploadOptions,
+} from './documents/useDocumentUpload';
+export { createDocumentUploadSession } from './documents/useUploadFields';
+export type { DocumentUploadSession } from './documents/useUploadFields';
+export type { PaperlessSearchDocument } from './documents/types';
+export { CalendarWorkspace } from './calendar/CalendarWorkspace';
+export type { CalendarWorkspaceProps, CalendarSource } from './calendar/types';

@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
 
-import { PageHeader } from '@pops/ui';
+import { Button, PageHeader } from '@pops/ui';
 
 import { fileImportGateway } from '../imports/api';
 import { ImportPreview } from '../imports/ImportPreview';
@@ -16,7 +16,22 @@ export function ImportReviewPage() {
   const { batchId } = useParams<{ batchId: string }>();
   return (
     <main className="space-y-6 p-6">
-      {!batchId && <PageHeader title={t('page.uploadTitle')} description={t('page.description')} />}
+      {!batchId && (
+        <PageHeader
+          title={t('page.uploadTitle')}
+          description={t('page.description')}
+          actions={
+            <div className="flex flex-wrap gap-2">
+              <Button asChild className="min-h-11">
+                <Link to="/contacts/new">{t('create.open')}</Link>
+              </Button>
+              <Button asChild variant="outline" className="min-h-11">
+                <Link to="/contacts/duplicates">{t('duplicates.open')}</Link>
+              </Button>
+            </div>
+          }
+        />
+      )}
       {batchId ? (
         <ReviewPanel
           key={batchId}

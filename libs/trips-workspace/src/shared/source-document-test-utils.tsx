@@ -102,7 +102,7 @@ function journeyHost(documentsClient: DocumentsClient, failFirst: boolean): Sour
   const original = sourceLeg();
   const changed = sourceLeg({ mode: 'Edited source' });
   const transport = journeyTransport({
-    source: { journey: sourceJourney(), legs: [original] },
+    source: { journey: sourceJourney(), legs: [original], legRevision: 0 },
     writes: [
       ...failureReplies(failFirst),
       { status: 200, body: changed },

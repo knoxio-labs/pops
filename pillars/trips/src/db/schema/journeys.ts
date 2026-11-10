@@ -26,6 +26,7 @@ export const journeys = sqliteTable(
     tripId: integer('trip_id')
       .notNull()
       .references(() => trips.id),
+    legRevision: integer('leg_revision').notNull().default(0),
     name: text('name'),
     reference: text('reference'),
     notes: text('notes').notNull().default(''),
@@ -45,6 +46,8 @@ export const journeyLegs = sqliteTable(
       .notNull()
       .references(() => journeys.id),
     position: integer('position').notNull(),
+    removedAt: text('removed_at'),
+    removalOperationId: text('removal_operation_id'),
     mode: text('mode'),
     from: text('from_endpoint', { mode: 'json' }).$type<JourneyEndpoint>().notNull().default({}),
     to: text('to_endpoint', { mode: 'json' }).$type<JourneyEndpoint>().notNull().default({}),
