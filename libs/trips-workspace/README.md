@@ -51,7 +51,9 @@ retained SDK picker intent for each responsibility target. Its controlled owner
 picker supplies the selected canonical URI; no raw URI entry or Contact form is
 implemented here. Closed or unmounted picker views cannot initiate responsibility writes. The
 workspace retains per-target PUT payloads, expected revisions, pending outcomes
-and exact successful receipts above source dialogs. Reloading identical source
+and their successful receipts above source dialogs. A Contact PUT may return the
+producer-verified canonical redirect; that returned URI belongs to the actual
+response, while retry keeps the originally selected input. Reloading identical source
 fields never acknowledges a lost response. Failures expose detached source snapshots; retry uses the controller-owned
 immutable request. Retry preserves the original request;
 starting a new responsibility change explicitly reconciles the current source

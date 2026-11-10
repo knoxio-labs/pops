@@ -15,7 +15,7 @@ import type {
   ArrangementsWorkspaceProps,
 } from './types';
 
-/** Independent revisioned responsibility editor; only an exact retained response acknowledges its operation. */
+/** Retained writes use their own response as proof; Contact receipts may contain the producer-verified canonical redirect. */
 export interface ResponsibilityEditor {
   query: UseQueryResult<ArrangementResponsibility, Error>;
   busy: boolean;
@@ -85,17 +85,17 @@ function matchesWrite(write: ResponsibilityWrite, receipt: ArrangementResponsibi
     receipt.targetKind === write.source.targetKind &&
     receipt.targetId === write.source.targetId &&
     receipt.revision === write.source.revision + 1 &&
-    sameResponsibility(receipt.responsibility, write.value)
+    acceptedResponsibility(receipt.responsibility, write.value)
   );
 }
 
-function sameResponsibility(
+function acceptedResponsibility(
   first: ArrangementResponsibility['responsibility'],
   second: ArrangementResponsibility['responsibility']
 ): boolean {
   if (second === null) return first === null;
   if (second.kind === 'self') return first?.kind === 'self';
-  return first?.kind === 'contact' && first.uri === second.uri;
+  return first?.kind === 'contact';
 }
 
 function newerResponsibility(

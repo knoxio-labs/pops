@@ -260,19 +260,35 @@ describe('Retained responsibility operations', () => {
     });
     await waitFor(() => expect(result.current.query.data).toEqual(confirmed));
   });
-  it.each([
-    { ...source, responsibility: contactB, revision: 5 },
-    { ...source, responsibility: contactA, revision: 8 },
-    { ...source, targetId: 99, responsibility: contactA, revision: 5 },
-  ])('rejects a receipt outside its exact selected payload/target/revision', async (receipt) => {
-    replace.mockResolvedValueOnce(receipt);
+  it('accepts the producer-verified canonical Contact redirect only from its own PUT receipt', async () => {
+    const canonical = { ...source, responsibility: contactB, revision: 5 };
+    replace.mockResolvedValueOnce(canonical);
     const { result, advance } = setup();
     await waitFor(() => expect(result.current.query.isSuccess).toBe(true));
     await act(async () => {
       await result.current.save(source, contactA, pickerA);
     });
-    expect(result.current.failure?.write).toEqual({ source, value: contactA, picker: pickerA });
-    expect(advance).not.toHaveBeenCalled();
-    expect(result.current.query.data).toEqual(source);
+    expect(replace).toHaveBeenCalledExactlyOnceWith(expect.anything(), source, contactA);
+    expect(result.current.query.data).toEqual(canonical);
+    expect(result.current.failure).toBeUndefined();
+    expect(advance).toHaveBeenCalledExactlyOnceWith(target, pickerA);
   });
+  it.each([
+    { ...source, responsibility: { kind: 'self' }, revision: 5 },
+    { ...source, responsibility: contactA, revision: 8 },
+    { ...source, targetId: 99, responsibility: contactA, revision: 5 },
+  ] satisfies ArrangementResponsibility[])(
+    'rejects a receipt outside its selected kind, target or next revision',
+    async (receipt) => {
+      replace.mockResolvedValueOnce(receipt);
+      const { result, advance } = setup();
+      await waitFor(() => expect(result.current.query.isSuccess).toBe(true));
+      await act(async () => {
+        await result.current.save(source, contactA, pickerA);
+      });
+      expect(result.current.failure?.write).toEqual({ source, value: contactA, picker: pickerA });
+      expect(advance).not.toHaveBeenCalled();
+      expect(result.current.query.data).toEqual(source);
+    }
+  );
 });
