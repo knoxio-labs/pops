@@ -63,6 +63,15 @@ editor through this app's generated client against SQLite. Both dependencies alr
 belong to this app's declared graph, so filtered CI installs include the producer's
 native SQLite runtime without adding a lib-to-pillar dependency.
 
+`PeopleContext({ tripId, contacts?, client? })` supplies Trips translations and
+forwards the owning trip, transport and opaque Contacts host capability to the
+shared workspace. It is a contextual component for the Trip Timeline; it publishes
+no independent People route or remote page slot. The shared workspace owns exact Visit grouping,
+independent meeting edits, durable retry and confirmed source Undo. It imports
+no Contacts implementation into this app. The meeting persistence regression
+drives the public headless editor through the generated HTTP client and the
+owning SQLite producer, including a lost response after a committed create.
+
 ## Visit sources
 
 `/trips/:tripId/visits/:visitId` mounts `VisitWorkspace` with literal source identities.
