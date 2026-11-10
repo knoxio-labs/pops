@@ -14,3 +14,9 @@ export { i18n as contactsI18n } from './locales';
 
 export { ContactChooserSession } from './entity/ContactChooserSession';
 export type { ContactChooserSnapshot } from './entity/ContactChooserSession';
+
+export { readContactReference } from './entity/readContactReference';
+export type {
+  AvailableContactReference,
+  ContactReferenceRead,
+} from './entity/readContactReference';
