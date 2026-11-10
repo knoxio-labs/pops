@@ -12,8 +12,8 @@ export class CaptureSourceOwner {
   }
   /** Check the effective transport at dispatch, including exact retries and Undo, without changing their payloads. */
   bind(identity: CaptureIdentity, perform: CapturePerformer): CapturePerformer {
-    const current = sourceOwner(identity);
     return (request) => {
+      const current = sourceOwner(identity);
       if (
         current.origin !== this.original.origin ||
         current.tripId !== this.original.tripId ||

@@ -116,6 +116,26 @@ it('allows a replacement client at the same semantic origin to retry the origina
   expect(source.requests[1]).toEqual(source.requests[0]);
 });
 
+it('checks the current effective client on a mutable identity without rejecting same-origin replacement', async () => {
+  const source = owner();
+  const retained = session(source.identity);
+  retained.editor.editDraft({ originalText: 'Retained owner A' });
+  source.identity.client = createClient({
+    baseUrl: 'http://owner-b.test',
+    fetch: source.transport,
+  });
+  expect(await retained.editor.capture()).toBe(false);
+  const pending = retained.editor.getPendingRequest();
+  expect(source.requests).toHaveLength(0);
+  source.identity.client = createClient({
+    baseUrl: 'http://owner-a.test',
+    fetch: source.transport,
+  });
+  expect(await retained.editor.retry()).toBe(true);
+  expect(source.requests).toHaveLength(1);
+  expect(source.requests[0]?.request).toEqual(pending);
+});
+
 it('uses the effective default origin for retention and point-use safety', async () => {
   const source = owner();
   defaultClient.setConfig({ baseUrl: 'http://owner-a.test', fetch: source.transport });
