@@ -1,6 +1,6 @@
 # Trips browser app
 
-The shell loads `dist/remote/trips.js` and `trips.css` from the Trips manifest. The app exposes the grouped home, trip metadata settings, a trip calendar, and route adapters for the `@pops/trips-workspace` visit, stay, journey, event, options-first decision editors. It also exports router-free Capture tools. Event detail is registered at `:tripId/events/:eventId`; invalid route identities fail before making source requests. The separate Documents list is registered at `/trips/:tripId/documents`. The public router-free `CaptureContext({ tripId, view, client?, documentsClient?, contacts?, onViewEvent? })` embeds the same retained engine in its owning Trip workspace. It publishes no Capture, Inbox or Explore destination or navigation; host placement and controlled view changes belong to the Trip workspace.
+The shell loads `dist/remote/trips.js` and `trips.css` from the Trips manifest. The app exposes the grouped home, trip metadata settings, a trip calendar, and route adapters for the `@pops/trips-workspace` visit, stay, journey, event, options-first decision editors. It also exports router-free Capture tools. Event detail is registered at `:tripId/events/:eventId`; invalid route identities fail before making source requests. The separate Documents list is registered at `/trips/:tripId/documents`. The public router-free `CaptureContext({ tripId, view, selectedSource?, client?, documentsClient?, contacts?, onViewEvent? })` embeds the same retained engine in its owning Trip workspace. It publishes no Capture, Inbox or Explore destination or navigation; host placement and controlled view changes belong to the Trip workspace.
 
 The Documents route provides typed document associations and owner uploads. It owns no database and uses generated Trips and Tags clients at the shell's authenticated same-origin proxy paths.
 
@@ -89,3 +89,5 @@ Trips transport, requires an explicit display zone, and opens exact owning edito
 routes. Unavailable collections render retryable errors, retaining a prior complete
 read during refresh failures. Calendar date bounds remain separate from resolved
 source clocks; the optional journey window uses the owning timing endpoint.
+
+The public `CaptureSourceSelection` union selects an exact persisted Capture or Idea ID and opens its existing editor. `selectedSource: undefined` or `null` leaves the ordinary tool view; a missing or removed selected source stays unavailable without falling back to a different row. Contextual source changes retain owner-scoped drafts, unknown operation UUIDs and Undo history. Retained writes/retries/Undo are fenced to the original effective Trips origin, including the default client; a same-origin replacement client is supported.

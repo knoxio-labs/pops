@@ -64,7 +64,8 @@ export function CaptureInbox({
     </section>
   );
 }
-function useInboxContactReads(session: CaptureBrowserSession, source: CaptureSource): void {
+/** Refresh retained association availability for the existing Inbox or exact-source row without writing Trips. */
+export function useInboxContactReads(session: CaptureBrowserSession, source: CaptureSource): void {
   useSyncExternalStore(
     session.contacts.subscribe,
     session.contacts.snapshot,
@@ -81,18 +82,21 @@ function useInboxContactReads(session: CaptureBrowserSession, source: CaptureSou
         void session.contactReads.load(row.target.reference.uri);
   }, [session.contactReads, source.associations]);
 }
-function CaptureInboxRow({
+/** The same raw source row and revisioned editor used by the Inbox and exact-source context. */
+export function CaptureInboxRow({
   session,
   capture,
   source,
   busy,
   documentsClient,
+  expanded,
 }: {
   session: CaptureBrowserSession;
   capture: Capture;
   source: CaptureSource;
   busy: boolean;
   documentsClient?: CaptureWorkspaceProps['documentsClient'];
+  expanded?: boolean;
 }): JSX.Element {
   useSyncExternalStore(
     session.records.subscribe,
@@ -124,20 +128,33 @@ function CaptureInboxRow({
         documentsClient={documentsClient}
         busy={busy}
       />
-      <CaptureFields session={session} capture={capture} busy={busy} />
+      <CaptureFields session={session} capture={capture} busy={busy} expanded={expanded} />
       <CaptureOrganise session={session} capture={capture} source={source} busy={busy} />
-      <Button
-        variant="ghost"
-        disabled={busy}
-        onClick={() =>
-          void session.editor.commit(
-            { kind: 'capture.remove', id: capture.id, expectedRevision: capture.revision },
-            'Remove capture'
-          )
-        }
-      >
-        Remove capture
-      </Button>
+      <RemoveCapture session={session} capture={capture} busy={busy} />
     </article>
+  );
+}
+function RemoveCapture({
+  session,
+  capture,
+  busy,
+}: {
+  session: CaptureBrowserSession;
+  capture: Capture;
+  busy: boolean;
+}): JSX.Element {
+  return (
+    <Button
+      variant="ghost"
+      disabled={busy}
+      onClick={() =>
+        void session.editor.commit(
+          { kind: 'capture.remove', id: capture.id, expectedRevision: capture.revision },
+          'Remove capture'
+        )
+      }
+    >
+      Remove capture
+    </Button>
   );
 }

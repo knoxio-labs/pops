@@ -329,11 +329,20 @@ new operation UUID while reusing accepted references, without another upload. No
 bytes or Undo history survive a browser reload. Organisation, source edits and collection
 removal use the producer's guarded inverses without restoring an old whole workspace.
 
-`CaptureWorkspace({ tripId, view, client?, documentsClient?, contacts?, onViewEvent? })`
+`CaptureWorkspace({ tripId, view, selectedSource?, client?, documentsClient?, contacts?, onViewEvent? })`
 provides embedded text-first Capture, inline Inbox and Explore tool views for the owning
 Trip workspace. The host controls the view and Event callback; the tool renders no
 page landmark, back navigation or destination links. Its session is scoped
-to the host QueryClient, API origin and owning trip. Optional catalogue failures stay
+to the host QueryClient, effective API origin and owning trip, including the generated default client.
+Every retained write, exact retry and Undo checks that original semantic origin at dispatch;
+changing a mutable client to another origin preserves the pending UUID/draft and blocks the request
+until that owner is restored. Replacing a client at the same origin is supported.
+The optional controlled `selectedSource: CaptureSourceSelection` uses the generated-ID union
+`{ kind: 'capture'; id } | { kind: 'idea'; id }` to open only that exact active source through
+its existing expanded editor. Missing or removed sources show unavailable; no other row or
+Explore membership is substituted. `undefined` and `null` show the ordinary tool view.
+Selection changes and remounts retain the same owner-scoped drafts, pending commands and Undo history.
+Optional catalogue failures stay
 separate from the source read. Inbox keeps raw material visible while saving explicit
 fields and typed existing/new Idea, Event, Journey or Stay organisation. Classification
 alone stays unorganised; unresolved external references retain their canonical identity.

@@ -28,6 +28,19 @@ interface OwnerState {
   loseNextWrite: boolean;
 }
 
+function workspaceForTrip(source: CaptureSource, path: string): CaptureSource {
+  const tripId = Number(path.match(/\/trips\/(\d+)\//)?.[1]);
+  return {
+    captures: source.captures.filter((row) => row.tripId === tripId),
+    ideas: source.ideas.filter((row) => row.tripId === tripId),
+    associations: source.associations.filter((row) => row.tripId === tripId),
+    memberships: source.memberships.filter((row) => row.tripId === tripId),
+    events: source.events.filter((row) => row.tripId === tripId),
+    journeys: source.journeys.filter((row) => row.tripId === tripId),
+    stays: source.stays.filter((row) => row.tripId === tripId),
+  };
+}
+
 async function answerOwner(
   state: OwnerState,
   request: IncomingMessage,
@@ -52,7 +65,8 @@ async function answerOwner(
         undone: false,
       })
     );
-  } else if (path.endsWith('/capture-workspace')) response.end(JSON.stringify(state.source));
+  } else if (path.endsWith('/capture-workspace'))
+    response.end(JSON.stringify(workspaceForTrip(state.source, path)));
   else if (path.endsWith('/places')) response.end(JSON.stringify({ places: [] }));
   else if (path.endsWith('/visits')) response.end(JSON.stringify({ visits: [] }));
   else if (path.endsWith('/paperless/status'))

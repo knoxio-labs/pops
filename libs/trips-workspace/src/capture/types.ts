@@ -22,6 +22,10 @@ import type {
 export type CaptureSource = CaptureWorkspaceGetResponses[200];
 /** A source capture keeps its own identity after organisation. */
 export type Capture = CaptureSource['captures'][number];
+/** Exact persisted source to edit; kind distinguishes colliding Capture and Idea IDs. */
+export type CaptureSourceSelection =
+  | { kind: 'capture'; id: Capture['id'] }
+  | { kind: 'idea'; id: CaptureSource['ideas'][number]['id'] };
 /** Accepted Documents task/original identity; never a browser File serialization. */
 export type CaptureAttachment = Capture['attachments'][number];
 /** Explicit organisation input from the published producer, without inferred source fields. */
@@ -86,6 +90,8 @@ export type CapturePerformer = (request: CaptureRequest) => Promise<CaptureResul
 /** Approved source surfaces share one browser session for an owning trip. */
 export interface CaptureWorkspaceProps extends CaptureIdentity {
   view: 'capture' | 'inbox' | 'explore';
+  /** Edit only this exact active source; undefined/null show the ordinary tool view, never a fallback source. */
+  selectedSource?: CaptureSourceSelection | null;
   /** Optional host-owned Contacts chooser and reader; absent capabilities leave retained references unverified. */
   contacts?: ContactsHostCapability;
   documentsClient?: DocumentsClient;

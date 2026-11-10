@@ -11,12 +11,14 @@ import { CaptureComposer } from './CaptureComposer';
 import { CaptureContactChooser } from './CaptureContactChooser';
 import { CaptureExplore } from './CaptureExplore';
 import { CaptureInbox } from './CaptureInbox';
+import { CaptureSelectedSource } from './CaptureSelectedSource';
 import { useCaptureContext } from './use-capture-context';
 import { useCaptureEditor } from './use-capture-editor';
 
 import type { JSX } from 'react';
 
 import type { CaptureBrowserSession } from './browser-session';
+import type { CaptureEditorState } from './editor-types';
 import type { CaptureWorkspaceProps } from './types';
 
 /** Contextual Capture tools retain one owning-trip composer and command history across view remounts. */
@@ -68,24 +70,11 @@ function WorkspaceSession({
     typeof useQuery<{ source: Awaited<ReturnType<typeof loadCaptureSource>>; generation: number }>
   >;
 }): JSX.Element {
-  const editor = session.editor;
   const state = useCaptureEditor(session, props, query.data);
   const context = useCaptureContext(props);
   return (
     <section aria-label="Capture tools" className="space-y-5">
-      <header className="flex items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold">
-          {{ capture: 'Capture', inbox: 'Inbox', explore: 'Explore' }[props.view]}
-        </h2>
-        <Button
-          variant="ghost"
-          disabled={state.busy || state.undoCount === 0}
-          onClick={() => void editor.undo()}
-        >
-          <RotateCcw className="size-4" aria-hidden />
-          Undo
-        </Button>
-      </header>
+      <WorkspaceHeader session={session} view={props.view} state={state} />
       <CaptureContactChooser session={session} />
       {query.isError ? (
         <ErrorState error={requestProblem(query.error)} onRetry={() => void query.refetch()} />
@@ -98,11 +87,20 @@ function WorkspaceSession({
             <ErrorState error={requestProblem(value.error)} onRetry={() => void value.refetch()} />
           </section>
         ))}
-      <CaptureComposer session={session} state={state} context={context} {...props} />
-      {props.view === 'inbox' ? (
+      {props.selectedSource ? (
+        <CaptureSelectedSource
+          selected={props.selectedSource}
+          session={session}
+          context={context}
+          {...props}
+        />
+      ) : (
+        <CaptureComposer session={session} state={state} context={context} {...props} />
+      )}
+      {!props.selectedSource && props.view === 'inbox' ? (
         <CaptureInbox session={session} documentsClient={props.documentsClient} />
       ) : null}
-      {props.view === 'explore' ? (
+      {!props.selectedSource && props.view === 'explore' ? (
         <CaptureExplore
           session={session}
           context={context}
@@ -112,6 +110,32 @@ function WorkspaceSession({
       ) : null}
       {state.busy ? <p role="status">Saving…</p> : null}
     </section>
+  );
+}
+
+function WorkspaceHeader({
+  session,
+  view,
+  state,
+}: {
+  session: CaptureBrowserSession;
+  view: CaptureWorkspaceProps['view'];
+  state: CaptureEditorState;
+}): JSX.Element {
+  return (
+    <header className="flex items-center justify-between gap-3">
+      <h2 className="text-lg font-semibold">
+        {{ capture: 'Capture', inbox: 'Inbox', explore: 'Explore' }[view]}
+      </h2>
+      <Button
+        variant="ghost"
+        disabled={state.busy || state.undoCount === 0}
+        onClick={() => void session.editor.undo()}
+      >
+        <RotateCcw className="size-4" aria-hidden />
+        Undo
+      </Button>
+    </header>
   );
 }
 

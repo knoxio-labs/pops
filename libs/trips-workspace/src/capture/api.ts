@@ -1,5 +1,6 @@
 import { unwrap } from '@pops/pillar-sdk/client';
 
+import { sourceOwner } from '../arrangements/source-owner';
 import {
   captureWorkspaceGet,
   capturesCreate,
@@ -43,12 +44,8 @@ export async function loadCaptureSource(
 export function captureQueryKey(
   identity: CaptureIdentity
 ): readonly ['trips', string, number, 'capture_workspace'] {
-  return [
-    'trips',
-    identity.client?.getConfig().baseUrl ?? '/trips-api',
-    identity.tripId,
-    'capture_workspace',
-  ];
+  const owner = sourceOwner(identity);
+  return ['trips', owner.origin, owner.tripId, 'capture_workspace'];
 }
 /** Execute only the finite action-specific owner endpoint matching this exact retained request. */
 export async function performCaptureRequest(

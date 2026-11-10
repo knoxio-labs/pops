@@ -17,8 +17,10 @@ export function useCaptureEditor(
   const editor = session.editor;
   const state = useSyncExternalStore(editor.subscribe, editor.getState, editor.getState);
   useEffect(() => {
-    editor.setPerformer((request) => performCaptureRequest({ client, tripId }, request));
-  }, [editor, client, tripId]);
+    session.bindPerformer({ client, tripId }, (request) =>
+      performCaptureRequest({ client, tripId }, request)
+    );
+  }, [session, client, tripId]);
   useEffect(() => {
     if (read) editor.receive(read.source, read.generation);
   }, [editor, read]);
