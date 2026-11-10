@@ -11,6 +11,12 @@ export { JourneyWorkspace } from './journey/JourneyWorkspace';
 export type { JourneyWorkspaceProps } from './journey/types';
 export { TripOverview } from './overview/TripOverview';
 export type { TripOverviewProps, OverviewLabels, OverviewKind } from './overview/types';
+export { ArrangementsWorkspace } from './arrangements/ArrangementsWorkspace';
+export type { ArrangementsWorkspaceProps, ArrangementLabels } from './arrangements/types';
+/** Locale-aware calendar source formatter; absent clocks never become viewer-local instants. */
+export { dateLabel as formatTripDate } from './visit/periods';
+export { VisitWorkspace } from './visit/VisitWorkspace';
+export type { VisitWorkspaceProps } from './visit/types';
 export { DocumentAssociationPicker } from './documents/DocumentAssociationPicker';
 export { TripDocumentsWorkspace } from './documents/TripDocumentsWorkspace';
 export type {
@@ -22,6 +28,14 @@ export type {
 export { TripDocumentLinks } from './documents/TripDocumentLinks';
 export { TripDocumentUpload } from './documents/TripDocumentUpload';
 export type { TripDocumentUploadProps } from './documents/TripDocumentUpload';
+export {
+  createTripDocumentUploadSession,
+  TripDocumentUploadContextError,
+} from './documents/trip-document-upload-session';
+export type {
+  TripDocumentUploadContext,
+  TripDocumentUploadSession,
+} from './documents/trip-document-upload-session';
 
 export { DocumentPicker } from './documents/DocumentPicker';
 export type { DocumentPickerProps } from './documents/DocumentPicker';

@@ -13,8 +13,9 @@ import { TripOverviewPage } from './TripOverviewPage';
 import type { TripOverviewProps } from '@pops/trips-workspace';
 
 vi.mock('@pops/trips-workspace', () => ({
-  TripOverview: ({ calendarLink, documentsHref, labels }: TripOverviewProps) => (
+  TripOverview: ({ calendarLink, documentsHref, labels, href }: TripOverviewProps) => (
     <>
+      <a href={href('visit', 31)}>Visit source</a>
       {calendarLink && <a href={calendarLink.href}>{calendarLink.label}</a>}
       {documentsHref && <a href={documentsHref}>{labels.documents}</a>}
     </>
@@ -45,6 +46,15 @@ function mount(path: string) {
 }
 
 describe('Trip overview navigation', () => {
+  it('links explicit Visit identities to the published owning editor', () => {
+    mount('/7');
+    const route = TRIPS_PAGES.find((page) => page.bundleSlot === 'trips-visit');
+    expect(route).toBeDefined();
+    expect(screen.getByRole('link', { name: 'Visit source' })).toHaveAttribute(
+      'href',
+      `/trips/${route?.path.replace(':tripId', '7').replace(':visitId', '31')}`
+    );
+  });
   it('links the published Calendar route using the owning trip identity', () => {
     mount('/7');
     const route = TRIPS_PAGES.find((page) => page.bundleSlot === 'trips-calendar');

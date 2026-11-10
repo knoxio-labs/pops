@@ -68,6 +68,28 @@ function call(path: string, method = 'GET', body?: unknown, key: string | null =
 }
 
 describe('Trips HTTP contract', () => {
+  it('publishes visit revisions, rejects stale PATCH and retains one-sided timing', async () => {
+    const trip = TripSchema.parse(await (await call('/trips', 'POST', {})).json());
+    const place = PlaceSchema.parse(await (await call('/places', 'POST', { name: 'City' })).json());
+    const path = `/trips/${trip.id}/visits`;
+    const visit = VisitSchema.parse(await (await call(path, 'POST', { placeId: place.id })).json());
+    expect(visit.revision).toBe(0);
+    const response = await call(`${path}/${visit.id}`, 'PATCH', {
+      expectedRevision: 0,
+      timing: { duration: { max: 0, unit: 'days' } },
+    });
+    expect(response.status).toBe(200);
+    const updated = VisitSchema.parse(await response.json());
+    expect(updated).toMatchObject({ revision: 1, timing: { duration: { max: 0, unit: 'days' } } });
+    const stale = await call(`${path}/${visit.id}`, 'PATCH', { expectedRevision: 0, timing: {} });
+    expect(stale.status).toBe(409);
+    expect(await stale.json()).toMatchObject({ code: 'trips.visit.visit_revision_conflict' });
+    expect(VisitSchema.parse(await (await call(`${path}/${visit.id}`)).json())).toEqual(updated);
+    for (const expectedRevision of [-1, 0.5, Number.MAX_SAFE_INTEGER + 1]) {
+      expect((await call(`${path}/${visit.id}`, 'PATCH', { expectedRevision })).status).toBe(400);
+    }
+  });
+
   it('serves discovery without credentials and publishes its actual operations', async () => {
     expect((await call('/health', 'GET', undefined, null)).status).toBe(200);
     expect((await call('/pillars', 'GET', undefined, null)).status).toBe(200);
@@ -111,8 +133,13 @@ describe('Trips HTTP contract', () => {
       visitIds: [second.id, first.id],
     });
     expect(reordered.status).toBe(200);
-    expect(await reordered.json()).toEqual({ visits: [second, first] });
-    expect(await (await call(`${route}/${first.id}`)).json()).toEqual(first);
+    expect(await reordered.json()).toEqual({
+      visits: [
+        { ...second, revision: 1 },
+        { ...first, revision: 1 },
+      ],
+    });
+    expect(await (await call(`${route}/${first.id}`)).json()).toEqual({ ...first, revision: 1 });
     expect(
       (await call(`${route}/${first.id}`, 'PATCH', { timing: {}, notes: 'Original text' })).status
     ).toBe(200);
@@ -129,6 +156,60 @@ describe('Trips HTTP contract', () => {
     });
     expect(await (await call('/places')).json()).toMatchObject({ places: [{ id: place.id }] });
     expect(await (await call('/trips')).json()).toMatchObject({ trips: [{ id: trip.id }] });
+  });
+
+  it('roundtrips one-sided and complete duration bounds without synthesizing source facts', async () => {
+    const trip = TripSchema.parse(await (await call('/trips', 'POST', {})).json());
+    const place = PlaceSchema.parse(await (await call('/places', 'POST', { name: 'City' })).json());
+    const route = `/trips/${trip.id}/visits`;
+    for (const duration of [
+      { min: 0, unit: 'days' },
+      { max: 1.5, unit: 'weeks' },
+      { min: 2, max: 3, unit: 'days' },
+    ]) {
+      const timing = { arrival: '2028-01-20', departure: '2028-01-10', duration };
+      const created = await call(route, 'POST', { placeId: place.id, timing });
+      expect(created.status).toBe(201);
+      const visit = VisitSchema.parse(await created.json());
+      expect(visit.timing).toEqual(timing);
+      expect(await (await call(`${route}/${visit.id}`)).json()).toEqual(visit);
+      expect((await call(`${route}/${visit.id}`, 'PATCH', { timing: {} })).status).toBe(200);
+      const updated = await call(`${route}/${visit.id}`, 'PATCH', { timing });
+      expect(updated.status).toBe(200);
+      expect(VisitSchema.parse(await updated.json()).timing).toEqual(timing);
+      expect(await (await call(`${route}/${visit.id}`)).json()).toMatchObject({ timing });
+    }
+  });
+
+  it('rejects empty or malformed durations before creating or partially updating source records', async () => {
+    const trip = TripSchema.parse(await (await call('/trips', 'POST', {})).json());
+    const place = PlaceSchema.parse(await (await call('/places', 'POST', { name: 'City' })).json());
+    const route = `/trips/${trip.id}/visits`;
+    const original = VisitSchema.parse(
+      await (
+        await call(route, 'POST', {
+          placeId: place.id,
+          timing: { duration: { min: 2, max: 3, unit: 'weeks' } },
+          notes: 'Retained source',
+        })
+      ).json()
+    );
+    for (const duration of [
+      {},
+      { unit: 'days' },
+      { min: -1, unit: 'days' },
+      { max: -1, unit: 'days' },
+      { min: 3, max: 2, unit: 'days' },
+      { min: 1 },
+      { max: 1, unit: 'months' },
+      { min: '1', unit: 'days' },
+      { max: null, unit: 'days' },
+    ]) {
+      const body = { placeId: place.id, timing: { duration }, notes: 'Rejected source' };
+      expect((await call(route, 'POST', body)).status).toBe(400);
+      expect((await call(`${route}/${original.id}`, 'PATCH', body)).status).toBe(400);
+      expect(await (await call(route)).json()).toEqual({ visits: [original] });
+    }
   });
 
   it('returns stable errors for invalid values, missing references and invalid route membership', async () => {

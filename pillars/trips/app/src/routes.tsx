@@ -8,12 +8,18 @@ import type { TripsPageSlot } from '@pops/trips/pages';
 const HomePage = lazy(() =>
   import('./home/HomePage').then((module) => ({ default: module.HomePage }))
 );
+const VisitPage = lazy(() =>
+  import('./VisitPage').then((module) => ({ default: module.VisitPage }))
+);
 const CalendarPage = lazy(() =>
   import('./CalendarPage').then((module) => ({ default: module.CalendarPage }))
 );
 const StayPage = lazy(() => import('./StayPage').then((module) => ({ default: module.StayPage })));
 const TripOverviewPage = lazy(() =>
   import('./TripOverviewPage').then((module) => ({ default: module.TripOverviewPage }))
+);
+const ArrangementsPage = lazy(() =>
+  import('./ArrangementsPage').then((module) => ({ default: module.ArrangementsPage }))
 );
 const EventPage = lazy(() =>
   import('./EventPage').then((module) => ({ default: module.EventPage }))
@@ -36,8 +42,10 @@ export const bundles = {
   'trips-overview': TripOverviewPage,
   'trips-calendar': CalendarPage,
   'trips-stay': StayPage,
+  'trips-arrangements': ArrangementsPage,
   'trips-event': EventPage,
   'trips-decision': DecisionPage,
+  'trips-visit': VisitPage,
   'trips-journey': JourneyPage,
   'trips-documents': DocumentsPage,
   'trips-settings': SettingsPage,
@@ -46,8 +54,10 @@ export const bundles = {
 export const routes: RouteObject[] = [
   { index: true, element: <HomePage /> },
   { path: ':tripId', element: <TripOverviewPage /> },
+  { path: ':tripId/visits/:visitId', element: <VisitPage /> },
   { path: ':tripId/calendar', element: <CalendarPage /> },
   { path: ':tripId/stays/:stayId', element: <StayPage /> },
+  { path: ':tripId/arrangements', element: <ArrangementsPage /> },
   { path: ':tripId/events/:eventId', element: <EventPage /> },
   { path: ':tripId/decisions/:decisionId', element: <DecisionPage /> },
   { path: ':tripId/journeys/:journeyId', element: <JourneyPage /> },

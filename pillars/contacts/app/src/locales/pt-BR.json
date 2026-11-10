@@ -89,7 +89,8 @@
     "email": "e-mail",
     "phone": "telefone",
     "social": "rede social",
-    "url": "URL"
+    "url": "URL",
+    "other": "Outro"
   },
   "classifications": {
     "automatic": "Correspondência encontrada",
@@ -140,7 +141,8 @@
     "invalidChoices": "Escolhas de revisão inválidas.",
     "stageFailed": "Não foi possível ler a exportação.",
     "providerChanged": "A conexão mudou ou a conta selecionada não corresponde. Recarregue as conexões e reconecte a conta desejada.",
-    "notPerson": "Este registro não é uma pessoa."
+    "notPerson": "Este registro não é uma pessoa.",
+    "entityType": "Este registro não é uma empresa ou organização."
   },
   "connections": {
     "title": "Conexões de contatos",
@@ -218,6 +220,7 @@
   },
   "person": {
     "title": "Detalhes da pessoa",
+    "details": "Detalhes",
     "name": "Nome da pessoa",
     "notes": "Notas",
     "methods": "Formas de contato",
@@ -244,6 +247,79 @@
     "reload": "Recarregar pessoa",
     "loading": "Carregando pessoa",
     "uncertain": "O resultado da gravação é desconhecido. Recarregue e confira os dados salvos antes de enviar novamente. Os valores digitados foram mantidos.",
-    "open": "Detalhes da pessoa (nova aba)"
+    "open": "Detalhes da pessoa (nova aba)",
+    "methodRow": "Método de contato {{number}}",
+    "addressRow": "Endereço {{number}}",
+    "removeMethod": "Remover método de contato {{number}}",
+    "removeAddress": "Remover endereço {{number}}",
+    "addressLabel": "Rótulo do endereço",
+    "city": "Cidade",
+    "draftChanged": "Os dados salvos mudaram durante a edição. Seu rascunho foi mantido. Revise os dados mais recentes antes de salvar novamente.",
+    "discardDraft": "Descartar rascunho e revisar dados atuais",
+    "add": "Adicionar"
+  },
+  "entity": {
+    "title": "Detalhes do contato",
+    "name": "Nome do contato",
+    "methods": "Formas de contato",
+    "addresses": "Endereços"
+  },
+  "entityTypes": {
+    "person": "Pessoa",
+    "company": "Empresa",
+    "organisation": "Organização",
+    "government": "Governo",
+    "bank": "Banco",
+    "place": "Local",
+    "brand": "Marca"
+  },
+  "reference": {
+    "type": "Tipo de contato"
+  },
+  "create": {
+    "open": "Criar contato",
+    "title": "Criar contato",
+    "description": "Crie o contato primeiro. Adicione formas de contato e endereços apenas quando tiver esses dados.",
+    "type": "Tipo de contato",
+    "submit": "Criar contato"
+  },
+  "picker": {
+    "open": "Escolher contato",
+    "title": "Escolher um contato",
+    "description": "Pesquise contatos existentes ou comece um novo contato.",
+    "search": "Pesquisar contatos",
+    "minimum": "Digite um nome para buscar.",
+    "empty": "Nenhum contato correspondente.",
+    "failed": "Não foi possível pesquisar contatos.",
+    "create": "Criar novo"
+  },
+  "duplicates": {
+    "open": "Revisar contatos duplicados",
+    "title": "Revisar contatos duplicados",
+    "description": "Escolha dois contatos existentes. Revise os registros de origem e formas de contato disponíveis antes de mesclar.",
+    "source": "Contato a mesclar",
+    "keep": "Contato a manter",
+    "chooseSource": "Escolher contato a mesclar",
+    "chooseKeep": "Escolher contato a manter",
+    "sources": "Registros de origem",
+    "methods": "Formas de contato",
+    "noSources": "Nenhum registro de origem está vinculado a este contato.",
+    "sourcesLimited": "Os registros importados estão disponíveis para contatos do tipo pessoa.",
+    "active": "Origem ativa",
+    "loading": "Carregando evidências de origem…",
+    "reason": "Por que estes registros pertencem ao mesmo contato?",
+    "preview": "Pré-visualizar mesclagem",
+    "confirmation": "Confirmação de mesclagem",
+    "confirm": "Mesclar {{source}} em {{canonical}}. Os registros de origem e endereços permanecem nos registros originais.",
+    "apply": "Mesclar contatos",
+    "cancel": "Voltar",
+    "saved": "A mesclagem foi aplicada. Os registros de origem e endereços permanecem nos registros originais."
+  },
+  "chooser": {
+    "existing": "Escolher um contato existente",
+    "useCreated": "Usar contato criado",
+    "duplicate": "Escolha explicitamente o contato existente ou altere o nome antes de criar outro.",
+    "uncertain": "Não foi possível confirmar o resultado da criação. O rascunho foi mantido e não será enviado novamente. Busque nos contatos existentes para verificar o que foi salvo.",
+    "retryTypes": "Recarregar tipos de contato"
   }
 }

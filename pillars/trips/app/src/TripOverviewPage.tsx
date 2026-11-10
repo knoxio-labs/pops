@@ -41,6 +41,8 @@ export function TripOverviewPage() {
   };
   const href = (kind: OverviewKind, id: number) => {
     switch (kind) {
+      case 'visit':
+        return `/trips/${tripId}/visits/${id}`;
       case 'stay':
         return `/trips/${tripId}/stays/${id}`;
       case 'event':

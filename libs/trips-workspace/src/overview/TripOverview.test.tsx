@@ -127,6 +127,11 @@ describe('source-backed TripOverview', () => {
     await screen.findAllByRole('heading', { name: /Wellington/ });
     const occurrences = document.querySelectorAll('[data-visit-id]');
     expect(occurrences).toHaveLength(2);
+    expect(
+      within(screen.getByRole('region', { name: 'Route' }))
+        .getAllByRole('link', { name: 'Wellington' })
+        .map((link) => link.getAttribute('href'))
+    ).toEqual(['/trips/7/visits/32', '/trips/7/visits/31']);
     expect(occurrences[0]).not.toHaveTextContent('Cedar guesthouse');
     expect(occurrences[1]).toHaveTextContent('Cedar guesthouse');
     expect(occurrences[1]).toHaveTextContent('Harbour festival');

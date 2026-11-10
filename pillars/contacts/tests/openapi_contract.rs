@@ -102,6 +102,26 @@ fn canonical_resolution_requires_an_explicit_nullable_mapping_value() {
 }
 
 #[test]
+fn entity_reference_route_publishes_the_canonical_uri_response() {
+    let document = openapi_30_value();
+    let operation = &document["paths"]["/entities/{id}/reference"]["get"];
+    assert_eq!(operation["operationId"], "entities.reference");
+    assert_eq!(
+        operation["responses"]["200"]["content"]["application/json"]["schema"]["$ref"],
+        "#/components/schemas/EntityReferenceResponse"
+    );
+    assert_eq!(
+        document["components"]["schemas"]["EntityReferenceResponse"]["properties"]["uri"]["type"],
+        "string"
+    );
+    assert_eq!(
+        document["components"]["schemas"]["EntityReferenceResponse"]["properties"]["canonicalId"]
+            ["type"],
+        "string"
+    );
+}
+
+#[test]
 fn error_schema_is_the_adr_054_envelope_with_registered_codes() {
     let doc = openapi_30_value();
     let schema = &doc["components"]["schemas"]["ErrorBody"];

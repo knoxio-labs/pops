@@ -3,6 +3,7 @@ import { Plus, RotateCcw } from 'lucide-react';
 
 import { Button, ErrorState, PageHeader, SortableGrid } from '@pops/ui';
 
+import { SourceDocuments } from '../shared/SourceDocuments';
 import { loadPlaces, requestProblem } from '../stay/api';
 import { journeyKey, loadJourney, loadTiming } from './api';
 import { JourneyChronology } from './JourneyChronology';
@@ -92,6 +93,12 @@ function JourneySession({
       </p>
       <JourneyChronology timing={timing.data} />
       <JourneyFields editor={editor} places={places.data ?? []} />
+      <SourceDocuments
+        tripId={identity.tripId}
+        target={{ kind: 'journey', id: identity.journeyId }}
+        tripsClient={identity.client}
+        documentsClient={identity.documentsClient}
+      />
     </section>
   );
 }

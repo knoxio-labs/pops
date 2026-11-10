@@ -1,5 +1,6 @@
 import { expect, test } from './fixtures/pillar-rest-guard';
 import { json, stubShellBoot } from './helpers/pillar-rest';
+import { stubUnavailableSourceDocuments } from './helpers/trips-source-documents';
 
 const trip = {
   id: 71,
@@ -145,6 +146,7 @@ test('A real stay identity mounts the existing source-backed workspace through t
     updatedAt: trip.updatedAt,
   };
   await stubShellBoot(page, ['trips']);
+  await stubUnavailableSourceDocuments(page, 71);
   await page.route(/\/trips-api\/trips\/71$/, (route) => json(route, 200, trip));
   await page.route(/\/trips-api\/places$/, (route) => json(route, 200, { places: [] }));
   await page.route(/\/trips-api\/trips\/71\/visits$/, (route) => json(route, 200, { visits: [] }));

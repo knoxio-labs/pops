@@ -1,5 +1,6 @@
 import { expect, test } from './fixtures/pillar-rest-guard';
 import { json, stubShellBoot } from './helpers/pillar-rest';
+import { stubEventDocuments } from './helpers/trips-source-documents';
 
 const eventSource = {
   id: 19,
@@ -27,6 +28,7 @@ for (const width of [1440, 390]) {
   test(`Event remote preserves source facts and persists Undo at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     await stubShellBoot(page, ['trips']);
+    const documents = await stubEventDocuments(page);
     const errors: string[] = [];
     const writes: unknown[] = [];
     let purchase: 'Purchased' | null = null;
@@ -117,6 +119,19 @@ for (const width of [1440, 390]) {
     const { id, tripId, createdAt, updatedAt, ...snapshot } = eventSource;
     expect([id, tripId, createdAt, updatedAt]).toHaveLength(4);
     expect(writes[1]).toEqual(snapshot);
+    const files = page.getByRole('region', { name: 'Source documents' });
+    await expect(files.getByText('Owner ticket', { exact: true })).toBeVisible();
+    await files.getByRole('button', { name: 'Unlink Owner ticket' }).click();
+    await expect(files.getByText('Owner ticket', { exact: true })).toHaveCount(0);
+    await files.getByRole('button', { name: 'Choose existing document' }).click();
+    await page.getByPlaceholder('Search documents...').fill('ticket');
+    await page.getByRole('button', { name: 'Link', exact: true }).click();
+    await expect(files.getByText('Owner ticket', { exact: true })).toBeVisible();
+    expect(documents.writes).toEqual([
+      { method: 'DELETE', path: '/trips-api/trips/7/document-associations/81' },
+      { documentId: 91, targetKind: 'event', targetId: 19 },
+    ]);
+    expect(writes).toHaveLength(2);
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
     ).toBe(true);

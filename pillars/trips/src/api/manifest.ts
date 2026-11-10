@@ -10,6 +10,11 @@ import type {
 const TRIPS_WIRE_NAV = { ...TRIPS_NAV, items: [...TRIPS_NAV.items] } satisfies NavConfigDescriptor;
 const TRIPS_WIRE_PAGES = [...TRIPS_PAGES] satisfies PageDescriptor[];
 const TRIPS_QUERIES = [
+  'trips.captureWorkspace.get',
+  'trips.rentals.list',
+  'trips.rentals.get',
+  'trips.responsibilities.list',
+  'trips.responsibilities.get',
   'trips.events.list',
   'trips.events.get',
   'trips.decisions.list',
@@ -36,6 +41,24 @@ const TRIPS_QUERIES = [
   'trips.visits.get',
 ] as const;
 const TRIPS_MUTATIONS = [
+  'trips.captures.create',
+  'trips.captures.update',
+  'trips.captures.attach',
+  'trips.captures.remove',
+  'trips.captures.organise',
+  'trips.captures.removeAssociation',
+  'trips.captures.undo',
+  'trips.ideas.create',
+  'trips.ideas.update',
+  'trips.ideas.remove',
+  'trips.ideas.undo',
+  'trips.explore.add',
+  'trips.explore.remove',
+  'trips.explore.undo',
+  'trips.rentals.create',
+  'trips.rentals.update',
+  'trips.rentals.delete',
+  'trips.responsibilities.replace',
   'trips.events.create',
   'trips.events.update',
   'trips.events.delete',

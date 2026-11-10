@@ -56,9 +56,19 @@ pub enum ContactPointKind {
     Phone,
     Social,
     Url,
+    Other,
 }
 
 impl ContactPointKind {
+    /// All contract-supported method kinds; a preferred selection may include one of each.
+    pub const ALL: [Self; 5] = [
+        Self::Email,
+        Self::Phone,
+        Self::Social,
+        Self::Url,
+        Self::Other,
+    ];
+
     /// Stable SQLite representation of this contact point kind.
     pub fn as_str(self) -> &'static str {
         match self {
@@ -66,13 +76,15 @@ impl ContactPointKind {
             Self::Phone => "phone",
             Self::Social => "social",
             Self::Url => "url",
+            Self::Other => "other",
         }
     }
 }
 
-/// A local or imported point. `sourceRecordId: null` identifies an explicit local value.
+/// A local or imported point. `sourceRecordId: null` identifies an explicit local value, which
+/// may belong to a person, company or organisation; source-backed points remain person-owned.
 /// Preferred observations survive source refresh/deactivation, including their original value.
-#[derive(Debug, Clone, Serialize, ToSchema, sqlx::FromRow)]
+#[derive(Debug, Clone, Deserialize, Serialize, ToSchema, sqlx::FromRow)]
 #[serde(rename_all = "camelCase")]
 pub struct ContactPoint {
     pub id: String,

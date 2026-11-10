@@ -1,3 +1,6 @@
+import type { ContactsHostCapability } from '@pops/pillar-sdk';
+
+import type { Client as DocumentsClient } from '../documents-api/client';
 import type { Client } from '../trips-api/client';
 import type { EventsGetResponses, EventsUpdateData } from '../trips-api/types.gen';
 
@@ -10,6 +13,10 @@ export interface EventWorkspaceProps {
   tripId: number;
   eventId: number;
   client?: Client;
+  /** Owner chooser and retained-reference reader supplied through the host boundary. */
+  contacts?: ContactsHostCapability;
+  /** Authenticated Documents owner transport, independent of the Trips source client. */
+  documentsClient?: DocumentsClient;
 }
 /** Controlled source fields and their explicit persistence action. */
 export interface EventFieldProps {

@@ -1,5 +1,6 @@
 import { expect, test } from './fixtures/pillar-rest-guard';
 import { json, stubShellBoot } from './helpers/pillar-rest';
+import { stubUnavailableSourceDocuments } from './helpers/trips-source-documents';
 
 const audit = { createdAt: '2029-01-01T00:00:00Z', updatedAt: '2029-01-01T00:00:00Z' };
 const journey = {
@@ -56,6 +57,7 @@ test('A real journey deep route loads the built remote and preserves endpoint so
   let legRevision = 0;
   page.on('pageerror', (error) => errors.push(error.message));
   await stubShellBoot(page, ['trips']);
+  await stubUnavailableSourceDocuments(page, 7);
   await page.route(/\/trips-api\/places$/, (route) => json(route, 200, { places: [] }));
   await page.route(/\/trips-api\/trips\/7\/journey-groups$/, (route) =>
     json(route, 200, { groups: [] })
@@ -149,6 +151,7 @@ test('Journey selection replaces the literal source URL and Undo restores the or
   let optionLegRevision = 0;
   page.on('pageerror', (error) => errors.push(error.message));
   await stubShellBoot(page, ['trips']);
+  await stubUnavailableSourceDocuments(page, 7);
   await page.route(/\/trips-api\/places$/, (route) => json(route, 200, { places: [] }));
   await page.route(/\/trips-api\/trips\/7\/journey-groups$/, (route) =>
     json(route, 200, { groups: [group] })
@@ -263,6 +266,7 @@ for (const width of [1440, 390]) {
     page.on('pageerror', (error) => errors.push(error.message));
     await page.setViewportSize({ width, height: 900 });
     await stubShellBoot(page, ['trips']);
+    await stubUnavailableSourceDocuments(page, 7);
     await page.route(/\/trips-api\/places$/, (route) => json(route, 200, { places: [] }));
     await page.route(/\/trips-api\/trips\/7\/journey-groups$/, (route) =>
       json(route, 200, { groups: [] })

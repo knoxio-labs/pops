@@ -1,53 +1,56 @@
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useCallback, useState, useSyncExternalStore } from 'react';
 
 import { loadPaperlessUploadPolicy } from './api';
 import { documentQueryKeys } from './query-keys';
+import { createTripDocumentUploadSession } from './trip-document-upload-session';
 import { uploadSessionKey } from './upload-context';
 import { UploadContent } from './UploadContent';
 import { UploadEntry } from './UploadEntry';
 import { useTripDocumentUpload } from './useTripDocumentUpload';
 
-import type { ReactElement } from 'react';
+import type { ReactElement, SetStateAction } from 'react';
 
-import type { Client as DocumentsClient } from '../documents-api/client';
-import type { Client as TripsClient } from '../trips-api/client';
-import type { DocumentAssociationTarget } from './types';
+import type {
+  TripDocumentFileIntent,
+  TripDocumentUploadContext,
+  TripDocumentUploadSession,
+} from './trip-document-upload-session';
+import type { DocumentUploadSession } from './useUploadFields';
 
-/** An explicit Trips target and optional authenticated transports for original uploads. */
-export interface TripDocumentUploadProps {
-  tripId: number;
-  target: DocumentAssociationTarget;
-  tripsClient?: TripsClient;
-  documentsClient?: DocumentsClient;
+/** Explicit upload context; retain session above conditional views to preserve files and owner receipts. */
+export interface TripDocumentUploadProps extends TripDocumentUploadContext {
+  session?: TripDocumentUploadSession;
 }
 
-interface FileIntent extends TripDocumentUploadProps {
-  id: string;
-  contextKey: string;
-  file: File;
-}
-
-/** Queue distinct browser files and retain each captured target until its owner task is linked. */
+/** Queue distinct browser files; an optional retained session must match this exact target and owners. */
 export function TripDocumentUpload(props: TripDocumentUploadProps): ReactElement {
-  const { tripId, target, tripsClient, documentsClient } = props;
+  const { tripId, target, tripsClient, documentsClient, session } = props;
   const contextKey = uploadSessionKey(tripId, target, tripsClient, documentsClient);
-  const [intents, setIntents] = useState<FileIntent[]>([]);
+  const [localSessions] = useState(() => new Map<string, TripDocumentUploadSession>());
+  let activeSession = session ?? localSessions.get(contextKey);
+  if (activeSession === undefined) {
+    activeSession = createTripDocumentUploadSession(props);
+    localSessions.set(contextKey, activeSession);
+  }
+  activeSession.assertContext(props);
   const policy = useQuery({
     queryKey: documentQueryKeys.status(documentsClient),
-    queryFn: () => loadPaperlessUploadPolicy(documentsClient),
+    queryFn: () => {
+      activeSession.assertCurrentContext();
+      return loadPaperlessUploadPolicy(documentsClient);
+    },
     retry: false,
   });
-  const addFiles = (files: File[]): void => {
-    setIntents((current) => [
-      ...current,
-      ...files.map((file) => ({ ...props, id: crypto.randomUUID(), contextKey, file })),
-    ]);
-  };
   return (
     <section aria-label="Add files" className="flex flex-col gap-3">
       <h2 className="text-lg font-medium">Add files</h2>
-      <UploadEntry {...props} policy={policy.data} onFilesSelected={addFiles} />
+      <UploadEntry
+        {...props}
+        policy={policy.data}
+        onFilesSelected={activeSession.addFiles}
+        beforeRequest={activeSession.assertCurrentContext}
+      />
       {!policy.isError && policy.data?.available && policy.data.configured ? null : (
         <p role="status" className="text-sm text-muted-foreground">
           {policy.isFetching
@@ -55,27 +58,47 @@ export function TripDocumentUpload(props: TripDocumentUploadProps): ReactElement
             : 'Documents is unavailable. Existing links remain visible.'}
         </p>
       )}
-      {intents.map((intent) => (
-        <div key={intent.id} hidden={intent.contextKey !== contextKey}>
-          <UploadIntent intent={intent} active={intent.contextKey === contextKey} />
-        </div>
-      ))}
+      <UploadQueue session={activeSession} />
     </section>
+  );
+}
+
+function UploadQueue({ session }: { session: TripDocumentUploadSession }): ReactElement {
+  const intents = useSyncExternalStore(session.subscribe, session.read, session.read);
+  return (
+    <div className="flex flex-col gap-3">
+      {intents.map((intent) => (
+        <UploadIntent key={intent.id} intent={intent} session={session} />
+      ))}
+    </div>
   );
 }
 
 function UploadIntent({
   intent,
-  active,
+  session,
 }: {
-  intent: FileIntent;
-  active: boolean;
+  intent: TripDocumentFileIntent;
+  session: TripDocumentUploadSession;
 }): ReactElement | null {
-  const workflow = useTripDocumentUpload(intent);
+  const onSessionChange = useCallback(
+    (update: SetStateAction<DocumentUploadSession>) => session.updateFile(intent.id, update),
+    [intent.id, session]
+  );
+  const workflow = useTripDocumentUpload({
+    ...session.context,
+    storage: { session: intent.upload, onSessionChange, taskScope: session.taskScope },
+    beforeRequest: session.assertCurrentContext,
+  });
   if (workflow.fields.file === null) return null;
   return (
     <article aria-label={`Selected file ${intent.file.name}`}>
-      <UploadContent {...intent} workflow={workflow} active={active} />
+      <UploadContent
+        {...session.context}
+        workflow={workflow}
+        active
+        beforeRequest={session.assertCurrentContext}
+      />
     </article>
   );
 }

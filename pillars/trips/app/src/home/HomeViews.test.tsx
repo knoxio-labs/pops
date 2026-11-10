@@ -43,6 +43,7 @@ function visit(id: number, timing: Visit['timing'] = {}): Visit {
     id,
     tripId: 1,
     placeId: id,
+    revision: 0,
     timing,
     notes: '',
     sourceLinks: [],

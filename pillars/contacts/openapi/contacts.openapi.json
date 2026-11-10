@@ -4,10 +4,19 @@
       "Address": {
         "description": "The wire shape served by `GET`/`POST /entities/:id/addresses`.",
         "properties": {
+          "city": {
+            "description": "Literal user-entered city text, independent of Trips place identities.",
+            "nullable": true,
+            "type": "string"
+          },
           "entityId": {
             "type": "string"
           },
           "id": {
+            "type": "string"
+          },
+          "label": {
+            "nullable": true,
             "type": "string"
           },
           "lastEditedTime": {
@@ -214,7 +223,7 @@
         "type": "object"
       },
       "ContactPoint": {
-        "description": "A local or imported point. `sourceRecordId: null` identifies an explicit local value.\nPreferred observations survive source refresh/deactivation, including their original value.",
+        "description": "A local or imported point. `sourceRecordId: null` identifies an explicit local value, which\nmay belong to a person, company or organisation; source-backed points remain person-owned.\nPreferred observations survive source refresh/deactivation, including their original value.",
         "properties": {
           "active": {
             "type": "boolean"
@@ -298,12 +307,13 @@
           "email",
           "phone",
           "social",
-          "url"
+          "url",
+          "other"
         ],
         "type": "string"
       },
       "ContactPointListResponse": {
-        "description": "Contact point observations, including inactive audit values and preferred selections.",
+        "description": "Contact point observations for a person, company or organisation, including inactive audit values and preferred selections.",
         "properties": {
           "data": {
             "items": {
@@ -332,6 +342,15 @@
       "CreateAddressBody": {
         "description": "Body accepted by `POST /entities/:id/addresses`.",
         "properties": {
+          "city": {
+            "description": "Literal city text; never parsed from `value` or resolved as a Trips place.",
+            "nullable": true,
+            "type": "string"
+          },
+          "label": {
+            "nullable": true,
+            "type": "string"
+          },
           "value": {
             "type": "string"
           }
@@ -443,6 +462,25 @@
         ],
         "type": "object"
       },
+      "EntityCatalogue": {
+        "description": "Entity creation choices and default, sourced from the same definitions as request validation.",
+        "properties": {
+          "defaultType": {
+            "type": "string"
+          },
+          "types": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "types",
+          "defaultType"
+        ],
+        "type": "object"
+      },
       "EntityListResponse": {
         "description": "`GET /entities` response body.",
         "properties": {
@@ -505,6 +543,22 @@
         ],
         "type": "object"
       },
+      "EntityReferenceResponse": {
+        "description": "Canonical POPS URI for an entity, resolving historical IDs to their retained identity.",
+        "properties": {
+          "canonicalId": {
+            "type": "string"
+          },
+          "uri": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "canonicalId",
+          "uri"
+        ],
+        "type": "object"
+      },
       "EntityResponse": {
         "description": "`GET /entities/:id` response body.",
         "properties": {
@@ -560,6 +614,298 @@
           "contacts.internal"
         ],
         "type": "string"
+      },
+      "FactChange": {
+        "description": "One explicit draft change. Point and address identifiers name exact observations, never matching text.\n`setEntity` replaces both display name and notes; omitted or null notes clear that field.",
+        "oneOf": [
+          {
+            "properties": {
+              "action": {
+                "enum": [
+                  "setEntity"
+                ],
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "notes": {
+                "nullable": true,
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "action"
+            ],
+            "type": "object"
+          },
+          {
+            "properties": {
+              "action": {
+                "enum": [
+                  "addPoint"
+                ],
+                "type": "string"
+              },
+              "point": {
+                "$ref": "#/components/schemas/ContactPointInput"
+              }
+            },
+            "required": [
+              "point",
+              "action"
+            ],
+            "type": "object"
+          },
+          {
+            "properties": {
+              "action": {
+                "enum": [
+                  "editPoint"
+                ],
+                "type": "string"
+              },
+              "point": {
+                "$ref": "#/components/schemas/ContactPointInput"
+              },
+              "pointId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "pointId",
+              "point",
+              "action"
+            ],
+            "type": "object"
+          },
+          {
+            "properties": {
+              "action": {
+                "enum": [
+                  "removePoint"
+                ],
+                "type": "string"
+              },
+              "pointId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "pointId",
+              "action"
+            ],
+            "type": "object"
+          },
+          {
+            "properties": {
+              "action": {
+                "enum": [
+                  "addAddress"
+                ],
+                "type": "string"
+              },
+              "address": {
+                "$ref": "#/components/schemas/CreateAddressBody"
+              }
+            },
+            "required": [
+              "address",
+              "action"
+            ],
+            "type": "object"
+          },
+          {
+            "properties": {
+              "action": {
+                "enum": [
+                  "editAddress"
+                ],
+                "type": "string"
+              },
+              "address": {
+                "$ref": "#/components/schemas/CreateAddressBody"
+              },
+              "addressId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "addressId",
+              "address",
+              "action"
+            ],
+            "type": "object"
+          },
+          {
+            "properties": {
+              "action": {
+                "enum": [
+                  "removeAddress"
+                ],
+                "type": "string"
+              },
+              "addressId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "addressId",
+              "action"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "FactChangeBody": {
+        "additionalProperties": false,
+        "description": "Apply the complete explicit draft atomically at the exact snapshot version; retries reuse the key and body.",
+        "properties": {
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/FactChange"
+            },
+            "type": "array"
+          },
+          "expectedVersion": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "idempotencyKey": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "expectedVersion",
+          "idempotencyKey",
+          "changes"
+        ],
+        "type": "object"
+      },
+      "FactOperation": {
+        "description": "Immutable operation identity; undo appends another operation rather than modifying history.",
+        "properties": {
+          "canUndo": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "undoneOperationId": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "createdAt",
+          "canUndo"
+        ],
+        "type": "object"
+      },
+      "FactOperationReceipt": {
+        "description": "The operation appended by a write, with the original operation identity on undo.",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "undoneOperationId": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "FactReceipt": {
+        "description": "Successful mutation receipt. Identical retries return this original snapshot, even after later changes.",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/FactsSnapshot"
+          },
+          "operation": {
+            "$ref": "#/components/schemas/FactOperationReceipt"
+          }
+        },
+        "required": [
+          "data",
+          "operation"
+        ],
+        "type": "object"
+      },
+      "FactUndoBody": {
+        "additionalProperties": false,
+        "description": "Undo one operation at a freshly read version, only while it still owns all decisions and preferences it changed.",
+        "properties": {
+          "expectedVersion": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "idempotencyKey": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "expectedVersion",
+          "idempotencyKey"
+        ],
+        "type": "object"
+      },
+      "FactsResponse": {
+        "description": "Read envelope for a coherent person fact snapshot.",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/FactsSnapshot"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "FactsSnapshot": {
+        "description": "An atomic canonical projection and its optimistic version, including persisted operation history.",
+        "properties": {
+          "addresses": {
+            "items": {
+              "$ref": "#/components/schemas/Address"
+            },
+            "type": "array"
+          },
+          "entity": {
+            "$ref": "#/components/schemas/Entity"
+          },
+          "operations": {
+            "items": {
+              "$ref": "#/components/schemas/FactOperation"
+            },
+            "type": "array"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/ContactPoint"
+            },
+            "type": "array"
+          },
+          "version": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "version",
+          "entity",
+          "points",
+          "addresses",
+          "operations"
+        ],
+        "type": "object"
       },
       "FieldSelection": {
         "description": "Explicit field provenance: a retained entity field or a source record's current immutable observation.",
@@ -3219,7 +3565,7 @@
             }
           }
         },
-        "summary": "Read all local and source points, with their provenance and preference flags.",
+        "summary": "Read local points for a person, company or organisation and source points for persons, retaining provenance and preference flags.",
         "tags": [
           "crate::persons::routes"
         ]
@@ -3328,6 +3674,196 @@
         "summary": "Set a local preference independently of whether the source observation is still active.",
         "tags": [
           "crate::persons::routes"
+        ]
+      }
+    },
+    "/entities/{id}/facts": {
+      "get": {
+        "operationId": "entities.facts.get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FactsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Read all editable person facts and the exact optimistic version from one snapshot.",
+        "tags": [
+          "crate::persons::facts_routes"
+        ]
+      }
+    },
+    "/entities/{id}/facts/changes": {
+      "post": {
+        "operationId": "entities.facts.change",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FactChangeBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FactReceipt"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Apply an explicit complete draft atomically without overwriting imported observations.",
+        "tags": [
+          "crate::persons::facts_routes"
+        ]
+      }
+    },
+    "/entities/{id}/facts/changes/{operation_id}/undo": {
+      "post": {
+        "operationId": "entities.facts.undo",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "operation_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FactUndoBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FactReceipt"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Undo only decisions and preferred selections still owned by the named operation.",
+        "tags": [
+          "crate::persons::facts_routes"
         ]
       }
     },
@@ -3582,6 +4118,47 @@
         ]
       }
     },
+    "/entities/{id}/reference": {
+      "get": {
+        "operationId": "entities.reference",
+        "parameters": [
+          {
+            "description": "Entity id",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntityReferenceResponse"
+                }
+              }
+            },
+            "description": "Canonical POPS URI"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "No such entity"
+          }
+        },
+        "tags": [
+          "crate::entities::routes"
+        ]
+      }
+    },
     "/entities/{id}/sources": {
       "get": {
         "operationId": "entities.sources.list",
@@ -3627,6 +4204,26 @@
         "summary": "List provenance for one canonical person, including inactive sources.",
         "tags": [
           "crate::sources::routes"
+        ]
+      }
+    },
+    "/entity-types": {
+      "get": {
+        "operationId": "entities.catalogue",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntityCatalogue"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Publish the owning entity type catalogue without requiring clients to copy backend constants.",
+        "tags": [
+          "crate::entities::routes"
         ]
       }
     },

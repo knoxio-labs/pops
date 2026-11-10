@@ -8,6 +8,11 @@ export class TripsServiceError extends Error {
       | 'leg_removal_conflict'
       | 'order_invalid'
       | 'revision_conflict'
+      | 'visit_revision_conflict'
+      | 'visit_revision_exhausted'
+      | 'arrangement_revision_conflict'
+      | 'contact_unknown'
+      | 'contacts_unavailable'
       | 'decision_revision_conflict'
       | 'option_not_removed'
       | 'journey_grouped'
@@ -16,6 +21,11 @@ export class TripsServiceError extends Error {
       | 'tags_unavailable'
       | 'association_invalid'
       | 'association_exists'
+      | 'source_revision_conflict'
+      | 'source_operation_mismatch'
+      | 'source_undo_conflict'
+      | 'source_target_invalid'
+      | 'source_referenced'
   ) {
     super(code);
     this.name = 'TripsServiceError';

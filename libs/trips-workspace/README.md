@@ -11,6 +11,86 @@ Only Purchased sources get hard styling. Date-only values never move timezone, a
 partial bounds, approximate months, duration and opaque trip When text stay distinct.
 Document associations identify their originals without claiming external resolution.
 
+`ArrangementsWorkspace({ tripId, labels, formatDate, client?, ContactChooser? })`
+groups independent Stay, Event and Rental sources by their explicit Visit occurrence
+in persisted route order. Repeated places retain separate occurrences. A Rental
+appears once at pickup, with an internal pickup/return timeline. Unavailable Visit
+references and unset associations remain visible separately. Journeys retain their
+own section because their contract has no Visit binding; matching endpoints, places
+and dates never place one on the route. Journey purchase styling belongs to each
+ordered leg, and only an explicit Purchased source receives hard styling.
+
+The host supplies translated controls and locale-aware calendar formatting. Search
+and filters preserve the source collections. Source requests fail independently and
+retain cached rows; an unavailable collection never becomes an empty catalogue.
+Opening a row composes the existing Stay, Event or Journey editor with independent
+revisioned responsibility controls. A stale Contacts URI can be cleared without
+Contacts, and optional assignment failures never block those source editors.
+Rental edits use the canonical rental revision, preserve failed drafts and exact
+retry bodies, and persist Undo against the confirmed successor revision. A newer
+source requires an explicit canonical reload before further edits.
+
+`visit/coverage` is the shared checkout-exclusive accommodation projection. The
+explicit source-state policy is Agreed, Reserved and Purchased covering nights;
+Considering remains an idea. It retains every candidate and activity, including
+unplaced sources. Valid arranged stays prove coverage even when neighbouring
+sources have uncertain dates. Uncertain arranged or unset sources, unknown Visit
+bounds and incomplete source loads prevent unsupported missing-night claims.
+Considering dates never mask a proven gap. Coverage findings use only the real
+bounded Visit interval; no clocks, zones or route placement are inferred.
+
+Arrangements coalesces adjacent identical findings and opens one dotted action per
+proven gap. Selecting it captures a real Stay for that exact Visit and interval,
+then opens the canonical editor. A known creation receipt retains its source ID;
+selecting the same action reopens it rather than repeating POST, including after
+capturing other gaps. Receipts belong to each explicit Visit/date action for the
+current owning-trip/API session. A lost creation
+response remains uncertain even after an empty source reload or a matching later
+record. Reload never claims that record as the created source. Existing sources
+remain explicitly selectable, and starting a new capture requires a separate
+conscious action for the currently selected uncertain gap; that action itself
+performs no POST and preserves every other gap receipt.
+
+Stay, Journey and Event editors provide the sole canonical document link and
+upload controls for that exact source. Arrangements resolves the same target-
+and transport-bound queue from the shared source registry for the QueryClient's
+lifetime, across dialog close, source switches and query-cache eviction.
+File handles and accepted task identities stay with the original target;
+Rental has no document association target. The workspace does not copy upload
+forms, pollers or recovery rules.
+Changing either owner client instance, owner origin or trip closes the active
+source view. Its queue remains dormant for that exact original context; only an
+explicit reopen under the same context restores its files. Document controls
+validate the current host context against the retained owner's queue before mounting.
+Gap creation and responsibility controllers also remain above keyed source views,
+scoped to the exact original client, origin and trip. An inactive context cannot
+retry, reset or reload its operation through the current owner. Late responses
+retain their own receipts without updating another context's cache or selection.
+Source-opening callbacks are fenced by host and selection generations, so a late
+Stay response cannot close a newer source editor or discard its draft, including
+after an A→B→A transition.
+
+Visit titles and Rental endpoints use persisted route occurrence positions, while
+their actual IDs remain source identities. Opaque Contact references use a neutral
+Contact label when the host omits the optional owner reader. The SDK capability
+resolves actual owner names and navigation; missing, unavailable and read-error
+states remain distinct. Card labels stay passive and the responsibility editor
+uses only an owner-issued href. Reference details preserve
+the original URI independently of Contacts availability. The host supplies a
+retained SDK picker intent for each responsibility target. Its controlled owner
+picker supplies the selected canonical URI; no raw URI entry or Contact form is
+implemented here. Closed or unmounted picker views cannot initiate responsibility writes. The
+workspace retains per-target PUT payloads, expected revisions, pending outcomes
+and their successful receipts above source dialogs. A Contact PUT may return the
+producer-verified canonical redirect; that returned URI belongs to the actual
+response, while retry keeps the originally selected input. Reloading identical source
+fields never acknowledges a lost response. Failures expose detached source snapshots; retry uses the controller-owned
+immutable request. Retry preserves the original request;
+starting a new responsibility change explicitly reconciles the current source
+without claiming the abandoned write succeeded. A known write receipt or that
+explicit reconciliation permits a fresh owner picker intent on the next Choose
+contact action, while previous owner receipts remain retained.
+
 `JourneyWorkspace({ tripId, journeyId, client? })` exports the source-backed Departure
 and arrival journey editor. It reads ordered legs and independent grouping identities
 through the same generated Trips client. Endpoint edits submit complete retained
@@ -51,18 +131,31 @@ retain that guard, including across manual source navigation.
 Opaque source references display their original labels/URIs without asserting document
 resolution. Nearby bookings and buffer-safety findings are owned by POPS-6134.
 
-`@pops/trips-workspace` exports `StayWorkspace({ tripId, stayId, client? })`, the approved
+`@pops/trips-workspace` exports `StayWorkspace({ tripId, stayId, formatNights, client? })`, the approved
 In visit accommodation workspace. This browser component library owns no service or database and imports no pillar package.
+The host supplies `formatNights(count)` from its active locale; the library passes only
+known positive checkout-exclusive calendar-day counts. The Trips app uses its own
+i18next singular/plural resources. Incomplete dates never receive a count.
 Its consumers supply source identities and a React Query provider; shell activation
 is tracked separately.
-`EventWorkspace({ tripId, eventId, client? })` implements the approved route-context
+`EventWorkspace({ tripId, eventId, client?, contacts? })` implements the approved route-context
 event detail. It places the editor inside its explicit associated visit and shows
 the immediately neighbouring visits in persisted route order. Missing associations
 remain unlinked; event dates never move visits or create journeys. Intention,
 arrangement and purchase save independently, and only Purchased has hard styling.
 Event dates, clocks and zone remain independent source fields. Source/ticket URLs,
-address, notes and opaque source/venue/organiser/document references are editable;
-no reference is hydrated or treated as an external booking action. Undo persists
+address, notes and opaque source/venue/document references remain editable.
+Organisers use the host-injected Contacts chooser and owner reader. Only an owner-issued
+reference is appended; existing opaque organiser values and exact removals remain intact.
+Passive names and hrefs come from successful owner reads, with separate missing,
+unavailable and read-error states. No person/organisation type restriction is inferred.
+Organiser selection never changes booking responsibility or another Contacts record.
+Owner intents and issued selections survive chooser close, source-write failure and
+route unmount for the Shell QueryClient's mount lifetime, outside its query cache.
+An unresolved owner intent is resumed; a retained issued reference can be explicitly
+reapplied without creating a global contact again. Source/client/capability replacement
+isolates those intents, and late closed-view callbacks do not write into another source.
+The chooser's local Suspense keeps source drafts mounted during owner UI loading. Undo persists
 the previous successful event source snapshot. Failed drafts remain visible and
 retryable; optional context failures do not prevent editing.
 The generated Trips client uses `/trips-api`; an explicit generated `Client`
@@ -76,12 +169,28 @@ Empty scalar choices clear to null. No visit dates or default clocks/zones are
 copied. Only Purchased receives hard styling. Undo persists the previous successful
 source snapshot; failed drafts remain visible with safe diagnostic codes and retry.
 Successful mutations update the source cache. Fresh source reads replace an untouched
-editor; pending drafts survive background reads. Context failures do not block editing the stay. Neighbours share an explicit
+editor; pending drafts survive background reads. Untouched top-level fields adopt fresh
+canonical values, including complete Host arrays. Overlapping local and canonical changes
+block source writes until the user explicitly discards only the conflicting draft fields.
+Unrelated pending edits and owner receipts remain retained. If an older save response
+arrives after a fresh read, conflict resolution keeps the observed field facts separately
+from the exact write acknowledgement and never grants its revision to a failed retry.
+A fresh source invalidates
+stale whole-source Undo history; own mutation echoes retain it. Failed operations keep
+their original confirmed save baseline for retry, including Visit revision guards. Context failures do not block editing the stay. Neighbours share an explicit
 visit identity; an unlinked stay implies no accommodation coverage.
 
-Existing host/document/provenance links are displayed and can be removed. Their
-opaque source identifiers remain intact, and the workspace asserts no resolution
-or external booking action. Source-owner picker integration is POPS-6156.
+Stay Host references use the same host-injected Contacts chooser and owner reader as
+Event organisers. Selection appends the owner's issued URI; explicit replacement and
+removal affect only the chosen occurrence, preserving all other opaque source values.
+Host choices never rewrite the stay address, provider facts or Contact records, and no
+Contact type or reference-count restriction is inferred. Unknown owner outcomes resume
+their retained intent; issued references survive failed Trips writes and route unmounts.
+A replacement pending against an altered source array cannot write into another row;
+its issued reference remains available for explicit recovery. Source labels are retained
+as provenance details, while names and hrefs require an actual successful owner read.
+Empty read-only Documents/Sources provenance groups are omitted. Stored opaque values
+remain removable; typed Documents originals have their own owner-backed actions.
 
 `TripDocumentsWorkspace({ tripId, target? })` and `DocumentAssociationPicker` use the
 typed Trips association contract and a separate generated Documents client. Trip-wide
@@ -91,7 +200,7 @@ its authenticated download route. Unlink removes only the Trips association. Upl
 use the current Documents MIME and size policy. The always-visible multi-file drop area
 sits beside the square existing-original picker. Each selected file has its own task,
 error and captured target, including distinct files with identical names. Accepted tasks
-remain mounted when switching source context, and completed files are never resent when
+survive switching source context, and completed files are never resent when
 another file fails. Uploads retain the accepted task identity while
 processing, and attach only after the owner returns a canonical document ID. An
 interrupted upload is treated as an uncertain outcome and requires searching Documents
@@ -102,6 +211,31 @@ their explicit target identity. `TripDocumentLinks({ tripId, target?, tripsClien
 documentsClient? })` renders only the exact trip, target kind and target ID when a
 target is supplied, without route lookups or another page shell. Editors compose
 it with `TripDocumentUpload` using the same explicit target and owner transports.
+Journey, Stay and Event editors embed these owner components for their explicit
+persisted source identity. Links never imply inheritance from a visit. Document
+operations retain the independent source draft, failed-save retry and persisted
+Undo history. Hosts may supply `documentsClient` separately from the Trips `client`;
+unavailable originals do not block source edits.
+Conditional dialogs, collapses and routes retain a queue above the view with
+`createTripDocumentUploadSession({ tripId, target, tripsClient?, documentsClient? })`
+and pass it through `TripDocumentUpload`'s optional `session` prop on every mount.
+Key host storage by the exact trip, target kind/ID and owner client identities and origins.
+A host with a supported authentication-switch path must reset storage on that transition;
+transport changes require a separate queue. Reloading releases these in-memory queues.
+The queue keeps distinct File handles, pending requests, accepted tasks and uncertain
+outcomes across unmounts; overlapping views observe the same selections and upload
+claim. Supplying a different target, client identity or owner origin throws
+`TripDocumentUploadContextError`
+before any owner action. Queues are live browser objects, not serializable drafts.
+Uploads, task reads, picker searches, linking and recovery recheck that captured
+context immediately before the operation, including mutable default clients.
+Without the prop, the component keeps its existing view-local queue behavior.
+Source upload queues are retained outside the query cache for the Shell QueryClient's
+mount lifetime, including route/card unmounts and query eviction. Exact trip, target
+kind/ID, client instances and owner origins isolate queues; replacing a client or
+origin creates another queue. Full page reload releases browser File handles and
+receipts. This lifetime follows the current Shell, which has no supported in-app
+account-switch/reset contract; it does not establish an authenticated-principal scope.
 `DocumentPicker({ onSelected, documentsClient? })` returns the actual owner original
 without writing a route association. `useDocumentUpload({ session, onSessionChange,
 documentsClient? })` is the same per-file owner workflow used by route uploads.
@@ -115,7 +249,15 @@ Overlapping views share one synchronous POST claim per intent; separate selectio
 remain independent. The session retains
 the exact browser File handle; only actual task/document identities belong in persisted
 provenance. Completed and explicit duplicate task results expose the canonical document
-ID while retaining the accepted task ID. The controller never repeats an accepted or
+ID while retaining the accepted task ID. Verified owner task results also remain in
+the receipt when its query cache is evicted; pending task lookup resumes on remount.
+An older read without a canonical identity cannot erase a verified original.
+Retained task query namespaces stay bound to the file intent's captured owner;
+a mutable client origin change cannot seed that proof into another owner's cache.
+Separate recovery pickers pass the controller's `assertOwnerContext` to
+`DocumentPicker.beforeRequest`, preserving the same transport and retaining-parent guard
+for owner searches and cached selection callbacks.
+The controller never repeats an accepted or
 uncertain upload; a definite rejection can be retried explicitly.
 
 Run `mise exec -- pnpm --filter @pops/trips-workspace dev` for the standalone development
@@ -167,3 +309,31 @@ navigation link and authenticated query/client context.
 and its generated-transport load/apply operations. The owning Trips app runs the
 real editor/HTTP/SQLite integration regression; this extractable library does not
 install or start a pillar runtime in its own unit tests.
+
+`VisitWorkspace({ tripId, visitId, client?, onViewVisit?, onViewStay?, onViewEvent? })`
+exports the approved direct visit editor and accommodation-period workspace.
+Exact dates, approximate month/part and one-sided duration bounds remain independent.
+Fields persist on blur or explicit selection; optional fields do not acquire defaults.
+Visit PATCH and Undo supply the exact confirmed source revision. A foreign canonical
+refresh clears local history; pending or failed drafts retain their original precondition.
+An explicit reload discards local draft/history only after a successful source read.
+Creating a reusable city retains its acknowledged identity if visit association fails;
+retrying that association never repeats creation. Undo restores the prior association
+without deleting the reusable city. An ambiguous creation failure blocks another POST
+in that session while allowing a canonical city reload and explicit source selection.
+
+Accommodation periods use explicit visit IDs and checkout-exclusive stay dates.
+Unknown, partial or contradictory dates remain visible without asserting coverage.
+Agreed, Reserved and Purchased accommodation covers nights; Considering stays remain
+visible as ideas without covering them. Only Purchased has a solid boundary. Missing
+accommodation uses the shared coverage classifier and names only the proven interval
+inside valid visit bounds. Unknown dates or context prevent unsupported missing-night
+claims without weakening coverage established by independently dated arranged stays.
+Activity placement uses its explicit visit ID and start date, includes every intention, and retains uncertain/outside-period sources separately.
+Source arrangement dates are never clipped or rewritten to match visit dates. Day focus
+accepts any valid calendar date and only changes the projection. Journeys without an
+explicit visit association remain outside this view; no place-label/date matching is used.
+
+Visit UI copy consumes the host i18next `trips` namespace, including the app-owned
+`visitWorkspace` catalogue in both supported locales. Calendar labels use the host
+resolved language while retaining literal source days without viewer-zone conversion.

@@ -26,6 +26,7 @@ for (const viewport of [
       id: 31,
       tripId: 7,
       placeId: 51,
+      revision: 0,
       timing: { arrival: '2029-05-01' },
       notes: '',
       sourceLinks: [],
@@ -113,6 +114,27 @@ for (const viewport of [
         },
       ],
     ]);
+    await page.route(/\/documents-api\/paperless\/status$/, (route) =>
+      json(route, 200, {
+        data: {
+          configured: false,
+          available: false,
+          maxUploadBytes: 1000,
+          allowedMimeTypes: ['application/pdf'],
+        },
+      })
+    );
+    await page.route(/\/documents-api\/paperless\/documents\/102$/, (route) =>
+      json(route, 200, {
+        data: {
+          id: 102,
+          title: 'Route original',
+          created: '2029-01-01',
+          originalFileName: 'route.pdf',
+          thumbnailUrl: '',
+        },
+      })
+    );
     let failEvents = false;
     await page.route(/\/trips-api\//u, (route) => {
       const path = new URL(route.request().url()).pathname.replace('/trips-api', '');
@@ -132,6 +154,12 @@ for (const viewport of [
     await expect(page.getByRole('heading', { name: 'Coast trip', exact: true })).toBeVisible();
     await expect(page.getByText('After the exams', { exact: true })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Wellington', exact: true })).toHaveCount(2);
+    await expect(page.getByRole('link', { name: 'Wellington', exact: true })).toHaveCount(2);
+    expect(
+      await page
+        .getByRole('link', { name: 'Wellington', exact: true })
+        .evaluateAll((links) => links.map((link) => link.getAttribute('href')))
+    ).toEqual(['/trips/7/visits/31', '/trips/7/visits/32']);
     const eventCard = page.locator('article').filter({ hasText: 'Harbour festival' });
     await expect(eventCard).toHaveAttribute('data-constraint', 'soft');
     await expect(eventCard.getByText('Alternative', { exact: true })).toBeVisible();
