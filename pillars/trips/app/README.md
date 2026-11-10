@@ -15,7 +15,9 @@ allows the next Choose contact action to start a fresh owner intent; prior owner
 receipts remain retained. An owner selection alone never advances the intent.
 Only an owner-issued selection supplies the canonical reference; cancelling
 or reopening does not write Trips. Self and clearing a stored reference remain
-independent of Contacts availability.
+independent of Contacts availability. The same optional SDK capability supplies
+passive reference reads; verified names and links come from the owner, while
+unverified or unavailable references retain their original source identity.
 
 Home groups use the first ordered visit's arrival and the last visit's departure, relative to the viewer's local calendar day. Missing, invalid, or contradictory outer dates remain in Other. Trip titles use trimmed custom name, then trimmed destination, then the translated Trip label. `when` is opaque source text and never supplies route dates.
 

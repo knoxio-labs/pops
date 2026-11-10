@@ -110,7 +110,10 @@
     "beginNewStay": "Start a new stay",
     "chooseContact": "Choose contact",
     "reconcileResponsibility": "Start a new responsibility change",
-    "responsibilityUncertain": "The previous change may still apply. Reloading does not confirm its outcome."
+    "responsibilityUncertain": "The previous change may still apply. Reloading does not confirm its outcome.",
+    "contactMissing": "Contact not found",
+    "contactsUnavailable": "Contacts unavailable",
+    "contactReadError": "Contact could not be loaded"
   },
   "calendar": "Calendar"
 }

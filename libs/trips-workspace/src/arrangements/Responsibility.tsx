@@ -83,7 +83,7 @@ function ResponsibilityControls({
     <>
       <p className="text-sm">
         {owner?.kind === 'contact' ? (
-          <ContactReference identity={identity} uri={owner.uri} />
+          <ContactReference identity={identity} uri={owner.uri} interactive />
         ) : (
           ownerLabel(owner, identity)
         )}

@@ -32,6 +32,7 @@ export function ArrangementsPage({ contacts }: RemotePageHostProps) {
       tripId={tripId}
       labels={labels}
       {...contactPicker}
+      contacts={contacts}
       formatDate={(value) => formatTripDate(value, locale)}
       backHref={TRIPS_NAV.basePath}
     />

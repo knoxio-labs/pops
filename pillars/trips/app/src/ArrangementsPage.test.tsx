@@ -63,6 +63,7 @@ describe('Arrangement source route', () => {
     mount('/7/arrangements', { contacts });
     const props = workspace.mock.calls[0]?.[0];
     expect(contacts.createIntent).not.toHaveBeenCalled();
+    expect(props?.contacts).toBe(contacts);
     expect(props?.contactChooserIntent?.({ targetKind: 'rental', targetId: 61 })).toBe(intent);
     expect(props?.contactChooserIntent?.({ targetKind: 'rental', targetId: 61 })).toBe(intent);
     expect(contacts.createIntent).toHaveBeenCalledTimes(1);

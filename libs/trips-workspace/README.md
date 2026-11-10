@@ -42,7 +42,10 @@ performs no POST and preserves every other gap receipt.
 
 Visit titles and Rental endpoints use persisted route occurrence positions, while
 their actual IDs remain source identities. Opaque Contact references use a neutral
-Contact label until an owner-issued label is supplied. Reference details preserve
+Contact label when the host omits the optional owner reader. The SDK capability
+resolves actual owner names and navigation; missing, unavailable and read-error
+states remain distinct. Card labels stay passive and the responsibility editor
+uses only an owner-issued href. Reference details preserve
 the original URI independently of Contacts availability. The host supplies a
 retained SDK picker intent for each responsibility target. Its controlled owner
 picker supplies the selected canonical URI; no raw URI entry or Contact form is

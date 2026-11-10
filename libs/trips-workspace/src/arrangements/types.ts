@@ -1,6 +1,4 @@
-import type { ComponentType } from 'react';
-
-import type { ContactChooserIntent } from '@pops/pillar-sdk';
+import type { ContactChooserIntent, ContactsHostCapability } from '@pops/pillar-sdk';
 
 import type { TripEvent } from '../event/types';
 import type { Journey, JourneyLeg } from '../journey/types';
@@ -66,6 +64,9 @@ export interface ArrangementLabels {
   noVisit: string;
   visit: string;
   contactReference: string;
+  contactMissing: string;
+  contactsUnavailable: string;
+  contactReadError: string;
   referenceDetails: string;
   visitUnavailable: string;
   placeUnavailable: string;
@@ -120,5 +121,5 @@ export interface ArrangementsWorkspaceProps {
   contactChooserIntent?: (target: ArrangementTarget) => ContactChooserIntent;
   /** Advance only after this write's receipt or explicit reconciliation; retain all previous owner receipts. */
   advanceContactChooserIntent?: (target: ArrangementTarget, intent: ContactChooserIntent) => void;
-  ContactLabel?: ComponentType<{ uri: string }>;
+  contacts?: ContactsHostCapability;
 }

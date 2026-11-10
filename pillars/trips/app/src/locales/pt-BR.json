@@ -110,7 +110,10 @@
     "beginNewStay": "Iniciar uma nova hospedagem",
     "chooseContact": "Escolher contato",
     "reconcileResponsibility": "Iniciar uma nova alteração de responsável",
-    "responsibilityUncertain": "A alteração anterior ainda pode ser aplicada. Recarregar não confirma o resultado."
+    "responsibilityUncertain": "A alteração anterior ainda pode ser aplicada. Recarregar não confirma o resultado.",
+    "contactMissing": "Contato não encontrado",
+    "contactsUnavailable": "Contatos indisponíveis",
+    "contactReadError": "Não foi possível carregar o contato"
   },
   "calendar": "Calendário"
 }
