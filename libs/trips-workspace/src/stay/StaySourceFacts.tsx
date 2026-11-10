@@ -22,7 +22,11 @@ export function StaySourceFacts({
   return (
     <fieldset disabled={editor.busy || editor.conflict} className="min-w-0 space-y-4">
       <legend className="sr-only">Stay source facts</legend>
-      <StayTimeline stay={editor.draft} stays={context.stays.data ?? []}>
+      <StayTimeline
+        stay={editor.draft}
+        stays={context.stays.data ?? []}
+        formatNights={identity.formatNights}
+      >
         <StayFields
           stay={editor.draft}
           visits={context.visits.data ?? []}

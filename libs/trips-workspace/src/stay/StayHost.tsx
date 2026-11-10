@@ -20,7 +20,7 @@ export function StayHost({
   disabled,
   commit,
 }: {
-  identity: StayWorkspaceProps;
+  identity: Pick<StayWorkspaceProps, 'tripId' | 'stayId' | 'client' | 'contacts'>;
   links: Stay['hostLinks'];
   disabled: boolean;
   commit: (patch: StayPatch) => void;

@@ -5,7 +5,7 @@ import { afterEach, expect, it } from 'vitest';
 import { contactOwner, ownerSelection } from '../source-contacts/test-utils';
 import { stayQueryKey } from './api';
 import { StayWorkspace } from './StayWorkspace';
-import { problem, sourceStay, workspaceTransport } from './test-utils';
+import { problem, sourceStay, testNightLabel, workspaceTransport } from './test-utils';
 
 import type { Stay } from './types';
 

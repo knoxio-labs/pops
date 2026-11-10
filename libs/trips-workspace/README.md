@@ -40,8 +40,11 @@ retain that guard, including across manual source navigation.
 Opaque source references display their original labels/URIs without asserting document
 resolution. Nearby bookings and buffer-safety findings are owned by POPS-6134.
 
-`@pops/trips-workspace` exports `StayWorkspace({ tripId, stayId, client? })`, the approved
+`@pops/trips-workspace` exports `StayWorkspace({ tripId, stayId, formatNights, client? })`, the approved
 In visit accommodation workspace. This browser component library owns no service or database and imports no pillar package.
+The host supplies `formatNights(count)` from its active locale; the library passes only
+known positive checkout-exclusive calendar-day counts. The Trips app uses its own
+i18next singular/plural resources. Incomplete dates never receive a count.
 Its consumers supply source identities and a React Query provider; shell activation
 is tracked separately.
 `EventWorkspace({ tripId, eventId, client?, contacts? })` implements the approved route-context

@@ -4,7 +4,7 @@ import { afterEach, expect, it } from 'vitest';
 
 import { contactOwner, ownerSelection } from '../source-contacts/test-utils';
 import { StayWorkspace } from './StayWorkspace';
-import { problem, sourceStay, workspaceTransport } from './test-utils';
+import { testNightLabel, problem, sourceStay, workspaceTransport } from './test-utils';
 
 const caches: QueryClient[] = [];
 afterEach(() => {
@@ -32,6 +32,7 @@ function harness() {
     render(
       <QueryClientProvider client={client}>
         <StayWorkspace
+          formatNights={testNightLabel}
           tripId={7}
           stayId={13}
           client={transport.client}

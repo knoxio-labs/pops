@@ -20,11 +20,17 @@ export type Visit = VisitsListResponses[200]['visits'][number];
 export type Place = PlacesListResponses[200]['places'][number];
 /** Trip source metadata. */
 export type Trip = TripsGetResponses[200];
-/** Workspace identity and optional generated-client override for an explicit host/transport. */
-export interface StayWorkspaceProps {
+/** Exact Stay source identity and its optional generated transport. */
+export interface StaySourceIdentity {
   tripId: number;
   stayId: number;
   client?: Client;
+}
+
+/** Host-owned presentation and capabilities for an exact Stay source. */
+export interface StayWorkspaceProps extends StaySourceIdentity {
+  /** Formats a known checkout-exclusive night count in the active host locale. */
+  formatNights: (count: number) => string;
   /** Published Contacts chooser and reader supplied by the owning host. */
   contacts?: ContactsHostCapability;
   /** Authenticated Documents owner transport, independent of the Trips source client. */

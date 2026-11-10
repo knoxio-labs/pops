@@ -14,10 +14,12 @@ export function StayTimeline({
   stay,
   stays,
   children,
+  formatNights,
 }: {
   stay: Stay;
   stays: Stay[];
   children: ReactNode;
+  formatNights: (count: number) => string;
 }): JSX.Element {
   const periods = [stay, ...neighbouringStays(stay, stays)].toSorted((left, right) => {
     const arrivalOrder = (left.timing.arrival ?? '').localeCompare(right.timing.arrival ?? '');
@@ -51,12 +53,21 @@ export function StayTimeline({
             ) : (
               <h2 className="font-medium">{period.name ?? `Stay ${period.id}`}</h2>
             )}
-            {calendarNights(period.timing) !== undefined && (
-              <Badge variant="outline">{calendarNights(period.timing)} nights</Badge>
-            )}
+            <NightCount stay={period} formatNights={formatNights} />
           </article>
         </div>
       ))}
     </section>
   );
+}
+
+function NightCount({
+  stay,
+  formatNights,
+}: {
+  stay: Stay;
+  formatNights: (count: number) => string;
+}): JSX.Element | null {
+  const count = calendarNights(stay.timing);
+  return count === undefined ? null : <Badge variant="outline">{formatNights(count)}</Badge>;
 }

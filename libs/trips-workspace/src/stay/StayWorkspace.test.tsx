@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { stayQueryKey } from './api';
 import { staySource } from './model';
 import { StayWorkspace } from './StayWorkspace';
-import { problem, sourceStay, workspaceTransport } from './test-utils';
+import { testNightLabel, problem, sourceStay, workspaceTransport } from './test-utils';
 
 const caches: QueryClient[] = [];
 afterEach(() => {
@@ -22,7 +22,7 @@ function mount(
   caches.push(cache);
   return render(
     <QueryClientProvider client={cache}>
-      <StayWorkspace {...identity} client={transport.client} />
+      <StayWorkspace formatNights={testNightLabel} {...identity} client={transport.client} />
     </QueryClientProvider>
   );
 }
@@ -331,7 +331,7 @@ describe('Source-backed In visit stay workspace', () => {
     });
     view.rerender(
       <QueryClientProvider client={cache}>
-        <StayWorkspace tripId={7} stayId={13} client={other.client} />
+        <StayWorkspace formatNights={testNightLabel} tripId={7} stayId={13} client={other.client} />
       </QueryClientProvider>
     );
     await waitFor(() =>

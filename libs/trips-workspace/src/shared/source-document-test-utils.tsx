@@ -4,7 +4,7 @@ import { eventTransport, sourceEvent } from '../event/test-utils';
 import { JourneyWorkspace } from '../journey/JourneyWorkspace';
 import { journeyTransport, sourceJourney, sourceLeg } from '../journey/test-utils';
 import { StayWorkspace } from '../stay/StayWorkspace';
-import { problem, sourceStay, workspaceTransport } from '../stay/test-utils';
+import { testNightLabel, problem, sourceStay, workspaceTransport } from '../stay/test-utils';
 
 import type { ReactElement } from 'react';
 
@@ -82,6 +82,7 @@ function stayHost(documentsClient: DocumentsClient, failFirst: boolean): SourceD
   return {
     element: (
       <StayWorkspace
+        formatNights={testNightLabel}
         tripId={7}
         stayId={13}
         client={transport.client}

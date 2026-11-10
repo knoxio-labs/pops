@@ -142,3 +142,8 @@ function jsonResponse(response: TestResponse) {
     headers: { 'content-type': 'application/json' },
   });
 }
+
+/** English-only presentation fixture supplied explicitly by test hosts. */
+export function testNightLabel(count: number): string {
+  return `${count} ${count === 1 ? 'night' : 'nights'}`;
+}

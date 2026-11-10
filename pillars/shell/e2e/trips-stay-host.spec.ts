@@ -4,7 +4,7 @@ import { stubSourceContactOwners } from './helpers/trips-event-organisers';
 for (const width of [1440, 390]) {
   test(`Stay Host retains owner creation and source retry independently at ${width}px`, async ({
     page,
-  }) => {
+  }, testInfo) => {
     await page.setViewportSize({ width, height: 900 });
     const owner = await stubSourceContactOwners(page, 'stay');
     const errors: string[] = [];
@@ -37,6 +37,7 @@ for (const width of [1440, 390]) {
       { hostLinks: [{ uri: owner.reference.uri }] },
       { hostLinks: [{ uri: owner.reference.uri }] },
     ]);
+    await page.screenshot({ path: testInfo.outputPath(`stay-host-${width}.png`), fullPage: true });
     await page.getByRole('button', { name: 'Undo', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Remove host link 1', exact: true })).toHaveCount(
       0
