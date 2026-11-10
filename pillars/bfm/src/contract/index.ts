@@ -13,3 +13,8 @@ export * from './rest-schemas.js';
 export { bfmDeviceContract, type BfmDeviceContract } from './rest-device.js';
 export { bfmOperatorContract, type BfmOperatorContract } from './rest-operator.js';
 export { bfmContract, type BfmContract } from './rest.js';
+
+export * from './mobile-trips-schemas.js';
+export * from './mobile-trips-journey-schemas.js';
+export * from './mobile-trips-stay-schemas.js';
+export * from './mobile-trips-detail-schemas.js';

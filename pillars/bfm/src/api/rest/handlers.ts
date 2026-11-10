@@ -38,6 +38,7 @@ import {
   makeMobilePurchasesHandlers,
   type MobilePurchasesHandlerDeps,
 } from './mobile-purchases-handlers.js';
+import { makeMobileTripsHandlers, type MobileTripsHandlerDeps } from './mobile-trips-handlers.js';
 import { makeOperatorHandlers } from './operator-handlers.js';
 
 import type { KeyObject } from 'node:crypto';
@@ -56,6 +57,7 @@ export interface BfmRestHandlerDeps
     MobileContactsHandlerDeps,
     MobileBarcodeHandlerDeps,
     MobileEgoHandlerDeps,
+    MobileTripsHandlerDeps,
     MobileFinanceHandlerDeps,
     MobileInventoryHandlerDeps,
     MobileInventoryDocumentHandlerDeps,
@@ -168,6 +170,7 @@ export function makeBfmRestHandlers(
     },
     mobileContacts: makeMobileContactsHandlers(deps),
     mobileEgo: makeMobileEgoHandlers(deps),
+    mobileTrips: makeMobileTripsHandlers(deps),
     mobileBarcode: makeMobileBarcodeHandlers(deps),
     mobileFinance: makeMobileFinanceHandlers(deps),
     mobileInventory: {
