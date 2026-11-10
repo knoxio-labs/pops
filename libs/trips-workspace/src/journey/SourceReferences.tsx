@@ -8,18 +8,22 @@ import type { Journey } from './types';
 export function SourceReferences({
   links,
   save,
+  label = 'Source links',
+  removeLabel = sourceRemoveLabel,
 }: {
   links: Journey['sourceLinks'];
+  label?: string;
+  removeLabel?: (index: number) => string;
   save: (links: Journey['sourceLinks']) => void;
 }): JSX.Element {
   return (
-    <section aria-label="Source links" className="flex flex-wrap gap-2">
+    <section aria-label={label} className="flex flex-wrap gap-2">
       {entries(links).map(({ link, index, key }) => (
         <Chip
           key={key}
           removable
           variant="outline"
-          removeLabel={`Remove source link ${index + 1}`}
+          removeLabel={removeLabel(index)}
           onRemove={() => save(links.filter((_, position) => position !== index))}
         >
           <span title={link.uri}>{link.label ?? link.uri}</span>
@@ -39,4 +43,8 @@ function entries(
     counts.set(content, count + 1);
     return { link, index, key: `${content}:${count}` };
   });
+}
+
+function sourceRemoveLabel(index: number): string {
+  return `Remove source link ${index + 1}`;
 }

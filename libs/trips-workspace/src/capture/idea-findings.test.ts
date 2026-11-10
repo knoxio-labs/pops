@@ -23,6 +23,7 @@ const visit = (id: number, placeId: number, arrival?: string, departure?: string
   id,
   tripId: 1,
   placeId,
+  revision: 0,
   notes: '',
   sourceLinks: [],
   timing: {

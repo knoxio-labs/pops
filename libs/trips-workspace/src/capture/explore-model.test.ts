@@ -30,6 +30,7 @@ const visit = (id: number, placeId: number): Visit => ({
   id,
   tripId: 1,
   placeId,
+  revision: 0,
   notes: '',
   sourceLinks: [],
   timing: {},

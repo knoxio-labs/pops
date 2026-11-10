@@ -247,3 +247,31 @@ request replay before that link can be replaced. Explicit replacement of an unse
 rejected link creates a new intent and removes only its own prepared entry. The old owner
 receipt remains retained. Discarded link drafts require an explicit restore, which adds
 only the selected canonical link to current edits without restoring discarded fields.
+
+`VisitWorkspace({ tripId, visitId, client?, onViewVisit?, onViewStay?, onViewEvent? })`
+exports the approved direct visit editor and accommodation-period workspace.
+Exact dates, approximate month/part and one-sided duration bounds remain independent.
+Fields persist on blur or explicit selection; optional fields do not acquire defaults.
+Visit PATCH and Undo supply the exact confirmed source revision. A foreign canonical
+refresh clears local history; pending or failed drafts retain their original precondition.
+An explicit reload discards local draft/history only after a successful source read.
+Creating a reusable city retains its acknowledged identity if visit association fails;
+retrying that association never repeats creation. Undo restores the prior association
+without deleting the reusable city. An ambiguous creation failure blocks another POST
+in that session while allowing a canonical city reload and explicit source selection.
+
+Accommodation periods use explicit visit IDs and checkout-exclusive stay dates.
+Unknown, partial or contradictory dates remain visible without asserting coverage.
+Agreed, Reserved and Purchased accommodation covers nights; Considering stays remain
+visible as ideas without covering them. Only Purchased has a solid boundary. Missing
+accommodation uses the shared coverage classifier and names only the proven interval
+inside valid visit bounds. Unknown dates or context prevent unsupported missing-night
+claims without weakening coverage established by independently dated arranged stays.
+Activity placement uses its explicit visit ID and start date, includes every intention, and retains uncertain/outside-period sources separately.
+Source arrangement dates are never clipped or rewritten to match visit dates. Day focus
+accepts any valid calendar date and only changes the projection. Journeys without an
+explicit visit association remain outside this view; no place-label/date matching is used.
+
+Visit UI copy consumes the host i18next `trips` namespace, including the app-owned
+`visitWorkspace` catalogue in both supported locales. Calendar labels use the host
+resolved language while retaining literal source days without viewer-zone conversion.

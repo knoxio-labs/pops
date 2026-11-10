@@ -81,9 +81,20 @@ function PreviewRoute({
         {visits.map((visit) => (
           <li key={visit.id} className="flex items-center justify-between gap-4 p-4">
             <div className="min-w-0">
-              <p className="break-words text-sm font-medium">
-                {placeTitle(visit.placeId, places, t('homeRows.placeUnavailable'))}
-              </p>
+              <Button
+                asChild
+                variant="ghost"
+                className="min-h-11 whitespace-normal px-0 text-left font-medium"
+              >
+                <a
+                  href={`/trips/${visit.tripId}/visits/${visit.id}`}
+                  aria-label={t('homeRows.openVisit', {
+                    name: placeTitle(visit.placeId, places, t('homeRows.placeUnavailable')),
+                  })}
+                >
+                  {placeTitle(visit.placeId, places, t('homeRows.placeUnavailable'))}
+                </a>
+              </Button>
               <p className="text-xs text-muted-foreground">{t('homeRows.visit')}</p>
             </div>
             <p className="text-right text-xs text-muted-foreground">

@@ -102,6 +102,18 @@ export const tripsErrors = defineErrors('trips', {
       'This decision or its options changed. Read its latest revision before editing or selecting.',
     retryable: false,
   },
+  visit_revision_conflict: {
+    area: 'visit',
+    status: 409,
+    message: 'This visit changed. Read its latest revision before editing.',
+    retryable: false,
+  },
+  visit_revision_exhausted: {
+    area: 'visit',
+    status: 409,
+    message: 'This visit cannot accept another source revision.',
+    retryable: false,
+  },
   revision_conflict: {
     area: 'group',
     status: 409,

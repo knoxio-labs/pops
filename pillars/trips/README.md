@@ -39,19 +39,25 @@ usable and an unknown explicit tag selection returns retryable 503.
 
 Equivalent `/places` routes manage reusable names and source links.
 `GET/POST /trips/:tripId/visits` and `GET/PATCH /trips/:tripId/visits/:id` manage
-visit facts. A new visit appends to that trip's route.
+visit facts. A new visit appends to that trip's route with revision zero. Visit
+responses include a monotonic safe-integer `revision`. PATCH accepts optional
+`expectedRevision` for compatibility; editors and Undo supply it. A stale write
+returns 409 atomically. Every successful PATCH and route-order row write advances
+revision by exactly one, including unchanged values. Exhausted revisions reject
+the complete mutation without advancing any row.
 
 Visit timing supports independent arrival/departure calendar dates, approximate
-year/month/early-middle-late precision and a numeric min/max duration in days or
-weeks. Durations are non-negative, including zero for a same-day visit; the
-maximum must not precede the minimum. Missing timing remains unknown. Valid but contradictory dates are retained
+year/month/early-middle-late precision and a numeric duration in explicit days or
+weeks. Duration requires a minimum, maximum or both; an omitted bound remains
+unknown. Bounds are finite and non-negative, including zero for a same-day visit;
+when both are supplied, the maximum must not precede the minimum. Missing timing remains unknown. Valid but contradictory dates are retained
 for later conflict presentation. No date is inferred from route position or a
 different visit. A timing update replaces the complete timing value; `{}` clears
 it. Omitted metadata fields retain their values; `null` clears an optional name.
 
 `PUT /trips/:tripId/visit-order` accepts the complete `visitIds` array. Each visit
 must belong to the trip and appear exactly once. Reordering is atomic and changes
-only position, preserving source values and timestamps. No purchase, reservation
+position and revision, preserving source values and timestamps. No purchase, reservation
 or certainty is inferred from route or timing.
 
 Events belong to trips independently of visits. `GET/POST /trips/:tripId/events`
@@ -325,8 +331,8 @@ Domain routes require their projected service-account scope: `trips.trips`,
 `trips.places`, `trips.visits`, `trips.journeys`, `trips.journeyLegs`,
 `trips.journeyGroups`, `trips.stays`, `trips.events`, `trips.rentals` or
 `trips.responsibilities`; a `trips` grant covers all domains. Discovery and
-health probes remain open. The pillar advertises `/trips`,
-`/trips/:tripId/stays/:stayId`, and `/trips/:tripId/settings` shell pages. The home
+health probes remain open. The pillar advertises its implemented shell pages through
+its published page descriptor, including the source-backed visit workspace. The home
 page groups source-backed trips and opens a selected-trip preview; stay links use the persisted trip and
 stay identities. Source-backed stay
 [workspace components](../../libs/trips-workspace/README.md) and their standalone

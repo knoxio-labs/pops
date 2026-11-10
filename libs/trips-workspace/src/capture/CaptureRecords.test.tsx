@@ -94,6 +94,7 @@ it.each(['missing visit', 'failed places', 'missing Event'] as const)(
           id: 3,
           tripId: 1,
           placeId: 2,
+          revision: 0,
           notes: '',
           sourceLinks: [],
           timing: {},
