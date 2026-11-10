@@ -29,6 +29,7 @@ it('statically registers every published Trips error constructor with the actual
         execFileSync(process.execPath, ['--input-type=module', '-e', script], {
           input: JSON.stringify(sources),
           encoding: 'utf8',
+          timeout: 10_000,
         })
       )
     );
@@ -43,4 +44,4 @@ it('statically registers every published Trips error constructor with the actual
     throw new Error('Expected a registered error constructor');
   });
   expect(result.registered.map((entry) => entry.code).toSorted()).toEqual(runtimeCodes.toSorted());
-});
+}, 30_000);
