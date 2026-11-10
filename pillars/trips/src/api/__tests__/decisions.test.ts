@@ -74,9 +74,24 @@ it('publishes source CRUD and guarded selection with validation, scope and owner
   const selected = await call(selection, { expectedRevision: 1, optionId: option.id }, 'PUT');
   expect(selected.status).toBe(200);
   expect(await selected.json()).toMatchObject({ selectedOptionId: option.id, revision: 2 });
+  const workspace = await fetch(origin + `${base}/${decision.id}/workspace`, {
+    headers: { 'x-api-key': 'scoped' },
+  });
+  expect(workspace.status).toBe(200);
+  expect(await workspace.json()).toMatchObject({
+    decision: { selectedOptionId: option.id, revision: 2 },
+    options: [{ id: option.id }],
+  });
   expect((await call(`${options}/${option.id}`, { expectedRevision: 2 }, 'DELETE')).status).toBe(
     204
   );
+  const removedWorkspace = await fetch(origin + `${base}/${decision.id}/workspace`, {
+    headers: { 'x-api-key': 'scoped' },
+  });
+  expect(await removedWorkspace.json()).toMatchObject({
+    decision: { selectedOptionId: null, revision: 3 },
+    options: [],
+  });
   expect((await call(`${options}/${option.id}/restore`, { expectedRevision: 3 })).status).toBe(400);
   expect(
     (await call(`${options}/${option.id}/restore`, { expectedRevision: 3, select: true })).status

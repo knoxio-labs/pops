@@ -68,3 +68,29 @@ harness, then enter real trip/stay IDs. Its proxy targets the local Trips API on
 The harness is a development entry, not shell navigation. Shell routes, remote
 assets and deployment activation are tracked by POPS-6155. Activity context is
 tracked by POPS-6134; derived stay findings remain under POPS-6147.
+
+The approved options-first `DecisionWorkspace` loads a decision and its live options
+from one transactional producer snapshot. It writes only explicit fields, keeps the
+deadline date-only, and never changes linked visits, journeys or stays when choosing
+or reopening a decision. Optional context failures remain independent. Unavailable
+stored memberships retain their exact kind and identity and may be removed without
+revalidating other retained links. An option's persisted validated membership
+history permits guarded restoration of an unlinked unavailable source; genuinely
+new memberships require live sources in the owning trip. Currently live foreign
+ownership is rejected even for a historical identity. Provenance URIs remain opaque.
+
+Inline fields save on blur and Escape discards the draft. Failed writes and cached
+read failures retain drafts and diagnostics. A newer source arriving during edits
+requires an explicit reload and review; changing the API origin or owning record
+starts a new editor. Undo uses only confirmed own successor revisions under the
+producer's exact one-step revision protocol. Selected-option removal restores the
+same option identity and prior selection atomically. A confirmed newer revision
+or revision conflict clears stale Undo. Transient failures retain inverse intent;
+retries keep their original revision, including after an unchanged refresh, and
+cannot silently rebase an uncertain create or inverse. The host supplies the parent
+navigation link and authenticated query/client context.
+
+`@pops/trips-workspace/decision-client` exports the headless decision controller
+and its generated-transport load/apply operations. The owning Trips app runs the
+real editor/HTTP/SQLite integration regression; this extractable library does not
+install or start a pillar runtime in its own unit tests.

@@ -14,6 +14,7 @@ const TRIPS_QUERIES = [
   'trips.events.get',
   'trips.decisions.list',
   'trips.decisions.get',
+  'trips.decisions.workspace',
   'trips.decisionOptions.list',
   'trips.decisionOptions.get',
   'trips.stays.list',
