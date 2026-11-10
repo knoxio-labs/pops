@@ -23,6 +23,15 @@ export const DecisionRevisionSchema = z.object({
 const errors = { 400: ErrorBodySchema, 404: ErrorBodySchema, 409: ErrorBodySchema };
 /** Decision source capture and explicit selection; selection never changes affected arrangements. */
 export const decisionsContract = c.router({
+  workspace: {
+    method: 'GET',
+    path: '/trips/:tripId/decisions/:id/workspace',
+    pathParams: DecisionParams,
+    responses: {
+      200: z.object({ decision: DecisionSchema, options: z.array(DecisionOptionSchema) }),
+      ...errors,
+    },
+  },
   list: {
     method: 'GET',
     path: '/trips/:tripId/decisions',
