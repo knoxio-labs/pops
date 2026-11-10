@@ -107,9 +107,16 @@ function OverviewHeader(props: OverviewViewProps): JSX.Element {
         }
         backHref={props.backHref}
         actions={
-          <Button asChild variant="outline" className="min-h-11">
-            <a href={props.settingsHref}>{props.labels.settings}</a>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            {props.calendarLink && (
+              <Button asChild variant="outline" className="min-h-11">
+                <a href={props.calendarLink.href}>{props.calendarLink.label}</a>
+              </Button>
+            )}
+            <Button asChild variant="outline" className="min-h-11">
+              <a href={props.settingsHref}>{props.labels.settings}</a>
+            </Button>
+          </div>
         }
       />
       {bounds && <p className="text-sm text-muted-foreground">{bounds}</p>}

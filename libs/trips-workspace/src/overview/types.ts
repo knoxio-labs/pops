@@ -57,6 +57,7 @@ export interface TripOverviewProps {
   settingsHref: string;
   href: (kind: OverviewKind, id: number) => string | undefined;
   documentsHref?: string;
+  calendarLink?: { href: string; label: string };
 }
 /** A trip source with independently loaded surrounding facts. */
 export interface OverviewViewProps extends TripOverviewProps {

@@ -9,9 +9,15 @@ import { createClient } from '../trips-api/client';
 import { overviewProps, overviewResponses, overviewTrip } from './test-utils';
 import { TripOverview } from './TripOverview';
 
+import type { TripOverviewProps } from './types';
+
 afterEach(cleanup);
 
-function mount(responses = overviewResponses(), wait?: { path: string; until: Promise<void> }) {
+function mount(
+  responses = overviewResponses(),
+  wait?: { path: string; until: Promise<void> },
+  props: Partial<TripOverviewProps> = {}
+) {
   const requests: string[] = [];
   const client = createClient({
     baseUrl: 'http://overview.test',
@@ -35,13 +41,30 @@ function mount(responses = overviewResponses(), wait?: { path: string; until: Pr
   const cache = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={cache}>
-      <TripOverview {...overviewProps} client={client} />
+      <TripOverview {...overviewProps} {...props} client={client} />
     </QueryClientProvider>
   );
   return { requests, cache };
 }
 
 describe('source-backed TripOverview', () => {
+  it('renders calendar navigation only when the host supplies its published route and label', async () => {
+    mount();
+    await screen.findByRole('heading', { name: 'Coast trip' });
+    expect(screen.queryByRole('link', { name: 'Calendar' })).not.toBeInTheDocument();
+    cleanup();
+    mount(overviewResponses(), undefined, {
+      calendarLink: { href: '/trips/7/calendar', label: 'Calendar' },
+    });
+    expect(await screen.findByRole('link', { name: 'Calendar' })).toHaveAttribute(
+      'href',
+      '/trips/7/calendar'
+    );
+    expect(screen.getByRole('link', { name: 'Trip settings' })).toHaveAttribute(
+      'href',
+      '/trips/7/settings'
+    );
+  });
   it('keeps initial loading distinct from an empty successful route', async () => {
     let finish = (): void => undefined;
     const tripWait = new Promise<void>((resolve) => {
