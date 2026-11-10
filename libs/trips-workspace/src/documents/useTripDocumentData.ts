@@ -15,7 +15,11 @@ import type { UseMutationResult, UseQueryResult } from '@tanstack/react-query';
 import type { Client as DocumentsClient } from '../documents-api/client';
 import type { Client as TripsClient } from '../trips-api/client';
 import type { TripDocumentTargetRecord } from './api';
-import type { PaperlessDocument, TripDocumentAssociation } from './types';
+import type {
+  DocumentAssociationTarget,
+  PaperlessDocument,
+  TripDocumentAssociation,
+} from './types';
 
 /** Resolved source links and their owner metadata, including independent failure state. */
 export interface TripDocumentData {
@@ -34,7 +38,8 @@ export interface TripDocumentData {
 export function useTripDocumentData(
   tripId: number,
   tripsClient: TripsClient | undefined,
-  documentsClient: DocumentsClient | undefined
+  documentsClient: DocumentsClient | undefined,
+  target?: DocumentAssociationTarget
 ): TripDocumentData {
   const queryClient = useQueryClient();
   const associationsQuery = useQuery({
@@ -45,14 +50,16 @@ export function useTripDocumentData(
   const routeVisitsQuery = useQuery({
     queryKey: documentQueryKeys.routeVisits(tripsClient, tripId),
     queryFn: () => loadTripRouteVisitIds(tripId, tripsClient),
+    enabled: target === undefined,
     retry: false,
   });
   const targetNamesQuery = useQuery({
     queryKey: [...documentQueryKeys.routeVisits(tripsClient, tripId), 'targetNames'],
     queryFn: () => loadTripDocumentTargets(tripId, tripsClient),
+    enabled: target === undefined,
     retry: false,
   });
-  const associations = associationsQuery.data ?? [];
+  const associations = selectedAssociations(associationsQuery.data ?? [], tripId, target);
   const visitOrder = routeVisitsQuery.data ?? [];
   const targetNames = targetNamesQuery.data ?? new Map();
   const groups = groupDocumentAssociations(associations, visitOrder, targetNames);
@@ -95,4 +102,18 @@ function originalQuery(
     queryFn: () => loadPaperlessDocument(documentId, client),
     retry: false,
   };
+}
+
+function selectedAssociations(
+  associations: TripDocumentAssociation[],
+  tripId: number,
+  target: DocumentAssociationTarget | undefined
+): TripDocumentAssociation[] {
+  if (target === undefined) return associations;
+  return associations.filter(
+    (association) =>
+      association.tripId === tripId &&
+      association.targetKind === target.kind &&
+      association.targetId === target.id
+  );
 }
