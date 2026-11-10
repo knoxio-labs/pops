@@ -1,3 +1,4 @@
+import { validTripDocumentReferences } from './document-references.js';
 import { uniqueTripsIds } from './wire.js';
 
 import type { MobileTripDetail } from '../../contract/mobile-trips-detail-schemas.js';
@@ -22,18 +23,27 @@ export function referencedTripsPlaceIds(
 }
 /** Reject mismatched ownership or unresolved required identities instead of substituting source labels. */
 export function validTripsReferences(detail: MobileTripDetail, requestedId: number): boolean {
-  if (detail.trip.id !== requestedId) return false;
+  if (detail.trip.id !== requestedId || !validTripDocumentReferences(detail)) return false;
   if (
-    [...detail.visits, ...detail.journeys, ...detail.stays, ...detail.journeyGroups].some(
-      (record) => record.tripId !== requestedId
-    )
+    [
+      ...detail.visits,
+      ...detail.journeys,
+      ...detail.stays,
+      ...detail.events,
+      ...detail.journeyGroups,
+    ].some((record) => record.tripId !== requestedId)
   )
     return false;
   const visits = new Set(detail.visits.map((visit) => visit.id));
   const journeys = new Set(detail.journeys.map((journey) => journey.id));
   const places = new Set(detail.places.map((place) => place.id));
   if ([...referencedTripsPlaceIds(detail)].some((id) => !places.has(id))) return false;
-  if (detail.stays.some((stay) => stay.visitId !== null && !visits.has(stay.visitId))) return false;
+  if (
+    [...detail.stays, ...detail.events].some(
+      (record) => record.visitId !== null && !visits.has(record.visitId)
+    )
+  )
+    return false;
   if (detail.journeys.some((journey) => journey.legs.some((leg) => leg.journeyId !== journey.id)))
     return false;
   if (!uniqueTripsIds(detail.journeys.flatMap((journey) => journey.legs))) return false;
