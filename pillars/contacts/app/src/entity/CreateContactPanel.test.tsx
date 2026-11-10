@@ -26,6 +26,7 @@ function mount(gateway: ContactCreationGateway) {
           <Route path="/contacts/new" element={<CreateContactPanel gateway={gateway} />} />
           <Route path="/contacts/entities/:entityId" element={<p>Contact detail route</p>} />
           <Route path="/contacts/people/:personId" element={<p>Person detail route</p>} />
+          <Route path="/contacts/bank-1" element={<p>Bank route</p>} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>
@@ -78,4 +79,34 @@ it('keeps the draft and does not navigate when create fails', async () => {
   expect(await screen.findByRole('alert')).toHaveTextContent('Create failed');
   expect(screen.getByRole('textbox', { name: 'Contact name' })).toHaveValue('New person');
   expect(screen.queryByText('Person detail route')).not.toBeInTheDocument();
+});
+
+it('opens the Bank route for an explicitly selected source-catalogue type', async () => {
+  const user = userEvent.setup();
+  const bank = { ...company, id: 'bank-1', name: '界', type: 'bank' };
+  const gateway: ContactCreationGateway = {
+    catalogue: vi.fn().mockResolvedValue({
+      types: ['company', 'person', 'government', 'bank', 'place', 'brand', 'organisation'],
+      defaultType: 'company',
+    }),
+    search: vi.fn(),
+    resolve: vi.fn(),
+    create: vi.fn().mockResolvedValue(bank),
+    load: vi.fn(),
+    update: vi.fn(),
+    addPoint: vi.fn(),
+    addAddress: vi.fn(),
+  };
+  mount(gateway);
+  const name = screen.getByRole('textbox', { name: 'Contact name' });
+  await waitFor(() => expect(name).toBeEnabled());
+  expect(screen.getByRole('combobox', { name: 'Contact type' })).toHaveValue('company');
+  await user.type(name, '界');
+  await user.selectOptions(screen.getByRole('combobox', { name: 'Contact type' }), 'bank');
+  await user.click(screen.getByRole('button', { name: 'Create contact' }));
+  expect(gateway.create).toHaveBeenCalledExactlyOnceWith('界', 'bank');
+  expect(await screen.findByText('Bank route')).toBeVisible();
+  expect(screen.queryByText('Contact detail route')).not.toBeInTheDocument();
+  expect(gateway.addPoint).not.toHaveBeenCalled();
+  expect(gateway.addAddress).not.toHaveBeenCalled();
 });

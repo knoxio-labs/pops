@@ -1,4 +1,4 @@
-import { ArrowLeft, Compass, FileText, Inbox, Plus } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Compass, FileText, Inbox, Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 
@@ -99,6 +99,12 @@ function PreviewRoute({
 function TripWorkspaceLinks({ tripId }: { tripId: number }) {
   return (
     <div className="flex flex-wrap gap-2">
+      <Button asChild variant="outline" className="min-h-11">
+        <Link to={`/trips/${tripId}/calendar`}>
+          <CalendarDays className="size-4" aria-hidden />
+          Calendar
+        </Link>
+      </Button>
       <Button asChild variant="outline" className="min-h-11">
         <Link to={`/trips/${tripId}/capture`}>
           <Plus className="size-4" aria-hidden />

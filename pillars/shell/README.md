@@ -98,11 +98,14 @@ routes at build time. That file is gone; page routes still resolve entirely
 through the runtime manifest.
 
 Remote pages receive optional `RemotePageHostProps` capabilities. The Contacts
-adapter lazily imports the owner's public app entry only when an explicit chooser
-intent mounts. Each opaque intent retains its owner session across route remounts,
-including pending and ambiguous creation. Libraries retain that intent rather than
-importing a pillar or owning its creation workflow. The capability factory has no
-global session cache; canonical name/reference callbacks come from the owner.
+adapter lazily imports the owner's public app entry when an explicit chooser
+intent mounts or a retained-reference read is requested. Each opaque intent retains
+its owner session across route remounts, including pending and ambiguous creation.
+Libraries retain that intent rather than importing a pillar or owning its creation
+workflow. The capability factory has no global session cache; canonical name/reference
+callbacks and reference-read outcomes come from the owner. Reads forward caller
+cancellation and preserve missing, unavailable and invalid-response outcomes without
+creating or acknowledging an association.
 
 ### The shared-runtime contract
 

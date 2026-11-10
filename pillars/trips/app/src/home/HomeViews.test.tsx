@@ -186,6 +186,10 @@ describe('TripPreview', () => {
         .map((item) => item.textContent)
     ).toEqual(['LyonVisit10 Nov 2026 → 12 Nov 2026', 'ParisVisit… → …']);
     expect(screen.queryByText('Unrelated')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Calendar' })).toHaveAttribute(
+      'href',
+      '/trips/4/calendar'
+    );
     expect(screen.getByRole('link', { name: 'Documents' })).toHaveAttribute(
       'href',
       '/trips/4/documents'

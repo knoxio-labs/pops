@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@hey-api/client-fetch": "^0.13.1",
+    "@js-temporal/polyfill": "^0.5.1",
     "@pops/pillar-sdk": "workspace:*",
     "@pops/ui": "workspace:*",
     "@tanstack/react-query": "5.102.8",

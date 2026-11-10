@@ -54,5 +54,6 @@
     "notes": "Notes",
     "visit": "Visit"
   },
-  "referenceUnavailable": "Source reference unavailable: {{value}}"
+  "referenceUnavailable": "Source reference unavailable: {{value}}",
+  "calendar": "Calendar"
 }

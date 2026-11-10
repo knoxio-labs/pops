@@ -34,6 +34,43 @@ export const tripsErrors = defineErrors('trips', {
       'This operation cannot be undone because its records changed or are referenced. Nothing was changed.',
     retryable: false,
   },
+  contact_unknown: {
+    area: 'responsibility',
+    status: 400,
+    message: 'Choose an identity issued by Contacts.',
+    retryable: false,
+  },
+  contacts_unavailable: {
+    area: 'responsibility',
+    status: 503,
+    message: 'The selected contact could not be verified. Retry when Contacts is available.',
+    retryable: true,
+  },
+  arrangement_revision_conflict: {
+    area: 'arrangement',
+    status: 409,
+    message:
+      'The arrangement changed or its revision cannot advance. Read its latest revision before editing.',
+    retryable: false,
+  },
+  leg_revision_conflict: {
+    area: 'journey_leg',
+    status: 409,
+    message: 'This journey’s legs changed. Read their current revision before retrying.',
+    retryable: false,
+  },
+  leg_order_conflict: {
+    area: 'journey_leg',
+    status: 409,
+    message: 'The live leg order changed. This removal cannot be undone against a different order.',
+    retryable: false,
+  },
+  leg_removal_conflict: {
+    area: 'journey_leg',
+    status: 409,
+    message: 'This removal identity belongs to a different intent or lifecycle.',
+    retryable: false,
+  },
   parent_invalid: {
     area: 'trip',
     status: 400,

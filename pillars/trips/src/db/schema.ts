@@ -13,3 +13,6 @@ export {
   exploreMemberships,
   sourceOperations,
 } from './schema/source-workspace.js';
+export { rentals } from './schema/rentals.js';
+export { arrangementResponsibilities } from './schema/responsibilities.js';
+export { legRemovals } from './schema/leg-removals.js';

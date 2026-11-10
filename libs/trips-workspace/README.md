@@ -11,11 +11,18 @@ Mode remains open source text, and intention, arrangement and purchase are indep
 Only Purchased receives hard styling. Optional buffer fields have no default.
 
 Inline field edits and whole-card ordering persist to the owning source endpoints.
-Undo submits their inverse PATCH/order; adding a blank leg can be undone by deleting
-that newly created identity. Existing source legs are not removed by this workspace.
-Failed PATCH/order writes retain their draft with explicit retry/discard. Ambiguous
-leg creation/removal failures require a successful canonical source reload before
-another write, preventing blind POST retries. Cached source remains
+Undo submits guarded inverse PATCH/order writes. Adding a blank leg can be undone
+through a server-owned reversible removal receipt for that newly created identity.
+The leg card’s Remove control uses the same receipt and persisted Undo to restore
+the original identity, ordering, purchase and provenance. Every leg write uses the
+atomic leg-list revision. Inverse guards advance only across the editor's own confirmed
+successor revisions; a later refetch or receipt replay cannot lend its revision to Undo.
+Consecutive removals restore in LIFO order with stable identities and exact live ordering.
+
+Failed source edits and receipt-backed removal/restoration retain their exact command
+for explicit retry, including the original operation ID and revision. A revision conflict
+invalidates inverse history. Ambiguous leg creation still requires a successful canonical
+source reload before another write, preventing blind create retries. Cached source remains
 mounted during background failures. Only the owning timing endpoint supplies chronology
 findings and signed minutes; unavailable or incomplete clocks do not imply safety.
 
@@ -109,6 +116,23 @@ harness, then enter real trip/stay IDs. Its proxy targets the local Trips API on
 The harness is a development entry, not shell navigation. Shell routes, remote
 assets and deployment activation are tracked by POPS-6155. Activity context is
 tracked by POPS-6134; derived stay findings remain under POPS-6147.
+
+`CalendarWorkspace({ tripId, locale, onOpenSource, client? })` projects complete journey,
+workspace/group, stay and event reads onto the approved clock rail. Its host opens
+exact source identities. Only explicit journey groups exclude alternative journeys;
+every event intention remains visible. Source clocks and zones remain independent.
+Journey workspace reads atomically couple source metadata and live legs to their
+exact timing projection. Foreign identities or incomplete timing membership fail
+with a retryable diagnostic instead of invented unknown clocks.
+The user chooses a display zone, inclusive date bounds, kind, and optional journey
+window. Journey windows come directly from usable owning timing projections.
+Floating dates are never midnight instants; complete skipped/repeated source clocks
+remain unresolved. Recorded boundaries and clipped ongoing intervals keep projection
+work proportional to sources rather than the number of days selected. Stay occupancy
+ends before checkout. Floating Event endpoints imply no intermediate occupancy. Unknown dates and chronology issues remain available to open.
+Required read failures never become empty collections; failed background refreshes
+retain the last complete read and explicit retry. The standalone `/calendar/:tripId`
+route mounts this workspace; source opening targets the shell's literal source paths.
 
 The approved options-first `DecisionWorkspace` loads a decision and its live options
 from one transactional producer snapshot. It writes only explicit fields, keeps the

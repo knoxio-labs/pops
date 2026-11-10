@@ -11,8 +11,9 @@ import type { ContactChooserProps } from '@pops/app-contacts';
 afterEach(cleanup);
 
 const sessions: ContactChooserSession[] = [];
-function OwnerChooser({ session, onSelect }: ContactChooserProps) {
+function OwnerChooser({ session, onSelect, open }: ContactChooserProps) {
   if (!session) throw new Error('Missing retained owner session');
+  if (!open) return null;
   sessions.push(session);
   return (
     <button
@@ -34,10 +35,9 @@ function OwnerChooser({ session, onSelect }: ContactChooserProps) {
     </button>
   );
 }
-const readContactReference = vi.fn(async () => ({
-  status: 'missing' as const,
-  diagnostic: 'missing',
-}));
+const readContactReference = vi
+  .fn<typeof import('@pops/app-contacts').readContactReference>()
+  .mockResolvedValue({ status: 'missing', diagnostic: 'missing' });
 const owner = { ContactChooserSession, ContactChooser: OwnerChooser, readContactReference };
 
 it('forwards retained reads lazily through the public owner with the exact URI and cancellation signal', async () => {
@@ -87,6 +87,69 @@ it('loads lazily and retains one opaque owner session through remount, with inde
   );
   await screen.findByRole('button', { name: 'Owner chooser' });
   expect(sessions.at(-1)).not.toBe(retained);
+});
+
+it.each(['missing', 'unavailable', 'readError'] as const)(
+  'preserves the owner %s read outcome without substituting available identity',
+  async (status) => {
+    const outcome = { status, diagnostic: 'Owner read outcome' };
+    const read = vi
+      .fn<typeof import('@pops/app-contacts').readContactReference>()
+      .mockResolvedValue(outcome);
+    const capability = createContactsHostCapability(async () => ({
+      ...owner,
+      readContactReference: read,
+    }));
+    if (!capability.readContactReference) throw new Error('Missing public reader');
+    expect(await capability.readContactReference('pops:contacts/contact/opaque')).toBe(outcome);
+    expect(read).toHaveBeenCalledExactlyOnceWith('pops:contacts/contact/opaque', undefined);
+  }
+);
+
+it('preserves a reader module-load failure for the consumer instead of inventing an owner outcome', async () => {
+  const failure = new Error('Owner module unavailable');
+  const load = vi.fn<() => Promise<typeof owner>>().mockRejectedValue(failure);
+  const capability = createContactsHostCapability(load);
+  if (!capability.readContactReference) throw new Error('Missing public reader');
+  await expect(capability.readContactReference('pops:contacts/contact/opaque')).rejects.toBe(
+    failure
+  );
+  expect(load).toHaveBeenCalledTimes(1);
+});
+
+it('keeps a closed intent inactive while its module arrives and resumes it without another owner load', async () => {
+  let resolve = (_owner: typeof owner): void => {
+    throw new Error('Not started');
+  };
+  const loaded = new Promise<typeof owner>((done) => {
+    resolve = done;
+  });
+  const load = vi.fn(() => loaded);
+  const capability = createContactsHostCapability(load);
+  const intent = capability.createIntent();
+  const selection = vi.fn();
+  const props = { onOpenChange: vi.fn(), onSelect: selection };
+  const view = render(
+    <Suspense>
+      <intent.Chooser {...props} open />
+    </Suspense>
+  );
+  view.rerender(
+    <Suspense>
+      <intent.Chooser {...props} open={false} />
+    </Suspense>
+  );
+  await act(async () => resolve(owner));
+  expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  expect(selection).not.toHaveBeenCalled();
+  view.rerender(
+    <Suspense>
+      <intent.Chooser {...props} open />
+    </Suspense>
+  );
+  fireEvent.click(await screen.findByRole('button', { name: 'Owner chooser' }));
+  expect(selection).toHaveBeenCalledTimes(1);
+  expect(load).toHaveBeenCalledTimes(1);
 });
 
 it('does not deliver a replaced intent when its owner module arrives late', async () => {
