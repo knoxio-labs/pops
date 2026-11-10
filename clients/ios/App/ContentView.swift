@@ -29,10 +29,6 @@ internal struct ContentView: View {
 
     @State private var tabSelection = ContentViewTabSelection()
 
-    /// Which bootstrap failure, if any, a person has already dismissed the
-    /// degraded banner for. See ``DegradedBannerVisibility``.
-    @State private var bannerVisibility = DegradedBannerVisibility()
-
     /// The one search model behind ``searchTab``, asking every pillar
     /// `surface.available` allows. Held rather than built where it is used —
     /// same reasoning as ``AppComposition/router(for:)`` — so a query and its
@@ -72,7 +68,7 @@ internal struct ContentView: View {
                     onOpen: { tabSelection.isEgoPresented = true }
                 )
             }
-            .safeAreaInset(edge: .top) { degradedBanner }
+            .safeAreaInset(edge: .top) { ConnectionBanner(phase: surface.bootstrap) }
             .modifier(
                 EntitySheets(
                     presentation: composition.entityPresentation,
@@ -84,7 +80,7 @@ internal struct ContentView: View {
             .sheet(isPresented: $tabSelection.isEgoPresented) {
                 EgoSheetView(
                     dependencies: dependencies,
-                    context: { composition.egoScreenContext.current },
+                    context: { composition.egoContext },
                     presentation: composition.entityPresentation,
                     entityRouter: composition.entityRouter,
                     onClose: { tabSelection.isEgoPresented = false }
@@ -99,9 +95,6 @@ internal struct ContentView: View {
                 let available = surface.available
                 let pillars = SearchPillar.allCases.filter { available.contains($0.feature) }
                 searchModel.update(available: pillars)
-            }
-            .onChange(of: surface.bootstrap) { _, phase in
-                if !phase.isDegraded { bannerVisibility.reset() }
             }
             .onChange(of: displayedTab, initial: true) { _, tab in
                 composition.egoScreenContext.selectedTab = tab
@@ -246,48 +239,6 @@ internal struct ContentView: View {
     ) -> MobileFeature {
         if let chosen, available.contains(chosen) { return chosen }
         return available[0]
-    }
-
-    /// Non-blocking, above the content, and never in the way of it. The app is
-    /// usable; this says the picture it is working from is incomplete.
-    ///
-    /// Attached to `features` with `.safeAreaInset(edge: .top)` rather than
-    /// stacked above it: a stack takes the banner's height off the top of
-    /// the whole tree, which for the multi-feature case is the `TabView`
-    /// itself — so the tab bar at its bottom shifts up by that height too,
-    /// moving a control a person navigates by muscle memory. A safe-area
-    /// inset instead reserves space inside `features`' own layout, the same
-    /// reasoning `PopsActionBar`'s docstring gives for the equivalent bottom
-    /// case.
-    ///
-    /// Dismissable, because a Watchtower blip that heals itself in a few
-    /// seconds (POPS-3731) used to leave this on screen, unshiftable, for the
-    /// rest of a foregrounded session — nothing re-polls on a timer, by
-    /// design, so a person who has seen the notice and wants their screen
-    /// back had no way to ask for it. Dismissing only silences *this* phase;
-    /// ``DegradedBannerVisibility`` shows it again for whatever comes next.
-    @ViewBuilder private var degradedBanner: some View {
-        if bannerVisibility.isVisible(for: surface.bootstrap) {
-            PopsCard {
-                VStack(alignment: .leading, spacing: PopsSpacing.md) {
-                    HStack(alignment: .top, spacing: PopsSpacing.md) {
-                        Text(RootCopy.degraded)
-                            .font(.popsBody)
-                            .foregroundStyle(Color.popsMutedForeground)
-                        Spacer(minLength: PopsSpacing.sm)
-                        Button {
-                            bannerVisibility.dismiss(surface.bootstrap)
-                        } label: {
-                            Image(systemName: "xmark")
-                                .font(.popsBody)
-                                .foregroundStyle(Color.popsMutedForeground)
-                        }
-                        .accessibilityLabel(RootCopy.dismissDegraded)
-                    }
-                }
-            }
-            .padding([.horizontal, .top], PopsSpacing.lg)
-        }
     }
 
     /// Built from the session rather than held, because the client behind it is
