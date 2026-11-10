@@ -18,6 +18,8 @@ export type {
   PeopleText,
   PeopleTextKey,
 } from './people/types';
+export { TripOverview } from './overview/TripOverview';
+export type { TripOverviewProps, OverviewLabels, OverviewKind } from './overview/types';
 export { ArrangementsWorkspace } from './arrangements/ArrangementsWorkspace';
 export type { ArrangementsWorkspaceProps, ArrangementLabels } from './arrangements/types';
 /** Locale-aware calendar source formatter; absent clocks never become viewer-local instants. */

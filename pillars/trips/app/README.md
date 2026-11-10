@@ -22,6 +22,18 @@ dialogs reuse the shared document controls only for Stay, Journey and Event, wit
 upload sessions retained above dialog lifetime for each exact target and owner
 connection.
 
+Home selection and successful creation open `/trips/:tripId`, the approved route-first
+overview. It loads the owning library's independent source collections and links only
+to published source routes. Calendar and Documents navigation remains available even
+when their source collections are empty. Stays and events attach only through explicit visit
+identities; journeys stay separate until a placement contract exists. Missing or
+unassociated facts remain visible, and document associations retain source identities
+without pretending to resolve Documents originals. The overview's When subtitle is
+opaque; its displayed outer dates come from ordered visit bounds.
+The shell supplies the overview library's utilities through the shared theme,
+outer page padding and shared component styles. The remote stylesheet scans only
+the Trips app's source.
+
 Home groups use the first ordered visit's arrival and the last visit's departure, relative to the viewer's local calendar day. Missing, invalid, or contradictory outer dates remain in Other. Trip titles use trimmed custom name, then trimmed destination, then the translated Trip label. `when` is opaque source text and never supplies route dates.
 
 Creation is permanent: a successful POST selects the returned trip and offers no Undo. Failures and background refresh errors preserve the draft; explicit Cancel clears it. Settings save with PATCH, omit source links, and offer Undo of successful metadata edits using another PATCH. Blank optional associations and unchanged stored references do not require their catalogues to be available. Settings PATCH omits unchanged references; unavailable stored identities remain visible without claiming resolution. Explicit parent and tag selections must be valid source choices; the server remains authoritative for cycle and tag validation.
@@ -63,13 +75,13 @@ owning SQLite producer, including a lost response after a committed create.
 ## Visit sources
 
 `/trips/:tripId/visits/:visitId` mounts `VisitWorkspace` with literal source identities.
-The selected-trip preview links each distinct visit occurrence to that route.
+The route-first overview links each distinct visit occurrence to that route.
 Visit navigation replaces the source URL; accommodation links open the existing stay route.
 Timing edits and Undo write only the visit, guarded by its confirmed source revision.
 
 ## Calendar
 
-The selected trip preview links to `/trips/:tripId/calendar`. Its exported calendar
+The route-first trip overview links to `/trips/:tripId/calendar`. Its exported calendar
 workspace reads independent journey, stay and event sources through the generated
 Trips transport, requires an explicit display zone, and opens exact owning editor
 routes. Unavailable collections render retryable errors, retaining a prior complete

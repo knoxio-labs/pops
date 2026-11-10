@@ -368,7 +368,7 @@ Domain routes require their projected service-account scope: `trips.trips`,
 `trips.responsibilities`; a `trips` grant covers all domains. Discovery and
 health probes remain open. The pillar advertises its implemented shell pages through
 its published page descriptor, including the source-backed visit workspace. The home
-page groups source-backed trips and opens a selected-trip preview; stay links use the persisted trip and
+page groups source-backed trips and opens the route-first overview; stay links use the persisted trip and
 stay identities. Source-backed stay
 [workspace components](../../libs/trips-workspace/README.md) and their standalone
 development harness remain in `libs/trips-workspace`. The shell loads
