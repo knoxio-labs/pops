@@ -118,3 +118,7 @@ date, includes every intention, and retains uncertain/outside-period sources sep
 Source arrangement dates are never clipped or rewritten to match visit dates. Day focus
 accepts any valid calendar date and only changes the projection. Journeys without an
 explicit visit association remain outside this view; no place-label/date matching is used.
+
+Visit UI copy consumes the host i18next `trips` namespace, including the app-owned
+`visitWorkspace` catalogue in both supported locales. Calendar labels use the host
+resolved language while retaining literal source days without viewer-zone conversion.

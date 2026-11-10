@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { Select, TextInput } from '@pops/ui';
 
@@ -6,16 +7,14 @@ import { monthValue } from './approximate';
 
 import type { JSX } from 'react';
 
+import type { MonthDraft } from './approximate';
+import type { Visit } from './types';
 import type { VisitFieldProps } from './VisitFields';
 
 /** Approximate source month capture with no implicit year, month or precision. */
 export function VisitMonthFields({ visit, commit }: VisitFieldProps): JSX.Element {
-  const month = visit.timing.month;
-  const [draft, setDraft] = useState({
-    year: month ? String(month.year) : '',
-    month: month ? String(month.month) : '',
-    part: month?.part ?? '',
-  });
+  const { t } = useTranslation('trips');
+  const [draft, setDraft] = useState(() => monthDraft(visit.timing.month));
   const error = monthValue(draft).error;
   const save = (next: typeof draft): void => {
     const parsed = monthValue(next);
@@ -31,7 +30,7 @@ export function VisitMonthFields({ visit, commit }: VisitFieldProps): JSX.Elemen
         {(['year', 'month'] as const).map((field) => (
           <TextInput
             key={field}
-            label={field === 'year' ? 'Year' : 'Month'}
+            label={t(`visitWorkspace.${field}`)}
             type="number"
             step="1"
             min={field === 'month' ? '1' : undefined}
@@ -44,14 +43,14 @@ export function VisitMonthFields({ visit, commit }: VisitFieldProps): JSX.Elemen
         ))}
         <div className="col-span-2 sm:col-span-1">
           <Select
-            label="Part of month"
+            label={t('visitWorkspace.part')}
             value={draft.part}
             className="min-h-11"
             options={[
-              { value: '', label: 'Any part' },
-              { value: 'early', label: 'Early' },
-              { value: 'middle', label: 'Middle' },
-              { value: 'late', label: 'Late' },
+              { value: '', label: t('visitWorkspace.anyPart') },
+              { value: 'early', label: t('visitWorkspace.early') },
+              { value: 'middle', label: t('visitWorkspace.middle') },
+              { value: 'late', label: t('visitWorkspace.late') },
             ]}
             onChange={(event) => {
               const next = { ...draft, part: event.currentTarget.value };
@@ -63,9 +62,17 @@ export function VisitMonthFields({ visit, commit }: VisitFieldProps): JSX.Elemen
       </div>
       {error && (
         <p role="alert" className="text-sm text-destructive">
-          {error}
+          {t(`visitWorkspace.${error}`)}
         </p>
       )}
     </div>
   );
+}
+
+function monthDraft(month: Visit['timing']['month']): MonthDraft {
+  return {
+    year: month ? String(month.year) : '',
+    month: month ? String(month.month) : '',
+    part: month?.part ?? '',
+  };
 }

@@ -15,11 +15,11 @@ export function durationValue(draft: DurationDraft): {
   const min = optionalNumber(draft.min);
   const max = optionalNumber(draft.max);
   if ([min, max].some((value) => value !== undefined && (!Number.isFinite(value) || value < 0)))
-    return { value: undefined, error: 'Duration must be a finite non-negative number.' };
+    return { value: undefined, error: 'durationNumber' };
   if (min !== undefined && max !== undefined && max < min)
-    return { value: undefined, error: 'Maximum duration must not precede minimum.' };
+    return { value: undefined, error: 'durationOrder' };
   if (draft.unit !== 'days' && draft.unit !== 'weeks')
-    return { value: undefined, error: 'Choose a duration unit.' };
+    return { value: undefined, error: 'durationUnit' };
   return {
     value: {
       ...(min === undefined ? {} : { min }),
@@ -39,11 +39,10 @@ export function monthValue(draft: MonthDraft): { value: Visit['timing']['month']
   if (!draft.year && !draft.month) return { value: undefined };
   const year = Number(draft.year);
   const month = Number(draft.month);
-  if (!completeMonth(draft, year, month))
-    return { value: undefined, error: 'Enter an integer year and a month from 1 to 12.' };
+  if (!completeMonth(draft, year, month)) return { value: undefined, error: 'monthInvalid' };
   const part = draft.part;
   if (part !== '' && part !== 'early' && part !== 'middle' && part !== 'late')
-    return { value: undefined, error: 'Choose an available part of month.' };
+    return { value: undefined, error: 'partInvalid' };
   return { value: { year, month, ...(part === '' ? {} : { part }) } };
 }
 

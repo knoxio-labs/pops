@@ -92,9 +92,9 @@ function sameStays(first: Stay[], second: Stay[]): boolean {
   );
 }
 /** Format retained calendar facts without shifting them to the viewer timezone. */
-export function dateLabel(value: string | undefined): string {
+export function dateLabel(value: string | undefined, locale: string): string {
   return validDate(value)
-    ? new Intl.DateTimeFormat('en-AU', {
+    ? new Intl.DateTimeFormat(locale, {
         day: 'numeric',
         month: 'short',
         year: 'numeric',

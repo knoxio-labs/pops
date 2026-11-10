@@ -1,14 +1,27 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { createInstance } from 'i18next';
+import { I18nextProvider } from 'react-i18next';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { visitQueryKey, visitSource } from './api';
 import { sourceEvent, sourceStay, sourceVisit, visitTransport } from './test-utils';
+import englishFixture from './translation.test-fixture.json';
 import { VisitWorkspace } from './VisitWorkspace';
 
+const locale = createInstance();
+await locale.init({
+  lng: 'en-AU',
+  fallbackLng: 'en-AU',
+  resources: {
+    'en-AU': { trips: { visitWorkspace: englishFixture } },
+  },
+  interpolation: { escapeValue: false },
+});
 const caches: QueryClient[] = [];
 afterEach(() => {
   cleanup();
+  void locale.changeLanguage('en-AU');
   caches.splice(0).forEach((cache) => cache.clear());
 });
 function mount(
@@ -18,9 +31,11 @@ function mount(
   const cache = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 60_000 } } });
   caches.push(cache);
   render(
-    <QueryClientProvider client={cache}>
-      <VisitWorkspace tripId={7} visitId={31} client={transport.client} {...overrides} />
-    </QueryClientProvider>
+    <I18nextProvider i18n={locale}>
+      <QueryClientProvider client={cache}>
+        <VisitWorkspace tripId={7} visitId={31} client={transport.client} {...overrides} />
+      </QueryClientProvider>
+    </I18nextProvider>
   );
   return cache;
 }

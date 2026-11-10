@@ -1,5 +1,6 @@
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { Button, ErrorState, TextInput } from '@pops/ui';
 
@@ -24,6 +25,7 @@ export function VisitPlaceCapture({
   selectedPlaceId: number;
   reload: () => Promise<unknown>;
 }): JSX.Element {
+  const { t } = useTranslation('trips');
   const [open, setOpen] = useState(false);
   const capture = usePlaceCapture(identity, commit, reload);
   return (
@@ -37,7 +39,7 @@ export function VisitPlaceCapture({
         aria-expanded={open}
       >
         <Plus className="size-4" aria-hidden />
-        New city
+        {t('visitWorkspace.newCity')}
       </Button>
       {open && (
         <PlaceForm
@@ -58,6 +60,7 @@ function PlaceForm({
   selectedPlaceId: number;
   close: () => void;
 }): JSX.Element {
+  const { t } = useTranslation('trips');
   const selected = selectedPlaceId === capture.created?.id;
   return (
     <form
@@ -70,11 +73,11 @@ function PlaceForm({
       {capture.created ? (
         <p role="status" className="text-sm">
           {capture.created.name}
-          {selected ? ' · Selected' : ''}
+          {selected ? t('visitWorkspace.selected') : ''}
         </p>
       ) : (
         <TextInput
-          label="City name"
+          label={t('visitWorkspace.cityName')}
           value={capture.name}
           className="min-h-11"
           disabled={capture.busy || capture.uncertain}
@@ -90,10 +93,10 @@ function PlaceForm({
           selected
         }
       >
-        {capture.created ? 'Use city' : 'Add city'}
+        {t(capture.created ? 'visitWorkspace.useCity' : 'visitWorkspace.addCity')}
       </Button>
       <Button type="button" variant="ghost" onClick={close} disabled={capture.busy}>
-        Close
+        {t('visitWorkspace.close')}
       </Button>
       {capture.failure !== undefined && (
         <ErrorState error={requestProblem(capture.failure)} onRetry={capture.reload} />

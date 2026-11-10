@@ -5,7 +5,8 @@ import type { Stay, Visit } from './types';
 /** A nonblocking discrepancy between independently owned source dates. */
 export interface VisitFinding {
   id: string;
-  message: string;
+  kind: 'reversed' | 'outside';
+  name?: string | null;
 }
 /** Report contradictions against explicit known bounds without changing or constraining source facts. */
 export function visitFindings(visit: Visit, candidates: Stay[]): VisitFinding[] {
@@ -15,12 +16,13 @@ export function visitFindings(visit: Visit, candidates: Stay[]): VisitFinding[] 
     validDate(visit.timing.departure) &&
     visit.timing.arrival > visit.timing.departure
   )
-    findings.push({ id: 'reversed', message: 'Arrival is after departure.' });
+    findings.push({ id: 'reversed', kind: 'reversed' });
   for (const stay of candidates) {
     if (stay.visitId === visit.id && outsideVisit(visit, stay))
       findings.push({
         id: `stay:${stay.id}`,
-        message: `${stay.name ?? 'Stay'} extends outside visit dates.`,
+        kind: 'outside',
+        name: stay.name,
       });
   }
   return findings;

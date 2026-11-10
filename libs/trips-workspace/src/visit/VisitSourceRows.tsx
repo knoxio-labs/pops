@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+
 import { Badge, Button, cn } from '@pops/ui';
 
 import { dateLabel } from './periods';
@@ -14,6 +16,7 @@ export function StayRow({
   stay: Stay;
   identity: VisitWorkspaceProps;
 }): JSX.Element {
+  const { t, i18n } = useTranslation('trips');
   return (
     <article
       className={cn(
@@ -23,18 +26,20 @@ export function StayRow({
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <SourceName
-          name={stay.name ?? 'Stay'}
+          name={stay.name ?? t('visitWorkspace.stay')}
           open={identity.onViewStay && (() => identity.onViewStay?.(stay.id))}
         />
         {stay.status && (
-          <Badge variant={stay.status === 'Purchased' ? 'default' : 'outline'}>{stay.status}</Badge>
+          <Badge variant={stay.status === 'Purchased' ? 'default' : 'outline'}>
+            {t(`visitWorkspace.${stay.status}`)}
+          </Badge>
         )}
       </div>
       <p className="text-xs text-muted-foreground">
         {[
-          dateLabel(stay.timing.arrival),
+          dateLabel(stay.timing.arrival, i18n.resolvedLanguage ?? i18n.language),
           stay.timing.checkIn,
-          dateLabel(stay.timing.departure),
+          dateLabel(stay.timing.departure, i18n.resolvedLanguage ?? i18n.language),
           stay.timing.checkOut,
           stay.timing.timeZone,
         ]
@@ -53,6 +58,7 @@ export function EventRow({
   event: TripEvent;
   identity: VisitWorkspaceProps;
 }): JSX.Element {
+  const { t, i18n } = useTranslation('trips');
   return (
     <article
       className={cn(
@@ -62,22 +68,22 @@ export function EventRow({
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <SourceName
-          name={event.name ?? 'Event'}
+          name={event.name ?? t('visitWorkspace.event')}
           open={identity.onViewEvent && (() => identity.onViewEvent?.(event.id))}
         />
         <div className="flex flex-wrap gap-1">
           {[event.intention, event.arrangement, event.purchase].filter(Boolean).map((value) => (
             <Badge key={value} variant={value === 'Purchased' ? 'default' : 'outline'}>
-              {value}
+              {t(`visitWorkspace.${value}`)}
             </Badge>
           ))}
         </div>
       </div>
       <p className="text-xs text-muted-foreground">
         {[
-          dateLabel(event.timing.start),
+          dateLabel(event.timing.start, i18n.resolvedLanguage ?? i18n.language),
           event.timing.startTime,
-          dateLabel(event.timing.end),
+          dateLabel(event.timing.end, i18n.resolvedLanguage ?? i18n.language),
           event.timing.endTime,
           event.timing.timeZone,
         ]

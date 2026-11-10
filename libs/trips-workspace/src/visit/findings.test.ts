@@ -7,8 +7,8 @@ it('reports reversed dates and only explicit same-visit booking conflicts withou
   const visit = sourceVisit({ timing: { arrival: '2030-04-15', departure: '2030-04-12' } });
   const stay = sourceStay({ status: 'Purchased' });
   expect(visitFindings(visit, [stay, sourceStay({ id: 14, visitId: 32 })])).toEqual([
-    { id: 'reversed', message: 'Arrival is after departure.' },
-    { id: 'stay:13', message: 'Cedar guesthouse extends outside visit dates.' },
+    { id: 'reversed', kind: 'reversed' },
+    { id: 'stay:13', kind: 'outside', name: 'Cedar guesthouse' },
   ]);
   expect(stay).toEqual(sourceStay({ status: 'Purchased' }));
 });

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { Select, TextInput } from '@pops/ui';
 
@@ -11,10 +12,11 @@ import type { VisitFieldProps } from './VisitFields';
 
 /** Approximate source facts have no implicit month, unit or duration bounds. */
 export function VisitApproximateTiming(props: VisitFieldProps): JSX.Element {
+  const { t } = useTranslation('trips');
   return (
     <details open={Boolean(props.visit.timing.month ?? props.visit.timing.duration)}>
       <summary className="min-h-11 cursor-pointer content-center text-sm font-medium">
-        Approximate timing
+        {t('visitWorkspace.approximate')}
       </summary>
       <div className="space-y-3">
         <VisitMonthFields key={JSON.stringify(props.visit.timing.month)} {...props} />
@@ -24,6 +26,7 @@ export function VisitApproximateTiming(props: VisitFieldProps): JSX.Element {
   );
 }
 function DurationFields({ visit, commit }: VisitFieldProps): JSX.Element {
+  const { t } = useTranslation('trips');
   const duration = visit.timing.duration;
   const [draft, setDraft] = useState({
     min: duration?.min === undefined ? '' : String(duration.min),
@@ -46,7 +49,7 @@ function DurationFields({ visit, commit }: VisitFieldProps): JSX.Element {
         {(['min', 'max'] as const).map((field) => (
           <TextInput
             key={field}
-            label={field === 'min' ? 'Minimum duration' : 'Maximum duration'}
+            label={t(field === 'min' ? 'visitWorkspace.minimum' : 'visitWorkspace.maximum')}
             type="number"
             min="0"
             step="any"
@@ -58,13 +61,13 @@ function DurationFields({ visit, commit }: VisitFieldProps): JSX.Element {
         ))}
         <div className="col-span-2 sm:col-span-1">
           <Select
-            label="Duration unit"
+            label={t('visitWorkspace.unit')}
             value={draft.unit}
             className="min-h-11"
             options={[
-              { value: '', label: 'Choose unit' },
-              { value: 'days', label: 'Days' },
-              { value: 'weeks', label: 'Weeks' },
+              { value: '', label: t('visitWorkspace.chooseUnit') },
+              { value: 'days', label: t('visitWorkspace.days') },
+              { value: 'weeks', label: t('visitWorkspace.weeks') },
             ]}
             onChange={(event) => {
               const next = { ...draft, unit: event.currentTarget.value };
@@ -76,7 +79,7 @@ function DurationFields({ visit, commit }: VisitFieldProps): JSX.Element {
       </div>
       {error && (
         <p role="alert" className="text-sm text-destructive">
-          {error}
+          {t(`visitWorkspace.${error}`)}
         </p>
       )}
     </div>

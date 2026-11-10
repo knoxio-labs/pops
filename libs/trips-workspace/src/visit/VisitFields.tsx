@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+
 import { Select, Textarea, TextInput } from '@pops/ui';
 
 import { VisitApproximateTiming } from './VisitApproximateTiming';
@@ -17,16 +19,19 @@ export function VisitFields({
   places,
   ...props
 }: VisitFieldProps & { places: Place[] }): JSX.Element {
+  const { t } = useTranslation('trips');
   const { visit, edit, commit } = props;
   const hasPlace = places.some((place) => place.id === visit.placeId);
   return (
     <div className="space-y-3">
       <Select
-        label="City"
+        label={t('visitWorkspace.city')}
         value={String(visit.placeId)}
         className="min-h-11"
         options={[
-          ...(!hasPlace ? [{ value: String(visit.placeId), label: 'City unavailable' }] : []),
+          ...(!hasPlace
+            ? [{ value: String(visit.placeId), label: t('visitWorkspace.cityUnavailable') }]
+            : []),
           ...places.map((place) => ({ value: String(place.id), label: place.name })),
         ]}
         onChange={(event) => {
@@ -38,7 +43,7 @@ export function VisitFields({
         {(['arrival', 'departure'] as const).map((field) => (
           <TextInput
             key={field}
-            label={field === 'arrival' ? 'Arrival' : 'Departure'}
+            label={t(`visitWorkspace.${field}`)}
             type="date"
             className="min-h-11"
             value={visit.timing[field] ?? ''}
@@ -54,10 +59,10 @@ export function VisitFields({
       <VisitApproximateTiming {...props} />
       <details>
         <summary className="min-h-11 cursor-pointer content-center text-sm font-medium">
-          Notes
+          {t('visitWorkspace.notes')}
         </summary>
         <Textarea
-          aria-label="Visit notes"
+          aria-label={t('visitWorkspace.visitNotes')}
           value={visit.notes}
           onChange={(event) => edit({ notes: event.currentTarget.value })}
           onBlur={(event) => commit({ notes: event.currentTarget.value })}

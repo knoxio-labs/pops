@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { Button, TextInput } from '@pops/ui';
 
@@ -20,6 +21,7 @@ interface TimelineProps {
 }
 /** Compact accommodation periods; day focus accepts any date without mutating source dates. */
 export function VisitTimeline(props: TimelineProps): JSX.Element {
+  const { t } = useTranslation('trips');
   const [day, setDay] = useState('');
   const { visit, stays, events, identity, accommodationAvailable } = props;
   const projection = accommodationPeriods(visit, stays, events, accommodationAvailable);
@@ -30,18 +32,18 @@ export function VisitTimeline(props: TimelineProps): JSX.Element {
     (event) => event.visitId === visit.id && event.timing.start === day
   );
   return (
-    <section aria-label="Accommodation timeline" className="space-y-2">
+    <section aria-label={t('visitWorkspace.timeline')} className="space-y-2">
       <div className="flex flex-wrap items-end gap-2">
         <Button
           variant={day ? 'ghost' : 'secondary'}
           aria-pressed={!day}
           onClick={() => setDay('')}
         >
-          Whole visit
+          {t('visitWorkspace.wholeVisit')}
         </Button>
         <div className="w-44">
           <TextInput
-            label="Day"
+            label={t('visitWorkspace.day')}
             type="date"
             className="min-h-11"
             value={day}
@@ -78,14 +80,15 @@ function PeriodRow({
   identity: VisitWorkspaceProps;
   events: TripEvent[];
 }): JSX.Element {
+  const { t, i18n } = useTranslation('trips');
   return (
     <VisitTimelineRow
       icon="stay"
       date={
         <>
-          {dateLabel(period.arrival)}
+          {dateLabel(period.arrival, i18n.resolvedLanguage ?? i18n.language)}
           <span className="block text-app-accent">↓</span>
-          {dateLabel(period.departure)}
+          {dateLabel(period.departure, i18n.resolvedLanguage ?? i18n.language)}
         </>
       }
     >
@@ -93,7 +96,9 @@ function PeriodRow({
         {period.stays.map((stay) => (
           <StayRow key={stay.id} stay={stay} identity={identity} />
         ))}
-        {!period.stays.length && <p className="text-sm text-muted-foreground">No accommodation</p>}
+        {!period.stays.length && (
+          <p className="text-sm text-muted-foreground">{t('visitWorkspace.noAccommodation')}</p>
+        )}
         {events.map((event) => (
           <EventRow key={event.id} event={event} identity={identity} />
         ))}
@@ -112,6 +117,7 @@ function UnplacedRows({
   day: string;
   hasPeriod: boolean;
 }): JSX.Element {
+  const { i18n } = useTranslation('trips');
   const events = projection.unplacedEvents.filter(
     (event) => !day || (event.timing.start === day && !hasPeriod)
   );
@@ -124,9 +130,9 @@ function UnplacedRows({
             icon="stay"
             date={
               <>
-                {dateLabel(stay.timing.arrival)}
+                {dateLabel(stay.timing.arrival, i18n.resolvedLanguage ?? i18n.language)}
                 {stay.timing.arrival && stay.timing.departure && <span className="block">↓</span>}
-                {dateLabel(stay.timing.departure)}
+                {dateLabel(stay.timing.departure, i18n.resolvedLanguage ?? i18n.language)}
               </>
             }
           >
@@ -137,7 +143,7 @@ function UnplacedRows({
         <VisitTimelineRow
           key={`event:${event.id}`}
           icon="event"
-          date={dateLabel(event.timing.start)}
+          date={dateLabel(event.timing.start, i18n.resolvedLanguage ?? i18n.language)}
         >
           <EventRow event={event} identity={identity} />
         </VisitTimelineRow>

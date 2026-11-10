@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { ErrorState } from '@pops/ui';
 
@@ -14,12 +15,13 @@ import type { VisitWorkspaceProps } from './types';
 
 /** Approved direct visit editor and accommodation-period workspace over literal trip-owned identities. */
 export function VisitWorkspace(props: VisitWorkspaceProps): JSX.Element {
+  const { t } = useTranslation('trips');
   if (![props.tripId, props.visitId].every((value) => Number.isSafeInteger(value) && value > 0))
     return (
       <ErrorState
         error={{
           code: 'trips.identity.invalid',
-          message: 'Choose a valid trip and visit',
+          message: t('visitWorkspace.invalidIdentity'),
           retryable: false,
         }}
       />
@@ -32,6 +34,7 @@ export function VisitWorkspace(props: VisitWorkspaceProps): JSX.Element {
   );
 }
 function LoadVisit(props: VisitWorkspaceProps): JSX.Element {
+  const { t } = useTranslation('trips');
   const context = useVisitContext(props);
   const source = useQuery({
     queryKey: visitQueryKey(props),
@@ -42,7 +45,7 @@ function LoadVisit(props: VisitWorkspaceProps): JSX.Element {
   if (source.isPending)
     return (
       <p role="status" className="p-4">
-        Loading visit…
+        {t('visitWorkspace.loading')}
       </p>
     );
   if (source.data === undefined)
