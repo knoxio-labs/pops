@@ -11,7 +11,7 @@ import { ContactChooser } from './ContactChooser';
 import { ContactChooserSession } from './ContactChooserSession';
 
 import type { Entity } from '../contacts-api/types.gen';
-import type { ContactCreationGateway } from './api';
+import type { ContactCreationGateway, ContactSelection } from './api';
 
 const entity: Entity = {
   id: 'created',
@@ -261,3 +261,164 @@ it.each([
     ).toBeVisible();
   }
 );
+
+it.each([false, true])(
+  'fences existing resolution after dismissal (reopen before completion: %s) and retries the selected ID explicitly',
+  async (reopen) => {
+    const api = gateway();
+    api.search = vi.fn().mockResolvedValue([entity]);
+    let finish: (value: ContactSelection) => void = () => {
+      throw new Error('Not started');
+    };
+    api.resolve = vi
+      .fn()
+      .mockImplementationOnce(
+        () =>
+          new Promise<ContactSelection>((resolve) => {
+            finish = resolve;
+          })
+      )
+      .mockResolvedValue({ entity: canonical, reference });
+    const onSelect = vi.fn();
+    const onOpenChange = vi.fn();
+    const client = new QueryClient();
+    const view = (open: boolean) => (
+      <QueryClientProvider client={client}>
+        <ContactChooser open={open} onOpenChange={onOpenChange} onSelect={onSelect} gateway={api} />
+      </QueryClientProvider>
+    );
+    const mounted = render(view(true));
+    const user = userEvent.setup();
+    await user.type(await screen.findByRole('textbox', { name: 'Search contacts' }), '界');
+    await user.click(await screen.findByRole('button', { name: /界.*bank/ }));
+    mounted.rerender(view(false));
+    if (reopen) mounted.rerender(view(true));
+    await act(async () => finish({ entity: canonical, reference }));
+    expect(onSelect).not.toHaveBeenCalled();
+    expect(onOpenChange).not.toHaveBeenCalled();
+    if (!reopen) mounted.rerender(view(true));
+    await user.click(await screen.findByRole('button', { name: 'Try again' }));
+    await waitFor(() => expect(onSelect).toHaveBeenCalledExactlyOnceWith(canonical, reference));
+    expect(api.resolve).toHaveBeenNthCalledWith(2, entity.id);
+  }
+);
+
+it('keeps an older resolution from replacing a newly explicit existing selection', async () => {
+  const api = gateway();
+  const other = { ...entity, id: 'other', name: 'B' };
+  api.search = vi.fn(async (query) => (query === 'B' ? [other] : [entity]));
+  let finish: (value: ContactSelection) => void = () => {
+    throw new Error('Not started');
+  };
+  const otherReference = { canonicalId: other.id, uri: 'pops:contacts/contact/other' };
+  api.resolve = vi
+    .fn()
+    .mockImplementationOnce(
+      () =>
+        new Promise<ContactSelection>((resolve) => {
+          finish = resolve;
+        })
+    )
+    .mockResolvedValue({ entity: other, reference: otherReference });
+  const onSelect = mount(api);
+  const user = userEvent.setup();
+  const search = await screen.findByRole('textbox', { name: 'Search contacts' });
+  await user.type(search, '界');
+  await user.click(await screen.findByRole('button', { name: /界.*bank/ }));
+  await user.clear(search);
+  await user.type(search, 'B');
+  await user.click(await screen.findByRole('button', { name: /B.*bank/ }));
+  await waitFor(() => expect(onSelect).toHaveBeenCalledExactlyOnceWith(other, otherReference));
+  await act(async () => finish({ entity: canonical, reference }));
+  expect(onSelect).toHaveBeenCalledOnce();
+});
+
+it.each([false, true])(
+  'fences a pending create across replaced intent including ABA return (%s)',
+  async (returnToA) => {
+    const api = gateway();
+    const first = new ContactChooserSession();
+    first.start('Alice');
+    first.setType('person');
+    const second = new ContactChooserSession();
+    second.start('Bob');
+    second.setType('person');
+    let finish: (value: Entity) => void = () => {
+      throw new Error('Not started');
+    };
+    api.create = vi.fn(
+      () =>
+        new Promise<Entity>((resolve) => {
+          finish = resolve;
+        })
+    );
+    const onSelect = vi.fn();
+    const client = new QueryClient();
+    const view = (session: ContactChooserSession) => (
+      <QueryClientProvider client={client}>
+        <ContactChooser
+          open
+          onOpenChange={vi.fn()}
+          onSelect={onSelect}
+          gateway={api}
+          session={session}
+        />
+      </QueryClientProvider>
+    );
+    const mounted = render(view(first));
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Create contact' }));
+    mounted.rerender(view(second));
+    if (returnToA) mounted.rerender(view(first));
+    await act(async () => finish(entity));
+    expect(onSelect).not.toHaveBeenCalled();
+    expect(first.snapshot().created).toEqual(entity);
+    expect(second.snapshot()).toMatchObject({ name: 'Bob', created: null });
+    mounted.rerender(view(first));
+    await user.click(await screen.findByRole('button', { name: 'Use created contact' }));
+    await waitFor(() => expect(onSelect).toHaveBeenCalledExactlyOnceWith(canonical, reference));
+    expect(api.create).toHaveBeenCalledOnce();
+  }
+);
+
+it('retains a known create but requires explicit resolution after gateway context replacement', async () => {
+  const firstApi = gateway();
+  const replacement = gateway();
+  const session = new ContactChooserSession();
+  session.start('Alice');
+  session.setType('person');
+  let finish: (value: Entity) => void = () => {
+    throw new Error('Not started');
+  };
+  firstApi.create = vi.fn(
+    () =>
+      new Promise<Entity>((resolve) => {
+        finish = resolve;
+      })
+  );
+  const onSelect = vi.fn();
+  const client = new QueryClient();
+  const view = (api: ContactCreationGateway) => (
+    <QueryClientProvider client={client}>
+      <ContactChooser
+        open
+        onOpenChange={vi.fn()}
+        onSelect={onSelect}
+        gateway={api}
+        session={session}
+      />
+    </QueryClientProvider>
+  );
+  const mounted = render(view(firstApi));
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole('button', { name: 'Create contact' }));
+  mounted.rerender(view(replacement));
+  await act(async () => finish(entity));
+  expect(onSelect).not.toHaveBeenCalled();
+  expect(session.snapshot().created).toEqual(entity);
+  await user.click(await screen.findByRole('button', { name: 'Use created contact' }));
+  await waitFor(() => expect(onSelect).toHaveBeenCalledExactlyOnceWith(canonical, reference));
+  expect(firstApi.create).toHaveBeenCalledOnce();
+  expect(replacement.create).not.toHaveBeenCalled();
+  expect(replacement.resolve).toHaveBeenCalledExactlyOnceWith(entity.id);
+});

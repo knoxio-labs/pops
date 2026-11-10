@@ -56,16 +56,19 @@ function ContactChooserContent({
   const [creating, setCreating] = useState(Boolean(session?.snapshot().name));
   const creation = useContactCreation(gateway, session);
   const delivery = useRef(0);
+  const context = useRef({ open, session, gateway });
   useEffect(() => {
+    context.current = { open, session, gateway };
     if (!open) delivery.current += 1;
     return () => {
       delivery.current += 1;
     };
-  }, [open]);
+  }, [open, session, gateway]);
   async function submit() {
     const generation = delivery.current;
+    const owner = context.current;
     const selection = await creation.submit();
-    if (selection && generation === delivery.current) {
+    if (selection && generation === delivery.current && owner === context.current && owner.open) {
       onSelect(selection.entity, selection.reference);
       onOpenChange(false);
     }
@@ -82,6 +85,7 @@ function ContactChooserContent({
         onSelect={onSelect}
         gateway={gateway}
         initialSearch={creation.name}
+        selectionIntent={session}
         onCreate={(name) => {
           creation.start(name);
           setCreating(true);
