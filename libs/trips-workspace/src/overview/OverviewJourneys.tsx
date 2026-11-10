@@ -1,16 +1,17 @@
-import { useQuery } from '@tanstack/react-query';
-
 import { unwrap } from '@pops/pillar-sdk/client';
 import { Badge, ErrorState } from '@pops/ui';
 
+import { useSourceQuery } from '../shared/use-source-query';
 import { requestProblem } from '../stay/api';
 import { journeyLegsList } from '../trips-api/sdk.gen';
 import { sourceAction } from './source-action';
+import { readOverviewSource } from './source-read';
 import { SourceCard } from './SourceCard';
 
 import type { JSX } from 'react';
 
 import type { Journey, JourneyLeg } from '../journey/types';
+import type { SourceQuery } from '../shared/use-source-query';
 import type { OverviewViewProps } from './types';
 
 /** Historical Journey group references remain distinct from active route placement. */
@@ -70,18 +71,8 @@ export function JourneyRecord({
   journey,
   ...props
 }: OverviewViewProps & { journey: Journey }): JSX.Element | null {
-  const origin = props.client?.getConfig().baseUrl ?? '/trips-api';
-  const legs = useQuery({
-    queryKey: ['trips', origin, props.tripId, 'journey', journey.id, 'legs'],
-    queryFn: async () =>
-      unwrap(
-        await journeyLegsList({
-          client: props.client,
-          path: { tripId: props.tripId, journeyId: journey.id },
-        })
-      ).legs,
-    retry: false,
-  });
+  const legs = useJourneyLegs(props, journey);
+  if (legs.ownershipError) return <ErrorState error={legs.ownershipError} />;
 
   return (
     <div className="min-w-0 space-y-2">
@@ -134,5 +125,32 @@ function endpoint(source: JourneyLeg['from'], props: OverviewViewProps): string 
     ]
       .filter(Boolean)
       .join(' · ') || '…'
+  );
+}
+
+function useJourneyLegs(props: OverviewViewProps, journey: Journey): SourceQuery<JourneyLeg[]> {
+  return useSourceQuery(
+    { ...props, kind: 'overview-journey-legs', sourceId: journey.id },
+    (owner) => ({
+      queryKey: [
+        'trips',
+        owner.client.getConfig().baseUrl ?? '/trips-api',
+        owner.tripId,
+        'journey',
+        owner.sourceId,
+        'legs',
+      ],
+      load: () =>
+        readOverviewSource(
+          owner,
+          async () =>
+            unwrap(
+              await journeyLegsList({
+                client: owner.client,
+                path: { tripId: owner.tripId, journeyId: owner.sourceId },
+              })
+            ).legs
+        ),
+    })
   );
 }

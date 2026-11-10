@@ -48,6 +48,9 @@ The `controls` slot belongs to that host; `contextualEditor` renders after the T
 main landmark so a Sheet or Dialog can reuse its existing workspace without nested mains.
 Meetings, captures, Ideas and Rentals retain their canonical identities and independent facts.
 People and Capture reads share the contextual editors' existing query keys and transports.
+All Timeline collection reads capture their actual owner, reject stale dispatch and delivery,
+and stop displaying cached context while the mutable connection no longer matches.
+Calendar rechecks that owner after collection reads before requesting Journey workspaces.
 The optional controlled `calendar` selection embeds the existing date/zone/source-window
 projection and requires a contextual source opener; it adds no Calendar destination.
 Trip, Place, ordered Visit, Journey, Journey group, Stay, Event, Rental, Meeting,

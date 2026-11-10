@@ -17,10 +17,7 @@ import type { TripOverviewProps, OverviewViewProps } from './types';
 export function TripOverview(props: TripOverviewProps): JSX.Element | null {
   return (
     <>
-      <OverviewSession
-        key={`${props.client?.getConfig().baseUrl ?? '/trips-api'}:${props.tripId}`}
-        {...props}
-      />
+      <OverviewSession {...props} />
       {props.contextualEditor}
     </>
   );
@@ -30,6 +27,10 @@ function OverviewSession(props: TripOverviewProps): JSX.Element | null {
   const queries = useOverviewSources(props);
   const route = useTripRoute(props);
   const { trip, ...context } = queries;
+  const ownershipError = Object.values(queries).find(
+    (query) => query.ownershipError
+  )?.ownershipError;
+  if (ownershipError) return <ErrorState error={ownershipError} />;
   if (trip.isPending)
     return (
       <p role="status" className="p-4">

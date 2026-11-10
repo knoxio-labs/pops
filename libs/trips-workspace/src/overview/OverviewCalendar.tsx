@@ -1,12 +1,13 @@
-import { useQuery } from '@tanstack/react-query';
-
 import { ErrorState } from '@pops/ui';
 
 import { loadCalendar } from '../calendar/api';
 import { CalendarControls } from '../calendar/CalendarControls';
 import { CalendarRows } from '../calendar/CalendarRows';
 import { selectionProblem, visibleEntries } from '../calendar/model';
+import { assertSourceOwner } from '../shared/retained-session-store';
+import { useSourceQuery } from '../shared/use-source-query';
 import { requestProblem } from '../stay/api';
+import { readOverviewSource } from './source-read';
 
 import type { JSX } from 'react';
 
@@ -17,16 +18,16 @@ type CalendarProps = TripOverviewProps & { calendar: OverviewCalendarControl };
 
 /** The existing Calendar projection inside its owning Timeline, with host-controlled explicit filters. */
 export function OverviewCalendar(props: CalendarProps): JSX.Element {
-  const source = useQuery({
-    queryKey: [
-      'trips',
-      props.client?.getConfig().baseUrl ?? '/trips-api',
-      props.tripId,
-      'calendar',
-    ],
-    queryFn: ({ signal }) => loadCalendar(props, signal),
-    retry: false,
-  });
+  const source = useSourceQuery({ ...props, kind: 'overview-calendar', sourceId: 0 }, (owner) => ({
+    queryKey: ['trips', owner.client.getConfig().baseUrl ?? '/trips-api', owner.tripId, 'calendar'],
+    load: ({ signal }) =>
+      readOverviewSource(owner, () =>
+        loadCalendar({ tripId: owner.tripId, client: owner.client }, signal, () =>
+          assertSourceOwner(owner)
+        )
+      ),
+  }));
+  if (source.ownershipError) return <ErrorState error={source.ownershipError} />;
   return (
     <section aria-label={props.labels.status('calendar')} className="space-y-4">
       {source.isPending && <p role="status">{props.labels.loading}</p>}

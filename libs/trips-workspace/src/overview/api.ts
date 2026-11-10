@@ -22,7 +22,10 @@ type Collections = Required<OverviewSources>;
 export type OverviewLoaders = { [K in keyof Collections]: () => Promise<Collections[K]> };
 
 /** Read each collection independently through the owning generated Trips transport. */
-export function overviewLoaders({ tripId, client }: TripOverviewProps): OverviewLoaders {
+export function overviewLoaders({
+  tripId,
+  client,
+}: Pick<TripOverviewProps, 'tripId' | 'client'>): OverviewLoaders {
   const options = { client, path: { tripId } };
   return {
     visits: async (): Promise<Collections['visits']> => unwrap(await visitsList(options)).visits,
