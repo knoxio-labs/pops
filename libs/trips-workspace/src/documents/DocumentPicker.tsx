@@ -24,6 +24,8 @@ export interface DocumentPickerProps {
   selectionLabel?: string;
   pendingSelectionLabel?: string;
   selectionErrorMessage?: string;
+  /** Assert the retaining context immediately before owner search or a selection callback. */
+  beforeRequest?: () => void;
 }
 
 /** Search current Documents originals, retaining the selection when its caller rejects the callback. */
@@ -32,7 +34,12 @@ export function DocumentPicker(props: DocumentPickerProps): ReactElement {
   const [search, setSearch] = useState(props.initialSearch ?? '');
   const [problem, setProblem] = useState<string | null>(null);
   const open = props.open ?? internalOpen;
-  const query = usePickerSearch(open, search, props.documentsClient);
+  const query = usePickerSearch({
+    open,
+    search,
+    client: props.documentsClient,
+    beforeRequest: props.beforeRequest,
+  });
   const onOpenChange = (next: boolean): void => {
     if (props.open === undefined) setInternalOpen(next);
     props.onOpenChange?.(next);
@@ -42,7 +49,10 @@ export function DocumentPicker(props: DocumentPickerProps): ReactElement {
   const selection = useMutation({
     meta: { errorHandled: true },
     retry: false,
-    mutationFn: async (document: PaperlessSearchDocument) => props.onSelected(document),
+    mutationFn: async (document: PaperlessSearchDocument) => {
+      props.beforeRequest?.();
+      return props.onSelected(document);
+    },
     onSuccess: () => onOpenChange(false),
     onError: () =>
       setProblem(
@@ -71,14 +81,23 @@ export function DocumentPicker(props: DocumentPickerProps): ReactElement {
   );
 }
 
-function usePickerSearch(
-  open: boolean,
-  search: string,
-  client: DocumentsClient | undefined
-): UseQueryResult<PaperlessSearchDocument[], Error> {
+function usePickerSearch({
+  open,
+  search,
+  client,
+  beforeRequest,
+}: {
+  open: boolean;
+  search: string;
+  client: DocumentsClient | undefined;
+  beforeRequest: (() => void) | undefined;
+}): UseQueryResult<PaperlessSearchDocument[], Error> {
   return useQuery({
     queryKey: documentQueryKeys.search(client, search),
-    queryFn: () => searchPaperlessDocuments(search, client),
+    queryFn: () => {
+      beforeRequest?.();
+      return searchPaperlessDocuments(search, client);
+    },
     enabled: open && search.length >= 2,
     retry: false,
   });

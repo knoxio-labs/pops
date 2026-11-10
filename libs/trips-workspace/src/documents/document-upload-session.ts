@@ -8,6 +8,7 @@ export interface DocumentUploadSnapshot {
   readonly pickerOpen: boolean;
   readonly ownerLookupCount: number | null;
   readonly taskId: string | null;
+  readonly taskReceipt: DocumentUploadTaskReceipt | null;
 }
 
 class DocumentUploadIntent {
@@ -25,6 +26,7 @@ class DocumentUploadIntent {
       pickerOpen: false,
       ownerLookupCount: null,
       taskId: null,
+      taskReceipt: null,
     };
   }
 
@@ -107,4 +109,14 @@ export class DocumentUploadSession implements DocumentUploadSnapshot {
   get taskId(): string | null {
     return this.intent.read().taskId;
   }
+  get taskReceipt(): DocumentUploadTaskReceipt | null {
+    return this.intent.read().taskReceipt;
+  }
+}
+import type { PaperlessTask } from './types';
+
+/** A result actually returned by the Documents owner for this receipt's accepted task. */
+export interface DocumentUploadTaskReceipt {
+  readonly taskId: string;
+  readonly result: PaperlessTask;
 }

@@ -24,6 +24,14 @@ export type {
 export { TripDocumentLinks } from './documents/TripDocumentLinks';
 export { TripDocumentUpload } from './documents/TripDocumentUpload';
 export type { TripDocumentUploadProps } from './documents/TripDocumentUpload';
+export {
+  createTripDocumentUploadSession,
+  TripDocumentUploadContextError,
+} from './documents/trip-document-upload-session';
+export type {
+  TripDocumentUploadContext,
+  TripDocumentUploadSession,
+} from './documents/trip-document-upload-session';
 
 export { DocumentPicker } from './documents/DocumentPicker';
 export type { DocumentPickerProps } from './documents/DocumentPicker';
