@@ -121,6 +121,8 @@ return `409` atomically. Created capture/Idea identities are tombstoned, and
 receipts and accepted attachment identities remain durable. Undo never modifies
 Documents originals or tasks. Web composer text and actual File handles remain
 the consumer's in-session responsibility; this API does not persist file bytes.
+Independent active Handled by assignments prevent Undo from deleting a created
+Journey, Stay or Event. Explicitly cleared assignments do not block the inverse.
 Successful Undo advances only a prior active inverse whose complete expected
 row equals the restored snapshot. This records the server-confirmed successor
 revision for repeated LIFO Undo while leaving original receipts immutable;

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { ContactUriSchema } from './contact-reference.js';
 import { CalendarDateSchema, SourceLinkSchema } from './schemas.js';
 
 const Id = z.number().int().positive();
@@ -27,9 +28,9 @@ export const IdeaTimingSchema = z.discriminatedUnion('mode', [
     to: CalendarDateSchema.optional(),
   }),
 ]);
-/** Owner-issued Contacts reference; unavailable opaque identities remain identifiable without copying a person. */
+/** Retained Contacts reference; URI shape alone is not issuance proof, and unavailable identities remain identifiable. */
 export const IdeaContactLinkSchema = SourceLinkSchema.extend({
-  uri: z.string().regex(/^pops:contacts\/contact\/[^/\s]+$/u),
+  uri: ContactUriSchema,
 });
 /** A Contacts-owned recommender reference; source notes survive an unavailable owner. */
 export const IdeaRecommendationSchema = z.object({

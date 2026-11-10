@@ -10,6 +10,7 @@ import {
   journeyGroupMembers,
 } from '../schema.js';
 import { sameCaptureTarget } from './capture-targets.js';
+import { hasResponsibilityForTarget } from './responsibility-references.js';
 import { TripsServiceError } from './source-record.js';
 
 import type { CaptureTarget, ExploreSource } from '../../contract/source-workspace.js';
@@ -43,7 +44,7 @@ export function assertSourceUnreferenced(db: TripsDb, tripId: number, source: Lo
     );
   if (member || associated) throw new TripsServiceError('source_referenced');
 }
-/** Creation Undo preserves Documents links, active Decision references and Journey legs/group memberships. */
+/** Creation Undo preserves Documents links, active Decisions/responsibilities and Journey legs/group memberships. */
 export function assertCreatedTargetUnreferenced(
   db: TripsDb,
   tripId: number,
@@ -65,7 +66,9 @@ export function assertCreatedTargetUnreferenced(
     .some((row) =>
       row.sources.some((source) => source.kind === target.kind && source.id === target.id)
     );
-  if (document || decision) throw new TripsServiceError('source_undo_conflict');
+  const responsibility =
+    target.kind !== 'idea' && hasResponsibilityForTarget(db, tripId, target.kind, target.id);
+  if (document || decision || responsibility) throw new TripsServiceError('source_undo_conflict');
   if (target.kind === 'journey') {
     const leg = db
       .select({ id: journeyLegs.id })
