@@ -84,7 +84,9 @@ Only new or changed nonnull references call Contacts `entities.reference` throug
 authenticated discovery. Contacts resolves historical IDs and supplies the stored
 canonical URI. Trips never constructs identity from a name/type, copies Contact
 facts, or rewrites retained references during reads. Unknown selections return 400;
-unverifiable selections return retryable 503 without a source write. Retained
+unverifiable selections return retryable 503 without a source write. Owner
+responses whose canonical ID disagrees with their URI are unverifiable and
+create neither a source nor an operation receipt. Retained
 unavailable references remain editable and clearable without Contacts access.
 The outbound Trips account therefore needs the Contacts `contacts.entities` scope.
 
