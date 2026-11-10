@@ -1,7 +1,7 @@
 import { formatTripDate } from '@/fixtures/trip-overview-format';
 import { GripVertical, Trash2 } from 'lucide-react';
 
-import { Button, SortableGrid, cn } from '@pops/ui';
+import { Button, cn } from '@pops/ui';
 
 import { AccommodationView } from './accommodation-view';
 import { AlternativeGroups } from './canvas-alternatives';
@@ -19,26 +19,28 @@ import { accommodationPeriods } from './lodging-periods';
 
 import type { TripRecord } from '@/fixtures/trip-overview-model';
 
-/** Every visit, transport and alternative group participates in the same movable route graph. */
+/** Render a flat route record; contained cities delegate their surface to the surrounding path. */
 export function CanvasNode({
   record,
   index = 0,
   datesInRail = false,
+  contained = false,
 }: {
   record: TripRecord;
   index?: number;
   datesInRail?: boolean;
+  contained?: boolean;
 }) {
   if (record.kind === 'transport') return <TransitCard record={record} datesInRail={datesInRail} />;
   if (record.kind === 'gap')
     return (
       <AlternativeGroups
         gap={record}
-        renderRecord={(item, position) => <CanvasNode record={item} index={position} />}
+        renderRecord={(item, position) => <CanvasNode record={item} index={position} contained />}
       />
     );
   return record.kind === 'city' ? (
-    <CityCard record={record} index={index} datesInRail={datesInRail} />
+    <CityCard record={record} index={index} datesInRail={datesInRail} contained={contained} />
   ) : (
     <ActivityCard item={record} />
   );
@@ -48,10 +50,12 @@ function CityCard({
   record,
   index,
   datesInRail,
+  contained,
 }: {
   record: TripRecord;
   index: number;
   datesInRail: boolean;
+  contained: boolean;
 }) {
   const canvas = useCanvas();
   const { state, preview } = canvas;
@@ -67,7 +71,8 @@ function CityCard({
       data-canvas-id={record.id}
       aria-label={name}
       className={cn(
-        'group/visit space-y-2 rounded-xl border border-dashed border-foreground/30 bg-muted/60 p-3 shadow-sm',
+        'group/visit min-w-0 space-y-1',
+        !contained && 'rounded-lg border border-dashed border-border px-2 py-1',
         issues.length > 0 && 'border-destructive bg-destructive/10'
       )}
       onDragOver={(e) => {
@@ -87,6 +92,15 @@ function CityCard({
       }}
     >
       <CityHeader record={record} index={index} datesInRail={datesInRail} />
+      <CityContents record={record} issues={issues} />
+    </article>
+  );
+}
+
+function CityContents({ record, issues }: { record: TripRecord; issues: string[] }) {
+  const canvas = useCanvas();
+  return (
+    <>
       <RentalSections visitId={record.id} />
       {issues.map((issue) => (
         <p key={issue} className="text-sm font-medium text-foreground">
@@ -99,8 +113,7 @@ function CityCard({
       ) : (
         <CityAccommodationSummary visit={record} />
       )}
-      <NestedVisits parentId={record.id} />
-    </article>
+    </>
   );
 }
 
@@ -117,7 +130,7 @@ function CityHeader({
   const { state } = canvas;
   const name = canvasName(state, record);
   return (
-    <div className="flex items-start gap-1">
+    <div className="flex min-w-0 items-start">
       <span
         role="img"
         aria-label={`Drag visit ${index + 1}`}
@@ -144,31 +157,6 @@ function CityHeader({
   );
 }
 
-function NestedVisits({ parentId }: { parentId: string }) {
-  const { state, change } = useCanvas();
-  const ids = state.itemOrders[`nested:${parentId}`] ?? [];
-  const records = state.records
-    .filter((r) => state.parents[r.id] === parentId)
-    .toSorted((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id));
-  if (!records.length) return null;
-  return (
-    <div className="ml-4 border-l border-dotted border-app-accent/50 pl-3">
-      <SortableGrid
-        items={records}
-        getKey={(r) => r.id}
-        columnsClassName="grid-cols-1"
-        onReorder={(next) =>
-          change({
-            ...state,
-            itemOrders: { ...state.itemOrders, [`nested:${parentId}`]: next.map((r) => r.id) },
-          })
-        }
-        renderItem={(record, index) => <CanvasNode record={record} index={index} />}
-      />
-    </div>
-  );
-}
-
 function CityAccommodationSummary({ visit }: { visit: TripRecord }) {
   const { state } = useCanvas();
   if (state.homePlaces.includes(visit.placeId)) return null;
@@ -180,10 +168,13 @@ function CityAccommodationSummary({ visit }: { visit: TripRecord }) {
     const nights =
       (Date.parse(`${period.end}T00:00:00Z`) - Date.parse(`${period.start}T00:00:00Z`)) / 86400000;
     return (
-      <p key={period.id} className="text-sm text-foreground">
-        {nights} uncovered {nights === 1 ? 'night' : 'nights'} · {formatTripDate(period.start)} →{' '}
-        {formatTripDate(period.end)}
-      </p>
+      <CanvasInsert
+        key={period.id}
+        target={{ visitId: visit.id, start: period.start, end: period.end }}
+        label="Add accommodation"
+        defaultKind="stay"
+        slotLabel={`${nights} uncovered ${nights === 1 ? 'night' : 'nights'} · ${formatTripDate(period.start)} → ${formatTripDate(period.end)}`}
+      />
     );
   });
 }

@@ -52,7 +52,7 @@ export function RoutePlanner({
             editor={editor}
             onChange={change}
             onSelect={setSelected}
-            onAdd={(id) => setAdding({ parentId: id })}
+            onAdd={(id) => setAdding({ afterId: id })}
           />
           {layout === 'side-editor' && record && (
             <div className="order-first xl:sticky xl:top-4 xl:order-last">{editor}</div>
@@ -62,10 +62,10 @@ export function RoutePlanner({
       {adding && (
         <AddVisit
           state={state}
-          parentId={adding.parentId}
+          initialAfterId={adding.afterId}
           onClose={() => setAdding(null)}
           onAdd={(placeId, afterId) => {
-            change(addVisit(state, placeId, afterId, adding.parentId));
+            change(addVisit(state, placeId, afterId));
             setAdding(null);
           }}
         />
@@ -115,7 +115,7 @@ function PlannerHeader({
 function usePlannerState(scenario: PlannerScenario) {
   const [state, setState] = useState(() => initialPlanner(scenario));
   const [selected, setSelected] = useState<string | null>(null);
-  const [adding, setAdding] = useState<{ parentId?: string } | null>(null);
+  const [adding, setAdding] = useState<{ afterId?: string } | null>(null);
   const [history, setHistory] = useState<PlannerState[]>([]);
   function change(next: PlannerState) {
     setHistory([...history, state]);

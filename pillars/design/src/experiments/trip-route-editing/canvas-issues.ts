@@ -37,7 +37,7 @@ function addIssue(issues: Record<string, string[]>, id: string, message: string)
 /** Date-order conflicts use preview order and known bounds without hardening wanted commitments. */
 export function routeIssues(state: CanvasState): Record<string, string[]> {
   const issues: Record<string, string[]> = {};
-  let previous: { id: string; end: string } | undefined;
+  let previous: { end: string } | undefined;
   for (const id of state.order) {
     const record = state.records.find((r) => r.id === id);
     if (record?.kind !== 'city') continue;
@@ -47,21 +47,23 @@ export function routeIssues(state: CanvasState): Record<string, string[]> {
     if (previous && range.start && validDate(range.start) && range.start < previous.end) {
       const message = `${range.start} < ${previous.end}`;
       addIssue(issues, id, message);
-      addIssue(issues, previous.id, message);
     }
-    if (range.end && validDate(range.end)) previous = { id, end: range.end };
+    if (range.end && validDate(range.end)) previous = { end: range.end };
   }
   return issues;
 }
 
 function neighbours(state: CanvasState, id: string) {
-  const index = state.order.indexOf(id);
+  const order = state.order.includes(id)
+    ? state.order
+    : (state.sections.find((section) => section.cards.includes(id))?.cards ?? []);
+  const index = order.indexOf(id);
   if (index < 0) return {};
   const cities = (ids: string[]) =>
     ids.map((key) => state.records.find((r) => r.id === key)).find((r) => r?.kind === 'city');
   return {
-    before: cities(state.order.slice(0, index).toReversed()),
-    after: cities(state.order.slice(index + 1)),
+    before: cities(order.slice(0, index).toReversed()),
+    after: cities(order.slice(index + 1)),
   };
 }
 

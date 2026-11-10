@@ -1,7 +1,9 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { BookingTimes } from './canvas-booking-times';
+import { timingFindings } from './calendar-model';
+import { BookingFindings, BookingTimes } from './canvas-booking-times';
+import { canvasCalendar, canvasTimingRules } from './canvas-calendar';
 import { CanvasContext } from './canvas-context';
 import { initialCanvas } from './canvas-model';
 
@@ -33,7 +35,7 @@ function renderTimes(recordId = 'flight') {
     previewOrder: vi.fn(),
   };
   render(<Harness actions={actions} recordId={recordId} />);
-  return { change, state };
+  return { change, state, actions };
 }
 
 describe('booking wall-clock editor', () => {
@@ -126,5 +128,60 @@ describe('booking source synchronization', () => {
       ...original,
       schedule: { ...original?.schedule, start: '2028-01-03', localTime: '21:30' },
     });
+  });
+});
+
+describe('route booking finding ownership', () => {
+  it('renders invalid bookings, connections, transfer gaps and overlaps exactly once on their source owner', () => {
+    const { state, actions } = renderTimes();
+    state.clockOverrides = {
+      dinner: {
+        startAt: '2027-12-29T00:00:00-03:00',
+        endAt: '2027-12-29T01:00:00-03:00',
+      },
+      concert: { startAt: 'invalid' },
+    };
+    const findings = timingFindings(canvasCalendar(state), canvasTimingRules(state));
+    expect(findings.map((finding) => finding.id)).toEqual(
+      expect.arrayContaining([
+        'dfw-connection',
+        'dinner-airport',
+        'invalid-concert',
+        'overlap-dinner-poa-rec',
+      ])
+    );
+    render(
+      <CanvasContext.Provider value={actions}>
+        {state.records.map((record) => (
+          <section key={record.id} aria-label={`Findings for ${record.id}`}>
+            <BookingFindings recordId={record.id} />
+          </section>
+        ))}
+      </CanvasContext.Provider>
+    );
+    expect(screen.getAllByRole('status')).toHaveLength(findings.length);
+    for (const finding of findings) {
+      expect(screen.getAllByText(finding.message)).toHaveLength(1);
+      expect(
+        within(
+          screen.getByRole('region', { name: `Findings for ${finding.recordIds[0]}` })
+        ).getByText(finding.message)
+      ).toBeDefined();
+    }
+    expect(
+      within(screen.getByRole('region', { name: 'Findings for connection' })).queryByRole('status')
+    ).toBeNull();
+  });
+
+  it('keeps a broken link visible on the remaining endpoint when its source is removed', () => {
+    const { state, actions } = renderTimes();
+    state.records = state.records.filter((record) => record.id !== 'dinner');
+    render(
+      <CanvasContext.Provider value={actions}>
+        <BookingFindings recordId="dinner" />
+        <BookingFindings recordId="connection" />
+      </CanvasContext.Provider>
+    );
+    expect(screen.getAllByText('dinner-airport: missing linked booking')).toHaveLength(1);
   });
 });

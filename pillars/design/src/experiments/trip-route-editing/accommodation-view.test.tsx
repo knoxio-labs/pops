@@ -131,6 +131,13 @@ describe('AccommodationView', () => {
     expect(dragged.querySelector('.invisible')).not.toBeNull();
   });
 
+  it('shows purchase once in place of the arrangement metadata', () => {
+    render(<StaySource record={{ ...stay, purchase: 'Purchased' }} />);
+    const card = screen.getByRole('group', { name: 'First hotel' });
+    expect(within(card).getAllByText('Purchased')).toHaveLength(1);
+    expect(within(card).queryByText('Booked')).toBeNull();
+  });
+
   it('keeps stay facts visible in a compact row and opens forms only for editing', () => {
     mount([stay]);
     const card = screen.getByRole('group', { name: 'First hotel' });
@@ -145,6 +152,16 @@ describe('AccommodationView', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Edit accommodation First hotel' }));
     expect(screen.getByLabelText('Accommodation name').getAttribute('value')).toBe('First hotel');
     expect(screen.getByLabelText('Check-in').getAttribute('value')).toBe('2028-01-01');
+  });
+
+  it('replaces empty accommodation prose with a compact actionable slot', () => {
+    mount([]);
+    const insert = screen.getByRole('button', { name: 'Add accommodation' });
+    expect(insert).toHaveTextContent('Accommodation');
+    expect(insert).toHaveClass('min-h-11', 'border-dashed');
+    expect(screen.queryByText('Accommodation needed')).toBeNull();
+    fireEvent.click(insert);
+    expect(screen.getByLabelText('Accommodation')).toBeDefined();
   });
 
   it('retains home-place activities while hiding lodging status', () => {
@@ -203,7 +220,7 @@ describe('AccommodationView', () => {
 
   it('updates arrangement and purchase only through explicit source controls', () => {
     const { changes } = mount([{ ...stay, arrangement: 'Not arranged' }]);
-    expect(screen.getAllByText('Accommodation needed')).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: 'Add accommodation' })).toHaveLength(2);
     fireEvent.click(screen.getByRole('button', { name: 'Edit accommodation First hotel' }));
     fireEvent.click(screen.getByRole('button', { name: 'Accommodation arrangement' }));
     fireEvent.click(screen.getByRole('button', { name: 'Booked' }));
@@ -217,7 +234,7 @@ describe('AccommodationView', () => {
     expect(
       changes.mock.lastCall?.[0].records.find((item) => item.id === stay.id)?.purchase
     ).toBeUndefined();
-    expect(screen.getAllByText('Accommodation needed')).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: 'Add accommodation' })).toHaveLength(1);
     fireEvent.click(screen.getByRole('button', { name: 'Purchased' }));
     expect(changes.mock.lastCall?.[0].records.find((item) => item.id === stay.id)?.purchase).toBe(
       'Purchased'
@@ -243,9 +260,11 @@ describe('AccommodationView', () => {
     mount([stay, second]);
     expect(screen.getByRole('button', { name: 'Edit accommodation First hotel' })).toBeDefined();
     expect(screen.getByRole('button', { name: 'Edit accommodation Second hotel' })).toBeDefined();
-    expect(screen.getByText('Accommodation needed')).toBeDefined();
+    expect(screen.queryByText('Accommodation needed')).toBeNull();
     expect(screen.getByRole('button', { name: 'Add accommodation' })).toBeDefined();
-    expect(screen.getByText('3 Jan → 4 Jan')).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Add accommodation' })).toHaveTextContent(
+      'Accommodation · 3 Jan → 4 Jan'
+    );
   });
 
   it('writes source title and dates and shows invalid chronology', () => {

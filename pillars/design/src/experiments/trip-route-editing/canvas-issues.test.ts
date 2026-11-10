@@ -47,9 +47,8 @@ describe('canvas route findings', () => {
     expect(routeIssues(current)).toEqual({});
     const before = structuredClone(current.records);
     current.order = ['b', 'journey', 'a', 'c'];
-    expect(routeIssues(current)).toMatchObject({
+    expect(routeIssues(current)).toEqual({
       a: ['2028-01-01 < 2028-01-05'],
-      b: ['2028-01-01 < 2028-01-05'],
     });
     expect(current.records).toEqual(before);
   });
@@ -71,8 +70,7 @@ describe('canvas route findings', () => {
       schedule: { start: '2028-01-02' },
     };
     current.records.push(wanted);
-    expect(routeIssues(current)).toMatchObject({
-      a: ['2028-01-02 < 2028-01-03'],
+    expect(routeIssues(current)).toEqual({
       b: ['2028-01-02 < 2028-01-03'],
     });
     expect(wanted.purchase).toBeUndefined();
@@ -90,6 +88,26 @@ describe('canvas route findings', () => {
 });
 
 describe('fixed transport constraints', () => {
+  it('checks the explicit containing alternative order and retains endpoint constraints after reordering', () => {
+    const current = state();
+    const journey = current.records.find((record) => record.id === 'journey');
+    if (!journey) throw new Error('Missing journey');
+    current.order = ['c'];
+    current.sections = [
+      { id: 'alternative', gapId: 'gap', title: 'Option', cards: ['a', 'journey', 'b'] },
+    ];
+    expect(transportIssues(current, journey)).toEqual([]);
+    current.transitLinks.journey = { from: 'b', to: 'a' };
+    expect(transportIssues(current, journey)).toEqual(['Transport does not connect these visits']);
+    current.transitLinks.journey = { from: 'a', to: 'b' };
+    const section = current.sections[0];
+    if (!section) throw new Error('Missing alternative');
+    section.cards = ['b', 'journey', 'a'];
+    expect(transportIssues(current, journey)).toContain('Transport does not connect these visits');
+    expect(current.transitLinks.journey).toEqual({ from: 'a', to: 'b' });
+    expect(current.order).toEqual(['c']);
+  });
+
   it('retains explicit links when moved between the wrong visits and detects date mismatches', () => {
     const current = state();
     const journey = current.records.find((record) => record.id === 'journey');

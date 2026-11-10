@@ -88,7 +88,7 @@ describe('RootLayout', () => {
       'flex-col',
       'overflow-x-clip',
       'md:min-h-0',
-      'md:flex-1',
+      'flex-1',
       'md:overflow-y-auto'
     );
 

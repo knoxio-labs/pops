@@ -1,5 +1,16 @@
 # Trips workspace components
 
+`TripOverview` is the approved route-first read surface. Its host supplies translated
+labels and links to published source pages. Trip, Place, ordered Visit, Journey,
+Journey group, Stay, Event, Decision and document-association reads fail independently;
+cached successes remain visible during refresh failures. Missing source references
+retain their identities. Only explicit Visit IDs attach stays and events to route
+occurrences. Journeys remain independent of visits, with current and alternative
+identities supplied solely by explicit groups. An Alternative event stays visible.
+Only Purchased sources get hard styling. Date-only values never move timezone, and
+partial bounds, approximate months, duration and opaque trip When text stay distinct.
+Document associations identify their originals without claiming external resolution.
+
 `ArrangementsWorkspace({ tripId, labels, formatDate, client?, ContactChooser? })`
 groups independent Stay, Event and Rental sources by their explicit Visit occurrence
 in persisted route order. Repeated places retain separate occurrences. A Rental
