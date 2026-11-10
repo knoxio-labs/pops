@@ -132,7 +132,10 @@ Opaque source references display their original labels/URIs without asserting do
 resolution. Nearby bookings and buffer-safety findings are owned by POPS-6134.
 
 `@pops/trips-workspace` exports `StayWorkspace({ tripId, stayId, formatNights, client? })`, the approved
-In visit accommodation workspace. This browser component library owns no service or database and imports no pillar package.
+In visit accommodation workspace. This browser component library owns no service or
+database. Its Contacts chooser is an opaque host-injected capability; the library
+imports no pillar implementation. Persisted Trips types come from this library's
+generated client.
 The host supplies `formatNights(count)` from its active locale; the library passes only
 known positive checkout-exclusive calendar-day counts. The Trips app uses its own
 i18next singular/plural resources. Incomplete dates never receive a count.
@@ -309,6 +312,74 @@ navigation link and authenticated query/client context.
 and its generated-transport load/apply operations. The owning Trips app runs the
 real editor/HTTP/SQLite integration regression; this extractable library does not
 install or start a pillar runtime in its own unit tests.
+
+`@pops/trips-workspace/capture-client` exports the headless shared Capture, Inbox
+and Explore editor. It submits finite action-specific owner commands with retained
+operation UUIDs. An uncertain response blocks a new operation until the same request
+is resolved; retry never substitutes revisions from a newer read. Receipts distinguish
+the immutable original outcome from current affected rows and an already-undone replay.
+Reads started before a confirmed mutation cannot replace its current source state.
+
+The composer retains verbatim source text, explicit optional selections and distinct
+File handles in this browser session. Every selected file needs an accepted Documents
+task or original identity before capture; later task completion retains both identities.
+Confirmed capture Undo restores its submitted draft only when the current composer is
+empty. The composer stays reserved during an uncertain inverse. Recapture creates a
+new operation UUID while reusing accepted references, without another upload. No file
+bytes or Undo history survive a browser reload. Organisation, source edits and collection
+removal use the producer's guarded inverses without restoring an old whole workspace.
+
+`CaptureWorkspace({ tripId, view, client?, documentsClient?, contacts?, onViewEvent? })`
+provides embedded text-first Capture, inline Inbox and Explore tool views for the owning
+Trip workspace. The host controls the view and Event callback; the tool renders no
+page landmark, back navigation or destination links. Its session is scoped
+to the host QueryClient, API origin and owning trip. Optional catalogue failures stay
+separate from the source read. Inbox keeps raw material visible while saving explicit
+fields and typed existing/new Idea, Event, Journey or Stay organisation. Classification
+alone stays unorganised; unresolved external references retain their canonical identity.
+An unverified external owner is distinct from a missing local target. Canonical Contact
+selection supplies evidence for its retained browser intent; after reload the owner
+availability stays unverified until an owner read confirms it.
+The optional host reader resolves retained Contacts URIs through their owner. Duplicate
+references share a read within this trip session; missing identity, unavailable transport
+and invalid owner responses stay distinct. Explicit read retry does not mutate Trips or
+rewrite historical URIs, and source navigation uses only the owner's returned route.
+Once an owner read completes, pending refreshes cannot reuse earlier chooser evidence
+to mark an unverified association organised.
+Failed row edits and target descriptions survive filters and navigation with their
+original preconditions. Upload views compose the Documents owner's controlled session;
+remounting a pending upload cannot issue another POST.
+Ambiguous-upload recovery searches and selections use that same session's published
+owner-context guard, so changing its Documents transport cannot accept another owner's original.
+The host may unmount or change the controlled tool view without replacing its QueryClient.
+A full page reload ends the browser session and cannot restore File handles.
+
+Explore reads actual Capture, Idea or Event membership identities and groups by the
+current source's recorded place, or an Event's explicitly selected visit place. Identical
+place names remain distinct. Unassigned and unavailable references remain separate.
+Inline detail edits the recorded Capture or independent Idea; Event opening is delegated
+to the host's published source route. Removing a membership never deletes its source.
+Explicit Idea kind selection in the composer creates and associates that subtype in
+the same owner operation, preserving both IDs and verbatim raw text. Its explicitly
+selected place/visit is submitted on both records; later edits do not synchronize them.
+
+Idea detail retains source links, canonical Contacts references and recommendation
+notes as explicit fields. Optional timing and location discrepancies produce findings
+without blocking unrelated edits. Mutable reference text keeps its editing identity
+while typing; failed writes retain the exact draft and original source revision.
+Contact selection and creation use a host-injected opaque owner intent, which supplies its own
+catalogues to the host locale. Each organisation intent retains the owner session above
+route views, including pending creation and ambiguous outcomes. The canonical reference
+is retained before a Trips association is attempted; retrying the association cannot
+create the Contact again. Removing a Trips reference never deletes a Contacts record.
+An Idea Contact or recommendation link remains explicitly retryable while another
+Trips operation is pending. Its canonical selection is immutable per intent; only
+confirmation for that operation UUID, Idea, original revision and submitted canonical
+link marks it applied. An uncertain link response resolves through the editor's retained
+request replay before that link can be replaced. Explicit replacement of an unsent or
+rejected link creates a new intent and removes only its own prepared entry. The old owner
+receipt remains retained. Discarded link drafts require an explicit restore, which adds
+only the selected canonical link to current edits without restoring discarded fields.
 
 `PeopleWorkspace({ tripId, text, contacts?, client? })` implements
 the approved People grouping by persisted Visit occurrence order. Repeated places

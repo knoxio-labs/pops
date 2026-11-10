@@ -7,6 +7,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./decision-client": "./src/decision/client.ts",
+    "./capture-client": "./src/capture/client.ts",
     "./people-client": "./src/people/client.ts"
   },
   "scripts": {
