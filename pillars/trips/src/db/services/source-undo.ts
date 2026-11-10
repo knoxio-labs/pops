@@ -7,6 +7,7 @@ import { undoCreatedTargets } from './source-created-target-undo.js';
 import { getCapture, getIdea } from './source-queries.js';
 import { requireOwnedRecord, TripsServiceError } from './source-record.js';
 import { assertCreatedTargetUnreferenced, assertSourceUnreferenced } from './source-references.js';
+import { acknowledgeSourceInverse } from './source-undo-lineage.js';
 import { restoreSourceRelations } from './source-undo-relations.js';
 import { guardSourceInverse, restoreSourceInverse } from './source-undo-row.js';
 
@@ -28,6 +29,7 @@ function restoreSources(write: SourceWrite, inverse: SourceInverse): void {
         .get()
     );
     write.receipt.captures.push(after);
+    acknowledgeSourceInverse(write, entry.before, after, (inverse) => inverse.captures);
   }
   for (const entry of inverse.ideas) {
     guardSourceInverse(getIdea(write.db, write.tripId, entry.after.id), entry.after);
@@ -42,6 +44,7 @@ function restoreSources(write: SourceWrite, inverse: SourceInverse): void {
         .get()
     );
     write.receipt.ideas.push(after);
+    acknowledgeSourceInverse(write, entry.before, after, (inverse) => inverse.ideas);
   }
   undoCreatedTargets(write, inverse);
 }

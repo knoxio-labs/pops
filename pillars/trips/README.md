@@ -120,6 +120,12 @@ return `409` atomically. Created capture/Idea identities are tombstoned, and
 receipts and accepted attachment identities remain durable. Undo never modifies
 Documents originals or tasks. Web composer text and actual File handles remain
 the consumer's in-session responsibility; this API does not persist file bytes.
+Successful Undo advances only a prior active inverse whose complete expected
+row equals the restored snapshot. This records the server-confirmed successor
+revision for repeated LIFO Undo while leaving original receipts immutable;
+ordinary later writes, including writes restoring identical fields, do not
+advance older inverse preconditions. A failed inverse rolls back these lineage
+updates with its source changes.
 
 Stays belong to trips independently of visits. `GET/POST /trips/:tripId/stays`
 and `GET/PATCH/DELETE /trips/:tripId/stays/:id` manage stable source records;

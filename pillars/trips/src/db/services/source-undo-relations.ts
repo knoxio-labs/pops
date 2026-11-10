@@ -12,6 +12,7 @@ import {
   requireExploreSource,
 } from './source-queries.js';
 import { TripsServiceError } from './source-record.js';
+import { acknowledgeSourceInverse } from './source-undo-lineage.js';
 import { guardSourceInverse, restoreSourceInverse } from './source-undo-row.js';
 
 import type { SourceInverse } from './source-inverse-types.js';
@@ -31,6 +32,7 @@ export function restoreSourceRelations(write: SourceWrite, inverse: SourceInvers
         .get()
     );
     write.receipt.memberships.push(after);
+    acknowledgeSourceInverse(write, entry.before, after, (inverse) => inverse.memberships);
   }
   for (const entry of inverse.associations) {
     guardSourceInverse(getCaptureAssociation(write.db, write.tripId, entry.after.id), entry.after);
@@ -60,6 +62,7 @@ export function restoreSourceRelations(write: SourceWrite, inverse: SourceInvers
         .get()
     );
     write.receipt.associations.push(after);
+    acknowledgeSourceInverse(write, entry.before, after, (inverse) => inverse.associations);
   }
 }
 function requireRestorableMembership(
