@@ -3,6 +3,7 @@ import { RotateCcw } from 'lucide-react';
 
 import { Button, ErrorState, PageHeader } from '@pops/ui';
 
+import { SourceDocuments } from '../shared/SourceDocuments';
 import { loadPlaces, loadTrip, loadVisits, requestProblem } from '../stay/api';
 import { eventQueryKey, loadEvent } from './api';
 import { EventFields } from './EventFields';
@@ -139,6 +140,12 @@ function EventSession({
           <EventReferences event={editor.draft} commit={(patch) => void editor.commit(patch)} />
         </EventRoute>
       </fieldset>
+      <SourceDocuments
+        tripId={identity.tripId}
+        target={{ kind: 'event', id: identity.eventId }}
+        tripsClient={identity.client}
+        documentsClient={identity.documentsClient}
+      />
     </main>
   );
 }
