@@ -1,6 +1,6 @@
 import { client as defaultDocumentsClient } from '../documents-api/client.gen';
 import { documentQueryKeys } from './query-keys';
-import { TripDocumentUploadContextError } from './upload-context';
+import { TripDocumentUploadContextError } from './upload-context-error';
 
 import type { Client as DocumentsClient } from '../documents-api/client';
 
