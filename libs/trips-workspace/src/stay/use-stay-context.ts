@@ -1,5 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
-
+import { useSourceQuery } from '../shared/use-source-query';
 import { loadPlaces, loadStays, loadTrip, loadVisits, stayListQueryKey } from './api';
 
 import type { UseQueryResult } from '@tanstack/react-query';
@@ -8,27 +7,36 @@ import type { Stay, Visit, Place, Trip, StaySourceIdentity } from './types';
 
 /** Load optional source context independently so its failure never prevents stay editing. */
 export function useStayContext({ tripId, client }: StaySourceIdentity): StayContext {
-  const origin = client?.getConfig().baseUrl ?? '/trips-api';
-  const trip = useQuery({
-    queryKey: ['trips', origin, tripId],
-    queryFn: () => loadTrip(tripId, client),
-    retry: false,
+  const trip = useSourceQuery({ client, tripId, kind: 'trip-context', sourceId: 0 }, (owner) => {
+    const origin = owner.client.getConfig().baseUrl ?? '/trips-api';
+    return {
+      queryKey: ['trips', origin, owner.tripId],
+      load: () => loadTrip(owner.tripId, owner.client),
+    };
   });
-  const visits = useQuery({
-    queryKey: ['trips', origin, tripId, 'visits'],
-    queryFn: () => loadVisits(tripId, client),
-    retry: false,
+  const visits = useSourceQuery(
+    { client, tripId, kind: 'visits-context', sourceId: 0 },
+    (owner) => {
+      const origin = owner.client.getConfig().baseUrl ?? '/trips-api';
+      return {
+        queryKey: ['trips', origin, owner.tripId, 'visits'],
+        load: () => loadVisits(owner.tripId, owner.client),
+      };
+    }
+  );
+  const stays = useSourceQuery({ client, tripId, kind: 'stays-context', sourceId: 0 }, (owner) => {
+    return {
+      queryKey: stayListQueryKey({ tripId: owner.tripId, client: owner.client }),
+      load: () => loadStays(owner.tripId, owner.client),
+    };
   });
-  const stays = useQuery({
-    queryKey: stayListQueryKey({ tripId, client }),
-    queryFn: () => loadStays(tripId, client),
-    retry: false,
-  });
-  const places = useQuery({
-    queryKey: ['trips', origin, 'places'],
-    queryFn: () => loadPlaces(client),
-    retry: false,
-  });
+  const places = useSourceQuery(
+    { client, tripId, kind: 'places-context', sourceId: 0 },
+    (owner) => {
+      const origin = owner.client.getConfig().baseUrl ?? '/trips-api';
+      return { queryKey: ['trips', origin, 'places'], load: () => loadPlaces(owner.client) };
+    }
+  );
   return { trip, visits, stays, places };
 }
 

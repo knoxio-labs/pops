@@ -1,9 +1,10 @@
-import { useQuery, type UseQueryResult } from '@tanstack/react-query';
-
 import { unwrap } from '@pops/pillar-sdk/client';
 
+import { useSourceQuery } from '../shared/use-source-query';
 import { loadPlaces, loadStays, loadVisits } from '../stay/api';
 import { journeysList } from '../trips-api/sdk.gen';
+
+import type { UseQueryResult } from '@tanstack/react-query';
 
 import type { JourneysListResponses } from '../trips-api/types.gen';
 import type { AffectedSource, DecisionWorkspaceProps } from './types';
@@ -24,29 +25,46 @@ export interface DecisionContext {
 }
 /** Independently load optional context; unavailable catalogues never replace or block decision facts. */
 export function useDecisionContext(props: DecisionWorkspaceProps): DecisionContext {
-  const origin = props.client?.getConfig().baseUrl ?? '/trips-api';
-  const prefix = ['trips', origin, props.tripId];
-  const visits = useQuery({
-    queryKey: [...prefix, 'visits'],
-    queryFn: () => loadVisits(props.tripId, props.client),
-    retry: false,
-  });
-  const stays = useQuery({
-    queryKey: [...prefix, 'stays'],
-    queryFn: () => loadStays(props.tripId, props.client),
-    retry: false,
-  });
-  const journeys = useQuery({
-    queryKey: [...prefix, 'journeys'],
-    queryFn: async () =>
-      unwrap(await journeysList({ client: props.client, path: { tripId: props.tripId } })).journeys,
-    retry: false,
-  });
-  const places = useQuery({
-    queryKey: ['trips', origin, 'places'],
-    queryFn: () => loadPlaces(props.client),
-    retry: false,
-  });
+  const visits = useSourceQuery(
+    { client: props.client, tripId: props.tripId, kind: 'visits-context', sourceId: 0 },
+    (owner) => {
+      const origin = owner.client.getConfig().baseUrl ?? '/trips-api';
+      return {
+        queryKey: ['trips', origin, owner.tripId, 'visits'],
+        load: () => loadVisits(owner.tripId, owner.client),
+      };
+    }
+  );
+  const stays = useSourceQuery(
+    { client: props.client, tripId: props.tripId, kind: 'stays-context', sourceId: 0 },
+    (owner) => {
+      const origin = owner.client.getConfig().baseUrl ?? '/trips-api';
+      return {
+        queryKey: ['trips', origin, owner.tripId, 'stays'],
+        load: () => loadStays(owner.tripId, owner.client),
+      };
+    }
+  );
+  const journeys = useSourceQuery(
+    { client: props.client, tripId: props.tripId, kind: 'journeys-context', sourceId: 0 },
+    (owner) => {
+      const origin = owner.client.getConfig().baseUrl ?? '/trips-api';
+      return {
+        queryKey: ['trips', origin, owner.tripId, 'journeys'],
+        load: () =>
+          journeysList({ client: owner.client, path: { tripId: owner.tripId } }).then(
+            (response) => unwrap(response).journeys
+          ),
+      };
+    }
+  );
+  const places = useSourceQuery(
+    { client: props.client, tripId: props.tripId, kind: 'places-context', sourceId: 0 },
+    (owner) => {
+      const origin = owner.client.getConfig().baseUrl ?? '/trips-api';
+      return { queryKey: ['trips', origin, 'places'], load: () => loadPlaces(owner.client) };
+    }
+  );
   const plans: DecisionPlan[] = [
     ...(visits.data ?? []).map((visit) => ({
       kind: 'visit' as const,

@@ -1,8 +1,8 @@
-import { useQuery } from '@tanstack/react-query';
 import { RotateCcw } from 'lucide-react';
 
 import { Button, ErrorState, PageHeader } from '@pops/ui';
 
+import { useSourceQuery } from '../shared/use-source-query';
 import { requestProblem } from '../stay/api';
 import { decisionQueryKey, loadDecision } from './api';
 import { DecisionContents } from './DecisionContents';
@@ -10,6 +10,7 @@ import { DecisionContextProblems, DecisionProblems } from './DecisionProblems';
 import { useDecisionContext } from './use-decision-context';
 import { useDecisionEditor } from './use-decision-editor';
 
+import type { UseQueryResult } from '@tanstack/react-query';
 import type { JSX } from 'react';
 
 import type { DecisionEditorState } from './editor-types';
@@ -30,12 +31,18 @@ export function DecisionWorkspace(props: DecisionWorkspaceProps): JSX.Element {
   return <LoadDecision key={JSON.stringify(decisionQueryKey(props))} {...props} />;
 }
 function LoadDecision(props: DecisionWorkspaceProps): JSX.Element {
-  const source = useQuery({
-    queryKey: decisionQueryKey(props),
-    queryFn: ({ signal }) => loadDecision(props, signal),
-    retry: false,
-  });
+  const source = useSourceQuery(
+    { client: props.client, tripId: props.tripId, kind: 'decision', sourceId: props.decisionId },
+    (owner) => {
+      const captured = { client: owner.client, tripId: owner.tripId, decisionId: owner.sourceId };
+      return {
+        queryKey: decisionQueryKey(captured),
+        load: (context) => loadDecision(captured, context.signal),
+      };
+    }
+  );
   const context = useDecisionContext(props);
+  if (source.ownershipError) return <ErrorState error={source.ownershipError} />;
   if (source.data === undefined)
     return source.isError ? (
       <ErrorState error={requestProblem(source.error)} onRetry={() => void source.refetch()} />
@@ -57,7 +64,7 @@ function DecisionSession({
   initial: DecisionSource;
   identity: DecisionWorkspaceProps;
   context: ReturnType<typeof useDecisionContext>;
-  query: ReturnType<typeof useQuery<DecisionSource>>;
+  query: UseQueryResult<DecisionSource>;
 }): JSX.Element {
   const { editor, state } = useDecisionEditor(initial, identity);
   const refresh = async (): Promise<void> => {

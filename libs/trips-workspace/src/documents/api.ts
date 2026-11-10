@@ -51,18 +51,22 @@ export interface TripDocumentTargetRecord {
   visitId: number | null;
 }
 
-/** Resolve labels and explicit visit memberships through the Trips owner endpoints. */
+/** Resolve Trips labels and memberships, rechecking the captured owner before every independent dispatch. */
 export async function loadTripDocumentTargets(
   tripId: number,
-  client?: TripsClient
+  client?: TripsClient,
+  beforeRead: () => void = () => {}
 ): Promise<Map<string, TripDocumentTargetRecord>> {
-  const [visits, places, stays, events, journeys] = await Promise.all([
-    unwrap(await visitsList({ client, path: { tripId } })),
-    unwrap(await placesList({ client })),
-    unwrap(await staysList({ client, path: { tripId } })),
-    unwrap(await eventsList({ client, path: { tripId } })),
-    unwrap(await journeysList({ client, path: { tripId } })),
-  ]);
+  beforeRead();
+  const visits = unwrap(await visitsList({ client, path: { tripId } }));
+  beforeRead();
+  const places = unwrap(await placesList({ client }));
+  beforeRead();
+  const stays = unwrap(await staysList({ client, path: { tripId } }));
+  beforeRead();
+  const events = unwrap(await eventsList({ client, path: { tripId } }));
+  beforeRead();
+  const journeys = unwrap(await journeysList({ client, path: { tripId } }));
   const placeNames = new Map(places.places.map((place) => [place.id, place.name]));
   const visitNames = new Map(
     visits.visits.map((visit) => [visit.id, placeNames.get(visit.placeId)])

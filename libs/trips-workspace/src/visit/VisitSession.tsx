@@ -28,7 +28,7 @@ export function VisitSession({
   initial: Visit;
   identity: VisitWorkspaceProps;
   context: VisitContext;
-  reload: () => Promise<void>;
+  reload: () => Promise<Visit | undefined>;
 }): JSX.Element {
   const { t } = useTranslation('trips');
   const editor = useVisitEditor(initial, identity);
@@ -43,6 +43,7 @@ export function VisitSession({
       >
         <legend className="sr-only">{t('visitWorkspace.sourceFacts')}</legend>
         <VisitFields
+          timingDrafts={editor.timingDrafts}
           visit={visit}
           places={context.places.data ?? []}
           edit={editor.edit}
@@ -129,7 +130,7 @@ function VisitStatus({
 }: {
   context: VisitContext;
   editor: VisitEditor;
-  reload: () => Promise<void>;
+  reload: () => Promise<Visit | undefined>;
 }): JSX.Element {
   const { t } = useTranslation('trips');
   const problems = Object.entries(context).filter(([, query]) => query.isError);
@@ -142,7 +143,14 @@ function VisitStatus({
             error={requestProblem(editor.failure.error)}
             onRetry={editor.conflict ? undefined : () => void editor.retry()}
           />
-          <Button variant="ghost" onClick={() => void reload()}>
+          <Button
+            variant="ghost"
+            onClick={() =>
+              void reload().then((source) => {
+                if (source !== undefined) editor.discard(source);
+              })
+            }
+          >
             {t('visitWorkspace.reload')}
           </Button>
         </div>

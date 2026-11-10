@@ -1,41 +1,57 @@
+import { RetainedSessionStore } from '../shared/retained-session-store';
+import { useRetainedSession } from '../shared/use-retained-session';
+import { useSessionView } from '../shared/use-session-view';
 import { canRetryJourneyChange, draftJourney } from './model';
 import { useJourneyRunner } from './use-journey-runner';
-import { useJourneyState } from './use-journey-state';
+import { JourneyEditSession, useJourneyState } from './use-journey-state';
 
 import type { JourneySource, JourneyChange, JourneyWorkspaceProps } from './types';
 import type { JourneyFailure } from './use-journey-state';
 
-/** Serialize explicit writes and inverse operations; failures preserve drafts and exact retry intent. */
+const sessions = new RetainedSessionStore<JourneyEditSession>();
+
+/** Serialize explicit writes and inverse operations; view closure retains drafts and exact retry intent. */
 export function useJourneyEditor(
   initial: JourneySource,
   props: JourneyWorkspaceProps
 ): JourneyEditor {
-  const state = useJourneyState(initial);
-  const edit = (change: JourneyChange): void =>
-    state.setDraft((value) => draftJourney(value, change));
-  const run = useJourneyRunner(props, state, edit);
+  const { owner, session } = useRetainedSession(
+    sessions,
+    { ...props, kind: 'journey', sourceId: props.journeyId },
+    () => new JourneyEditSession(initial)
+  );
+  const view = useSessionView(owner);
+  const state = useJourneyState(initial, session, owner);
+  const run = useJourneyRunner(session, view);
   return {
     draft: state.draft,
     busy: state.busy,
     failure: state.failure,
     dirty: state.dirty,
-    edit,
+    edit: (change): void => {
+      if (!view.isActive() || session.getState().busy) return;
+      view.assertCurrent();
+      session.update({ draft: draftJourney(session.getState().draft, change) });
+    },
     run,
     canUndo: state.history.length > 0 && !state.busy && !state.failure && !state.dirty,
     undo: (): void => {
-      const change = state.history.at(-1);
-      if (change) void run(change, true);
+      const current = session.getState();
+      const change = current.history.at(-1);
+      if (change && !current.failure && !current.dirty) void run(change, true);
     },
     retry: (): void => {
-      if (state.failure && canRetryJourneyChange(state.failure.change))
-        void run(state.failure.change, state.failure.undo);
+      const { failure } = session.getState();
+      if (failure && canRetryJourneyChange(failure.change)) void run(failure.change, failure.undo);
     },
     discard: (): void => {
-      state.setDraft(state.saved);
-      state.setFailure(undefined);
+      if (!view.isActive() || session.getState().busy) return;
+      view.assertCurrent();
+      session.discard();
     },
   };
-} /** Source editor operations consumed by presentational journey sections. */
+}
+/** Source editor operations consumed by presentational journey sections. */
 export interface JourneyEditor {
   draft: JourneySource;
   busy: boolean;

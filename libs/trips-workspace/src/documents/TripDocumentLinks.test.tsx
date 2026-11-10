@@ -3,6 +3,7 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { client as defaultTripsClient } from '../trips-api/client.gen';
 import {
   loadDocumentAssociations,
   loadPaperlessDocument,
@@ -115,7 +116,7 @@ describe('TripDocumentLinks scoped editor section', () => {
     expect(await screen.findByText('Original unavailable · Documents ID 41')).toBeVisible();
     expect(screen.queryByRole('link', { name: 'Open original' })).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Unlink Documents 41' }));
-    await waitFor(() => expect(unlink).toHaveBeenCalledWith(4, 1, undefined));
+    await waitFor(() => expect(unlink).toHaveBeenCalledWith(4, 1, defaultTripsClient));
     expect(await screen.findByText('No files linked yet.')).toBeVisible();
     expect(associations.map((association) => association.id)).toEqual([2]);
   });
