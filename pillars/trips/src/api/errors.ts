@@ -2,6 +2,25 @@ import { defineErrors } from '@pops/pillar-express';
 
 /** Stable errors for missing owned records and invalid route permutations. */
 export const tripsErrors = defineErrors('trips', {
+  contact_unknown: {
+    area: 'responsibility',
+    status: 400,
+    message: 'Choose an identity issued by Contacts.',
+    retryable: false,
+  },
+  contacts_unavailable: {
+    area: 'responsibility',
+    status: 503,
+    message: 'The selected contact could not be verified. Retry when Contacts is available.',
+    retryable: true,
+  },
+  arrangement_revision_conflict: {
+    area: 'arrangement',
+    status: 409,
+    message:
+      'The arrangement changed or its revision cannot advance. Read its latest revision before editing.',
+    retryable: false,
+  },
   leg_revision_conflict: {
     area: 'journey_leg',
     status: 409,
