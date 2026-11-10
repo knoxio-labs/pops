@@ -133,6 +133,27 @@ describe('test DOM immediate task ownership', () => {
     }
   });
 
+  it('includes immediate tasks created by microtasks during React cleanup', async () => {
+    vi.useFakeTimers();
+    const lifecycle = observeTestDomTasks();
+    const order: string[] = [];
+    try {
+      queueMicrotask(() => {
+        setTimeout(() => {
+          order.push('task');
+        }, 0);
+      });
+
+      await finishAtBoundary(lifecycle, () => {
+        order.push('dispose');
+      });
+
+      expect(order).toEqual(['task', 'dispose']);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it.each(['handle', 'number', 'string'])(
     'finishes a task canceled through clearTimeout with its %s',
     async (kind) => {

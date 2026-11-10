@@ -77,10 +77,12 @@ export function observeTestDomTasks(): { cleanup: () => Promise<void> } {
         }
         await act(async () => {
           cleanup();
-          while (pending.size > 0) {
-            await Promise.all([...pending.values()].map((task) => task.completion));
-          }
         });
+        while (pending.size > 0) {
+          await act(async () => {
+            await Promise.all([...pending.values()].map((task) => task.completion));
+          });
+        }
       } finally {
         Object.defineProperty(globalThis, 'setTimeout', setDescriptor);
         Object.defineProperty(globalThis, 'clearTimeout', clearDescriptor);
