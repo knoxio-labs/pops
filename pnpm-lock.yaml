@@ -3100,6 +3100,9 @@ importers:
       '@hey-api/client-fetch':
         specifier: ^0.13.1
         version: 0.13.1(@hey-api/openapi-ts@0.99.0(magicast@0.5.4)(typescript@6.0.3))
+      '@pops/app-contacts':
+        specifier: workspace:*
+        version: link:../contacts/app
       '@pops/locales':
         specifier: workspace:*
         version: link:../../libs/locales
