@@ -117,13 +117,24 @@ source reload before another write, preventing blind create retries. Cached sour
 mounted during background failures. Only the owning timing endpoint supplies chronology
 findings and signed minutes; unavailable or incomplete clocks do not imply safety.
 
+Journey drafts, prepared removal IDs/revisions, failed operations, the shared write
+lock and confirmed inverses survive source-view remounts in the same QueryClient and
+exact client/origin/trip/source session. Ambiguous leg creation and grouping recovery
+guards also survive closure and query-cache eviction. Reads and new dispatches are
+fenced against the captured transport; dispatched responses settle only their original
+session and cache keys. An older leg snapshot cannot replace a confirmed newer leg
+aggregate, while independent unversioned Journey metadata still refreshes normally.
+Foreign metadata or leg revisions retain the existing inverse invalidation rules.
+Navigation generations and expanded presentation remain local to each mounted view.
+
 Alternative editors preserve independent journey identities and display every explicit
 matching group. A host with literal source routes supplies `onViewJourney` to replace
 the URL after a successful selection. Undo retains the prior selected identity, original
 viewed source and the operation's exact returned revision above source-editor state;
 unrelated refetches never rebase that inverse. It restores the original viewed source
 only after the inverse succeeds. Manual navigation invalidates the local selection
-history, and no Undo is promised after leaving or reloading the workspace. Late source
+history. Closing and reopening a view retains the confirmed selection inverse in the
+same host QueryClient and exact client/origin/trip session. Late source
 or selection responses cannot replace a manually chosen view. A new option is an empty
 source, never a clone of the working journey. Ambiguous grouping writes block further
 grouping mutations until an explicit canonical reload succeeds; pending or failed reads
