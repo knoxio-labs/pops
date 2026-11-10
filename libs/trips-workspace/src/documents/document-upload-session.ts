@@ -1,3 +1,9 @@
+import { client as defaultDocumentsClient } from '../documents-api/client.gen';
+import { documentQueryKeys } from './query-keys';
+import { TripDocumentUploadContextError } from './upload-context';
+
+import type { Client as DocumentsClient } from '../documents-api/client';
+
 /** Live state for one immutable file intent; File bytes remain browser-session data. */
 export interface DocumentUploadSnapshot {
   readonly file: File | null;
@@ -8,12 +14,15 @@ export interface DocumentUploadSnapshot {
   readonly pickerOpen: boolean;
   readonly ownerLookupCount: number | null;
   readonly taskId: string | null;
+  readonly taskReceipt: DocumentUploadTaskReceipt | null;
 }
 
 class DocumentUploadIntent {
   readonly id = crypto.randomUUID();
   private snapshot: DocumentUploadSnapshot;
   private readonly listeners = new Set<() => void>();
+  private taskOwner: DocumentsClient | null = null;
+  private taskScope: readonly [string, string] | null = null;
 
   constructor(file: File | null) {
     this.snapshot = {
@@ -25,6 +34,7 @@ class DocumentUploadIntent {
       pickerOpen: false,
       ownerLookupCount: null,
       taskId: null,
+      taskReceipt: null,
     };
   }
 
@@ -35,6 +45,27 @@ class DocumentUploadIntent {
   };
   readonly canStart = (): boolean =>
     !this.snapshot.uploadPending && !this.snapshot.uncertain && this.snapshot.taskId === null;
+
+  bindOwner(
+    client: DocumentsClient | undefined,
+    scope?: readonly [string, string]
+  ): readonly [string, string] {
+    if (this.taskScope === null) {
+      const [kind, origin] = documentQueryKeys.task(client, '');
+      this.taskScope = Object.freeze<[string, string]>(
+        scope === undefined ? [kind, origin] : [scope[0], scope[1]]
+      );
+      this.taskOwner = client ?? defaultDocumentsClient;
+    }
+    return this.taskScope;
+  }
+
+  assertOwner(client: DocumentsClient | undefined): void {
+    const current = client ?? defaultDocumentsClient;
+    if (current !== this.taskOwner || (current.getConfig().baseUrl ?? '') !== this.taskScope?.[1]) {
+      throw new TripDocumentUploadContextError();
+    }
+  }
 
   claim(): boolean {
     if (!this.canStart()) return false;
@@ -107,4 +138,14 @@ export class DocumentUploadSession implements DocumentUploadSnapshot {
   get taskId(): string | null {
     return this.intent.read().taskId;
   }
+  get taskReceipt(): DocumentUploadTaskReceipt | null {
+    return this.intent.read().taskReceipt;
+  }
+}
+import type { PaperlessTask } from './types';
+
+/** A result actually returned by the Documents owner for this receipt's accepted task. */
+export interface DocumentUploadTaskReceipt {
+  readonly taskId: string;
+  readonly result: PaperlessTask;
 }

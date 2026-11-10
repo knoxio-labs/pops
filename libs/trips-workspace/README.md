@@ -83,7 +83,7 @@ its authenticated download route. Unlink removes only the Trips association. Upl
 use the current Documents MIME and size policy. The always-visible multi-file drop area
 sits beside the square existing-original picker. Each selected file has its own task,
 error and captured target, including distinct files with identical names. Accepted tasks
-remain mounted when switching source context, and completed files are never resent when
+survive switching source context, and completed files are never resent when
 another file fails. Uploads retain the accepted task identity while
 processing, and attach only after the owner returns a canonical document ID. An
 interrupted upload is treated as an uncertain outcome and requires searching Documents
@@ -94,6 +94,20 @@ their explicit target identity. `TripDocumentLinks({ tripId, target?, tripsClien
 documentsClient? })` renders only the exact trip, target kind and target ID when a
 target is supplied, without route lookups or another page shell. Editors compose
 it with `TripDocumentUpload` using the same explicit target and owner transports.
+Conditional dialogs, collapses and routes retain a queue above the view with
+`createTripDocumentUploadSession({ tripId, target, tripsClient?, documentsClient? })`
+and pass it through `TripDocumentUpload`'s optional `session` prop on every mount.
+Key host storage by the exact trip, target kind/ID and owner client identities and origins.
+The retaining parent resets storage when authentication or transport context changes;
+reloading the browser releases these in-memory queues.
+The queue keeps distinct File handles, pending requests, accepted tasks and uncertain
+outcomes across unmounts; overlapping views observe the same selections and upload
+claim. Supplying a different target, client identity or owner origin throws
+`TripDocumentUploadContextError`
+before any owner action. Queues are live browser objects, not serializable drafts.
+Uploads, task reads, picker searches, linking and recovery recheck that captured
+context immediately before the operation, including mutable default clients.
+Without the prop, the component keeps its existing view-local queue behavior.
 `DocumentPicker({ onSelected, documentsClient? })` returns the actual owner original
 without writing a route association. `useDocumentUpload({ session, onSessionChange,
 documentsClient? })` is the same per-file owner workflow used by route uploads.
@@ -107,7 +121,12 @@ Overlapping views share one synchronous POST claim per intent; separate selectio
 remain independent. The session retains
 the exact browser File handle; only actual task/document identities belong in persisted
 provenance. Completed and explicit duplicate task results expose the canonical document
-ID while retaining the accepted task ID. The controller never repeats an accepted or
+ID while retaining the accepted task ID. Verified owner task results also remain in
+the receipt when its query cache is evicted; pending task lookup resumes on remount.
+An older read without a canonical identity cannot erase a verified original.
+Retained task query namespaces stay bound to the file intent's captured owner;
+a mutable client origin change cannot seed that proof into another owner's cache.
+The controller never repeats an accepted or
 uncertain upload; a definite rejection can be retried explicitly.
 
 Run `mise exec -- pnpm --filter @pops/trips-workspace dev` for the standalone development
