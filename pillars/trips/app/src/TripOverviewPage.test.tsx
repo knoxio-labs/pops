@@ -1,0 +1,68 @@
+import { cleanup, render, screen } from '@testing-library/react';
+import { createInstance } from 'i18next';
+import { I18nextProvider } from 'react-i18next';
+import { MemoryRouter, Route, Routes } from 'react-router';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { TRIPS_PAGES } from '@pops/trips/pages';
+
+import enAU from './locales/en-AU.json';
+import ptBR from './locales/pt-BR.json';
+import { TripOverviewPage } from './TripOverviewPage';
+
+import type { TripOverviewProps } from '@pops/trips-workspace';
+
+vi.mock('@pops/trips-workspace', () => ({
+  TripOverview: ({ calendarLink }: TripOverviewProps) =>
+    calendarLink ? <a href={calendarLink.href}>{calendarLink.label}</a> : null,
+}));
+
+const translation = createInstance();
+
+beforeEach(async () => {
+  await translation.init({
+    lng: 'en-AU',
+    resources: { 'en-AU': { trips: enAU }, 'pt-BR': { trips: ptBR } },
+    interpolation: { escapeValue: false },
+  });
+});
+afterEach(cleanup);
+
+function mount(path: string) {
+  render(
+    <I18nextProvider i18n={translation}>
+      <MemoryRouter initialEntries={[path]}>
+        <Routes>
+          <Route path="/:tripId" element={<TripOverviewPage />} />
+        </Routes>
+      </MemoryRouter>
+    </I18nextProvider>
+  );
+}
+
+describe('Trip overview navigation', () => {
+  it('links the published Calendar route using the owning trip identity', () => {
+    mount('/7');
+    const route = TRIPS_PAGES.find((page) => page.bundleSlot === 'trips-calendar');
+    expect(route).toBeDefined();
+    expect(screen.getByRole('link', { name: 'Calendar' })).toHaveAttribute(
+      'href',
+      `/trips/${route?.path.replace(':tripId', '7')}`
+    );
+  });
+
+  it('translates the Calendar label', async () => {
+    await translation.changeLanguage('pt-BR');
+    mount('/19');
+    expect(screen.getByRole('link', { name: ptBR.calendar })).toHaveAttribute(
+      'href',
+      '/trips/19/calendar'
+    );
+  });
+
+  it('rejects invalid trip identities before offering source navigation', () => {
+    mount('/01');
+    expect(screen.getByText('Choose a valid trip')).toBeVisible();
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+  });
+});

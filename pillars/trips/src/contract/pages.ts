@@ -2,6 +2,7 @@
 export const TRIPS_PAGES = [
   { path: '', index: true, bundleSlot: 'trips-home' },
   { path: ':tripId', bundleSlot: 'trips-overview' },
+  { path: ':tripId/calendar', bundleSlot: 'trips-calendar' },
   { path: ':tripId/stays/:stayId', bundleSlot: 'trips-stay' },
   { path: ':tripId/events/:eventId', bundleSlot: 'trips-event' },
   { path: ':tripId/decisions/:decisionId', bundleSlot: 'trips-decision' },

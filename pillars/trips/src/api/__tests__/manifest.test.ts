@@ -35,6 +35,7 @@ describe('Trips manifest', () => {
     expect(manifest.pages).toEqual([
       { path: '', index: true, bundleSlot: 'trips-home' },
       { path: ':tripId', bundleSlot: 'trips-overview' },
+      { path: ':tripId/calendar', bundleSlot: 'trips-calendar' },
       { path: ':tripId/stays/:stayId', bundleSlot: 'trips-stay' },
       { path: ':tripId/events/:eventId', bundleSlot: 'trips-event' },
       { path: ':tripId/decisions/:decisionId', bundleSlot: 'trips-decision' },
@@ -54,7 +55,7 @@ describe('Trips manifest', () => {
       version: '1.2.3',
       tag: 'contract-trips@v1.2.3',
     });
-    expect(manifest.routes.queries).toHaveLength(23);
+    expect(manifest.routes.queries).toHaveLength(24);
     expect(manifest.routes.queries).toContain('trips.documentAssociations.list');
     expect(manifest.routes.mutations).toEqual(
       expect.arrayContaining([
@@ -79,6 +80,8 @@ describe('Trips manifest', () => {
         'trips.events.delete',
         'trips.stays.update',
         'trips.stays.delete',
+        'trips.journeyLegs.remove',
+        'trips.journeyLegs.restore',
         'trips.journeyGroups.create',
         'trips.journeyGroups.addBlank',
         'trips.journeyGroups.select',
@@ -86,6 +89,7 @@ describe('Trips manifest', () => {
       ])
     );
     expect(manifest.routes.queries).toContain('trips.journeys.timing');
+    expect(manifest.routes.queries).toContain('trips.journeys.workspace');
     expect(manifest.routes.queries).toEqual(
       expect.arrayContaining([
         'trips.events.list',

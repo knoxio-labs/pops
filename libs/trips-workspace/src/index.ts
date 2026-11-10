@@ -11,3 +11,5 @@ export { JourneyWorkspace } from './journey/JourneyWorkspace';
 export type { JourneyWorkspaceProps } from './journey/types';
 export { TripOverview } from './overview/TripOverview';
 export type { TripOverviewProps, OverviewLabels, OverviewKind } from './overview/types';
+export { CalendarWorkspace } from './calendar/CalendarWorkspace';
+export type { CalendarWorkspaceProps, CalendarSource } from './calendar/types';

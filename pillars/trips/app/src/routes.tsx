@@ -8,6 +8,9 @@ import type { TripsPageSlot } from '@pops/trips/pages';
 const HomePage = lazy(() =>
   import('./home/HomePage').then((module) => ({ default: module.HomePage }))
 );
+const CalendarPage = lazy(() =>
+  import('./CalendarPage').then((module) => ({ default: module.CalendarPage }))
+);
 const StayPage = lazy(() => import('./StayPage').then((module) => ({ default: module.StayPage })));
 const TripOverviewPage = lazy(() =>
   import('./TripOverviewPage').then((module) => ({ default: module.TripOverviewPage }))
@@ -28,6 +31,7 @@ const SettingsPage = lazy(() =>
 export const bundles = {
   'trips-home': HomePage,
   'trips-overview': TripOverviewPage,
+  'trips-calendar': CalendarPage,
   'trips-stay': StayPage,
   'trips-event': EventPage,
   'trips-decision': DecisionPage,
@@ -38,6 +42,7 @@ export const bundles = {
 export const routes: RouteObject[] = [
   { index: true, element: <HomePage /> },
   { path: ':tripId', element: <TripOverviewPage /> },
+  { path: ':tripId/calendar', element: <CalendarPage /> },
   { path: ':tripId/stays/:stayId', element: <StayPage /> },
   { path: ':tripId/events/:eventId', element: <EventPage /> },
   { path: ':tripId/decisions/:decisionId', element: <DecisionPage /> },

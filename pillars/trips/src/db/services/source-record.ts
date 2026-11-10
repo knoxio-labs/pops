@@ -3,6 +3,9 @@ export class TripsServiceError extends Error {
   constructor(
     readonly code:
       | 'not_found'
+      | 'leg_revision_conflict'
+      | 'leg_order_conflict'
+      | 'leg_removal_conflict'
       | 'order_invalid'
       | 'revision_conflict'
       | 'decision_revision_conflict'

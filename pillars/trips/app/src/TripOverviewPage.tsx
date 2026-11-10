@@ -60,6 +60,7 @@ export function TripOverviewPage() {
       labels={labels}
       backHref="/trips"
       settingsHref={`/trips/${tripId}/settings`}
+      calendarLink={{ href: `/trips/${tripId}/calendar`, label: t('calendar') }}
       href={href}
     />
   );
