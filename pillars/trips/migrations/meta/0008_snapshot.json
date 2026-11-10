@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "87f27d50-c91c-4e77-ad50-4aa30eb42420",
+  "id": "412e2317-444c-46f9-90ac-c02145806606",
   "prevId": "2dee33f2-4c8d-4a83-9f48-dd3830717223",
   "tables": {
     "decision_options": {
@@ -46,6 +46,14 @@
         },
         "affected_sources": {
           "name": "affected_sources",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'[]'"
+        },
+        "validated_sources": {
+          "name": "validated_sources",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -1144,14 +1152,6 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
-        },
-        "revision": {
-          "name": "revision",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
         },
         "timing": {
           "name": "timing",

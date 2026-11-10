@@ -215,9 +215,14 @@ provides list/create and `/:id` provides get/patch/delete. Source fields are
 decision has no selected option or deadline. Options at `/:decisionId/options`
 provide list/create and `/:id` get/patch/delete, retaining `title`, `notes`,
 `sourceLinks` and `affectedSources`. Each affected source is an explicit
-`{ kind: 'visit' | 'journey' | 'stay', id }` identity in the same trip. New or
-replaced references must exist; retained references remain identifiable after
-source deletion and unrelated edits do not revalidate them. Duplicate references
+`{ kind: 'visit' | 'journey' | 'stay', id }` identity in the same trip. Creation
+validates every reference. Each option privately retains its validated exact
+kind/ID membership history. PATCH may retain, unlink or restore a historical
+membership after source deletion; genuinely new memberships must currently belong
+to the trip. A currently live source owned by another trip is always rejected.
+Existing live and tombstoned option memberships are backfilled when this provenance
+is migrated, and it survives unlink, option removal and restoration. Historical
+references remain identifiable after source deletion. Duplicate references
 are rejected. Options never own or rewrite arrangements.
 
 Every mutation after decision creation requires `expectedRevision` from the
@@ -250,3 +255,8 @@ Option mutation responses do not contain the parent revision and DELETE returns
 204, so consumers may record that exact one-step result for their own operation.
 A later parent read with a different revision must clear local Undo rather than
 adopting another writer's revision for an inverse mutation.
+
+`GET /trips/:tripId/decisions/:id/workspace` reads the decision and its live
+options in one SQLite snapshot, exposing `{ decision, options }` without
+resolving linked arrangements. Consumers can compare the coherent aggregate
+revision after a mutation rather than combining unrelated parent/option reads.
