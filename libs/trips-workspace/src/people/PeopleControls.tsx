@@ -86,7 +86,7 @@ function PeopleFilterFields({
 }): JSX.Element {
   const text = workspace.text;
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-3 sm:max-lg:grid-cols-2 lg:grid-cols-4">
       <TextInput
         label={text('search')}
         value={filters.query}
