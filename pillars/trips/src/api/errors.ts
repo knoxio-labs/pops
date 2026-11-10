@@ -1,7 +1,8 @@
 import { defineErrors } from '@pops/pillar-express';
 
-/** Stable errors for missing owned records and invalid route permutations. */
-export const tripsErrors = defineErrors('trips', {
+import { routeErrors } from './route-errors.js';
+
+const recordErrors = defineErrors('trips', {
   meeting_revision_conflict: {
     area: 'meeting_plan',
     status: 409,
@@ -190,3 +191,6 @@ export const tripsErrors = defineErrors('trips', {
     retryable: false,
   },
 });
+
+/** Stable registered constructors for all Trips domain failures. */
+export const tripsErrors = { ...recordErrors, ...routeErrors };

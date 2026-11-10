@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -7,45 +7,18 @@ import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import { expect, it } from 'vitest';
-import { z } from 'zod';
 
+import { TripSchema, VisitSchema } from '../../contract/schemas.js';
 import { openTripsDb } from '../index.js';
 import * as schema from '../schema.js';
 import { getMeetingPlan } from '../services/meeting-plan-queries.js';
 import { operateMeetingPlan } from '../services/meeting-plans.js';
-import { createPlace, createTrip, createVisit, getTrip, listVisits } from '../services/records.js';
+import { createPlace, getTrip, listVisits } from '../services/records.js';
 import { readSourceWorkspace } from '../services/source-queries.js';
 import { send as operateCapture } from './capture-test-utils.js';
+import { migrationsBefore } from './migration-test-utils.js';
 
 import type { MeetingPlanReceipt } from '../../contract/meeting-plan-schemas.js';
-
-const migrations = fileURLToPath(new URL('../../../migrations/', import.meta.url));
-function previousMigrations(directory: string): string {
-  const journal = z
-    .object({
-      version: z.string(),
-      dialect: z.string(),
-      entries: z.array(
-        z.object({
-          idx: z.number(),
-          version: z.string(),
-          when: z.number(),
-          tag: z.string(),
-          breakpoints: z.boolean(),
-        })
-      ),
-    })
-    .parse(JSON.parse(readFileSync(join(migrations, 'meta/_journal.json'), 'utf8')));
-  const index = journal.entries.findIndex((entry) => entry.tag.endsWith('_meeting_plan_sources'));
-  expect(index).toBeGreaterThan(0);
-  const previous = join(directory, 'migrations');
-  mkdirSync(join(previous, 'meta'), { recursive: true });
-  const entries = journal.entries.slice(0, index);
-  for (const entry of entries)
-    copyFileSync(join(migrations, `${entry.tag}.sql`), join(previous, `${entry.tag}.sql`));
-  writeFileSync(join(previous, 'meta/_journal.json'), JSON.stringify({ ...journal, entries }));
-  return previous;
-}
 
 it('upgrades an existing trip database without changing its route and persists receipts across reopening', () => {
   const root = fileURLToPath(new URL('../../../../../tmp/', import.meta.url));
@@ -55,12 +28,26 @@ it('upgrades an existing trip database without changing its route and persists r
   const raw = new Database(path);
   try {
     const db = drizzle(raw, { schema });
-    migrate(db, { migrationsFolder: previousMigrations(directory) });
-    const trip = createTrip(db, { name: 'Retained' });
+    migrate(db, { migrationsFolder: migrationsBefore(directory, '_meeting_plan_sources') });
+    const trip = TripSchema.parse(
+      db.insert(schema.trips).values({ name: 'Retained' }).returning().get()
+    );
     const place = createPlace(db, { name: 'Repeated town' });
-    createVisit(db, trip.id, { placeId: place.id });
-    const second = createVisit(db, trip.id, { placeId: place.id });
-    const route = listVisits(db, trip.id);
+    const first = VisitSchema.parse(
+      db
+        .insert(schema.visits)
+        .values({ tripId: trip.id, placeId: place.id, position: 0 })
+        .returning()
+        .get()
+    );
+    const second = VisitSchema.parse(
+      db
+        .insert(schema.visits)
+        .values({ tripId: trip.id, placeId: place.id, position: 1 })
+        .returning()
+        .get()
+    );
+    const route = [first, second];
     const captureOperationId = randomUUID();
     const captureCommand = {
       kind: 'capture.create',

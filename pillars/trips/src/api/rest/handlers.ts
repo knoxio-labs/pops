@@ -2,14 +2,10 @@ import { initServer } from '@ts-rest/express';
 
 import { tripsContract } from '../../contract/rest.js';
 import {
-  createPlace,
   createVisit,
-  getPlace,
   getVisit,
-  listPlaces,
   listVisits,
   reorderVisits,
-  updatePlace,
   updateVisit,
 } from '../../db/services/records.js';
 import {
@@ -24,8 +20,10 @@ import { makeEventHandlers } from './events.js';
 import { makeJourneyGroupHandlers } from './journey-groups.js';
 import { makeJourneyHandlers, makeJourneyLegHandlers } from './journeys.js';
 import { makeMeetingPlanHandlers } from './meeting-plans.js';
+import { makePlaceHandlers } from './places.js';
 import { makeRentalHandlers } from './rentals.js';
 import { makeResponsibilityHandlers } from './responsibilities.js';
+import { makeRouteHandlers } from './route.js';
 import { makeStayHandlers } from './stays.js';
 import { makeTripMetadataHandlers } from './trip-metadata.js';
 import { withTripsErrors } from './with-errors.js';
@@ -40,6 +38,7 @@ export function makeTripsRestHandlers(
 ): ReturnType<typeof server.router<typeof tripsContract>> {
   const db = deps.tripsDb.db;
   return server.router(tripsContract, {
+    route: makeRouteHandlers(db),
     captureWorkspace: makeCaptureWorkspaceHandlers(db),
     captures: makeCaptureHandlers(db),
     ideas: makeIdeaHandlers(db),
@@ -56,16 +55,7 @@ export function makeTripsRestHandlers(
     journeys: makeJourneyHandlers(db),
     journeyLegs: makeJourneyLegHandlers(db),
     trips: makeTripMetadataHandlers(deps),
-    places: {
-      list: () =>
-        withTripsErrors(() => ({ status: 200 as const, body: { places: listPlaces(db) } })),
-      get: ({ params }) =>
-        withTripsErrors(() => ({ status: 200 as const, body: getPlace(db, params.id) })),
-      create: ({ body }) =>
-        withTripsErrors(() => ({ status: 201 as const, body: createPlace(db, body) })),
-      update: ({ params, body }) =>
-        withTripsErrors(() => ({ status: 200 as const, body: updatePlace(db, params.id, body) })),
-    },
+    places: makePlaceHandlers(db),
     visits: {
       list: ({ params }) =>
         withTripsErrors(() => ({
