@@ -9,6 +9,8 @@ export { DecisionWorkspace } from './decision/DecisionWorkspace';
 export type { DecisionWorkspaceProps } from './decision/types';
 export { JourneyWorkspace } from './journey/JourneyWorkspace';
 export type { JourneyWorkspaceProps } from './journey/types';
+export { VisitWorkspace } from './visit/VisitWorkspace';
+export type { VisitWorkspaceProps } from './visit/types';
 export { DocumentAssociationPicker } from './documents/DocumentAssociationPicker';
 export { TripDocumentsWorkspace } from './documents/TripDocumentsWorkspace';
 export type {
@@ -20,6 +22,14 @@ export type {
 export { TripDocumentLinks } from './documents/TripDocumentLinks';
 export { TripDocumentUpload } from './documents/TripDocumentUpload';
 export type { TripDocumentUploadProps } from './documents/TripDocumentUpload';
+export {
+  createTripDocumentUploadSession,
+  TripDocumentUploadContextError,
+} from './documents/trip-document-upload-session';
+export type {
+  TripDocumentUploadContext,
+  TripDocumentUploadSession,
+} from './documents/trip-document-upload-session';
 
 export { DocumentPicker } from './documents/DocumentPicker';
 export type { DocumentPickerProps } from './documents/DocumentPicker';

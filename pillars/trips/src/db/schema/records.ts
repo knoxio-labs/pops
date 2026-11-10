@@ -46,6 +46,7 @@ export const visits = sqliteTable(
       .notNull()
       .references(() => places.id),
     position: integer('position').notNull(),
+    revision: integer('revision').notNull().default(0),
     timing: text('timing', { mode: 'json' }).$type<VisitTiming>().notNull().default({}),
     notes: text('notes').notNull().default(''),
     sourceLinks: text('source_links', { mode: 'json' }).$type<SourceLink[]>().notNull().default([]),

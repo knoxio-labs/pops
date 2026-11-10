@@ -80,7 +80,7 @@ its authenticated download route. Unlink removes only the Trips association. Upl
 use the current Documents MIME and size policy. The always-visible multi-file drop area
 sits beside the square existing-original picker. Each selected file has its own task,
 error and captured target, including distinct files with identical names. Accepted tasks
-remain mounted when switching source context, and completed files are never resent when
+survive switching source context, and completed files are never resent when
 another file fails. Uploads retain the accepted task identity while
 processing, and attach only after the owner returns a canonical document ID. An
 interrupted upload is treated as an uncertain outcome and requires searching Documents
@@ -91,6 +91,20 @@ their explicit target identity. `TripDocumentLinks({ tripId, target?, tripsClien
 documentsClient? })` renders only the exact trip, target kind and target ID when a
 target is supplied, without route lookups or another page shell. Editors compose
 it with `TripDocumentUpload` using the same explicit target and owner transports.
+Conditional dialogs, collapses and routes retain a queue above the view with
+`createTripDocumentUploadSession({ tripId, target, tripsClient?, documentsClient? })`
+and pass it through `TripDocumentUpload`'s optional `session` prop on every mount.
+Key host storage by the exact trip, target kind/ID and owner client identities and origins.
+The retaining parent resets storage when authentication or transport context changes;
+reloading the browser releases these in-memory queues.
+The queue keeps distinct File handles, pending requests, accepted tasks and uncertain
+outcomes across unmounts; overlapping views observe the same selections and upload
+claim. Supplying a different target, client identity or owner origin throws
+`TripDocumentUploadContextError`
+before any owner action. Queues are live browser objects, not serializable drafts.
+Uploads, task reads, picker searches, linking and recovery recheck that captured
+context immediately before the operation, including mutable default clients.
+Without the prop, the component keeps its existing view-local queue behavior.
 `DocumentPicker({ onSelected, documentsClient? })` returns the actual owner original
 without writing a route association. `useDocumentUpload({ session, onSessionChange,
 documentsClient? })` is the same per-file owner workflow used by route uploads.
@@ -104,7 +118,15 @@ Overlapping views share one synchronous POST claim per intent; separate selectio
 remain independent. The session retains
 the exact browser File handle; only actual task/document identities belong in persisted
 provenance. Completed and explicit duplicate task results expose the canonical document
-ID while retaining the accepted task ID. The controller never repeats an accepted or
+ID while retaining the accepted task ID. Verified owner task results also remain in
+the receipt when its query cache is evicted; pending task lookup resumes on remount.
+An older read without a canonical identity cannot erase a verified original.
+Retained task query namespaces stay bound to the file intent's captured owner;
+a mutable client origin change cannot seed that proof into another owner's cache.
+Separate recovery pickers pass the controller's `assertOwnerContext` to
+`DocumentPicker.beforeRequest`, preserving the same transport and retaining-parent guard
+for owner searches and cached selection callbacks.
+The controller never repeats an accepted or
 uncertain upload; a definite rejection can be retried explicitly.
 
 Run `mise exec -- pnpm --filter @pops/trips-workspace dev` for the standalone development
@@ -156,3 +178,31 @@ navigation link and authenticated query/client context.
 and its generated-transport load/apply operations. The owning Trips app runs the
 real editor/HTTP/SQLite integration regression; this extractable library does not
 install or start a pillar runtime in its own unit tests.
+
+`VisitWorkspace({ tripId, visitId, client?, onViewVisit?, onViewStay?, onViewEvent? })`
+exports the approved direct visit editor and accommodation-period workspace.
+Exact dates, approximate month/part and one-sided duration bounds remain independent.
+Fields persist on blur or explicit selection; optional fields do not acquire defaults.
+Visit PATCH and Undo supply the exact confirmed source revision. A foreign canonical
+refresh clears local history; pending or failed drafts retain their original precondition.
+An explicit reload discards local draft/history only after a successful source read.
+Creating a reusable city retains its acknowledged identity if visit association fails;
+retrying that association never repeats creation. Undo restores the prior association
+without deleting the reusable city. An ambiguous creation failure blocks another POST
+in that session while allowing a canonical city reload and explicit source selection.
+
+Accommodation periods use explicit visit IDs and checkout-exclusive stay dates.
+Unknown, partial or contradictory dates remain visible without asserting coverage.
+Agreed, Reserved and Purchased accommodation covers nights; Considering stays remain
+visible as ideas without covering them. Only Purchased has a solid boundary. Missing
+accommodation uses the shared coverage classifier and names only the proven interval
+inside valid visit bounds. Unknown dates or context prevent unsupported missing-night
+claims without weakening coverage established by independently dated arranged stays.
+Activity placement uses its explicit visit ID and start date, includes every intention, and retains uncertain/outside-period sources separately.
+Source arrangement dates are never clipped or rewritten to match visit dates. Day focus
+accepts any valid calendar date and only changes the projection. Journeys without an
+explicit visit association remain outside this view; no place-label/date matching is used.
+
+Visit UI copy consumes the host i18next `trips` namespace, including the app-owned
+`visitWorkspace` catalogue in both supported locales. Calendar labels use the host
+resolved language while retaining literal source days without viewer-zone conversion.
