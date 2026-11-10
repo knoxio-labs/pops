@@ -28,18 +28,20 @@ export function StayTimeline({
   return (
     <section aria-label="Accommodation timeline" className="space-y-4">
       {periods.map((period) => (
-        <div key={period.id} className="flex gap-3">
-          <div className="flex w-24 shrink-0 flex-col gap-2 pt-3 text-right text-sm text-muted-foreground">
-            {period.timing.arrival && (
-              <time dateTime={period.timing.arrival}>{period.timing.arrival}</time>
-            )}
-            {period.timing.departure && (
-              <time dateTime={period.timing.departure}>{period.timing.departure}</time>
-            )}
-          </div>
-          <div className="flex shrink-0 flex-col items-center pt-3">
-            <BedDouble className="size-4 text-app-accent" aria-hidden />
-            <div className="grow border-l border-dotted border-app-accent/50" />
+        <div key={period.id} className="flex flex-col gap-3 sm:flex-row">
+          <div className="flex shrink-0 gap-3">
+            <div className="flex w-24 shrink-0 flex-col gap-2 pt-3 text-right text-sm text-muted-foreground">
+              {period.timing.arrival && (
+                <time dateTime={period.timing.arrival}>{period.timing.arrival}</time>
+              )}
+              {period.timing.departure && (
+                <time dateTime={period.timing.departure}>{period.timing.departure}</time>
+              )}
+            </div>
+            <div className="flex shrink-0 flex-col items-center pt-3">
+              <BedDouble className="size-4 text-app-accent" aria-hidden />
+              <div className="grow border-l border-dotted border-app-accent/50" />
+            </div>
           </div>
           <article
             aria-label={period.id === stay.id ? 'Stay editor' : `Neighbouring stay ${period.id}`}
