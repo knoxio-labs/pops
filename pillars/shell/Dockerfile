@@ -35,7 +35,7 @@ RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
 # scoped to the packages this image bundles: the filtered install leaves the
 # other units without their generators.
 COPY scripts/codegen/ ./scripts/codegen/
-RUN node scripts/codegen/generate.mjs --pkg @pops/shell --pkg @pops/overlay-ego
+RUN node scripts/codegen/generate.mjs --pkg @pops/shell --pkg @pops/overlay-ego --pkg @pops/app-contacts
 
 # Build the shell's workspace dependencies (pillars + shared packages) in
 # pnpm topological order, then the shell itself (tsc typecheck + vite build).
