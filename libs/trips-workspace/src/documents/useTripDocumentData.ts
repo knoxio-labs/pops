@@ -1,4 +1,4 @@
-import { useMutation, useQueries, useQueryClient } from '@tanstack/react-query';
+import { useQueries } from '@tanstack/react-query';
 
 import { assertSourceOwner } from '../shared/retained-session-store';
 import { useSourceQuery } from '../shared/use-source-query';
@@ -7,10 +7,10 @@ import {
   loadPaperlessDocument,
   loadTripRouteVisitIds,
   loadTripDocumentTargets,
-  unlinkPaperlessDocument,
 } from './api';
 import { groupDocumentAssociations } from './model';
 import { documentQueryKeys } from './query-keys';
+import { useDocumentUnlink } from './use-document-unlink';
 
 import type { UseMutationResult, UseQueryResult } from '@tanstack/react-query';
 
@@ -44,7 +44,6 @@ export function useTripDocumentData(
   documentsClient: DocumentsClient | undefined,
   target?: DocumentAssociationTarget
 ): TripDocumentData {
-  const queryClient = useQueryClient();
   const { associationsQuery, routeVisitsQuery, targetNamesQuery } = useAssociationSources(
     tripId,
     tripsClient,
@@ -57,21 +56,7 @@ export function useTripDocumentData(
   const originals = useQueries({
     queries: associations.map((item) => originalQuery(item.documentId, documentsClient)),
   });
-  const unlinkMutation = useMutation({
-    meta: { errorHandled: true },
-    mutationFn: (associationId: number) => {
-      assertSourceOwner(associationsQuery.owner);
-      return unlinkPaperlessDocument(
-        associationsQuery.owner.tripId,
-        associationId,
-        associationsQuery.owner.client
-      );
-    },
-    onSuccess: () =>
-      queryClient.invalidateQueries({
-        queryKey: associationsQuery.queryKey,
-      }),
-  });
+  const unlinkMutation = useDocumentUnlink(associationsQuery);
   const originalRows = originals.map((query) => ({ document: query.data, failed: query.isError }));
   return {
     associationsQuery,

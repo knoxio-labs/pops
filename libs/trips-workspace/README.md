@@ -212,7 +212,9 @@ its original key, but cannot mount an editor while that view's connection differ
 The query cancellation signal remains unconsumed unless the owning loader already
 uses it, preserving late source caching after manual navigation. Embedded Trips document
 associations use the same captured read scope; unlink invalidates only its original
-association key. Multi-endpoint target-name reads recheck the owner before each dispatch.
+association key. Each unlink captures its source ID, mounted view and cache owner before
+asynchronous mutation preparation, so a later render cannot retarget its dispatch or
+settlement. Multi-endpoint target-name reads recheck the owner before each dispatch.
 An upload queue with a known context mismatch reports that error without discarding
 its retained File, task or receipt; restoring the original context restores the queue.
 
