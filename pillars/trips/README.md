@@ -1,7 +1,7 @@
 # Trips pillar
 
 `@pops/trips` owns trip metadata, reusable manual place identities and distinct
-visits, stays, journeys and ordered transport legs in its own SQLite database. A place may occur repeatedly in one trip or
+visits, stays, events, rental periods, journeys and ordered transport legs in its own SQLite database. A place may occur repeatedly in one trip or
 across trips. Contacts owns reusable contact identities and addresses; Documents
 owns original files; Tags owns the shared vocabulary, while assignments remain
 with their source pillars. Explicit HTTP(S) and
@@ -26,7 +26,8 @@ unverifiable selections return retryable 503 without partially changing trip
 source. Cache refresh never erases a retained trip reference, and independent
 metadata edits do not revalidate omitted associations. Trips owns no shared tag
 names, hierarchy, windows, archive/merge rules or vocabulary writes.
-Outbound reads use a Trips-owned service account granted `tags.tags`. Local
+Outbound reads use a Trips-owned service account granted `tags.tags` and
+`contacts.entities.reference`. Local
 configuration can supply `POPS_INTERNAL_API_KEY`; production supplies only a
 mounted-file path in `POPS_INTERNAL_API_KEY_FILE`. Startup checks configured
 secret-file readability and prefers that file over the local environment. No
@@ -84,6 +85,55 @@ are separate from `hostLinks` and `documentLinks`; each reference array uses the
 same explicit URI/optional-label contract. These links are opaque, retained even
 when their source is unavailable, and do not assert contact/document resolution
 or transfer ownership. Deleting a stay removes only that source record.
+
+Rentals belong to trips independently of visits. `GET/POST /trips/:tripId/rentals`
+and `GET/PATCH/DELETE /trips/:tripId/rentals/:id` retain one rental identity with
+nullable `provider`, `pickupVisitId`, `returnVisitId`, calendar-only `start` and
+`end`, and `status` (Considering, Reserved or Purchased). Only explicit Purchased
+is a hard purchase fact. Empty rentals select nothing. Bounds are independent;
+partial, equal and reversed dates remain source facts. No clock, zone, office
+address, journey coverage or route insertion is inferred. Visit movement changes
+neither rental identity nor dates, and repeated towns remain distinct occurrences.
+
+New or changed pickup/return references must identify an existing Visit in the
+same trip, inside the source write transaction. Visit identities are logical
+references: if a Visit is removed, its retained rental reference remains available
+for missing-reference presentation. Unrelated edits and unchanged references do
+not revalidate that missing source. Null explicitly detaches either endpoint;
+it never changes dates. Patches retain omitted fields and clear nullable facts
+with null. Creation starts at revision zero; PATCH and DELETE require
+`expectedRevision`. Successful patches advance by exactly one. Stale or exhausted
+safe-integer revisions return 409 without mutation.
+
+Responsibility is a separate optional association for a whole journey, stay,
+event or rental, never a journey leg. `GET /trips/:tripId/responsibilities` lists
+recorded states; `GET/PUT /trips/:tripId/responsibilities/:targetKind/:targetId`
+reads or replaces one target's association. The `responsibility` value is null
+(unset), `{ kind: "self" }`, or `{ kind: "contact", uri }`. Consumers choose the
+Contacts-issued `uri` from `GET /entities/:id/reference`. A new or changed
+Contact selection is verified through that same authenticated owner operation;
+Trips stores the returned canonical URI, including an explicit alias redirect,
+without constructing an identity from display text. The response's canonical ID
+and URI must agree. Unknown identities return 400; unavailable, refused or
+malformed owner responses return retryable 503 without changing source state.
+Trips rechecks target ownership and the expected revision in the write transaction
+after the owner read, so concurrent replacement or deletion is preserved.
+
+Reads, self, clear and an unchanged retained Contact URI require no Contacts call.
+A retained unresolved reference remains editable and clearable offline; choosing
+it again after clear is a new selection and requires owner verification. Trips
+never copies, mutates or deletes the Contact. Independent arrangement edits
+remain usable when Contacts is unavailable.
+
+Every target is checked in the same trip transaction. A new target reads as
+unset at revision zero. PUT requires `expectedRevision` and replaces the entire
+association, advancing by exactly one. Clearing retains a revisioned unset row,
+which list includes, so a stale initial write cannot recreate a cleared value.
+Stale or exhausted revisions return 409. There is at most one state per target.
+Deleting an arrangement atomically removes only its responsibility state;
+independent source edits preserve it. Hosts, organisers, operators and purchases
+never select responsibility. Responsibility grants no access or role; its routes
+require `trips.responsibilities`, independently of source-edit scopes.
 
 Trips document associations use `POST/GET /trips/:tripId/document-associations`
 and `DELETE /trips/:tripId/document-associations/:id`. They retain the numeric
@@ -210,7 +260,8 @@ while any group membership remains.
 
 Domain routes require their projected service-account scope: `trips.trips`,
 `trips.places`, `trips.visits`, `trips.journeys`, `trips.journeyLegs`,
-`trips.journeyGroups` or `trips.stays`; a `trips` grant covers all domains. Discovery and
+`trips.journeyGroups`, `trips.stays`, `trips.events`, `trips.rentals` or
+`trips.responsibilities`; a `trips` grant covers all domains. Discovery and
 health probes remain open. The pillar advertises `/trips`,
 `/trips/:tripId/stays/:stayId`, and `/trips/:tripId/settings` shell pages. The home
 page groups source-backed trips and opens a selected-trip preview; stay links use the persisted trip and
