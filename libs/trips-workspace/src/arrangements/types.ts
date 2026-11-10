@@ -1,5 +1,6 @@
 import type { ContactChooserIntent, ContactsHostCapability } from '@pops/pillar-sdk';
 
+import type { Client as DocumentsClient } from '../documents-api/client';
 import type { TripEvent } from '../event/types';
 import type { Journey, JourneyLeg } from '../journey/types';
 import type { Place, Stay, Trip, Visit } from '../stay/types';
@@ -115,6 +116,7 @@ export interface ArrangementLabels {
 export interface ArrangementsWorkspaceProps {
   tripId: number;
   client?: Client;
+  documentsClient?: DocumentsClient;
   labels: ArrangementLabels;
   formatDate: (date: string) => string;
   backHref?: string;

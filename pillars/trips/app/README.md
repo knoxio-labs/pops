@@ -17,7 +17,10 @@ Only an owner-issued selection supplies the canonical reference; cancelling
 or reopening does not write Trips. Self and clearing a stored reference remain
 independent of Contacts availability. The same optional SDK capability supplies
 passive reference reads; verified names and links come from the owner, while
-unverified or unavailable references retain their original source identity.
+unverified or unavailable references retain their original source identity. Source
+dialogs reuse the shared document controls only for Stay, Journey and Event, with
+upload sessions retained above dialog lifetime for each exact target and owner
+connection.
 
 Home groups use the first ordered visit's arrival and the last visit's departure, relative to the viewer's local calendar day. Missing, invalid, or contradictory outer dates remain in Other. Trip titles use trimmed custom name, then trimmed destination, then the translated Trip label. `when` is opaque source text and never supplies route dates.
 

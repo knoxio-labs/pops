@@ -1,5 +1,9 @@
 import { expect, test } from './fixtures/pillar-rest-guard';
 import { json, stubShellBoot } from './helpers/pillar-rest';
+import {
+  arrangementOwnerReference,
+  stubArrangementOwners,
+} from './helpers/trips-arrangements-owners';
 
 import type { Page } from '@playwright/test';
 
@@ -90,6 +94,7 @@ async function stubSources(page: Page) {
   };
   const staySources: unknown[] = [stay];
   await stubShellBoot(page, ['trips']);
+  const owners = await stubArrangementOwners(page);
   await page.route(/\/trips-api\/places$/, (route) =>
     json(route, 200, { places: [{ id: 51, name: 'Wellington', sourceLinks: [], ...audit }] })
   );
@@ -108,15 +113,27 @@ async function stubSources(page: Page) {
     } else await json(route, 200, { stays: staySources });
   });
   await page.route(/\/trips-api\/trips\/7\/stays\/14$/, (route) => json(route, 200, created));
-  await page.route(/\/trips-api\/trips\/7\/responsibilities\/stay\/14$/, (route) =>
-    json(route, 200, {
-      tripId: 7,
-      targetKind: 'stay',
-      targetId: 14,
-      responsibility: null,
-      revision: 0,
-    })
-  );
+  const responsibilityWrites: unknown[] = [];
+  let stayAssigned = false;
+  const stayResponsibility = () => ({
+    tripId: 7,
+    targetKind: 'stay',
+    targetId: 14,
+    responsibility: stayAssigned ? { kind: 'contact', uri: arrangementOwnerReference.uri } : null,
+    revision: stayAssigned ? 1 : 0,
+  });
+  await page.route(/\/trips-api\/trips\/7\/responsibilities\/stay\/14$/, async (route) => {
+    if (route.request().method() === 'PUT') {
+      const body: unknown = route.request().postDataJSON();
+      expect(body).toEqual({
+        expectedRevision: 0,
+        responsibility: { kind: 'contact', uri: arrangementOwnerReference.uri },
+      });
+      responsibilityWrites.push(body);
+      stayAssigned = true;
+    }
+    await json(route, 200, stayResponsibility());
+  });
   await page.route(/\/trips-api\/trips\/7\/events$/, (route) => json(route, 200, { events: [] }));
   await page.route(/\/trips-api\/trips\/7\/journeys$/, (route) =>
     json(route, 200, { journeys: [journey] })
@@ -124,14 +141,19 @@ async function stubSources(page: Page) {
   await page.route(/\/trips-api\/trips\/7\/journeys\/20\/legs$/, (route) =>
     json(route, 200, { legs: [leg], revision: 0 })
   );
-  return { stayCreates };
+  return {
+    stayCreates,
+    owners,
+    responsibilityWrites,
+    responsibilities: () => (stayAssigned ? [stayResponsibility()] : []),
+  };
 }
 
 for (const viewport of [
   { width: 1440, height: 1000 },
   { width: 390, height: 844 },
 ]) {
-  test(`Along the route source Rental and responsibility at ${viewport.width}px`, async ({
+  test(`Along the route editors, owner picker and retained upload at ${viewport.width}px`, async ({
     page,
   }) => {
     await page.setViewportSize(viewport);
@@ -182,7 +204,7 @@ for (const viewport of [
         : null,
     });
     await page.route(/\/trips-api\/trips\/7\/responsibilities$/, (route) =>
-      json(route, 200, { responsibilities: [responsibility()] })
+      json(route, 200, { responsibilities: [responsibility(), ...context.responsibilities()] })
     );
     await page.route(/\/trips-api\/trips\/7\/responsibilities\/rental\/61$/, async (route) => {
       if (route.request().method() === 'PUT') {
@@ -237,6 +259,7 @@ for (const viewport of [
     });
     await open.click();
     await expect(page.getByLabel('Provider', { exact: true })).toHaveValue('Harbour cars');
+    await expect(page.getByRole('region', { name: 'Add files', exact: true })).toHaveCount(0);
     await page.getByLabel('Provider', { exact: true }).fill('Updated provider');
     await page.getByRole('button', { name: 'Save changes', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Undo', exact: true })).toBeEnabled();
@@ -279,6 +302,84 @@ for (const viewport of [
     await expect(
       page.getByRole('dialog').getByLabel('Check-out date', { exact: true })
     ).toHaveValue('2030-04-13');
+    const handledBy = page.getByRole('region', { name: 'Handled by', exact: true });
+    await handledBy.getByRole('button', { name: 'Choose contact', exact: true }).click();
+    const picker = page.getByRole('dialog', { name: 'Choose a contact', exact: true });
+    await picker.getByRole('textbox', { name: 'Search contacts', exact: true }).fill('Owner');
+    await picker.getByRole('button', { name: /Owner from Contacts/ }).click();
+    await expect(
+      handledBy.getByRole('link', { name: 'Owner from Contacts', exact: true })
+    ).toHaveAttribute('href', '/contacts/owner-issued');
+    expect(context.owners.contactCreates).toEqual([]);
+    expect(context.responsibilityWrites).toEqual([
+      {
+        expectedRevision: 0,
+        responsibility: { kind: 'contact', uri: arrangementOwnerReference.uri },
+      },
+    ]);
+    await handledBy.getByRole('button', { name: 'Choose contact', exact: true }).click();
+    await picker.getByRole('textbox', { name: 'Search contacts', exact: true }).fill('New driver');
+    await picker.getByRole('button', { name: 'Create new', exact: true }).click();
+    const creation = page.getByRole('dialog', { name: 'Create contact', exact: true });
+    await expect(creation.getByRole('textbox')).toHaveValue('New driver');
+    await expect(creation.getByRole('combobox', { name: 'Contact type', exact: true })).toHaveValue(
+      'company'
+    );
+    await creation.getByRole('button', { name: 'Create contact', exact: true }).click();
+    await expect(creation.getByText(/create outcome is unknown/)).toBeVisible();
+    await creation.getByRole('button', { name: 'Close', exact: true }).click();
+    await page.getByRole('button', { name: 'Close', exact: true }).click();
+    const createdStay = page
+      .locator('[data-source-kind="stay"][data-source-id="14"]')
+      .getByRole('button');
+    await createdStay.click();
+    await handledBy.getByRole('button', { name: 'Choose contact', exact: true }).click();
+    await expect(creation.getByRole('textbox')).toHaveValue('New driver');
+    await expect(
+      creation.getByRole('button', { name: 'Create contact', exact: true })
+    ).toBeDisabled();
+    expect(context.owners.contactCreates).toHaveLength(1);
+    expect(context.responsibilityWrites).toHaveLength(1);
+    await creation.getByRole('button', { name: 'Close', exact: true }).click();
+    const addFiles = page.getByRole('region', { name: 'Add files', exact: true });
+    await expect(addFiles.getByRole('button', { name: /^Upload a file/ })).not.toHaveAttribute(
+      'aria-disabled',
+      'true'
+    );
+    await addFiles.locator('input[type="file"]').setInputFiles({
+      name: 'booking.pdf',
+      mimeType: 'application/pdf',
+      buffer: Buffer.from('original booking'),
+    });
+    await page.getByRole('button', { name: 'Send to Documents', exact: true }).click();
+    await context.owners.uploadStarted;
+    await page.getByRole('button', { name: 'Close', exact: true }).click();
+    context.owners.acceptUpload();
+    await createdStay.click();
+    await expect(page.getByText(/booking.pdf ·/)).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Retry status check', exact: true })
+    ).toBeVisible();
+    expect(context.owners.uploadCount()).toBe(1);
+    context.owners.completeTask();
+    await page.getByRole('button', { name: 'Retry status check', exact: true }).click();
+    await page.getByRole('button', { name: 'Link file', exact: true }).click();
+    await expect(page.getByText('Booking original', { exact: true })).toBeVisible();
+    const dialogWidth = await page.getByRole('dialog').evaluate((element) => ({
+      content: element.scrollWidth,
+      viewport: element.clientWidth,
+    }));
+    expect(dialogWidth.content).toBeLessThanOrEqual(dialogWidth.viewport);
+    await page.screenshot({
+      path: new URL(`../../../tmp/arrangements-source-${viewport.width}.png`, import.meta.url)
+        .pathname,
+      fullPage: true,
+    });
+    expect(context.owners.associations).toHaveLength(1);
+    expect(context.owners.uploadCount()).toBe(1);
+    expect(context.owners.taskReads.every((url) => url.endsWith('/arrangement-upload-1'))).toBe(
+      true
+    );
     expect(context.stayCreates).toEqual([
       { visitId: 31, timing: { arrival: '2030-04-12', departure: '2030-04-13' } },
     ]);

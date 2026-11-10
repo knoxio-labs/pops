@@ -11,6 +11,20 @@ import { arrangementsTransport, labels, sourceRental } from './test-utils';
 
 import type { ReactElement } from 'react';
 
+import type { TripDocumentUploadSession } from '../documents/trip-document-upload-session';
+
+const documentViews = vi.hoisted(() => vi.fn<(session: TripDocumentUploadSession) => void>());
+vi.mock('./ArrangementDocuments', () => ({
+  ArrangementDocuments: ({ session }: { session: TripDocumentUploadSession }) => {
+    documentViews(session);
+    return (
+      <p>
+        Documents source {session.context.target.kind}:{session.context.target.id}
+      </p>
+    );
+  },
+}));
+
 vi.mock('../stay/StayWorkspace', () => ({
   StayWorkspace: ({ tripId, stayId }: { tripId: number; stayId: number }) => (
     <p>
@@ -55,7 +69,10 @@ vi.mock('../journey/JourneyWorkspace', () => ({
   },
 }));
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  documentViews.mockClear();
+});
 function mount(element: ReactElement): QueryClient {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
   render(<QueryClientProvider client={queryClient}>{element}</QueryClientProvider>);
@@ -99,6 +116,30 @@ describe('Along the route source workspace', () => {
     const { user } = setup();
     await user.click(await screen.findByRole('button', { name }));
     expect(within(screen.getByRole('dialog')).getByText(result)).toBeVisible();
+  });
+  it('retains exact owner queues across source close, another target and query-cache eviction', async () => {
+    const { user, queryClient } = setup();
+    await user.click(await screen.findByRole('button', { name: /Cedar guesthouse/ }));
+    const first = documentViews.mock.calls.at(-1)?.[0];
+    if (!first) throw new Error('Expected the canonical Stay document controls');
+    const file = new File(['original'], 'booking.pdf', { type: 'application/pdf' });
+    first.addFiles([file]);
+    await user.click(screen.getByRole('button', { name: 'Close' }));
+    await user.click(screen.getByRole('button', { name: /Harbour performance/ }));
+    const event = documentViews.mock.calls.at(-1)?.[0];
+    expect(event?.context.target).toEqual({ kind: 'event', id: 19 });
+    expect(event).not.toBe(first);
+    expect(event?.read()).toHaveLength(0);
+    await user.click(screen.getByRole('button', { name: 'Close' }));
+    act(() => queryClient.clear());
+    await user.click(await screen.findByRole('button', { name: /Cedar guesthouse/ }));
+    expect(documentViews.mock.calls.at(-1)?.[0]).toBe(first);
+    expect(first.context.target).toEqual({ kind: 'stay', id: 13 });
+    expect(first.read()[0]?.file).toBe(file);
+    await user.click(screen.getByRole('button', { name: 'Close' }));
+    await user.click(screen.getByRole('button', { name: /Harbour cars/ }));
+    expect(screen.queryByText(/Documents source/)).not.toBeInTheDocument();
+    expect(first.read()[0]?.file).toBe(file);
   });
   it('filters source facts without changing reservations or the source collections', async () => {
     const { user, transport } = setup();

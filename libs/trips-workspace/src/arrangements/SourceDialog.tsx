@@ -6,6 +6,7 @@ import { EventWorkspace } from '../event/EventWorkspace';
 import { JourneyWorkspace } from '../journey/JourneyWorkspace';
 import { StayWorkspace } from '../stay/StayWorkspace';
 import { arrangementsKey } from './api';
+import { ArrangementDocuments } from './ArrangementDocuments';
 import { arrangementRows } from './projection';
 import { RentalWorkspace } from './RentalWorkspace';
 import { Responsibility } from './Responsibility';
@@ -13,6 +14,7 @@ import { arrangementTitle } from './source-labels';
 
 import type { JSX } from 'react';
 
+import type { TripDocumentUploadSession } from '../documents/trip-document-upload-session';
 import type {
   ArrangementSources,
   ArrangementTarget,
@@ -27,12 +29,14 @@ export function SourceDialog({
   sources,
   close,
   viewJourney,
+  documents,
 }: {
   target: ArrangementTarget;
   identity: ArrangementsWorkspaceProps;
   sources: ArrangementSources;
   close: () => void;
   viewJourney: (id: number) => void;
+  documents?: TripDocumentUploadSession;
 }): JSX.Element {
   const queryClient = useQueryClient();
   const savedRental = (confirmed: Rental): void => {
@@ -48,7 +52,7 @@ export function SourceDialog({
       }}
     >
       <DialogContent
-        className="max-h-screen overflow-y-auto sm:max-w-5xl"
+        className="max-h-screen grid-cols-1 overflow-y-auto sm:max-w-5xl"
         showCloseButton={false}
         aria-describedby={undefined}
       >
@@ -60,13 +64,16 @@ export function SourceDialog({
             {identity.labels.close}
           </Button>
         </DialogClose>
-        <SourceEditor
-          target={target}
-          identity={identity}
-          sources={sources}
-          savedRental={savedRental}
-          viewJourney={viewJourney}
-        />
+        <div className="min-w-0">
+          <SourceEditor
+            target={target}
+            identity={identity}
+            sources={sources}
+            savedRental={savedRental}
+            viewJourney={viewJourney}
+          />
+        </div>
+        {documents && <ArrangementDocuments session={documents} />}
         <Responsibility
           key={`${target.targetKind}:${target.targetId}`}
           identity={identity}

@@ -40,6 +40,13 @@ remain explicitly selectable, and starting a new capture requires a separate
 conscious action for the currently selected uncertain gap; that action itself
 performs no POST and preserves every other gap receipt.
 
+Stay, Journey and Event source dialogs embed the canonical document link and
+upload controls for that exact source. Their parent retains the owner's target-
+and transport-bound session across dialog close, source switches and query-cache
+eviction. File handles and accepted task identities stay with the original target;
+Rental has no document association target. The workspace does not copy upload
+forms, pollers or recovery rules.
+
 Visit titles and Rental endpoints use persisted route occurrence positions, while
 their actual IDs remain source identities. Opaque Contact references use a neutral
 Contact label when the host omits the optional owner reader. The SDK capability

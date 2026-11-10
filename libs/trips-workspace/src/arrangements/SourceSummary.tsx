@@ -28,7 +28,7 @@ export function JourneySummary({
           <span className="block text-sm">
             {leg.mode ?? identity.labels.journey} · {index + 1}
           </span>
-          {(leg.from.sourceLabel || leg.to.sourceLabel) && (
+          {(Boolean(leg.from.sourceLabel) || Boolean(leg.to.sourceLabel)) && (
             <span className="block break-words text-xs text-muted-foreground">
               {leg.from.sourceLabel} → {leg.to.sourceLabel}
             </span>

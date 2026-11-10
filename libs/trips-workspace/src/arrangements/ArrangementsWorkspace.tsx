@@ -15,6 +15,7 @@ import {
 import { ResponsibilitySessions } from './ResponsibilitySessions';
 import { visitTitle } from './source-labels';
 import { SourceDialog } from './SourceDialog';
+import { useArrangementSource } from './use-arrangement-source';
 import { useArrangements } from './use-arrangements';
 import { useGapCapture } from './use-gap-capture';
 import { VisitCoverage } from './VisitCoverage';
@@ -48,8 +49,8 @@ function ArrangementsSession(identity: ArrangementsWorkspaceProps): JSX.Element 
   const { sources, queries, pending, complete, coverageComplete, refresh } =
     useArrangements(identity);
   const [filters, setFilters] = useState<Filters>({ query: '', kind: '', purchase: '' });
-  const [target, setTarget] = useState<ArrangementTarget>();
-  const capture = useGapCapture(identity, setTarget);
+  const source = useArrangementSource(identity);
+  const capture = useGapCapture(identity, source.open);
   const rows = filterArrangements(arrangementRows(sources), filters, sources);
   const groups = groupArrangements(rows, sources.visits);
   return (
@@ -71,18 +72,19 @@ function ArrangementsSession(identity: ArrangementsWorkspaceProps): JSX.Element 
           identity={identity}
           capture={capture}
           complete={coverageComplete}
-          open={setTarget}
+          open={source.open}
         />
-        {target && (
+        {source.selection && (
           <SourceDialog
-            target={target}
+            target={source.selection.target}
             identity={identity}
             sources={sources}
             close={() => {
-              setTarget(undefined);
+              source.close();
               void refresh();
             }}
-            viewJourney={(targetId) => setTarget({ targetKind: 'journey', targetId })}
+            viewJourney={(targetId) => source.open({ targetKind: 'journey', targetId })}
+            documents={source.selection.documents}
           />
         )}
       </main>
