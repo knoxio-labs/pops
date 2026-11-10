@@ -46,6 +46,7 @@ pub async fn entity(
             }
         }
     }
+    crate::persons::facts_projection::entity(conn, &mut row).await?;
     Ok(row)
 }
 
@@ -89,6 +90,7 @@ pub async fn points_in_transaction(
             None => point.entity_id == canonical && point.preferred,
         };
     }
+    crate::persons::facts_projection::points(conn, &canonical, &mut rows).await?;
     rows.retain(|point| point.active || point.preferred);
     Ok(rows)
 }

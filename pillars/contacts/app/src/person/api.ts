@@ -1,51 +1,45 @@
 import {
-  entitiesAddressesCreate,
-  entitiesAddressesList,
-  entitiesGet,
-  entitiesPointsCreate,
-  entitiesPointsList,
+  entitiesFactsGet,
+  entitiesFactsChange,
+  entitiesFactsUndo,
   entitiesSourcesList,
-  entitiesUpdate,
   sourcesAccountsList,
 } from '../contacts-api/sdk.gen';
 import { ContactError } from '../errors';
 import { contactRequest } from '../request';
+import { personChanges } from './draft-changes';
 
 import type { PersonGateway } from './contracts';
 
-/** Bind person editing to Contacts' existing contracts, rejecting other entity types before loading facts. */
+/** Bind atomic versioned person edits and committed undo to the published Contacts contract. */
 export const personGateway: PersonGateway = {
   async load(id) {
-    const { data: entity } = await contactRequest(() => entitiesGet({ path: { id } }));
-    if (entity.type !== 'person') throw new ContactError('notPerson', 'contacts.person.type');
-    const [points, addresses, sources, accounts] = await Promise.all([
-      contactRequest(() => entitiesPointsList({ path: { id: entity.id } })),
-      contactRequest(() => entitiesAddressesList({ path: { id: entity.id } })),
-      contactRequest(() => entitiesSourcesList({ path: { id: entity.id } })),
+    const { data } = await contactRequest(() => entitiesFactsGet({ path: { id } }));
+    if (data.entity.type !== 'person') throw new ContactError('notPerson', 'contacts.person.type');
+    const [sources, accounts] = await Promise.all([
+      contactRequest(() => entitiesSourcesList({ path: { id: data.entity.id } })),
       contactRequest(() => sourcesAccountsList()),
     ]);
-    return {
-      entity,
-      points: points.data,
-      addresses: addresses.data,
-      sources: sources.data,
-      accounts: accounts.data,
-    };
+    return { ...data, sources: sources.data, accounts: accounts.data };
   },
-  async save(id, draft) {
-    const result = await contactRequest(() =>
-      entitiesUpdate({ path: { id }, body: { name: draft.name, notes: draft.notes || null } })
+  async save(id, draft, before) {
+    return contactRequest(() =>
+      entitiesFactsChange({
+        path: { id },
+        body: {
+          expectedVersion: before.version,
+          idempotencyKey: crypto.randomUUID(),
+          changes: personChanges(before, draft),
+        },
+      })
     );
-    return result.data;
   },
-  async addPoint(id, body) {
-    const result = await contactRequest(() => entitiesPointsCreate({ path: { id }, body }));
-    return result.data;
-  },
-  async addAddress(id, value) {
-    const result = await contactRequest(() =>
-      entitiesAddressesCreate({ path: { id }, body: { value } })
+  async undo(id, operationId, version) {
+    return contactRequest(() =>
+      entitiesFactsUndo({
+        path: { id, operation_id: operationId },
+        body: { expectedVersion: version, idempotencyKey: crypto.randomUUID() },
+      })
     );
-    return result.data;
   },
 };

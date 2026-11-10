@@ -214,7 +214,9 @@ pub async fn insert_point(
             Some(country) => crate::identity::normalize_phone_for_country(&point.value, country),
             None => crate::identity::normalize_phone(&point.value),
         },
-        super::model::ContactPointKind::Social | super::model::ContactPointKind::Url => None,
+        super::model::ContactPointKind::Social
+        | super::model::ContactPointKind::Url
+        | super::model::ContactPointKind::Other => None,
     };
     let now = now_rfc3339();
     sqlx::query("INSERT INTO contact_points(id,entity_id,kind,value,normalized_value,label,country_code,source_record_id,created_at) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9)")

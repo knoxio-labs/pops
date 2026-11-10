@@ -76,12 +76,35 @@ async fn post_then_get_round_trips_an_address() {
     assert_eq!(status, StatusCode::CREATED, "create returns 201: {body}");
     assert_eq!(body["data"]["value"], "12 Example St");
     assert_eq!(body["data"]["entityId"], entity_id);
+    assert!(body["data"]["label"].is_null());
+    assert!(body["data"]["city"].is_null());
 
     let (status, body) = send(&app, get(&format!("/entities/{entity_id}/addresses"))).await;
     assert_eq!(status, StatusCode::OK);
     let data = body["data"].as_array().expect("data array");
     assert_eq!(data.len(), 1);
     assert_eq!(data[0]["value"], "12 Example St");
+}
+
+#[tokio::test]
+async fn label_and_literal_city_round_trip_without_parsing_or_place_lookup() {
+    let app = app().await;
+    let entity_id = create_entity(&app, "Independent city").await;
+    let value = "18 Fictional Street\nOlinda";
+    let (status, created) = send(
+        &app,
+        post(
+            &format!("/entities/{entity_id}/addresses"),
+            json!({"value":value,"label":" Studio ","city":"Unlisted city / raw text"}),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    let (_, listed) = send(&app, get(&format!("/entities/{entity_id}/addresses"))).await;
+    assert_eq!(listed["data"][0], created["data"]);
+    assert_eq!(listed["data"][0]["value"], value);
+    assert_eq!(listed["data"][0]["label"], " Studio ");
+    assert_eq!(listed["data"][0]["city"], "Unlisted city / raw text");
 }
 
 #[tokio::test]

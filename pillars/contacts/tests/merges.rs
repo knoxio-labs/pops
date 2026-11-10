@@ -92,6 +92,7 @@ async fn selected_subset_projects_fields_and_preserves_original_ids_and_ownershi
         &b,
         CreateAddressBody {
             value: "Original branch".into(),
+            ..Default::default()
         },
     )
     .await
@@ -467,6 +468,7 @@ async fn later_entity_address_and_observation_edits_fence_undo() {
                     &a,
                     CreateAddressBody {
                         value: "later".into(),
+                        ..Default::default()
                     },
                 )
                 .await

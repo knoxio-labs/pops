@@ -50,7 +50,7 @@ pub async fn merge_in_transaction(
     if body.member_ids.is_empty()
         || body.member_ids.len() > 499
         || body.selections.len() > 9
-        || body.preferred_point_ids.len() > 4
+        || body.preferred_point_ids.len() > crate::persons::model::ContactPointKind::ALL.len()
     {
         return Err(MergeError::Invalid(
             "Merge requires 1..499 other roots and bounded selections".into(),
@@ -155,7 +155,9 @@ pub async fn select_in_transaction(
     selections: &[FieldSelection],
     preferred_point_ids: &[String],
 ) -> Result<Vec<AppliedSelection>, MergeError> {
-    if selections.len() > 9 || preferred_point_ids.len() > 4 {
+    if selections.len() > 9
+        || preferred_point_ids.len() > crate::persons::model::ContactPointKind::ALL.len()
+    {
         return Err(MergeError::Invalid(
             "Field selections exceed supported limits".into(),
         ));

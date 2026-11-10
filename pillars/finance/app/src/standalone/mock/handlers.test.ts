@@ -171,3 +171,25 @@ describe('contacts, absent', () => {
     }
   );
 });
+
+it.each([
+  'GET /entities/{id}/facts',
+  'POST /entities/{id}/facts/changes',
+  'POST /entities/{id}/facts/changes/{operation_id}/undo',
+])('answers %s without inventing person facts for merchant fixtures', async (operation) => {
+  const handler = contactsHandlers[operation];
+  const entity = CONTACT_ENTITIES[0];
+  if (!handler || !entity) throw new Error('Missing handler or merchant fixture');
+  const answer = await handler({
+    method: 'GET',
+    path: '/',
+    params: { id: entity.id },
+    query: new URLSearchParams(),
+    body: undefined,
+  });
+  expect(answer.status).toBe(400);
+  expect(answer.body).toMatchObject({
+    code: 'contacts.request.invalid',
+    message: 'Entity must be a person',
+  });
+});

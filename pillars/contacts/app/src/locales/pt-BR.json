@@ -89,7 +89,8 @@
     "email": "e-mail",
     "phone": "telefone",
     "social": "rede social",
-    "url": "URL"
+    "url": "URL",
+    "other": "Outro"
   },
   "classifications": {
     "automatic": "Correspondência encontrada",
@@ -246,7 +247,16 @@
     "reload": "Recarregar pessoa",
     "loading": "Carregando pessoa",
     "uncertain": "O resultado da gravação é desconhecido. Recarregue e confira os dados salvos antes de enviar novamente. Os valores digitados foram mantidos.",
-    "open": "Detalhes da pessoa (nova aba)"
+    "open": "Detalhes da pessoa (nova aba)",
+    "methodRow": "Método de contato {{number}}",
+    "addressRow": "Endereço {{number}}",
+    "removeMethod": "Remover método de contato {{number}}",
+    "removeAddress": "Remover endereço {{number}}",
+    "addressLabel": "Rótulo do endereço",
+    "city": "Cidade",
+    "draftChanged": "Os dados salvos mudaram durante a edição. Seu rascunho foi mantido. Revise os dados mais recentes antes de salvar novamente.",
+    "discardDraft": "Descartar rascunho e revisar dados atuais",
+    "add": "Adicionar"
   },
   "entity": {
     "title": "Detalhes do contato",

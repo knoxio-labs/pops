@@ -14,13 +14,10 @@ use super::addresses_model::{AddressRow, CreateAddressBody};
 /// List every address recorded against `entity_id`, oldest first. An entity
 /// with none returns an empty vector, never an error.
 pub async fn list_for_entity(pool: &SqlitePool, entity_id: &str) -> sqlx::Result<Vec<AddressRow>> {
-    sqlx::query_as::<_, AddressRow>(
-        "SELECT id, entity_id, value, last_edited_time FROM entity_addresses \
-         WHERE entity_id = COALESCE((SELECT canonical_id FROM entity_redirects WHERE member_id=?1),?1) OR entity_id IN (SELECT member_id FROM entity_redirects WHERE canonical_id=COALESCE((SELECT canonical_id FROM entity_redirects WHERE member_id=?1),?1)) ORDER BY last_edited_time ASC",
-    )
-    .bind(entity_id)
-    .fetch_all(pool)
-    .await
+    let mut tx = pool.begin().await?;
+    let rows = crate::persons::facts_projection::addresses(&mut tx, entity_id).await?;
+    tx.commit().await?;
+    Ok(rows)
 }
 
 /// Insert a new address under `entity_id`. A v4 UUID id and the current
@@ -40,13 +37,15 @@ pub async fn create(
     let now = now_rfc3339();
 
     sqlx::query(
-        "INSERT INTO entity_addresses (id, entity_id, value, last_edited_time) \
-         VALUES (?1, ?2, ?3, ?4)",
+        "INSERT INTO entity_addresses (id, entity_id, value, last_edited_time, label, city) \
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
     )
     .bind(&id)
     .bind(entity_id)
     .bind(&body.value)
     .bind(&now)
+    .bind(&body.label)
+    .bind(&body.city)
     .execute(pool)
     .await?;
 
@@ -54,6 +53,8 @@ pub async fn create(
         id,
         entity_id: entity_id.to_string(),
         value: body.value,
+        label: body.label,
+        city: body.city,
         last_edited_time: now,
     })
 }
@@ -106,6 +107,7 @@ mod tests {
             &entity_id,
             CreateAddressBody {
                 value: "12 Example St".to_string(),
+                ..Default::default()
             },
         )
         .await
@@ -126,6 +128,7 @@ mod tests {
             "does-not-exist",
             CreateAddressBody {
                 value: "12 Example St".to_string(),
+                ..Default::default()
             },
         )
         .await;
