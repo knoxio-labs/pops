@@ -198,6 +198,12 @@ buffers are nonnegative physical minutes, including zero and fractions; missing
 thresholds have no defaults. A supplied buffers object replaces its complete
 configuration and `{}` clears it. Source links may remain unavailable remotely.
 
+`GET /trips/:tripId/journeys/:id/workspace` returns source metadata, ordered live
+legs and timing derived from exactly those legs inside one SQLite read transaction.
+Consumers that combine source clocks and projected instants use this aggregate rather
+than joining independent reads across concurrent edits. It uses the owning journey
+scope and never rewrites source records or selection.
+
 `GET /trips/:tripId/journeys/:id/timing` projects the persisted source legs in
 one read transaction. It returns resolved endpoint instants, signed leg elapsed
 minutes, signed time available between adjacent legs, a local-calendar window,

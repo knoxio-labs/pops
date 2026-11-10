@@ -234,6 +234,22 @@ pub async fn update(
         }
     }
 
+    if !matches!(effective_type, "person" | "company" | "organisation")
+        && matches!(current.r#type.as_str(), "company" | "organisation")
+    {
+        let has_local_contact_points: bool = sqlx::query_scalar(
+            "SELECT EXISTS(SELECT 1 FROM contact_points WHERE entity_id=?1 AND source_record_id IS NULL)",
+        )
+        .bind(id)
+        .fetch_one(pool)
+        .await?;
+        if has_local_contact_points {
+            return Err(RepoError::Invalid(
+                "Local contact points require a person, company or organisation entity".to_string(),
+            ));
+        }
+    }
+
     if effective_type != "person" && name_exists(pool, effective_name, Some(id)).await? {
         return Err(RepoError::Conflict(format!(
             "Entity with name '{effective_name}' already exists"

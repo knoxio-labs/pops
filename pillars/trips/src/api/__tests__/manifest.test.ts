@@ -34,10 +34,12 @@ describe('Trips manifest', () => {
     const manifest = buildTripsManifest('1.2.3');
     expect(manifest.pages).toEqual([
       { path: '', index: true, bundleSlot: 'trips-home' },
+      { path: ':tripId/calendar', bundleSlot: 'trips-calendar' },
       { path: ':tripId/stays/:stayId', bundleSlot: 'trips-stay' },
       { path: ':tripId/events/:eventId', bundleSlot: 'trips-event' },
       { path: ':tripId/decisions/:decisionId', bundleSlot: 'trips-decision' },
       { path: ':tripId/journeys/:journeyId', bundleSlot: 'trips-journey' },
+      { path: ':tripId/documents', bundleSlot: 'trips-documents' },
       { path: ':tripId/settings', bundleSlot: 'trips-settings' },
     ]);
     expect(manifest.pages).toEqual(TRIPS_PAGES);
@@ -53,7 +55,7 @@ describe('Trips manifest', () => {
       version: '1.2.3',
       tag: 'contract-trips@v1.2.3',
     });
-    expect(manifest.routes.queries).toHaveLength(27);
+    expect(manifest.routes.queries).toHaveLength(28);
     expect(manifest.routes.queries).toEqual(
       expect.arrayContaining([
         'trips.rentals.list',
@@ -103,6 +105,7 @@ describe('Trips manifest', () => {
       ])
     );
     expect(manifest.routes.queries).toContain('trips.journeys.timing');
+    expect(manifest.routes.queries).toContain('trips.journeys.workspace');
     expect(manifest.routes.queries).toEqual(
       expect.arrayContaining([
         'trips.events.list',

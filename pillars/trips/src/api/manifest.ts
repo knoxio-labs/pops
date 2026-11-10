@@ -29,6 +29,7 @@ const TRIPS_QUERIES = [
   'trips.journeys.list',
   'trips.journeys.get',
   'trips.journeys.timing',
+  'trips.journeys.workspace',
   'trips.journeyLegs.list',
   'trips.journeyLegs.get',
   'trips.trips.list',
