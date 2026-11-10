@@ -131,12 +131,13 @@ export class ScriptCdpTransport {
   private lifecycle(message: CdpMessage): void {
     if (message.method === 'Target.attachedToTarget') {
       const worker = this.observations.attached(message.sessionId, message.params);
-      if (worker)
-        this.startup.attached(worker.sessionId, message.sessionId, worker.waitingForDebugger);
+      if (worker) this.startup.attached(worker.sessionId, worker.waitingForDebugger);
     }
     if (message.method === 'Target.detachedFromTarget') {
       const { sessionId } = z.object({ sessionId: z.string() }).parse(message.params);
-      for (const removed of this.startup.detached(sessionId)) {
+      const descendants = this.observations.descendants(sessionId);
+      this.startup.detached(descendants);
+      for (const removed of descendants) {
         this.observations.detached(removed);
         this.forgetCommands(removed);
       }

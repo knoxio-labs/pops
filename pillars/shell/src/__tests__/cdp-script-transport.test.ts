@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { ScriptCdpTransport } from '../tests/cdp-script-transport';
 import { inspectCdpMessage } from '../tests/cdp-script-types';
 
-function fixture() {
+function fixture(parents: readonly ('iframe' | 'worker')[] = []) {
   let receive: (data: unknown) => void = () => {
     throw new Error('Missing receiver');
   };
@@ -40,9 +40,23 @@ function fixture() {
     { type: 'page', targetId: 'target', browserContextId: 'context' },
     () => undefined
   );
+  let parentSessionId = 'page';
+  for (const [index, type] of parents.entries()) {
+    const sessionId = `parent-${index}`;
+    incoming({
+      method: 'Target.attachedToTarget',
+      sessionId: parentSessionId,
+      params: {
+        sessionId,
+        waitingForDebugger: true,
+        targetInfo: { type, targetId: `${sessionId}-target` },
+      },
+    });
+    parentSessionId = sessionId;
+  }
   incoming({
     method: 'Target.attachedToTarget',
-    sessionId: 'page',
+    sessionId: parentSessionId,
     params: {
       sessionId: 'worker',
       waitingForDebugger: true,
@@ -135,6 +149,71 @@ describe('sole CDP worker startup connection', () => {
     f.incoming({ id: 3, sessionId: 'worker', result: {} });
     expect(f.sentIds()).toEqual([1, 3]);
     expect(f.delivered.some((message) => inspectCdpMessage(message).id === 2)).toBe(false);
+    expect(() => f.page.assertHealthy()).toThrow();
+  });
+
+  it.each([
+    { parents: [], ancestor: 'page' },
+    { parents: ['iframe'], ancestor: 'page' },
+    { parents: ['iframe'], ancestor: 'parent-0' },
+    { parents: ['worker', 'iframe'], ancestor: 'page' },
+    { parents: ['worker', 'iframe'], ancestor: 'parent-0' },
+    { parents: ['worker', 'iframe', 'worker'], ancestor: 'parent-1' },
+  ] as const)(
+    'invalidates complete ancestry $parents when $ancestor detaches before late replies',
+    ({ parents, ancestor }) => {
+      const f = fixture(parents);
+      f.setup();
+      f.incoming({
+        method: 'Network.requestWillBeSent',
+        sessionId: 'worker',
+        params: {
+          requestId: 'held-import',
+          type: 'Script',
+          request: { method: 'GET', url: 'https://example.test/import.js' },
+        },
+      });
+      f.incoming({ method: 'Target.detachedFromTarget', params: { sessionId: ancestor } });
+      f.incoming({ id: 1, sessionId: 'worker', result: {} });
+      f.incoming({ id: 3, sessionId: 'worker', result: {} });
+      expect(f.sentIds()).toEqual([1, 3]);
+      expect(() => f.page.assertHealthy()).toThrow();
+      expect(f.page.pending().map((request) => request.requestId)).toEqual(['held-import']);
+      const lateError = {
+        id: 1,
+        sessionId: 'worker',
+        error: { code: -32000, message: 'Detached' },
+      };
+      f.incoming(lateError);
+      expect(f.delivered.at(-1)).toEqual(lateError);
+      expect(f.sentIds()).toEqual([1, 3]);
+    }
+  );
+
+  it('cannot revive an iframe descendant from a reply already deferred before ancestor detachment', async () => {
+    const f = fixture(['iframe']);
+    f.setup();
+    let release: () => void = () => {
+      throw new Error('Missing release');
+    };
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    f.transport.beforeWorkerReply = async (command) => {
+      if (command.id === 1) await held;
+    };
+    const forwarded = new Promise<void>((resolve) => {
+      f.transport.onmessage = (message) => {
+        f.delivered.push(message);
+        if (inspectCdpMessage(message).id === 1) resolve();
+      };
+    });
+    f.incoming({ id: 1, sessionId: 'worker', result: {} });
+    f.incoming({ method: 'Target.detachedFromTarget', params: { sessionId: 'page' } });
+    f.incoming({ id: 3, sessionId: 'worker', result: {} });
+    release();
+    await forwarded;
+    expect(f.sentIds()).toEqual([1, 3]);
     expect(() => f.page.assertHealthy()).toThrow();
   });
 

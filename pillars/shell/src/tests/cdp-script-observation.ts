@@ -128,6 +128,17 @@ export class ScriptObservations {
     if (changed) this.changed(session.owner.pageTargetId);
   }
 
+  /** Include every observed iframe and worker edge before any ancestor state is removed. */
+  descendants(sessionId: string): readonly string[] {
+    const descendants = new Set([sessionId]);
+    for (const parentId of descendants) {
+      for (const [id, session] of this.sessions) {
+        if (session.owner.parentSessionId === parentId) descendants.add(id);
+      }
+    }
+    return [...descendants];
+  }
+
   /** A lost worker session cannot claim that its unfinished requests completed. */
   detached(sessionId: string): void {
     const session = this.sessions.get(sessionId);

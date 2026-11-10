@@ -78,7 +78,9 @@ proves the discovered endpoint belongs to that process before attachment. All te
 use the connected browser, preserving configured context options, routing, downloads and traces.
 Dedicated workers resume only after their own real `Network.enable` and recursive auto-attach
 acknowledgements. Imports retain exact session/request IDs and page/context ownership; failed
-setup, lost transport or a detached session with unfinished work fails visibly.
+setup, lost transport or a detached session with unfinished work fails visibly. Ancestor
+detachment invalidates descendant startup through iframe edges before observation cleanup;
+later replies cannot release those retained resumes.
 
 A worker's bootstrap appears on its parent connection but can finish on the worker session.
 Chromium uses the same worker token for that bootstrap request ID and worker target ID

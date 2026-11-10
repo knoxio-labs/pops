@@ -3,7 +3,6 @@ import { z } from 'zod';
 import type { CdpCommand } from './cdp-script-types';
 
 interface WorkerStartup {
-  readonly parentSessionId: string | undefined;
   readonly resumes: object[];
   network: boolean;
   recursive: boolean;
@@ -17,13 +16,8 @@ export class WorkerStartupFence {
   constructor(private readonly failed: (sessionId: string, error: Error) => void) {}
 
   /** An existing running worker cannot retroactively prove its early request coverage. */
-  attached(
-    sessionId: string,
-    parentSessionId: string | undefined,
-    waitingForDebugger: boolean
-  ): void {
+  attached(sessionId: string, waitingForDebugger: boolean): void {
     this.workers.set(sessionId, {
-      parentSessionId,
       resumes: [],
       network: false,
       recursive: false,
@@ -99,18 +93,14 @@ export class WorkerStartupFence {
     );
   }
 
-  /** Detachment cannot lend late acknowledgements to the dead session or its descendants. */
-  detached(sessionId: string): readonly string[] {
-    const removed = [sessionId];
-    for (const id of removed) {
+  /** Invalidate every supplied observed descendant before any delayed reply can release it. */
+  detached(sessionIds: readonly string[]): void {
+    for (const id of sessionIds) {
       const worker = this.workers.get(id);
       if (worker?.resumes.length)
         this.failed(id, new Error('Worker detached before startup observation completed'));
       this.workers.delete(id);
-      for (const [childId, child] of this.workers)
-        if (child.parentSessionId === id) removed.push(childId);
     }
-    return removed;
   }
 
   /** A disconnect with unresolved startup must remain a visible observation failure. */
