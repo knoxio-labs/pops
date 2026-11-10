@@ -724,7 +724,7 @@ describe('Along the route source workspace', () => {
     });
     mount(
       <Responsibility
-        identity={{ tripId: 7, client: transport.client, labels, formatDate: (date) => date }}
+        identity={{ tripId: 7, client: transport.client, labels }}
         target={{ targetKind: 'rental', targetId: 61 }}
       />
     );
@@ -775,7 +775,6 @@ describe('Along the route source workspace', () => {
           tripId: 7,
           client: transport.client,
           labels,
-          formatDate: (date) => date,
           contactChooserIntent: () => ({
             Chooser: ({ open, onSelect }) =>
               open ? (

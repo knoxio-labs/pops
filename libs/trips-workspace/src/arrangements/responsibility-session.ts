@@ -20,6 +20,7 @@ export class ResponsibilitySession {
   private state: ResponsibilityOperation = { kind: 'ready' };
   private history: ResponsibilityOperation[] = [];
   private listeners = new Set<() => void>();
+  private readonly deliveredPickers = new Set<ResponsibilityWrite>();
 
   /** Read the stable immutable owned snapshot for the current explicit operation. */
   read = (): ResponsibilityOperation => this.state;
@@ -70,6 +71,15 @@ export class ResponsibilitySession {
   fail(write: ResponsibilityWrite, error: unknown): void {
     if (this.state.kind !== 'saving' || this.state.write !== write) return;
     this.update({ kind: 'uncertain', write, error });
+  }
+
+  /** Deliver a known own picker receipt once when its original owner context is active. */
+  deliverPicker(advance: (picker: ContactChooserIntent) => void): void {
+    if (this.state.kind !== 'acknowledged') return;
+    const { write } = this.state;
+    if (!write.picker || this.deliveredPickers.has(write)) return;
+    advance(write.picker);
+    this.deliveredPickers.add(write);
   }
 
   /** Explicitly abandon the active unknown outcome without claiming it succeeded or deleting its receipt. */

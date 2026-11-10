@@ -8,20 +8,17 @@ import { useResponsibility } from './use-responsibility';
 import type { JSX } from 'react';
 
 import type {
-  ArrangementResponsibility,
-  ArrangementTarget,
-  ArrangementsWorkspaceProps,
-} from './types';
+  ArrangementResponsibilityContext,
+  ArrangementResponsibilityFieldProps,
+} from './responsibility-context';
+import type { ArrangementResponsibility } from './types';
 import type { ResponsibilityEditor } from './use-responsibility';
 
 /** Edit responsibility independently; clearing a stale contact never contacts its owner. */
 export function Responsibility({
   identity,
   target,
-}: {
-  identity: ArrangementsWorkspaceProps;
-  target: ArrangementTarget;
-}): JSX.Element {
+}: ArrangementResponsibilityFieldProps): JSX.Element {
   const labels = identity.labels;
   const editor = useResponsibility(identity, target);
   return (
@@ -72,7 +69,7 @@ function ResponsibilityControls({
   source,
   editor,
 }: {
-  identity: ArrangementsWorkspaceProps;
+  identity: ArrangementResponsibilityContext;
   source: ArrangementResponsibility;
   editor: ResponsibilityEditor;
 }): JSX.Element {
@@ -118,7 +115,7 @@ function ResponsibilityControls({
 }
 function ownerLabel(
   owner: ArrangementResponsibility['responsibility'],
-  identity: ArrangementsWorkspaceProps
+  identity: ArrangementResponsibilityContext
 ): string {
   if (owner?.kind === 'contact') return identity.labels.contactReference;
   return owner?.kind === 'self' ? identity.labels.self : identity.labels.unset;

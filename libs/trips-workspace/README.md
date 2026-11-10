@@ -133,6 +133,29 @@ without claiming the abandoned write succeeded. A known write receipt or that
 explicit reconciliation permits a fresh owner picker intent on the next Choose
 contact action, while previous owner receipts remain retained.
 
+`ArrangementResponsibilityProvider({ identity: { tripId, client? }, children })`
+retains the same per-target controllers for contextual source editors. Mount it
+above keyed or conditional fields for the host lifetime. Each
+`ArrangementResponsibilityField({ identity, target })` takes only translated
+`ResponsibilityLabels`, the matching trip/client, optional SDK Contacts capability
+and retained picker callbacks. It requires no standalone navigation, calendar
+formatter or Documents controls. Targets are the generated whole Journey, Stay,
+Event and Rental identities; Visits, groups and legs are not responsibility targets.
+
+Source reads and write receipts validate the generated canonical wire schemas.
+Each field's cache belongs to its exact captured client instance, origin, trip and
+target, independently of same-origin clients. Mismatched provider contexts cannot
+dispatch requests. Changing the transport's mutable origin blocks old reads,
+writes and retries until the original context is restored. Late own PUT receipts
+remain retained for their original context; they cannot update another context's
+cache or advance its picker. The original picker receipt is delivered once after
+that context becomes active again. Changing owner or target closes the picker
+view without replacing the host-retained opaque intent. Returning to the original
+context requires an explicit Choose contact action; it never applies a selection
+automatically. Cancelled or replaced view callbacks remain inactive after an
+A→B→A return or reopening the same intent. Keep the provider lifetime within the host's
+actual authentication/transport lifetime; no principal is inferred by this API.
+
 `JourneyWorkspace({ tripId, journeyId, client? })` exports the source-backed Departure
 and arrival journey editor. It reads ordered legs and independent grouping identities
 through the same generated Trips client. Endpoint edits submit complete retained

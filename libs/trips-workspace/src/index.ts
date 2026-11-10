@@ -53,6 +53,15 @@ export { TripOverview } from './overview/TripOverview';
 export type { TripOverviewProps, OverviewLabels, OverviewKind } from './overview/types';
 export { ArrangementsWorkspace } from './arrangements/ArrangementsWorkspace';
 export type { ArrangementsWorkspaceProps, ArrangementLabels } from './arrangements/types';
+export { Responsibility as ArrangementResponsibilityField } from './arrangements/Responsibility';
+export { ResponsibilitySessions as ArrangementResponsibilityProvider } from './arrangements/ResponsibilitySessions';
+export type { ArrangementTarget, ArrangementResponsibility } from './arrangements/types';
+export type {
+  ArrangementResponsibilityContext,
+  ArrangementResponsibilityFieldProps,
+  ArrangementResponsibilityProviderProps,
+  ResponsibilityLabels,
+} from './arrangements/responsibility-context';
 /** Locale-aware calendar source formatter; absent clocks never become viewer-local instants. */
 export { dateLabel as formatTripDate } from './visit/periods';
 export { VisitWorkspace } from './visit/VisitWorkspace';
