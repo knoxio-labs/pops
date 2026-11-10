@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router';
 
 import { Button, PageHeader } from '@pops/ui';
 
@@ -9,7 +10,6 @@ import { defaultClients } from '../api/types';
 import { NewTripDialog } from '../settings/NewTripDialog';
 import { HomeToolbar } from './HomeToolbar';
 import { filteredRecords } from './model';
-import { TripPreview } from './TripPreview';
 import { TripRows } from './TripRows';
 import { useHomeSources } from './use-home-sources';
 import { useToday } from './use-today';
@@ -23,9 +23,9 @@ export function HomePage({ clients = defaultClients }: { clients?: ApiClients })
 }
 function HomeSession({ clients }: { clients: ApiClients }) {
   const { t } = useTranslation('trips');
+  const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [bucket, setBucket] = useState<HomeFilter>('all');
-  const [selectedId, select] = useState<number | null>(null);
   const [open, setOpen] = useState(false);
   const referenceDate = useToday();
   const { trips, places, visits, retryContext } = useHomeSources(clients);
@@ -36,40 +36,30 @@ function HomeSession({ clients }: { clients: ApiClients }) {
     trip,
     visits: visits[index]?.data,
   }));
-  const selected = records.find(({ trip }) => trip.id === selectedId);
   return (
     <main className="mx-auto max-w-5xl space-y-5 px-4 py-6 text-sm md:py-8">
       {trips.isError && <SourceFailure error={trips.error} retry={trips.refetch} />}
       {(places.isError || visits.some((visit) => visit.isError)) && (
         <ContextFailure retry={retryContext} />
       )}
-      {selected ? (
-        <TripPreview
-          {...selected}
-          allTrips={trips.data}
-          places={places.data ?? []}
-          onBack={() => select(null)}
-        />
-      ) : (
-        <HomeBrowse
-          records={records}
-          allTrips={trips.data}
-          places={places.data ?? []}
-          referenceDate={referenceDate}
-          query={query}
-          setQuery={setQuery}
-          bucket={bucket}
-          setBucket={setBucket}
-          create={() => setOpen(true)}
-          select={select}
-        />
-      )}
+      <HomeBrowse
+        records={records}
+        allTrips={trips.data}
+        places={places.data ?? []}
+        referenceDate={referenceDate}
+        query={query}
+        setQuery={setQuery}
+        bucket={bucket}
+        setBucket={setBucket}
+        create={() => setOpen(true)}
+        select={(id) => void navigate(`/trips/${id}`)}
+      />
       <NewTripDialog
         open={open}
         setOpen={setOpen}
         trips={trips.data}
         clients={clients}
-        created={(trip) => select(trip.id)}
+        created={(trip) => void navigate(`/trips/${trip.id}`)}
       />
     </main>
   );

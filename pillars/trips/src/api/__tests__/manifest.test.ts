@@ -34,6 +34,7 @@ describe('Trips manifest', () => {
     const manifest = buildTripsManifest('1.2.3');
     expect(manifest.pages).toEqual([
       { path: '', index: true, bundleSlot: 'trips-home' },
+      { path: ':tripId', bundleSlot: 'trips-overview' },
       { path: ':tripId/stays/:stayId', bundleSlot: 'trips-stay' },
       { path: ':tripId/decisions/:decisionId', bundleSlot: 'trips-decision' },
       { path: ':tripId/journeys/:journeyId', bundleSlot: 'trips-journey' },

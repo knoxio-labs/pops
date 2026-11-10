@@ -6,6 +6,7 @@ import { act, cleanup, render, screen, waitFor, within } from '@testing-library/
 import userEvent from '@testing-library/user-event';
 import { createInstance } from 'i18next';
 import { I18nextProvider } from 'react-i18next';
+import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { tripKeys } from '../api/source';
@@ -92,7 +93,9 @@ describe('HomePage source refresh', () => {
     render(
       <I18nextProvider i18n={i18n}>
         <QueryClientProvider client={cache}>
-          <HomePage clients={clients} />
+          <MemoryRouter>
+            <HomePage clients={clients} />
+          </MemoryRouter>
         </QueryClientProvider>
       </I18nextProvider>
     );
