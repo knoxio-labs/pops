@@ -1,8 +1,8 @@
-import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 
 import { ErrorState } from '@pops/ui';
 
+import { useSourceQuery } from '../shared/use-source-query';
 import { requestProblem } from '../stay/api';
 import { loadVisit, visitQueryKey } from './api';
 import { useVisitContext } from './use-visit-context';
@@ -35,11 +35,14 @@ export function VisitWorkspace(props: VisitWorkspaceProps): JSX.Element {
 function LoadVisit(props: VisitWorkspaceProps): JSX.Element {
   const { t } = useTranslation('trips');
   const context = useVisitContext(props);
-  const source = useQuery({
-    queryKey: visitQueryKey(props),
-    queryFn: () => loadVisit(props),
-    retry: false,
-  });
+  const source = useSourceQuery(
+    { client: props.client, tripId: props.tripId, kind: 'visit', sourceId: props.visitId },
+    (owner) => {
+      const captured = { client: owner.client, tripId: owner.tripId, visitId: owner.sourceId };
+      return { queryKey: visitQueryKey(captured), load: () => loadVisit(captured) };
+    }
+  );
+  if (source.ownershipError) return <ErrorState error={source.ownershipError} />;
   if (source.isPending)
     return (
       <p role="status" className="p-4">

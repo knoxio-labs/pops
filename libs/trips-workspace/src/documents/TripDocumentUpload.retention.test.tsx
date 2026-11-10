@@ -111,6 +111,51 @@ async function selectFile(start = true): Promise<void> {
   if (start) await userEvent.click(screen.getByRole('button', { name: 'Send to Documents' }));
 }
 
+it('renders a context error and restores the same File, task and receipt after the original owner returns', async () => {
+  const owner = harness();
+  const view = owner.mount();
+  await selectFile();
+  const respond = owner.responses[0];
+  if (respond === undefined) throw new Error('Upload acceptance missing');
+  await act(async () =>
+    respond(Response.json({ data: { taskId: 'accepted-8' } }, { status: 202 }))
+  );
+  await screen.findByRole('button', { name: 'Link file' });
+  const before = owner.session.read()[0]?.upload;
+  const trips = owner.session.context.tripsClient;
+  if (!trips || !before) throw new Error('Original upload context missing');
+  const content = () => (
+    <QueryClientProvider client={owner.cache}>
+      <TripDocumentUpload {...owner.session.context} session={owner.session} />
+    </QueryClientProvider>
+  );
+  trips.setConfig({ baseUrl: 'https://other.example/trips-api' });
+  view.rerender(content());
+  expect(screen.getByRole('alert')).toHaveTextContent('connection changed');
+  expect(screen.queryByRole('button', { name: 'Link file' })).not.toBeInTheDocument();
+  expect(owner.session.read()[0]?.upload.file).toBe(before.file);
+  trips.setConfig({ baseUrl: 'https://pops.example/trips-api' });
+  view.rerender(content());
+  await screen.findByRole('button', { name: 'Link file' });
+  expect(owner.session.read()[0]?.upload.file).toBe(before.file);
+  expect(owner.session.read()[0]?.upload.taskId).toBe('accepted-8');
+  expect(owner.session.read()[0]?.upload.taskReceipt).toEqual(before.taskReceipt);
+  expect(owner.posts()).toBe(1);
+  expect(owner.links).toEqual([]);
+  expect(owner.reads.some((url) => url.includes('other.example'))).toBe(false);
+});
+
+it('rethrows unexpected context failures rather than treating them as an owner change', () => {
+  const owner = harness();
+  const unexpected = new Error('Unexpected session failure');
+  const assertion = vi.spyOn(owner.session, 'assertContext').mockImplementation(() => {
+    throw unexpected;
+  });
+  expect(() => owner.mount()).toThrow(unexpected);
+  assertion.mockRestore();
+  expect(owner.cache.getQueryCache().getAll()).toHaveLength(0);
+});
+
 it('checks the captured owner immediately before a private File POST after a client mutates without rendering', async () => {
   const owner = harness();
   owner.mount();

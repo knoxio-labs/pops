@@ -78,13 +78,22 @@ export class RetainedSessionStore<Session> {
 
 /** Reject configuration changes before dispatch rather than rebinding an old draft or receipt. */
 export function assertSourceOwner(owner: RetainedSourceOwner): void {
-  if ((owner.client.getConfig().baseUrl ?? '') !== owner.origin)
-    throw new ApiError({
-      code: 'web.source.context_changed',
-      kind: 'client',
-      message: 'The source connection changed. Reopen the original source before retrying.',
-      retryable: false,
-    });
+  if (!isSourceOwnerCurrent(owner)) throw sourceOwnerProblem();
+}
+
+/** Test the captured connection before admitting reads or mounting a controller from cached data. */
+export function isSourceOwnerCurrent(owner: RetainedSourceOwner): boolean {
+  return (owner.client.getConfig().baseUrl ?? '') === owner.origin;
+}
+
+/** Safe diagnostic for a source view whose transport no longer matches its captured connection. */
+export function sourceOwnerProblem(): ApiError {
+  return new ApiError({
+    code: 'web.source.context_changed',
+    kind: 'client',
+    message: 'The source connection changed. Reopen the original source before retrying.',
+    retryable: false,
+  });
 }
 
 /** One mounted view's permission to start work; closing another view cannot deactivate this lease. */
@@ -109,8 +118,7 @@ export class SourceSessionView {
   }
 
   /** Ignore reads or draft callbacks when their committed view or captured transport is no longer current. */
-  isCurrent = (): boolean =>
-    this.active && (this.owner.client.getConfig().baseUrl ?? '') === this.owner.origin;
+  isCurrent = (): boolean => this.active && isSourceOwnerCurrent(this.owner);
 
   /** Recheck after asynchronous preparation and immediately before any request dispatch. */
   assertCurrent(): void {

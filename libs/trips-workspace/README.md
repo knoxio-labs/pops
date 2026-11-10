@@ -205,6 +205,17 @@ session and captured cache keys. Another open view shares the same write lock an
 remains usable. Mutable client-origin changes are checked immediately before dispatch;
 asynchronous preparation must check that lease again before sending a request.
 
+Canonical reads and their selector context capture the effective default or explicit
+client and query key at the view boundary. Changing that client's origin cannot send
+another owner's read into the previous cache key. A deferred response may populate
+its original key, but cannot mount an editor while that view's connection differs.
+The query cancellation signal remains unconsumed unless the owning loader already
+uses it, preserving late source caching after manual navigation. Embedded Trips document
+associations use the same captured read scope; unlink invalidates only its original
+association key. Multi-endpoint target-name reads recheck the owner before each dispatch.
+An upload queue with a known context mismatch reports that error without discarding
+its retained File, task or receipt; restoring the original context restores the queue.
+
 Stay Host references use the same host-injected Contacts chooser and owner reader as
 Event organisers. Selection appends the owner's issued URI; explicit replacement and
 removal affect only the chosen occurrence, preserving all other opaque source values.
