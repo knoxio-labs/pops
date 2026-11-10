@@ -89,7 +89,8 @@
     "email": "email",
     "phone": "phone",
     "social": "social",
-    "url": "URL"
+    "url": "URL",
+    "other": "Other"
   },
   "classifications": {
     "automatic": "Match found",
@@ -246,7 +247,16 @@
     "reload": "Reload person",
     "loading": "Loading person",
     "uncertain": "The write outcome is unknown. Reload and check the saved facts before submitting again. Your entered values are retained.",
-    "open": "Person details (new tab)"
+    "open": "Person details (new tab)",
+    "methodRow": "Contact method {{number}}",
+    "addressRow": "Address {{number}}",
+    "removeMethod": "Remove contact method {{number}}",
+    "removeAddress": "Remove address {{number}}",
+    "addressLabel": "Address label",
+    "city": "City",
+    "draftChanged": "Saved details changed while you were editing. Your draft is retained. Review the latest details before saving again.",
+    "discardDraft": "Discard draft and review latest",
+    "add": "Add"
   },
   "entity": {
     "title": "Contact details",

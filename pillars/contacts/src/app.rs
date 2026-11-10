@@ -65,6 +65,7 @@ pub fn build_router_with_providers(
         .merge(crate::providers::routes::router())
         .merge(crate::imports::ready_routes::router())
         .merge(crate::persons::routes::router())
+        .merge(crate::persons::facts_routes::router())
         .merge(crate::sources::routes::router())
         .merge(crate::merges::routes::router())
         .layer(axum::Extension(providers))

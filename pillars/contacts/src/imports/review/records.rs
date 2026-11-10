@@ -145,7 +145,7 @@ pub(super) fn normalized_point(point: &ContactPointInput) -> Option<String> {
             || normalize_phone(&point.value),
             |country| normalize_phone_for_country(&point.value, country),
         ),
-        ContactPointKind::Social | ContactPointKind::Url => None,
+        ContactPointKind::Social | ContactPointKind::Url | ContactPointKind::Other => None,
     }
 }
 
