@@ -20,6 +20,26 @@ function mount(props: PeopleWorkspaceProps) {
 }
 
 describe('meeting workspace source actions', () => {
+  it('searches resolved owner names without changing source identity or treating a failed lookup as unavailable', async () => {
+    const api = peopleTransport();
+    mount({
+      tripId: 7,
+      client: api.client,
+      text: (key) => key,
+      resolveContact: async () => ({
+        status: 'available',
+        uri: 'pops:contacts/contact/canonical',
+        name: 'Casey Park',
+        href: '/contacts/reference/owner-issued',
+      }),
+    });
+    await screen.findByText('Casey Park');
+    fireEvent.change(screen.getByLabelText('search'), { target: { value: 'Casey' } });
+    expect(screen.getByRole('article', { name: 'Coffee' })).toBeVisible();
+    fireEvent.change(screen.getByLabelText('search'), { target: { value: 'Different person' } });
+    expect(screen.queryByRole('article')).not.toBeInTheDocument();
+    expect(api.writes).toEqual([]);
+  });
   it('edits exact association, agreement and independent reversed dates while keeping unavailable identity', async () => {
     const api = peopleTransport();
     const resolveContact = vi

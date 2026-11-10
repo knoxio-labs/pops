@@ -8,6 +8,20 @@ import { meetingPlan, meetingResult } from './test-utils';
 import type { MeetingOperation, MeetingResult } from './types';
 
 describe('confirmed meeting operations', () => {
+  it('retains the observed revision while a field is dirty and never silently rebases its pending edit', async () => {
+    const apply = vi.fn(async (operation: MeetingOperation) =>
+      meetingResult(operation, meetingPlan(), meetingPlan({ revision: 2, title: 'Draft' }))
+    );
+    const editor = new PeopleEditor([meetingPlan()], apply);
+    editor.setDirty('41:title', true);
+    editor.refresh([meetingPlan({ revision: 8, title: 'Foreign edit' })]);
+    expect(editor.snapshot().plans[0]?.revision).toBe(1);
+    await editor.run({ kind: 'update', id: 41, expectedRevision: 1, patch: { title: 'Draft' } });
+    expect(apply.mock.calls[0]?.[0].command).toMatchObject({ expectedRevision: 1 });
+    expect(editor.snapshot().canUndo).toBe(false);
+    editor.setDirty('41:title', false);
+    expect(editor.snapshot().canUndo).toBe(true);
+  });
   it('retains exact uncertain create operation and fences subsequent writes and reload', async () => {
     const apply = vi
       .fn<(operation: MeetingOperation) => Promise<MeetingResult>>()

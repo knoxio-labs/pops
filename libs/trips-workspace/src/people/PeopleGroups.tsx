@@ -1,5 +1,6 @@
 import { MeetingCard } from './MeetingCard';
 import { groupMeetingPlans } from './model';
+import { useFilteredMeetings } from './use-filtered-meetings';
 
 import type { JSX, ComponentProps } from 'react';
 
@@ -14,21 +15,7 @@ export function PeopleGroups({
   workspace,
   filters,
 }: PeopleSectionProps & { filters: PeopleFilters }): JSX.Element {
-  const plans = state.plans.filter(
-    (plan) =>
-      (!filters.intention || filters.intention === plan.intention) &&
-      (!filters.agreement || filters.agreement === plan.agreement) &&
-      (!filters.visitId || filters.visitId === String(plan.visitId)) &&
-      [
-        plan.title,
-        plan.notes,
-        plan.contactUri ?? '',
-        plan.startDate ?? '',
-        plan.endDate ?? '',
-      ].some((value) =>
-        value.toLocaleLowerCase().includes(filters.query.trim().toLocaleLowerCase())
-      )
-  );
+  const plans = useFilteredMeetings(state.plans, filters, { context, workspace });
   return (
     <div className="space-y-5">
       {groupMeetingPlans(plans, context.visits.data ?? []).map((group) => (
