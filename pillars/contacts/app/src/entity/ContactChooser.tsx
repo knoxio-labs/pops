@@ -1,5 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useTranslation } from 'react-i18next';
 
+import { i18n as translations } from '../locales';
 import { contactGateway } from './api';
 import { ContactCreationDialog } from './ContactCreationDialog';
 import { ContactPicker } from './ContactPicker';
@@ -18,8 +20,33 @@ export interface ContactChooserProps {
   session?: ContactChooserSession;
 }
 
-/** Return a real canonical entity/reference without navigating the host or replaying an uncertain create. */
-export function ContactChooser({
+/** Register owner translations on the host instance before returning a canonical contact; retain session across route remounts. */
+export function ContactChooser(props: ContactChooserProps) {
+  const { i18n } = useTranslation();
+  const registered = useSyncExternalStore(
+    (notify) => {
+      i18n.store.on('added', notify);
+      i18n.store.on('removed', notify);
+      return () => {
+        i18n.store.off('added', notify);
+        i18n.store.off('removed', notify);
+      };
+    },
+    () =>
+      Object.keys(translations.resources).every((locale) =>
+        i18n.hasResourceBundle(locale, translations.namespace)
+      ),
+    () => false
+  );
+  useEffect(() => {
+    for (const [locale, resources] of Object.entries(translations.resources)) {
+      i18n.addResourceBundle(locale, translations.namespace, resources, true, true);
+    }
+  }, [i18n]);
+  return registered ? <ContactChooserContent {...props} /> : null;
+}
+
+function ContactChooserContent({
   open,
   onOpenChange,
   onSelect,

@@ -1,7 +1,9 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { createInstance } from 'i18next';
 import { useState } from 'react';
+import { I18nextProvider } from 'react-i18next';
 import { expect, it, vi } from 'vitest';
 
 import { ContactError } from '../errors';
@@ -228,3 +230,34 @@ it('retains an in-flight intent across route unmount and resolves the known enti
   await waitFor(() => expect(onSelect).toHaveBeenCalledExactlyOnceWith(canonical, reference));
   expect(api.create).toHaveBeenCalledOnce();
 });
+
+it.each([
+  ['en-AU', 'Search contacts', 'Create new'],
+  ['pt-BR', 'Pesquisar contatos', 'Criar novo'],
+])(
+  'localizes a fresh %s embed without a Contacts remote or preloaded namespace',
+  async (locale, searchLabel, createLabel) => {
+    const instance = createInstance();
+    await instance.init({ lng: locale, resources: {}, interpolation: { escapeValue: false } });
+    expect(instance.hasResourceBundle(locale, 'contacts')).toBe(false);
+    render(
+      <I18nextProvider i18n={instance}>
+        <QueryClientProvider client={new QueryClient()}>
+          <ContactChooser open onOpenChange={vi.fn()} onSelect={vi.fn()} gateway={gateway()} />
+        </QueryClientProvider>
+      </I18nextProvider>
+    );
+    expect(await screen.findByRole('textbox', { name: searchLabel })).toBeVisible();
+    expect(screen.getByRole('button', { name: createLabel })).toBeVisible();
+    expect(instance.hasResourceBundle('en-AU', 'contacts')).toBe(true);
+    expect(instance.hasResourceBundle('pt-BR', 'contacts')).toBe(true);
+    await act(async () => {
+      await instance.changeLanguage(locale === 'pt-BR' ? 'en-AU' : 'pt-BR');
+    });
+    expect(
+      screen.getByRole('textbox', {
+        name: locale === 'pt-BR' ? 'Search contacts' : 'Pesquisar contatos',
+      })
+    ).toBeVisible();
+  }
+);

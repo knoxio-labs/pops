@@ -41,11 +41,11 @@ existing contacts. A duplicate conflict requires explicit existing selection,
 never a guessed identity match. Dismissing a pending request prevents its result
 from being delivered to the host automatically.
 
-Embedded hosts import `contactsI18n` from `@pops/app-contacts` and install that
-`RemotePillarI18n` metadata through their sanctioned shared-instance translation
-registration before rendering `ContactChooser`. The host must register both
-supported catalogues even when the Contacts remote has never mounted; no copied
-locale resources or separate i18next instance are required.
+`ContactChooser` registers both owner catalogues on the host's shared i18next
+instance before its embedded view mounts, including when no Contacts remote has
+loaded. It follows the host locale without a second i18next instance. The public
+`contactsI18n` metadata remains available to hosts with their own sanctioned
+translation registration.
 
 `GET /entity-types` publishes choices and the default from the backend's actual
 validation constants. Both creation surfaces consume that catalogue; retained
