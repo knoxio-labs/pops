@@ -89,6 +89,8 @@ packages:
     path: Packages/FeatureSearch
   FeatureEgo:
     path: Packages/FeatureEgo
+  FeatureTrips:
+    path: Packages/FeatureTrips
   InventoryReplica:
     path: Packages/InventoryReplica
   DesignPlayground:
@@ -141,6 +143,7 @@ targets:
       - package: FeatureInventory
       - package: FeatureSearch
       - package: FeatureEgo
+      - package: FeatureTrips
       - package: InventoryReplica
     # A shared scheme, so `xcodebuild -scheme Pops` resolves on a clean checkout
     # rather than relying on Xcode autocreating one into xcuserdata. This list is
@@ -177,6 +180,7 @@ targets:
         - package: FeatureInventory/FeatureInventoryTests
         - package: FeatureSearch/FeatureSearchTests
         - package: FeatureEgo/FeatureEgoTests
+        - package: FeatureTrips/FeatureTripsTests
         - package: InventoryReplica/InventoryReplicaTests
         - package: DesignPlayground/DesignPlaygroundTests
     # The team lives outside the repo; see Config/Signing.xcconfig. Nothing here

@@ -17,10 +17,12 @@ internal struct BFMErrorDecodingMiddleware: ClientMiddleware {
         guard response.status.kind != .successful else { return (response, responseBody) }
 
         let requestID = Self.requestID(from: response)
+        let retryAfter = BFMRetryAfter.seconds(response.headerFields[.retryAfter])
         guard let responseBody else {
             throw BFMRuntimePopsError(
                 PopsError.http(status: response.status.code, requestID: requestID),
-                statusCode: response.status.code
+                statusCode: response.status.code,
+                retryAfterSeconds: retryAfter
             )
         }
 
@@ -41,14 +43,15 @@ internal struct BFMErrorDecodingMiddleware: ClientMiddleware {
                     kind: PopsError.kind(forHTTPStatus: response.status.code)
                 ),
                 statusCode: response.status.code,
-                retryAfterSeconds: envelope.retryAfterSeconds
+                retryAfterSeconds: envelope.retryAfterSeconds ?? retryAfter
             )
         } catch let error as BFMRuntimePopsError {
             throw error
         } catch {
             throw BFMRuntimePopsError(
                 PopsError.http(status: response.status.code, requestID: requestID),
-                statusCode: response.status.code
+                statusCode: response.status.code,
+                retryAfterSeconds: retryAfter
             )
         }
     }
@@ -67,6 +70,7 @@ internal struct BFMErrorDecodingMiddleware: ClientMiddleware {
 internal struct BFMRuntimePopsError: Error, Sendable {
     internal let popsError: PopsError
     internal let statusCode: Int
+    /// The typed body value or parsed HTTP header fallback; nil means the producer supplied no readable delay.
     internal let retryAfterSeconds: Int?
 
     internal init(
@@ -162,7 +166,7 @@ extension PopsError {
         return nil
     }
 
-    private static var offline: PopsError {
+    internal static var offline: PopsError {
         PopsError(
             code: "ios.net.offline",
             message: "The request could not reach the server",
@@ -171,7 +175,7 @@ extension PopsError {
         )
     }
 
-    private static var timeout: PopsError {
+    internal static var timeout: PopsError {
         PopsError(
             code: "ios.net.timeout",
             message: "Request timed out",

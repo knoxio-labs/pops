@@ -1,6 +1,7 @@
 import AppCore
 import DesignSystem
 import FeatureEgo
+import FeatureTrips
 import SwiftUI
 
 internal struct TripsContentView: View {
@@ -10,32 +11,41 @@ internal struct TripsContentView: View {
     @State private var isEgoPresented = false
 
     internal var body: some View {
-        NavigationStack {
+        content
+            .safeAreaInset(edge: .top) {
+                ConnectionBanner(phase: surface.bootstrap)
+            }
+            .safeAreaInset(edge: .bottom, spacing: PopsSpacing.zero) {
+                EgoEntryView(
+                    isAvailable: surface.available.contains(FeatureEgo.feature),
+                    onOpen: { isEgoPresented = true }
+                )
+            }
+            .sheet(isPresented: $isEgoPresented) {
+                EgoSheetView(
+                    dependencies: dependencies,
+                    context: { composition.egoContext },
+                    presentation: composition.entityPresentation,
+                    entityRouter: composition.entityRouter,
+                    onClose: { isEgoPresented = false }
+                )
+            }
+            .environment(
+                \.startRePairing,
+                RePairingAction { composition.session.send(.revoked(.credentialsRejected)) }
+            )
+    }
+
+    @ViewBuilder private var content: some View {
+        if case .paired(let device) = composition.session.state {
+            TripsRootView(
+                repository: composition.tripsRepository(for: device),
+                documents: composition.documentsRepository(for: device)
+            )
+            .id(device)
+        } else {
             TripsPlaceholderView()
-                .navigationTitle(TripsCopy.title)
         }
-        .safeAreaInset(edge: .top) {
-            ConnectionBanner(phase: surface.bootstrap)
-        }
-        .safeAreaInset(edge: .bottom, spacing: PopsSpacing.zero) {
-            EgoEntryView(
-                isAvailable: surface.available.contains(FeatureEgo.feature),
-                onOpen: { isEgoPresented = true }
-            )
-        }
-        .sheet(isPresented: $isEgoPresented) {
-            EgoSheetView(
-                dependencies: dependencies,
-                context: { composition.egoContext },
-                presentation: composition.entityPresentation,
-                entityRouter: composition.entityRouter,
-                onClose: { isEgoPresented = false }
-            )
-        }
-        .environment(
-            \.startRePairing,
-            RePairingAction { composition.session.send(.revoked(.credentialsRejected)) }
-        )
     }
 
     private var dependencies: AppDependencies {
