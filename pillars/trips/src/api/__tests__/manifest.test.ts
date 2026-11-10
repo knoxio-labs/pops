@@ -15,6 +15,14 @@ describe('Trips manifest', () => {
     expect(buildTripsManifest('test')).toEqual(expected);
   });
 
+  it('publishes independent meeting source reads and receipt-backed operations', () => {
+    const manifest = buildTripsManifest('test');
+    expect(manifest.routes.queries).toEqual(
+      expect.arrayContaining(['trips.meetingPlans.list', 'trips.meetingPlans.get'])
+    );
+    expect(manifest.routes.mutations).toContain('trips.meetingPlans.operate');
+  });
+
   it('publishes the approved rail entry without adding unimplemented navigation', () => {
     const manifest = buildTripsManifest('1.2.3');
     expect(manifest.nav).toEqual({
@@ -53,7 +61,7 @@ describe('Trips manifest', () => {
       version: '1.2.3',
       tag: 'contract-trips@v1.2.3',
     });
-    expect(manifest.routes.queries).toHaveLength(23);
+    expect(manifest.routes.queries).toHaveLength(25);
     expect(manifest.routes.queries).toContain('trips.documentAssociations.list');
     expect(manifest.routes.mutations).toEqual(
       expect.arrayContaining([

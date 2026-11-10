@@ -4,9 +4,12 @@ import { getPillarRegistry } from './pillars/registry.js';
 import type { PillarRegistryEntry } from '@pops/types';
 
 import type { OpenedTripsDb } from '../db/index.js';
+import type { MeetingContactResolver } from './rest/meeting-plan-contact.js';
 
 /** Dependencies for the trips pillar's liveness and roster probes. */
 export interface TripsApiDeps {
+  /** Owning identity API override; unknown and unavailable are distinct from a retained source reference. */
+  readonly resolveMeetingContact?: MeetingContactResolver;
   readonly tripsDb: OpenedTripsDb;
   readonly version: string;
   readonly selfBaseUrl: string;

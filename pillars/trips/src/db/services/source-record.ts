@@ -2,6 +2,12 @@
 export class TripsServiceError extends Error {
   constructor(
     readonly code:
+      | 'meeting_revision_conflict'
+      | 'meeting_revision_exhausted'
+      | 'meeting_undo_conflict'
+      | 'meeting_operation_mismatch'
+      | 'meeting_contact_unknown'
+      | 'meeting_contact_unavailable'
       | 'not_found'
       | 'order_invalid'
       | 'revision_conflict'

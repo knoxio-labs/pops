@@ -8,6 +8,7 @@ import { documentAssociationsContract } from './document-associations.js';
 import { eventsContract } from './events.js';
 import { journeyGroupsContract } from './journey-groups.js';
 import { journeysContract, journeyLegsContract } from './journeys.js';
+import { meetingPlansContract } from './meeting-plans.js';
 import {
   CreatePlaceBody,
   CreateTripBody,
@@ -36,6 +37,7 @@ export const tripsContract = c.router(
     decisions: decisionsContract,
     decisionOptions: decisionOptionsContract,
     stays: staysContract,
+    meetingPlans: meetingPlansContract,
     documentAssociations: documentAssociationsContract,
     journeyGroups: journeyGroupsContract,
     journeys: journeysContract,

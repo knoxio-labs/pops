@@ -17,6 +17,7 @@ import { makeDocumentAssociationHandlers } from './document-associations.js';
 import { makeEventHandlers } from './events.js';
 import { makeJourneyGroupHandlers } from './journey-groups.js';
 import { makeJourneyHandlers, makeJourneyLegHandlers } from './journeys.js';
+import { makeMeetingPlanHandlers } from './meeting-plans.js';
 import { makeStayHandlers } from './stays.js';
 import { makeTripMetadataHandlers } from './trip-metadata.js';
 import { withTripsErrors } from './with-errors.js';
@@ -35,6 +36,7 @@ export function makeTripsRestHandlers(
     decisions: makeDecisionHandlers(db),
     decisionOptions: makeDecisionOptionHandlers(db),
     stays: makeStayHandlers(db),
+    meetingPlans: makeMeetingPlanHandlers(deps),
     documentAssociations: makeDocumentAssociationHandlers(db),
     journeyGroups: makeJourneyGroupHandlers(db),
     journeys: makeJourneyHandlers(db),
