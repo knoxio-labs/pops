@@ -1,3 +1,4 @@
+import type { Client as DocumentsClient } from '../documents-api/client';
 import type { Client } from '../trips-api/client';
 import type {
   PlacesListResponses,
@@ -22,6 +23,8 @@ export interface StayWorkspaceProps {
   tripId: number;
   stayId: number;
   client?: Client;
+  /** Authenticated Documents owner transport, independent of the Trips source client. */
+  documentsClient?: DocumentsClient;
 }
 
 /** Explicit field edits and persistence actions shared by source-field sections. */
