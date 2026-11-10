@@ -663,3 +663,195 @@ async fn merge_field_selection_uses_the_selected_members_effective_local_facts()
             .unwrap();
     assert_eq!(stored, ("Original person".into(), None));
 }
+
+#[derive(Clone, Copy)]
+enum HiddenPoint {
+    Replaced,
+    Removed,
+    UndoneAddition,
+}
+
+async fn rejects_hidden_preference(hidden: HiddenPoint, merging: bool) {
+    let (app, pool, id) = app().await;
+    let mut tx = pool.begin().await.unwrap();
+    let member = persons::create_person(&mut tx, "Other person")
+        .await
+        .unwrap();
+    tx.commit().await.unwrap();
+    let added = apply(
+        &app,
+        &id,
+        "add-hidden",
+        json!([{"action":"addPoint","point":{"kind":"email","value":"hidden@example.test"}}]),
+    )
+    .await;
+    let hidden_id = added["data"]["points"][0]["id"].as_str().unwrap();
+    match hidden {
+        HiddenPoint::Replaced => {
+            apply(&app, &id, "replace-hidden", json!([{"action":"editPoint","pointId":hidden_id,"point":{"kind":"email","value":"replacement@example.test"}}])).await;
+        }
+        HiddenPoint::Removed => {
+            apply(
+                &app,
+                &id,
+                "remove-hidden",
+                json!([{"action":"removePoint","pointId":hidden_id}]),
+            )
+            .await;
+        }
+        HiddenPoint::UndoneAddition => {
+            assert_eq!(
+                undo(
+                    &app,
+                    &id,
+                    added["operation"]["id"].as_str().unwrap(),
+                    "undo-hidden"
+                )
+                .await
+                .0,
+                StatusCode::OK
+            );
+        }
+    }
+    let visible = apply(
+        &app,
+        &id,
+        "add-visible",
+        json!([{"action":"addPoint","point":{"kind":"email","value":"visible@example.test"}}]),
+    )
+    .await;
+    let visible_id = visible["data"]["points"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|point| point["value"] == "visible@example.test")
+        .unwrap()["id"]
+        .as_str()
+        .unwrap();
+    let editable = apply(&app, &id, "edit-visible", json!([{"action":"editPoint","pointId":visible_id,"point":{"kind":"email","value":"preferred@example.test"}}])).await;
+    let before = facts(&app, &id).await;
+    assert!(before["points"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|point| point["value"] == "preferred@example.test" && point["preferred"] == true));
+    let (status, body) = if merging {
+        send(&app, "POST", "/merges", json!({"canonicalId":id,"memberIds":[member],"expectedRevision":before["version"],"idempotencyKey":"hidden-merge","evidence":"Explicit test selection","preferredPointIds":[hidden_id]})).await
+    } else {
+        send(
+            &app,
+            "PUT",
+            &format!("/entities/{id}/contact-points/{hidden_id}/preferred"),
+            Value::Null,
+        )
+        .await
+    };
+    assert_eq!(
+        status,
+        if merging {
+            StatusCode::BAD_REQUEST
+        } else {
+            StatusCode::NOT_FOUND
+        },
+        "{body}"
+    );
+    assert_eq!(facts(&app, &id).await, before);
+    let (status, group) = send(
+        &app,
+        "GET",
+        &format!("/merges/groups/{member}"),
+        Value::Null,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(group["canonicalId"], member);
+    assert_eq!(
+        undo(
+            &app,
+            &id,
+            editable["operation"]["id"].as_str().unwrap(),
+            "undo-visible"
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+}
+
+#[tokio::test]
+async fn preferred_put_rejects_replaced_point_without_mutation() {
+    rejects_hidden_preference(HiddenPoint::Replaced, false).await;
+}
+
+#[tokio::test]
+async fn preferred_put_rejects_removed_point_without_mutation() {
+    rejects_hidden_preference(HiddenPoint::Removed, false).await;
+}
+
+#[tokio::test]
+async fn preferred_put_rejects_undone_addition_without_mutation() {
+    rejects_hidden_preference(HiddenPoint::UndoneAddition, false).await;
+}
+
+#[tokio::test]
+async fn merge_rejects_replaced_point_without_mutation() {
+    rejects_hidden_preference(HiddenPoint::Replaced, true).await;
+}
+
+#[tokio::test]
+async fn merge_rejects_removed_point_without_mutation() {
+    rejects_hidden_preference(HiddenPoint::Removed, true).await;
+}
+
+#[tokio::test]
+async fn merge_rejects_undone_addition_without_mutation() {
+    rejects_hidden_preference(HiddenPoint::UndoneAddition, true).await;
+}
+
+#[tokio::test]
+async fn preference_paths_accept_inactive_provider_observations() {
+    for merging in [false, true] {
+        let (app, pool, id) = app().await;
+        let mut input = imported(&pool, &id).await;
+        let original = facts(&app, &id).await["points"][0]["id"]
+            .as_str()
+            .unwrap()
+            .to_owned();
+        input.points.clear();
+        refresh(&pool, &input).await;
+        assert!(facts(&app, &id).await["points"]
+            .as_array()
+            .unwrap()
+            .is_empty());
+        let (status, body) = if merging {
+            let mut tx = pool.begin().await.unwrap();
+            let member = persons::create_person(&mut tx, "Other person")
+                .await
+                .unwrap();
+            tx.commit().await.unwrap();
+            let current = facts(&app, &id).await;
+            send(&app, "POST", "/merges", json!({"canonicalId":id,"memberIds":[member],"expectedRevision":current["version"],"idempotencyKey":"inactive-merge","evidence":"Retained provider evidence","preferredPointIds":[original]})).await
+        } else {
+            send(
+                &app,
+                "PUT",
+                &format!("/entities/{id}/contact-points/{original}/preferred"),
+                Value::Null,
+            )
+            .await
+        };
+        assert_eq!(
+            status,
+            if merging {
+                StatusCode::OK
+            } else {
+                StatusCode::NO_CONTENT
+            },
+            "{body}"
+        );
+        let current = facts(&app, &id).await;
+        assert_eq!(current["points"][0]["id"], original);
+        assert_eq!(current["points"][0]["active"], false);
+        assert_eq!(current["points"][0]["preferred"], true);
+    }
+}

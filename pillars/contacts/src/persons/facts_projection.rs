@@ -102,6 +102,22 @@ pub async fn points(
     Ok(())
 }
 
+/// Read a retained point unless a local fact decision hides it; inactive provider evidence remains selectable.
+pub async fn selectable_point(
+    conn: &mut SqliteConnection,
+    id: &str,
+) -> Result<Option<ContactPoint>, sqlx::Error> {
+    let point: Option<ContactPoint> = sqlx::query_as("SELECT id,entity_id,kind,value,normalized_value,label,country_code,source_record_id,active,preferred,created_at FROM contact_points WHERE id=?1")
+        .bind(id).fetch_optional(&mut *conn).await?;
+    let Some(point) = point else { return Ok(None) };
+    let canonical = resolve_one(conn, &point.entity_id)
+        .await?
+        .unwrap_or_else(|| point.entity_id.clone());
+    let mut rows = vec![point];
+    points(conn, &canonical, &mut rows).await?;
+    Ok(rows.pop())
+}
+
 /// Read effective addresses within an existing consistent snapshot, preserving retained address IDs.
 pub async fn addresses(
     conn: &mut SqliteConnection,

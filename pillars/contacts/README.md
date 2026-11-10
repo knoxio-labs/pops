@@ -137,6 +137,10 @@ its kind. Additions preserve the existing preference. Removal records a local
 visibility decision; source observations, original address rows and immutable
 source history remain stored. New provider point IDs are independent evidence,
 including when their text resembles a hidden observation.
+Replaced, locally removed and undone-added point IDs cannot be selected through
+the preferred-point endpoint or merge selections. Rejection preserves the
+directory version and existing Undo ownership. Inactive provider observations
+without a local visibility decision remain selectable.
 
 Undo accepts a freshly read `expectedVersion` and its own retry key. It restores
 only the operation's previous decisions and preferences while those targets are

@@ -103,9 +103,13 @@ pub async fn apply(
                 target: target.clone(),
             });
         }
+        let editing_point = matches!(&change, FactChange::EditPoint { .. });
         let value = execute_change(&mut tx, id, &target, change, &mut evidence).await?;
         for target in targets {
             set_decision(&mut tx, id, &target, &operation, &encode(&value)?).await?;
+        }
+        if let (true, DecisionValue::Point { id: point_id }) = (editing_point, &value) {
+            crate::merges::projection::prefer_point(&mut tx, id, point_id).await?;
         }
     }
     for selection in &evidence.selections {
@@ -238,7 +242,6 @@ async fn execute_change(
             if editing {
                 let field = format!("point:{}", point.kind);
                 remember_selection(conn, id, &field, evidence).await?;
-                crate::merges::projection::prefer_point(conn, id, &point.id).await?;
             }
             Ok(DecisionValue::Point { id: point.id })
         }
