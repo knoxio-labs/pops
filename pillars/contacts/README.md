@@ -51,6 +51,22 @@ loaded. It follows the host locale without a second i18next instance. The public
 `contactsI18n` metadata remains available to hosts with their own sanctioned
 translation registration.
 
+`readContactReference(uri, { signal })` is the public retained-reference reader.
+It verifies the owner-issued URI with `GET /entities/{id}/reference`, follows
+historical aliases to the canonical entity, then reads that entity's current
+name and data. An available result includes the actual name, entity, canonical
+reference and encoded generic Contacts route; entity type never determines the
+link or label. The reader does not depend on the creation catalogue.
+
+Only a resolver 404 means `missing`. Network, permission, service and cancelled
+reads are `unavailable`; malformed or inconsistent owner responses are
+`readError`. After successful identity proof, display-read failure retains that
+reference without claiming the contact is missing. Consumers keep an unread URI
+unverified and can clear it without calling the reader. Cancellation belongs to
+the caller; there is no automatic timeout or retry. IDs remain opaque and are
+not decoded or normalized. URL dot-segment IDs cannot be safely addressed by
+this path-based API and produce `readError` without following a normalized path.
+
 `GET /entity-types` publishes choices and the default from the backend's actual
 validation constants. Both creation surfaces consume that catalogue; retained
 unknown choices stay visible instead of being silently replaced. Search and
