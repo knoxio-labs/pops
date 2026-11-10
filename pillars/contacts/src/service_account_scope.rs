@@ -381,6 +381,14 @@ mod tests {
             Some("contacts.health.get")
         );
         assert_eq!(
+            scopes.resolve(&Method::GET, "/entity-types"),
+            Some("contacts.entities.catalogue")
+        );
+        assert_eq!(
+            scopes.resolve(&Method::GET, "/entities/{id}/reference"),
+            Some("contacts.entities.reference")
+        );
+        assert_eq!(
             scopes.allowed_methods("/health").as_deref(),
             Some("GET, HEAD")
         );

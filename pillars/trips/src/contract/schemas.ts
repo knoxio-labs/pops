@@ -19,7 +19,7 @@ export const SourceLinkSchema = z.object({
   label: z.string().optional(),
 });
 
-/** Independent planning facts: absent bounds stay unknown and contradictory dates stay editable. */
+/** Independent planning facts; durations need an explicit unit and at least one bound, while contradictory dates stay editable. */
 export const VisitTimingSchema = z.object({
   arrival: CalendarDateSchema.optional(),
   departure: CalendarDateSchema.optional(),
@@ -32,11 +32,18 @@ export const VisitTimingSchema = z.object({
     .optional(),
   duration: z
     .object({
-      min: z.number().nonnegative(),
-      max: z.number().nonnegative(),
+      min: z.number().nonnegative().optional(),
+      max: z.number().nonnegative().optional(),
       unit: z.enum(['days', 'weeks']),
     })
-    .refine((value) => value.max >= value.min, 'Maximum duration must not precede minimum')
+    .refine(
+      (value) => value.min !== undefined || value.max !== undefined,
+      'Duration requires at least one bound'
+    )
+    .refine(
+      (value) => value.min === undefined || value.max === undefined || value.max >= value.min,
+      'Maximum duration must not precede minimum'
+    )
     .optional(),
 });
 
@@ -71,6 +78,7 @@ export const VisitSchema = z.object({
   id: IdSchema,
   tripId: IdSchema,
   placeId: IdSchema,
+  revision: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),
   timing: VisitTimingSchema,
   ...SourceFields,
   ...AuditFields,
@@ -107,8 +115,10 @@ export const CreateVisitBody = z.object({
   sourceLinks: z.array(SourceLinkSchema).optional(),
 });
 
-/** Mutable visit facts; timing replaces the complete timing value so fields can be cleared. */
-export const UpdateVisitBody = CreateVisitBody.partial();
+/** Mutable visit facts with an optional compatibility precondition; timing replaces the complete value. */
+export const UpdateVisitBody = CreateVisitBody.partial().extend({
+  expectedRevision: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional(),
+});
 
 /** The complete visit order for one trip, containing each existing visit exactly once. */
 export const ReorderVisitsBody = z.object({ visitIds: z.array(IdSchema) });

@@ -91,7 +91,7 @@ describe('Journey persistence boundaries', () => {
       const body =
         kind === 'journey' ? { ...initialJourney, notes: next } : { ...initialLeg, notes: next };
       const transport = journeyTransport({
-        source: { journey: initialJourney, legs: [initialLeg] },
+        source: { legRevision: 0, journey: initialJourney, legs: [initialLeg] },
         writes: [{ status: 200, body }],
       });
       mount(transport);
@@ -109,7 +109,9 @@ describe('Journey persistence boundaries', () => {
       fireEvent.change(field, { target: { value: next } });
       fireEvent.blur(field);
       await waitFor(() => expect(writes(transport)).toHaveLength(1));
-      expect(writes(transport)[0]?.body).toEqual({ notes: next });
+      expect(writes(transport)[0]?.body).toEqual(
+        kind === 'journey' ? { notes: next } : { notes: next, expectedRevision: 0 }
+      );
       await waitFor(() => expect(field).toHaveValue(next));
     }
   );
@@ -118,7 +120,11 @@ describe('Journey persistence boundaries', () => {
     'preserves untouched local precision %s without a write',
     async (local) => {
       const transport = journeyTransport({
-        source: { journey: sourceJourney(), legs: [sourceLeg({ from: { local } })] },
+        source: {
+          legRevision: 0,
+          journey: sourceJourney(),
+          legs: [sourceLeg({ from: { local } })],
+        },
       });
       mount(transport);
       const field = await screen.findByLabelText('Departure local time');
@@ -139,7 +145,7 @@ describe('Journey persistence boundaries', () => {
     fireEvent.change(field, { target: { value: local } });
     fireEvent.blur(field);
     await waitFor(() => expect(writes(transport)).toHaveLength(1));
-    expect(writes(transport)[0]?.body).toEqual({ from });
+    expect(writes(transport)[0]?.body).toEqual({ from, expectedRevision: 0 });
     await waitFor(() => expect(screen.getByLabelText('Departure local time')).toHaveValue(local));
   });
   it('retains an invalid local draft after owner rejection without changing canonical source', async () => {
@@ -154,7 +160,7 @@ describe('Journey persistence boundaries', () => {
     expect(field).toHaveValue('2029-02-30T25:99');
     expect(
       cache.getQueryData(journeyKey({ tripId: 7, journeyId: 20, client: transport.client }))
-    ).toEqual({ journey: sourceJourney(), legs: [sourceLeg()] });
+    ).toEqual({ legRevision: 0, journey: sourceJourney(), legs: [sourceLeg()] });
     expect(screen.getByRole('button', { name: 'Undo' })).toBeDisabled();
   });
 
@@ -162,7 +168,7 @@ describe('Journey persistence boundaries', () => {
     'recovers ambiguous creation without another POST; owner reload fails: %s',
     async (ownerReadFails) => {
       const transport = journeyTransport({
-        source: { journey: sourceJourney(), legs: [] },
+        source: { legRevision: 0, journey: sourceJourney(), legs: [] },
         writes: [{ status: 503, body: sourceProblem('trips.create.unknown') }],
       });
       mount(transport);
@@ -172,6 +178,7 @@ describe('Journey persistence boundaries', () => {
       expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull();
       expect(screen.queryByRole('button', { name: 'Discard unsaved changes' })).toBeNull();
       transport.setSource({
+        legRevision: 0,
         journey: sourceJourney(),
         legs: [sourceLeg({ id: 99, mode: 'Created before response failed' })],
       });
@@ -193,6 +200,7 @@ describe('Journey persistence boundaries', () => {
   );
   it('shows the independent option source title and counts only explicit Purchased legs', async () => {
     const alternative = {
+      legRevision: 0,
       journey: sourceJourney({ id: 21, name: 'Independent night option' }),
       legs: [
         sourceLeg({ id: 41, journeyId: 21, purchase: 'Purchased' }),
@@ -211,6 +219,7 @@ describe('Journey persistence boundaries', () => {
   });
   it('adds an empty independent alternative with the existing group revision and no copied source fields', async () => {
     const empty = {
+      legRevision: 0,
       journey: sourceJourney({ id: 22, name: null, reference: null, sourceLinks: [], buffers: {} }),
       legs: [],
     };
@@ -222,6 +231,7 @@ describe('Journey persistence boundaries', () => {
           status: 201,
           body: {
             group: { ...group, alternativeJourneyIds: [22], revision: 4 },
+            legRevision: 0,
             journey: empty.journey,
           },
         },
@@ -263,7 +273,7 @@ describe('Journey persistence boundaries', () => {
       buffers: { minimumConnectionMinutes: 35, airportBufferMinutes: 75 },
     });
     const transport = journeyTransport({
-      source: { journey: initial, legs: [sourceLeg()] },
+      source: { legRevision: 0, journey: initial, legs: [sourceLeg()] },
       writes: [{ status: 200, body: sourceJourney({ buffers: { airportBufferMinutes: 75 } }) }],
     });
     mount(transport);
@@ -284,6 +294,7 @@ describe('Journey persistence boundaries', () => {
   });
   it('edits an independent alternative without selecting it or sending working-journey fields', async () => {
     const alternative = {
+      legRevision: 0,
       journey: sourceJourney({ id: 21, name: 'Independent option' }),
       legs: [sourceLeg({ id: 41, journeyId: 21, mode: 'Night coach' })],
     };
@@ -301,7 +312,11 @@ describe('Journey persistence boundaries', () => {
     fireEvent.blur(field);
     await waitFor(() =>
       expect(writes(transport)).toEqual([
-        { method: 'PATCH', path: '/trips/7/journeys/21/legs/41', body: { mode: 'Sleeper coach' } },
+        {
+          method: 'PATCH',
+          path: '/trips/7/journeys/21/legs/41',
+          body: { mode: 'Sleeper coach', expectedRevision: 0 },
+        },
       ])
     );
     expect(screen.getByRole('heading', { name: 'Harbour connection' })).toBeVisible();
@@ -310,7 +325,9 @@ describe('Journey persistence boundaries', () => {
     const selected = { ...group, currentJourneyId: 21, alternativeJourneyIds: [20], revision: 4 };
     const transport = journeyTransport({
       groups: [group],
-      alternatives: [{ journey: sourceJourney({ id: 21, name: 'Selected source' }), legs: [] }],
+      alternatives: [
+        { legRevision: 0, journey: sourceJourney({ id: 21, name: 'Selected source' }), legs: [] },
+      ],
       writes: [
         { status: 200, body: selected },
         { status: 200, body: { ...group, revision: 5 } },

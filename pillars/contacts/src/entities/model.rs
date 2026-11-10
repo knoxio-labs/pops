@@ -28,7 +28,7 @@ pub const DEFAULT_ENTITY_TYPE: &str = "company";
 /// The wire shape served by every entities route. `notionId`, `ownerUri`, and
 /// `ownerUriStaleAt` are deliberately NOT exposed (internal/integration
 /// columns).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct Entity {
     pub id: String,

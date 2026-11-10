@@ -1,5 +1,6 @@
 import { expect, test } from './fixtures/pillar-rest-guard';
 import { json, stubShellBoot } from './helpers/pillar-rest';
+import { stubUnavailableSourceDocuments } from './helpers/trips-source-documents';
 
 const trip = {
   id: 71,
@@ -55,6 +56,22 @@ test('Trips loads its real remote, creates permanently, and edits metadata throu
   await expect(page.getByRole('heading', { name: 'Hill country', exact: true })).toBeVisible();
   await expect(page.getByText('Whenever the ferry resumes', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Undo', exact: true })).toHaveCount(0);
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const [name, path] of [
+      ['Calendar', 'calendar'],
+      ['Documents', 'documents'],
+    ]) {
+      const link = page.getByRole('link', { name, exact: true });
+      await expect(link).toBeVisible();
+      await expect(link).toHaveAttribute('href', `/trips/72/${path}`);
+      expect((await link.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+    }
+    await page.screenshot({
+      path: `../../tmp/trips-documents/preview-${width}.png`,
+      fullPage: true,
+    });
+  }
   await page.goto('/trips/72/settings');
   await expect(page.getByRole('textbox', { name: 'Destination', exact: true })).toHaveValue(
     'Hill country'
@@ -116,6 +133,7 @@ test('A real stay identity mounts the existing source-backed workspace through t
     updatedAt: trip.updatedAt,
   };
   await stubShellBoot(page, ['trips']);
+  await stubUnavailableSourceDocuments(page, 71);
   await page.route(/\/trips-api\/trips\/71$/, (route) => json(route, 200, trip));
   await page.route(/\/trips-api\/places$/, (route) => json(route, 200, { places: [] }));
   await page.route(/\/trips-api\/trips\/71\/visits$/, (route) => json(route, 200, { visits: [] }));

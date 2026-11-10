@@ -1,5 +1,6 @@
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, FileText } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router';
 
 import { Button } from '@pops/ui';
 
@@ -44,6 +45,17 @@ export function TripPreview({
           </p>
         )}
       </header>
+      <div className="flex flex-wrap gap-2">
+        <Button asChild variant="outline" className="min-h-11">
+          <a href={`/trips/${trip.id}/calendar`}>{t('calendar')}</a>
+        </Button>
+        <Button asChild variant="outline" className="min-h-11">
+          <Link to={`/trips/${trip.id}/documents`}>
+            <FileText className="size-4" aria-hidden />
+            Documents
+          </Link>
+        </Button>
+      </div>
       <PreviewRoute visits={visits} places={places} locale={locale} />
       {trip.notes && (
         <section className="space-y-2 rounded-xl border border-border bg-card p-4">
@@ -79,9 +91,20 @@ function PreviewRoute({
         {visits.map((visit) => (
           <li key={visit.id} className="flex items-center justify-between gap-4 p-4">
             <div className="min-w-0">
-              <p className="break-words text-sm font-medium">
-                {placeTitle(visit.placeId, places, t('homeRows.placeUnavailable'))}
-              </p>
+              <Button
+                asChild
+                variant="ghost"
+                className="min-h-11 whitespace-normal px-0 text-left font-medium"
+              >
+                <a
+                  href={`/trips/${visit.tripId}/visits/${visit.id}`}
+                  aria-label={t('homeRows.openVisit', {
+                    name: placeTitle(visit.placeId, places, t('homeRows.placeUnavailable')),
+                  })}
+                >
+                  {placeTitle(visit.placeId, places, t('homeRows.placeUnavailable'))}
+                </a>
+              </Button>
               <p className="text-xs text-muted-foreground">{t('homeRows.visit')}</p>
             </div>
             <p className="text-right text-xs text-muted-foreground">

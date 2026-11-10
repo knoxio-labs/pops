@@ -7,9 +7,9 @@ import type {
   JourneyChange,
 } from './types';
 
-/** Only source PATCH and complete-order PUT support exact retry without ambiguous membership duplication. */
+/** Source edits, ordering and receipt-backed lifecycle writes retain exact retry intent; create remains ambiguous. */
 export function canRetryJourneyChange(change: JourneyChange): boolean {
-  return change.kind === 'journey' || change.kind === 'leg' || change.kind === 'order';
+  return change.kind !== 'create';
 }
 
 /** Complete mutable metadata snapshot for persisted undo, excluding audit/identity. */

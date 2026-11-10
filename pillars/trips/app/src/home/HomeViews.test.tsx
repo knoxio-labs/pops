@@ -2,6 +2,7 @@ import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createInstance } from 'i18next';
 import { I18nextProvider } from 'react-i18next';
+import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import enAU from '../locales/en-AU.json';
@@ -44,6 +45,7 @@ function visit(id: number, timing: Visit['timing'] = {}): Visit {
     id,
     tripId: 1,
     placeId: id,
+    revision: 0,
     timing,
     notes: '',
     sourceLinks: [],
@@ -89,13 +91,15 @@ function preview(source: Trip, visits: Visit[] | undefined, allTrips: Trip[] = [
   const onBack = vi.fn();
   render(
     <I18nextProvider i18n={translation}>
-      <TripPreview
-        trip={source}
-        visits={visits}
-        allTrips={allTrips}
-        places={places}
-        onBack={onBack}
-      />
+      <MemoryRouter>
+        <TripPreview
+          trip={source}
+          visits={visits}
+          allTrips={allTrips}
+          places={places}
+          onBack={onBack}
+        />
+      </MemoryRouter>
     </I18nextProvider>
   );
   return onBack;
@@ -160,7 +164,7 @@ describe('TripRows', () => {
 });
 
 describe('TripPreview', () => {
-  it('renders only selected source facts and offers only the working back action', async () => {
+  it('renders selected source facts and links visit occurrences, calendar and documents', async () => {
     const onBack = preview(
       trip(4, {
         name: 'Holiday',
@@ -183,11 +187,35 @@ describe('TripPreview', () => {
         .map((item) => item.textContent)
     ).toEqual(['LyonVisit10 Nov 2026 → 12 Nov 2026', 'ParisVisit… → …']);
     expect(screen.queryByText('Unrelated')).not.toBeInTheDocument();
-    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Open visit: Lyon' })).toHaveAttribute(
+      'href',
+      '/trips/1/visits/2'
+    );
+    expect(screen.getByRole('link', { name: 'Open visit: Paris' })).toHaveAttribute(
+      'href',
+      '/trips/1/visits/1'
+    );
+    expect(screen.getByRole('link', { name: 'Calendar' })).toHaveAttribute(
+      'href',
+      '/trips/4/calendar'
+    );
+    expect(screen.getByRole('link', { name: 'Documents' })).toHaveAttribute(
+      'href',
+      '/trips/4/documents'
+    );
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
     expect(screen.getAllByRole('button')).toHaveLength(1);
     await userEvent.click(screen.getByRole('button', { name: 'Trips' }));
     expect(onBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps repeated-city visit links distinct by source occurrence ID', () => {
+    preview(trip(1), [visit(1), { ...visit(2), placeId: 1 }]);
+    expect(
+      screen
+        .getAllByRole('link', { name: 'Open visit: Paris' })
+        .map((link) => link.getAttribute('href'))
+    ).toEqual(['/trips/1/visits/1', '/trips/1/visits/2']);
   });
 
   it.each([

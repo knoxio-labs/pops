@@ -18,6 +18,8 @@ import type {
   AddressMutation,
   EntitiesLookupResponses,
   EntityResponse,
+  EntityCatalogue,
+  EntityReferenceResponse,
   HealthResponse,
   IdentityGroup,
   MergeResult,
@@ -52,6 +54,30 @@ const entityById: MockHandler = ({ params }) => {
 };
 
 const mutation = { data: firstEntity, message: 'ok' };
+
+const personFacts: MockHandler = ({ params }) => {
+  const entity = CONTACT_ENTITIES.find((entity) => entity.id === params['id']);
+  if (!entity) return notFound('person', 'contacts.resource.not_found');
+  return {
+    status: 400,
+    body: {
+      code: 'contacts.request.invalid',
+      message: 'Entity must be a person',
+      requestId: 'finance-standalone-mock',
+      retryable: false,
+    },
+  };
+};
+
+const entityReference: MockHandler = ({ params }) => {
+  const entity = CONTACT_ENTITIES.find((entity) => entity.id === params['id']);
+  if (entity === undefined) return notFound('entity', 'contacts.resource.not_found');
+  const body: EntityReferenceResponse = {
+    canonicalId: entity.id,
+    uri: `pops:contacts/contact/${entity.id}`,
+  };
+  return { body };
+};
 
 const addressCreated: MockHandler = ({ params }) => {
   const body: AddressMutation = {
@@ -104,6 +130,10 @@ export const contactsHandlers: MockHandlers = {
     ts: '2026-09-05T08:00:00.000Z',
     version: 'standalone',
   }),
+  'GET /entity-types': ok<EntityCatalogue>({
+    types: ['company', 'person', 'government', 'bank', 'place', 'brand', 'organisation'],
+    defaultType: 'company',
+  }),
   'GET /entities': listEntities,
   'POST /entities': created(mutation),
   'POST /entities/resolve': resolveIdentities,
@@ -131,6 +161,10 @@ export const contactsHandlers: MockHandlers = {
     fetchedAt: '2026-09-05T08:00:00.000Z',
   }),
   'GET /entities/{id}': entityById,
+  'GET /entities/{id}/reference': entityReference,
+  'GET /entities/{id}/facts': personFacts,
+  'POST /entities/{id}/facts/changes': personFacts,
+  'POST /entities/{id}/facts/changes/{operation_id}/undo': personFacts,
   'PATCH /entities/{id}': ok(mutation),
   'DELETE /entities/{id}': ok({ message: 'deleted' }),
   'GET /entities/{id}/contact-points': ok({ data: [contactPoint.data] }),

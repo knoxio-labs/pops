@@ -64,6 +64,34 @@
       "when": 1794245591529,
       "tag": "0008_decision_source_provenance",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1794271955361,
+      "tag": "0009_journey_leg_removals",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1794276713849,
+      "tag": "0010_rental_responsibility",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1794283962093,
+      "tag": "0011_visit_revision",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1794299558818,
+      "tag": "0012_capture_workspace",
+      "breakpoints": true
     }
   ]
 }

@@ -2,9 +2,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { stayQueryKey } from './api';
 import { staySource } from './model';
 import { StayWorkspace } from './StayWorkspace';
-import { problem, sourceStay, workspaceTransport } from './test-utils';
+import { testNightLabel, problem, sourceStay, workspaceTransport } from './test-utils';
 
 const caches: QueryClient[] = [];
 afterEach(() => {
@@ -21,7 +22,7 @@ function mount(
   caches.push(cache);
   return render(
     <QueryClientProvider client={cache}>
-      <StayWorkspace {...identity} client={transport.client} />
+      <StayWorkspace formatNights={testNightLabel} {...identity} client={transport.client} />
     </QueryClientProvider>
   );
 }
@@ -35,6 +36,30 @@ async function saved() {
 }
 
 describe('Source-backed In visit stay workspace', () => {
+  it('retains the cached editor and unsaved draft through background read failure and retry', async () => {
+    const initial = sourceStay();
+    const transport = workspaceTransport({
+      gets: [
+        { status: 200, body: initial },
+        { status: 503, body: problem('trips.temporarily_unavailable') },
+      ],
+    });
+    const cache = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    mount(transport, undefined, cache);
+    const field = await screen.findByLabelText('Stay name');
+    fireEvent.change(field, { target: { value: 'Uncommitted stay' } });
+    const queryKey = stayQueryKey({ tripId: 7, stayId: 13, client: transport.client });
+    await act(async () => {
+      await cache.refetchQueries({ queryKey });
+    });
+    expect(await screen.findByText('trips.temporarily_unavailable')).toBeVisible();
+    expect(screen.getByLabelText('Stay name')).toHaveValue('Uncommitted stay');
+    expect(screen.getByText('Unsaved changes')).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    await waitFor(() => expect(screen.queryByText('trips.temporarily_unavailable')).toBeNull());
+    expect(screen.getByLabelText('Stay name')).toHaveValue('Uncommitted stay');
+    expect(transport.patches).toEqual([]);
+  });
   it('renders real sources and same-visit neighbours without defaulting soft status or copying visit dates', async () => {
     const transport = workspaceTransport({
       neighbours: [
@@ -49,7 +74,7 @@ describe('Source-backed In visit stay workspace', () => {
     expect(await screen.findByText('Neighbour source')).toBeVisible();
     expect(screen.queryByText('Foreign source')).toBeNull();
     expect(screen.getByRole('article', { name: 'Stay editor' })).toHaveClass('border-dashed');
-    expect(screen.getByText('Cedar host')).toBeVisible();
+    expect(screen.getByText('Source label: Cedar host')).toBeInTheDocument();
     expect(screen.getByText('pops:documents/document/unavailable')).toBeVisible();
     expect(transport.patches).toEqual([]);
   });
@@ -121,13 +146,13 @@ describe('Source-backed In visit stay workspace', () => {
     await edit('Stay name', 'Edited source');
     await saved();
     expect(transport.patches).toEqual([{ name: 'Edited source' }]);
-    expect(screen.getByText('Cedar host')).toBeVisible();
+    expect(screen.getByText('Source label: Cedar host')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Remove host link 1' }));
     await waitFor(() =>
       expect(transport.patches).toEqual([{ name: 'Edited source' }, { hostLinks: [] }])
     );
     await saved();
-    expect(screen.queryByText('Cedar host')).toBeNull();
+    expect(screen.queryByText('Source label: Cedar host')).toBeNull();
     expect(screen.getByText(initial.documentLinks[0]?.uri ?? '')).toBeVisible();
   });
 
@@ -306,7 +331,7 @@ describe('Source-backed In visit stay workspace', () => {
     });
     view.rerender(
       <QueryClientProvider client={cache}>
-        <StayWorkspace tripId={7} stayId={13} client={other.client} />
+        <StayWorkspace formatNights={testNightLabel} tripId={7} stayId={13} client={other.client} />
       </QueryClientProvider>
     );
     await waitFor(() =>
