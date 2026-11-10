@@ -24,3 +24,9 @@ Run the unit's discovered mise tasks for tests, typecheck, and the isolated remo
 REST operations and does not infer mixed route placement or alternative membership.
 Use journey replaces this literal source URL after selection succeeds; selection Undo
 persists its own revisioned inverse before restoring the original viewed URL.
+
+The decision persistence regression belongs to this app's integration boundary:
+it starts the owning Trips producer fixture and drives the public headless workspace
+editor through this app's generated client against SQLite. Both dependencies already
+belong to this app's declared graph, so filtered CI installs include the producer's
+native SQLite runtime without adding a lib-to-pillar dependency.

@@ -6,11 +6,14 @@ import { createInterface } from 'node:readline';
 import { expect, it } from 'vitest';
 
 import { unwrap } from '@pops/pillar-sdk/client';
+import {
+  applyDecisionCommand,
+  loadDecision,
+  createDecisionEditor,
+} from '@pops/trips-workspace/decision-client';
 
 import { createClient } from '../trips-api/client';
 import { decisionOptionsUpdate, journeysDelete, journeysGet } from '../trips-api/sdk.gen';
-import { applyDecisionCommand, loadDecision } from './api';
-import { createDecisionEditor } from './editor';
 
 const REAL_SUBPROCESS_TIMEOUT_MS = 60_000;
 
@@ -18,7 +21,7 @@ it(
   'restores an unlinked unavailable source through the actual editor inverse, generated HTTP client and SQLite producer',
   { timeout: REAL_SUBPROCESS_TIMEOUT_MS },
   async () => {
-    const fixture = resolve('../../pillars/trips/src/api/__tests__/decision-source.fixture.ts');
+    const fixture = resolve('../src/api/__tests__/decision-source.fixture.ts');
     const child = spawn(process.execPath, ['--import', 'tsx', fixture], {
       stdio: ['ignore', 'pipe', 'inherit'],
     });

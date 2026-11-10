@@ -82,3 +82,8 @@ or revision conflict clears stale Undo. Transient failures retain inverse intent
 retries keep their original revision, including after an unchanged refresh, and
 cannot silently rebase an uncertain create or inverse. The host supplies the parent
 navigation link and authenticated query/client context.
+
+`@pops/trips-workspace/decision-client` exports the headless decision controller
+and its generated-transport load/apply operations. The owning Trips app runs the
+real editor/HTTP/SQLite integration regression; this extractable library does not
+install or start a pillar runtime in its own unit tests.
