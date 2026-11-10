@@ -54,7 +54,7 @@ internal struct RootView: View {
             // device already paired — the two moments a fresh replica would
             // otherwise sit empty until something else asked for it.
             .task(id: pairedDevice) {
-                guard let pairedDevice else { return }
+                guard composition.experience.usesInventory, let pairedDevice else { return }
                 await composition.syncInventoryOnPairing(pairedDevice)
             }
             // Off the main actor: `pruneStaleInventoryReplicas` does blocking
@@ -62,7 +62,7 @@ internal struct RootView: View {
             // cleanup for a device this build is no longer paired to, not
             // anything the one it is paired to now is missing without.
             .task(id: pairedDevice) {
-                guard let pairedDevice else { return }
+                guard composition.experience.usesInventory, let pairedDevice else { return }
                 await Task.detached(priority: .utility) {
                     AppComposition.pruneStaleInventoryReplicas(keeping: pairedDevice)
                 }.value
@@ -104,10 +104,13 @@ internal struct RootView: View {
             .onChange(of: scenePhase) { _, phase in
                 switch phase {
                 case .active:
-                    composition.noteForeground()
+                    if composition.experience.usesInventory { composition.noteForeground() }
                     Task { await composition.shell.reloadBootstrap() }
-                    Task { await composition.refreshInventory() }
+                    if composition.experience.usesInventory {
+                        Task { await composition.refreshInventory() }
+                    }
                 case .background:
+                    guard composition.experience.usesInventory else { return }
                     let application = UIApplication.shared
                     BackgroundExecutionAssertion.hold(
                         begin: {
@@ -222,11 +225,16 @@ internal struct RootView: View {
                 )
             #endif
         case .content(let surface):
-            ContentView(
-                surface: surface,
-                shell: composition.shell,
-                composition: composition,
-                purchasesCaptureObserver: nil)
+            switch composition.experience {
+            case .pops:
+                ContentView(
+                    surface: surface,
+                    shell: composition.shell,
+                    composition: composition,
+                    purchasesCaptureObserver: nil)
+            case .trips:
+                TripsContentView(surface: surface, composition: composition)
+            }
         }
     }
 }

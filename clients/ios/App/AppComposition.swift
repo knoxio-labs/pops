@@ -34,6 +34,7 @@ import InventoryReplica
 /// would build a fresh HTTP client every time a body was evaluated.
 @MainActor
 internal final class AppComposition {
+    internal let experience: AppExperience
     internal let session: SessionStore
     internal let shell: AppShellModel
     internal let errorPresenter = AppErrorPresenter()
@@ -128,6 +129,7 @@ internal final class AppComposition {
     ///   - firstUnlock: Whether the phone has been unlocked since it started;
     ///     a marker under Application Support by default.
     internal init(
+        experience: AppExperience = .pops,
         credentialStore: DeviceCredentialStore = .live(),
         openInventoryReplica: @escaping (PairedDevice) throws -> InventoryReplica =
             AppComposition.onDiskInventoryReplica(for:),
@@ -147,6 +149,7 @@ internal final class AppComposition {
             BFMHTTPClient(baseURL: $0.baseURL, middlewares: [middleware])
         }
 
+        self.experience = experience
         self.session = session
         self.credentialStore = credentialStore
         self.streamAuthorizer = refresher
@@ -169,9 +172,9 @@ internal final class AppComposition {
             session: session,
             restorer: DeviceSessionRestorer(credentialStore: credentialStore),
             bootstrapService: { BFMBootstrapService(client: authenticated($0)) },
-            renderableFeatures: RootFeature.renderable
+            renderableFeatures: experience.renderableFeatures
         )
-        registerEntityRoutes()
+        if experience == .pops { registerEntityRoutes() }
     }
 
     private func registerEntityRoutes() {
@@ -196,46 +199,6 @@ internal final class AppComposition {
                 presentation.purchase = PurchaseEntity(uri)
             }
         }
-    }
-
-    /// Everything a paired device's screens may reach. Built per device rather
-    /// than at launch, for the reason in this type's note, and kept until the
-    /// device changes.
-    internal func dependencies(for device: PairedDevice) -> AppDependencies {
-        if let bound, bound.device == device { return bound.dependencies }
-
-        var storageFull = false
-        let errorPresenter = errorPresenter
-        let inventoryTransport = BFMInventoryTransport(
-            client: authenticated(device),
-            syncReadFailureObserver: { error, operation in
-                await errorPresenter.present(
-                    error, operation: operation, context: .background)
-            }
-        )
-        let dependencies = AppDependencies(
-            transactions: BFMTransactionsRepository(client: authenticated(device)),
-            pairing: BFMDevicePairingService(credentialStore: credentialStore),
-            reachability: shell,
-            receiptCapture: BFMReceiptCaptureRepository(client: authenticated(device)),
-            purchases: BFMPurchasesRepository(client: authenticated(device)),
-            merchants: BFMMerchantDirectoryRepository(client: authenticated(device)),
-            accounts: BFMAccountsRepository(client: authenticated(device)),
-            inventory: inventoryStore(
-                for: device, transport: inventoryTransport, storageFull: &storageFull),
-            codeSuggestions: inventoryTransport,
-            barcodeLookup: inventoryTransport,
-            parts: inventoryTransport,
-            documents: BFMInventoryDocumentsRepository(
-                client: authenticated(device), baseURL: device.baseURL,
-                authorizer: streamAuthorizer),
-            ego: BFMEgoRepository(
-                client: authenticated(device),
-                baseURL: device.baseURL,
-                authorizer: streamAuthorizer)
-        )
-        bound = BoundDevice(device: device, dependencies: dependencies, storageFull: storageFull)
-        return dependencies
     }
 
     /// Universal search's per-pillar providers, read from the same

@@ -6,7 +6,7 @@ set -eu
 : "${SRCROOT:?}"
 : "${DERIVED_FILE_DIR:?}"
 
-source_info="$SRCROOT/App/Info.plist"
+source_info="$SRCROOT/${POPS_INFO_PLIST:-App/Info.plist}"
 output_info="$DERIVED_FILE_DIR/Pops-Info.plist"
 
 mkdir -p "$DERIVED_FILE_DIR"
