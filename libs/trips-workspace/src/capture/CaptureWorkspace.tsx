@@ -1,23 +1,28 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { RotateCcw } from 'lucide-react';
-import { useSyncExternalStore } from 'react';
+import { useCallback, useState, useSyncExternalStore } from 'react';
 
 import { Button, ErrorState } from '@pops/ui';
 
 import { requestProblem } from '../stay/api';
-import { captureQueryKey, loadCaptureSource, performCaptureRequest } from './api';
-import { findCaptureSession, retainCaptureSession } from './browser-session';
+import { captureQueryKey, performCaptureRequest } from './api';
+import { findCaptureSessionForOwner, retainCaptureSession } from './browser-session';
 import { CaptureComposer } from './CaptureComposer';
 import { CaptureContactChooser } from './CaptureContactChooser';
 import { CaptureExplore } from './CaptureExplore';
 import { CaptureInbox } from './CaptureInbox';
+import { CaptureSelectedSource } from './CaptureSelectedSource';
 import { useCaptureContext } from './use-capture-context';
 import { useCaptureEditor } from './use-capture-editor';
+import { useCaptureQueryOwner } from './use-capture-owner';
+import { CaptureWorkspaceReadScope } from './workspace-read';
 
 import type { JSX } from 'react';
 
 import type { CaptureBrowserSession } from './browser-session';
+import type { CaptureEditorState } from './editor-types';
 import type { CaptureWorkspaceProps } from './types';
+import type { CaptureWorkspaceRead } from './workspace-read';
 
 /** Contextual Capture tools retain one owning-trip composer and command history across view remounts. */
 export function CaptureWorkspace(props: CaptureWorkspaceProps): JSX.Element {
@@ -31,14 +36,18 @@ export function CaptureWorkspace(props: CaptureWorkspaceProps): JSX.Element {
 }
 function LoadWorkspace(props: CaptureWorkspaceProps): JSX.Element {
   const cache = useQueryClient();
-  const retained = findCaptureSession(cache, props);
+  const [scope] = useState(() => new CaptureWorkspaceReadScope(props));
+  const currentOwner = useCaptureQueryOwner(props);
+  const select = useCallback(
+    (read: CaptureWorkspaceRead) => scope.select(currentOwner, read),
+    [scope, currentOwner]
+  );
+  const retained = findCaptureSessionForOwner(cache, scope.owner.captured);
   const query = useQuery({
-    queryKey: captureQueryKey(props),
+    queryKey: scope.key,
     retry: false,
-    queryFn: async ({ signal }) => {
-      const generation = findCaptureSession(cache, props)?.editor.getState().generation ?? 0;
-      return { source: await loadCaptureSource(props, signal), generation };
-    },
+    queryFn: ({ signal }) => scope.load(cache, props, signal),
+    select,
   });
   if (retained === undefined && query.data === undefined)
     return query.isError ? (
@@ -56,36 +65,23 @@ function LoadWorkspace(props: CaptureWorkspaceProps): JSX.Element {
         contacts: props.contacts,
       }));
   if (!session) throw new Error('Missing source session');
-  return <WorkspaceSession session={session} query={query} {...props} />;
+  return <WorkspaceSession session={session} query={query} scope={scope} {...props} />;
 }
 function WorkspaceSession({
   session,
   query,
+  scope,
   ...props
 }: CaptureWorkspaceProps & {
   session: CaptureBrowserSession;
-  query: ReturnType<
-    typeof useQuery<{ source: Awaited<ReturnType<typeof loadCaptureSource>>; generation: number }>
-  >;
+  query: ReturnType<typeof useQuery<CaptureWorkspaceRead>>;
+  scope: CaptureWorkspaceReadScope;
 }): JSX.Element {
-  const editor = session.editor;
-  const state = useCaptureEditor(session, props, query.data);
-  const context = useCaptureContext(props);
+  const state = useCaptureEditor(session, props, query.data, scope.key);
+  const context = useCaptureContext(props, scope);
   return (
     <section aria-label="Capture tools" className="space-y-5">
-      <header className="flex items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold">
-          {{ capture: 'Capture', inbox: 'Inbox', explore: 'Explore' }[props.view]}
-        </h2>
-        <Button
-          variant="ghost"
-          disabled={state.busy || state.undoCount === 0}
-          onClick={() => void editor.undo()}
-        >
-          <RotateCcw className="size-4" aria-hidden />
-          Undo
-        </Button>
-      </header>
+      <WorkspaceHeader session={session} view={props.view} state={state} />
       <CaptureContactChooser session={session} />
       {query.isError ? (
         <ErrorState error={requestProblem(query.error)} onRetry={() => void query.refetch()} />
@@ -98,11 +94,20 @@ function WorkspaceSession({
             <ErrorState error={requestProblem(value.error)} onRetry={() => void value.refetch()} />
           </section>
         ))}
-      <CaptureComposer session={session} state={state} context={context} {...props} />
-      {props.view === 'inbox' ? (
+      {props.selectedSource ? (
+        <CaptureSelectedSource
+          selected={props.selectedSource}
+          session={session}
+          context={context}
+          {...props}
+        />
+      ) : (
+        <CaptureComposer session={session} state={state} context={context} {...props} />
+      )}
+      {!props.selectedSource && props.view === 'inbox' ? (
         <CaptureInbox session={session} documentsClient={props.documentsClient} />
       ) : null}
-      {props.view === 'explore' ? (
+      {!props.selectedSource && props.view === 'explore' ? (
         <CaptureExplore
           session={session}
           context={context}
@@ -112,6 +117,32 @@ function WorkspaceSession({
       ) : null}
       {state.busy ? <p role="status">Saving…</p> : null}
     </section>
+  );
+}
+
+function WorkspaceHeader({
+  session,
+  view,
+  state,
+}: {
+  session: CaptureBrowserSession;
+  view: CaptureWorkspaceProps['view'];
+  state: CaptureEditorState;
+}): JSX.Element {
+  return (
+    <header className="flex items-center justify-between gap-3">
+      <h2 className="text-lg font-semibold">
+        {{ capture: 'Capture', inbox: 'Inbox', explore: 'Explore' }[view]}
+      </h2>
+      <Button
+        variant="ghost"
+        disabled={state.busy || state.undoCount === 0}
+        onClick={() => void session.editor.undo()}
+      >
+        <RotateCcw className="size-4" aria-hidden />
+        Undo
+      </Button>
+    </header>
   );
 }
 

@@ -101,4 +101,4 @@ export type { CalendarWorkspaceProps, CalendarSource } from './calendar/types';
 
 /** Shared text-first Capture, inline Inbox and Explore source surfaces. */
 export { CaptureWorkspace } from './capture/CaptureWorkspace';
-export type { CaptureWorkspaceProps } from './capture/types';
+export type { CaptureWorkspaceProps, CaptureSourceSelection } from './capture/types';

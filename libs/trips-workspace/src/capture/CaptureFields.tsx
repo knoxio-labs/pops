@@ -15,10 +15,12 @@ export function CaptureFields({
   session,
   capture,
   busy,
+  expanded,
 }: {
   session: CaptureBrowserSession;
   capture: Capture;
   busy: boolean;
+  expanded?: boolean;
 }): JSX.Element {
   useSyncExternalStore(
     session.records.subscribe,
@@ -27,7 +29,7 @@ export function CaptureFields({
   );
   const draft = session.records.capture(capture.id);
   return (
-    <details>
+    <details open={expanded}>
       <summary className="min-h-11 cursor-pointer py-3 text-sm">Edit capture</summary>
       <div className="space-y-3">
         <TextInput

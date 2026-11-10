@@ -1,15 +1,18 @@
+import { sourceOwner } from '../arrangements/source-owner';
 import { createDocumentUploadSession } from '../documents/useUploadFields';
 import { CaptureContactChoices } from './contact-choices';
 import { CaptureContactReferenceReads } from './contact-reference-reads';
 import { createCaptureEditor } from './editor';
 import { CaptureRecordDrafts } from './record-drafts';
 import { CaptureReferenceIdentities } from './reference-identities';
+import { CaptureSourceOwner } from './source-owner';
 
 import type { QueryClient } from '@tanstack/react-query';
 import type { Dispatch, SetStateAction } from 'react';
 
 import type { ContactsHostCapability } from '@pops/pillar-sdk';
 
+import type { SourceOwner } from '../arrangements/source-owner';
 import type { DocumentUploadSession } from '../documents/useUploadFields';
 import type { CaptureEditor } from './editor-types';
 import type { CaptureIdentity, CapturePerformer, CaptureSource } from './types';
@@ -32,6 +35,7 @@ export class CaptureBrowserSession {
   private uploads = new Map<string, DocumentUploadSession>();
   private listeners = new Set<() => void>();
   private version = 0;
+  private owner: CaptureSourceOwner | undefined;
   constructor(
     source: CaptureSource,
     tripId: number,
@@ -45,6 +49,11 @@ export class CaptureBrowserSession {
       contacts?.readContactReference,
       this.contacts.hasKnownReference
     );
+  }
+  /** Rebind the current transport without permitting retained commands to change their semantic owner. */
+  bindPerformer(identity: CaptureIdentity, perform: CapturePerformer): void {
+    this.owner ??= new CaptureSourceOwner(identity);
+    this.editor.setPerformer(this.owner.bind(identity, perform));
   }
   /** Observe retained upload changes without storing bytes outside this browser session. */
   subscribe = (listener: () => void): (() => void) => {
@@ -95,7 +104,14 @@ export function findCaptureSession(
   cache: QueryClient,
   identity: CaptureIdentity
 ): CaptureBrowserSession | undefined {
-  return sessions.get(cache)?.get(sessionKey(identity));
+  return findCaptureSessionForOwner(cache, sourceOwner(identity));
+}
+/** Look up the captured semantic owner without consulting its later mutable transport configuration. */
+export function findCaptureSessionForOwner(
+  cache: QueryClient,
+  owner: Pick<SourceOwner, 'origin' | 'tripId'>
+): CaptureBrowserSession | undefined {
+  return sessions.get(cache)?.get(sessionKey(owner));
 }
 /** Reuse the same session across contextual Capture, Inbox and Explore remounts. */
 export function retainCaptureSession(
@@ -109,14 +125,15 @@ export function retainCaptureSession(
     owned = new Map();
     sessions.set(cache, owned);
   }
-  const key = sessionKey(identity);
+  const key = sessionKey(sourceOwner(identity));
   let session = owned.get(key);
   if (session === undefined) {
     session = new CaptureBrowserSession(source, identity.tripId, options.perform, options.contacts);
+    session.bindPerformer(identity, options.perform);
     owned.set(key, session);
   }
   return session;
 }
-function sessionKey(identity: CaptureIdentity): string {
-  return JSON.stringify([identity.client?.getConfig().baseUrl ?? '/trips-api', identity.tripId]);
+function sessionKey(owner: Pick<SourceOwner, 'origin' | 'tripId'>): string {
+  return JSON.stringify([owner.origin, owner.tripId]);
 }

@@ -18,7 +18,8 @@ export function IdeaFields({
   row,
   busy,
   context,
-}: Omit<IdeaFieldProps, 'value'>): JSX.Element {
+  expanded,
+}: Omit<IdeaFieldProps, 'value'> & { expanded?: boolean }): JSX.Element {
   useSyncExternalStore(
     session.records.subscribe,
     session.records.getVersion,
@@ -27,7 +28,7 @@ export function IdeaFields({
   const draft = session.records.idea(row.id);
   const props = { session, row, value: { ...row, ...draft?.input }, busy, context };
   return (
-    <details>
+    <details open={expanded}>
       <summary className="min-h-11 cursor-pointer py-3 text-sm">Edit Idea {row.id}</summary>
       <div className="space-y-4">
         <IdeaFindings value={props.value} context={context} />
