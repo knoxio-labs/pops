@@ -12,6 +12,12 @@ import {
   updatePlace,
   updateVisit,
 } from '../../db/services/records.js';
+import {
+  makeCaptureHandlers,
+  makeIdeaHandlers,
+  makeExploreHandlers,
+  makeCaptureWorkspaceHandlers,
+} from './captures.js';
 import { makeDecisionHandlers, makeDecisionOptionHandlers } from './decisions.js';
 import { makeDocumentAssociationHandlers } from './document-associations.js';
 import { makeEventHandlers } from './events.js';
@@ -33,6 +39,10 @@ export function makeTripsRestHandlers(
 ): ReturnType<typeof server.router<typeof tripsContract>> {
   const db = deps.tripsDb.db;
   return server.router(tripsContract, {
+    captureWorkspace: makeCaptureWorkspaceHandlers(db),
+    captures: makeCaptureHandlers(db),
+    ideas: makeIdeaHandlers(db),
+    explore: makeExploreHandlers(db),
     rentals: makeRentalHandlers(db),
     responsibilities: makeResponsibilityHandlers(deps),
     events: makeEventHandlers(db),

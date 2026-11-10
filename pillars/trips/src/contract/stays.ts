@@ -43,6 +43,6 @@ export const staysContract = c.router({
     path: '/trips/:tripId/stays/:id',
     pathParams: Stay,
     body: c.noBody(),
-    responses: { 204: c.noBody(), ...errors },
+    responses: { 204: c.noBody(), ...errors, 409: ErrorBodySchema },
   },
 });
