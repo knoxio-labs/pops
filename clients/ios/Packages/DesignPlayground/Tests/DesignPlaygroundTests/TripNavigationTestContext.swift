@@ -1,4 +1,5 @@
 import AppCore
+import Foundation
 import Testing
 import ViewInspector
 
@@ -12,8 +13,17 @@ internal struct TripNavigationTestContext {
     internal let model: TripsModel
     internal let root: TripsRootView
 
+    internal static func snapshot() throws -> TripSnapshot {
+        let packages = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent()
+            .deletingLastPathComponent().deletingLastPathComponent()
+        let fixture = packages.appendingPathComponent(
+            "FeatureTrips/Tests/FeatureTripsTests/Resources/trip-source.json")
+        return try JSONDecoder().decode(TripSnapshot.self, from: Data(contentsOf: fixture))
+    }
+
     internal static func make() async throws -> Self {
-        let first = try TripTestSources.snapshot()
+        let first = try snapshot()
         let second = TripSnapshot(
             trip: TripRecord(
                 id: 2, name: "Intent B", destination: "", when: "",

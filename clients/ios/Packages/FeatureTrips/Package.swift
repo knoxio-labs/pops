@@ -13,7 +13,6 @@ let package = Package(
     dependencies: [
         .package(path: "../AppCore"),
         .package(path: "../DesignSystem"),
-        .package(url: "https://github.com/nalexn/ViewInspector.git", exact: "0.10.5"),
     ],
     targets: [
         .target(
@@ -22,10 +21,7 @@ let package = Package(
         ),
         .testTarget(
             name: "FeatureTripsTests",
-            dependencies: [
-                "FeatureTrips", "AppCore", "DesignSystem",
-                .product(name: "ViewInspector", package: "ViewInspector"),
-            ],
+            dependencies: ["FeatureTrips", "AppCore", "DesignSystem"],
             resources: [.process("Resources")],
             swiftSettings: strictSwiftSettings
         ),

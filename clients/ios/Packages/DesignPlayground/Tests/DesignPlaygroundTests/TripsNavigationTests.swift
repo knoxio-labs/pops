@@ -19,7 +19,7 @@ internal struct TripsNavigationTests {
 
     @Test("the selected snapshot is the one Timeline and retains its exact reader identity")
     internal func selectedTimeline() async throws {
-        let snapshot = try TripTestSources.snapshot()
+        let snapshot = try TripNavigationTestContext.snapshot()
         let reader = NavigationReader(snapshot: snapshot)
         let model = TripsModel(repository: reader)
         await model.select(snapshot.trip.id)
@@ -32,7 +32,7 @@ internal struct TripsNavigationTests {
 
     @Test("calendar grouping preserves undated originals and spanning intervals inside a range")
     internal func undatedAndSpanningRows() throws {
-        let snapshot = try TripTestSources.snapshot()
+        let snapshot = try TripNavigationTestContext.snapshot()
         var filter = TripTimelineFilter()
         filter.grouping = .day
         filter.fromDay = "2026-01-02"
@@ -49,7 +49,7 @@ internal struct TripsNavigationTests {
         "app search invokes exact source and trip actions instead of creating a second detail route"
     )
     internal func searchActions() throws {
-        let snapshot = try TripTestSources.snapshot()
+        let snapshot = try TripNavigationTestContext.snapshot()
         var chosen: [String] = []
         var trips: [Int] = []
         let sources = TripsSearchResults(
@@ -74,7 +74,7 @@ internal struct TripsNavigationTests {
         "contextual details resolve the current record and reject a foreign Trip with a colliding ID"
     )
     internal func canonicalDetails() async throws {
-        let snapshot = try TripTestSources.snapshot()
+        let snapshot = try TripNavigationTestContext.snapshot()
         let reader = NavigationReader(snapshot: snapshot)
         let model = TripsModel(repository: reader)
         await model.select(snapshot.trip.id)

@@ -25,7 +25,7 @@ internal struct TripsTimelineControlTests {
 
     @Test("the Documents shortcut opens the original Trip snapshot")
     internal func documents() throws {
-        let snapshot = try TripTestSources.snapshot()
+        let snapshot = try TripNavigationTestContext.snapshot()
         let view = TripsDocumentShortcut(snapshot: snapshot, repository: ShortcutReader())
         let destination = try view.inspect().find(ViewType.NavigationLink.self)
             .view(TripsDocumentsView.self).actualView()
