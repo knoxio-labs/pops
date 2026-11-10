@@ -1,5 +1,6 @@
 import { captureSource } from '../capture/test-utils';
 import { sourceJourney, sourceLeg } from '../journey/test-utils';
+import { routeRead } from '../route/test-utils';
 import { sourcePlaces, sourceStay, sourceVisits } from '../stay/test-utils';
 
 import type { Trip } from '../stay/types';
@@ -89,5 +90,9 @@ export function overviewResponses(): Map<string, unknown> {
     ['/trips/7/meeting-plans', { meetingPlans: [] }],
     ['/trips/7/capture-workspace', captureSource()],
     ['/trips/7/rentals', { rentals: [] }],
+    [
+      '/trips/7/route',
+      routeRead({ order: sourceVisits.map((visit) => ({ kind: 'visit', id: visit.id })) }),
+    ],
   ]);
 }

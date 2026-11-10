@@ -1,11 +1,12 @@
 import { Button, cn, ErrorState, PageHeader } from '@pops/ui';
 
+import { projectTripRoute } from '../route/projection';
+import { useTripRoute } from '../route/use-trip-route';
 import { requestProblem } from '../stay/api';
-import { dateRange } from './model';
 import { OverviewCalendar } from './OverviewCalendar';
-import { OverviewJourneys } from './OverviewJourneys';
 import { OverviewDetached, OverviewReferences } from './OverviewReferences';
 import { OverviewRoute } from './OverviewRoute';
+import { routeDateRange } from './route-context';
 import { useOverviewSources } from './use-overview-sources';
 
 import type { JSX } from 'react';
@@ -27,6 +28,7 @@ export function TripOverview(props: TripOverviewProps): JSX.Element | null {
 
 function OverviewSession(props: TripOverviewProps): JSX.Element | null {
   const queries = useOverviewSources(props);
+  const route = useTripRoute(props);
   const { trip, ...context } = queries;
   if (trip.isPending)
     return (
@@ -61,7 +63,13 @@ function OverviewSession(props: TripOverviewProps): JSX.Element | null {
           </section>
         ) : null
       )}
-      <OverviewContent {...props} trip={trip.data} sources={sources} />
+      <OverviewContent
+        {...props}
+        trip={trip.data}
+        sources={sources}
+        route={route}
+        projection={route.view ? projectTripRoute(route.view, sources) : undefined}
+      />
       {Object.values(context).some((query) => query.isPending) && (
         <p role="status" className="text-muted-foreground">
           {props.labels.loading}
@@ -81,7 +89,6 @@ function OverviewContent(props: OverviewViewProps): JSX.Element | null {
       <div className={cn('grid min-w-0 gap-6', hasReferences && 'xl:grid-cols-3')}>
         <div className={cn('min-w-0 space-y-6', hasReferences && 'xl:col-span-2')}>
           <OverviewRoute {...props} />
-          <OverviewJourneys {...props} />
           <OverviewDetached {...props} />
           {trip.notes && (
             <section className="space-y-2">
@@ -97,13 +104,9 @@ function OverviewContent(props: OverviewViewProps): JSX.Element | null {
 }
 
 function OverviewHeader(props: OverviewViewProps): JSX.Element {
-  const { trip, sources } = props;
+  const { trip } = props;
   const title = trip.name?.trim() || trip.destination.trim() || props.labels.trip;
-  const bounds = dateRange(
-    sources.visits?.[0]?.timing.arrival,
-    sources.visits?.at(-1)?.timing.departure,
-    props.locale
-  );
+  const bounds = routeDateRange(props.projection, props.locale);
   return (
     <>
       <PageHeader

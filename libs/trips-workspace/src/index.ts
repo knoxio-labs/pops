@@ -54,6 +54,7 @@ export type {
   TripOverviewProps,
   OverviewLabels,
   OverviewKind,
+  OverviewPlacementTarget,
   OverviewLinkKind,
   OverviewSource,
   OverviewTool,

@@ -54,8 +54,12 @@ Trip, Place, ordered Visit, Journey, Journey group, Stay, Event, Rental, Meeting
 Capture workspace, Decision and document-association reads fail independently;
 cached successes remain visible during refresh failures. Missing source references
 retain their identities. Only explicit Visit IDs attach stays and events to route
-occurrences. Journeys remain independent of visits, with current and alternative
-identities supplied solely by explicit groups. An Alternative event stays visible.
+occurrences. The shared route reader/projector supplies mixed Visit/Journey root order,
+persisted gaps, complete alternative paths, applied history and unplaced sources.
+Missing references require explicit producer proof; failed reads remain unavailable.
+Journey groups retain their independent current/alternative identities without placing
+sources. Optional `onOpenPlacement` opens exact gap/path identities through the host;
+without it structural references remain read-only. An Alternative event stays visible.
 Only Purchased sources get hard styling. Date-only values never move timezone, and
 partial bounds, approximate months, duration and opaque trip When text stay distinct.
 Document associations identify their originals without claiming external resolution.

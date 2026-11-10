@@ -3,6 +3,7 @@ import { contextRecords, ContextSources } from './ContextSources';
 import { dateLabel, detachedByVisit, detachedRecords } from './model';
 import { OverviewDocuments } from './OverviewDocuments';
 import { overviewRentals, RentalCard } from './OverviewRentals';
+import { renderedVisitReferences } from './route-context';
 import { sourceAction } from './source-action';
 import { SourceCard } from './SourceCard';
 
@@ -12,7 +13,7 @@ import type { OverviewViewProps } from './types';
 
 /** Unassociated facts and missing visit references remain visible as their own source records. */
 export function OverviewDetached(props: OverviewViewProps): JSX.Element | null {
-  const visits = props.sources.visits ?? [];
+  const visits = renderedVisitReferences(props);
   const stays = detachedRecords(props.sources.stays ?? [], visits);
   const events = detachedRecords(props.sources.events ?? [], visits);
   const contextual = detachedByVisit(

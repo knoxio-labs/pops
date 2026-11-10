@@ -5,6 +5,9 @@ import type { CalendarSelection } from '../calendar/types';
 import type { CaptureSource } from '../capture/types';
 import type { Journey, JourneyGroup } from '../journey/types';
 import type { MeetingPlan } from '../people/types';
+import type { RouteProjection } from '../route/projection';
+import type { RouteItem, RoutePath } from '../route/types';
+import type { TripRouteController } from '../route/use-trip-route';
 import type { Place, Stay, Trip, Visit } from '../stay/types';
 import type { Client } from '../trips-api/client';
 import type {
@@ -25,6 +28,10 @@ export type OverviewLinkKind = 'visit' | 'stay' | 'event' | 'journey' | 'decisio
 export type OverviewKind = OverviewLinkKind | 'rental' | 'meeting' | 'capture' | 'idea';
 /** Exact source identities remain discriminated even when numeric IDs coincide. */
 export type OverviewSource = { [K in OverviewKind]: { kind: K; id: number } }[OverviewKind];
+/** Persisted structural identity; the host owns the canonical route controller and editor. */
+export type OverviewPlacementTarget =
+  | Extract<RouteItem, { kind: 'gap' }>
+  | { kind: 'path'; id: RoutePath['id'] };
 /** Existing contextual tools; each host mounts its canonical editor rather than another destination. */
 export type OverviewTool = 'people' | 'capture' | 'inbox' | 'explore';
 /** Existing explicit date/zone/source-window controls, owned by the Timeline host. */
@@ -77,6 +84,7 @@ interface OverviewBaseProps {
   backHref: string;
   settingsHref?: string;
   href?: (kind: OverviewLinkKind, id: number) => string | undefined;
+  onOpenPlacement?: (target: OverviewPlacementTarget) => void;
   onOpenTool?: (tool: OverviewTool) => void;
   controls?: ReactNode;
   contextualEditor?: ReactNode;
@@ -93,4 +101,6 @@ export type TripOverviewProps = OverviewBaseProps &
 export type OverviewViewProps = TripOverviewProps & {
   trip: Trip;
   sources: OverviewSources;
+  route: TripRouteController;
+  projection: RouteProjection | undefined;
 };

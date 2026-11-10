@@ -5,7 +5,6 @@ import { Badge, ErrorState } from '@pops/ui';
 
 import { requestProblem } from '../stay/api';
 import { journeyLegsList } from '../trips-api/sdk.gen';
-import { journeyRecords } from './model';
 import { sourceAction } from './source-action';
 import { SourceCard } from './SourceCard';
 
@@ -14,57 +13,51 @@ import type { JSX } from 'react';
 import type { Journey, JourneyLeg } from '../journey/types';
 import type { OverviewViewProps } from './types';
 
-/** Independent journeys and explicit alternatives remain outside the visit rail until placement has a contract. */
+/** Historical Journey group references remain distinct from active route placement. */
 export function OverviewJourneys(props: OverviewViewProps): JSX.Element | null {
-  const projection = journeyRecords(props.sources.journeys ?? [], props.sources.groups ?? []);
-  if (!projection.groups.length && !projection.independent.length) return null;
+  const groups = props.sources.groups ?? [];
+  if (!groups.length) return null;
   return (
     <section aria-label={props.labels.journeys} className="min-w-0 space-y-3">
       <h2 className="border-b pb-2 text-lg font-semibold">{props.labels.journeys}</h2>
-      {projection.groups.map(({ group, current, alternatives }) => (
+      {groups.map((group) => (
         <section
           key={group.id}
           className="min-w-0 space-y-3 border-l-2 border-border pl-3"
           aria-label={props.labels.source('group', group.id)}
         >
           <Badge variant="secondary">{props.labels.current}</Badge>
-          {current ? (
-            <JourneyRecord {...props} journey={current} />
-          ) : (
-            <MissingJourney {...props} id={group.currentJourneyId} />
-          )}
-          {alternatives.length > 0 && (
+          <JourneyReference {...props} id={group.currentJourneyId} />
+          {group.alternativeJourneyIds.length > 0 && (
             <details>
               <summary className="min-h-11 cursor-pointer py-3 text-sm text-muted-foreground">
-                {props.labels.alternatives} ({alternatives.length})
+                {props.labels.alternatives} ({group.alternativeJourneyIds.length})
               </summary>
               <div className="space-y-3">
-                {alternatives.map(({ id, journey }) =>
-                  journey ? (
-                    <JourneyRecord key={id} {...props} journey={journey} />
-                  ) : (
-                    <MissingJourney key={id} {...props} id={id} />
-                  )
-                )}
+                {group.alternativeJourneyIds.map((id) => (
+                  <JourneyReference key={id} {...props} id={id} />
+                ))}
               </div>
             </details>
           )}
         </section>
       ))}
-      {projection.independent.map((journey) => (
-        <JourneyRecord key={journey.id} {...props} journey={journey} />
-      ))}
     </section>
   );
 }
 
-function MissingJourney(props: OverviewViewProps & { id: number }): JSX.Element {
+function JourneyReference(props: OverviewViewProps & { id: number }): JSX.Element {
+  const available = props.sources.journeys?.some(
+    (journey) => journey.id === props.id && journey.tripId === props.tripId
+  );
   const title = props.labels.source('journey', props.id);
   return (
     <SourceCard
       kind="journey"
       title={
-        props.sources.journeys === undefined ? title : `${title} · ${props.labels.unavailable}`
+        available || props.sources.journeys === undefined
+          ? title
+          : `${title} · ${props.labels.unavailable}`
       }
       {...sourceAction(props, { kind: 'journey', id: props.id })}
       labels={props.labels}
@@ -72,7 +65,8 @@ function MissingJourney(props: OverviewViewProps & { id: number }): JSX.Element 
   );
 }
 
-function JourneyRecord({
+/** Read one canonical Journey and its actual ordered leg facts without assigning it to a Visit. */
+export function JourneyRecord({
   journey,
   ...props
 }: OverviewViewProps & { journey: Journey }): JSX.Element | null {
