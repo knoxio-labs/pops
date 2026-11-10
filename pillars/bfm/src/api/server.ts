@@ -68,6 +68,8 @@ import {
   startPruneCredentialsWorker,
   type PruneCredentialsWorkerHandle,
 } from './cron/prune-credentials.js';
+import { createMobileDocumentsBytesClient } from './documents/bytes-client.js';
+import { createMobileDocumentsClient } from './documents/client.js';
 import { createMobileEgoClient } from './ego/client.js';
 import { createEgoStreamClient } from './ego/stream-client.js';
 import { createMobileFinanceClient } from './finance/client.js';
@@ -123,6 +125,8 @@ const contacts = createMobileContactsClient(gateway);
 const barcode = createMobileBarcodeClient(gateway);
 const ego = createMobileEgoClient(gateway);
 const trips = createMobileTripsClient(gateway);
+const documents = createMobileDocumentsClient(gateway);
+const documentBytes = createMobileDocumentsBytesClient();
 const egoStream = createEgoStreamClient();
 
 // Its own gateway, not the shared one above: this is the one leg that must
@@ -176,6 +180,8 @@ const app = createBfmApiApp(
     barcode,
     ego,
     trips,
+    documents,
+    documentBytes,
     egoStream,
     barcodeLogger: {
       info: (message, context) => {
