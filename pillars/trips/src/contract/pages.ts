@@ -3,6 +3,7 @@ export const TRIPS_PAGES = [
   { path: '', index: true, bundleSlot: 'trips-home' },
   { path: ':tripId/stays/:stayId', bundleSlot: 'trips-stay' },
   { path: ':tripId/journeys/:journeyId', bundleSlot: 'trips-journey' },
+  { path: ':tripId/documents', bundleSlot: 'trips-documents' },
   { path: ':tripId/settings', bundleSlot: 'trips-settings' },
 ] as const;
 

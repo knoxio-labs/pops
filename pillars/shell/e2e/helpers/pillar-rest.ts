@@ -256,6 +256,7 @@ const LOADER_MOUNTED_UI: Readonly<Record<string, Record<string, unknown>>> = {
       { path: '', index: true, bundleSlot: 'trips-home' },
       { path: ':tripId/stays/:stayId', bundleSlot: 'trips-stay' },
       { path: ':tripId/journeys/:journeyId', bundleSlot: 'trips-journey' },
+      { path: ':tripId/documents', bundleSlot: 'trips-documents' },
       { path: ':tripId/settings', bundleSlot: 'trips-settings' },
     ],
   },
