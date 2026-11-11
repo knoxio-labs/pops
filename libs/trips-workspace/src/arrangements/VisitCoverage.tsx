@@ -7,7 +7,8 @@ import { arrangementVisitCoverage } from './coverage';
 import type { JSX } from 'react';
 
 import type { Visit } from '../stay/types';
-import type { ArrangementSources, ArrangementsWorkspaceProps } from './types';
+import type { AccommodationGapLabels } from './accommodation-gap-types';
+import type { ArrangementSources } from './types';
 import type { GapCapture } from './use-gap-capture';
 
 /** Compact route-local findings use complete source facts, never the currently filtered arrangement rows. */
@@ -21,7 +22,7 @@ export function VisitCoverage({
   visit: Visit;
   sources: ArrangementSources;
   complete: boolean;
-  identity: ArrangementsWorkspaceProps;
+  identity: { labels: AccommodationGapLabels; formatDate: (date: string) => string };
   capture: GapCapture;
 }): JSX.Element {
   const { labels } = identity;
