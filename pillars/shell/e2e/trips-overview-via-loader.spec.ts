@@ -265,15 +265,24 @@ for (const viewport of [
     ).toBeVisible();
     failEvents = true;
     await page.goto('/trips/7');
-    await expect(page.getByText('trips.events.unavailable', { exact: true })).toBeVisible();
+    const eventsSource = page.getByRole('region', { name: 'Events', exact: true });
+    await expect(eventsSource.getByText('trips.events.unavailable', { exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Cedar guesthouse', exact: true })).toBeVisible();
     await expect(page.getByText('No route entries.', { exact: true })).toHaveCount(0);
+    const gapDiagnostics = [31, 32].map((id) =>
+      page.locator(`[data-visit-id="${id}"]`).getByText('trips.events.unavailable', { exact: true })
+    );
+    for (const diagnostic of gapDiagnostics) await expect(diagnostic).toBeVisible();
     failEvents = false;
-    await page
-      .getByRole('region', { name: 'Events', exact: true })
-      .getByRole('button', { name: 'Try again', exact: true })
-      .click();
+    await eventsSource.getByRole('button', { name: 'Try again', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Harbour festival', exact: true })).toBeVisible();
+    await expect(eventsSource).toHaveCount(0);
+    for (const diagnostic of gapDiagnostics) await expect(diagnostic).toBeVisible();
+    await page
+      .locator('[data-visit-id="31"]')
+      .getByRole('button', { name: 'Reload source', exact: true })
+      .click();
+    for (const diagnostic of gapDiagnostics) await expect(diagnostic).toHaveCount(0);
     await expect(page.getByText('trips.events.unavailable', { exact: true })).toHaveCount(0);
   });
 }

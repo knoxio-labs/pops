@@ -213,10 +213,15 @@ test('Calendar URL loads inline Timeline filters and opens exact source sheets a
   const journeyRead = page.waitForRequest(
     (request) =>
       request.method() === 'GET' &&
-      new URL(request.url()).pathname === '/trips-api/trips/7/journeys/20/workspace'
+      new URL(request.url()).pathname === '/trips-api/trips/7/journeys/20'
+  );
+  const legsRead = page.waitForRequest(
+    (request) =>
+      request.method() === 'GET' &&
+      new URL(request.url()).pathname === '/trips-api/trips/7/journeys/20/legs'
   );
   await page.getByRole('button', { name: 'Harbour connection Departure' }).click();
-  await journeyRead;
+  await Promise.all([journeyRead, legsRead]);
   const journeySheet = page.getByRole('dialog', { name: 'Journey #20', exact: true });
   await expect(journeySheet).toBeVisible();
   await expect(page).toHaveURL(/\/trips\/7\/calendar$/);
