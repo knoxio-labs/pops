@@ -20,7 +20,10 @@ export async function loadTrips(clients: ApiClients = {}): Promise<Trip[]> {
 }
 /** Read a selected source trip through its actual identity. */
 export async function loadTrip(id: number, clients: ApiClients = {}): Promise<Trip> {
-  return unwrap(await tripsGet({ client: clients.tripClient, path: { id } }));
+  const result = await tripsGet({ client: clients.tripClient, path: { id } });
+  if (result.response?.ok && result.response.status !== 200)
+    throw new Error('Unexpected Trip read status');
+  return unwrap(result);
 }
 /** Persist explicit creation fields, never a generated title or route dates. */
 export async function createTrip(body: TripInput, clients: ApiClients = {}): Promise<Trip> {
@@ -32,7 +35,10 @@ export async function updateTrip(
   body: TripInput,
   clients: ApiClients = {}
 ): Promise<Trip> {
-  return unwrap(await tripsUpdate({ client: clients.tripClient, path: { id }, body }));
+  const result = await tripsUpdate({ client: clients.tripClient, path: { id }, body });
+  if (result.response?.ok && result.response.status !== 200)
+    throw new Error('Unexpected Trip update status');
+  return unwrap(result);
 }
 /** Read visits in their published explicit route order. */
 export async function loadVisits(tripId: number, clients: ApiClients = {}): Promise<Visit[]> {
