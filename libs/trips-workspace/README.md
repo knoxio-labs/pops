@@ -133,6 +133,29 @@ remain explicitly selectable, and starting a new capture requires a separate
 conscious action for the currently selected uncertain gap; that action itself
 performs no POST and preserves every other gap receipt.
 
+`AccommodationGapProvider({ identity: { tripId, client? }, children })` and
+`AccommodationGapContext({ identity, visitId, labels: AccommodationGapLabels,
+formatDate, onOpenStay })` expose this same coverage action inside a controlled
+Trip context. The callback receives only the actual `{ tripId, visitId, stayId }`
+from a validated own HTTP 201 response. The host opens the canonical Stay editor
+and its existing responsibility/document controls for that ID; accommodation
+intervals are not persisted route gap or path identities. The host also fences
+its selection generation before opening, so a late completion cannot replace a
+newer contextual editor. Replacing the callback or closing its initiating view
+prevents automatic delivery; explicit selection can reopen the retained receipt.
+
+Retained creation state belongs to the exact QueryClient, client instance,
+captured origin and trip. It survives provider remount and query-cache eviction;
+provider placement above conditional views keeps the host lifetime explicit.
+Each mounted view holds its own lease. Ending that host lifetime requires a new
+QueryClient; this does not invent an authentication lifecycle. Source reads and
+reloads use captured owner keys, and foreign or failed collections cannot prove
+missing nights. Canonical Stay-list invalidation also refreshes these scoped
+reads. No GET acknowledges an unknown create, no retry invents a request UUID,
+and creation has no Undo contract; the existing Stay editor owns subsequent edit
+Undo. Known receipts and unknown outcomes remain dormant with their original
+owner during context changes.
+
 Stay, Journey and Event editors provide the sole canonical document link and
 upload controls for that exact source. Arrangements resolves the same target-
 and transport-bound queue from the shared source registry for the QueryClient's

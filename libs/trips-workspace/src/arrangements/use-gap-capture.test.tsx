@@ -40,6 +40,68 @@ function setup() {
   return { transport, cache, open, result };
 }
 describe('Gap Stay source capture identity', () => {
+  it('retains unknown creation after the entire provider remounts with the same host cache', async () => {
+    const transport = arrangementsTransport();
+    transport.replies.push({
+      status: 503,
+      body: { code: 'lost', message: 'Lost', retryable: true },
+    });
+    const cache = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const identity = { tripId: 7, client: transport.client, labels, formatDate: String };
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={cache}>
+        <GapCaptureSessions identity={identity}>{children}</GapCaptureSessions>
+      </QueryClientProvider>
+    );
+    const first = renderHook(() => useGapCapture(identity, vi.fn()), { wrapper });
+    await act(async () => {
+      await first.result.current.create(31, gap);
+    });
+    first.unmount();
+    cache.clear();
+    const second = renderHook(() => useGapCapture(identity, vi.fn()), { wrapper });
+    await act(async () => {
+      await second.result.current.create(31, gap);
+    });
+    expect(second.result.current.uncertain).toBe(true);
+    expect(transport.writes).toHaveLength(1);
+  });
+  it('claims once across two mounted views and does not let a saved reset abandon another intent', async () => {
+    const scope = arrangementsTransport();
+    const cache = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const identity = { tripId: 7, client: scope.client };
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={cache}>{children}</QueryClientProvider>
+    );
+    const first = renderHook(() => useGapCapture(identity, vi.fn()), { wrapper });
+    const second = renderHook(() => useGapCapture(identity, vi.fn()), { wrapper });
+    scope.replies.push({ status: 503, body: { code: 'lost', message: 'Lost', retryable: true } });
+    await act(async () => {
+      await Promise.all([
+        first.result.current.create(31, gap),
+        second.result.current.create(31, gap),
+      ]);
+    });
+    expect(scope.writes).toHaveLength(1);
+    const resetA = first.result.current.beginNew;
+    scope.replies.push({ status: 503, body: { code: 'lost', message: 'Lost', retryable: true } });
+    await act(async () => {
+      await second.result.current.create(32, gap);
+    });
+    act(() => resetA());
+    await act(async () => {
+      await second.result.current.create(32, gap);
+    });
+    expect(second.result.current.uncertain).toBe(true);
+    expect(scope.writes).toHaveLength(2);
+    first.unmount();
+    const stale = first.result.current;
+    await act(async () => {
+      await stale.reload();
+      await stale.create(33, gap);
+    });
+    expect(scope.writes).toHaveLength(2);
+  });
   it('keeps reload busy/error state with its current source owner when an older read settles', async () => {
     const first = arrangementsTransport();
     const second = arrangementsTransport();
@@ -164,7 +226,7 @@ describe('Gap Stay source capture identity', () => {
     const { transport, result, open } = setup();
     transport.replies.push(
       { status: 201, body: sourceStay({ id: 17 }) },
-      { status: 201, body: sourceStay({ id: 18 }) }
+      { status: 201, body: sourceStay({ id: 18, visitId: 32 }) }
     );
     await act(async () => {
       await result.current.create(31, gap);
@@ -188,7 +250,11 @@ describe('Gap Stay source capture identity', () => {
       status: 503,
       body: { code: 'trips.creation.unknown', message: 'Response lost', retryable: true },
     };
-    transport.replies.push(unknown, { status: 201, body: sourceStay({ id: 18 }) }, unknown);
+    transport.replies.push(
+      unknown,
+      { status: 201, body: sourceStay({ id: 18, visitId: 32 }) },
+      unknown
+    );
     await act(async () => {
       await result.current.create(31, gap);
     });
@@ -252,9 +318,11 @@ describe('Gap Stay source capture identity', () => {
       await act(async () => {
         await result.current.create(31, gap);
       });
-      expect(cache.getQueryData(['trips', 'http://arrangements.test', 7, 'stays'])).toEqual([
-        later,
-      ]);
+      expect(
+        cache.getQueriesData({
+          queryKey: ['trips', 'http://arrangements.test', 7, 'stays', 'accommodation'],
+        })[0]?.[1]
+      ).toEqual([later]);
       expect(result.current.uncertain).toBe(true);
       expect(transport.writes).toHaveLength(1);
       expect(open).not.toHaveBeenCalled();

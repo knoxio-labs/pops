@@ -13,6 +13,7 @@ import {
   staysCreate,
 } from '../trips-api/sdk.gen';
 import {
+  zStaysCreateResponse,
   zRentalsGetResponse,
   zRentalsUpdateResponse,
   zResponsibilitiesGetResponse,
@@ -136,11 +137,15 @@ export async function createGapStay(
   arrival: string,
   departure: string
 ): Promise<Stay> {
-  return unwrap(
-    await staysCreate({
-      client: props.client,
-      path: { tripId: props.tripId },
-      body: { visitId, timing: { arrival, departure } },
-    })
-  );
+  const result = await staysCreate({
+    client: props.client,
+    path: { tripId: props.tripId },
+    body: { visitId, timing: { arrival, departure } },
+  });
+  const receipt = unwrap(result);
+  if (result.response?.status !== 201) throw new Error('Unconfirmed Stay creation status');
+  const source = zStaysCreateResponse.parse(receipt);
+  if (source.tripId !== props.tripId || source.visitId !== visitId)
+    throw new Error('Stay creation does not match its explicit target');
+  return source;
 }

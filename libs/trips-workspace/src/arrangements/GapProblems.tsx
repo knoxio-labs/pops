@@ -4,7 +4,7 @@ import { requestProblem } from '../stay/api';
 
 import type { JSX } from 'react';
 
-import type { ArrangementsWorkspaceProps } from './types';
+import type { AccommodationGapLabels } from './accommodation-gap-types';
 import type { GapCapture } from './use-gap-capture';
 
 /** Preserve uncertain gap recovery controls independently of the active source editor. */
@@ -13,7 +13,7 @@ export function GapProblems({
   identity,
 }: {
   capture: GapCapture;
-  identity: ArrangementsWorkspaceProps;
+  identity: { labels: AccommodationGapLabels };
 }): JSX.Element | null {
   if (capture.failure === undefined) return null;
   return (
