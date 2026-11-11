@@ -1,6 +1,8 @@
 import { expect, test } from './fixtures/pillar-rest-guard';
 import { json, stubShellBoot } from './helpers/pillar-rest';
 
+import type { Page } from '@playwright/test';
+
 const audit = { createdAt: '2029-01-01T00:00:00Z', updatedAt: '2029-01-01T00:00:00Z' };
 const journey = {
   id: 20,
@@ -79,12 +81,13 @@ const stay = {
   ...audit,
 };
 
-test('Calendar loads the configured remote, filters independent sources, and directly opens exact source identities at desktop and narrow widths', async ({
+test('Calendar URL loads inline Timeline filters and opens exact source sheets at desktop and narrow widths', async ({
   page,
 }) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await stubShellBoot(page, ['trips']);
+  await stubTimelineSources(page, [{ kind: 'journey', id: 20 }]);
   await page.route(/\/documents-api\/paperless\/status$/, (route) =>
     route.request().method() === 'GET'
       ? json(route, 200, {
@@ -98,9 +101,6 @@ test('Calendar loads the configured remote, filters independent sources, and dir
           },
         })
       : route.fallback()
-  );
-  await page.route(/\/trips-api\/trips\/7\/document-associations$/, (route) =>
-    route.request().method() === 'GET' ? json(route, 200, { associations: [] }) : route.fallback()
   );
   await page.route(/\/trips-api\/trips\/7\/journeys$/, (route) =>
     json(route, 200, { journeys: [journey] })
@@ -122,25 +122,36 @@ test('Calendar loads the configured remote, filters independent sources, and dir
     json(route, 200, { events: [event] })
   );
   await page.route(/\/trips-api\/trips\/7\/stays$/, (route) => json(route, 200, { stays: [stay] }));
-  await page.route(/\/trips-api\/places$/, (route) => json(route, 200, { places: [] }));
   await page.route(/\/trips-api\/trips\/7\/events\/60$/, (route) => json(route, 200, event));
-  await page.route(/\/trips-api\/trips\/7\/visits$/, (route) => json(route, 200, { visits: [] }));
-  await page.route(/\/trips-api\/trips\/7$/, (route) =>
-    json(route, 200, {
-      id: 7,
-      name: 'Harbour trip',
-      destination: '',
-      when: '',
-      parentId: null,
-      tagId: null,
-      notes: '',
-      sourceLinks: [],
-      ...audit,
-    })
+  await page.route(/\/trips-api\/trips\/7\/responsibilities\/event\/60$/, (route) =>
+    route.request().method() === 'GET'
+      ? json(route, 200, {
+          tripId: 7,
+          targetKind: 'event',
+          targetId: 60,
+          responsibility: null,
+          revision: 0,
+        })
+      : route.fallback()
+  );
+  await page.route(/\/trips-api\/trips\/7\/responsibilities\/journey\/20$/, (route) =>
+    route.request().method() === 'GET'
+      ? json(route, 200, {
+          tripId: 7,
+          targetKind: 'journey',
+          targetId: 20,
+          responsibility: null,
+          revision: 0,
+        })
+      : route.fallback()
   );
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto('/trips/7/calendar');
-  await expect(page.getByRole('heading', { name: 'Trip calendar' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Harbour trip', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Calendar', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true'
+  );
   await expect(page.getByLabel('Display time zone')).toHaveValue('');
   await page.getByLabel('Display time zone').fill('Pacific/Auckland');
   await expect(page.getByRole('button', { name: 'Evening exhibition Start' })).toBeVisible();
@@ -179,13 +190,37 @@ test('Calendar loads the configured remote, filters independent sources, and dir
   await expect(page.getByRole('alert')).toContainText('Choose a valid date range');
   await page.getByLabel('From date').fill('2029-02-01');
   await page.getByLabel('To date').fill('2029-02-01');
+  const eventRead = page.waitForRequest(
+    (request) =>
+      request.method() === 'GET' &&
+      new URL(request.url()).pathname === '/trips-api/trips/7/events/60'
+  );
   await page.getByRole('button', { name: 'Evening exhibition Start' }).click();
-  await expect(page).toHaveURL(/\/trips\/7\/events\/60$/);
-  await page.goto('/trips/7/calendar');
-  await page.getByLabel('Display time zone').fill('Pacific/Auckland');
+  await eventRead;
+  const eventSheet = page.getByRole('dialog', { name: 'Event #60', exact: true });
+  await expect(eventSheet).toBeVisible();
+  await expect(eventSheet.getByLabel('Event name', { exact: true })).toHaveValue(
+    'Evening exhibition'
+  );
+  await expect(page).toHaveURL(/\/trips\/7\/calendar$/);
+  await eventSheet.getByRole('button', { name: 'Close', exact: true }).click();
+  await expect(eventSheet).toHaveCount(0);
+  await expect(page.getByLabel('Display time zone')).toHaveValue('Pacific/Auckland');
+  await expect(page.getByLabel('Kind', { exact: true })).toHaveValue('event');
+  await page.getByLabel('Kind', { exact: true }).selectOption('all');
+  await page.getByLabel('From date').fill('');
+  await page.getByLabel('To date').fill('');
+  const journeyRead = page.waitForRequest(
+    (request) =>
+      request.method() === 'GET' &&
+      new URL(request.url()).pathname === '/trips-api/trips/7/journeys/20/workspace'
+  );
   await page.getByRole('button', { name: 'Harbour connection Departure' }).click();
-  await expect(page).toHaveURL(/\/trips\/7\/journeys\/20$/);
-  await expect(page.getByLabel('Transport mode')).toHaveValue('Hydrofoil');
+  await journeyRead;
+  const journeySheet = page.getByRole('dialog', { name: 'Journey #20', exact: true });
+  await expect(journeySheet).toBeVisible();
+  await expect(page).toHaveURL(/\/trips\/7\/calendar$/);
+  await expect(journeySheet.getByLabel('Transport mode')).toHaveValue('Hydrofoil');
   expect(errors).toEqual([]);
 });
 
@@ -193,6 +228,7 @@ test('A required-source failure remains retryable and never becomes an empty cal
   page,
 }) => {
   await stubShellBoot(page, ['trips']);
+  await stubTimelineSources(page);
   let unavailable = true;
   await page.route(/\/trips-api\/trips\/7\/journeys$/, (route) =>
     json(route, 200, { journeys: [] })
@@ -215,10 +251,65 @@ test('A required-source failure remains retryable and never becomes an empty cal
     )
   );
   await page.goto('/trips/7/calendar');
-  await expect(page.getByText('trips.events.unavailable')).toBeVisible();
+  const calendar = page.getByRole('region', { name: 'Calendar', exact: true });
+  await expect(calendar.getByText('trips.events.unavailable')).toBeVisible();
   await expect(page.getByText('No entries in this range')).toHaveCount(0);
   unavailable = false;
-  await page.getByRole('button', { name: /Try again/ }).click();
+  await calendar.getByRole('button', { name: /Try again/ }).click();
   await page.getByLabel('Display time zone').fill('Pacific/Auckland');
-  await expect(page.getByText('No entries in this range')).toBeVisible();
+  await expect(calendar.getByText('No entries in this range')).toBeVisible();
 });
+
+async function stubTimelineSources(page: Page, order: { kind: 'journey'; id: number }[] = []) {
+  await page.route(/\/trips-api\/trips\/7\/document-associations$/, (route) =>
+    route.request().method() === 'GET' ? json(route, 200, { associations: [] }) : route.fallback()
+  );
+  await page.route(/\/trips-api\/places$/, (route) => json(route, 200, { places: [] }));
+  await page.route(/\/trips-api\/trips\/7\/visits$/, (route) => json(route, 200, { visits: [] }));
+  await page.route(/\/trips-api\/trips\/7$/, (route) =>
+    json(route, 200, {
+      id: 7,
+      name: 'Harbour trip',
+      destination: '',
+      when: '',
+      parentId: null,
+      tagId: null,
+      notes: '',
+      sourceLinks: [],
+      ...audit,
+    })
+  );
+  await page.route(/\/trips-api\/trips\/7\/decisions$/, (route) =>
+    route.request().method() === 'GET' ? json(route, 200, { decisions: [] }) : route.fallback()
+  );
+  await page.route(/\/trips-api\/trips\/7\/meeting-plans$/, (route) =>
+    route.request().method() === 'GET' ? json(route, 200, { meetingPlans: [] }) : route.fallback()
+  );
+  await page.route(/\/trips-api\/trips\/7\/capture-workspace$/, (route) =>
+    route.request().method() === 'GET'
+      ? json(route, 200, {
+          captures: [],
+          ideas: [],
+          associations: [],
+          memberships: [],
+          events: [],
+          journeys: [],
+          stays: [],
+        })
+      : route.fallback()
+  );
+  await page.route(/\/trips-api\/trips\/7\/rentals$/, (route) =>
+    route.request().method() === 'GET' ? json(route, 200, { rentals: [] }) : route.fallback()
+  );
+  await page.route(/\/trips-api\/trips\/7\/route$/, (route) =>
+    route.request().method() === 'GET'
+      ? json(route, 200, {
+          tripId: 7,
+          revision: 0,
+          order,
+          paths: [],
+          missingSources: [],
+        })
+      : route.fallback()
+  );
+}
