@@ -2,14 +2,20 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 
-import { ArrangementResponsibilityProvider, TripOverview } from '@pops/trips-workspace';
+import {
+  AccommodationGapProvider,
+  ArrangementResponsibilityProvider,
+  TripOverview,
+} from '@pops/trips-workspace';
 import { Button, ErrorState } from '@pops/ui';
 
 import { useArrangementContacts } from './arrangements/use-arrangement-contacts';
 import { sourceId } from './source-id';
 import { useOverviewLabels } from './timeline-labels';
+import { accommodationContext } from './TimelineAccommodation';
 import { TimelineContext } from './TimelineContext';
 import { client as defaultClient } from './trips-api/client.gen';
+import { useTimelineSelection } from './use-timeline-selection';
 
 import type { RemotePageHostProps } from '@pops/pillar-sdk';
 import type { OverviewCalendarSelection, OverviewKind } from '@pops/trips-workspace';
@@ -46,14 +52,16 @@ export function TripOverviewPage(props: TimelineOwnerProps = {}) {
       />
     );
   return (
-    <ArrangementResponsibilityProvider identity={{ tripId, client: props.client }}>
-      <TimelineSession
-        key={`${(props.client ?? defaultClient).getConfig().baseUrl}:${tripId}`}
-        {...props}
-        tripId={tripId}
-        {...chooser}
-      />
-    </ArrangementResponsibilityProvider>
+    <AccommodationGapProvider identity={{ tripId, client: props.client }}>
+      <ArrangementResponsibilityProvider identity={{ tripId, client: props.client }}>
+        <TimelineSession
+          key={`${(props.client ?? defaultClient).getConfig().baseUrl}:${tripId}`}
+          {...props}
+          tripId={tripId}
+          {...chooser}
+        />
+      </ArrangementResponsibilityProvider>
+    </AccommodationGapProvider>
   );
 }
 
@@ -66,7 +74,7 @@ function TimelineSession(
 ) {
   const { tripId } = props;
   const { i18n } = useTranslation('trips');
-  const { selection, onSelect, changed } = useTimelineSelection(props);
+  const { selection, onSelect, changed } = useTimelineSelection(props.client);
   const [calendarEnabled, setCalendarEnabled] = useState(props.initialCalendar ?? false);
   const [calendarSelection, setCalendarSelection] = useState<OverviewCalendarSelection>({
     from: '',
@@ -111,24 +119,10 @@ function TimelineSession(
           ? { selection: calendarSelection, onChange: setCalendarSelection }
           : undefined
       }
+      renderVisitContext={accommodationContext({ tripId, client: props.client, onSelect })}
       contextualEditor={<TimelineContext {...props} selection={selection} onSelect={onSelect} />}
     />
   );
-}
-
-function useTimelineSelection(props: TimelineOwnerProps) {
-  const owner = props.client ?? defaultClient;
-  const [origin] = useState(() => owner.getConfig().baseUrl);
-  const [selection, setSelection] = useState<TimelineSelection | null>(null);
-  const [changed, setChanged] = useState(false);
-  const onSelect = (next: TimelineSelection | null) => {
-    if (owner.getConfig().baseUrl !== origin) {
-      setChanged(true);
-      return;
-    }
-    setSelection(next);
-  };
-  return { selection, onSelect, changed };
 }
 
 function sourceHref(tripId: number, kind: OverviewKind, id: number) {

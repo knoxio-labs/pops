@@ -15,6 +15,10 @@ Whole Journey, Stay, Event and Rental contexts reuse the independent Handled by 
 Rentals have no Documents target. Route controls use the canonical retained UUID/revision
 controller for explicit gaps, moves, complete order, alternative paths, apply and Undo.
 A mutable Trips-origin change rejects stale source-opening callbacks.
+Resolved Visit contexts reuse canonical accommodation coverage even when route placement
+is unavailable. A confirmed gap create opens the acknowledged Stay in the existing sheet.
+The owner provider retains uncertain creation state across sheet and Trip remounts;
+reloading source facts does not acknowledge a lost create response or repeat its POST.
 
 The reusable Arrangements workspace retains its independent responsibility writes;
 no external booking action is performed. The shell may inject the shared

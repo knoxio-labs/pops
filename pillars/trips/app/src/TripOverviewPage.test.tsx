@@ -17,6 +17,7 @@ import type { ReactNode } from 'react';
 
 import type { ContactsHostCapability } from '@pops/pillar-sdk';
 import type {
+  AccommodationGapContext,
   EventWorkspaceProps,
   OverviewSource,
   OverviewTool,
@@ -31,6 +32,7 @@ import type { PeopleContextProps } from './PeopleContext';
 
 const observed = vi.hoisted(() => ({
   overview: vi.fn<(props: TripOverviewProps) => void>(),
+  accommodation: vi.fn<(props: Parameters<typeof AccommodationGapContext>[0]) => void>(),
   stay: vi.fn<(props: StayWorkspaceProps) => void>(),
   event: vi.fn<(props: EventWorkspaceProps) => void>(),
   responsibility: vi.fn<(props: ArrangementResponsibilityFieldProps) => void>(),
@@ -38,6 +40,12 @@ const observed = vi.hoisted(() => ({
   people: vi.fn<(props: PeopleContextProps) => void>(),
 }));
 vi.mock('@pops/trips-workspace', () => ({
+  AccommodationGapProvider: ({ children }: { children: ReactNode }) => children,
+  AccommodationGapContext: (props: Parameters<typeof AccommodationGapContext>[0]) => {
+    observed.accommodation(props);
+    return null;
+  },
+  formatTripDate: (value: string, locale: string) => `${locale}:${value}`,
   ArrangementResponsibilityProvider: ({ children }: { children: ReactNode }) => children,
   ArrangementResponsibilityField: (props: ArrangementResponsibilityFieldProps) => {
     observed.responsibility(props);
@@ -67,6 +75,7 @@ vi.mock('@pops/trips-workspace', () => ({
         <main>
           <h1>Timeline {props.tripId}</h1>
           {props.controls}
+          {props.renderVisitContext?.({ tripId: props.tripId, visitId: 31 })}
           {sources.map((source) => (
             <button key={source.kind} onClick={() => props.onOpenSource?.(source)}>
               Open {source.kind}
@@ -152,6 +161,41 @@ function mount(path: string, props: Parameters<typeof TripOverviewPage>[0] = {})
 }
 
 describe('Selected Trip Timeline host', () => {
+  it('opens only the acknowledged Stay for the exact accommodation owner and Visit', () => {
+    const client = createClient({ baseUrl: 'https://gap-owner.invalid' });
+    mount('/7', { client });
+    const context = observed.accommodation.mock.lastCall?.[0];
+    expect(context?.identity).toEqual({ tripId: 7, client });
+    expect(context?.visitId).toBe(31);
+    expect(context?.labels.accommodationMissing).toBe(enAU.arrangements.accommodationMissing);
+    expect(context?.formatDate('2027-01-02')).toBe('en-AU:2027-01-02');
+    act(() => context?.onOpenStay({ tripId: 8, visitId: 31, stayId: 147 }));
+    act(() => context?.onOpenStay({ tripId: 7, visitId: 32, stayId: 147 }));
+    expect(observed.stay).not.toHaveBeenCalled();
+    act(() => context?.onOpenStay({ tripId: 7, visitId: 31, stayId: 147 }));
+    expect(observed.stay.mock.lastCall?.[0]).toMatchObject({ tripId: 7, stayId: 147, client });
+    expect(screen.getByRole('dialog', { name: 'Stay #147' })).toBeVisible();
+    expect(
+      observed.overview.mock.lastCall?.[0].renderVisitContext?.({ tripId: 8, visitId: 31 })
+    ).toBeNull();
+  });
+  it('keeps a newer source selection when an earlier accommodation create completes', async () => {
+    mount('/7');
+    const context = observed.accommodation.mock.lastCall?.[0];
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Open event' }));
+    act(() => context?.onOpenStay({ tripId: 7, visitId: 31, stayId: 147 }));
+    expect(observed.stay).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog', { name: 'Event #53' })).toBeVisible();
+  });
+  it('rejects an old accommodation acknowledgement after the client changes origin', () => {
+    const client = createClient({ baseUrl: 'https://original-gap.invalid' });
+    mount('/7', { client });
+    const context = observed.accommodation.mock.lastCall?.[0];
+    client.setConfig({ baseUrl: 'https://changed-gap.invalid' });
+    act(() => context?.onOpenStay({ tripId: 7, visitId: 31, stayId: 147 }));
+    expect(observed.stay).not.toHaveBeenCalled();
+    expect(screen.getByText(enAU.overview.status.connectionChanged)).toBeVisible();
+  });
   it('rejects a stale source opener after the owning client changes origin', () => {
     const client = createClient({ baseUrl: 'https://first.invalid' });
     mount('/7', { client });
