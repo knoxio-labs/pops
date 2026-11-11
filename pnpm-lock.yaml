@@ -15,7 +15,7 @@ importers:
     devDependencies:
       '@modelcontextprotocol/sdk':
         specifier: ^1.30.0
-        version: 1.30.0(supports-color@10.2.2)(zod@4.6.5)
+        version: 1.30.0(supports-color@10.2.2)(zod@4.6.6)
       '@pops/pillar-sdk':
         specifier: workspace:*
         version: link:libs/sdk
@@ -62,14 +62,14 @@ importers:
         specifier: ^2.9.1
         version: 2.9.1
       zod:
-        specifier: ^4.6.2
-        version: 4.6.5
+        specifier: ^4.6.6
+        version: 4.6.6
 
   libs/ai-telemetry:
     dependencies:
       zod:
-        specifier: ^4.6.2
-        version: 4.6.5
+        specifier: ^4.6.6
+        version: 4.6.6
     devDependencies:
       '@types/node':
         specifier: ^24.13.4
@@ -91,10 +91,10 @@ importers:
         version: 3.53.0-rc.1(@types/node@24.19.1)
       '@ts-rest/open-api':
         specifier: 3.53.0-rc.1
-        version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.19.1))(zod@4.6.5)
+        version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.19.1))(zod@4.6.6)
       zod:
-        specifier: ^4.6.2
-        version: 4.6.5
+        specifier: ^4.6.6
+        version: 4.6.6
     devDependencies:
       '@types/node':
         specifier: ^24.13.4
@@ -136,8 +136,8 @@ importers:
         specifier: 5.11.0
         version: 5.11.0(supports-color@10.2.2)
       zod:
-        specifier: ^4.6.2
-        version: 4.6.5
+        specifier: ^4.6.6
+        version: 4.6.6
     devDependencies:
       '@types/node':
         specifier: ^24.13.4
@@ -319,8 +319,8 @@ importers:
         specifier: 3.53.0-rc.1
         version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.19.1))(express@5.2.1(supports-color@10.2.2))
       zod:
-        specifier: ^4.6.2
-        version: 4.6.5
+        specifier: ^4.6.6
+        version: 4.6.6
     devDependencies:
       '@types/express':
         specifier: ^5.0.4
@@ -356,8 +356,8 @@ importers:
         specifier: ^9.0.3
         version: 9.0.3
       zod:
-        specifier: ^4.6.2
-        version: 4.6.5
+        specifier: ^4.6.6
+        version: 4.6.6
     devDependencies:
       '@tailwindcss/vite':
         specifier: 4.3.3
@@ -414,8 +414,8 @@ importers:
         specifier: ^0.45.2
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@13.0.3)
       zod:
-        specifier: ^4.6.2
-        version: 4.6.5
+        specifier: ^4.6.6
+        version: 4.6.6
     devDependencies:
       '@types/better-sqlite3':
         specifier: ^7.6.12
@@ -469,8 +469,8 @@ importers:
         specifier: ^17.0.13
         version: 17.0.13(i18next@26.4.2(typescript@6.0.3))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
       zod:
-        specifier: ^4.6.2
-        version: 4.6.5
+        specifier: ^4.6.6
+        version: 4.6.6
     devDependencies:
       '@hey-api/openapi-ts':
         specifier: ^0.99.0
@@ -521,8 +521,8 @@ importers:
   libs/types:
     dependencies:
       zod:
-        specifier: ^4.6.2
-        version: 4.6.5
+        specifier: ^4.6.6
+        version: 4.6.6
     devDependencies:
       '@types/node':
         specifier: ^24.13.4
@@ -734,7 +734,7 @@ importers:
     dependencies:
       '@anthropic-ai/sdk':
         specifier: ^0.125.0
-        version: 0.125.0(zod@4.6.5)
+        version: 0.125.0(zod@4.6.6)
       '@pops/ai-telemetry':
         specifier: workspace:*
         version: link:../../libs/ai-telemetry
@@ -761,7 +761,7 @@ importers:
         version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.19.1))(express@5.2.1(supports-color@10.2.2))
       '@ts-rest/open-api':
         specifier: 3.53.0-rc.1
-        version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.19.1))(zod@4.6.5)
+        version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.19.1))(zod@4.6.6)
       better-sqlite3:
         specifier: ^13.0.3
         version: 13.0.3
@@ -770,7 +770,7 @@ importers:
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@13.0.3)
       drizzle-zod:
         specifier: ^0.8.3
-        version: 0.8.3(drizzle-orm@0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@13.0.3))(zod@4.6.5)
+        version: 0.8.3(drizzle-orm@0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@13.0.3))(zod@4.6.6)
       express:
         specifier: ^5.1.0
         version: 5.2.1(supports-color@10.2.2)
@@ -784,8 +784,8 @@ importers:
         specifier: ^13.1.3
         version: 13.1.3
       zod:
-        specifier: ^4.6.2
-        version: 4.6.5
+        specifier: ^4.6.6
+        version: 4.6.6
     devDependencies:
       '@pops/contract-openapi':
         specifier: workspace:*
@@ -831,7 +831,7 @@ importers:
         version: 0.13.1(@hey-api/openapi-ts@0.99.0(magicast@0.5.4)(typescript@6.0.3))
       '@hookform/resolvers':
         specifier: ^5.9.1
-        version: 5.9.1(@standard-schema/spec@1.1.0)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(react-hook-form@7.88.0(react@19.3.0))(zod@4.6.5)
+        version: 5.9.1(@standard-schema/spec@1.1.0)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(react-hook-form@7.88.0(react@19.3.0))(zod@4.6.6)
       '@pops/ai':
         specifier: workspace:*
         version: link:..
@@ -881,8 +881,8 @@ importers:
         specifier: ^2.0.8
         version: 2.0.8(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       zod:
-        specifier: ^4.6.2
-        version: 4.6.5
+        specifier: ^4.6.6
+        version: 4.6.6
     devDependencies:
       '@hey-api/openapi-ts':
         specifier: ^0.99.0
@@ -952,7 +952,7 @@ importers:
         version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.19.1))(express@5.2.1(supports-color@10.2.2))
       '@ts-rest/open-api':
         specifier: 3.53.0-rc.1
-        version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.19.1))(zod@4.6.5)
+        version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.19.1))(zod@4.6.6)
       better-sqlite3:
         specifier: ^13.0.3
         version: 13.0.3
@@ -963,8 +963,8 @@ importers:
         specifier: ^5.1.0
         version: 5.2.1(supports-color@10.2.2)
       zod:
-        specifier: ^4.6.2
-        version: 4.6.5
+        specifier: ^4.6.6
+        version: 4.6.6
     devDependencies:
       '@pops/contract-openapi':
         specifier: workspace:*
@@ -1016,7 +1016,7 @@ importers:
         version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.19.1))(express@5.2.1(supports-color@10.2.2))
       '@ts-rest/open-api':
         specifier: 3.53.0-rc.1
-        version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.19.1))(zod@4.6.5)
+        version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.19.1))(zod@4.6.6)
       better-sqlite3:
         specifier: ^13.0.3
         version: 13.0.3
@@ -1030,8 +1030,8 @@ importers:
         specifier: ^9.0.3
         version: 9.0.3
       zod:
-        specifier: ^4.6.2
-        version: 4.6.5
+        specifier: ^4.6.6
+        version: 4.6.6
     devDependencies:
       '@pops/contract-openapi':
         specifier: workspace:*
@@ -1162,10 +1162,10 @@ importers:
     dependencies:
       '@anthropic-ai/sdk':
         specifier: ^0.125.0
-        version: 0.125.0(zod@4.6.5)
+        version: 0.125.0(zod@4.6.6)
       '@modelcontextprotocol/sdk':
         specifier: ^1.30.0
-        version: 1.30.0(supports-color@10.2.2)(zod@4.6.5)
+        version: 1.30.0(supports-color@10.2.2)(zod@4.6.6)
       '@pops/ai-telemetry':
         specifier: workspace:*
         version: link:../../libs/ai-telemetry
@@ -1189,7 +1189,7 @@ importers:
         version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.19.1))(express@5.2.1(supports-color@10.2.2))
       '@ts-rest/open-api':
         specifier: 3.53.0-rc.1
-        version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.19.1))(zod@4.6.5)
+        version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.19.1))(zod@4.6.6)
       better-sqlite3:
         specifier: ^13.0.3
         version: 13.0.3
@@ -1207,7 +1207,7 @@ importers:
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@13.0.3)
       drizzle-zod:
         specifier: ^0.8.3
-        version: 0.8.3(drizzle-orm@0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@13.0.3))(zod@4.6.5)
+        version: 0.8.3(drizzle-orm@0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@13.0.3))(zod@4.6.6)
       express:
         specifier: ^5.1.0
         version: 5.2.1(supports-color@10.2.2)
@@ -1227,8 +1227,8 @@ importers:
         specifier: ^0.1.7
         version: 0.1.9
       zod:
-        specifier: ^4.6.2
-        version: 4.6.5
+        specifier: ^4.6.6
+        version: 4.6.6
     devDependencies:
       '@pops/contract-openapi':
         specifier: workspace:*
@@ -1318,8 +1318,8 @@ importers:
         specifier: ^2.0.8
         version: 2.0.8(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       zod:
-        specifier: ^4.6.2
-        version: 4.6.5
+        specifier: ^4.6.6
+        version: 4.6.6
     devDependencies:
       '@hey-api/openapi-ts':
         specifier: ^0.99.0
@@ -1542,8 +1542,8 @@ importers:
         specifier: ^2.9.1
         version: 2.9.1
       zod:
-        specifier: ^4.6.2
-        version: 4.6.5
+        specifier: ^4.6.6
+        version: 4.6.6
     devDependencies:
       '@babel/core':
         specifier: ^8.0.5
@@ -1667,13 +1667,13 @@ importers:
         version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.19.1))(express@5.2.1(supports-color@10.2.2))
       '@ts-rest/open-api':
         specifier: 3.53.0-rc.1
-        version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.19.1))(zod@4.6.5)
+        version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.19.1))(zod@4.6.6)
       express:
         specifier: ^5.1.0
         version: 5.2.1(supports-color@10.2.2)
       zod:
-        specifier: ^4.6.2
-        version: 4.6.5
+        specifier: ^4.6.6
+        version: 4.6.6
     devDependencies:
       '@pops/contract-openapi':
         specifier: workspace:*
@@ -1707,7 +1707,7 @@ importers:
     dependencies:
       '@anthropic-ai/sdk':
         specifier: ^0.125.0
-        version: 0.125.0(zod@4.6.5)
+        version: 0.125.0(zod@4.6.6)
       '@pops/ai-telemetry':
         specifier: workspace:*
         version: link:../../libs/ai-telemetry
@@ -1731,7 +1731,7 @@ importers:
         version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.19.1))(express@5.2.1(supports-color@10.2.2))
       '@ts-rest/open-api':
         specifier: 3.53.0-rc.1
-        version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.19.1))(zod@4.6.5)
+        version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.19.1))(zod@4.6.6)
       better-sqlite3:
         specifier: ^13.0.3
         version: 13.0.3
@@ -1740,13 +1740,13 @@ importers:
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@13.0.3)
       drizzle-zod:
         specifier: ^0.8.3
-        version: 0.8.3(drizzle-orm@0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@13.0.3))(zod@4.6.5)
+        version: 0.8.3(drizzle-orm@0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@13.0.3))(zod@4.6.6)
       express:
         specifier: ^5.1.0
         version: 5.2.1(supports-color@10.2.2)
       zod:
-        specifier: ^4.6.2
-        version: 4.6.5
+        specifier: ^4.6.6
+        version: 4.6.6
     devDependencies:
       '@pops/contract-openapi':
         specifier: workspace:*
@@ -1798,7 +1798,7 @@ importers:
         version: 0.13.1(@hey-api/openapi-ts@0.99.0(magicast@0.5.4)(typescript@6.0.3))
       '@hookform/resolvers':
         specifier: ^5.9.1
-        version: 5.9.1(@standard-schema/spec@1.1.0)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(react-hook-form@7.88.0(react@19.3.0))(zod@4.6.5)
+        version: 5.9.1(@standard-schema/spec@1.1.0)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(react-hook-form@7.88.0(react@19.3.0))(zod@4.6.6)
       '@pops/date':
         specifier: workspace:*
         version: link:../../../libs/date
@@ -1863,8 +1863,8 @@ importers:
         specifier: ^2.0.8
         version: 2.0.8(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       zod:
-        specifier: ^4.6.2
-        version: 4.6.5
+        specifier: ^4.6.6
+        version: 4.6.6
       zustand:
         specifier: 5.0.15
         version: 5.0.15(@types/react@19.3.0)(immer@11.1.16)(react@19.3.0)(use-sync-external-store@1.6.0(react@19.3.0))
@@ -1934,7 +1934,7 @@ importers:
     dependencies:
       '@anthropic-ai/sdk':
         specifier: ^0.125.0
-        version: 0.125.0(zod@4.6.5)
+        version: 0.125.0(zod@4.6.6)
       '@mozilla/readability':
         specifier: ^0.6.0
         version: 0.6.0
@@ -1958,7 +1958,7 @@ importers:
         version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.19.1))(express@5.2.1(supports-color@10.2.2))
       '@ts-rest/open-api':
         specifier: 3.53.0-rc.1
-        version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.19.1))(zod@4.6.5)
+        version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.19.1))(zod@4.6.6)
       better-sqlite3:
         specifier: ^13.0.3
         version: 13.0.3
@@ -1970,7 +1970,7 @@ importers:
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@13.0.3)
       drizzle-zod:
         specifier: ^0.8.3
-        version: 0.8.3(drizzle-orm@0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@13.0.3))(zod@4.6.5)
+        version: 0.8.3(drizzle-orm@0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@13.0.3))(zod@4.6.6)
       express:
         specifier: ^5.1.0
         version: 5.2.1(supports-color@10.2.2)
@@ -1987,8 +1987,8 @@ importers:
         specifier: ^0.35.4
         version: 0.35.4(@types/node@24.19.1)
       zod:
-        specifier: ^4.6.2
-        version: 4.6.5
+        specifier: ^4.6.6
+        version: 4.6.6
     devDependencies:
       '@pops/contract-openapi':
         specifier: workspace:*
@@ -2212,7 +2212,7 @@ importers:
         version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.19.1))(express@5.2.1(supports-color@10.2.2))
       '@ts-rest/open-api':
         specifier: 3.53.0-rc.1
-        version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.19.1))(zod@4.6.5)
+        version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.19.1))(zod@4.6.6)
       better-sqlite3:
         specifier: ^13.0.3
         version: 13.0.3
@@ -2221,7 +2221,7 @@ importers:
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@13.0.3)
       drizzle-zod:
         specifier: ^0.8.3
-        version: 0.8.3(drizzle-orm@0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@13.0.3))(zod@4.6.5)
+        version: 0.8.3(drizzle-orm@0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@13.0.3))(zod@4.6.6)
       express:
         specifier: ^5.1.0
         version: 5.2.1(supports-color@10.2.2)
@@ -2232,8 +2232,8 @@ importers:
         specifier: ^0.35.4
         version: 0.35.4(@types/node@24.19.1)
       zod:
-        specifier: ^4.6.2
-        version: 4.6.5
+        specifier: ^4.6.6
+        version: 4.6.6
     devDependencies:
       '@pops/contract-openapi':
         specifier: workspace:*
@@ -2347,8 +2347,8 @@ importers:
         specifier: ^2.0.8
         version: 2.0.8(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       zod:
-        specifier: ^4.6.2
-        version: 4.6.5
+        specifier: ^4.6.6
+        version: 4.6.6
     devDependencies:
       '@hey-api/openapi-ts':
         specifier: ^0.99.0
@@ -2430,7 +2430,7 @@ importers:
         version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.19.1))(express@5.2.1(supports-color@10.2.2))
       '@ts-rest/open-api':
         specifier: 3.53.0-rc.1
-        version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.19.1))(zod@4.6.5)
+        version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.19.1))(zod@4.6.6)
       better-sqlite3:
         specifier: ^13.0.3
         version: 13.0.3
@@ -2439,13 +2439,13 @@ importers:
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@13.0.3)
       drizzle-zod:
         specifier: ^0.8.3
-        version: 0.8.3(drizzle-orm@0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@13.0.3))(zod@4.6.5)
+        version: 0.8.3(drizzle-orm@0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@13.0.3))(zod@4.6.6)
       express:
         specifier: ^5.1.0
         version: 5.2.1(supports-color@10.2.2)
       zod:
-        specifier: ^4.6.2
-        version: 4.6.5
+        specifier: ^4.6.6
+        version: 4.6.6
     devDependencies:
       '@pops/contract-openapi':
         specifier: workspace:*
@@ -2588,7 +2588,7 @@ importers:
     dependencies:
       '@modelcontextprotocol/sdk':
         specifier: ^1.30.0
-        version: 1.30.0(supports-color@10.2.2)(zod@4.6.5)
+        version: 1.30.0(supports-color@10.2.2)(zod@4.6.6)
       '@pops/pillar-express':
         specifier: workspace:*
         version: link:../../libs/pillar-express
@@ -2621,8 +2621,8 @@ importers:
         specifier: ^4.1.11
         version: 4.1.11(@types/node@24.19.1)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.19.1)(typescript@6.0.3))(vite@8.3.0(@types/node@24.19.1)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
       zod:
-        specifier: ^4.6.2
-        version: 4.6.5
+        specifier: ^4.6.6
+        version: 4.6.6
 
   pillars/media:
     dependencies:
@@ -2646,7 +2646,7 @@ importers:
         version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.19.1))(express@5.2.1(supports-color@10.2.2))
       '@ts-rest/open-api':
         specifier: 3.53.0-rc.1
-        version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.19.1))(zod@4.6.5)
+        version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.19.1))(zod@4.6.6)
       better-sqlite3:
         specifier: ^13.0.3
         version: 13.0.3
@@ -2658,13 +2658,13 @@ importers:
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@13.0.3)
       drizzle-zod:
         specifier: ^0.8.3
-        version: 0.8.3(drizzle-orm@0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@13.0.3))(zod@4.6.5)
+        version: 0.8.3(drizzle-orm@0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@13.0.3))(zod@4.6.6)
       express:
         specifier: ^5.1.0
         version: 5.2.1(supports-color@10.2.2)
       zod:
-        specifier: ^4.6.2
-        version: 4.6.5
+        specifier: ^4.6.6
+        version: 4.6.6
     devDependencies:
       '@pops/contract-openapi':
         specifier: workspace:*
@@ -2830,8 +2830,8 @@ importers:
         specifier: ^5.1.0
         version: 5.2.1(supports-color@10.2.2)
       zod:
-        specifier: ^4.6.2
-        version: 4.6.5
+        specifier: ^4.6.6
+        version: 4.6.6
     devDependencies:
       '@pops/contract-openapi':
         specifier: workspace:*
@@ -2865,7 +2865,7 @@ importers:
     dependencies:
       '@anthropic-ai/sdk':
         specifier: ^0.125.0
-        version: 0.125.0(zod@4.6.5)
+        version: 0.125.0(zod@4.6.6)
       '@pops/ai-telemetry':
         specifier: workspace:*
         version: link:../../libs/ai-telemetry
@@ -2886,7 +2886,7 @@ importers:
         version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.19.1))(express@5.2.1(supports-color@10.2.2))
       '@ts-rest/open-api':
         specifier: 3.53.0-rc.1
-        version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.19.1))(zod@4.6.5)
+        version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.19.1))(zod@4.6.6)
       better-sqlite3:
         specifier: ^13.0.3
         version: 13.0.3
@@ -2895,7 +2895,7 @@ importers:
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@13.0.3)
       drizzle-zod:
         specifier: ^0.8.3
-        version: 0.8.3(drizzle-orm@0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@13.0.3))(zod@4.6.5)
+        version: 0.8.3(drizzle-orm@0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@13.0.3))(zod@4.6.6)
       express:
         specifier: ^5.1.0
         version: 5.2.1(supports-color@10.2.2)
@@ -2906,8 +2906,8 @@ importers:
         specifier: ^0.35.4
         version: 0.35.4(@types/node@24.19.1)
       zod:
-        specifier: ^4.6.2
-        version: 4.6.5
+        specifier: ^4.6.6
+        version: 4.6.6
     devDependencies:
       '@pops/contract-openapi':
         specifier: workspace:*
@@ -3056,7 +3056,7 @@ importers:
         version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.19.1))(express@5.2.1(supports-color@10.2.2))
       '@ts-rest/open-api':
         specifier: 3.53.0-rc.1
-        version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.19.1))(zod@4.6.5)
+        version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.19.1))(zod@4.6.6)
       better-sqlite3:
         specifier: ^13.0.3
         version: 13.0.3
@@ -3065,7 +3065,7 @@ importers:
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@13.0.3)
       drizzle-zod:
         specifier: ^0.8.3
-        version: 0.8.3(drizzle-orm@0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@13.0.3))(zod@4.6.5)
+        version: 0.8.3(drizzle-orm@0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@13.0.3))(zod@4.6.6)
       express:
         specifier: ^5.1.0
         version: 5.2.1(supports-color@10.2.2)
@@ -3076,8 +3076,8 @@ importers:
         specifier: ^13.1.3
         version: 13.1.3
       zod:
-        specifier: ^4.6.2
-        version: 4.6.5
+        specifier: ^4.6.6
+        version: 4.6.6
     devDependencies:
       '@pops/contract-openapi':
         specifier: workspace:*
@@ -3228,8 +3228,8 @@ importers:
         specifier: ^4.1.11
         version: 4.1.11(@types/node@24.19.1)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.19.1)(typescript@6.0.3))(vite@8.3.0(@types/node@24.19.1)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
       zod:
-        specifier: ^4.6.2
-        version: 4.6.5
+        specifier: ^4.6.6
+        version: 4.6.6
 
   pillars/tags:
     dependencies:
@@ -3250,7 +3250,7 @@ importers:
         version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.19.1))(express@5.2.1(supports-color@10.2.2))
       '@ts-rest/open-api':
         specifier: 3.53.0-rc.1
-        version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.19.1))(zod@4.6.5)
+        version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.19.1))(zod@4.6.6)
       better-sqlite3:
         specifier: ^13.0.3
         version: 13.0.3
@@ -3261,8 +3261,8 @@ importers:
         specifier: ^5.1.0
         version: 5.2.1(supports-color@10.2.2)
       zod:
-        specifier: ^4.6.2
-        version: 4.6.5
+        specifier: ^4.6.6
+        version: 4.6.6
     devDependencies:
       '@pops/contract-openapi':
         specifier: workspace:*
@@ -3317,7 +3317,7 @@ importers:
         version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.19.1))(express@5.2.1(supports-color@10.2.2))
       '@ts-rest/open-api':
         specifier: 3.53.0-rc.1
-        version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.19.1))(zod@4.6.5)
+        version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.19.1))(zod@4.6.6)
       better-sqlite3:
         specifier: ^13.0.3
         version: 13.0.3
@@ -3328,8 +3328,8 @@ importers:
         specifier: ^5.1.0
         version: 5.2.1(supports-color@10.2.2)
       zod:
-        specifier: ^4.6.2
-        version: 4.6.5
+        specifier: ^4.6.6
+        version: 4.6.6
     devDependencies:
       '@pops/contract-openapi':
         specifier: workspace:*
@@ -3456,8 +3456,8 @@ importers:
         specifier: ^4.1.11
         version: 4.1.11(@types/node@24.19.1)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.19.1)(typescript@6.0.3))(vite@8.3.0(@types/node@24.19.1)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
       zod:
-        specifier: ^4.6.2
-        version: 4.6.5
+        specifier: ^4.6.6
+        version: 4.6.6
 
 packages:
 
@@ -8579,6 +8579,7 @@ packages:
 
   node-abort-controller@3.1.1:
     resolution: {integrity: sha512-AGK2yQKIjRuqnc6VkX2Xj5d+QW8xZ87pa1UK6yA6ouUyuxfHuMP6umE5QK7UmTeOAymo+Zx1Fxiuw9rVx8taHQ==}
+    deprecated: This package is no longer needed on supported Node.js versions. Node.js 16+ includes AbortController and AbortSignal as built-in globals. All Node.js versions requiring this polyfill are end-of-life. Use the built-in globals instead.
 
   node-addon-api@8.9.2:
     resolution: {integrity: sha512-VijLXbi3UACN69I0JVXJsX4tjACjNoQDgv2gTF6sx2wWEi8tkSg2eX8p5gSIFi8z2+DL3oHmY6OyKce38SDolg==}
@@ -9974,8 +9975,8 @@ packages:
   zod@3.25.76:
     resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
 
-  zod@4.6.5:
-    resolution: {integrity: sha512-v5l/aFXZQeai4awLbOpSoHecE9UiMrnfx75tEXLjNonXVARxQ5mOeipTjROUchszUNCqnE+hqAMujRsRHsut2Q==}
+  zod@4.6.6:
+    resolution: {integrity: sha512-4UmzQUF5fxvfcYHlbjBmejU+w+hbDnWFx4aS8kBx7nPBHcO2SqPbpAG8snbdg+Xse4pRefR98hgjFgIMCI/UhA==}
 
   zustand@5.0.15:
     resolution: {integrity: sha512-MpSEjRiBkA9crSYeOUH32rJC7SVqAbm0Fqcqge/bUi2PPoLcBWKOsG+C8mevmpr8TwXHBVkChbbJiyvkE+i/3A==}
@@ -10005,18 +10006,18 @@ snapshots:
 
   '@adobe/css-tools@4.5.0': {}
 
-  '@anatine/zod-openapi@1.14.2(openapi3-ts@2.0.2)(zod@4.6.5)':
+  '@anatine/zod-openapi@1.14.2(openapi3-ts@2.0.2)(zod@4.6.6)':
     dependencies:
       openapi3-ts: 2.0.2
       ts-deepmerge: 6.2.1
-      zod: 4.6.5
+      zod: 4.6.6
 
-  '@anthropic-ai/sdk@0.125.0(zod@4.6.5)':
+  '@anthropic-ai/sdk@0.125.0(zod@4.6.6)':
     dependencies:
       json-schema-to-ts: 3.1.1
       standardwebhooks: 1.1.1
     optionalDependencies:
-      zod: 4.6.5
+      zod: 4.6.6
 
   '@asamuzakjp/css-color@6.0.5':
     dependencies:
@@ -10776,7 +10777,7 @@ snapshots:
     dependencies:
       hono: 4.13.0
 
-  '@hookform/resolvers@5.9.1(@standard-schema/spec@1.1.0)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(react-hook-form@7.88.0(react@19.3.0))(zod@4.6.5)':
+  '@hookform/resolvers@5.9.1(@standard-schema/spec@1.1.0)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(react-hook-form@7.88.0(react@19.3.0))(zod@4.6.6)':
     dependencies:
       '@standard-schema/utils': 0.3.0
       react-hook-form: 7.88.0(react@19.3.0)
@@ -10784,7 +10785,7 @@ snapshots:
       '@standard-schema/spec': 1.1.0
       ajv: 8.20.0
       ajv-formats: 2.1.1(ajv@8.20.0)
-      zod: 4.6.5
+      zod: 4.6.6
 
   '@img/colour@1.1.0': {}
 
@@ -11011,7 +11012,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@modelcontextprotocol/sdk@1.30.0(supports-color@10.2.2)(zod@4.6.5)':
+  '@modelcontextprotocol/sdk@1.30.0(supports-color@10.2.2)(zod@4.6.6)':
     dependencies:
       '@hono/node-server': 2.1.0(hono@4.13.0)
       ajv: 8.20.0
@@ -11028,8 +11029,8 @@ snapshots:
       json-schema-typed: 8.0.2
       pkce-challenge: 5.0.1
       raw-body: 3.0.2
-      zod: 4.6.5
-      zod-to-json-schema: 3.25.2(zod@4.6.5)
+      zod: 4.6.6
+      zod-to-json-schema: 3.25.2(zod@4.6.6)
     transitivePeerDependencies:
       - supports-color
 
@@ -12331,12 +12332,12 @@ snapshots:
       '@ts-rest/core': 3.53.0-rc.1(@types/node@24.19.1)
       express: 5.2.1(supports-color@10.2.2)
 
-  '@ts-rest/open-api@3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.19.1))(zod@4.6.5)':
+  '@ts-rest/open-api@3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.19.1))(zod@4.6.6)':
     dependencies:
-      '@anatine/zod-openapi': 1.14.2(openapi3-ts@2.0.2)(zod@4.6.5)
+      '@anatine/zod-openapi': 1.14.2(openapi3-ts@2.0.2)(zod@4.6.6)
       '@ts-rest/core': 3.53.0-rc.1(@types/node@24.19.1)
       openapi3-ts: 2.0.2
-      zod: 4.6.5
+      zod: 4.6.6
 
   '@tweenjs/tween.js@25.0.0': {}
 
@@ -13266,10 +13267,10 @@ snapshots:
       '@types/better-sqlite3': 7.6.13
       better-sqlite3: 13.0.3
 
-  drizzle-zod@0.8.3(drizzle-orm@0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@13.0.3))(zod@4.6.5):
+  drizzle-zod@0.8.3(drizzle-orm@0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@13.0.3))(zod@4.6.6):
     dependencies:
       drizzle-orm: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@13.0.3)
-      zod: 4.6.5
+      zod: 4.6.6
 
   dunder-proto@1.0.1:
     dependencies:
@@ -16124,13 +16125,13 @@ snapshots:
     dependencies:
       zod: 3.25.76
 
-  zod-to-json-schema@3.25.2(zod@4.6.5):
+  zod-to-json-schema@3.25.2(zod@4.6.6):
     dependencies:
-      zod: 4.6.5
+      zod: 4.6.6
 
   zod@3.25.76: {}
 
-  zod@4.6.5: {}
+  zod@4.6.6: {}
 
   zustand@5.0.15(@types/react@19.3.0)(immer@11.1.16)(react@19.3.0)(use-sync-external-store@1.6.0(react@19.3.0)):
     optionalDependencies:
