@@ -1,5 +1,6 @@
 import {
   assertSourceOwner,
+  isSourceOwnerCurrent,
   tripMetadataReadSchema,
   tripMetadataWriteSchema,
 } from '@pops/trips-workspace';
@@ -24,13 +25,12 @@ export function metadataSource(value: unknown, tripId: number): Trip {
   if (source.id !== tripId) throw new Error('Foreign metadata source response');
   return source;
 }
-/** Captured transport and matching supplied fields are required before a PATCH can establish own inverse history. */
+/** Dispatch uses the captured transport; a matching validated acknowledgement settles that original owner even after navigation. */
 export async function persistMetadata(owner: RetainedSourceOwner, body: TripInput): Promise<Trip> {
   assertSourceOwner(owner);
   const result = tripMetadataWriteSchema.parse(
     await updateTrip(owner.tripId, body, { tripClient: owner.client })
   );
-  assertSourceOwner(owner);
   const fields = ['name', 'destination', 'when', 'notes', 'parentId', 'tagId'] as const;
   if (
     result.id !== owner.tripId ||
@@ -52,14 +52,13 @@ export async function readMetadata(owner: RetainedSourceOwner): Promise<Trip> {
 /** Update only raw original-owner Trip caches and invalidate only that owner's list. */
 export function cacheMetadata(owner: RetainedSourceOwner, result: Trip): void {
   const keys = metadataKeys(owner);
-  assertSourceOwner(owner);
   owner.scope.setQueryData(keys.one, result);
-  assertSourceOwner(owner);
   owner.scope.setQueryData(keys.read, result);
-  assertSourceOwner(owner);
   owner.scope.setQueryData<Trip[]>(keys.all, (previous) =>
     previous?.map((trip) => (trip.id === result.id ? result : trip))
   );
-  assertSourceOwner(owner);
-  void owner.scope.invalidateQueries({ queryKey: keys.all });
+  void owner.scope.invalidateQueries({
+    queryKey: keys.all,
+    refetchType: isSourceOwnerCurrent(owner) ? 'active' : 'none',
+  });
 }

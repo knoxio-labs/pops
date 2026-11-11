@@ -1,7 +1,12 @@
-import { act, cleanup, waitFor } from '@testing-library/react';
+import { QueryClientProvider, useQuery } from '@tanstack/react-query';
+import { act, cleanup, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
+import { loadTrips } from '../api/source';
 import { metadataServer, metadataTrip, mountMetadata } from './metadata-test-utils';
+import { useTripMetadataRead } from './use-metadata-source';
+
+import type { ReactNode } from 'react';
 
 let server: Awaited<ReturnType<typeof metadataServer>>;
 beforeEach(async () => {
@@ -37,33 +42,81 @@ it('fences old and foreign-origin callbacks through A→B→A while preserving e
   expect(reopened.result.current.canUndo).toBe(true);
 });
 
-it('does not deliver an A PATCH into B state or B cache, and retains its exact original retry', async () => {
-  const first = mountMetadata(server);
-  act(() => first.result.current.change({ ...first.result.current.draft, name: 'Pending A' }));
-  const release = server.hold();
-  let pending = Promise.resolve();
-  act(() => {
-    pending = first.result.current.save();
-  });
-  await waitFor(() => expect(server.requests).toHaveLength(1));
-  first.unmount();
-  server.client.setConfig({ baseUrl: `${server.origin}/b` });
-  const second = mountMetadata(server, first.cache, server.current('b'));
-  await act(async () => {
-    release();
-    await pending;
-  });
-  expect(second.result.current.draft.name).toBe('Owner B');
-  expect(second.result.current.canUndo).toBe(false);
-  expect(first.cache.getQueryData(['trips', `${server.origin}/b`, 7])).toBeUndefined();
-  second.unmount();
-  server.client.setConfig({ baseUrl: `${server.origin}/a` });
-  const reopened = mountMetadata(server, first.cache);
-  expect(reopened.result.current.failure).toBeDefined();
-  await act(() => reopened.result.current.retry());
-  expect(server.requests[1]?.body).toBe(server.requests[0]?.body);
-  expect(reopened.result.current.canUndo).toBe(true);
-});
+it.each([false, true])(
+  'settles a valid dispatched A receipt only into retained A after its initiating view closes (sibling=%s)',
+  async (keepSibling) => {
+    const first = mountMetadata(server);
+    const sibling = keepSibling ? mountMetadata(server, first.cache) : undefined;
+    const wrapper = ({ children }: { children: ReactNode }): ReactNode => (
+      <QueryClientProvider client={first.cache}>{children}</QueryClientProvider>
+    );
+    const list = renderHook(
+      () =>
+        useQuery({
+          queryKey: ['trips', `${server.origin}/a`, 'list'],
+          queryFn: () => loadTrips({ tripClient: server.client }),
+        }),
+      { wrapper }
+    );
+    await waitFor(() => expect(list.result.current.isSuccess).toBe(true));
+    act(() => first.result.current.change({ ...first.result.current.draft, name: 'Confirmed A' }));
+    const staleSave = first.result.current.save;
+    const staleUndo = first.result.current.undo;
+    const release = server.hold();
+    let pending = Promise.resolve();
+    act(() => {
+      pending = first.result.current.save();
+    });
+    await waitFor(() =>
+      expect(server.requests.filter(({ method }) => method === 'PATCH')).toHaveLength(1)
+    );
+    first.unmount();
+    server.client.setConfig({ baseUrl: `${server.origin}/b` });
+    const second = mountMetadata(server, first.cache, server.current('b'));
+    await act(async () => {
+      release();
+      await pending;
+      await staleSave();
+      await staleUndo();
+    });
+    await waitFor(() =>
+      expect(first.cache.getQueryState(['trips', `${server.origin}/a`, 'list'])?.fetchStatus).toBe(
+        'idle'
+      )
+    );
+    expect(second.result.current.draft.name).toBe('Owner B');
+    expect(second.result.current.canUndo).toBe(false);
+    expect(first.cache.getQueryData(['trips', `${server.origin}/b`, 7])).toBeUndefined();
+    expect(first.cache.getQueryData(['trips', `${server.origin}/a`, 7])).toEqual(server.current());
+    expect(first.cache.getQueryData(['trips', `${server.origin}/a`, 'list'])).toEqual([
+      server.current(),
+    ]);
+    expect(server.requests.some(({ path }) => path.startsWith('/b/'))).toBe(false);
+    second.unmount();
+    sibling?.unmount();
+    list.unmount();
+    server.client.setConfig({ baseUrl: `${server.origin}/a` });
+    await act(async () => {
+      await staleSave();
+      await staleUndo();
+    });
+    const reopened = mountMetadata(server, first.cache);
+    expect(reopened.result.current.failure).toBeUndefined();
+    expect(reopened.result.current.previous.name).toBe('Confirmed A');
+    expect(reopened.result.current.canUndo).toBe(true);
+    server.status(503);
+    const read = renderHook(() => useTripMetadataRead(7, { tripClient: server.client }), {
+      wrapper,
+    });
+    await waitFor(() => expect(read.result.current.isError).toBe(true));
+    expect(read.result.current.retainedSource?.name).toBe('Confirmed A');
+    expect(reopened.result.current.canUndo).toBe(true);
+    expect(server.requests.filter(({ method }) => method === 'PATCH')).toHaveLength(1);
+    await act(() => reopened.result.current.undo());
+    expect(server.current()).toEqual(metadataTrip);
+    expect(server.requests.filter(({ method }) => method === 'PATCH')).toHaveLength(2);
+  }
+);
 
 it.each([
   { ...metadataTrip, id: 8 },
