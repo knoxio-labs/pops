@@ -1,70 +1,187 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 
-import { TripOverview } from '@pops/trips-workspace';
-import { ErrorState } from '@pops/ui';
+import {
+  AccommodationGapProvider,
+  ArrangementResponsibilityProvider,
+  TripOverview,
+} from '@pops/trips-workspace';
+import { Button, ErrorState } from '@pops/ui';
 
+import { useArrangementContacts } from './arrangements/use-arrangement-contacts';
 import { sourceId } from './source-id';
+import { useOverviewLabels } from './timeline-labels';
+import { accommodationContext } from './TimelineAccommodation';
+import { TimelineContext } from './TimelineContext';
+import { client as defaultClient } from './trips-api/client.gen';
+import { useTimelineSelection } from './use-timeline-selection';
 
-import type { OverviewKind, OverviewLabels } from '@pops/trips-workspace';
+import type { RemotePageHostProps } from '@pops/pillar-sdk';
+import type { OverviewCalendarSelection, OverviewKind } from '@pops/trips-workspace';
 
-/** Published overview adapter supplies translations and literal approved source routes. */
-export function TripOverviewPage() {
+import type { ApiClients } from './api/types';
+import type { CaptureContextProps } from './CaptureContext';
+import type { TimelineSelection } from './TimelineContext';
+
+type TimelineOwnerProps = RemotePageHostProps &
+  Pick<CaptureContextProps, 'client' | 'documentsClient'> & {
+    initialCalendar?: boolean;
+    tagsClient?: ApiClients['tagsClient'];
+  };
+
+/** Preserve the Calendar entry URL as the selected Trip Timeline with its date filter enabled. */
+export function TripCalendarPage(props: RemotePageHostProps = {}) {
+  return <TripOverviewPage {...props} initialCalendar />;
+}
+
+/** Bind the selected Trip Timeline to its owning identities and shell capabilities. */
+export function TripOverviewPage(props: TimelineOwnerProps = {}) {
   const params = useParams();
   const tripId = sourceId(params.tripId);
-  const { t, i18n } = useTranslation('trips');
+  const chooser = useArrangementContacts(
+    props.contacts,
+    tripId,
+    (props.client ?? defaultClient).getConfig().baseUrl
+  );
+  const { t } = useTranslation('trips');
   if (tripId === undefined)
     return (
       <ErrorState
         error={{ code: 'trips.identity.invalid', message: t('overview.invalid'), retryable: false }}
       />
     );
-  const labels: OverviewLabels = {
-    trip: t('trip'),
-    route: t('overview.route'),
-    journeys: t('overview.journeys'),
-    unassociated: t('overview.unassociated'),
-    decisions: t('overview.decisions'),
-    documents: t('overview.documents'),
-    notes: t('notes'),
-    empty: t('overview.empty'),
-    loading: t('overview.loading'),
-    unavailable: t('overview.unavailable'),
-    retry: t('retry'),
-    settings: t('settings'),
-    current: t('overview.current'),
-    alternatives: t('overview.alternatives'),
-    selected: t('overview.selected'),
-    unresolved: t('overview.unresolved'),
-    source: (kind, id) => t('overview.source', { kind: t(`overview.kinds.${kind}`), id }),
-    status: (value) => t(`overview.status.${value}`, { defaultValue: value }),
-  };
-  const href = (kind: OverviewKind, id: number) => {
-    switch (kind) {
-      case 'visit':
-        return `/trips/${tripId}/visits/${id}`;
-      case 'stay':
-        return `/trips/${tripId}/stays/${id}`;
-      case 'event':
-        return `/trips/${tripId}/events/${id}`;
-      case 'journey':
-        return `/trips/${tripId}/journeys/${id}`;
-      case 'decision':
-        return `/trips/${tripId}/decisions/${id}`;
-      default:
-        return undefined;
-    }
-  };
+  return (
+    <AccommodationGapProvider identity={{ tripId, client: props.client }}>
+      <ArrangementResponsibilityProvider identity={{ tripId, client: props.client }}>
+        <TimelineSession
+          key={`${(props.client ?? defaultClient).getConfig().baseUrl}:${tripId}`}
+          {...props}
+          tripId={tripId}
+          {...chooser}
+        />
+      </ArrangementResponsibilityProvider>
+    </AccommodationGapProvider>
+  );
+}
+
+function TimelineSession(
+  props: TimelineOwnerProps &
+    Pick<
+      Parameters<typeof TimelineContext>[0],
+      'contactChooserIntent' | 'advanceContactChooserIntent'
+    > & { tripId: number }
+) {
+  const { tripId } = props;
+  const { i18n } = useTranslation('trips');
+  const { selection, onSelect, changed } = useTimelineSelection(props.client);
+  const [calendarEnabled, setCalendarEnabled] = useState(props.initialCalendar ?? false);
+  const [calendarSelection, setCalendarSelection] = useState<OverviewCalendarSelection>({
+    from: '',
+    to: '',
+    zone: '',
+    kind: 'all',
+    journey: '',
+  });
+  const labels = useOverviewLabels();
+  if (changed)
+    return (
+      <ErrorState
+        error={{
+          code: 'trips.context.changed',
+          message: labels.status('connectionChanged'),
+          retryable: false,
+        }}
+      />
+    );
   return (
     <TripOverview
       tripId={tripId}
+      client={props.client}
       locale={i18n.resolvedLanguage ?? i18n.language}
       labels={labels}
       backHref="/trips"
       documentsHref={`/trips/${tripId}/documents`}
       settingsHref={`/trips/${tripId}/settings`}
-      calendarLink={{ href: `/trips/${tripId}/calendar`, label: t('calendar') }}
-      href={href}
+      href={(kind, id) => sourceHref(tripId, kind, id)}
+      onOpenSource={(source) => onSelect({ kind: 'source', source })}
+      onOpenTool={(tool) => onSelect({ kind: 'tool', tool })}
+      onOpenPlacement={(target) => onSelect({ kind: 'placement', target })}
+      controls={
+        <TimelineControls
+          calendarEnabled={calendarEnabled}
+          toggleCalendar={() => setCalendarEnabled((enabled) => !enabled)}
+          onSelect={onSelect}
+        />
+      }
+      calendar={
+        calendarEnabled
+          ? { selection: calendarSelection, onChange: setCalendarSelection }
+          : undefined
+      }
+      renderVisitContext={accommodationContext({ tripId, client: props.client, onSelect })}
+      contextualEditor={<TimelineContext {...props} selection={selection} onSelect={onSelect} />}
     />
+  );
+}
+
+function sourceHref(tripId: number, kind: OverviewKind, id: number) {
+  switch (kind) {
+    case 'visit':
+      return `/trips/${tripId}/visits/${id}`;
+    case 'stay':
+      return `/trips/${tripId}/stays/${id}`;
+    case 'event':
+      return `/trips/${tripId}/events/${id}`;
+    case 'journey':
+      return `/trips/${tripId}/journeys/${id}`;
+    case 'decision':
+      return `/trips/${tripId}/decisions/${id}`;
+    default:
+      return undefined;
+  }
+}
+
+function TimelineControls({
+  calendarEnabled,
+  toggleCalendar,
+  onSelect,
+}: {
+  calendarEnabled: boolean;
+  toggleCalendar: () => void;
+  onSelect: (selection: TimelineSelection) => void;
+}) {
+  const { t } = useTranslation('trips');
+  return (
+    <div className="flex min-w-0 flex-wrap gap-2">
+      <Button
+        variant="outline"
+        className="min-h-11"
+        aria-pressed={calendarEnabled}
+        onClick={toggleCalendar}
+      >
+        {t('calendar')}
+      </Button>
+      <Button
+        variant="outline"
+        className="min-h-11"
+        onClick={() => onSelect({ kind: 'placement', target: null })}
+      >
+        {t('timeline.route.title')}
+      </Button>
+      <Button variant="outline" className="min-h-11" onClick={() => onSelect({ kind: 'metadata' })}>
+        {t('settings')}
+      </Button>
+      {(['people', 'capture', 'inbox', 'explore'] as const).map((tool) => (
+        <Button
+          key={tool}
+          variant="outline"
+          className="min-h-11"
+          onClick={() => onSelect({ kind: 'tool', tool })}
+        >
+          {t(`timeline.tools.${tool}`)}
+        </Button>
+      ))}
+    </div>
   );
 }

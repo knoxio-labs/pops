@@ -14,6 +14,21 @@ function capability() {
 }
 const rental = { targetKind: 'rental', targetId: 61 } as const;
 describe('Arrangement owner picker intent retention', () => {
+  it('isolates source origins while restoring the original exact owner intent', () => {
+    const contacts = capability();
+    const { result, rerender } = renderHook(
+      ({ origin }) => useArrangementContacts(contacts, 7, origin),
+      {
+        initialProps: { origin: 'https://first.invalid' },
+      }
+    );
+    const original = result.current.contactChooserIntent?.(rental);
+    rerender({ origin: 'https://second.invalid' });
+    expect(result.current.contactChooserIntent?.(rental)).not.toBe(original);
+    rerender({ origin: 'https://first.invalid' });
+    expect(result.current.contactChooserIntent?.(rental)).toBe(original);
+    expect(contacts.createIntent).toHaveBeenCalledTimes(2);
+  });
   it('creates lazily and retains the actual opaque intent across rerenders', () => {
     const contacts = capability();
     const { result, rerender } = renderHook(() => useArrangementContacts(contacts, 7));

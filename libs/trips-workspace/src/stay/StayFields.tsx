@@ -13,7 +13,7 @@ export function StayFields(
 ): JSX.Element {
   const { stay, edit, commit } = props;
   return (
-    <div className="space-y-4">
+    <div className="@container space-y-4">
       <TextInput
         label="Stay name"
         value={stay.name ?? ''}

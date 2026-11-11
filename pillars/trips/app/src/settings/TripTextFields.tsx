@@ -1,7 +1,8 @@
 import { MapPin, Type } from 'lucide-react';
+import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { TextInput } from '@pops/ui';
+import { FieldLabel, Textarea, TextInput } from '@pops/ui';
 
 import { tripTitle } from '../home/model';
 
@@ -16,6 +17,7 @@ export function TripTextFields({
   change: (draft: TripDraft) => void;
 }) {
   const { t } = useTranslation('trips');
+  const whenId = useId();
   return (
     <>
       <TextInput
@@ -31,12 +33,15 @@ export function TripTextFields({
         value={draft.name}
         onChange={(event) => change({ ...draft, name: event.currentTarget.value })}
       />
-      <TextInput
-        label={t('when')}
-        placeholder={t('whenPlaceholder')}
-        value={draft.when}
-        onChange={(event) => change({ ...draft, when: event.currentTarget.value })}
-      />
+      <div className="space-y-2">
+        <FieldLabel htmlFor={whenId} label={t('when')} />
+        <Textarea
+          id={whenId}
+          placeholder={t('whenPlaceholder')}
+          value={draft.when}
+          onChange={(event) => change({ ...draft, when: event.currentTarget.value })}
+        />
+      </div>
     </>
   );
 }
