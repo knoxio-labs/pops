@@ -47,7 +47,8 @@ controlled tools and exact `onOpenSource({ kind, id })` callbacks for existing e
 The `controls` slot belongs to that host; `contextualEditor` renders after the Timeline's
 main landmark so a Sheet or Dialog can reuse its existing workspace without nested mains.
 Meetings, captures, Ideas and Rentals retain their canonical identities and independent facts.
-People and Capture reads share the contextual editors' existing query keys and transports.
+People reads share the contextual editor's existing query key. Capture reads use separate
+typed cache entries beneath a common owner/trip prefix; both reuse the owning transport.
 All Timeline collection reads capture their actual owner, reject stale dispatch and delivery,
 and stop displaying cached context while the mutable connection no longer matches.
 Calendar rechecks that owner after collection reads before requesting Journey workspaces.
@@ -491,6 +492,8 @@ ownership before dispatch and after the response, and cached envelopes carry own
 before editor delivery. An unavailable restored owner retains its last good source rather than
 accepting another origin's records. Confirmed in-flight write receipts remain valid; their cache
 invalidation targets the captured owner even if the mutable transport changes afterward.
+The Timeline uses a separate raw-source query beneath the same owner/trip prefix; it never
+shares the Capture editor's proof-envelope cache entry. Confirmed writes invalidate both reads.
 Place and Visit catalogues use owner-proved entries beneath that same workspace key,
 with checks at dispatch, completion and option delivery. Last verified same-owner options
 remain available through a failed refresh; another origin's labels or occurrences are never

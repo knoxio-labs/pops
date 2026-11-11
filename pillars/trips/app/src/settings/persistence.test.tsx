@@ -320,7 +320,7 @@ describe('TripSettingsPage persistence', () => {
   });
 
   it('keeps opaque source references visible and saves other metadata when both catalogues fail', async () => {
-    source = { ...original, tagId: 'opaque-tag-reference', parentId: 42 };
+    source = { ...original, tagId: '11111111-1111-4111-8111-111111111111', parentId: 42 };
     failTags = true;
     failTrips = true;
     const edited: Trip = { ...source, name: 'Edited with unavailable references' };
@@ -330,7 +330,7 @@ describe('TripSettingsPage persistence', () => {
     await screen.findByText('Shared tags could not be loaded.');
     await screen.findByText('Parent trips could not be loaded.');
     expect(
-      screen.getByText('Source reference unavailable: opaque-tag-reference')
+      screen.getByText('Source reference unavailable: 11111111-1111-4111-8111-111111111111')
     ).toBeInTheDocument();
     expect(screen.getByText('Source reference unavailable: 42')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
@@ -343,7 +343,7 @@ describe('TripSettingsPage persistence', () => {
     ]);
     expect(cache.getQueryData(['trips', tripClient.getConfig().baseUrl, 7])).toEqual(edited);
     expect(
-      screen.getByText('Source reference unavailable: opaque-tag-reference')
+      screen.getByText('Source reference unavailable: 11111111-1111-4111-8111-111111111111')
     ).toBeInTheDocument();
     expect(screen.getByText('Source reference unavailable: 42')).toBeInTheDocument();
   });

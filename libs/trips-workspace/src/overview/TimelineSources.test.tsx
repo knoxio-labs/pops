@@ -56,7 +56,7 @@ it('retains explicit missing Visit references and independent meeting facts with
   expect(screen.queryByText('Contact unavailable')).not.toBeInTheDocument();
 });
 
-it('observes the canonical People and Capture query caches used by contextual editors', async () => {
+it('observes People cache updates and refreshes independent Capture facts through owner invalidation', async () => {
   const responses = overviewResponses();
   responses.set('/trips/7/meeting-plans', { meetingPlans: [meetingPlan()] });
   responses.set(
@@ -66,15 +66,24 @@ it('observes the canonical People and Capture query caches used by contextual ed
   const { cache, client } = mountOverview(responses);
   await screen.findByText('Coffee');
   await screen.findByText('Original capture');
+  expect(cache.getQueryData([...captureQueryKey({ tripId: 7, client }), 'overview'])).toEqual(
+    captureSource([sourceCapture({ tripId: 7, title: 'Original capture' })])
+  );
   act(() => {
     cache.setQueryData(peopleQueryKey({ tripId: 7, client }), [
       meetingPlan({ title: 'Changed meeting' }),
     ]);
-    cache.setQueryData(
-      captureQueryKey({ tripId: 7, client }),
-      captureSource([sourceCapture({ tripId: 7, title: 'Changed capture' })])
-    );
   });
+  responses.set('/trips/7/meeting-plans', {
+    meetingPlans: [meetingPlan({ title: 'Changed meeting' })],
+  });
+  responses.set(
+    '/trips/7/capture-workspace',
+    captureSource([sourceCapture({ tripId: 7, title: 'Changed capture' })])
+  );
+  await act(() =>
+    cache.invalidateQueries({ queryKey: captureQueryKey({ tripId: 7, client }).slice(0, 3) })
+  );
   expect(await screen.findByText('Changed meeting')).toBeVisible();
   expect(await screen.findByText('Changed capture')).toBeVisible();
   expect(screen.queryByText('Coffee')).not.toBeInTheDocument();
