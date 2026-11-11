@@ -61,7 +61,7 @@ function useOverviewCollection<Kind extends keyof Collections>(
     let queryKey: readonly (string | number)[] = ['trips', origin, owner.tripId, kind];
     if (kind === 'places') queryKey = ['trips', origin, kind];
     if (kind === 'meetings') queryKey = peopleQueryKey(identity);
-    if (kind === 'capture') queryKey = captureQueryKey(identity);
+    if (kind === 'capture') queryKey = [...captureQueryKey(identity), 'overview'];
     return { queryKey, load: () => readOverviewSource(owner, loaders[kind]) };
   });
 }
