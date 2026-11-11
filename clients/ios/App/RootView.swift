@@ -138,9 +138,20 @@ internal struct RootView: View {
                         return
                     }
                 #endif
-                let outcome = handleOpenPopsURL(url, router: composition.entityRouter)
-                guard case .unsupported(let pillar)? = outcome else { return }
-                unsupportedPillar = pillar
+                Task {
+                    let outcome: EntityRouteOutcome?
+                    if url.scheme == "pops-i" {
+                        await composition.shell.restoreSession()
+                        guard case .paired(let device) = composition.session.state else { return }
+                        outcome = await handleOpenPopsURL(
+                            url, router: composition.entityRouter,
+                            inventory: composition.dependencies(for: device).inventory)
+                    } else {
+                        outcome = handleOpenPopsURL(url, router: composition.entityRouter)
+                    }
+                    guard case .unsupported(let pillar)? = outcome else { return }
+                    unsupportedPillar = pillar
+                }
             }
             .alert(
                 RootCopy.opensIn(unsupportedPillar ?? ""),

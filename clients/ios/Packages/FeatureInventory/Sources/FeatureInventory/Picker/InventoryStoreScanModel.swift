@@ -85,13 +85,15 @@ internal final class InventoryStoreScanModel {
         sightings[payload] = moment
         guard !isRepeat else { return }
 
-        if let uri = parsePopsURI(payload) {
+        if let code = parseInventoryCodeURI(payload) {
+            lookUp(.inventoryCode(code))
+        } else if let uri = parsePopsURI(payload) {
             guard case .item(let id) = InventoryEntity(uri) else {
                 phase = .notAnItem
                 return
             }
             lookUp(.id(id))
-        } else if payload.hasPrefix("pops://") {
+        } else if payload.hasPrefix("pops://") || payload.hasPrefix("pops-i://") {
             phase = .notPops
         } else {
             lookUp(.code(payload))
@@ -162,6 +164,7 @@ internal final class InventoryStoreScanModel {
 internal enum InventoryStoreScanReference: Sendable {
     case id(InventoryItem.ID)
     case code(String)
+    case inventoryCode(String)
 }
 
 /// An item a scanned code named, and why it cannot be stored, if it cannot.
@@ -180,6 +183,8 @@ internal struct InventoryStoreScanCandidate: Sendable {
             switch reference {
             case .id(let id):
                 items = source.inventoryItem(id: id).map { [$0] } ?? []
+            case .inventoryCode(let code):
+                items = source.inventoryItem(withCode: code).map { [$0] } ?? []
             case .code(let code):
                 items =
                     source.inventoryItem(withCode: code).map { [$0] }

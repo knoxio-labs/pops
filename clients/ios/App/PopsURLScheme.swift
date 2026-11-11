@@ -19,3 +19,16 @@ internal func handleOpenPopsURL(_ url: URL, router: EntityRouter) -> EntityRoute
     guard let uri = parsePopsURI(url.absoluteString) else { return nil }
     return router.route(uri)
 }
+
+/// Resolves code links through the paired Inventory store before routing the
+/// item. Other URLs retain the ordinary cross-pillar routing path.
+@MainActor
+internal func handleOpenPopsURL(
+    _ url: URL, router: EntityRouter, inventory: any InventoryStore
+) async -> EntityRouteOutcome? {
+    guard url.scheme == "pops-i" else { return handleOpenPopsURL(url, router: router) }
+    guard let uri = await resolveInventoryCodeURI(url.absoluteString, store: inventory) else {
+        return nil
+    }
+    return router.route(uri)
+}

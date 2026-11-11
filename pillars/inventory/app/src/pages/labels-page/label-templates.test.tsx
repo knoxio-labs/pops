@@ -2,8 +2,9 @@ import { cleanup, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { sheetLayout } from '@pops/inventory/labels';
+import { decodeQrSvg } from '@pops/ui/testing/decode-qr';
 
-import { FieldList } from './label-template-parts';
+import { FieldList, LabelQr } from './label-template-parts';
 import { ContentLabel } from './label-templates';
 
 import type { LabelFieldValue, PrintSubject } from '@pops/inventory/labels';
@@ -87,5 +88,19 @@ describe('printed field icons', () => {
       expect(row).toHaveClass('overflow-hidden');
     }
     expect(list.querySelector('span[aria-hidden="true"]')).toHaveClass('align-text-bottom');
+  });
+});
+
+describe('printed QR payloads', () => {
+  it.each([
+    { code: 'B002', expected: 'pops-i://B002' },
+    { code: 'CAB /?#@界', expected: 'pops-i://CAB%20%2F%3F%23%40%E7%95%8C' },
+    { code: null, expected: `pops://inventory/item/${subject.id}` },
+    { code: '', expected: `pops://inventory/item/${subject.id}` },
+  ])('encodes $expected for code $code', ({ code, expected }) => {
+    render(<LabelQr subject={{ ...subject, code, suggestedCode: 'SUG-001' }} sizeMm={24} />);
+    const qr = screen.getByRole('img', { name: `QR code for ${subject.name}` });
+    if (!(qr instanceof SVGElement)) throw new Error('Label QR was not rendered');
+    expect(decodeQrSvg(qr)).toBe(expected);
   });
 });

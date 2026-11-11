@@ -93,7 +93,7 @@ export function planLabels({
       details.get(subject.id) ?? NO_DETAILS,
       { recorded: fragility?.get(subject.id), manual: fragileIds?.has(subject.id) ?? false }
     );
-    const label = fitPrintedLabel(wanted, layout, fragile);
+    const label = fitPrintedLabel(wanted, layout, fragile, subject);
     if (label === null) {
       tooSmall = true;
       fragileTooSmall ||= fragile;

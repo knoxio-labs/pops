@@ -216,6 +216,24 @@ beforeEach(() => {
 });
 
 describe('ConnectEndsDialog', () => {
+  it('keeps code buttons outside buttons and preserves keyboard candidate selection', () => {
+    currentItemRows = itemRows({
+      rows: [{ ...itemRow('lamp', 'Bedside lamp'), code: 'K12' }, itemRow('soundbar', 'Soundbar')],
+    });
+    renderDialog();
+    const left = within(screen.getByRole('listbox', { name: 'Item' }));
+    const right = within(screen.getByRole('listbox', { name: 'Connects to' }));
+    const option = left.getByRole('option', { name: /Bedside lamp/ });
+    const qr = left.getByRole('button', { name: 'Show QR code for K12' });
+    expect(option.tagName).toBe('DIV');
+    expect(qr.parentElement?.closest('button')).toBeNull();
+    fireEvent.keyDown(qr, { key: 'Enter' });
+    expect(connectButton()).toBeDisabled();
+    fireEvent.keyDown(option, { key: 'Enter' });
+    fireEvent.keyDown(right.getByRole('option', { name: /Soundbar/ }), { key: ' ' });
+    expect(connectButton()).toBeEnabled();
+  });
+
   it('says what will happen once both ends are chosen and connects them', async () => {
     const { onOpenChange } = renderDialog();
     selectItem('Bedside lamp', 'Soundbar');

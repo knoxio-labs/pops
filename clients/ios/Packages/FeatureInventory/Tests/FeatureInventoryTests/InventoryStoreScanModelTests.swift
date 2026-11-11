@@ -33,6 +33,24 @@ internal struct InventoryStoreScanModelTests {
         return (record.id, outcome)
     }
 
+    @Test("a code link stores the named item")
+    func codeLinkStores() async {
+        let rig = Self.rig([Fixture.item("drill", "Drill", at: .hand, code: "ABC-123")])
+        await rig.scan("pops-i://abc-123")
+        #expect(rig.store.commands == [Self.storing("drill")])
+        #expect(Self.answer(rig.model.phase)?.outcome == .stored)
+    }
+
+    @Test("a code link does not store an external identifier match")
+    func codeLinkDoesNotStoreBarcode() async {
+        let rig = Self.rig([
+            Fixture.item("drill", "Drill", at: .hand, externalIds: Self.barcode("ABC-123"))
+        ])
+        await rig.scan("pops-i://ABC-123")
+        #expect(rig.store.commands.isEmpty)
+        #expect(rig.model.phase == .notFound)
+    }
+
     @Test("an item's own code stores it in the target with the store verb")
     func ownCodeStores() async {
         let rig = Self.rig([Fixture.item("drill", "Drill", at: .hand, code: "ABC-123")])

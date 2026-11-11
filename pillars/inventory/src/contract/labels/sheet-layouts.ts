@@ -160,10 +160,14 @@ export function textWidthMm(layout: SheetLayout): number {
  * Whether a template prints on this sheet: its QR keeps every module at
  * the printable minimum and the text beside it has room to be read.
  */
-export function templateFits(layout: SheetLayout, template: LabelTemplateId): boolean {
+export function templateFits(
+  layout: SheetLayout,
+  template: LabelTemplateId,
+  minimumQrMm = MIN_QR_MM
+): boolean {
   const { paddingMm, qrMm } = layout.scale;
   return (
-    qrMm >= MIN_QR_MM &&
+    qrMm >= minimumQrMm &&
     qrMm <= layout.labelHeightMm - paddingMm * 2 + EPSILON_MM &&
     textWidthMm(layout) + EPSILON_MM >= MIN_TEXT_MM[template]
   );

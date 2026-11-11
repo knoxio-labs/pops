@@ -4,6 +4,8 @@ import {
   customLayout,
   fitToSheet,
   LABEL_GAP_MM,
+  labelQrLayout,
+  labelQrMinimumMm,
   MIN_QR_MM,
   planLabel,
   sheetLayout,
@@ -47,14 +49,18 @@ function smallLayout(widthMm: number, heightMm: number): SheetLayout {
 }
 
 describe('fragile label fitting', () => {
-  it('delegates normal fitting and planning without changing their results', () => {
+  it('uses the actual payload dimensions for normal fitting and planning', () => {
     const layout = sheetLayout('L7160');
-    const fitted = fitPrintedLabel(boxLabel, layout, false);
-    expect(fitted).toEqual(fitToSheet(boxLabel, layout));
+    const fitted = fitPrintedLabel(boxLabel, layout, false, subject);
+    expect(fitted).toEqual(
+      fitToSheet(boxLabel, labelQrLayout(subject, layout), labelQrMinimumMm(subject))
+    );
     expect(fitted).not.toBeNull();
     if (fitted === null) return;
     expect(planPrintedLabel(fitted, subject, layout, false)).toEqual({
-      plan: planLabel(fitted, subject, layout),
+      plan: planLabel(fitted, subject, labelQrLayout(subject, layout), {
+        minimumQrMm: labelQrMinimumMm(subject),
+      }),
       fragileMm: null,
     });
   });
@@ -88,7 +94,16 @@ describe('fragile label fitting', () => {
   it('rejects width and height that cannot hold both scannable symbols', () => {
     expect(fitPrintedLabel(qrLabel, smallLayout(43, 38), true)).toBeNull();
     expect(fitPrintedLabel(qrLabel, smallLayout(64, 22), true)).toBeNull();
-    expect(() => planPrintedLabel(qrLabel, subject, smallLayout(43, 38), true)).toThrow(RangeError);
+    expect(() => planPrintedLabel(qrLabel, subject, smallLayout(30, 38), true)).toThrow(RangeError);
+  });
+
+  it('allows a compact code QR where the old fixed QR minimum did not fit', () => {
+    const layout = smallLayout(43, 22);
+    expect(fitPrintedLabel(qrLabel, layout, true)).toBeNull();
+    expect(fitPrintedLabel(qrLabel, layout, true, subject)).toEqual(qrLabel);
+    const { plan } = planPrintedLabel(qrLabel, subject, layout, true);
+    expect(plan.qrMm).toBeGreaterThanOrEqual(labelQrMinimumMm(subject));
+    expect(plan.qrMm).toBeLessThan(MIN_QR_MM);
   });
 
   it('sizes a QR-only pair equally without overflowing the die-cut', () => {

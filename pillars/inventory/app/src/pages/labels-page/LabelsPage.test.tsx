@@ -305,12 +305,12 @@ describe('LabelsPage', () => {
     expect(within(labels[2] as HTMLElement).queryByText('Coffee grinder')).toBeNull();
   });
 
-  it('encodes each label as its item URI', async () => {
+  it('encodes each labelled item using its assigned inventory code', async () => {
     renderPage(`?ids=${GRINDER}`);
     await screen.findByRole('button', { name: 'Print 1 label' });
     const qr = document.querySelector('[data-slot-kind="label"] svg');
     if (!(qr instanceof SVGElement)) throw new Error('no QR on the label');
-    expect(decodeQrSvg(qr)).toBe(`pops://inventory/item/${GRINDER}`);
+    expect(decodeQrSvg(qr)).toBe('pops-i://KIT-031');
     expect(document.querySelector<HTMLElement>('[data-slot-kind="label"]')?.style.top).toBe(
       '15.15mm'
     );

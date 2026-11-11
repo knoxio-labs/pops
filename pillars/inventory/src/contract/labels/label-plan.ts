@@ -24,3 +24,11 @@ export interface LabelPlan {
   fields: FittedList<LabelFieldValue> | null;
   contents: FittedList<string> | null;
 }
+
+/** Physical constraints for planning a label beside other printed content. */
+export interface LabelPlanOptions {
+  /** Width reserved beside the header, or beside the whole label without a header. */
+  inlineReservationMm?: number;
+  /** Minimum QR side for the encoded payload; defaults to the legacy item URI minimum. */
+  minimumQrMm?: number;
+}
