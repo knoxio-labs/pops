@@ -151,10 +151,13 @@ Each mounted view holds its own lease. Ending that host lifetime requires a new
 QueryClient; this does not invent an authentication lifecycle. Source reads and
 reloads use captured owner keys, and foreign or failed collections cannot prove
 missing nights. Canonical Stay-list invalidation also refreshes these scoped
-reads. No GET acknowledges an unknown create, no retry invents a request UUID,
+reads. Event facts attach to periods already bounded by Visits and Stays; unavailable
+Events cannot block proven accommodation gaps or change their dates. No GET acknowledges an unknown create, no retry invents a request UUID,
 and creation has no Undo contract; the existing Stay editor owns subsequent edit
-Undo. A known creation response settles its captured scoped cache even when the
-initiating view has closed. Its captured canonical collection prefix becomes
+Undo. A known creation response amends its existing captured complete Stay collection even
+when the initiating view has closed. After collection eviction, the receipt retains
+the source identity while the collection remains unavailable until a full read;
+one created record never becomes a fabricated complete collection. Its captured canonical collection prefix becomes
 stale without refetch while the initiating view, callback or transport is inactive;
 only the current original view may refresh it or open the editor. Explicit Reload
 refreshes the scoped collection and any current legacy collection consumer through

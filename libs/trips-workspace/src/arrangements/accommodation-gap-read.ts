@@ -40,7 +40,7 @@ export async function accommodationStays(binding: GapCaptureBinding): Promise<St
     throw new Error('Foreign accommodation Stay');
   return stays;
 }
-/** Event dates supply existing projection boundaries only; they never become accommodation coverage. */
+/** Attach Events to existing periods; their dates never define period boundaries or accommodation coverage. */
 export async function accommodationEvents(binding: GapCaptureBinding): Promise<TripEvent[]> {
   current(binding);
   const result = await eventsList({
