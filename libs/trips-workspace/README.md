@@ -46,6 +46,10 @@ newer foreign revisions and already-undone replay outcomes grant no inverse.
 controlled tools and exact `onOpenSource({ kind, id })` callbacks for existing editors.
 The `controls` slot belongs to that host; `contextualEditor` renders after the Timeline's
 main landmark so a Sheet or Dialog can reuse its existing workspace without nested mains.
+The optional `renderVisitContext({ tripId, visitId })` renders a host-owned node after resolved
+owning Visit facts in the root, active alternatives and unplaced context. Applied history and
+unresolved or foreign Visit references never receive it. A failed route-placement read does not
+hide the slot for an independently resolved owning Visit.
 Meetings, captures, Ideas and Rentals retain their canonical identities and independent facts.
 People reads share the contextual editor's existing query key. Capture reads use separate
 typed cache entries beneath a common owner/trip prefix; both reuse the owning transport.
