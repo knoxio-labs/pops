@@ -158,8 +158,10 @@ Every build is the **local** flavour unless it says otherwise: `com.knoxiolabs.p
 `Pops` alone registers the `pops://` and `pops-i://` URL schemes; `PopsPlayground` does not. The
 simulator pairing URL handler is compiled only for Debug simulator builds.
 Inventory code links (`pops-i://<CODE>`) resolve through the paired device’s
-Inventory code index, including containers. Unknown or deleted codes do not
-open an item. Existing `pops://<pillar>/<type>/<id>` labels remain supported.
+Inventory code index, including containers. Unknown or deleted codes show
+no-match feedback with a sync suggestion. Opening a code link restores pairing first; an unpaired device
+receives pairing instructions through the shared error banner and Recent errors,
+with a safe diagnostic id. Existing `pops://<pillar>/<type>/<id>` labels remain supported.
 
 ### On the phone
 

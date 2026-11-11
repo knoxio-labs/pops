@@ -32,3 +32,46 @@ internal func handleOpenPopsURL(
     }
     return router.route(uri)
 }
+
+/// The result of opening a URL, including failures the shell must present.
+internal enum PopsURLOpenOutcome: Equatable {
+    case ignored
+    case routed(EntityRouteOutcome)
+    case failed(PopsError)
+}
+
+/// Restores pairing before resolving code links. A missing pairing or failed
+/// restoration becomes a user-safe failure; legacy links bypass restoration.
+@MainActor
+internal func openPopsURL(
+    _ url: URL, router: any EntityRouter,
+    restoreInventory: @MainActor () async throws -> (any InventoryStore)?
+) async -> PopsURLOpenOutcome {
+    guard url.scheme == "pops-i" else {
+        return handleOpenPopsURL(url, router: router).map(PopsURLOpenOutcome.routed) ?? .ignored
+    }
+    guard parseInventoryCodeURI(url.absoluteString) != nil else { return .ignored }
+    do {
+        guard let inventory = try await restoreInventory() else {
+            return .failed(
+                PopsError(
+                    code: "ios.inventory.link.pairing-required",
+                    message: RootCopy.inventoryLinkPairingRequired,
+                    requestID: UUID().uuidString, retryable: false, kind: .client))
+        }
+        guard let outcome = await handleOpenPopsURL(url, router: router, inventory: inventory)
+        else {
+            return .failed(
+                PopsError(
+                    code: "ios.inventory.link.not-found", message: RootCopy.inventoryLinkNotFound,
+                    requestID: UUID().uuidString, retryable: false, kind: .client))
+        }
+        return .routed(outcome)
+    } catch {
+        return .failed(
+            PopsError(
+                code: "ios.inventory.link.restore-failed",
+                message: RootCopy.inventoryLinkRestoreFailed,
+                requestID: UUID().uuidString, retryable: true, kind: .client))
+    }
+}

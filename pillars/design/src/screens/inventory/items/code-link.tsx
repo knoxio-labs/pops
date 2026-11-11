@@ -12,19 +12,19 @@ function CodeLinkReview({ failed = false }: { failed?: boolean }): ReactElement 
           <QrCodePopover value="pops-i://CAB-012" label="CAB-012" />
           CAB-012
         </div>
-        <div className="space-y-3 rounded-md border bg-popover p-4 text-popover-foreground shadow-md">
-          <h2 className="text-sm font-medium">CAB-012</h2>
-          <QrCode value="pops-i://CAB-012" title="QR code for CAB-012" className="mx-auto w-48" />
-          <p className="break-all font-mono text-xs">pops-i://CAB-012</p>
-          <p role={failed ? 'alert' : 'status'} className="text-sm text-muted-foreground">
-            {failed
-              ? 'Could not copy link. Copy it below or try again. (clipboard-write-failed)'
-              : 'Link copied'}
-          </p>
-          <Button variant="outline" className="w-full">
-            {failed ? 'Try copying again' : 'Copy link'}
-          </Button>
-        </div>
+        {failed ? (
+          <div className="space-y-3 rounded-md border bg-popover p-4 text-popover-foreground shadow-md">
+            <h2 className="text-sm font-medium">CAB-012</h2>
+            <QrCode value="pops-i://CAB-012" title="QR code for CAB-012" className="mx-auto w-48" />
+            <p className="break-all font-mono text-xs">pops-i://CAB-012</p>
+            <p role="alert" className="text-sm text-muted-foreground">
+              Could not copy link. Copy it below or try again. (clipboard-write-failed)
+            </p>
+            <Button variant="outline" className="w-full">
+              Try copying again
+            </Button>
+          </div>
+        ) : null}
       </div>
     </main>
   );
