@@ -4,7 +4,7 @@ import type { SourceSessionView } from '../shared/retained-session-store';
 import type { Stay } from '../stay/types';
 import type { GapCaptureBinding } from './gap-capture-registry';
 
-/** Known creation belongs to its captured cache even after its view closes; only current views may start refresh reads. */
+/** Amend an existing full collection with the own receipt; absent collections remain unavailable. Only current views may refresh. */
 export function settleAccommodationStay(
   cache: QueryClient,
   binding: GapCaptureBinding,
@@ -12,9 +12,10 @@ export function settleAccommodationStay(
   isVisible?: () => boolean
 ): (source: Stay) => void {
   return (source) => {
-    cache.setQueryData<Stay[]>(binding.staysKey, (previous) =>
-      previous?.some((stay) => stay.id === source.id) ? previous : [...(previous ?? []), source]
-    );
+    cache.setQueryData<Stay[]>(binding.staysKey, (previous) => {
+      if (!previous) return previous;
+      return previous.some((stay) => stay.id === source.id) ? previous : [...previous, source];
+    });
     const current = binding.isCurrent() && view.isCurrent() && (isVisible?.() ?? true);
     void cache.invalidateQueries({
       queryKey: binding.staysPrefix,
