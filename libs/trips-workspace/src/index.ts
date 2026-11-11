@@ -137,3 +137,15 @@ export {
   zTripsGetResponse as tripMetadataReadSchema,
   zTripsUpdateResponse as tripMetadataWriteSchema,
 } from './trips-api/zod.gen';
+
+export {
+  AccommodationGapProvider,
+  AccommodationGapContext,
+} from './arrangements/AccommodationGapContext';
+export type {
+  AccommodationGapIdentity,
+  AccommodationGapLabels,
+  AccommodationGapStay,
+  AccommodationGapProviderProps,
+  AccommodationGapContextProps,
+} from './arrangements/accommodation-gap-types';
