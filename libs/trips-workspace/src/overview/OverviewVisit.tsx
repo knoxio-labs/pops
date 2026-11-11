@@ -42,6 +42,8 @@ export function OverviewVisit({
             </p>
           )}
           <VisitFacts {...props} visitId={visit.id} />
+          {visit.tripId === props.tripId &&
+            props.renderVisitContext?.({ tripId: props.tripId, visitId: visit.id })}
         </div>
       </div>
     </li>

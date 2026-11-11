@@ -88,6 +88,8 @@ interface OverviewBaseProps {
   onOpenTool?: (tool: OverviewTool) => void;
   controls?: ReactNode;
   contextualEditor?: ReactNode;
+  /** Host context follows resolved owning Visit facts; optional route outages do not hide a known Visit. */
+  renderVisitContext?: (identity: { tripId: Trip['id']; visitId: Visit['id'] }) => ReactNode;
   documentsHref?: string;
   calendarLink?: { href: string; label: string };
 }
