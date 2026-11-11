@@ -10,6 +10,7 @@ export interface GapCaptureBinding {
   readonly session: GapCaptureSession;
   readonly identity: Readonly<Pick<SourceOwner, 'client' | 'tripId'>>;
   readonly owner: SourceOwner;
+  readonly staysPrefix: readonly (string | number)[];
   readonly staysKey: readonly (string | number)[];
   readonly isCurrent: () => boolean;
 }
@@ -48,6 +49,7 @@ export class GapCaptureRegistry {
       session: new GapCaptureSession(),
       owner: captured,
       identity: Object.freeze({ client: captured.client, tripId: captured.tripId }),
+      staysPrefix: Object.freeze(['trips', captured.origin, captured.tripId, 'stays']),
       staysKey: Object.freeze([
         'trips',
         captured.origin,

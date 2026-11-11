@@ -153,8 +153,13 @@ reloads use captured owner keys, and foreign or failed collections cannot prove
 missing nights. Canonical Stay-list invalidation also refreshes these scoped
 reads. No GET acknowledges an unknown create, no retry invents a request UUID,
 and creation has no Undo contract; the existing Stay editor owns subsequent edit
-Undo. Known receipts and unknown outcomes remain dormant with their original
-owner during context changes.
+Undo. A known creation response settles its captured scoped cache even when the
+initiating view has closed. Its captured canonical collection prefix becomes
+stale without refetch while the initiating view, callback or transport is inactive;
+only the current original view may refresh it or open the editor. Explicit Reload
+refreshes the scoped collection and any current legacy collection consumer through
+that same captured prefix. Known receipts and unknown outcomes remain dormant with
+their original owner during context changes.
 
 Stay, Journey and Event editors provide the sole canonical document link and
 upload controls for that exact source. Arrangements resolves the same target-

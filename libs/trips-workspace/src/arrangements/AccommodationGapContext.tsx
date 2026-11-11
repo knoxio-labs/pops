@@ -45,7 +45,8 @@ function GapContext(
 ): JSX.Element {
   const { binding } = props;
   const { visits, stays, events } = useAccommodationSources(binding);
-  const capture = useGapCapture(props.identity, useGapDelivery(props), props.visitId);
+  const delivery = useGapDelivery(props);
+  const capture = useGapCapture(props.identity, delivery.open, props.visitId, delivery.isCurrent);
   const visit = visits.data?.find(
     (source) => source.id === props.visitId && source.tripId === binding.identity.tripId
   );
@@ -108,9 +109,10 @@ function useAccommodationSources(binding: GapCaptureBinding): {
   return { visits, stays, events };
 }
 
-function useGapDelivery(
-  props: AccommodationGapContextProps & { binding: GapCaptureBinding }
-): (target: ArrangementTarget) => void {
+function useGapDelivery(props: AccommodationGapContextProps & { binding: GapCaptureBinding }): {
+  open: (target: ArrangementTarget) => void;
+  isCurrent: () => boolean;
+} {
   const scope = useQueryClient();
   const delivery = useMemo(
     () => ({
@@ -128,12 +130,15 @@ function useGapDelivery(
     delivery.view.activate();
     return () => delivery.view.deactivate();
   }, [delivery]);
-  return (target) => {
-    if (delivery.view.isCurrent())
-      delivery.callback({
-        tripId: props.binding.identity.tripId,
-        visitId: props.visitId,
-        stayId: target.targetId,
-      });
+  return {
+    isCurrent: delivery.view.isCurrent,
+    open: (target) => {
+      if (delivery.view.isCurrent())
+        delivery.callback({
+          tripId: props.binding.identity.tripId,
+          visitId: props.visitId,
+          stayId: target.targetId,
+        });
+    },
   };
 }

@@ -1,7 +1,8 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, QueryObserver } from '@tanstack/react-query';
 import { act, cleanup, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { loadStays } from '../stay/api';
 import { sourceStay } from '../stay/test-utils';
 import { createClient } from '../trips-api/client';
 import { GapCaptureSessions } from './GapCaptureSessions';
@@ -287,6 +288,12 @@ describe('Gap Stay source capture identity', () => {
     'never settles a lost response using an empty reload or matching later source %s',
     async (laterId) => {
       const { transport, result, open, cache } = setup();
+      const canonicalKey = ['trips', 'http://arrangements.test', 7, 'stays'];
+      const observer = new QueryObserver(cache, {
+        queryKey: canonicalKey,
+        queryFn: () => loadStays(7, transport.client),
+      });
+      const unsubscribe = observer.subscribe(() => {});
       transport.replies.push({
         status: 503,
         body: {
@@ -323,9 +330,11 @@ describe('Gap Stay source capture identity', () => {
           queryKey: ['trips', 'http://arrangements.test', 7, 'stays', 'accommodation'],
         })[0]?.[1]
       ).toEqual([later]);
+      expect(cache.getQueryData(canonicalKey)).toEqual([later]);
       expect(result.current.uncertain).toBe(true);
       expect(transport.writes).toHaveLength(1);
       expect(open).not.toHaveBeenCalled();
+      unsubscribe();
     }
   );
   it('starts no automatic POST when the user explicitly abandons uncertainty and begins a new intent', async () => {

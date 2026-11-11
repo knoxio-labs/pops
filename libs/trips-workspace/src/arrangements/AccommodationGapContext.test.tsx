@@ -11,6 +11,7 @@ import { arrangementsTransport, labels } from './test-utils';
 
 import type { ReactNode } from 'react';
 
+import type { Stay } from '../stay/types';
 import type { AccommodationGapIdentity, AccommodationGapStay } from './accommodation-gap-types';
 
 afterEach(cleanup);
@@ -187,6 +188,14 @@ describe('canonical accommodation context', () => {
       );
       await screen.findByRole('button', { name: /Add stay/ });
       view.rerender(<Host {...first} identity={{ tripId: 7, client }} />);
+      await waitFor(() =>
+        expect(
+          first.cache.isFetching({
+            queryKey: ['trips', 'http://arrangements.test', 7, 'stays', 'accommodation'],
+          })
+        ).toBe(0)
+      );
+      const priorReads = first.requests.length;
       await act(async () => {
         finish?.(
           new Response(JSON.stringify(sourceStay({ id: 77 })), {
@@ -196,6 +205,14 @@ describe('canonical accommodation context', () => {
         );
       });
       expect(first.open).not.toHaveBeenCalled();
+      expect(first.requests).toHaveLength(priorReads);
+      expect(
+        first.cache
+          .getQueriesData<Stay[]>({
+            queryKey: ['trips', 'http://arrangements.test', 7, 'stays', 'accommodation'],
+          })
+          .some(([, value]) => value?.some((source) => source.id === 77))
+      ).toBe(true);
       await add();
       expect(first.open).toHaveBeenCalledExactlyOnceWith({ tripId: 7, visitId: 31, stayId: 77 });
       expect(first.writes).toHaveLength(1);

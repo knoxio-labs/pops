@@ -3,7 +3,8 @@ import { useMemo, useRef, useState, useSyncExternalStore } from 'react';
 
 import { useSessionView } from '../shared/use-session-view';
 import { accommodationStays } from './accommodation-gap-read';
-import { arrangementsKey, createGapStay } from './api';
+import { settleAccommodationStay } from './accommodation-gap-settlement';
+import { createGapStay } from './api';
 import { useGapCaptureSession } from './GapCaptureSessions';
 
 import type { SourceSessionView } from '../shared/retained-session-store';
@@ -26,11 +27,11 @@ export interface GapCapture {
 export function useGapCapture(
   identity: AccommodationGapIdentity,
   open: (target: ArrangementTarget) => void,
-  visitId?: number
+  visitId?: number,
+  isVisible?: () => boolean
 ): GapCapture {
   const queryClient = useQueryClient();
   const binding = useGapCaptureSession(identity);
-  const key = binding.staysKey;
   const owner = useMemo(
     () => ({
       ...binding.owner,
@@ -45,16 +46,10 @@ export function useGapCapture(
   const state = useSyncExternalStore(capture.subscribe, capture.read, capture.read);
   const reads = useGapReads(binding, view);
   function present(source: Stay): void {
-    if (!binding.isCurrent() || !view.isCurrent()) return;
-    queryClient.setQueryData<Stay[]>(key, (previous) => [
-      ...(previous ?? []).filter((stay) => stay.id !== source.id),
-      source,
-    ]);
-    void queryClient.invalidateQueries({
-      queryKey: [...arrangementsKey(binding.identity), 'stays'],
-    });
+    if (!binding.isCurrent() || !view.isCurrent() || (isVisible && !isVisible())) return;
     open({ targetKind: 'stay', targetId: source.id });
   }
+  const settle = settleAccommodationStay(queryClient, binding, view, isVisible);
   return {
     busy: capture.pending() || reads.busy,
     uncertain:
@@ -64,7 +59,7 @@ export function useGapCapture(
       (state.kind === 'uncertain' && (visitId === undefined || state.intent.visitId === visitId)
         ? state.error
         : undefined),
-    create: gapCreate(binding, view, present),
+    create: gapCreate(binding, view, { present, settle }),
     reload: reads.reload,
     beginNew: (): void => {
       if (
@@ -99,6 +94,10 @@ function useGapReads(
         const sources = await accommodationStays(binding);
         if (!view.isCurrent() || !binding.isCurrent()) return;
         cache.setQueryData(binding.staysKey, sources);
+        await cache.invalidateQueries({
+          queryKey: binding.staysPrefix,
+          refetchType: binding.isCurrent() && view.isCurrent() ? 'active' : 'none',
+        });
         setFailure(undefined);
       } catch (error) {
         if (view.isCurrent() && binding.isCurrent()) setFailure({ binding, error });
@@ -117,7 +116,7 @@ function useGapReads(
 function gapCreate(
   binding: GapCaptureBinding,
   view: SourceSessionView,
-  present: (source: Stay) => void
+  delivery: { present: (source: Stay) => void; settle: (source: Stay) => void }
 ): GapCapture['create'] {
   const capture = binding.session;
   return async (visitId: number, interval: ArrangementCoverageFinding): Promise<void> => {
@@ -126,7 +125,8 @@ function gapCreate(
     const current = capture.select(intent);
     if (current.kind === 'uncertain') return;
     if (current.kind === 'acknowledged') {
-      present(current.source);
+      delivery.settle(current.source);
+      delivery.present(current.source);
       return;
     }
     capture.update({ kind: 'creating', intent });
@@ -138,6 +138,7 @@ function gapCreate(
       return;
     }
     capture.update({ kind: 'acknowledged', intent, source });
-    present(source);
+    delivery.settle(source);
+    delivery.present(source);
   };
 }
