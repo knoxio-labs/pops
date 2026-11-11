@@ -252,9 +252,11 @@ describe('TripSettingsPage persistence', () => {
     fireEvent.change(when, { target: { value: '  after graduation  ' } });
     failTripRead = true;
     await act(async () => {
-      await cache.refetchQueries({ queryKey: tripKeys().one(7), exact: true });
+      await cache.refetchQueries({ queryKey: [...tripKeys().one(7), 'metadata'], exact: true });
     });
-    await waitFor(() => expect(cache.getQueryState(tripKeys().one(7))?.status).toBe('error'));
+    await waitFor(() =>
+      expect(cache.getQueryState([...tripKeys().one(7), 'metadata'])?.status).toBe('error')
+    );
     expect(screen.getByLabelText('Destination')).toBe(destination);
     expect(destination).toHaveValue('  unsaved destination  ');
     expect(when).toHaveValue('  after graduation  ');

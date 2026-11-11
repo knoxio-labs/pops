@@ -16,7 +16,8 @@ type Picker = Pick<
 /** Retain owner receipts per exact operation; only confirmed or explicitly reconciled writes permit the next picker intent. */
 export function useArrangementContacts(
   contacts: ContactsHostCapability | undefined,
-  tripId: number | undefined
+  tripId: number | undefined,
+  sourceOrigin?: string
 ): Picker {
   const scopes = useRef(new Map<ContactsHostCapability, Map<string, RetainedIntent>>());
   return useMemo(() => {
@@ -32,7 +33,7 @@ export function useArrangementContacts(
     }
     return {
       contactChooserIntent: (target): ContactChooserIntent => {
-        const key = JSON.stringify([tripId, target.targetKind, target.targetId]);
+        const key = JSON.stringify([sourceOrigin, tripId, target.targetKind, target.targetId]);
         const intents = entries();
         const retained = intents.get(key);
         if (retained && !retained.advance) return retained.active;
@@ -46,10 +47,10 @@ export function useArrangementContacts(
       },
       advanceContactChooserIntent: (target, intent): void => {
         const retained = entries().get(
-          JSON.stringify([tripId, target.targetKind, target.targetId])
+          JSON.stringify([sourceOrigin, tripId, target.targetKind, target.targetId])
         );
         if (retained?.active === intent) retained.advance = true;
       },
     };
-  }, [contacts, tripId]);
+  }, [contacts, tripId, sourceOrigin]);
 }
