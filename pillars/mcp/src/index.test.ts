@@ -67,6 +67,16 @@ vi.mock('./tools/index.js', () => ({
       scope: 'inventory.types.manage',
     },
     {
+      name: 'test.strict',
+      description: 'Tool that declares its arguments closed',
+      inputSchema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: { containingItemId: { type: 'string' }, limit: { type: 'integer' } },
+      },
+      handler: mockToolHandler,
+    },
+    {
       name: 'test.readonly',
       description: 'Read-only tool for testing',
       inputSchema: { type: 'object', properties: {} },
@@ -153,7 +163,7 @@ describe('createMcpServer — ListTools handler', () => {
     const response = (await handler({ params: {} })) as {
       tools: { name: string; description: string; inputSchema: unknown }[];
     };
-    expect(response.tools).toHaveLength(3);
+    expect(response.tools).toHaveLength(4);
     expect(response.tools[0]).toMatchObject({
       name: 'test.echo',
       description: 'Echo tool for testing',
@@ -232,6 +242,25 @@ describe('createMcpServer — CallTool handler', () => {
 
     expect(response.isError).toBe(true);
     expect(response.content[0]?.text).toContain('upstream failed');
+  });
+
+  it('refuses an argument a closed schema does not declare, without calling the handler', async () => {
+    const handler = capturedHandlers.get(CallToolRequestSchema)!;
+    const response = (await handler({
+      params: { name: 'test.strict', arguments: { containerItemId: 'box-1', limit: 5 } },
+    })) as { content: { text: string }[]; isError?: boolean };
+
+    expect(mockToolHandler).not.toHaveBeenCalled();
+    expect(response.isError).toBe(true);
+    expect(response.content[0]?.text).toBe(
+      'Unknown argument(s) for test.strict: containerItemId. Accepted: containingItemId, limit.'
+    );
+  });
+
+  it('dispatches a closed-schema call whose arguments are all declared', async () => {
+    const handler = capturedHandlers.get(CallToolRequestSchema)!;
+    await handler({ params: { name: 'test.strict', arguments: { containingItemId: 'box-1' } } });
+    expect(mockToolHandler).toHaveBeenCalledWith({ containingItemId: 'box-1' }, {});
   });
 
   it('passes empty object when arguments is undefined', async () => {
