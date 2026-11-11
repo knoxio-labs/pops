@@ -1,8 +1,9 @@
 import { Check } from 'lucide-react';
 
-import { ButtonPrimitive, cn } from '@pops/ui';
+import { buttonVariants, cn } from '@pops/ui';
 
 import { FilterField } from './list-parts.js';
+import { activateOptionOnKeyDown } from './option-keyboard.js';
 
 import type { ReactElement, ReactNode } from 'react';
 
@@ -59,13 +60,15 @@ function OptionRow({
 }): ReactElement {
   const refused = option.refusal !== undefined;
   return (
-    <ButtonPrimitive
-      variant="ghost"
+    <div
       role="option"
+      tabIndex={0}
       aria-selected={selected}
       aria-disabled={refused || undefined}
       onClick={refused ? undefined : () => onToggle?.(option.key)}
+      onKeyDown={(event) => activateOptionOnKeyDown(event, refused, () => onToggle?.(option.key))}
       className={cn(
+        buttonVariants({ variant: 'ghost' }),
         'h-auto min-h-11 w-full justify-start gap-3 rounded-none px-3 py-1.5 text-left font-normal',
         selected && 'bg-app-accent/10 hover:bg-app-accent/15',
         refused && 'cursor-not-allowed opacity-60 hover:bg-transparent'
@@ -84,7 +87,7 @@ function OptionRow({
         )}
       </span>
       {!multiple && selected ? <Check className="size-4 text-app-accent" aria-hidden /> : null}
-    </ButtonPrimitive>
+    </div>
   );
 }
 

@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
+import { CodeBadge } from '../badges/badges.js';
 import { SkeletonRows } from './list-parts.js';
 import { PageStateBanner } from './page-states.js';
 import { PickList } from './pick-list.js';
@@ -9,6 +10,30 @@ import { PickList } from './pick-list.js';
 import type { ReactElement, ReactNode } from 'react';
 
 describe('secondary page parts', () => {
+  it('keeps QR actions independent while preserving keyboard option selection', () => {
+    const toggle = vi.fn();
+    render(
+      <PickList
+        label="Items"
+        options={[{ key: 'lamp', title: 'Lamp', mark: null, meta: <CodeBadge code="K12" /> }]}
+        selected={new Set()}
+        query=""
+        placeholder="Search"
+        onToggle={toggle}
+      />
+    );
+    const option = screen.getByRole('option');
+    const qr = screen.getByRole('button', { name: 'Show QR code for K12' });
+    expect(qr.closest('button')).toBe(qr);
+    expect(option.tagName).toBe('DIV');
+    fireEvent.keyDown(qr, { key: 'Enter' });
+    expect(toggle).not.toHaveBeenCalled();
+    fireEvent.keyDown(option, { key: 'Enter' });
+    fireEvent.keyDown(option, { key: ' ' });
+    expect(toggle).toHaveBeenCalledTimes(2);
+    expect(toggle).toHaveBeenLastCalledWith('lamp');
+  });
+
   it('a refused pick option shows its reason and does not toggle', () => {
     const onToggle = vi.fn();
     render(
@@ -34,6 +59,8 @@ describe('secondary page parts', () => {
     expect(option).toHaveAttribute('aria-disabled', 'true');
     expect(screen.getByText('Already connected to this item')).toBeInTheDocument();
     fireEvent.click(option);
+    fireEvent.keyDown(option, { key: 'Enter' });
+    fireEvent.keyDown(option, { key: ' ' });
     expect(onToggle).not.toHaveBeenCalled();
   });
 

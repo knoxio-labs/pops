@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { coreWorld, television } from '../test-fixtures/core';
 import {
@@ -34,6 +34,24 @@ const event: EventModel = {
 };
 
 describe('badges', () => {
+  it('opens the code QR and copies the encoded inventory link without activating its row', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+    const activate = vi.fn();
+    render(
+      <div role="row" onClick={activate}>
+        <CodeBadge code="CAB/012" />
+      </div>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Show QR code for CAB/012' }));
+
+    expect(await screen.findByRole('status')).toHaveTextContent('Link copied');
+    expect(writeText).toHaveBeenCalledWith('pops-i://CAB%2F012');
+    expect(screen.getByRole('img', { name: 'QR code for CAB/012' })).toBeInTheDocument();
+    expect(activate).not.toHaveBeenCalled();
+  });
+
   it('draws nothing for the quiet cases', () => {
     const { container } = render(
       <>

@@ -14,13 +14,13 @@ import { headerPlan } from './label-header-layout.js';
 import { MIN_QR_MM, templateFits, textWidthMm } from './sheet-layouts.js';
 
 import type { ResolvedLabel } from './label-content.js';
-import type { LabelPlan } from './label-plan.js';
+import type { LabelPlan, LabelPlanOptions } from './label-plan.js';
 import type { PrintSubject } from './label-subject.js';
 import type { SheetLayout } from './sheet-layouts.js';
 
 export { estimateLines, fitList, fitNamePt } from './label-fitting.js';
 export type { FittedList } from './label-fitting.js';
-export type { LabelArrangement, LabelPlan } from './label-plan.js';
+export type { LabelArrangement, LabelPlan, LabelPlanOptions } from './label-plan.js';
 
 const MM_PER_PT = 25.4 / 72;
 const LIST_LEADING = 1.3;
@@ -70,11 +70,15 @@ function needsRoom(label: ResolvedLabel): boolean {
  * cannot fit keeps the QR and any selected code, dropping other text.
  * Never adds an unselected part; null when no scannable QR fits.
  */
-export function fitToSheet(label: ResolvedLabel, layout: SheetLayout): ResolvedLabel | null {
+export function fitToSheet(
+  label: ResolvedLabel,
+  layout: SheetLayout,
+  minimumQrMm = MIN_QR_MM
+): ResolvedLabel | null {
   if (!label.parts.includes('qr')) return label;
-  if (!hasText(label)) return fillQrMm(layout) >= MIN_QR_MM ? label : null;
-  if (templateFits(layout, needsRoom(label) ? 'container' : 'item')) return label;
-  if (templateFits(layout, 'item')) {
+  if (!hasText(label)) return fillQrMm(layout) >= minimumQrMm ? label : null;
+  if (templateFits(layout, needsRoom(label) ? 'container' : 'item', minimumQrMm)) return label;
+  if (templateFits(layout, 'item', minimumQrMm)) {
     return {
       parts: label.parts.filter((part) => part === 'qr' || part === 'code'),
       fields: [],
@@ -177,8 +181,10 @@ export function planLabel(
   label: ResolvedLabel,
   subject: PrintSubject,
   layout: SheetLayout,
-  inlineReservationMm = 0
+  options: LabelPlanOptions | number = {}
 ): LabelPlan {
+  const { inlineReservationMm = 0, minimumQrMm = MIN_QR_MM } =
+    typeof options === 'number' ? { inlineReservationMm: options } : options;
   if (!Number.isFinite(inlineReservationMm) || inlineReservationMm < 0) {
     throw new RangeError('inline reservation must be finite and nonnegative');
   }
@@ -196,7 +202,7 @@ export function planLabel(
       contents: null,
     };
   }
-  const header = headerPlan(label, subject, layout, inlineReservationMm);
+  const header = headerPlan(label, subject, layout, { inlineReservationMm, minimumQrMm });
   if (header) return header;
   return isSolo(label)
     ? soloPlan(label, subject, contentLayout)

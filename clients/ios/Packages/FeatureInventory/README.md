@@ -89,3 +89,7 @@ Move, from any of the three, and from the dashboard's own In hand section, goes 
 ## Deduplication
 
 Search, Browse and In hand share Inventory-specific rows, selection panels and symbols through `Components/`. Their search, motion, glass and empty-state controls come from `DesignSystem`, so another feature can use the same behavior with its own tint instead of importing Inventory.
+
+Retrieval and Store here scanners accept `pops-i://<CODE>` labels, resolving
+the code through the same case-insensitive index as a plain printed code.
+Existing `pops://inventory/item/<id>` labels remain supported.

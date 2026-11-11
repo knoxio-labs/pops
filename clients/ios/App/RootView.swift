@@ -138,9 +138,7 @@ internal struct RootView: View {
                         return
                     }
                 #endif
-                let outcome = handleOpenPopsURL(url, router: composition.entityRouter)
-                guard case .unsupported(let pillar)? = outcome else { return }
-                unsupportedPillar = pillar
+                openEntityURL(url)
             }
             .alert(
                 RootCopy.opensIn(unsupportedPillar ?? ""),
@@ -234,6 +232,29 @@ internal struct RootView: View {
                     purchasesCaptureObserver: nil)
             case .trips:
                 TripsContentView(surface: surface, composition: composition)
+            }
+        }
+    }
+}
+
+extension RootView {
+    private func openEntityURL(_ url: URL) {
+        Task {
+            let outcome = await openPopsURL(url, router: composition.entityRouter) {
+                await composition.shell.restoreSession()
+                guard case .paired(let device) = composition.session.state else {
+                    return nil
+                }
+                return composition.dependencies(for: device).inventory
+            }
+            switch outcome {
+            case .routed(.unsupported(let pillar)):
+                unsupportedPillar = pillar
+            case .failed(let error):
+                composition.errorPresenter.present(
+                    error, operation: "inventory.open-link", context: .foreground)
+            case .ignored, .routed(.handled):
+                break
             }
         }
     }

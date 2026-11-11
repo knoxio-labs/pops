@@ -142,6 +142,7 @@ export * from './components/WarrantyBadge';
 // Additional standalone primitives (feedback, uploads, media, data viz, layout)
 export * from './components/EmptyState';
 export * from './components/QrCode';
+export * from './components/QrCodePopover';
 export * from './components/SuccessBurst';
 export * from './components/UriCard';
 export * from './components/FileUpload';

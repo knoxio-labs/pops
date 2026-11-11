@@ -77,6 +77,7 @@ internal struct AppBundleTests {
         )
         let schemes = types.flatMap { $0["CFBundleURLSchemes"] as? [String] ?? [] }
         #expect(schemes.contains("pops"))
+        #expect(schemes.contains("pops-i"))
     }
 
     /// Export compliance, declared in the binary. Without the key a TestFlight
