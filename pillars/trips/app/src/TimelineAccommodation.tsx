@@ -1,10 +1,11 @@
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { AccommodationGapContext, formatTripDate } from '@pops/trips-workspace';
 
 import { useArrangementLabels } from './arrangements/use-arrangement-labels';
 
-import type { TripOverviewProps } from '@pops/trips-workspace';
+import type { AccommodationGapStay, TripOverviewProps } from '@pops/trips-workspace';
 
 import type { TimelineContextProps } from './timeline-context-types';
 
@@ -27,16 +28,20 @@ export function TimelineAccommodation({ tripId, visitId, client, onSelect }: Acc
   const labels = useArrangementLabels();
   const { i18n } = useTranslation('trips');
   const locale = i18n.resolvedLanguage ?? i18n.language;
+  const onOpenStay = useCallback(
+    (created: AccommodationGapStay) => {
+      if (created.tripId === tripId && created.visitId === visitId)
+        onSelect({ kind: 'source', source: { kind: 'stay', id: created.stayId } });
+    },
+    [onSelect, tripId, visitId]
+  );
   return (
     <AccommodationGapContext
       identity={{ tripId, client }}
       visitId={visitId}
       labels={labels}
       formatDate={(value) => formatTripDate(value, locale)}
-      onOpenStay={(created) => {
-        if (created.tripId === tripId && created.visitId === visitId)
-          onSelect({ kind: 'source', source: { kind: 'stay', id: created.stayId } });
-      }}
+      onOpenStay={onOpenStay}
     />
   );
 }

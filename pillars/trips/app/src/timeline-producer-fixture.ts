@@ -41,6 +41,7 @@ export async function timelineProducer() {
       tagsRequests,
       loseNextWrite: recording.loseNextWrite,
       failNextTripRead: recording.failNextTripRead,
+      holdNextStayCreate: recording.holdNextStayCreate,
       tripId: identity.tripId,
       client: createClient({
         baseUrl: identity.origin,
@@ -84,6 +85,7 @@ function documentsOwner() {
 
 function requestRecorder() {
   const requests: { method: string; path: string; body: unknown }[] = [];
+  const held = holdStayResponse();
   let loseNext = false;
   let failRead = false;
   const transport: typeof fetch = async (input, init) => {
@@ -106,9 +108,10 @@ function requestRecorder() {
       loseNext = false;
       throw new TypeError('Fixture response lost after commit');
     }
-    return response;
+    return held.deliver(request, response);
   };
   return {
+    holdNextStayCreate: held.next,
     requests,
     transport,
     failNextTripRead: () => {
@@ -133,4 +136,42 @@ function tagsOwner() {
     },
   });
   return { tagsClient, tagsRequests };
+}
+
+function holdStayResponse() {
+  let pending:
+    | { committed: ReturnType<typeof signal>; released: ReturnType<typeof signal> }
+    | undefined;
+  return {
+    next: () => {
+      if (pending) throw new Error('A Stay response is already held');
+      const committed = signal();
+      const released = signal();
+      pending = { committed, released };
+      return { committed: committed.promise, release: released.resolve };
+    },
+    deliver: async (request: Request, response: Response) => {
+      if (
+        pending &&
+        request.method === 'POST' &&
+        /^\/trips\/\d+\/stays$/.test(new URL(request.url).pathname)
+      ) {
+        const active = pending;
+        pending = undefined;
+        active.committed.resolve();
+        await active.released.promise;
+      }
+      return response;
+    },
+  };
+}
+
+function signal() {
+  let resolve: () => void = () => {
+    throw new Error('Signal was not initialized');
+  };
+  const promise = new Promise<void>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
 }
