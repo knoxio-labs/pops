@@ -1,5 +1,4 @@
 import AppCore
-import DesignSystem
 import SwiftUI
 
 internal struct TripsTimelineRoute: View {
