@@ -10,34 +10,9 @@ import { TimelineSourceContext } from './TimelineSourceContext';
 
 import type { TFunction } from 'i18next';
 
-import type {
-  ArrangementResponsibilityContext,
-  OverviewPlacementTarget,
-  OverviewSource,
-  OverviewTool,
-} from '@pops/trips-workspace';
+import type { TimelineContextProps, TimelineSelection } from './timeline-context-types';
 
-import type { ApiClients } from './api/types';
-import type { CaptureContextProps } from './CaptureContext';
-
-/** A contextual source or tool selection within the owning Trip Timeline. */
-export type TimelineSelection =
-  | { kind: 'source'; source: OverviewSource }
-  | { kind: 'tool'; tool: OverviewTool }
-  | { kind: 'metadata' }
-  | { kind: 'placement'; target: OverviewPlacementTarget | null };
-
-/** Canonical owner capabilities and controlled selection; the host retains its QueryClient. */
-export interface TimelineContextProps extends Pick<
-  CaptureContextProps,
-  'tripId' | 'client' | 'contacts' | 'documentsClient'
-> {
-  tagsClient?: ApiClients['tagsClient'];
-  contactChooserIntent?: ArrangementResponsibilityContext['contactChooserIntent'];
-  advanceContactChooserIntent?: ArrangementResponsibilityContext['advanceContactChooserIntent'];
-  selection: TimelineSelection | null;
-  onSelect: (selection: TimelineSelection | null) => void;
-}
+export type { TimelineContextProps, TimelineSelection } from './timeline-context-types';
 
 /** Mount canonical source editors and tools over the same Timeline without another destination. */
 export function TimelineContext(props: TimelineContextProps) {

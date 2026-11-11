@@ -17,7 +17,7 @@ import { TimelineSourcePlacement } from './TimelineSourcePlacement';
 
 import type { ArrangementTarget, OverviewSource } from '@pops/trips-workspace';
 
-import type { TimelineContextProps } from './TimelineContext';
+import type { TimelineContextProps } from './timeline-context-types';
 
 /** Compose canonical source fields, literal placement and whole-source responsibility controls. */
 export function TimelineSourceContext(
