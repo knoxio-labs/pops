@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { createInstance } from 'i18next';
 import { I18nextProvider } from 'react-i18next';
 import { MemoryRouter, Route, Routes } from 'react-router';
@@ -124,45 +124,57 @@ it('opens all nine actual SQLite sources in one Timeline and only supported whol
 }, 60_000);
 
 it('retains the actual Rental draft and independently persists its literal Rental responsibility through the Timeline', async () => {
-  mount();
-  fireEvent.click(await screen.findByRole('button', { name: 'Host rental' }));
-  const provider = await screen.findByRole('textbox', { name: enAU.arrangements.provider });
-  fireEvent.change(provider, { target: { value: 'Retained rental provider' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Close' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Host rental' }));
-  expect(await screen.findByRole('textbox', { name: enAU.arrangements.provider })).toHaveValue(
-    'Retained rental provider'
-  );
-  fireEvent.click(screen.getByRole('button', { name: enAU.arrangements.save }));
-  await waitFor(() =>
-    expect(owner.requests.some((request) => request.method === 'PATCH')).toBe(true)
-  );
-  await waitFor(async () =>
+  const route = holdInitialRouteRead();
+  try {
+    mount();
+    await route.started;
+    await screen.findByRole('button', { name: 'Host rental' });
+    fireEvent.click(screen.getByRole('button', { name: 'Host rental' }));
+    const provider = await screen.findByRole('textbox', { name: enAU.arrangements.provider });
+    fireEvent.change(provider, { target: { value: 'Retained rental provider' } });
+    await act(async () => route.release());
+    await waitFor(() => expect(screen.queryAllByText(enAU.overview.loading)).toHaveLength(0));
+    expect(screen.getByRole('dialog', { name: `Rental #${source.rental.id}` })).toBeVisible();
+    expect(screen.getByRole('textbox', { name: enAU.arrangements.provider })).toBe(provider);
+    expect(provider).toHaveValue('Retained rental provider');
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Host rental' }));
+    expect(await screen.findByRole('textbox', { name: enAU.arrangements.provider })).toHaveValue(
+      'Retained rental provider'
+    );
+    fireEvent.click(screen.getByRole('button', { name: enAU.arrangements.save }));
+    await waitFor(() =>
+      expect(owner.requests.some((request) => request.method === 'PATCH')).toBe(true)
+    );
+    await waitFor(async () =>
+      expect(
+        unwrap(
+          await rentalsGet({
+            client: owner.client,
+            path: { tripId: owner.tripId, id: source.rental.id },
+          })
+        ).provider
+      ).toBe('Retained rental provider')
+    );
+    const handled = await screen.findByRole('region', { name: enAU.arrangements.handledBy });
+    fireEvent.click(await within(handled).findByRole('button', { name: enAU.arrangements.self }));
+    await waitFor(async () =>
+      expect(
+        unwrap(
+          await responsibilitiesGet({
+            client: owner.client,
+            path: { tripId: owner.tripId, targetKind: 'rental', targetId: source.rental.id },
+          })
+        ).responsibility
+      ).toEqual({ kind: 'self' })
+    );
     expect(
-      unwrap(
-        await rentalsGet({
-          client: owner.client,
-          path: { tripId: owner.tripId, id: source.rental.id },
-        })
-      ).provider
-    ).toBe('Retained rental provider')
-  );
-  const handled = await screen.findByRole('region', { name: enAU.arrangements.handledBy });
-  fireEvent.click(await within(handled).findByRole('button', { name: enAU.arrangements.self }));
-  await waitFor(async () =>
-    expect(
-      unwrap(
-        await responsibilitiesGet({
-          client: owner.client,
-          path: { tripId: owner.tripId, targetKind: 'rental', targetId: source.rental.id },
-        })
-      ).responsibility
-    ).toEqual({ kind: 'self' })
-  );
-  expect(
-    owner.requests.filter((request) => request.method === 'PUT').map((request) => request.path)
-  ).toEqual([`/trips/${owner.tripId}/responsibilities/rental/${source.rental.id}`]);
-  expect(owner.documentsRequests).toEqual([]);
+      owner.requests.filter((request) => request.method === 'PUT').map((request) => request.path)
+    ).toEqual([`/trips/${owner.tripId}/responsibilities/rental/${source.rental.id}`]);
+    expect(owner.documentsRequests).toEqual([]);
+  } finally {
+    route.release();
+  }
 }, 60_000);
 
 async function expectVisibleField(dialog: HTMLElement, value: string) {
@@ -174,4 +186,30 @@ async function expectVisibleField(dialog: HTMLElement, value: string) {
     fireEvent.click(summary);
   }
   expect(field).toBeVisible();
+}
+
+function holdInitialRouteRead() {
+  let release: () => void = () => {
+    throw new Error('Route control was not initialized');
+  };
+  let started: () => void = () => {
+    throw new Error('Route control was not initialized');
+  };
+  const released = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const ready = new Promise<void>((resolve) => {
+    started = resolve;
+  });
+  owner.client.interceptors.response.use(async (response, request) => {
+    if (
+      request.method === 'GET' &&
+      new URL(request.url).pathname === `/trips/${owner.tripId}/route`
+    ) {
+      started();
+      await released;
+    }
+    return response;
+  });
+  return { started: ready, release };
 }
