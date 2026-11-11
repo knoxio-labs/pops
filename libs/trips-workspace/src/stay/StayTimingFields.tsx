@@ -10,7 +10,7 @@ import type { Stay, StayFieldProps } from './types';
 export function StayTimingFields(props: StayFieldProps): JSX.Element {
   return (
     <>
-      <div className="grid gap-3 sm:max-lg:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 @sm:grid-cols-2 @2xl:grid-cols-4">
         <TimingField {...props} field="arrival" label="Check-in date" type="date" />
         <TimingField {...props} field="checkIn" label="Check-in time" type="time" />
         <TimingField {...props} field="departure" label="Check-out date" type="date" />
@@ -38,7 +38,8 @@ function TimingField({
       label={label}
       type={type}
       value={stay.timing[field] ?? ''}
-      className="min-h-11"
+      className="min-h-11 min-w-0 w-full"
+      containerClassName="min-w-0"
       onChange={(event) => edit({ timing: changeTiming(stay.timing, field, event.target.value) })}
       onBlur={(event) =>
         commit({ timing: changeTiming(stay.timing, field, event.currentTarget.value) })
