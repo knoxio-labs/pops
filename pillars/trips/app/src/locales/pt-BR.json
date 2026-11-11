@@ -124,7 +124,13 @@
       "event": "Evento",
       "decision": "Decisão",
       "document": "Documento",
-      "group": "Grupo de trajetos"
+      "group": "Grupo de trajetos",
+      "meeting": "Encontro",
+      "capture": "Captura",
+      "idea": "Ideia",
+      "rental": "Aluguel",
+      "gap": "Lacuna",
+      "path": "Caminho"
     },
     "status": {
       "In plan": "No plano",
@@ -155,7 +161,28 @@
       "journeys": "Trajetos",
       "groups": "Grupos de trajetos",
       "decisions": "Decisões",
-      "documents": "Documentos"
+      "documents": "Documentos",
+      "meeting": "Encontro",
+      "capture": "Capturar",
+      "idea": "Ideia",
+      "people": "Pessoas",
+      "inbox": "Caixa de entrada",
+      "explore": "Explorar",
+      "rental": "Aluguel",
+      "calendar": {
+        "zone": "Escolha um fuso horário válido para exibição",
+        "range": "Escolha um intervalo válido, com o fim igual ou posterior ao início",
+        "window": "O período deste trajeto está indisponível. Escolha outro trajeto ou todas as datas.",
+        "empty": "Nenhuma entrada neste intervalo"
+      },
+      "unplaced": "Sem posição no roteiro",
+      "meetings": "Encontros",
+      "rentals": "Aluguéis",
+      "pickup": "Retirada",
+      "return": "Devolução",
+      "alternative": "Alternativo",
+      "applied": "Aplicado",
+      "connectionChanged": "A conexão de Viagens mudou. Reabra a viagem antes de selecionar uma fonte."
     }
   },
   "arrangements": {
@@ -286,5 +313,42 @@
     "nights_one": "{{count}} noite",
     "nights_other": "{{count}} noites"
   },
-  "calendar": "Calendário"
+  "calendar": "Calendário",
+  "timeline": {
+    "tools": {
+      "people": "Pessoas",
+      "capture": "Capturar",
+      "inbox": "Caixa de entrada",
+      "explore": "Explorar"
+    },
+    "route": {
+      "title": "Editar roteiro",
+      "unavailable": "Esta posição no roteiro está indisponível. Recarregue o roteiro para revisar o estado atual.",
+      "reload": "Recarregar roteiro",
+      "undo": "Desfazer alteração no roteiro",
+      "addGap": "Adicionar lacuna ao final",
+      "upSource": "Mover {{source}} para cima",
+      "downSource": "Mover {{source}} para baixo",
+      "up": "Mover para cima",
+      "down": "Mover para baixo",
+      "gapBefore": "Inserir lacuna antes de {{source}}",
+      "paths": "Caminhos alternativos",
+      "gap": "Lacuna de inserção",
+      "chooseGap": "Escolha uma lacuna",
+      "pathTitle": "Título do caminho",
+      "createPath": "Criar caminho",
+      "pathIdentity": "Caminho #{{id}}",
+      "applyPath": "Usar este caminho",
+      "placement": "Posição no roteiro",
+      "move": "Mover fonte",
+      "destination": "Destino",
+      "chooseDestination": "Escolha um destino",
+      "before": "Inserir antes de",
+      "end": "Final",
+      "alternative": "Alternativo",
+      "applied": "Aplicado",
+      "rejected": "A alteração do roteiro foi rejeitada. Recarregue para reconciliar o estado atual.",
+      "uncertain": "O resultado da alteração do roteiro é desconhecido. Tente novamente a mesma operação para reconciliá-lo."
+    }
+  }
 }
