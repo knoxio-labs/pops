@@ -3,6 +3,7 @@ import { ErrorState } from '@pops/ui';
 import { loadCalendar } from '../calendar/api';
 import { CalendarControls } from '../calendar/CalendarControls';
 import { CalendarRows } from '../calendar/CalendarRows';
+import { CalendarWindowContext } from '../calendar/CalendarWindowContext';
 import { selectionProblem, visibleEntries } from '../calendar/model';
 import { assertSourceOwner } from '../shared/retained-session-store';
 import { useSourceQuery } from '../shared/use-source-query';
@@ -57,6 +58,7 @@ function CalendarProjection(props: CalendarProps & { snapshot: CalendarSnapshot 
           {props.labels.status(`calendar.${problem}`)}
         </p>
       )}
+      {!problem && <CalendarWindowContext snapshot={snapshot} selection={selection} />}
       {!problem && entries.length === 0 && (
         <p role="status">{props.labels.status('calendar.empty')}</p>
       )}

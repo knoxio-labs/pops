@@ -7,6 +7,7 @@ import { requestProblem } from '../stay/api';
 import { loadCalendar } from './api';
 import { CalendarControls } from './CalendarControls';
 import { CalendarRows } from './CalendarRows';
+import { CalendarWindowContext } from './CalendarWindowContext';
 import { selectionProblem, visibleEntries } from './model';
 
 import type { JSX } from 'react';
@@ -83,8 +84,6 @@ function CalendarContent({
   });
   const problem = selectionProblem(selection, snapshot);
   const entries = visibleEntries(snapshot, selection);
-  const window = snapshot.journeys.find(({ journey }) => String(journey.id) === selection.journey)
-    ?.timing.window;
   return (
     <>
       <CalendarControls snapshot={snapshot} selection={selection} onChange={onChange} />
@@ -96,12 +95,7 @@ function CalendarContent({
           {problems[problem]}
         </p>
       )}
-      {!problem && (
-        <p className="text-xs text-muted-foreground">
-          Display zone: {selection.zone}
-          {window ? ` · Journey window: ${window.from} → ${window.toExclusive} (exclusive)` : ''}
-        </p>
-      )}
+      {!problem && <CalendarWindowContext snapshot={snapshot} selection={selection} />}
       {!problem && entries.length === 0 && <p role="status">No entries in this range</p>}
       {!problem && entries.length > 0 && (
         <CalendarRows
