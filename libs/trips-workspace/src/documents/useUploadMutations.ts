@@ -4,6 +4,7 @@ import { ApiError } from '@pops/pillar-sdk/client';
 
 import { associatePaperlessDocument, uploadPaperlessDocument } from './api';
 import { documentQueryKeys } from './query-keys';
+import { TripDocumentUploadContextError } from './upload-context';
 
 import type { QueryClient } from '@tanstack/react-query';
 import type { UseMutationResult } from '@tanstack/react-query';
@@ -15,12 +16,16 @@ import type { UploadFields } from './useUploadFields';
 
 /** Start one original upload through Documents. */
 export function useUploadMutation(
-  documentsClient: DocumentsClient | undefined
+  documentsClient: DocumentsClient | undefined,
+  beforeRequest?: () => void
 ): UseMutationResult<string, Error, { file: File; fields: UploadFields }, unknown> {
   return useMutation({
     meta: { errorHandled: true },
     retry: false,
-    mutationFn: ({ file }) => uploadPaperlessDocument(file, documentsClient),
+    mutationFn: ({ file }) => {
+      beforeRequest?.();
+      return uploadPaperlessDocument(file, documentsClient);
+    },
     onSuccess: (id, variables) => {
       variables.fields.setTaskId(id);
       variables.fields.setUploadPending(false);
@@ -37,18 +42,22 @@ export function useAssociationMutation({
   tripsClient,
   fields,
   queryClient,
+  beforeRequest,
 }: {
   tripId: number;
   target: DocumentAssociationTarget;
   tripsClient: TripsClient | undefined;
   fields: UploadFields;
   queryClient: QueryClient;
+  beforeRequest?: () => void;
 }): UseMutationResult<TripDocumentAssociation, Error, number, unknown> {
   return useMutation({
     meta: { errorHandled: true },
     retry: false,
-    mutationFn: (documentId: number) =>
-      associatePaperlessDocument(tripId, documentId, target, tripsClient),
+    mutationFn: (documentId: number) => {
+      beforeRequest?.();
+      return associatePaperlessDocument(tripId, documentId, target, tripsClient);
+    },
     onSuccess: () => finishAssociation(fields, queryClient, tripsClient, tripId),
     onError: (error) =>
       handleAssociationFailure({ error, fields, queryClient, tripsClient, tripId }),
@@ -56,6 +65,11 @@ export function useAssociationMutation({
 }
 
 function setUploadFailure(error: Error, fields: UploadFields): void {
+  if (error instanceof TripDocumentUploadContextError) {
+    fields.setUploadError(error.message);
+    fields.setUploadPending(false);
+    return;
+  }
   const uncertain =
     !(error instanceof ApiError) || error.status === undefined || error.status >= 500;
   fields.setUncertain(uncertain);
@@ -81,6 +95,10 @@ function handleAssociationFailure({
   tripsClient: TripsClient | undefined;
   tripId: number;
 }): void {
+  if (error instanceof TripDocumentUploadContextError) {
+    fields.setUploadError(error.message);
+    return;
+  }
   if (error instanceof ApiError && error.code === 'trips.document.association_exists') {
     void finishAssociation(fields, queryClient, tripsClient, tripId);
     return;

@@ -1,6 +1,40 @@
 # Trips browser app
 
-The shell loads `dist/remote/trips.js` and `trips.css` from the Trips manifest. The app exposes the grouped home, trip metadata settings, a trip calendar, and route adapters for the `@pops/trips-workspace` stay, journey, event, and options-first decision editors. Event detail is registered at `:tripId/events/:eventId`; invalid route identities fail before making source requests. The `/trips/:tripId/documents` route provides typed document associations and owner uploads. It owns no database and uses generated Trips and Tags clients at the shell's authenticated same-origin proxy paths.
+The shell loads `dist/remote/trips.js` and `trips.css` from the Trips manifest. The app exposes the grouped home, trip metadata settings, a trip calendar, and route adapters for the `@pops/trips-workspace` visit, stay, journey, event, options-first decision editors. It also exports router-free Capture tools. Event detail is registered at `:tripId/events/:eventId`; invalid route identities fail before making source requests. The separate Documents list is registered at `/trips/:tripId/documents`. The public router-free `CaptureContext({ tripId, view, selectedSource?, client?, documentsClient?, contacts?, onViewEvent? })` embeds the same retained engine in its owning Trip workspace. It publishes no Capture, Inbox or Explore destination or navigation; host placement and controlled view changes belong to the Trip workspace.
+
+The Documents route provides typed document associations and owner uploads. It owns no database and uses generated Trips and Tags clients at the shell's authenticated same-origin proxy paths.
+
+`:tripId/arrangements` publishes the `trips-arrangements` slot. Its adapter validates
+the owning trip identity and supplies shell-selected translations and calendar locale
+to the route-grouped workspace. Only explicit Visit associations group sources;
+Journeys remain separately identifiable until their producer owns Visit placement.
+Opening an arrangement uses its actual source editor and independent responsibility
+writes; no external booking action is performed. The shell may inject the shared
+Contacts capability through `RemotePageHostProps`. The adapter retains one opaque
+owner picker intent per exact trip/source responsibility target across dialog
+remounts. An acknowledged responsibility PUT or explicit source reconciliation
+allows the next Choose contact action to start a fresh owner intent; prior owner
+receipts remain retained. An owner selection alone never advances the intent.
+Only an owner-issued selection supplies the canonical reference; cancelling
+or reopening does not write Trips. Self and clearing a stored reference remain
+independent of Contacts availability. The same optional SDK capability supplies
+passive reference reads; verified names and links come from the owner, while
+unverified or unavailable references retain their original source identity. Source
+dialogs reuse the shared document controls only for Stay, Journey and Event, with
+upload sessions retained above dialog lifetime for each exact target and owner
+connection.
+
+Home selection and successful creation open `/trips/:tripId`, the approved route-first
+overview. It loads the owning library's independent source collections and links only
+to published source routes. Calendar and Documents navigation remains available even
+when their source collections are empty. Stays and events attach only through explicit visit
+identities; journeys stay separate until a placement contract exists. Missing or
+unassociated facts remain visible, and document associations retain source identities
+without pretending to resolve Documents originals. The overview's When subtitle is
+opaque; its displayed outer dates come from ordered visit bounds.
+The shell supplies the overview library's utilities through the shared theme,
+outer page padding and shared component styles. The remote stylesheet scans only
+the Trips app's source.
 
 Home groups use the first ordered visit's arrival and the last visit's departure, relative to the viewer's local calendar day. Missing, invalid, or contradictory outer dates remain in Other. Trip titles use trimmed custom name, then trimmed destination, then the translated Trip label. `when` is opaque source text and never supplies route dates.
 
@@ -31,11 +65,33 @@ editor through this app's generated client against SQLite. Both dependencies alr
 belong to this app's declared graph, so filtered CI installs include the producer's
 native SQLite runtime without adding a lib-to-pillar dependency.
 
+`PeopleContext({ tripId, meetingId?, contacts?, client? })` supplies Trips translations and
+forwards the owning trip, transport and opaque Contacts host capability to the
+shared workspace. It is a contextual component for the Trip Timeline; it publishes
+no independent People route or remote page slot. The shared workspace owns exact Visit grouping,
+independent meeting edits, durable retry and confirmed source Undo. It imports
+no Contacts implementation into this app. The meeting persistence regression
+drives the public headless editor through the generated HTTP client and the
+owning SQLite producer, including a lost response after a committed create.
+
+## Visit sources
+
+`/trips/:tripId/visits/:visitId` mounts `VisitWorkspace` with literal source identities.
+The route-first overview links each distinct visit occurrence to that route.
+Visit navigation replaces the source URL; accommodation links open the existing stay route.
+Timing edits and Undo write only the visit, guarded by its confirmed source revision.
+
 ## Calendar
 
-The selected trip preview links to `/trips/:tripId/calendar`. Its exported calendar
+The route-first trip overview links to `/trips/:tripId/calendar`. Its exported calendar
 workspace reads independent journey, stay and event sources through the generated
 Trips transport, requires an explicit display zone, and opens exact owning editor
 routes. Unavailable collections render retryable errors, retaining a prior complete
 read during refresh failures. Calendar date bounds remain separate from resolved
 source clocks; the optional journey window uses the owning timing endpoint.
+
+The public `CaptureSourceSelection` union selects an exact persisted Capture or Idea ID and opens its existing editor. `selectedSource: undefined` or `null` leaves the ordinary tool view; a missing or removed selected source stays unavailable without falling back to a different row. Contextual source changes retain owner-scoped drafts, unknown operation UUIDs and Undo history. Retained writes/retries/Undo are fenced to the original effective Trips origin, including the default client; a same-origin replacement client is supported.
+
+Each contextual view also captures its read/cache owner. Mutable origin changes cannot refetch another owner beneath the old key or deliver foreign cached data into its editor. Restoring an unavailable owner keeps its last good source and pending commands. An accepted in-flight write is retained, and invalidation stays with that write's original cache scope.
+
+Optional Place/Visit choices share the captured workspace owner and cache proof. Their failures retain last verified same-owner options and do not block raw capture; owner changes cannot substitute foreign catalogue labels or occurrences beneath a retained source.

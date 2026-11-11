@@ -10,6 +10,8 @@ it is not command-specific data and therefore does not belong inside `args`.
 
 The same transport relays barcode lookups through `/mobile/barcode/lookup/{code}`. It maps a found response into AppCore's facts-only product and preserves definite misses and unsupported product categories. Failures retain their safe code, request ID and retryability as `PopsError`, including unavailable provider answers, authentication or permission refusals, network failures and unreadable responses. Capability refusals surface as feature-unavailable errors and leave the pairing intact; device revocation ends the session. Scanning remains optional: the form records failures in Recent errors and keeps text capture available.
 
+`BFMTripsRepository` reads complete cursor snapshots and complete trip aggregates; required source collections never default to empty after a failed or incomplete response. `BFMDocumentsRepository` uses Documents-original IDs under its independent `documents.read` grant, not Inventory link IDs. Original metadata does not establish file availability: files stream through the shared device authorization and retain only actual response-header size, MIME and filename facts. Missing originals and an unconfigured Paperless connection remain distinct from transport or capability failures.
+
 ## The client is generated, committed, and gated
 
 ```bash
@@ -68,9 +70,11 @@ Two things it does that the generated client does not:
 
 It carries no credentials of its own. `init(baseURL:)` reaches only the BFM's unauthenticated perimeter; `init(baseURL:middlewares:)` is how a caller hands it `Auth`'s `AuthenticatingMiddleware`, which is what a `/mobile/*` call needs. Nothing in this package knows which of the two it was given.
 
+Runtime failures retain the body's typed `retryAfterSeconds`, with an HTTP `Retry-After` header fallback. The shared parser accepts delta seconds and all three HTTP-date forms; absent or malformed values remain unknown. Retaining this metadata leaves the existing status and error classification intact.
+
 ## Ego byte transport
 
-The generated client does not expose response bytes as they arrive, so Ego's `POST /mobile/ego/chat/stream` uses `BFMEgoByteTransport`. Its authentication — attach the token, refresh once on `401`, revoke only on an explicit `403` — is `BFMRawAuthorization`, which the item-document byte routes share. It receives a `BFMStreamAuthorizer` and a `BFMByteSource`; it does not store credentials or own pairing. Each `BFMStreamCredential` carries the access token and the revision read with it, so an explicit revocation response is applied only to the identity that made that request. The default source reads with Foundation's `URLSession.bytes(for:)`, yields chunks of at most 4096 bytes, and cancels the request when its consumer stops. A token-bearing `401` refreshes once and retries once, carrying the refreshed credential's revision into any response handling. A `403` revokes the device only when its body has the explicit `bfm.auth.device_revoked` or `device_revoked` code; capability refusals are not revocations. Rejected bodies are capped at 64 KiB and have the request's bearer tokens removed.
+The generated client does not expose response bytes as they arrive, so Ego's `POST /mobile/ego/chat/stream` uses `BFMEgoByteTransport`. Its authentication — attach the token, refresh once on `401`, revoke only on an explicit `403` — is `BFMRawAuthorization`, which Inventory document-link and Documents-original byte routes share. It receives a `BFMStreamAuthorizer` and a `BFMByteSource`; it does not store credentials or own pairing. Each `BFMStreamCredential` carries the access token and the revision read with it, so an explicit revocation response is applied only to the identity that made that request. The default source reads with Foundation's `URLSession.bytes(for:)`, yields chunks of at most 4096 bytes, and cancels the request when its consumer stops. A token-bearing `401` refreshes once and retries once, carrying the refreshed credential's revision into any response handling. A `403` revokes the device only when its body has the explicit `bfm.auth.device_revoked` or `device_revoked` code; capability refusals are not revocations. Rejected bodies are capped at 64 KiB and have the request's bearer tokens removed.
 
 ## Item documents
 

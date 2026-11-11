@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiError } from '@pops/pillar-sdk/client';
 
+import { client as defaultTripsClient } from '../trips-api/client.gen';
 import {
   associatePaperlessDocument,
   loadDocumentAssociations,
@@ -170,7 +171,7 @@ describe('TripDocumentsWorkspace', () => {
       screen.getByText('Documents is unavailable. Existing links remain visible.')
     ).toBeVisible();
     await userEvent.click(screen.getByRole('button', { name: 'Unlink Documents 12' }));
-    await waitFor(() => expect(unlink).toHaveBeenCalledWith(4, 1, undefined));
+    await waitFor(() => expect(unlink).toHaveBeenCalledWith(4, 1, defaultTripsClient));
   });
 
   it('locks an ambiguous upload and requires a Documents lookup before releasing the selected file', async () => {

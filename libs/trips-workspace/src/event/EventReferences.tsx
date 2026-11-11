@@ -1,15 +1,15 @@
-import { useState } from 'react';
-
 import { Button, Chip, TextInput } from '@pops/ui';
+
+import { useSemanticDraft } from '../shared/semantic-draft';
 
 import type { JSX } from 'react';
 
+import type { EventReferenceDraft, EventReferenceDrafts } from './reference-drafts';
 import type { EventPatch, TripEvent } from './types';
 
 const groups = [
   { field: 'sourceLinks', label: 'Sources' },
   { field: 'venueLinks', label: 'Venue references' },
-  { field: 'organiserLinks', label: 'Organiser references' },
   { field: 'documentLinks', label: 'Document references' },
 ] as const;
 
@@ -17,14 +17,22 @@ const groups = [
 export function EventReferences({
   event,
   commit,
+  drafts,
 }: {
   event: TripEvent;
   commit: (patch: EventPatch) => void;
+  drafts?: EventReferenceDrafts;
 }): JSX.Element {
   return (
     <div className="space-y-4">
       {groups.map((group) => (
-        <ReferenceGroup key={group.field} {...group} event={event} commit={commit} />
+        <ReferenceGroup
+          key={group.field}
+          {...group}
+          event={event}
+          commit={commit}
+          drafts={drafts}
+        />
       ))}
     </div>
   );
@@ -35,14 +43,20 @@ function ReferenceGroup({
   label,
   event,
   commit,
+  drafts,
 }: {
   field: (typeof groups)[number]['field'];
   label: string;
   event: TripEvent;
   commit: (patch: EventPatch) => void;
+  drafts?: EventReferenceDrafts;
 }): JSX.Element {
-  const [uri, setUri] = useState('');
-  const [name, setName] = useState('');
+  const [draft, setDraft] = useSemanticDraft(
+    { uri: '', name: '' },
+    drafts?.[field],
+    drafts?.isCurrent
+  );
+  const { uri, name } = draft;
   return (
     <section aria-label={label} className="space-y-2">
       <h3 className="text-sm font-medium">{label}</h3>
@@ -53,20 +67,7 @@ function ReferenceGroup({
           commit({ [field]: event[field].filter((_, index) => index !== position) })
         }
       />
-      <div className="grid items-end gap-2 sm:grid-cols-2">
-        <TextInput
-          label={`${label} URI`}
-          value={uri}
-          onChange={(e) => setUri(e.target.value)}
-          className="min-h-11"
-        />
-        <TextInput
-          label={`${label} label`}
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="min-h-11"
-        />
-      </div>
+      <ReferenceInputs label={label} draft={draft} setDraft={setDraft} />
       <Button
         className="min-h-11"
         variant="outline"
@@ -79,13 +80,39 @@ function ReferenceGroup({
               { uri: uri.trim(), ...(sourceLabel ? { label: sourceLabel } : {}) },
             ],
           });
-          setUri('');
-          setName('');
+          setDraft({ uri: '', name: '' });
         }}
       >
         Add {label.toLowerCase()} link
       </Button>
     </section>
+  );
+}
+
+function ReferenceInputs({
+  label,
+  draft,
+  setDraft,
+}: {
+  label: string;
+  draft: EventReferenceDraft;
+  setDraft: (draft: EventReferenceDraft) => void;
+}): JSX.Element {
+  return (
+    <div className="grid items-end gap-2 sm:grid-cols-2">
+      <TextInput
+        label={`${label} URI`}
+        value={draft.uri}
+        onChange={(e) => setDraft({ ...draft, uri: e.target.value })}
+        className="min-h-11"
+      />
+      <TextInput
+        label={`${label} label`}
+        value={draft.name}
+        onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+        className="min-h-11"
+      />
+    </div>
   );
 }
 

@@ -87,7 +87,7 @@ describe('Shared direct source editor', () => {
     expect(result.current.canUndo).toBe(false);
   });
 
-  it('protects failed edits from fresh reads and merges a corrected field without losing other failed fields', async () => {
+  it('blocks a failed patch after an overlapping canonical refresh until the draft is reset', async () => {
     const changed = { ...initial, name: 'Retry name', notes: 'New note' };
     const save = vi
       .fn<(patch: Patch) => Promise<Source>>()
@@ -110,11 +110,13 @@ describe('Shared direct source editor', () => {
     await act(async () => {
       await result.current.commit({ notes: 'New note' });
     });
-    expect(save.mock.calls.map(([patch]) => patch)).toEqual([
-      { name: 'Retry name' },
-      { name: 'Retry name', notes: 'New note' },
-    ]);
-    expect(result.current.draft).toEqual(changed);
+    expect(save.mock.calls.map(([patch]) => patch)).toEqual([{ name: 'Retry name' }]);
+    expect(result.current.conflict).toBe(true);
+    expect(result.current.saved.name).toBe('Fresh read');
+    act(() => result.current.reset());
+    expect(result.current.draft.name).toBe('Fresh read');
+    expect(result.current.failure).toBeUndefined();
+    expect(result.current.conflict).toBe(false);
   });
 
   it('accepts an untouched fresh source, but never overwrites an unsaved draft or writes a no-op', async () => {
@@ -133,7 +135,11 @@ describe('Shared direct source editor', () => {
     expect(result.current.draft.name).toBe('Fresh read');
     act(() => result.current.edit({ notes: 'Uncommitted' }));
     rerender({ value: { ...initial, name: 'Background read' } });
-    expect(result.current.draft).toEqual({ ...fresh, notes: 'Uncommitted' });
+    expect(result.current.draft).toEqual({
+      ...initial,
+      name: 'Background read',
+      notes: 'Uncommitted',
+    });
     expect(result.current.dirty).toBe(true);
     await act(async () => {
       await result.current.commit({ notes: fresh.notes });

@@ -1,0 +1,184 @@
+{
+  "trip": {
+    "id": 1,
+    "name": "Journey",
+    "destination": "Brazil",
+    "when": "Summer",
+    "tagId": null,
+    "parentId": null,
+    "notes": "",
+    "sourceLinks": [],
+    "createdAt": "2026-01-01T00:00:00Z",
+    "updatedAt": "2026-01-01T00:00:00Z"
+  },
+  "places": [
+    {
+      "id": 1,
+      "name": "Recife",
+      "sourceLinks": [],
+      "createdAt": "",
+      "updatedAt": ""
+    }
+  ],
+  "visits": [
+    {
+      "id": 4,
+      "tripId": 1,
+      "placeId": 1,
+      "timing": {},
+      "notes": "",
+      "sourceLinks": [],
+      "createdAt": "",
+      "updatedAt": ""
+    }
+  ],
+  "journeys": [
+    {
+      "id": 1,
+      "tripId": 1,
+      "name": "Later return",
+      "reference": null,
+      "notes": "",
+      "sourceLinks": [],
+      "buffers": {},
+      "createdAt": "",
+      "updatedAt": "",
+      "legs": [
+        {
+          "id": 10,
+          "journeyId": 1,
+          "mode": "flight",
+          "from": {
+            "local": "2026-02-01T12:00",
+            "timeZone": "UTC"
+          },
+          "to": {
+            "local": "2026-02-01T14:00",
+            "timeZone": "UTC"
+          },
+          "intention": "In plan",
+          "arrangement": "Booked",
+          "purchase": null,
+          "operator": null,
+          "service": "AB10",
+          "reference": null,
+          "notes": "",
+          "sourceLinks": [],
+          "createdAt": "",
+          "updatedAt": ""
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "tripId": 1,
+      "name": "Alternative",
+      "reference": null,
+      "notes": "",
+      "sourceLinks": [],
+      "buffers": {},
+      "createdAt": "",
+      "updatedAt": "",
+      "legs": [
+        {
+          "id": 20,
+          "journeyId": 2,
+          "mode": null,
+          "from": {},
+          "to": {},
+          "intention": "Alternative",
+          "arrangement": null,
+          "purchase": "Purchased",
+          "operator": null,
+          "service": null,
+          "reference": null,
+          "notes": "",
+          "sourceLinks": [],
+          "createdAt": "",
+          "updatedAt": ""
+        }
+      ]
+    }
+  ],
+  "journeyGroups": [
+    {
+      "id": 1,
+      "tripId": 1,
+      "currentJourneyId": 1,
+      "alternativeJourneyIds": [2],
+      "revision": 1,
+      "createdAt": "",
+      "updatedAt": ""
+    }
+  ],
+  "stays": [
+    {
+      "id": 1,
+      "tripId": 1,
+      "visitId": 4,
+      "name": "Current stay",
+      "kind": "hotel",
+      "status": "Reserved",
+      "timing": {
+        "arrival": "2026-01-01",
+        "departure": "2026-01-03",
+        "checkIn": "14:00",
+        "checkOut": "11:00",
+        "timeZone": "UTC"
+      },
+      "address": "Source address",
+      "reference": "SOURCE123",
+      "notes": "",
+      "sourceLinks": [],
+      "hostLinks": [],
+      "documentLinks": [],
+      "createdAt": "",
+      "updatedAt": ""
+    },
+    {
+      "id": 2,
+      "tripId": 1,
+      "visitId": null,
+      "name": "Earlier next stay",
+      "kind": "friend",
+      "status": "Agreed",
+      "timing": {
+        "arrival": "2026-01-04",
+        "departure": "2026-01-05",
+        "checkIn": "14:00",
+        "checkOut": "11:00",
+        "timeZone": "UTC"
+      },
+      "address": null,
+      "reference": null,
+      "notes": "",
+      "sourceLinks": [],
+      "hostLinks": [],
+      "documentLinks": [],
+      "createdAt": "",
+      "updatedAt": ""
+    },
+    {
+      "id": 3,
+      "tripId": 1,
+      "visitId": null,
+      "name": "Unknown clock",
+      "kind": null,
+      "status": null,
+      "timing": {
+        "arrival": "2026-01-02",
+        "departure": "2026-01-04"
+      },
+      "address": null,
+      "reference": null,
+      "notes": "",
+      "sourceLinks": [],
+      "hostLinks": [],
+      "documentLinks": [],
+      "createdAt": "",
+      "updatedAt": ""
+    }
+  ],
+  "events": [],
+  "documentAssociations": []
+}

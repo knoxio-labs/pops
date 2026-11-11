@@ -6,11 +6,13 @@ import { createDocumentUploadSession } from './useUploadFields';
 import { useAssociationMutation } from './useUploadMutations';
 
 import type { UseMutationResult } from '@tanstack/react-query';
+import type { Dispatch, SetStateAction } from 'react';
 
 import type { Client as DocumentsClient } from '../documents-api/client';
 import type { Client as TripsClient } from '../trips-api/client';
 import type { DocumentAssociationTarget, TripDocumentAssociation } from './types';
 import type { DocumentUploadController } from './useDocumentUpload';
+import type { DocumentUploadSession } from './useUploadFields';
 
 /** A Documents owner upload composed with the route's explicit association action. */
 export interface TripDocumentUploadController extends Omit<DocumentUploadController, 'actions'> {
@@ -27,15 +29,29 @@ export function useTripDocumentUpload({
   tripsClient,
   documentsClient,
   file,
+  storage,
+  beforeRequest,
 }: {
   tripId: number;
   target: DocumentAssociationTarget;
   tripsClient?: TripsClient;
   documentsClient?: DocumentsClient;
   file?: File;
+  storage?: {
+    session: DocumentUploadSession;
+    onSessionChange: Dispatch<SetStateAction<DocumentUploadSession>>;
+    taskScope?: readonly [string, string];
+  };
+  beforeRequest?: () => void;
 }): TripDocumentUploadController {
   const [session, setSession] = useState(() => createDocumentUploadSession(file ?? null));
-  const upload = useDocumentUpload({ session, onSessionChange: setSession, documentsClient });
+  const upload = useDocumentUpload({
+    session: storage?.session ?? session,
+    onSessionChange: storage?.onSessionChange ?? setSession,
+    documentsClient,
+    beforeRequest,
+    taskScope: storage?.taskScope,
+  });
   const queryClient = useQueryClient();
   const associationMutation = useAssociationMutation({
     tripId,
@@ -43,6 +59,7 @@ export function useTripDocumentUpload({
     tripsClient,
     fields: upload.fields,
     queryClient,
+    beforeRequest,
   });
   return {
     ...upload,

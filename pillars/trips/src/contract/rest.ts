@@ -8,6 +8,10 @@ import { documentAssociationsContract } from './document-associations.js';
 import { eventsContract } from './events.js';
 import { journeyGroupsContract } from './journey-groups.js';
 import { journeysContract, journeyLegsContract } from './journeys.js';
+import { meetingPlansContract } from './meeting-plans.js';
+import { rentalsContract } from './rentals.js';
+import { responsibilitiesContract } from './responsibilities.js';
+import { routeContract } from './route.js';
 import {
   CreatePlaceBody,
   CreateTripBody,
@@ -20,6 +24,12 @@ import {
   UpdateVisitBody,
   VisitSchema,
 } from './schemas.js';
+import {
+  captureWorkspaceContract,
+  capturesContract,
+  ideasContract,
+  exploreContract,
+} from './source-workspace.js';
 import { staysContract } from './stays.js';
 
 const c = initContract();
@@ -32,10 +42,18 @@ const VisitList = z.object({ visits: z.array(VisitSchema) });
 /** Trips-owned source metadata and route identity contract; ordering never rewrites dates. */
 export const tripsContract = c.router(
   {
+    route: routeContract,
+    captureWorkspace: captureWorkspaceContract,
+    captures: capturesContract,
+    ideas: ideasContract,
+    explore: exploreContract,
+    rentals: rentalsContract,
+    responsibilities: responsibilitiesContract,
     events: eventsContract,
     decisions: decisionsContract,
     decisionOptions: decisionOptionsContract,
     stays: staysContract,
+    meetingPlans: meetingPlansContract,
     documentAssociations: documentAssociationsContract,
     journeyGroups: journeyGroupsContract,
     journeys: journeysContract,
@@ -117,14 +135,14 @@ export const tripsContract = c.router(
         path: '/trips/:tripId/visits/:id',
         pathParams: VisitParams,
         body: UpdateVisitBody,
-        responses: { 200: VisitSchema, ...errors },
+        responses: { 200: VisitSchema, ...errors, 409: ErrorBodySchema },
       },
       reorder: {
         method: 'PUT',
         path: '/trips/:tripId/visit-order',
         pathParams: TripParams,
         body: ReorderVisitsBody,
-        responses: { 200: VisitList, ...errors },
+        responses: { 200: VisitList, ...errors, 409: ErrorBodySchema },
       },
     }),
   },

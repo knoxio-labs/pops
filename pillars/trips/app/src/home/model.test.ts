@@ -33,6 +33,7 @@ function visit(timing: Visit['timing'], id = 1): Visit {
     id,
     tripId: 1,
     placeId: id,
+    revision: 0,
     timing,
     notes: '',
     sourceLinks: [],

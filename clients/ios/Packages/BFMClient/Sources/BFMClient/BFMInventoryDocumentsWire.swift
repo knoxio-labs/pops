@@ -20,7 +20,7 @@ internal enum BFMDocumentsFailure {
 /// after the slash of a `206`'s `Content-Range`, or a `200`'s
 /// `Content-Length` when the server sent the whole file instead.
 internal enum BFMDocumentFileHeaders {
-    internal static func version(of response: HTTPURLResponse) -> InventoryDocumentFileVersion? {
+    internal static func metadata(of response: HTTPURLResponse) -> DocumentFileMetadata {
         let byteCount: Int?
         if response.statusCode == 206 {
             byteCount = response.value(forHTTPHeaderField: "Content-Range")
@@ -29,12 +29,18 @@ internal enum BFMDocumentFileHeaders {
         } else {
             byteCount = response.value(forHTTPHeaderField: "Content-Length").flatMap { Int($0) }
         }
-        guard let byteCount else { return nil }
-        return InventoryDocumentFileVersion(
+        return DocumentFileMetadata(
             byteCount: byteCount,
             contentType: response.value(forHTTPHeaderField: "Content-Type"),
             fileName: response.value(forHTTPHeaderField: "Content-Disposition")
                 .flatMap(fileName(fromDisposition:)))
+    }
+
+    internal static func version(of response: HTTPURLResponse) -> InventoryDocumentFileVersion? {
+        let value = metadata(of: response)
+        guard let byteCount = value.byteCount else { return nil }
+        return InventoryDocumentFileVersion(
+            byteCount: byteCount, contentType: value.contentType, fileName: value.fileName)
     }
 
     /// `filename*=UTF-8''…` wins over `filename="…"`, per RFC 6266.

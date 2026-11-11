@@ -1,5 +1,21 @@
 import { expect, test } from './fixtures/pillar-rest-guard';
 import { json, stubShellBoot } from './helpers/pillar-rest';
+import { stubUnavailableSourceDocuments } from './helpers/trips-source-documents';
+
+const timelineReads = {
+  'meeting-plans': { meetingPlans: [] },
+  'capture-workspace': {
+    captures: [],
+    ideas: [],
+    associations: [],
+    memberships: [],
+    events: [],
+    journeys: [],
+    stays: [],
+  },
+  rentals: { rentals: [] },
+  route: { tripId: 72, revision: 0, order: [], paths: [], missingSources: [] },
+};
 
 const trip = {
   id: 71,
@@ -25,6 +41,19 @@ test('Trips loads its real remote, creates permanently, and edits metadata throu
   await page.route(/\/tags-api\/tags(?:\?.*)?$/, (route) => json(route, 200, { tags: [] }));
   await page.route(/\/trips-api\/places$/, (route) => json(route, 200, { places: [] }));
   await page.route(/\/trips-api\/trips\/\d+\/visits$/, (route) => json(route, 200, { visits: [] }));
+  for (const [collection, response] of [
+    ...Object.entries(timelineReads),
+    ['stays', { stays: [] }],
+    ['events', { events: [] }],
+    ['journeys', { journeys: [] }],
+    ['journey-groups', { groups: [] }],
+    ['decisions', { decisions: [] }],
+    ['document-associations', { associations: [] }],
+  ] as const) {
+    await page.route(new RegExp(`/trips-api/trips/72/${collection}$`), (route) =>
+      json(route, 200, response)
+    );
+  }
   await page.route(/\/trips-api\/trips$/, async (route) => {
     if (route.request().method() === 'POST') {
       writes.push('POST');
@@ -52,6 +81,7 @@ test('Trips loads its real remote, creates permanently, and edits metadata throu
   await page.getByRole('textbox', { name: 'Destination', exact: true }).fill('Hill country');
   await page.getByRole('textbox', { name: 'When', exact: true }).fill('Whenever the ferry resumes');
   await page.getByRole('button', { name: 'Create trip', exact: true }).click();
+  await expect(page).toHaveURL(/\/trips\/72$/);
   await expect(page.getByRole('heading', { name: 'Hill country', exact: true })).toBeVisible();
   await expect(page.getByText('Whenever the ferry resumes', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Undo', exact: true })).toHaveCount(0);
@@ -132,6 +162,7 @@ test('A real stay identity mounts the existing source-backed workspace through t
     updatedAt: trip.updatedAt,
   };
   await stubShellBoot(page, ['trips']);
+  await stubUnavailableSourceDocuments(page, 71);
   await page.route(/\/trips-api\/trips\/71$/, (route) => json(route, 200, trip));
   await page.route(/\/trips-api\/places$/, (route) => json(route, 200, { places: [] }));
   await page.route(/\/trips-api\/trips\/71\/visits$/, (route) => json(route, 200, { visits: [] }));

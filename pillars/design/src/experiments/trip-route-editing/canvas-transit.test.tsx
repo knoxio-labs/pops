@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { CanvasContext } from './canvas-context';
+import { CanvasInsert } from './canvas-insert';
 import { initialCanvas } from './canvas-model';
 import { RentalSections } from './canvas-rentals';
 import { TransitCard } from './canvas-transit';
@@ -74,6 +75,8 @@ function mount(overrides: Partial<RentalPeriod> = {}, transport?: TripRecord) {
     return (
       <CanvasContext.Provider value={context}>
         {journey && <TransitCard record={journey} />}
+        <CanvasInsert label="Insert a stop" target={{}} />
+        <CanvasInsert label="Add transport" slotLabel="Transport" target={{}} />
         <RentalSections visitId="" />
         {state.order.map((id) => (
           <RentalSections key={id} visitId={id} />
@@ -111,6 +114,7 @@ describe('rental route editing', () => {
       title: 'Original train',
     };
     const changes = mount({}, transport);
+    fireEvent.click(screen.getByRole('button', { name: 'Edit transport name' }));
     fireEvent.blur(screen.getByLabelText('Transport name'), { target: { value: 'Renamed train' } });
     fireEvent.click(screen.getByRole('button', { name: 'Edit transport' }));
     fireEvent.input(screen.getByLabelText('Departure date'), { target: { value: '2028-01-01' } });
@@ -192,5 +196,47 @@ describe('rental route editing', () => {
     expect(screen.getByRole('note', { name: 'Car rental return' }).textContent).toContain('5 Jan');
     expect(screen.getAllByRole('button', { name: 'Edit rental' })).toHaveLength(1);
     expect(screen.getAllByLabelText('Rental provider')).toHaveLength(1);
+  });
+});
+
+describe('route transport presentation', () => {
+  it('uses one purchased badge and reveals a stable editor from the whole transport card', () => {
+    const visit = visits[0];
+    if (!visit) throw new Error('Missing visit fixture');
+    mount(
+      {},
+      {
+        ...visit,
+        id: 'purchased-transport',
+        kind: 'transport',
+        title: 'Journey',
+        arrangement: 'Booked',
+        purchase: 'Purchased',
+      }
+    );
+    const card = screen.getByRole('region', { name: 'Journey' });
+    expect(card.className).toContain('group/transit');
+    expect(card.textContent).toContain('Purchased');
+    expect(card.textContent).not.toContain('Booked');
+    expect(card.querySelectorAll('[data-slot="badge"]')).toHaveLength(1);
+    const editor = screen.getByRole('button', { name: 'Edit transport' });
+    expect(editor.className).toContain('group-hover/transit:opacity-100');
+    expect(editor.className).toContain('group-focus-within/transit:opacity-100');
+    expect(editor.className).toContain('min-h-11');
+    expect(editor.className).toContain('min-w-11');
+    expect(card.className).not.toContain('bg-app-accent');
+  });
+
+  it('uses neutral borders for ordinary insertion and missing transport, with parent-card reveal selectors', () => {
+    mount();
+    const missing = screen.getByRole('button', { name: 'Add transport' });
+    expect(missing.className).toContain('border-border');
+    expect(missing.className).not.toContain('app-accent');
+    const insert = screen.getByRole('button', { name: 'Insert a stop' });
+    expect(insert.className).toContain('group-hover/route:opacity-100');
+    expect(insert.className).toContain('group-focus-within/route:opacity-100');
+    expect(insert.className).toContain('min-h-11');
+    expect(insert.className).toContain('min-w-11');
+    expect(insert.className).not.toContain('app-accent');
   });
 });

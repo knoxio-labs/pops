@@ -1,8 +1,11 @@
 /** Shell routes and remote bundle slots shared by Trips registration and its UI. */
 export const TRIPS_PAGES = [
   { path: '', index: true, bundleSlot: 'trips-home' },
+  { path: ':tripId', bundleSlot: 'trips-overview' },
+  { path: ':tripId/visits/:visitId', bundleSlot: 'trips-visit' },
   { path: ':tripId/calendar', bundleSlot: 'trips-calendar' },
   { path: ':tripId/stays/:stayId', bundleSlot: 'trips-stay' },
+  { path: ':tripId/arrangements', bundleSlot: 'trips-arrangements' },
   { path: ':tripId/events/:eventId', bundleSlot: 'trips-event' },
   { path: ':tripId/decisions/:decisionId', bundleSlot: 'trips-decision' },
   { path: ':tripId/journeys/:journeyId', bundleSlot: 'trips-journey' },

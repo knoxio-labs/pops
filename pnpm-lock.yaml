@@ -453,6 +453,9 @@ importers:
       '@tanstack/react-query':
         specifier: 5.102.8
         version: 5.102.8(react@19.3.0)
+      i18next:
+        specifier: ^26.4.2
+        version: 26.4.2(typescript@6.0.3)
       lucide-react:
         specifier: ^1.45.0
         version: 1.46.0(react@19.3.0)
@@ -462,6 +465,12 @@ importers:
       react-dom:
         specifier: ^19.3.0
         version: 19.3.0(react@19.3.0)
+      react-i18next:
+        specifier: ^17.0.13
+        version: 17.0.13(i18next@26.4.2(typescript@6.0.3))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(typescript@6.0.3)
+      zod:
+        specifier: ^4.6.2
+        version: 4.6.5
     devDependencies:
       '@hey-api/openapi-ts':
         specifier: ^0.99.0
@@ -3109,6 +3118,9 @@ importers:
       '@hey-api/client-fetch':
         specifier: ^0.13.1
         version: 0.13.1(@hey-api/openapi-ts@0.99.0(magicast@0.5.4)(typescript@6.0.3))
+      '@pops/app-contacts':
+        specifier: workspace:*
+        version: link:../contacts/app
       '@pops/locales':
         specifier: workspace:*
         version: link:../../libs/locales
@@ -3443,6 +3455,9 @@ importers:
       vitest:
         specifier: ^4.1.11
         version: 4.1.11(@types/node@24.19.1)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1(@noble/hashes@1.8.0))(msw@2.14.6(@types/node@24.19.1)(typescript@6.0.3))(vite@8.3.0(@types/node@24.19.1)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.1))
+      zod:
+        specifier: ^4.6.2
+        version: 4.6.5
 
 packages:
 

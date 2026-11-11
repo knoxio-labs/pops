@@ -51,6 +51,22 @@ loaded. It follows the host locale without a second i18next instance. The public
 `contactsI18n` metadata remains available to hosts with their own sanctioned
 translation registration.
 
+`readContactReference(uri, { signal })` is the public retained-reference reader.
+It verifies the owner-issued URI with `GET /entities/{id}/reference`, follows
+historical aliases to the canonical entity, then reads that entity's current
+name and data. An available result includes the actual name, entity, canonical
+reference and encoded generic Contacts route; entity type never determines the
+link or label. The reader does not depend on the creation catalogue.
+
+Only a resolver 404 means `missing`. Network, permission, service and cancelled
+reads are `unavailable`; malformed or inconsistent owner responses are
+`readError`. After successful identity proof, display-read failure retains that
+reference without claiming the contact is missing. Consumers keep an unread URI
+unverified and can clear it without calling the reader. Cancellation belongs to
+the caller; there is no automatic timeout or retry. IDs remain opaque and are
+not decoded or normalized. URL dot-segment IDs cannot be safely addressed by
+this path-based API and produce `readError` without following a normalized path.
+
 `GET /entity-types` publishes choices and the default from the backend's actual
 validation constants. Both creation surfaces consume that catalogue; retained
 unknown choices stay visible instead of being silently replaced. Search and
@@ -108,6 +124,9 @@ The HTTP surface:
 | `/entities/{id}/person`                              | Local structured-name override (`GET`/`PUT`), independent of imported names.                                                                    |
 | `/entities/{id}/contact-points`                      | Labeled contact points (`GET`/`POST`); local points support people, companies and organisations, while source observations remain person-owned. |
 | `/entities/{id}/contact-points/{point_id}/preferred` | Choose a preferred observation (`PUT`), scoped to its contact and kind.                                                                         |
+| `/entities/{id}/facts`                               | Coherent person draft, directory version and local operation history (`GET`).                                                                   |
+| `/entities/{id}/facts/changes`                       | Atomic explicit name, notes, method and address changes (`POST`).                                                                               |
+| `/entities/{id}/facts/changes/{operation_id}/undo`   | Reverse a still-owned local operation without reverting provider evidence (`POST`).                                                             |
 | `/entities/{id}/sources`                             | Active and inactive namespaced source links (`GET`).                                                                                            |
 | `/sources/accounts`                                  | Stable provider account metadata (`GET`/`POST`); credentials are never accepted here.                                                           |
 | `/search`                                            | The contacts slice of unified search (`POST`) — ranked name hits.                                                                               |
@@ -116,12 +135,45 @@ The HTTP surface:
 
 The Contacts app exposes `/contacts/people/:personId` from materialized import-review
 candidates and `/contacts/:entityId` for a canonical contact reference. The candidate
-link opens a separate tab to retain unsaved review choices. Person details show
-original local/imported methods (including inactive and preferred observations) and
-repeatable addresses before notes. Company and organisation details put local methods
-and addresses before editable name and notes. Each new local method or raw address is
-saved individually. An uncertain write requires a successful reload before further
-writes; entered values remain available for checking against the refreshed record.
+link opens a separate tab to retain unsaved review choices. Person details edit a
+single draft containing name, notes, repeatable methods and addresses. Company and
+organisation details retain their individual local-write endpoints. Address labels
+and city text are literal strings, independent of Trips place identities. The
+`other` method kind carries an opaque value and label without a normalized match
+key; existing `url` observations retain their kind. Address and Other values retain
+literal newlines and are copied verbatim.
+
+`GET /entities/{id}/facts` returns the canonical entity, effective points and
+addresses, chronological operation history and the exact directory `version` from
+one read snapshot. `POST /entities/{id}/facts/changes` accepts `expectedVersion`, an
+`idempotencyKey` and explicit tagged `changes`. Every change commits together or
+none does. Imported method edits create a new local observation, hide only the
+exact edited observation and explicitly select the replacement as preferred for
+its kind. Additions preserve the existing preference. Removal records a local
+visibility decision; source observations, original address rows and immutable
+source history remain stored. New provider point IDs are independent evidence,
+including when their text resembles a hidden observation.
+Replaced, locally removed and undone-added point IDs cannot be selected through
+the preferred-point endpoint or merge selections. Rejection preserves the
+directory version and existing Undo ownership. Inactive provider observations
+without a local visibility decision remain selectable.
+
+Undo accepts a freshly read `expectedVersion` and its own retry key. It restores
+only the operation's previous decisions and preferences while those targets are
+still owned by that operation. Provider refreshes and unrelated writes survive;
+a later edit or preference choice, including selecting the same point again,
+returns `409` instead of overwriting it. `canUndo` describes current target
+ownership, not which browser created the operation. Clients choose their own
+successful operation receipts. The editor's Undo first discards pending draft
+changes, then uses only receipts acknowledged in that editor; it never chooses a
+foreign session's operation from persisted history. Reload retains pending input
+bound to its original version. If the server changed, Save remains disabled
+until the user explicitly discards that draft and reviews the refreshed state. Explicit
+contact deletion clears its current facts and retains immutable operation evidence.
+Undo appends immutable history, and identical key/body retries return the original
+successful receipt before checking freshness. Changed-body key reuse and stale versions return `409`. An uncertain
+write requires a successful reload before further writes; entered values remain
+available for comparison with the refreshed record.
 
 Person entities retain the same fleet UUID identity as other entities. Multiple
 people may share a display name, including first-name-only records, and a person
@@ -223,7 +275,7 @@ incoming row so other staged rows can be reviewed against a real person. A pure
 later decision saves the pending choices without creating a person. Selections
 and point preferences use the same provenance contracts as identity merges.
 Each request permits at most 499 merged or different identities, 10,000 deferred
-identities, nine field selections, four point preferences and 1,000 expanded
+identities, nine field selections, one point preference per supported kind and 1,000 expanded
 negative-group operations or 10,000 stable member pairs; bodies are bounded to
 128 KiB.
 
@@ -339,8 +391,9 @@ manual review remains available. Any late failure rolls the whole action back.
 A merge changes canonical membership, preserving every original entity, source,
 address and blob. The request names only the roots to merge; another plausible
 candidate is never included implicitly. The selected canonical root supplies
-scalar defaults. Explicit field references select a retained member's original
-value, and preferred point references select one group observation per kind.
+scalar defaults. Explicit entity field references select the retained member's
+effective local value, including acknowledged fact edits; its original row stays
+unchanged. Preferred point references select one group observation per kind.
 Selectors are tagged: `{kind: "entity", field: "name", entityId}` selects a
 retained entity; `{kind: "sourceRecord", field: "personProfile", sourceRecordId}`
 selects imported name evidence. Source selectors support only `name` and
@@ -378,8 +431,11 @@ decision; source replay cannot clear a rejection.
 Undo is deliberately conservative: **any subsequent directory mutation**, even
 outside the group, blocks it. SQLite triggers fence entity, profile, point,
 source/history, address, asset, selection and separation changes. Identical source
-replay does not write or advance that revision. Undo restores previous membership
-and selections only at the exact untouched post-merge revision. References written
+replay does not write or advance that revision. Undo restores previous membership,
+selections, local fact decisions and preference ownership only at the exact
+untouched post-merge revision. Preference counters remain monotonic. A legacy
+merge without a retained fact snapshot returns `409` when affected local fact
+history exists, rather than guessing its previous decisions. References written
 in another pillar after a merge still name the chosen canonical UUID after undo;
 contacts cannot reconstruct an external writer's intended former member.
 

@@ -6,7 +6,9 @@
   "main": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./decision-client": "./src/decision/client.ts"
+    "./decision-client": "./src/decision/client.ts",
+    "./capture-client": "./src/capture/client.ts",
+    "./people-client": "./src/people/client.ts"
   },
   "scripts": {
     "build": "tsc --noEmit && vite build",
@@ -22,9 +24,12 @@
     "@pops/pillar-sdk": "workspace:*",
     "@pops/ui": "workspace:*",
     "@tanstack/react-query": "5.102.8",
+    "i18next": "^26.4.2",
     "lucide-react": "^1.45.0",
     "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "react-dom": "^19.3.0",
+    "react-i18next": "^17.0.13",
+    "zod": "^4.6.2"
   },
   "devDependencies": {
     "@hey-api/openapi-ts": "^0.99.0",

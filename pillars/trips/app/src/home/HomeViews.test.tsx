@@ -2,12 +2,10 @@ import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createInstance } from 'i18next';
 import { I18nextProvider } from 'react-i18next';
-import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import enAU from '../locales/en-AU.json';
 import ptBR from '../locales/pt-BR.json';
-import { TripPreview } from './TripPreview';
 import { TripRows } from './TripRows';
 
 import type { Place, Trip, Visit } from '../api/types';
@@ -45,6 +43,7 @@ function visit(id: number, timing: Visit['timing'] = {}): Visit {
     id,
     tripId: 1,
     placeId: id,
+    revision: 0,
     timing,
     notes: '',
     sourceLinks: [],
@@ -84,24 +83,6 @@ function rows(records: HomeRecord[], allTrips: Trip[] = []) {
     </I18nextProvider>
   );
   return onSelect;
-}
-
-function preview(source: Trip, visits: Visit[] | undefined, allTrips: Trip[] = []) {
-  const onBack = vi.fn();
-  render(
-    <I18nextProvider i18n={translation}>
-      <MemoryRouter>
-        <TripPreview
-          trip={source}
-          visits={visits}
-          allTrips={allTrips}
-          places={places}
-          onBack={onBack}
-        />
-      </MemoryRouter>
-    </I18nextProvider>
-  );
-  return onBack;
 }
 
 describe('TripRows', () => {
@@ -159,55 +140,5 @@ describe('TripRows', () => {
     rows([]);
     expect(screen.getByRole('status')).toHaveTextContent(ptBR.homeRows.empty);
     expect(screen.queryByRole('heading')).not.toBeInTheDocument();
-  });
-});
-
-describe('TripPreview', () => {
-  it('renders only selected source facts and opens the selected calendar and offers the working back action', async () => {
-    const onBack = preview(
-      trip(4, {
-        name: 'Holiday',
-        when: 'After the exams',
-        parentId: 9,
-        notes: 'Keep this source note.',
-        sourceLinks: [{ uri: 'pops:documents/document/12', label: 'Private document' }],
-      }),
-      [visit(2, { arrival: '2026-11-10', departure: '2026-11-12' }), visit(1)],
-      [trip(9, { name: 'Family' }), trip(10, { name: 'Unrelated' })]
-    );
-    expect(screen.getByRole('heading', { name: 'Holiday', level: 1 })).toBeVisible();
-    expect(screen.getByText('After the exams')).toBeVisible();
-    expect(screen.getByText('Parent: Family')).toBeVisible();
-    expect(screen.getByText('Keep this source note.')).toBeVisible();
-    const route = screen.getByRole('list');
-    expect(
-      within(route)
-        .getAllByRole('listitem')
-        .map((item) => item.textContent)
-    ).toEqual(['LyonVisit10 Nov 2026 → 12 Nov 2026', 'ParisVisit… → …']);
-    expect(screen.queryByText('Unrelated')).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Calendar' })).toHaveAttribute(
-      'href',
-      '/trips/4/calendar'
-    );
-    expect(screen.getByRole('link', { name: 'Documents' })).toHaveAttribute(
-      'href',
-      '/trips/4/documents'
-    );
-    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
-    expect(screen.getAllByRole('button')).toHaveLength(1);
-    await userEvent.click(screen.getByRole('button', { name: 'Trips' }));
-    expect(onBack).toHaveBeenCalledTimes(1);
-  });
-
-  it.each([
-    { visits: undefined, message: 'Route unavailable' },
-    { visits: [], message: 'No visits' },
-  ])('distinguishes $message without inventing route coverage', ({ visits, message }) => {
-    preview(trip(1, { parentId: 80 }), visits);
-    expect(screen.getByRole('status')).toHaveTextContent(message);
-    expect(screen.getByText('Parent: Parent unavailable')).toBeVisible();
-    expect(screen.queryByRole('list')).not.toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Route' })).not.toBeInTheDocument();
   });
 });

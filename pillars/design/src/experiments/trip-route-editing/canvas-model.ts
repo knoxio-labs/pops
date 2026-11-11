@@ -5,20 +5,12 @@ import { initialPlanner } from './model';
 import type { TripRecord } from '@/fixtures/trip-overview-model';
 import type { TripPlace } from '@/fixtures/trip-places';
 
+import type { RouteSection, TransitLink } from './canvas-path-types';
+
+export type { RouteSection, TransitLink } from './canvas-path-types';
+
 import type { PlannerScenario, PlannerState } from './model';
 
-/** A user-owned alternative section contains any number of movable visits. */
-export interface RouteSection {
-  id: string;
-  gapId: string;
-  title: string;
-  cards: string[];
-}
-/** Transport retains explicit visit endpoints independently of its display position. */
-export interface TransitLink {
-  from: string;
-  to: string;
-}
 /** A car hire period spans visits and retains its own pickup/return dates. */
 export interface RentalPeriod {
   id: string;
@@ -33,6 +25,8 @@ export interface RentalPeriod {
 export interface CanvasState extends PlannerState {
   places: TripPlace[];
   sections: RouteSection[];
+  /** Applied path source receipts retain identity after exclusive placement moves into root order. */
+  appliedPaths: RouteSection[];
   transitLinks: Record<string, TransitLink>;
   rentals: RentalPeriod[];
   itemOrders: Record<string, string[]>;
@@ -118,13 +112,15 @@ export function initialCanvas(scenario: PlannerScenario): CanvasState {
       .map(([key]) => key),
   ]);
   const sections = base.records
-    .filter((r) => r.kind === 'gap')
+    .filter((record) => record.kind === 'gap')
     .flatMap((gap) =>
       (gap.optionIds ?? []).map((id) => ({
         id: `section-${id}`,
         gapId: gap.id,
         title:
-          places.find((p) => p.id === base.records.find((r) => r.id === id)?.placeId)?.name ?? '',
+          places.find(
+            (place) => place.id === base.records.find((record) => record.id === id)?.placeId
+          )?.name ?? '',
         cards: [id],
       }))
     );
@@ -134,6 +130,7 @@ export function initialCanvas(scenario: PlannerScenario): CanvasState {
     order,
     places,
     sections,
+    appliedPaths: [],
     transitLinks,
     itemOrders: {},
     activityStays: {},

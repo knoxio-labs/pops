@@ -14,9 +14,10 @@ pub async fn entity(
 ) -> Result<EntityRow, sqlx::Error> {
     for selection in repo::selections(conn, &row.id).await? {
         if let Some(owner) = selection.owner_entity_id {
-            let source = get_stored(conn, &owner)
+            let mut source = get_stored(conn, &owner)
                 .await?
                 .ok_or(sqlx::Error::RowNotFound)?;
+            crate::persons::facts_projection::entity(conn, &mut source).await?;
             let field: MergeField = decode_field(&selection.field)?;
             match field {
                 MergeField::Name => row.name = source.name,
@@ -46,6 +47,7 @@ pub async fn entity(
             }
         }
     }
+    crate::persons::facts_projection::entity(conn, &mut row).await?;
     Ok(row)
 }
 
@@ -89,25 +91,30 @@ pub async fn points_in_transaction(
             None => point.entity_id == canonical && point.preferred,
         };
     }
+    crate::persons::facts_projection::points(conn, &canonical, &mut rows).await?;
     rows.retain(|point| point.active || point.preferred);
     Ok(rows)
 }
 
-/// Select a retained member point for a canonical group without rewriting its provenance.
+/// Select a retained member point unless hidden by local facts, preserving inactive provider evidence and provenance.
 pub async fn prefer_point(
     conn: &mut SqliteConnection,
     canonical: &str,
     point_id: &str,
 ) -> Result<bool, sqlx::Error> {
-    let kind: Option<String> = sqlx::query_scalar(
-        "SELECT kind FROM contact_points WHERE id=?1 AND (entity_id=?2 OR entity_id IN (SELECT member_id FROM entity_redirects WHERE canonical_id=?2))")
-        .bind(point_id).bind(canonical).fetch_optional(&mut *conn).await?;
-    let Some(kind) = kind else { return Ok(false) };
+    let Some(point) = crate::persons::facts_projection::selectable_point(conn, point_id).await?
+    else {
+        return Ok(false);
+    };
+    let owner = repo::resolve_one(conn, &point.entity_id).await?;
+    if owner.as_deref() != Some(canonical) {
+        return Ok(false);
+    }
     repo::put_selection(
         conn,
         &SelectionRow {
             canonical_id: canonical.into(),
-            field: format!("point:{kind}"),
+            field: format!("point:{}", point.kind),
             owner_entity_id: None,
             point_id: Some(point_id.into()),
             source_history_id: None,

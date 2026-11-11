@@ -2,6 +2,8 @@ import { and, asc, eq } from 'drizzle-orm';
 
 import { PlaceSchema, TripSchema, VisitSchema } from '../../contract/schemas.js';
 import { places, trips, visits } from '../schema.js';
+import { appendRouteVisit, initializeTripRoute } from './route-storage.js';
+import { projectVisitOrder, reorderLegacyRoute } from './route-visit-order.js';
 import { requireOwnedRecord, TripsServiceError } from './source-record.js';
 import { validateTripAssociations } from './trip-associations.js';
 
@@ -38,7 +40,11 @@ export function getTrip(db: TripsDb, id: number): Trip {
 export function createTrip(db: TripsDb, input: TripInput): Trip {
   return db.transaction((tx) => {
     validateTripAssociations(tx, input);
-    return TripSchema.parse(requireOwnedRecord(tx.insert(trips).values(input).returning().get()));
+    const trip = TripSchema.parse(
+      requireOwnedRecord(tx.insert(trips).values(input).returning().get())
+    );
+    initializeTripRoute(tx, trip.id);
+    return trip;
   });
 }
 
@@ -99,13 +105,14 @@ export function updatePlace(db: TripsDb, id: number, input: PlaceUpdate): Place 
 /** Read one trip's visits in explicit route order, including repeated places. */
 export function listVisits(db: TripsDb, tripId: number): Visit[] {
   getTrip(db, tripId);
-  return db
+  const rows = db
     .select()
     .from(visits)
     .where(eq(visits.tripId, tripId))
     .orderBy(asc(visits.position), asc(visits.id))
     .all()
     .map((row) => VisitSchema.parse(row));
+  return projectVisitOrder(db, tripId, rows);
 }
 
 /** Read a visit only within its owning trip. */
@@ -127,7 +134,7 @@ export function createVisit(db: TripsDb, tripId: number, input: VisitInput): Vis
     (tx) => {
       const current = listVisits(tx, tripId);
       getPlace(tx, input.placeId);
-      return VisitSchema.parse(
+      const visit = VisitSchema.parse(
         requireOwnedRecord(
           tx
             .insert(visits)
@@ -136,6 +143,8 @@ export function createVisit(db: TripsDb, tripId: number, input: VisitInput): Vis
             .get()
         )
       );
+      appendRouteVisit(tx, tripId, visit.id);
+      return visit;
     },
     { behavior: 'immediate' }
   );
@@ -145,13 +154,17 @@ export function createVisit(db: TripsDb, tripId: number, input: VisitInput): Vis
 export function updateVisit(db: TripsDb, tripId: number, id: number, input: VisitUpdate): Visit {
   return db.transaction(
     (tx) => {
-      getVisit(tx, tripId, id);
+      const current = getVisit(tx, tripId, id);
+      const { expectedRevision, ...fields } = input;
+      if (expectedRevision !== undefined && expectedRevision !== current.revision)
+        throw new TripsServiceError('visit_revision_conflict');
+      const revision = nextVisitRevision(current.revision);
       if (input.placeId !== undefined) getPlace(tx, input.placeId);
       return VisitSchema.parse(
         requireOwnedRecord(
           tx
             .update(visits)
-            .set({ ...input, updatedAt: new Date().toISOString() })
+            .set({ ...fields, revision, updatedAt: new Date().toISOString() })
             .where(and(eq(visits.id, id), eq(visits.tripId, tripId)))
             .returning()
             .get()
@@ -162,7 +175,7 @@ export function updateVisit(db: TripsDb, tripId: number, id: number, input: Visi
   );
 }
 
-/** Atomically replace the complete route order; all source facts and timestamps remain unchanged. */
+/** Atomically replace route order; source facts and timestamps remain, and each written row advances revision. */
 export function reorderVisits(db: TripsDb, tripId: number, visitIds: number[]): Visit[] {
   return db.transaction(
     (tx) => {
@@ -175,9 +188,14 @@ export function reorderVisits(db: TripsDb, tripId: number, visitIds: number[]): 
       ) {
         throw new TripsServiceError('order_invalid');
       }
-      for (const [position, id] of visitIds.entries()) {
+      const revisions = new Map(
+        current.map((visit) => [visit.id, nextVisitRevision(visit.revision)])
+      );
+      reorderLegacyRoute(tx, tripId, visitIds);
+      const ordered = projectVisitOrder(tx, tripId, current).map((visit) => visit.id);
+      for (const [position, id] of ordered.entries()) {
         tx.update(visits)
-          .set({ position })
+          .set({ position, revision: revisions.get(id) })
           .where(and(eq(visits.id, id), eq(visits.tripId, tripId)))
           .run();
       }
@@ -185,4 +203,9 @@ export function reorderVisits(db: TripsDb, tripId: number, visitIds: number[]): 
     },
     { behavior: 'immediate' }
   );
+}
+
+function nextVisitRevision(revision: number): number {
+  if (revision >= Number.MAX_SAFE_INTEGER) throw new TripsServiceError('visit_revision_exhausted');
+  return revision + 1;
 }

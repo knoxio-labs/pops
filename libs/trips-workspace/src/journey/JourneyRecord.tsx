@@ -1,8 +1,9 @@
-import { useQuery } from '@tanstack/react-query';
 import { Plus, RotateCcw } from 'lucide-react';
 
 import { Button, ErrorState, PageHeader, SortableGrid } from '@pops/ui';
 
+import { SourceDocuments } from '../shared/SourceDocuments';
+import { useSourceQuery } from '../shared/use-source-query';
 import { loadPlaces, requestProblem } from '../stay/api';
 import { journeyKey, loadJourney, loadTiming } from './api';
 import { JourneyChronology } from './JourneyChronology';
@@ -11,19 +12,23 @@ import { JourneyMetadata } from './JourneyMetadata';
 import { JourneyWriteFailure } from './JourneyWriteFailure';
 import { useJourneyEditor } from './use-journey-editor';
 
+import type { UseQueryResult } from '@tanstack/react-query';
 import type { JSX } from 'react';
 
 import type { Place } from '../stay/types';
-import type { JourneyWorkspaceProps, JourneySource } from './types';
+import type { JourneyWorkspaceProps, JourneySource, JourneyTiming } from './types';
 import type { JourneyEditor } from './use-journey-editor';
 
 /** Independently editable source record, also used for expanded alternatives without recursive grouping UI. */
 export function JourneyRecord(props: JourneyWorkspaceProps): JSX.Element {
-  const source = useQuery({
-    queryKey: journeyKey(props),
-    queryFn: () => loadJourney(props),
-    retry: false,
-  });
+  const source = useSourceQuery(
+    { client: props.client, tripId: props.tripId, kind: 'journey', sourceId: props.journeyId },
+    (owner) => {
+      const captured = { client: owner.client, tripId: owner.tripId, journeyId: owner.sourceId };
+      return { queryKey: journeyKey(captured), load: () => loadJourney(captured) };
+    }
+  );
+  if (source.ownershipError) return <ErrorState error={source.ownershipError} />;
   if (source.isPending)
     return (
       <p role="status" className="p-4">
@@ -59,20 +64,13 @@ function JourneySession({
   reload: () => Promise<boolean>;
 }): JSX.Element {
   const editor = useJourneyEditor(initial, identity);
-  const timing = useQuery({
-    queryKey: [...journeyKey(identity), 'timing'],
-    queryFn: () => loadTiming(identity),
-    retry: false,
-  });
-  const places = useQuery({
-    queryKey: ['trips', identity.client?.getConfig().baseUrl ?? '/trips-api', 'places'],
-    queryFn: () => loadPlaces(identity.client),
-    retry: false,
-  });
+  const { timing, places } = useJourneyRecordContext(identity);
   return (
     <section aria-label="Journey source editor" className="space-y-4">
       <PageHeader
-        title={editor.draft.journey.name?.trim() || 'Journey detail'}
+        title={
+          editor.draft.journey.name?.trim() ? editor.draft.journey.name.trim() : 'Journey detail'
+        }
         actions={
           <Button variant="ghost" disabled={!editor.canUndo} onClick={editor.undo}>
             <RotateCcw className="size-4" aria-hidden />
@@ -92,8 +90,40 @@ function JourneySession({
       </p>
       <JourneyChronology timing={timing.data} />
       <JourneyFields editor={editor} places={places.data ?? []} />
+      <SourceDocuments
+        tripId={identity.tripId}
+        target={{ kind: 'journey', id: identity.journeyId }}
+        tripsClient={identity.client}
+        documentsClient={identity.documentsClient}
+      />
     </section>
   );
+}
+
+function useJourneyRecordContext(identity: JourneyWorkspaceProps): {
+  timing: UseQueryResult<JourneyTiming>;
+  places: UseQueryResult<Place[]>;
+} {
+  const timing = useSourceQuery(
+    {
+      client: identity.client,
+      tripId: identity.tripId,
+      kind: 'journey-timing',
+      sourceId: identity.journeyId,
+    },
+    (owner) => {
+      const captured = { client: owner.client, tripId: owner.tripId, journeyId: owner.sourceId };
+      return { queryKey: [...journeyKey(captured), 'timing'], load: () => loadTiming(captured) };
+    }
+  );
+  const places = useSourceQuery(
+    { client: identity.client, tripId: identity.tripId, kind: 'places-context', sourceId: 0 },
+    (owner) => ({
+      queryKey: ['trips', owner.client.getConfig().baseUrl ?? '/trips-api', 'places'],
+      load: () => loadPlaces(owner.client),
+    })
+  );
+  return { timing, places };
 }
 
 function JourneyFields({

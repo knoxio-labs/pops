@@ -1,13 +1,13 @@
-import { useQuery } from '@tanstack/react-query';
 import { RotateCcw } from 'lucide-react';
 
 import { Button, ErrorState, PageHeader } from '@pops/ui';
 
+import { SourceConflict } from '../shared/SourceConflict';
+import { SourceDocuments } from '../shared/SourceDocuments';
+import { useSourceQuery } from '../shared/use-source-query';
 import { loadPlaces, loadTrip, loadVisits, requestProblem } from '../stay/api';
 import { eventQueryKey, loadEvent } from './api';
-import { EventFields } from './EventFields';
-import { EventReferences } from './EventReferences';
-import { EventRoute } from './EventRoute';
+import { EventSourceFacts } from './EventSourceFacts';
 import { useEventEditor } from './use-event-editor';
 
 import type { UseQueryResult } from '@tanstack/react-query';
@@ -38,12 +38,15 @@ export function EventWorkspace(props: EventWorkspaceProps): JSX.Element {
 }
 
 function LoadEvent(props: EventWorkspaceProps): JSX.Element {
-  const source = useQuery({
-    queryKey: eventQueryKey(props),
-    queryFn: () => loadEvent(props),
-    retry: false,
-  });
+  const source = useSourceQuery(
+    { client: props.client, tripId: props.tripId, kind: 'event', sourceId: props.eventId },
+    (owner) => {
+      const captured = { client: owner.client, tripId: owner.tripId, eventId: owner.sourceId };
+      return { queryKey: eventQueryKey(captured), load: () => loadEvent(captured) };
+    }
+  );
   const context = useEventContext(props);
+  if (source.ownershipError) return <ErrorState error={source.ownershipError} />;
   if (source.isPending)
     return (
       <p role="status" className="p-6">
@@ -70,22 +73,30 @@ interface EventContext {
   places: UseQueryResult<Place[], Error>;
 }
 function useEventContext({ tripId, client }: EventWorkspaceProps): EventContext {
-  const origin = client?.getConfig().baseUrl ?? '/trips-api';
-  const trip = useQuery({
-    queryKey: ['trips', origin, tripId],
-    queryFn: () => loadTrip(tripId, client),
-    retry: false,
+  const trip = useSourceQuery({ client, tripId, kind: 'trip-context', sourceId: 0 }, (owner) => {
+    const origin = owner.client.getConfig().baseUrl ?? '/trips-api';
+    return {
+      queryKey: ['trips', origin, owner.tripId],
+      load: () => loadTrip(owner.tripId, owner.client),
+    };
   });
-  const visits = useQuery({
-    queryKey: ['trips', origin, tripId, 'visits'],
-    queryFn: () => loadVisits(tripId, client),
-    retry: false,
-  });
-  const places = useQuery({
-    queryKey: ['trips', origin, 'places'],
-    queryFn: () => loadPlaces(client),
-    retry: false,
-  });
+  const visits = useSourceQuery(
+    { client, tripId, kind: 'visits-context', sourceId: 0 },
+    (owner) => {
+      const origin = owner.client.getConfig().baseUrl ?? '/trips-api';
+      return {
+        queryKey: ['trips', origin, owner.tripId, 'visits'],
+        load: () => loadVisits(owner.tripId, owner.client),
+      };
+    }
+  );
+  const places = useSourceQuery(
+    { client, tripId, kind: 'places-context', sourceId: 0 },
+    (owner) => {
+      const origin = owner.client.getConfig().baseUrl ?? '/trips-api';
+      return { queryKey: ['trips', origin, 'places'], load: () => loadPlaces(owner.client) };
+    }
+  );
   return { trip, visits, places };
 }
 
@@ -122,23 +133,18 @@ function EventSession({
         }
       />
       <EditorStatus editor={editor} context={context} />
-      <fieldset disabled={editor.busy} className="min-w-0">
-        <legend className="sr-only">Event source facts</legend>
-        <EventRoute
-          event={editor.draft}
-          visits={context.visits.data ?? []}
-          places={context.places.data ?? []}
-        >
-          <EventFields
-            event={editor.draft}
-            visits={context.visits.data ?? []}
-            places={context.places.data ?? []}
-            edit={editor.edit}
-            commit={(patch) => void editor.commit(patch)}
-          />
-          <EventReferences event={editor.draft} commit={(patch) => void editor.commit(patch)} />
-        </EventRoute>
-      </fieldset>
+      <EventSourceFacts
+        editor={editor}
+        identity={identity}
+        visits={context.visits.data ?? []}
+        places={context.places.data ?? []}
+      />
+      <SourceDocuments
+        tripId={identity.tripId}
+        target={{ kind: 'event', id: identity.eventId }}
+        tripsClient={identity.client}
+        documentsClient={identity.documentsClient}
+      />
     </main>
   );
 }
@@ -171,10 +177,11 @@ function EditorStatus({
 }): JSX.Element {
   return (
     <>
+      <SourceConflict conflict={editor.conflict} reset={editor.reset} />
       {editor.failure && (
         <ErrorState
           error={requestProblem(editor.failure.error)}
-          onRetry={() => void editor.retry()}
+          onRetry={editor.conflict ? undefined : () => void editor.retry()}
         />
       )}
       <ContextProblems context={context} />
