@@ -3,8 +3,22 @@ import { describe, expect, it } from 'vitest';
 const { allTools } = await import('./index.js');
 
 describe('allTools', () => {
-  it('exports exactly 193 tools', () => {
-    expect(allTools).toHaveLength(193);
+  it('exports exactly 198 tools', () => {
+    expect(allTools).toHaveLength(198);
+  });
+
+  it('registers the finite direct Documents owner/recovery family alongside Inventory associations', () => {
+    const tools = allTools.filter(
+      (tool) => tool.name.startsWith('documents.') && tool.name !== 'documents.delete'
+    );
+    expect(tools.map((tool) => [tool.name, tool.readOnly, tool.scope])).toEqual([
+      ['documents.status', true, 'documents.paperless.status'],
+      ['documents.search', true, 'documents.paperless.search'],
+      ['documents.get', true, 'documents.paperless.get'],
+      ['documents.task', true, 'documents.paperless.task'],
+      ['documents.createUpload', false, 'documents.write.upload'],
+      ['documents.uploadStatus', true, undefined],
+    ]);
   });
 
   it('registers purchases inventory proposal tools', () => {

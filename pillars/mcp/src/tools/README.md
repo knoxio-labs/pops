@@ -12,7 +12,7 @@ lookup, so a name is the whole routing table.
 
 ## Published contract inputs
 
-`src/contract-inputs.ts` declares the Trips-owned OpenAPI snapshot in
+`src/contract-inputs.ts` declares the Trips- and Documents-owned OpenAPI snapshots in
 `contracts/`. The vendored-contract guard checks each copy byte-for-byte
 against its owner and rejects undeclared locations or missing inputs. The
 MCP image carries the same files beside both `src/` and `dist/`; no producer
@@ -194,14 +194,28 @@ though nothing enforces it mechanically.
   `item.attachPhoto`/`item.removePhoto`, which take no base revision. An image
   never travels through tool arguments: a model cannot emit megabytes of
   base64.
-- Item documents live in Paperless; inventory keeps the links. Everything
-  inventory can reach goes through inventory, because the MCP key holds the
-  `inventory` root: `documents.search` calls inventory's `paperless.search`
-  pass-through, and `inventory.documents.list`, `.link`, `.update`, `.unlink`
-  and `.dismissFailed` call inventory's `documents.*` routes. `list` adds each
-  link's `webPath`, the item's page relative to the pops web origin (the
-  gateway knows no web origin). There is no download tool: a model cannot use
-  the bytes.
+- `documents.status`, `.search`, `.get` and `.task` call the Documents owner
+  directly, using its published input and response schemas and exact
+  `documents.paperless.*` scopes. An actual 404 remains missing; unavailable
+  or unconfigured remains unverifiable. Search metadata and completed task IDs
+  do not create associations: use the owning Trips or Inventory command.
+- `documents.createUpload` reads the owner's current size/MIME policy, then
+  mints a single-use URL for raw bytes with no Inventory target. It requires
+  `documents.paperless.status` and `documents.write.upload`. Keep `uploadId`: the
+  authenticated `documents.uploadStatus` reads its process-local receipt if the
+  uploader loses its HTTP reply. A task is accepted, not complete; poll
+  `documents.task` until the owner supplies a done/duplicate document ID.
+  The gateway retains receipts before replying, never retries POST and never
+  treats unknown/expired/restarted memory as safe to reupload. URLs and settled
+  receipts expire after ten minutes; active streams retain their capacity slot
+  until settlement. Raw document POSTs never follow redirects or admit redirected
+  receipts, including same-origin redirects. Both direct Documents and legacy
+  Inventory document redirects remain unknown and non-retryable. Durable
+  producer recovery remains POPS-6266.
+- Item documents live in Paperless; Inventory keeps its own links.
+  `inventory.documents.list`, `.link`, `.update`, `.unlink` and `.dismissFailed`
+  retain their Inventory routes. `list` adds each link's `webPath`, relative to
+  the web origin. There is no byte-returning MCP download tool.
 - `inventory.documents.createUpload` mints the same single-use URL as photos,
   carrying a document target: item, kind, file name, title, and the
   `maxUploadBytes` and `allowedMimeTypes` documents states, read through
@@ -221,7 +235,6 @@ though nothing enforces it mechanically.
 ## Not here
 
 No tools exist for `ai`, `food`, `lists`, or `registry` — those pillars are
-unreachable through MCP until an adapter is added. `documents` is reached
-only for its upload limits and deletion (above). The one
+unreachable through MCP until an adapter is added. The one
 cross-pillar query, `tags.things.list`, makes a single call to the orchestrator,
 which fans out to registered tag carriers and reports each carrier's status.
