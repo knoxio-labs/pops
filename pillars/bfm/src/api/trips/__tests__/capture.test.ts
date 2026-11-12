@@ -4,6 +4,7 @@ import { fakePillarHandle } from '@pops/pillar-sdk/testing';
 
 import {
   MobileCaptureCreateSchema,
+  MobileCaptureAttachSchema,
   MobileCapturePatchSchema,
 } from '../../../contract/mobile-trip-capture-schemas.js';
 import { createPillarGateway, type PillarHandleFactory } from '../../pillars/gateway.js';
@@ -138,5 +139,82 @@ describe('mobile canonical Capture operations', () => {
     expect(
       await createMobileCaptureClient(createPillarGateway(factory)).workspace(7)
     ).toMatchObject({ kind: 'contract-mismatch' });
+  });
+});
+
+const attachBody = MobileCaptureAttachSchema.parse({
+  operationId,
+  command: {
+    kind: 'capture.attach',
+    id: 3,
+    expectedRevision: 4,
+    attachment: { kind: 'task', taskId: 'accepted_task-1' },
+  },
+});
+const capture = {
+  id: 3,
+  tripId: 7,
+  originalText: 'Original remains verbatim',
+  originalUrl: null,
+  attachments: [{ kind: 'task' as const, taskId: 'accepted_task-1' }],
+  title: null,
+  notes: '',
+  classification: null,
+  placeId: null,
+  visitId: null,
+  revision: 5,
+  removedAt: null,
+  createdAt: '2026-11-01T00:00:00Z',
+  updatedAt: '2026-11-01T00:00:00Z',
+};
+const attached = {
+  receipt: { ...workspace, captures: [capture], operationId, undoneOperationId: null },
+  current: { ...workspace, captures: [{ ...capture, attachments: [], revision: 6 }] },
+  replayed: true,
+  undone: true,
+};
+
+describe('mobile capture attachment receipt ownership', () => {
+  it('retains the original accepted-task receipt separately from current undone state', async () => {
+    const calls: unknown[] = [];
+    const factory: PillarHandleFactory = <TRouter>() =>
+      fakePillarHandle<TRouter>('trips', {
+        captures: {
+          attach: (input) => {
+            calls.push(input);
+            return Promise.resolve({ kind: 'ok', value: attached });
+          },
+        },
+      });
+    const client = createMobileCaptureClient(createPillarGateway(factory));
+    expect(await client.attach(7, attachBody)).toEqual({ kind: 'ok', value: attached });
+    expect(calls).toEqual([{ tripId: 7, ...attachBody }]);
+  });
+
+  it.each([
+    {
+      ...attached,
+      receipt: { ...attached.receipt, operationId: '3b5f6780-4111-4111-8111-111111111112' },
+    },
+    { ...attached, receipt: { ...attached.receipt, captures: [{ ...capture, tripId: 8 }] } },
+    { ...attached, current: { ...attached.current, captures: [{ ...capture, tripId: 8 }] } },
+    { ...attached, current: { ...attached.current, captures: [capture, capture] } },
+    {
+      ...attached,
+      receipt: {
+        ...attached.receipt,
+        captures: [{ ...capture, attachments: [{ kind: 'file', name: 'local.pdf' }] }],
+      },
+    },
+  ])('rejects mismatched, foreign or malformed attach proof %#', async (value) => {
+    const factory: PillarHandleFactory = <TRouter>() =>
+      fakePillarHandle<TRouter>('trips', {
+        captures: { attach: () => Promise.resolve({ kind: 'ok', value }) },
+      });
+    const outcome = await createMobileCaptureClient(createPillarGateway(factory)).attach(
+      7,
+      attachBody
+    );
+    expect(outcome).toMatchObject({ kind: 'contract-mismatch', pillar: 'trips' });
   });
 });

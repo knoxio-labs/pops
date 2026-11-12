@@ -537,16 +537,39 @@ duplicate IDs or wrong trip/journey ownership produce a contract mismatch;
 unavailable sources never become empty successful arrays. The exact upstream
 service-account grants are listed in [the federation client documentation](src/api/pillars/README.md).
 
+### Trips metadata writes
+
+`trips.write` independently permits canonical Trip creation and metadata patches,
+with exact producer grants `trips.trips.create` and `trips.trips.update`. It is
+excluded from operator defaults, guest grants and explicit read-only grants;
+select it explicitly for the intended device. Creation is permanent and has no
+Undo. When stays opaque text; route dates never come from it. Empty input and
+nullable source facts follow the producer's existing semantics.
+
+The plain BFM create relay uses the producer's non-idempotent create route. It dispatches
+once and does not automatically replay an uncertain POST or correlate a result
+by name, When or dates. A phone must retain its unknown draft, allow explicit
+inspection/selection of existing Trips, and warn before a separate new creation.
+
 ### Trips capture commands
 
 `trips.capture.write` independently gates canonical capture create, presentation
-update and explicit Undo. It grants only `trips.captures.create`,
-`trips.captures.update` and `trips.captures.undo`; explicit read-only and guest
+update, attachment append and explicit Undo. It grants only `trips.captures.create`,
+`trips.captures.update`, `trips.captures.attach` and `trips.captures.undo`; explicit read-only and guest
 grants are not widened. This new write capability is excluded from operator
 defaults too: enable it explicitly for the intended device in Devices.
 The BFM forwards the caller's operation UUID unchanged.
 The Trips producer owns replay, revision conflicts and Undo receipts; BFM has
 no capture database, automatic retry or second deduplication key.
+
+`POST /mobile/trips/:tripId/captures/attach` forwards the original UUID, capture ID,
+expected revision and one Documents task/original reference. Accepted tasks remain
+tasks; only actual Documents results establish a completed original. Filenames,
+local files and Inventory links are not attachment identities. BFM does not add
+a Documents read or upload grant to this Trips operation or perform an extra
+owner lookup. A retry retains the exact original envelope; the producer replays
+its durable receipt without appending again. Capture Undo removes only the own
+attachment change, never the Documents original.
 
 The workspace retains removed source identities. Operation results distinguish
 the immutable original receipt from current affected records and replay/Undo
@@ -793,7 +816,7 @@ and send it in that header, against the registry's admin surface reachable
 externally through the shell proxy:
 
 ```bash
-curl -sS -X POST https://pops.local/registry-api/service-accounts -H 'Content-Type: application/json' -H "cf-access-jwt-assertion: $ACCESS_JWT" -d '{"name":"bfm","scopes":["finance.transactions","finance.transactionHistory","finance.transactionAttachments","finance.accounts","finance.checkpoints","finance.delegatedSubject","purchases.purchase","purchases.search","purchases.receipt","inventory.sync","inventory.types.catalogue","inventory.types.read","inventory.codes","inventory.media","inventory.documents","inventory.paperless.status","inventory.items.getParts","inventory.items.addPart","inventory.items.removePart","barcode.lookup","cerebrum.ego","documents.paperless.get","documents.paperless.download","documents.paperless.status","documents.paperless.task","documents.write.upload","trips.captureWorkspace.get","trips.captures.create","trips.captures.update","trips.captures.undo","trips.trips.list","trips.trips.get","trips.places.list","trips.visits.list","trips.journeys.list","trips.journeyLegs.list","trips.journeyGroups.list","trips.stays.list","trips.events.list","trips.documentAssociations.list"]}'
+curl -sS -X POST https://pops.local/registry-api/service-accounts -H 'Content-Type: application/json' -H "cf-access-jwt-assertion: $ACCESS_JWT" -d '{"name":"bfm","scopes":["finance.transactions","finance.transactionHistory","finance.transactionAttachments","finance.accounts","finance.checkpoints","finance.delegatedSubject","purchases.purchase","purchases.search","purchases.receipt","inventory.sync","inventory.types.catalogue","inventory.types.read","inventory.codes","inventory.media","inventory.documents","inventory.paperless.status","inventory.items.getParts","inventory.items.addPart","inventory.items.removePart","barcode.lookup","cerebrum.ego","documents.paperless.get","documents.paperless.download","documents.paperless.status","documents.paperless.task","documents.write.upload","trips.trips.create","trips.trips.update","trips.captureWorkspace.get","trips.captures.create","trips.captures.update","trips.captures.attach","trips.captures.undo","trips.trips.list","trips.trips.get","trips.places.list","trips.visits.list","trips.journeys.list","trips.journeyLegs.list","trips.journeyGroups.list","trips.stays.list","trips.events.list","trips.documentAssociations.list"]}'
 ```
 
 Two deployment shapes let a bare `curl` through, which is why this can work on

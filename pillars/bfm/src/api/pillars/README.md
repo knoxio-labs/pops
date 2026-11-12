@@ -86,9 +86,12 @@ adoption ticket.
 Original Documents metadata and bytes separately require `documents.paperless.get`
 and `documents.paperless.download`; no Inventory-link scopes authorize them.
 
+Trip metadata creation/patches require only `trips.trips.create` and
+`trips.trips.update`; mobile `trips.write` remains an explicit device choice.
+
 Capture workspace reads also require `trips.captureWorkspace.get`. Capture writes
-require only `trips.captures.create`, `trips.captures.update` and
-`trips.captures.undo`, matching their independent mobile capability.
+require only `trips.captures.create`, `trips.captures.update`,
+`trips.captures.attach` and `trips.captures.undo`, matching their independent mobile capability.
 The producer owns operation UUID replay and revisions.
 
 Trips source detail reads require only `trips.trips.list`, `trips.trips.get`,

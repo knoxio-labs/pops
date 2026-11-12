@@ -120,6 +120,54 @@ internal struct RuntimeErrorDecodingTests {
         #expect(!String(describing: error).contains(token))
         #expect(!error.localizedDescription.contains(token))
     }
+    @Test(
+        "optional malformed or unrelated upstream diagnostics never replace the original error",
+        arguments: [
+            "null", "[]", "42", #"{"other":"retained elsewhere"}"#,
+            #"{"upstream":{"pillar":"trips","status":99}}"#,
+            #"{"upstream":{"pillar":"trips","status":600}}"#,
+            #"{"upstream":{"pillar":"trips","status":"404"}}"#,
+        ])
+    func malformedProvenance(details: String) async throws {
+        let runtime = try await runtime(details: details)
+        #expect(runtime.upstream == nil)
+        #expect(runtime.popsError.code == "domain.refused")
+        #expect(runtime.popsError.message == "Original refusal")
+        #expect(runtime.popsError.requestID == "original-request")
+        #expect(runtime.popsError.retryable)
+        #expect(runtime.statusCode == 418)
+        #expect(runtime.retryAfterSeconds == 37)
+    }
+
+    @Test(
+        "typed upstream diagnostics preserve only protocol-valid pillar and status",
+        arguments: [100, 404, 599])
+    func typedProvenance(status: Int) async throws {
+        let runtime = try await runtime(
+            details:
+                #"{"upstream":{"pillar":"trips","status":\#(status)},"unrelated":{"value":"not retained"}}"#
+        )
+        #expect(runtime.upstream?.pillar == "trips")
+        #expect(runtime.upstream?.status == status)
+        #expect(runtime.popsError.code == "domain.refused")
+        #expect(runtime.retryAfterSeconds == 37)
+    }
+
+    private func runtime(details: String) async throws -> BFMRuntimePopsError {
+        let wire = """
+            {"code":"domain.refused","message":"Original refusal","requestId":"original-request",
+            "retryable":true,"retryAfterSeconds":37,"details":\(details)}
+            """
+        let client = BFMHTTPClient(
+            baseURL: try #require(URL(string: "https://bfm.example")),
+            transport: StubTransport(status: .init(code: 418), json: wire))
+        do {
+            _ = try await client.generated.mobile_bootstrap()
+        } catch let error as ClientError {
+            return try #require(error.underlyingError as? BFMRuntimePopsError)
+        }
+        throw TestFailure.wrongRepositoryError
+    }
 }
 
 private struct TokenMiddleware: ClientMiddleware {

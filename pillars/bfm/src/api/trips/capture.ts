@@ -9,6 +9,7 @@ import type { z } from 'zod';
 import type {
   MobileCaptureCreate,
   MobileCaptureUpdate,
+  MobileCaptureAttach,
   MobileCaptureUndo,
   MobileCaptureResult,
   MobileCaptureWorkspace,
@@ -20,6 +21,7 @@ type Router = {
   captures: {
     create(input: MobileCaptureCreate & { tripId: number }): Promise<unknown>;
     update(input: MobileCaptureUpdate & { tripId: number }): Promise<unknown>;
+    attach(input: MobileCaptureAttach & { tripId: number }): Promise<unknown>;
     undo(input: MobileCaptureUndo & { tripId: number }): Promise<unknown>;
   };
 };
@@ -28,6 +30,7 @@ export interface MobileCaptureClient {
   workspace(tripId: number): Promise<GatewayOutcome<MobileCaptureWorkspace>>;
   create(tripId: number, body: MobileCaptureCreate): Promise<GatewayOutcome<MobileCaptureResult>>;
   update(tripId: number, body: MobileCaptureUpdate): Promise<GatewayOutcome<MobileCaptureResult>>;
+  attach(tripId: number, body: MobileCaptureAttach): Promise<GatewayOutcome<MobileCaptureResult>>;
   undo(tripId: number, body: MobileCaptureUndo): Promise<GatewayOutcome<MobileCaptureResult>>;
 }
 function ownedWorkspace(workspace: MobileCaptureWorkspace, tripId: number): boolean {
@@ -53,6 +56,36 @@ function operationSchema(tripId: number, operationId: string): z.ZodType<MobileC
       ownedWorkspace(result.current, tripId)
   );
 }
+function attachmentMatches(
+  actual: MobileCaptureAttach['command']['attachment'],
+  expected: MobileCaptureAttach['command']['attachment']
+): boolean {
+  if (actual.kind === 'task') return expected.kind === 'task' && actual.taskId === expected.taskId;
+  return (
+    expected.kind === 'document' &&
+    actual.documentId === expected.documentId &&
+    actual.taskId === expected.taskId
+  );
+}
+function attachSchema(tripId: number, body: MobileCaptureAttach): z.ZodType<MobileCaptureResult> {
+  return operationSchema(tripId, body.operationId).refine((result) => {
+    const receipt = result.receipt.captures[0];
+    const current = result.current.captures[0];
+    const appended = receipt?.attachments.at(-1);
+    return (
+      result.receipt.captures.length === 1 &&
+      receipt !== undefined &&
+      receipt.id === body.command.id &&
+      receipt.revision === body.command.expectedRevision + 1 &&
+      receipt.removedAt === null &&
+      result.receipt.undoneOperationId === null &&
+      appended !== undefined &&
+      attachmentMatches(appended, body.command.attachment) &&
+      result.current.captures.length === 1 &&
+      current?.id === body.command.id
+    );
+  });
+}
 /** Forwards the original typed operation UUID and preserves current state separately from its receipt. */
 export function createMobileCaptureClient(gateway: PillarGateway): MobileCaptureClient {
   return {
@@ -76,6 +109,13 @@ export function createMobileCaptureClient(gateway: PillarGateway): MobileCapture
         await gateway.call<Router, unknown>('trips', (h) => h.captures.update({ tripId, ...body })),
         operationSchema(tripId, body.operationId),
         'captures.update'
+      ),
+    attach: async (tripId, body) =>
+      parseOrMismatch(
+        'trips',
+        await gateway.call<Router, unknown>('trips', (h) => h.captures.attach({ tripId, ...body })),
+        attachSchema(tripId, body),
+        'captures.attach'
       ),
     undo: async (tripId, body) =>
       parseOrMismatch(

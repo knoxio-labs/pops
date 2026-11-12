@@ -6,9 +6,11 @@ import {
   validTripsReferences,
 } from './references.js';
 import { TripsWire } from './wire.js';
+import { createMobileTrip, updateMobileTrip } from './write.js';
 
 import type { z } from 'zod';
 
+import type { MobileTripInput } from '../../contract/mobile-trip-write-schemas.js';
 import type { MobileTripDetail } from '../../contract/mobile-trips-detail-schemas.js';
 import type { MobileJourney } from '../../contract/mobile-trips-journey-schemas.js';
 import type { MobileTrip } from '../../contract/mobile-trips-schemas.js';
@@ -26,8 +28,10 @@ type TripsReadRouter = {
   stays: { list: (input: { tripId: number }) => Promise<unknown> };
 };
 
-/** Complete source reads used by the native contract, not a persistence or booking mutation layer. */
+/** Source-backed reads and explicit metadata writes; all persistence remains in Trips. */
 export interface MobileTripsClient {
+  createTrip(input: MobileTripInput): Promise<GatewayOutcome<MobileTrip>>;
+  updateTrip(id: number, input: MobileTripInput): Promise<GatewayOutcome<MobileTrip>>;
   listTrips(): Promise<GatewayOutcome<MobileTrip[]>>;
   getTrip(id: number): Promise<GatewayOutcome<MobileTripDetail>>;
 }
@@ -35,6 +39,8 @@ export interface MobileTripsClient {
 /** Builds the source-backed native Trips reader over BFM's authenticated federation gateway. */
 export function createMobileTripsClient(gateway: PillarGateway): MobileTripsClient {
   return {
+    createTrip: (input) => createMobileTrip(gateway, input),
+    updateTrip: (id, input) => updateMobileTrip(gateway, id, input),
     listTrips: async () => {
       const response = await gateway.call<TripsReadRouter, unknown>('trips', (handle) =>
         handle.trips.list()

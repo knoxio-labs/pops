@@ -5,6 +5,7 @@ import { requires } from './capabilities.js';
 import {
   MobileCaptureCreateSchema,
   MobileCaptureUpdateSchema,
+  MobileCaptureAttachSchema,
   MobileCaptureUndoSchema,
   MobileCaptureResultSchema,
   MobileCaptureWorkspaceSchema,
@@ -48,6 +49,14 @@ export const mobileTripCapturesContract = c.router({
     path: '/mobile/trips/:tripId/captures/update',
     pathParams,
     body: MobileCaptureUpdateSchema,
+    responses: { 200: MobileCaptureResultSchema, ...errors },
+    metadata: requires('trips.capture.write'),
+  },
+  attach: {
+    method: 'POST',
+    path: '/mobile/trips/:tripId/captures/attach',
+    pathParams,
+    body: MobileCaptureAttachSchema,
     responses: { 200: MobileCaptureResultSchema, ...errors },
     metadata: requires('trips.capture.write'),
   },

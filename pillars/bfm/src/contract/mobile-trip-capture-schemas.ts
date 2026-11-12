@@ -29,17 +29,15 @@ const Mutable = {
 /** Mutable presentation never overwrites captured source material. */
 export const MobileCapturePatchSchema = z.strictObject(Mutable).partial();
 /** Canonical captured originals remain verbatim, with independently editable source facts. */
-export const MobileTripCaptureSchema = z
-  .object({
-    id: Id,
-    tripId: Id,
-    originalText: z.string(),
-    originalUrl: z.string().nullable(),
-    attachments: z.array(MobileCaptureAttachmentSchema),
-    ...Mutable,
-    ...Audit,
-  })
-  .meta({ id: 'MobileTripCapture' });
+export const MobileTripCaptureSchema = z.object({
+  id: Id,
+  tripId: Id,
+  originalText: z.string(),
+  originalUrl: z.string().nullable(),
+  attachments: z.array(MobileCaptureAttachmentSchema),
+  ...Mutable,
+  ...Audit,
+});
 const Input = z
   .strictObject({
     originalText: z.string(),
@@ -70,6 +68,16 @@ export const MobileCaptureUpdateSchema = z.strictObject({
     id: Id,
     expectedRevision: z.number().int().positive(),
     input: MobileCapturePatchSchema,
+  }),
+});
+/** Append one Documents-issued identity with the producer's revision guard and replay UUID. */
+export const MobileCaptureAttachSchema = z.strictObject({
+  operationId: z.uuid(),
+  command: z.strictObject({
+    kind: z.literal('capture.attach'),
+    id: Id,
+    expectedRevision: z.number().int().positive(),
+    attachment: MobileCaptureAttachmentSchema,
   }),
 });
 /** Explicit producer Undo, with its own replay identity and original target UUID. */
@@ -126,43 +134,41 @@ const Idea = z.object({
   ...Audit,
 });
 /** Atomic producer snapshot, including tombstones needed for exact retry and Undo. */
-export const MobileCaptureWorkspaceSchema = z
-  .object({
-    captures: z.array(MobileTripCaptureSchema),
-    ideas: z.array(Idea),
-    associations: z.array(
-      z.object({
-        id: Id,
-        tripId: Id,
-        captureId: Id,
-        target: Target,
-        provenance: z.enum(['existing', 'created']),
-        sourceRevision: z.number().int().positive(),
-        ...Audit,
-      })
-    ),
-    memberships: z.array(z.object({ id: Id, tripId: Id, source: Source, ...Audit })),
-    events: z.array(MobileTripEventSchema),
-    journeys: z.array(MobileJourneySchema),
-    stays: z.array(MobileStaySchema),
-  })
-  .meta({ id: 'MobileCaptureWorkspace' });
+export const MobileCaptureWorkspaceSchema = z.object({
+  captures: z.array(MobileTripCaptureSchema),
+  ideas: z.array(Idea),
+  associations: z.array(
+    z.object({
+      id: Id,
+      tripId: Id,
+      captureId: Id,
+      target: Target,
+      provenance: z.enum(['existing', 'created']),
+      sourceRevision: z.number().int().positive(),
+      ...Audit,
+    })
+  ),
+  memberships: z.array(z.object({ id: Id, tripId: Id, source: Source, ...Audit })),
+  events: z.array(MobileTripEventSchema),
+  journeys: z.array(MobileJourneySchema),
+  stays: z.array(MobileStaySchema),
+});
 /** Original immutable receipt and current affected records are deliberately distinct on replay. */
-export const MobileCaptureResultSchema = z
-  .object({
-    receipt: MobileCaptureWorkspaceSchema.extend({
-      operationId: z.uuid(),
-      undoneOperationId: z.uuid().nullable(),
-    }).meta({ id: 'MobileCaptureReceipt' }),
-    current: MobileCaptureWorkspaceSchema,
-    undone: z.boolean(),
-    replayed: z.boolean(),
-  })
-  .meta({ id: 'MobileCaptureResult' });
+export const MobileCaptureResultSchema = z.object({
+  receipt: MobileCaptureWorkspaceSchema.extend({
+    operationId: z.uuid(),
+    undoneOperationId: z.uuid().nullable(),
+  }),
+  current: MobileCaptureWorkspaceSchema,
+  undone: z.boolean(),
+  replayed: z.boolean(),
+});
 /** Canonical mobile creation envelope. */
 export type MobileCaptureCreate = z.infer<typeof MobileCaptureCreateSchema>;
 /** Canonical mobile presentation edit envelope. */
 export type MobileCaptureUpdate = z.infer<typeof MobileCaptureUpdateSchema>;
+/** Canonical append-only attachment envelope, not a file upload. */
+export type MobileCaptureAttach = z.infer<typeof MobileCaptureAttachSchema>;
 /** Canonical mobile Undo envelope. */
 export type MobileCaptureUndo = z.infer<typeof MobileCaptureUndoSchema>;
 /** Atomic source workspace, without inferred route membership. */

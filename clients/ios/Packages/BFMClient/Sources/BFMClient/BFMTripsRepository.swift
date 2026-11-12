@@ -124,7 +124,7 @@ private struct TripReadPage: Decodable {
 private struct TripReadErrorCode: Decodable { let code: String }
 private enum TripReadFailure: Error { case staleCursor }
 
-private func tripDomain<Value: Decodable>(_ wire: some Encodable) throws -> Value {
+internal func tripDomain<Value: Decodable>(_ wire: some Encodable) throws -> Value {
     let encoder = JSONEncoder()
     do { return try JSONDecoder().decode(Value.self, from: encoder.encode(wire)) } catch {
         throw RepositoryError.contractMismatch
