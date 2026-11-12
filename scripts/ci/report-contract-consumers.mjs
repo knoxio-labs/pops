@@ -212,7 +212,8 @@ export function miseTaskFor(text, filename) {
  */
 export function deriveRegenerateHint({ declaredBy, copy }, read) {
   if (declaredBy === null) return { kind: 'undeclared' };
-  const dir = dirname(declaredBy);
+  const backendInput = basename(declaredBy) === 'contract-inputs.ts';
+  const dir = backendInput ? dirname(dirname(declaredBy)) : dirname(declaredBy);
   const manifestText = read(join(dir, 'package.json'));
   if (manifestText === null) {
     if (basename(declaredBy) === 'mise.toml') {
@@ -231,7 +232,7 @@ export function deriveRegenerateHint({ declaredBy, copy }, read) {
     return { kind: 'unparsable-manifest', dir, detail: String(error) };
   }
   const pkgName = typeof manifest.name === 'string' ? manifest.name : dir;
-  const needle = basename(declaredBy);
+  const needle = backendInput ? basename(copy) : basename(declaredBy);
   const commands = Object.entries(manifest.scripts ?? {})
     .filter(([, body]) => typeof body === 'string' && body.includes(needle))
     .map(([script]) => `pnpm --filter ${pkgName} ${script}`);

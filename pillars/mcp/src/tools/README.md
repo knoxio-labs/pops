@@ -10,6 +10,41 @@ names are `<pillar>.<domain>.<op>`; `finance.search`, `cerebrum.search` and
 `purchases.search` are `<pillar>.<op>`. The server lists them verbatim and routes a call by exact name
 lookup, so a name is the whole routing table.
 
+## Published contract inputs
+
+`src/contract-inputs.ts` declares the Trips-owned OpenAPI snapshot in
+`contracts/`. The vendored-contract guard checks each copy byte-for-byte
+against its owner and rejects undeclared locations or missing inputs. The
+MCP image carries the same files beside both `src/` and `dist/`; no producer
+backend package or database dependency enters the gateway.
+
+`openapi-input.ts` projects a finite adapter's selected operation to flat
+path/query/body arguments, matching the server SDK. The exact advertised
+JSON Schema is also compiled by the MCP SDK's public Ajv validator. Required
+fields, nested unions, nullability, formats and additional-property rules
+remain constraints. Arguments are never coerced, defaulted or silently
+trimmed. MCP's top-level argument bag rejects undeclared properties, including
+when a producer's object schema leaves additional properties unspecified.
+Unknown schema keywords/formats, recursive or missing references, ambiguous
+flattened properties and missing/duplicate operations fail during adapter
+startup; they do not publish a less constrained tool.
+
+OpenAPI 3.0 boolean exclusive bounds become JSON Schema numeric exclusive
+bounds. Its nullable composed unions become a union with null. Numeric
+`int32`/`int64` formats become signed-width bounds intersected with existing
+constraints; `double` retains finite JSON-number bounds. The int64 upper
+bound is exclusive at 2^63, so a JavaScript number rounded to that boundary
+cannot be accepted as a signed 64-bit integer. These are protocol type
+constraints, not domain limits. See the
+[OpenAPI 3.0 data types](https://spec.openapis.org/oas/v3.0.3#data-types).
+
+After a producer contract changes, run `pnpm --filter @pops/mcp sync:contracts`
+to copy the canonical Trips snapshot, then run the affected adapter tests
+and vendored-contract guard. Projection and response validators read that
+snapshot directly; there is no separate handwritten domain schema or
+generated client to refresh. This helper performs no dispatch, discovery,
+authorization or retry; each adapter owns its finite operation list.
+
 ## Invariants every handler upholds
 
 These hold across every tool; a new adapter that breaks one is a bug even

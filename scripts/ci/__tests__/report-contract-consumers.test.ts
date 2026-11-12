@@ -103,6 +103,7 @@ describe('the real tree', () => {
       'contacts -> pillars/finance/app/contracts/contacts.openapi.json',
       'purchases -> pillars/finance/app/contracts/purchases.openapi.json',
       'purchases -> pillars/inventory/app/contracts/purchases.openapi.json',
+      'trips -> pillars/mcp/contracts/trips.openapi.json',
     ]);
   });
 
