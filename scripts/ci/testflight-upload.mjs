@@ -11,9 +11,10 @@ const DUPLICATE_BUILD_MESSAGE =
 const SCHEME_BUNDLE_IDS = Object.freeze({
   Pops: 'com.knoxiolabs.pops',
   PopsPlayground: 'com.knoxiolabs.pops.playground',
+  PopsTrips: 'com.knoxiolabs.pops.trips',
 });
 
-/** @typedef {'Pops' | 'PopsPlayground'} TestFlightScheme */
+/** @typedef {'Pops' | 'PopsPlayground' | 'PopsTrips'} TestFlightScheme */
 
 /**
  * @typedef {{
@@ -92,7 +93,7 @@ function dataResources(body) {
  * @returns {TestFlightScheme}
  */
 function parseScheme(scheme) {
-  if (scheme === 'Pops' || scheme === 'PopsPlayground') return scheme;
+  if (scheme === 'Pops' || scheme === 'PopsPlayground' || scheme === 'PopsTrips') return scheme;
   throw new Error(`unsupported TestFlight scheme '${scheme}'`);
 }
 
