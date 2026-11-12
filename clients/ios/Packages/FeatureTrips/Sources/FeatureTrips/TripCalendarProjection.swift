@@ -57,10 +57,9 @@ internal func tripCalendarFacts(sources: [TripSource], zone: TimeZone) -> [TripC
 private func endpointFact(
     _ source: TripSource, endpoint: TripEndpoint, label: String, zone: TimeZone
 ) -> TripCalendarFact? {
-    guard let instant = TripClock.instant(local: endpoint.local, zone: endpoint.timeZone) else {
-        return nil
-    }
-    return calendarFact(source, day: nil, instant: instant, label: label, zone: zone)
+    let instant = TripClock.instant(local: endpoint.local, zone: endpoint.timeZone)
+    let day = endpoint.date ?? endpoint.local.map { String($0.prefix(10)) }
+    return calendarFact(source, day: day, instant: instant, label: label, zone: zone)
 }
 
 private func calendarFact(

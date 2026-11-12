@@ -1,8 +1,25 @@
 import { describe, expect, it } from 'vitest';
 
-import { journeyClockInstant, journeyDayBoundary, journeyElapsedMinutes } from '../journey-time.js';
+import {
+  journeyClockInstant,
+  journeyDayBoundary,
+  journeyElapsedMinutes,
+  journeySourceDay,
+} from '../journey-time.js';
 
 describe('Explicit journey source clocks', () => {
+  it('projects a supplied day independently of zone and never fabricates an instant or duration', () => {
+    const source = { date: '2028-02-29', timeZone: 'Pacific/Kiritimati' };
+    expect(journeySourceDay(source)).toEqual({ date: '2028-02-29', precision: 'day' });
+    expect(journeySourceDay({ local: '2028-02-29T23:30' })).toEqual({
+      date: '2028-02-29',
+      precision: 'local',
+    });
+    expect(journeySourceDay({})).toEqual({ date: null, precision: 'unknown' });
+    expect(journeyClockInstant(source)).toBeNull();
+    expect(journeyElapsedMinutes(source, { date: '2028-03-01' })).toBeNull();
+    expect(journeyDayBoundary(source, 1)).toBeNull();
+  });
   it('resolves date-line and overnight endpoints from their independent source zones', () => {
     const departure = { local: '2028-01-15T10:00', timeZone: 'Australia/Sydney' };
     const arrival = { local: '2028-01-15T08:15', timeZone: 'America/Chicago' };

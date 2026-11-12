@@ -5,6 +5,7 @@ import { requires } from './capabilities.js';
 import { MobileTripInputSchema, MobileTripPatchInputSchema } from './mobile-trip-write-schemas.js';
 import {
   MobileTripDetailSchema,
+  MobileTripDetailV2Schema,
   MobileTripsPageSchema,
   MobileTripsQuerySchema,
 } from './mobile-trips-detail-schemas.js';
@@ -69,6 +70,21 @@ export const mobileTripsContract = c.router({
     },
     summary:
       'Read one trip with complete ordered visits, journeys, groups, stays, events and document associations',
+    metadata: requires('trips.read'),
+  },
+  getTripV2: {
+    method: 'GET',
+    path: '/mobile/v2/trips/:id',
+    pathParams: z.object({ id: z.coerce.number().int().positive() }),
+    responses: {
+      200: MobileTripDetailV2Schema,
+      ...MOBILE_REQUEST_RESPONSES,
+      ...MOBILE_PERIMETER_RESPONSES,
+      404: MobileUpstreamErrorSchema,
+      ...MOBILE_UPSTREAM_RESPONSES,
+    },
+    summary:
+      'Read one day-aware trip with complete ordered sources and independent Journey endpoint precision',
     metadata: requires('trips.read'),
   },
 });

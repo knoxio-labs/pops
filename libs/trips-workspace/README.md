@@ -236,6 +236,11 @@ and arrival journey editor. It reads ordered legs and independent grouping ident
 through the same generated Trips client. Endpoint edits submit complete retained
 endpoint values; clearing a clock or zone never clears location or provenance.
 Local times use plain ISO text, preserving optional seconds and fractional precision.
+The independent day control accepts a known calendar day without selecting a clock
+or zone. Clearing a local datetime retains its day; clearing the day removes both
+day and clock. Changing an existing datetime's day retains its exact clock precision.
+Complete endpoint snapshots, including Undo, explicitly send `date: null` when no
+day-only value is intended, so legacy omission-preservation cannot retain a removed day.
 Only explicit draft changes save on blur; untouched fields never normalize source values.
 Journey and leg notes support multiple lines.
 Mode remains open source text, and intention, arrangement and purchase are independent.
@@ -457,7 +462,10 @@ window. Journey windows come directly from usable owning timing projections.
 Floating dates are never midnight instants; complete skipped/repeated source clocks
 remain unresolved. Recorded boundaries and clipped ongoing intervals keep projection
 work proportional to sources rather than the number of days selected. Stay occupancy
-ends before checkout. Floating Event endpoints imply no intermediate occupancy. Unknown dates and chronology issues remain available to open.
+ends before checkout. Day-only Journey and floating Event endpoints imply no
+intermediate occupancy. Journey days stay on their supplied calendar date in every
+display zone, with time unknown. The Timeline also retains those source days.
+Unknown dates and chronology issues remain available to open.
 Required read failures never become empty collections; failed background refreshes
 retain the last complete read and explicit retry. The standalone `/calendar/:tripId`
 route mounts this workspace; source opening targets the shell's literal source paths.
@@ -580,6 +588,18 @@ Idea detail retains source links, canonical Contacts references and recommendati
 notes as explicit fields. Optional timing and location discrepancies produce findings
 without blocking unrelated edits. Mutable reference text keeps its editing identity
 while typing; failed writes retain the exact draft and original source revision.
+A confirmed row edit may advance a newer retained draft only to its strict unchanged
+original receipt successor. A later read, foreign mutation or advanced replay never
+lends its revision to local edits. Definite row revision conflicts offer Reload source
+instead of replaying a permanently stale command. Reload reads the captured owner and
+retains all drafts; only the matching row's explicit Discard after that successful read
+clears its rejected command. A subsequent explicit edit starts a new UUID using the
+current canonical revision. Failed, stale, closed-view or foreign-owner reads cannot
+unlock discard, and ambiguous writes retain their exact request and Retry. Definite
+conflicts retain their exact rejected commands by owning trip, record kind and ID;
+unrelated acknowledgements and other row conflicts cannot release those fences.
+Only explicit matching Discard removes one conflict; remaining conflicts reuse the
+existing recovery controls without automatic retry or revision rebasing.
 Contact selection and creation use a host-injected opaque owner intent, which supplies its own
 catalogues to the host locale. Each organisation intent retains the owner session above
 route views, including pending creation and ambiguous outcomes. The canonical reference
@@ -669,3 +689,13 @@ explicit visit association remain outside this view; no place-label/date matchin
 Visit UI copy consumes the host i18next `trips` namespace, including the app-owned
 `visitWorkspace` catalogue in both supported locales. Calendar labels use the host
 resolved language while retaining literal source days without viewer-zone conversion.
+
+`CaptureTimelineFilters` renders controlled organisation, source-type and literal-location
+filters inside `TripOverview.sourceControls`. Its `known`/`visible` identity projection
+can be supplied as `sourceVisibility`; only classified Capture, Idea and Event cards
+are filtered, without changing any route, booking or source record. Unclassified
+identities remain visible. Optional catalogue failures remain diagnostics, and missing
+member sources retain their exact unavailable reference instead of an inferred location.
+`CaptureMembershipContext` shares the canonical Capture session for an Event context;
+selected Capture and Idea editors already include the same membership removal action.
+Removal uses the actual membership ID/revision, and shares retained retry, lock and Undo.

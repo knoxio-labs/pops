@@ -1,5 +1,6 @@
 import { isGatewayOk } from '../pillars/gateway.js';
 import { decodeTripsCursor, tripsPage } from '../trips/cursor.js';
+import { legacyTripDetail } from '../trips/legacy-detail.js';
 import { invalidMobileCursorResponse } from './mobile-request-error.js';
 import { toTripWriteErrorResponse } from './mobile-trip-write-errors.js';
 import { toCollectionUpstreamErrorResponse, toUpstreamErrorResponse } from './upstream-error.js';
@@ -42,6 +43,11 @@ export function makeMobileTripsHandlers(deps: MobileTripsHandlerDeps) {
       return { status: 200 as const, body: page };
     },
     getTrip: async ({ params }: Req['getTrip']) => {
+      const outcome = await deps.trips.getTrip(params.id);
+      if (!isGatewayOk(outcome)) return toUpstreamErrorResponse(outcome);
+      return { status: 200 as const, body: legacyTripDetail(outcome.value) };
+    },
+    getTripV2: async ({ params }: Req['getTripV2']) => {
       const outcome = await deps.trips.getTrip(params.id);
       if (!isGatewayOk(outcome)) return toUpstreamErrorResponse(outcome);
       return { status: 200 as const, body: outcome.value };

@@ -44,6 +44,29 @@ const operationId = '11111111-1111-4111-8111-111111111111';
 const otherOperationId = '22222222-2222-4222-8222-222222222222';
 
 describe('identity-preserving leg removal receipts', () => {
+  it('restores original day-only facts after reopen without rewriting a pre-existing receipt', () => {
+    const { db, owner, first } = fixture();
+    const source = updateJourneyLeg(
+      db,
+      { ...owner, id: first.id },
+      { from: { date: '2028-02-29' } }
+    );
+    const removed = removeJourneyLeg(
+      db,
+      { ...owner, id: first.id },
+      { operationId, expectedRevision: 3 }
+    );
+    const receipt = db.select().from(legRemovals).all();
+    opened.raw.close();
+    opened = openTripsDb(join(directory, 'trips.db'));
+    expect(
+      removeJourneyLeg(opened.db, { ...owner, id: first.id }, { operationId, expectedRevision: 3 })
+    ).toEqual(removed);
+    expect(opened.db.select().from(legRemovals).all()).toEqual(receipt);
+    const restored = restoreJourneyLeg(opened.db, { ...owner, operationId }, 4);
+    expect(restored.legs[0]).toEqual(source);
+    expect(restored.legs[0]?.from).toEqual({ date: '2028-02-29' });
+  });
   it('replays exact intent without changing identity, source or a later lifecycle', () => {
     const { db, owner, first, second } = fixture();
     const input = { operationId, expectedRevision: 2 };

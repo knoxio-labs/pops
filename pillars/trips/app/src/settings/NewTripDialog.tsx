@@ -1,12 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Dialog, DialogContent, DialogDescription, DialogTitle, ErrorState } from '@pops/ui';
 
 import { loadTags, sourceProblem, tripKeys } from '../api/source';
 import { defaultClients } from '../api/types';
-import { draftInput, draftIssues, tripDraft } from './model';
+import { draftIssues } from './model';
 import { TripForm } from './TripForm';
 import { useCreateTrip } from './use-create-trip';
 
@@ -19,45 +18,43 @@ interface Props {
   clients?: ApiClients;
   created: (trip: Trip) => void;
 }
-/** Persist creation through the API; failed or temporarily hidden drafts remain available for correction. */
+/** Recover the original durable creation attempt through the existing form; Close never forgets an unknown outcome. */
 export function NewTripDialog({ open, setOpen, trips, clients = defaultClients, created }: Props) {
   const { t } = useTranslation('trips');
-  const [draft, change] = useState(tripDraft);
   const tags = useQuery({
     queryKey: tripKeys(clients).tags,
     queryFn: () => loadTags(clients),
     enabled: open,
     retry: false,
   });
-  const mutation = useCreateTrip(clients, (trip) => {
-    change(tripDraft());
-    setOpen(false);
-    created(trip);
-  });
+  const mutation = useCreateTrip(
+    clients,
+    (trip) => {
+      setOpen(false);
+      created(trip);
+    },
+    open
+  );
+  const { draft } = mutation;
   const submit = (): void => {
-    if (!draftIssues(draft, trips, tags.data).length) mutation.create(draftInput(draft));
+    if (!draftIssues(draft, trips, tags.data).length) mutation.create();
   };
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => {
-        if (!mutation.isPending) setOpen(next);
-      }}
-    >
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="max-h-screen overflow-y-auto bg-card">
         <DialogTitle className="text-base font-semibold">{t('newTrip')}</DialogTitle>
         <DialogDescription className="sr-only">{t('createDescription')}</DialogDescription>
         <TripForm
           draft={draft}
-          change={change}
+          change={mutation.change}
           trips={trips}
           tags={tags.data}
-          busy={mutation.isPending}
+          busy={mutation.busy}
+          locked={mutation.locked}
           mode="create"
           submit={submit}
           cancel={() => {
-            change(tripDraft());
-            mutation.reset();
+            mutation.cancel();
             setOpen(false);
           }}
           tagsFailed={tags.isError}
@@ -67,8 +64,11 @@ export function NewTripDialog({ open, setOpen, trips, clients = defaultClients, 
           parentsFailed={false}
           retryParents={() => undefined}
           error={
-            mutation.isError && (
-              <ErrorState error={sourceProblem(mutation.error)} onRetry={submit} />
+            mutation.error !== undefined && (
+              <ErrorState
+                error={sourceProblem(mutation.error)}
+                onRetry={mutation.canRetry ? mutation.retry : undefined}
+              />
             )
           }
         />

@@ -2,6 +2,7 @@ import { Button } from '@pops/ui';
 
 import { CaptureAttachments } from './CaptureAttachments';
 import { CaptureFields } from './CaptureFields';
+import { CaptureMembershipRemove } from './CaptureMembershipRemove';
 import { IdeaFields } from './IdeaFields';
 
 import type { JSX } from 'react';
@@ -35,22 +36,11 @@ export function ExploreSourceRow(props: Props): JSX.Element {
       ) : (
         <SourceEditor {...props} />
       )}
-      <Button
-        variant="ghost"
-        disabled={busy}
-        onClick={() =>
-          void session.editor.commit(
-            {
-              kind: 'explore.remove',
-              id: row.membershipId,
-              expectedRevision: row.membershipRevision,
-            },
-            'Remove from Explore'
-          )
-        }
-      >
-        Remove from Explore
-      </Button>
+      <CaptureMembershipRemove
+        membership={{ id: row.membershipId, revision: row.membershipRevision }}
+        session={session}
+        busy={busy}
+      />
     </article>
   );
 }

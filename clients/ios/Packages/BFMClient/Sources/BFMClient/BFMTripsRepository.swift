@@ -24,12 +24,12 @@ public struct BFMTripsRepository: TripsReading {
 
     /// Returns nil only for a missing trip; an incomplete or mismatched response fails the read.
     public func trip(id: Int) async throws -> TripSnapshot? {
-        let output: Operations.MobileTrips_getTrip.Output
+        let output: Operations.MobileTrips_getTripV2.Output
         do {
-            output = try await client.generated.mobileTrips_getTrip(path: .init(id: id))
+            output = try await client.generated.mobileTrips_getTripV2(path: .init(id: id))
         } catch let error as ClientError {
             if BFMRepositoryFailure.statusCode(in: error) == 404 { return nil }
-            throw bfmReadFailure(error, operation: "mobileTrips.getTrip")
+            throw bfmReadFailure(error, operation: "mobileTrips.getTripV2")
         }
         switch output {
         case .ok(let ok):
@@ -46,10 +46,10 @@ public struct BFMTripsRepository: TripsReading {
                 retryAfterSeconds: try value.body.json.retryAfterSeconds)
         case .badGateway(let value):
             throw BFMRepositoryFailure.upstreamFailure(
-                try value.body.json.code, operation: "mobileTrips.getTrip")
+                try value.body.json.code, operation: "mobileTrips.getTripV2")
         case .serviceUnavailable(let value):
             throw BFMRepositoryFailure.upstreamFailure(
-                try value.body.json.code, operation: "mobileTrips.getTrip")
+                try value.body.json.code, operation: "mobileTrips.getTripV2")
         case .undocumented: throw RepositoryError.contractMismatch
         }
     }

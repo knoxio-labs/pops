@@ -63,9 +63,9 @@ internal struct ContentViewTabSwitcherTests {
     private static let canvas = CGSize(width: 390, height: 844)
 
     /// The titles a person would see along the bottom of the screen.
-    private func offeredTabTitles(available: [MobileFeature]) throws -> [String] {
+    private func offeredTabTitles(available: [MobileFeature]) async throws -> [String] {
         let switcher = try #require(
-            try mountedTabBar(available: available),
+            try await mountedTabBar(available: available),
             "more than one feature is available and no tab bar was built for them"
         )
         return switcher.tabBar.items?.compactMap(\.title) ?? []
@@ -73,11 +73,8 @@ internal struct ContentViewTabSwitcherTests {
 
     /// The tab bar the app would actually build for this surface, or `nil` when
     /// it builds none.
-    private func mountedTabBar(available: [MobileFeature]) throws -> UITabBarController? {
-        let scene = try #require(
-            UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first,
-            "the test host is not showing a window scene, so nothing can be mounted in one"
-        )
+    private func mountedTabBar(available: [MobileFeature]) async throws -> UITabBarController? {
+        let scene = try await HostWindowScene.require()
         let window = UIWindow(windowScene: scene)
         window.frame = CGRect(origin: .zero, size: Self.canvas)
         window.rootViewController = UIHostingController(
@@ -97,9 +94,9 @@ internal struct ContentViewTabSwitcherTests {
     /// mounting is what makes its absence a fact rather than an inference from
     /// two canvases that matched.
     @Test("one available feature is offered no tab bar at all")
-    func oneFeatureBuildsNoTabBar() throws {
+    func oneFeatureBuildsNoTabBar() async throws {
         #expect(
-            try mountedTabBar(available: [.receiptCapture]) == nil,
+            try await mountedTabBar(available: [.receiptCapture]) == nil,
             Comment(
                 rawValue: "a tab bar was built for a single feature — one tab is chrome nobody "
                     + "asked for, and it is the regression this suite is named after"
@@ -117,14 +114,14 @@ internal struct ContentViewTabSwitcherTests {
     }
 
     @Test("every available feature is offered, in the BFM's order")
-    func everyFeatureGetsATab() throws {
+    func everyFeatureGetsATab() async throws {
         let available: [MobileFeature] = [
             .receiptCapture,
             MobileFeature(rawValue: "budgets"),
             MobileFeature(rawValue: "wishlist"),
         ]
 
-        let offered = try offeredTabTitles(available: available)
+        let offered = try await offeredTabTitles(available: available)
 
         #expect(
             offered == available.map(RootCopy.name(of:)),
@@ -141,9 +138,9 @@ internal struct ContentViewTabSwitcherTests {
     /// no-tab-bar path above: there are two things to switch between even
     /// then. Purchases stands in for every searchable pillar here.
     @Test("Purchases alone still gets a tab bar, for the search tab")
-    func purchasesAloneGetsATabBarForSearch() throws {
+    func purchasesAloneGetsATabBarForSearch() async throws {
         let switcher = try #require(
-            try mountedTabBar(available: [FeaturePurchases.feature]),
+            try await mountedTabBar(available: [FeaturePurchases.feature]),
             "Purchases is available alone but no tab bar was built for the search tab"
         )
 
@@ -157,9 +154,9 @@ internal struct ContentViewTabSwitcherTests {
     }
 
     @Test("Ego sits immediately before Search without replacing Purchases")
-    func egoLauncherSitsBeforeSearch() throws {
+    func egoLauncherSitsBeforeSearch() async throws {
         let switcher = try #require(
-            try mountedTabBar(available: [FeaturePurchases.feature, FeatureEgo.feature]),
+            try await mountedTabBar(available: [FeaturePurchases.feature, FeatureEgo.feature]),
             "Purchases and Ego should build a native tab bar"
         )
         let items = try #require(switcher.tabBar.items)
@@ -172,9 +169,9 @@ internal struct ContentViewTabSwitcherTests {
     /// `hasSearch` must get right: alone, it stays on the single-feature,
     /// no-tab-bar path, same as any other non-searchable feature.
     @Test("Transactions alone gets no tab bar and no search tab")
-    func transactionsAloneGetsNoTabBar() throws {
+    func transactionsAloneGetsNoTabBar() async throws {
         #expect(
-            try mountedTabBar(available: [MobileFeature(rawValue: "transactions")]) == nil,
+            try await mountedTabBar(available: [MobileFeature(rawValue: "transactions")]) == nil,
             Comment(
                 rawValue: "a tab bar was built for Transactions alone — it searches nothing, so "
                     + "it must not gain a search tab"
@@ -190,14 +187,11 @@ internal struct ContentViewTabSwitcherTests {
     /// height; this is the regression the ticket is named after, made into an
     /// assertion a future edit to `ContentView.body` can trip.
     @Test("the tab bar does not move when the degraded banner appears")
-    func tabBarFrameIsUnaffectedByTheDegradedBanner() throws {
+    func tabBarFrameIsUnaffectedByTheDegradedBanner() async throws {
         let available: [MobileFeature] = [.receiptCapture, MobileFeature(rawValue: "budgets")]
 
-        func mount(bootstrap: BootstrapPhase) throws -> UITabBarController {
-            let scene = try #require(
-                UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first,
-                "the test host is not showing a window scene, so nothing can be mounted in one"
-            )
+        func mount(bootstrap: BootstrapPhase) async throws -> UITabBarController {
+            let scene = try await HostWindowScene.require()
             let window = UIWindow(windowScene: scene)
             window.frame = CGRect(origin: .zero, size: Self.canvas)
             window.rootViewController = UIHostingController(
@@ -212,8 +206,8 @@ internal struct ContentViewTabSwitcherTests {
             )
         }
 
-        let steady = try mount(bootstrap: .answered(.fresh))
-        let degraded = try mount(bootstrap: .failed(.unavailable))
+        let steady = try await mount(bootstrap: .answered(.fresh))
+        let degraded = try await mount(bootstrap: .failed(.unavailable))
 
         #expect(
             steady.tabBar.frame == degraded.tabBar.frame,
@@ -233,9 +227,9 @@ internal struct ContentViewTabSwitcherTests {
     /// lands on. This is what makes that assumption a fact rather than a
     /// hope.
     @Test("the first feature the BFM listed is the one selected on launch")
-    func theFirstOfferedFeatureIsSelected() throws {
+    func theFirstOfferedFeatureIsSelected() async throws {
         let switcher = try #require(
-            try mountedTabBar(available: [
+            try await mountedTabBar(available: [
                 .receiptCapture,
                 MobileFeature(rawValue: "budgets"),
                 MobileFeature(rawValue: "wishlist"),
@@ -249,11 +243,11 @@ internal struct ContentViewTabSwitcherTests {
     }
 
     @Test("a fourth feature is a fourth tab, not the same tabs again")
-    func theTabCountFollowsTheSurface() throws {
-        let two = try offeredTabTitles(available: [
+    func theTabCountFollowsTheSurface() async throws {
+        let two = try await offeredTabTitles(available: [
             MobileFeature(rawValue: "budgets"), MobileFeature(rawValue: "wishlist"),
         ])
-        let four = try offeredTabTitles(available: [
+        let four = try await offeredTabTitles(available: [
             MobileFeature(rawValue: "budgets"), MobileFeature(rawValue: "wishlist"),
             MobileFeature(rawValue: "goals"), MobileFeature(rawValue: "receipts"),
         ])

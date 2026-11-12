@@ -47,9 +47,7 @@ internal struct InventoryPartsMountingTests {
         let service = CountingPartsService()
         let dependencies = AppDependencies.fake(
             inventory: InMemoryInventoryStore(items: [Self.kit()]), parts: service)
-        let scene = try #require(
-            UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first,
-            "the test host is not showing a window scene, so nothing can be mounted in one")
+        let scene = try await HostWindowScene.require()
         let window = UIWindow(windowScene: scene)
         window.frame = CGRect(x: 0, y: 0, width: 390, height: 844)
         window.rootViewController = UIHostingController(

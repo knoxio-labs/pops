@@ -30,6 +30,7 @@ const timelineReads = {
 
 for (const viewport of [
   { width: 1440, height: 1000 },
+  { width: 933, height: 1000 },
   { width: 390, height: 844 },
 ]) {
   test(`Trip overview source navigation and hierarchy at ${viewport.width}px`, async ({ page }) => {
@@ -193,6 +194,26 @@ for (const viewport of [
     await expect(page).toHaveURL(/\/trips\/7$/u);
     await expect(page.getByRole('heading', { name: 'Coast trip', exact: true })).toBeVisible();
     await expect(page.getByText('After the exams', { exact: true })).toBeVisible();
+    const title = page.getByRole('heading', { name: 'Coast trip', exact: true });
+    const header = title.locator('xpath=ancestor::header');
+    await expect(header).toBeVisible();
+    const headerLayout = await header.evaluate((element) => {
+      const heading = element.querySelector('h1');
+      if (!heading) throw new Error('Trip header has no title');
+      const titleBox = heading.getBoundingClientRect();
+      const lineHeight = Number.parseFloat(window.getComputedStyle(heading).lineHeight);
+      const headerBox = element.getBoundingClientRect();
+      return {
+        titleHeight: titleBox.height,
+        lineHeight,
+        controlsFit: [...element.querySelectorAll('a, button')].every((control) => {
+          const box = control.getBoundingClientRect();
+          return box.left >= headerBox.left && box.right <= headerBox.right + 1;
+        }),
+      };
+    });
+    expect(headerLayout.titleHeight).toBeLessThanOrEqual(headerLayout.lineHeight + 1);
+    expect(headerLayout.controlsFit).toBe(true);
     await expect(page.getByRole('heading', { name: 'Wellington', exact: true })).toHaveCount(2);
     await expect(page.getByRole('button', { name: 'Wellington', exact: true })).toHaveCount(2);
     for (const [index, id] of [31, 32].entries()) {

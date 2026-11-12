@@ -11,16 +11,32 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { Queue } from 'bullmq';
-import { Redis } from 'ioredis';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { openCerebrumDb, type OpenedCerebrumDb } from '../../db/index.js';
 import { createCerebrumApiApp } from '../app.js';
 import { makeCerebrumApiDeps, makeClient, makeFakeIngestLlm } from './test-utils.js';
 
+import type { Queue } from 'bullmq';
+
 import type { IngestLlm } from '../modules/ingest/llm.js';
 import type { ClassifyEngramJobData } from '../modules/ingest/queue.js';
+
+vi.mock('bullmq', () => ({
+  Queue: class {
+    constructor() {
+      throw new Error('Payload fixtures must not construct a BullMQ Queue');
+    }
+  },
+}));
+vi.mock('ioredis', () => {
+  class Redis {
+    constructor() {
+      throw new Error('Payload fixtures must not construct a Redis client');
+    }
+  }
+  return { Redis, default: Redis };
+});
 
 let tmpDir: string;
 let engramRoot: string;
@@ -299,29 +315,25 @@ describe('POST /ingest/retry-enrichment', () => {
 });
 
 describe('retry-enrichment queue payload', () => {
-  it('forces the job past the worker idempotency guard', async () => {
-    const redis = new Redis({ lazyConnect: true, maxRetriesPerRequest: null });
-    const queue = new Queue<ClassifyEngramJobData>('retry-enrichment-test', { connection: redis });
-    const add = vi.spyOn(queue, 'add').mockRejectedValue(new Error('stop'));
+  it('forces the job past the worker idempotency guard without a live queue', async () => {
+    const add = vi.fn<Queue<ClassifyEngramJobData>['add']>().mockRejectedValue(new Error('stop'));
     const c = makeClient(
       createCerebrumApiApp(
         makeCerebrumApiDeps(
           { cerebrumDb, tmpDir, engramRoot },
-          { ingestLlm: makeFakeIngestLlm(), curationQueue: () => queue }
+          { ingestLlm: makeFakeIngestLlm(), curationQueue: () => ({ add }) }
         )
       )
     );
-    try {
-      const captured = await c.ingest.quickCapture({ text: 'retry payload probe' });
-      add.mockClear();
-      await c.ingest.retryEnrichment(captured.id);
-      expect(add).toHaveBeenCalledWith('classifyEngram', {
-        type: 'classifyEngram',
-        engramId: captured.id,
-        force: true,
-      });
-    } finally {
-      redis.disconnect();
-    }
+    const captured = await c.ingest.quickCapture({ text: 'retry payload probe' });
+    expect(captured.requeued).toBe(false);
+    add.mockClear();
+    const result = await c.ingest.retryEnrichment(captured.id);
+    expect(result.requeued).toBe(false);
+    expect(add).toHaveBeenCalledExactlyOnceWith('classifyEngram', {
+      type: 'classifyEngram',
+      engramId: captured.id,
+      force: true,
+    });
   });
 });
