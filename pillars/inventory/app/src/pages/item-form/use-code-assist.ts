@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { unwrap } from '../../inventory-api-helpers.js';
 import { codesSuggest } from '../../inventory-api/index.js';
+import { INVENTORY_SYNC_PROTOCOL } from '../../inventory-web/mutation-client.js';
 import { useWebSearch } from '../../inventory-web/useWebSearch.js';
 import { codeEntry, suggestDestination } from './code-assist';
 
@@ -91,6 +92,7 @@ function useCodeSuggestion({
         ...(typeKey === null ? {} : { typeKey }),
         ...suggestDestination(placement),
       },
+      headers: { 'pops-inventory-protocol': INVENTORY_SYNC_PROTOCOL },
     })
       .then((result) => {
         const response = unwrap(result);
