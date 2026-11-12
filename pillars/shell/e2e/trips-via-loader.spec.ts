@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 import { expect, test } from './fixtures/pillar-rest-guard';
 import { json, stubShellBoot } from './helpers/pillar-rest';
 import { stubUnavailableSourceDocuments } from './helpers/trips-source-documents';
@@ -54,13 +56,30 @@ test('Trips loads its real remote, creates permanently, and edits metadata throu
       json(route, 200, response)
     );
   }
-  await page.route(/\/trips-api\/trips$/, async (route) => {
-    if (route.request().method() === 'POST') {
-      writes.push('POST');
-      const body: Record<string, unknown> = route.request().postDataJSON();
-      saved = { ...trip, id: 72, destination: String(body.destination), when: String(body.when) };
-      await json(route, 201, saved);
-    } else await json(route, 200, { trips: [saved] });
+  await page.route(/\/trips-api\/trips$/, (route) => {
+    expect(route.request().method()).toBe('GET');
+    return json(route, 200, { trips: [saved] });
+  });
+  await page.route(/\/trips-api\/trips\/operations$/, async (route) => {
+    expect(route.request().method()).toBe('POST');
+    const body: unknown = route.request().postDataJSON();
+    const { operationId } = z.object({ operationId: z.uuid() }).parse(body);
+    const input = {
+      name: null,
+      destination: 'Hill country',
+      when: 'Whenever the ferry resumes',
+      tagId: null,
+      parentId: null,
+      notes: '',
+    };
+    expect(body).toEqual({ operationId, command: { kind: 'trip.create', input } });
+    writes.push('POST /trips/operations');
+    saved = { ...trip, ...input, id: 72 };
+    await json(route, 201, {
+      receipt: { operationId, trip: { ...saved } },
+      current: { trip: { ...saved } },
+      replayed: false,
+    });
   });
   await page.route(/\/trips-api\/trips\/\d+$/, async (route) => {
     if (route.request().method() === 'PATCH') {
@@ -118,7 +137,7 @@ test('Trips loads its real remote, creates permanently, and edits metadata throu
   );
   await page.goto('/trips/nope/stays/1');
   await expect(page.getByText('Choose a valid trip and stay', { exact: true })).toBeVisible();
-  expect(writes).toEqual(['POST', 'PATCH', 'PATCH']);
+  expect(writes).toEqual(['POST /trips/operations', 'PATCH', 'PATCH']);
   expect(errors).toEqual([]);
 });
 
