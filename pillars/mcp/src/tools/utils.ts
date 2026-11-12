@@ -2,7 +2,9 @@ import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 
 import type { CallResult } from '@pops/pillar-sdk/client';
 
+/** Encode a successful result; undefined has no content, while JSON values retain their representation. */
 export function ok(data: unknown): CallToolResult {
+  if (data === undefined) return { content: [] };
   return { content: [{ type: 'text', text: JSON.stringify(data) }] };
 }
 

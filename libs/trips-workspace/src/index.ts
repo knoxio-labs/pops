@@ -119,6 +119,8 @@ export type { CalendarWorkspaceProps, CalendarSource } from './calendar/types';
 
 /** Shared text-first Capture, inline Inbox and Explore source surfaces. */
 export { CaptureWorkspace } from './capture/CaptureWorkspace';
+export { IdeaCreateContext } from './capture/IdeaCreateContext';
+export type { IdeaCreateContextProps } from './capture/IdeaCreateContext';
 export type { CaptureWorkspaceProps, CaptureSourceSelection } from './capture/types';
 
 /** Captured source ownership and retained view lifetimes shared by contextual app editors. */

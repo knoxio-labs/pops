@@ -5,6 +5,7 @@
 #
 #   scripts/testflight.sh Pops
 #   scripts/testflight.sh PopsPlayground
+#   scripts/testflight.sh PopsTrips
 #
 # Reads, and never prints:
 #   DEVELOPMENT_TEAM   the Apple team (not in the tree: the repo is public)
@@ -29,7 +30,8 @@ scheme="${1-}"
 case "$scheme" in
     Pops) shipped_bundle_id=com.knoxiolabs.pops ;;
     PopsPlayground) shipped_bundle_id=com.knoxiolabs.pops.playground ;;
-    *) die "expected 'Pops' or 'PopsPlayground', got '${scheme}'." ;;
+    PopsTrips) shipped_bundle_id=com.knoxiolabs.pops.trips ;;
+    *) die "expected 'Pops', 'PopsPlayground' or 'PopsTrips', got '${scheme}'." ;;
 esac
 
 for name in DEVELOPMENT_TEAM ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_PATH; do

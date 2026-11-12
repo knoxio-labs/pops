@@ -26,6 +26,13 @@ unverifiable selections return retryable 503 without partially changing trip
 source. Cache refresh never erases a retained trip reference, and independent
 metadata edits do not revalidate omitted associations. Trips owns no shared tag
 names, hierarchy, windows, archive/merge rules or vocabulary writes.
+
+Producers that must retry Trip creation use `POST /trips/operations` with a
+stable UUID and a `trip.create` command. The Trips database stores the typed
+request and original created Trip in one transaction. Replays return that
+original receipt alongside the current Trip; reusing the UUID with different
+input returns 409. This operation is permanent and has no Undo. Legacy
+`POST /trips` remains a separate non-idempotent operation.
 Outbound reads use a Trips-owned service account granted `tags.tags` and
 `contacts.entities.reference`. Local
 configuration can supply `POPS_INTERNAL_API_KEY`; production supplies only a

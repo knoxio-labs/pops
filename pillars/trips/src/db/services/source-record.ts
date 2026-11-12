@@ -36,6 +36,7 @@ export class TripsServiceError extends Error {
       | 'source_undo_conflict'
       | 'source_target_invalid'
       | 'source_referenced'
+      | 'trip_create_operation_mismatch'
   ) {
     super(code);
     this.name = 'TripsServiceError';

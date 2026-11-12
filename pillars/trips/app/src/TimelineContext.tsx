@@ -5,6 +5,7 @@ import { Sheet } from '@pops/ui';
 import { CaptureContext } from './CaptureContext';
 import { PeopleContext } from './PeopleContext';
 import { TripSettingsContext } from './settings/TripSettingsPage';
+import { TimelineCreate } from './TimelineCreate';
 import { TimelineRouteEditor } from './TimelineRouteEditor';
 import { TimelineSourceContext } from './TimelineSourceContext';
 
@@ -37,6 +38,8 @@ type ContentProps = TimelineContextProps & { selection: TimelineSelection };
 
 function ContextContent(props: ContentProps) {
   const { tripId, client, contacts, documentsClient, selection, onSelect } = props;
+  if (selection.kind === 'create')
+    return <TimelineCreate {...props} sourceKind={selection.sourceKind} />;
   if (selection.kind === 'metadata')
     return (
       <TripSettingsContext
@@ -64,6 +67,7 @@ function ContextContent(props: ContentProps) {
 }
 
 function contextTitle(selection: TimelineSelection, t: TFunction<'trips'>): string {
+  if (selection.kind === 'create') return t('timeline.create.title');
   if (selection.kind === 'metadata') return t('settings');
   if (selection.kind === 'source')
     return t('overview.source', {

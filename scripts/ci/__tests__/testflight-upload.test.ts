@@ -28,6 +28,18 @@ const testflightScript = readFileSync(
   ),
   'utf8'
 );
+const testflightWorkflow = readFileSync(
+  resolve(
+    dirname(fileURLToPath(import.meta.url)),
+    '..',
+    '..',
+    '..',
+    '.github',
+    'workflows',
+    'ios-testflight.yml'
+  ),
+  'utf8'
+);
 
 function response(body: Record<string, unknown>, status = 200): Response {
   return new Response(JSON.stringify(body), { status });
@@ -69,7 +81,7 @@ function uploadResponse({
 }
 
 function input(
-  scheme: 'Pops' | 'PopsPlayground',
+  scheme: 'Pops' | 'PopsPlayground' | 'PopsTrips',
   request: typeof fetch,
   overrides: Partial<Parameters<typeof verifyDuplicateBuild>[0]> = {}
 ) {
@@ -88,37 +100,28 @@ function input(
 }
 
 describe('TestFlight duplicate upload verification', () => {
-  it('accepts a split-success retry for both exact app uploads', async () => {
-    const popsRequest = vi
+  it.each([
+    ['Pops', 'com.knoxiolabs.pops'],
+    ['PopsPlayground', 'com.knoxiolabs.pops.playground'],
+    ['PopsTrips', 'com.knoxiolabs.pops.trips'],
+  ] as const)('verifies exact upload identity for %s', async (scheme, bundleId) => {
+    const request = vi
       .fn<typeof fetch>()
-      .mockResolvedValueOnce(appResponse(bundleIdForScheme('Pops'), 'pops-app'))
-      .mockResolvedValueOnce(uploadResponse({ uploadId: 'pops-upload' }));
-    const playgroundRequest = vi
-      .fn<typeof fetch>()
-      .mockResolvedValueOnce(appResponse(bundleIdForScheme('PopsPlayground'), 'playground-app'))
-      .mockResolvedValueOnce(
-        uploadResponse({
-          uploadId: 'playground-upload',
-        })
-      );
+      .mockResolvedValueOnce(appResponse(bundleId, `${scheme}-app`))
+      .mockResolvedValueOnce(uploadResponse({ uploadId: `${scheme}-upload` }));
 
-    await expect(verifyDuplicateBuild(input('Pops', popsRequest))).resolves.toMatchObject({
-      uploadId: 'pops-upload',
-      scheme: 'Pops',
+    await expect(verifyDuplicateBuild(input(scheme, request))).resolves.toMatchObject({
+      uploadId: `${scheme}-upload`,
+      scheme,
+      bundleId,
     });
-    const uploadRequest = popsRequest.mock.calls[1]?.[0];
+    const uploadRequest = request.mock.calls[1]?.[0];
     if (uploadRequest === undefined) throw new Error('missing build upload request');
     const uploadUrl = new URL(uploadRequest.toString());
-    expect(uploadUrl.pathname).toBe('/v1/apps/pops-app/buildUploads');
+    expect(uploadUrl.pathname).toBe(`/v1/apps/${scheme}-app/buildUploads`);
     expect(uploadUrl.searchParams.get('filter[cfBundleShortVersionString]')).toBe(marketingVersion);
     expect(uploadUrl.searchParams.get('filter[cfBundleVersion]')).toBe(buildNumber);
     expect(uploadUrl.searchParams.get('filter[platform]')).toBe('IOS');
-    await expect(
-      verifyDuplicateBuild(input('PopsPlayground', playgroundRequest))
-    ).resolves.toMatchObject({
-      uploadId: 'playground-upload',
-      scheme: 'PopsPlayground',
-    });
   });
 
   it('requires the exact scheme-to-bundle identity before querying Apple', async () => {
@@ -189,5 +192,10 @@ describe('TestFlight duplicate upload verification', () => {
   it('routes export failures through the guarded verifier', () => {
     expect(testflightScript).toContain('testflight-upload.mjs');
     expect(testflightScript).toContain('--export-log');
+  });
+
+  it('selects PopsTrips for the shipped upload workflow', () => {
+    expect(testflightScript).toContain('PopsTrips) shipped_bundle_id=com.knoxiolabs.pops.trips');
+    expect(testflightWorkflow).toContain('mise run release:testflight PopsTrips');
   });
 });
