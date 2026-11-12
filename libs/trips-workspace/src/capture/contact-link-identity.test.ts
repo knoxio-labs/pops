@@ -183,6 +183,8 @@ it.each(['idea-contact', 'recommendation'] as const)(
     if (!choice) throw new Error('Missing intent');
     session.contacts.accept(choice.id, first);
     await vi.waitFor(() => expect(session.editor.getState().failure).not.toBeNull());
+    const pending = session.editor.getPendingRequest();
+    expect(pending).toEqual(requests[0]);
     session.records.discard('idea', 7);
     session.contacts.open({ kind, id: 7 }, true);
     session.contacts.accept(choice.id, second);
@@ -193,13 +195,23 @@ it.each(['idea-contact', 'recommendation'] as const)(
       applied: false,
       open: false,
     });
-    expect(session.records.idea(7)).toBeUndefined();
+    expect(session.records.idea(7)).toEqual({
+      revision: 1,
+      input:
+        kind === 'idea-contact'
+          ? { contactLinks: [{ uri: first.reference.uri }] }
+          : { recommendations: [{ contact: { uri: first.reference.uri }, note: '' }] },
+    });
+    expect(session.editor.getPendingRequest()).toEqual(pending);
+    expect(requests).toHaveLength(1);
     expect(createIntent).toHaveBeenCalledTimes(1);
     session.contacts.open({ kind, id: 8 }, true);
     expect(createIntent).toHaveBeenCalledTimes(2);
     session.contacts.open({ kind, id: 7 });
     await session.editor.retry();
+    expect(requests).toHaveLength(2);
     expect(requests[1]).toEqual(requests[0]);
+    expect(session.records.idea(7)).toBeUndefined();
     expect(session.contacts.snapshot()).toMatchObject({ selected: first, applied: true });
     session.contacts.open({ kind, id: 7 }, true);
     expect(session.contacts.snapshot()?.id).not.toBe(choice.id);
