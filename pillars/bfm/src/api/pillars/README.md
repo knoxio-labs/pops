@@ -115,3 +115,5 @@ there, not copied here.
 The one thing `env.ts` does not borrow is the variable name: overrides come
 from `POPS_INTERNAL_BASE_URLS`, not `POPS_PILLARS`. Its header says why, and
 the reason is worth reading before anyone "simplifies" it back.
+
+Direct Documents ingestion adds only `documents.paperless.status`, `documents.paperless.task`, and `documents.write.upload`. Mobile `documents.upload` is independent from `documents.read` and is not part of default or guest pairing grants. Its internal policy read does not require a handset read grant; task tracking does. Scope declarations do not mutate live credentials.

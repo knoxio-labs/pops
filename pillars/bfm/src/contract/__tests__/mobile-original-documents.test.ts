@@ -34,6 +34,8 @@ describe('original-document authority', () => {
     expect(MOBILE_CAPABILITY_SCOPES['documents.read']).toEqual([
       'documents.paperless.get',
       'documents.paperless.download',
+      'documents.paperless.status',
+      'documents.paperless.task',
     ]);
     expect(MOBILE_CAPABILITY_SCOPES['trips.read']).not.toContain('documents.paperless.get');
   });

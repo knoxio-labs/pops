@@ -4,6 +4,24 @@ import { getRequestId, mintRequestId } from '@pops/pillar-sdk/server';
 import type { ErrorBody } from '@pops/types';
 
 const BFM_ERROR_DEFINITIONS = {
+  upload_outcome_unknown: {
+    area: 'documents',
+    status: 502,
+    message: 'The upload outcome is unknown. Do not upload the file again automatically.',
+    retryable: false,
+  },
+  upload_too_large: {
+    area: 'documents',
+    status: 413,
+    message: 'The file exceeds the Documents owner upload limit.',
+    retryable: false,
+  },
+  upload_unsupported_type: {
+    area: 'documents',
+    status: 415,
+    message: 'The Documents owner does not accept this content type.',
+    retryable: false,
+  },
   invalid_token: {
     area: 'auth',
     status: 401,
@@ -102,6 +120,10 @@ export function bfmErrorBody(
   reason: 'not_found',
   options?: { readonly details?: unknown; readonly requestId?: string }
 ): ErrorBody & { readonly code: 'bfm.resource.not_found' };
+export function bfmErrorBody(
+  reason: 'upload_outcome_unknown' | 'upload_too_large' | 'upload_unsupported_type',
+  options?: { readonly details?: unknown; readonly requestId?: string }
+): ErrorBody;
 export function bfmErrorBody(
   reason: BfmErrorReason,
   options: { readonly details?: unknown; readonly requestId?: string } = {}

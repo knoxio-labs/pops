@@ -135,6 +135,8 @@ export const MOBILE_CAPABILITIES = [
   'trips.read',
   'trips.capture.write',
   'documents.read',
+  /** Raw Documents ingestion, explicitly granted and independent of reads. */
+  'documents.upload',
 ] as const;
 
 export type MobileCapability = (typeof MOBILE_CAPABILITIES)[number];
@@ -262,8 +264,14 @@ export const MOBILE_CAPABILITY_SCOPES: Readonly<Record<MobileCapability, readonl
   'ego.chat': ['cerebrum.ego'],
   'ego.actions': ['cerebrum.ego'],
   /** Exact published read operations; no Trips mutation authority is granted. */
-  'documents.read': ['documents.paperless.get', 'documents.paperless.download'],
+  'documents.read': [
+    'documents.paperless.get',
+    'documents.paperless.download',
+    'documents.paperless.status',
+    'documents.paperless.task',
+  ],
   'trips.capture.write': ['trips.captures.create', 'trips.captures.update', 'trips.captures.undo'],
+  'documents.upload': ['documents.paperless.status', 'documents.write.upload'],
   'trips.read': [
     'trips.captureWorkspace.get',
     'trips.trips.list',
@@ -280,11 +288,11 @@ export const MOBILE_CAPABILITY_SCOPES: Readonly<Record<MobileCapability, readonl
 };
 
 /**
- * Operator pairing defaults retain the existing grant. Trips capture writes
- * require explicit per-device selection; a new build never opts a device in.
+ * Operator pairing defaults retain the existing grant. Capture writes and
+ * Documents uploads require explicit per-device selection.
  */
 export const DEFAULT_DEVICE_CAPABILITIES: readonly MobileCapability[] = MOBILE_CAPABILITIES.filter(
-  (capability) => capability !== 'trips.capture.write'
+  (capability) => capability !== 'trips.capture.write' && capability !== 'documents.upload'
 );
 
 /**
