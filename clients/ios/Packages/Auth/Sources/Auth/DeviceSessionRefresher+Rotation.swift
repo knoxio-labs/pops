@@ -21,12 +21,18 @@ extension DeviceSessionRefresher {
     /// Re-escalating with the captured revision binds the wipe to the identity
     /// whose refresh was refused. A replacement that commits in this gap makes
     /// the conditional wipe a no-op.
-    func rotateTokens(replacing staleAccessToken: String, at baseURL: URL) async throws
+    func rotateTokens(
+        replacing staleAccessToken: String, at baseURL: URL,
+        ifRevision expectedRevision: UInt64? = nil
+    ) async throws
         -> CredentialTokenSnapshot
     {
         let epoch = credentialEpoch
         let captured = try captureTokenSnapshot(replacing: staleAccessToken)
         let snapshot = captured.snapshot
+        guard expectedRevision == nil || snapshot.revision == expectedRevision else {
+            throw SessionRefreshError.unavailable("paired client identity changed")
+        }
         if let current = captured.currentTokens {
             return CredentialTokenSnapshot(revision: snapshot.revision, tokens: current)
         }

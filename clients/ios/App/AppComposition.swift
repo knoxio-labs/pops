@@ -21,9 +21,9 @@ import InventoryReplica
 /// alongside the code, and a Release build ships no hostname at all. So there
 /// is no client to construct at launch, and the objects that need one —
 /// everything reaching `/mobile/*` — are built per paired device instead of
-/// held. What *can* be built once is built once: the credential store, the
-/// refresher that single-flights token rotation, and the middleware that
-/// attaches a token, none of which know a base URL until they are handed one.
+/// held. The credential store and single-flight token refresher live for the
+/// process. Authenticated middleware is bound per device to its base URL and
+/// pairing revision, so an old client cannot adopt a replacement pairing.
 ///
 /// ## Why it is a class
 ///
@@ -141,12 +141,12 @@ internal final class AppComposition {
             credentialStore: credentialStore,
             sessionEvents: session
         )
-        // One instance, reused for every base URL. It attaches and refreshes a
-        // token and knows nothing about where the request is going; the client
-        // wrapped around it is what carries that.
-        let middleware = AuthenticatingMiddleware(refresher: refresher)
-        let authenticated: @Sendable (PairedDevice) -> BFMHTTPClient = {
-            BFMHTTPClient(baseURL: $0.baseURL, middlewares: [middleware])
+        let authenticated: @Sendable (PairedDevice) -> BFMHTTPClient = { device in
+            BFMHTTPClient(
+                baseURL: device.baseURL,
+                middlewares: [
+                    AuthenticatingMiddleware(refresher: refresher, expectedDevice: device)
+                ])
         }
 
         self.experience = experience
