@@ -28,10 +28,12 @@ describe('native Trips read failures', () => {
         mobileTripsReader({ getTrip: () => Promise.resolve(failure) })
       );
       apps.push(created);
-      const response = await getMobileTrips(created.app, created.token, '/mobile/trips/7');
-      expect(response.status).toBe(expected);
-      expect(response.body).not.toHaveProperty('trip');
-      expect(response.body).toMatchObject({ details: { upstream: { pillar: 'trips' } } });
+      for (const path of ['/mobile/trips/7', '/mobile/v2/trips/7']) {
+        const response = await getMobileTrips(created.app, created.token, path);
+        expect(response.status).toBe(expected);
+        expect(response.body).not.toHaveProperty('trip');
+        expect(response.body).toMatchObject({ details: { upstream: { pillar: 'trips' } } });
+      }
     }
   );
 

@@ -27765,6 +27765,1418 @@
                                 "from": {
                                   "additionalProperties": false,
                                   "properties": {
+                                    "local": {
+                                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d+)?)?$",
+                                      "type": "string"
+                                    },
+                                    "placeId": {
+                                      "exclusiveMinimum": true,
+                                      "maximum": 9007199254740991,
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    },
+                                    "sourceLabel": {
+                                      "type": "string"
+                                    },
+                                    "sourceLinks": {
+                                      "items": {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "label": {
+                                            "type": "string"
+                                          },
+                                          "uri": {
+                                            "anyOf": [
+                                              {
+                                                "format": "uri",
+                                                "type": "string"
+                                              },
+                                              {
+                                                "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                                "type": "string"
+                                              }
+                                            ]
+                                          }
+                                        },
+                                        "required": ["uri"],
+                                        "type": "object"
+                                      },
+                                      "type": "array"
+                                    },
+                                    "timeZone": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "type": "object"
+                                },
+                                "id": {
+                                  "exclusiveMinimum": true,
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                },
+                                "intention": {
+                                  "enum": ["In plan", "Considering", "Alternative", null],
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "journeyId": {
+                                  "exclusiveMinimum": true,
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                },
+                                "mode": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "notes": {
+                                  "type": "string"
+                                },
+                                "operator": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "purchase": {
+                                  "enum": ["Purchased", null],
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "reference": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "service": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "sourceLinks": {
+                                  "items": {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "label": {
+                                        "type": "string"
+                                      },
+                                      "uri": {
+                                        "anyOf": [
+                                          {
+                                            "format": "uri",
+                                            "type": "string"
+                                          },
+                                          {
+                                            "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                            "type": "string"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "required": ["uri"],
+                                    "type": "object"
+                                  },
+                                  "type": "array"
+                                },
+                                "to": {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "local": {
+                                      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d+)?)?$",
+                                      "type": "string"
+                                    },
+                                    "placeId": {
+                                      "exclusiveMinimum": true,
+                                      "maximum": 9007199254740991,
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    },
+                                    "sourceLabel": {
+                                      "type": "string"
+                                    },
+                                    "sourceLinks": {
+                                      "items": {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "label": {
+                                            "type": "string"
+                                          },
+                                          "uri": {
+                                            "anyOf": [
+                                              {
+                                                "format": "uri",
+                                                "type": "string"
+                                              },
+                                              {
+                                                "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                                "type": "string"
+                                              }
+                                            ]
+                                          }
+                                        },
+                                        "required": ["uri"],
+                                        "type": "object"
+                                      },
+                                      "type": "array"
+                                    },
+                                    "timeZone": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "type": "object"
+                                },
+                                "updatedAt": {
+                                  "format": "date-time",
+                                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "journeyId",
+                                "mode",
+                                "from",
+                                "to",
+                                "intention",
+                                "arrangement",
+                                "purchase",
+                                "operator",
+                                "service",
+                                "reference",
+                                "notes",
+                                "sourceLinks",
+                                "createdAt",
+                                "updatedAt"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "name": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "notes": {
+                            "type": "string"
+                          },
+                          "reference": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "sourceLinks": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "label": {
+                                  "type": "string"
+                                },
+                                "uri": {
+                                  "anyOf": [
+                                    {
+                                      "format": "uri",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                      "type": "string"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": ["uri"],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "tripId": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "updatedAt": {
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "tripId",
+                          "name",
+                          "reference",
+                          "notes",
+                          "sourceLinks",
+                          "buffers",
+                          "createdAt",
+                          "updatedAt",
+                          "legs"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "places": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "createdAt": {
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                            "type": "string"
+                          },
+                          "id": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "sourceLinks": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "label": {
+                                  "type": "string"
+                                },
+                                "uri": {
+                                  "anyOf": [
+                                    {
+                                      "format": "uri",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                      "type": "string"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": ["uri"],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "updatedAt": {
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                            "type": "string"
+                          }
+                        },
+                        "required": ["id", "name", "sourceLinks", "createdAt", "updatedAt"],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "stays": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "address": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                            "type": "string"
+                          },
+                          "documentLinks": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "label": {
+                                  "type": "string"
+                                },
+                                "uri": {
+                                  "anyOf": [
+                                    {
+                                      "format": "uri",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                      "type": "string"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": ["uri"],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "hostLinks": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "label": {
+                                  "type": "string"
+                                },
+                                "uri": {
+                                  "anyOf": [
+                                    {
+                                      "format": "uri",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                      "type": "string"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": ["uri"],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "id": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "kind": {
+                            "enum": ["hotel", "friend", "family", "other", null],
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "name": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "notes": {
+                            "type": "string"
+                          },
+                          "reference": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "sourceLinks": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "label": {
+                                  "type": "string"
+                                },
+                                "uri": {
+                                  "anyOf": [
+                                    {
+                                      "format": "uri",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                      "type": "string"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": ["uri"],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "status": {
+                            "enum": ["Considering", "Agreed", "Reserved", "Purchased", null],
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "timing": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "arrival": {
+                                "format": "date",
+                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+                                "type": "string"
+                              },
+                              "checkIn": {
+                                "pattern": "^(?:[01]\\d|2[0-3]):[0-5]\\d$",
+                                "type": "string"
+                              },
+                              "checkOut": {
+                                "pattern": "^(?:[01]\\d|2[0-3]):[0-5]\\d$",
+                                "type": "string"
+                              },
+                              "departure": {
+                                "format": "date",
+                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+                                "type": "string"
+                              },
+                              "timeZone": {
+                                "type": "string"
+                              }
+                            },
+                            "type": "object"
+                          },
+                          "tripId": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "updatedAt": {
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                            "type": "string"
+                          },
+                          "visitId": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "nullable": true,
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "tripId",
+                          "visitId",
+                          "name",
+                          "kind",
+                          "status",
+                          "timing",
+                          "address",
+                          "reference",
+                          "notes",
+                          "sourceLinks",
+                          "hostLinks",
+                          "documentLinks",
+                          "createdAt",
+                          "updatedAt"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "trip": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "createdAt": {
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                          "type": "string"
+                        },
+                        "destination": {
+                          "type": "string"
+                        },
+                        "id": {
+                          "exclusiveMinimum": true,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "name": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "notes": {
+                          "type": "string"
+                        },
+                        "parentId": {
+                          "exclusiveMinimum": true,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "sourceLinks": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "label": {
+                                "type": "string"
+                              },
+                              "uri": {
+                                "anyOf": [
+                                  {
+                                    "format": "uri",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                    "type": "string"
+                                  }
+                                ]
+                              }
+                            },
+                            "required": ["uri"],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "tagId": {
+                          "format": "uuid",
+                          "nullable": true,
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
+                        "updatedAt": {
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                          "type": "string"
+                        },
+                        "when": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "destination",
+                        "when",
+                        "tagId",
+                        "parentId",
+                        "notes",
+                        "sourceLinks",
+                        "createdAt",
+                        "updatedAt"
+                      ],
+                      "type": "object"
+                    },
+                    "visits": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "createdAt": {
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                            "type": "string"
+                          },
+                          "id": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "notes": {
+                            "type": "string"
+                          },
+                          "placeId": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "sourceLinks": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "label": {
+                                  "type": "string"
+                                },
+                                "uri": {
+                                  "anyOf": [
+                                    {
+                                      "format": "uri",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                      "type": "string"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": ["uri"],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "timing": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "arrival": {
+                                "format": "date",
+                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+                                "type": "string"
+                              },
+                              "departure": {
+                                "format": "date",
+                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+                                "type": "string"
+                              },
+                              "duration": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "max": {
+                                    "minimum": 0,
+                                    "type": "number"
+                                  },
+                                  "min": {
+                                    "minimum": 0,
+                                    "type": "number"
+                                  },
+                                  "unit": {
+                                    "enum": ["days", "weeks"],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": ["unit"],
+                                "type": "object"
+                              },
+                              "month": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "month": {
+                                    "maximum": 12,
+                                    "minimum": 1,
+                                    "type": "integer"
+                                  },
+                                  "part": {
+                                    "enum": ["early", "middle", "late"],
+                                    "type": "string"
+                                  },
+                                  "year": {
+                                    "maximum": 9007199254740991,
+                                    "minimum": -9007199254740991,
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": ["year", "month"],
+                                "type": "object"
+                              }
+                            },
+                            "type": "object"
+                          },
+                          "tripId": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "updatedAt": {
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "tripId",
+                          "placeId",
+                          "timing",
+                          "notes",
+                          "sourceLinks",
+                          "createdAt",
+                          "updatedAt"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "trip",
+                    "places",
+                    "visits",
+                    "journeys",
+                    "journeyGroups",
+                    "stays",
+                    "events",
+                    "documentAssociations"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": ["invalid_cursor", "bfm.request.invalid"],
+                      "type": "string"
+                    },
+                    "details": {},
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["code", "message", "requestId", "retryable"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": ["bfm.auth.invalid_token"],
+                      "type": "string"
+                    },
+                    "details": {},
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["code", "message", "requestId", "retryable"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "401"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "code": {
+                          "enum": ["bfm.auth.device_revoked"],
+                          "type": "string"
+                        },
+                        "details": {},
+                        "message": {
+                          "type": "string"
+                        },
+                        "requestId": {
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "retryable": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": ["code", "message", "requestId", "retryable"],
+                      "type": "object"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "capability": {
+                          "type": "string"
+                        },
+                        "code": {
+                          "enum": ["capability_not_granted"],
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code", "message", "capability"],
+                      "type": "object"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "403"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "properties": {
+                        "upstream": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "pillar": {
+                              "type": "string"
+                            },
+                            "status": {
+                              "maximum": 599,
+                              "minimum": 100,
+                              "type": "integer"
+                            }
+                          },
+                          "required": ["pillar", "status"],
+                          "type": "object"
+                        }
+                      },
+                      "required": ["upstream"],
+                      "type": "object"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["code", "message", "requestId", "retryable", "details"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "enum": ["rate_limited"],
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "retryAfterSeconds": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "required": ["code", "message", "retryAfterSeconds"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "429"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "properties": {
+                        "upstream": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "pillar": {
+                              "type": "string"
+                            },
+                            "status": {
+                              "maximum": 599,
+                              "minimum": 100,
+                              "type": "integer"
+                            }
+                          },
+                          "required": ["pillar", "status"],
+                          "type": "object"
+                        }
+                      },
+                      "required": ["upstream"],
+                      "type": "object"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["code", "message", "requestId", "retryable", "details"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "502"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "code": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "details": {
+                      "additionalProperties": {},
+                      "properties": {
+                        "upstream": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "pillar": {
+                              "type": "string"
+                            },
+                            "status": {
+                              "maximum": 599,
+                              "minimum": 100,
+                              "type": "integer"
+                            }
+                          },
+                          "required": ["pillar", "status"],
+                          "type": "object"
+                        }
+                      },
+                      "required": ["upstream"],
+                      "type": "object"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "retryable": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["code", "message", "requestId", "retryable", "details"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "503"
+          }
+        },
+        "summary": "Read one trip with complete ordered visits, journeys, groups, stays, events and document associations",
+        "tags": ["mobileTrips"]
+      }
+    },
+    "/mobile/v2/trips/{id}": {
+      "get": {
+        "operationId": "mobileTrips.getTripV2",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "exclusiveMinimum": true,
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "documentAssociations": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "createdAt": {
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                            "type": "string"
+                          },
+                          "documentId": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "id": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "targetId": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "targetKind": {
+                            "enum": ["trip", "visit", "journey", "stay", "event"],
+                            "type": "string"
+                          },
+                          "tripId": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "tripId",
+                          "documentId",
+                          "targetKind",
+                          "targetId",
+                          "createdAt"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "events": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "address": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "arrangement": {
+                            "enum": ["Booked", "Agreed", "Not arranged", "Not needed", null],
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                            "type": "string"
+                          },
+                          "documentLinks": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "label": {
+                                  "type": "string"
+                                },
+                                "uri": {
+                                  "anyOf": [
+                                    {
+                                      "format": "uri",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                      "type": "string"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": ["uri"],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "id": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "intention": {
+                            "enum": ["In plan", "Considering", "Alternative", null],
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "name": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "notes": {
+                            "type": "string"
+                          },
+                          "organiserLinks": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "label": {
+                                  "type": "string"
+                                },
+                                "uri": {
+                                  "anyOf": [
+                                    {
+                                      "format": "uri",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                      "type": "string"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": ["uri"],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "purchase": {
+                            "enum": ["Purchased", null],
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "reference": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "sourceLinks": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "label": {
+                                  "type": "string"
+                                },
+                                "uri": {
+                                  "anyOf": [
+                                    {
+                                      "format": "uri",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                      "type": "string"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": ["uri"],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "sourceUrl": {
+                            "format": "uri",
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "ticketUrl": {
+                            "format": "uri",
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "timing": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "end": {
+                                "format": "date",
+                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+                                "type": "string"
+                              },
+                              "endTime": {
+                                "pattern": "^(?:[01]\\d|2[0-3]):[0-5]\\d$",
+                                "type": "string"
+                              },
+                              "start": {
+                                "format": "date",
+                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+                                "type": "string"
+                              },
+                              "startTime": {
+                                "pattern": "^(?:[01]\\d|2[0-3]):[0-5]\\d$",
+                                "type": "string"
+                              },
+                              "timeZone": {
+                                "type": "string"
+                              }
+                            },
+                            "type": "object"
+                          },
+                          "tripId": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "updatedAt": {
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                            "type": "string"
+                          },
+                          "venueLinks": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "label": {
+                                  "type": "string"
+                                },
+                                "uri": {
+                                  "anyOf": [
+                                    {
+                                      "format": "uri",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                      "type": "string"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": ["uri"],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "visitId": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "nullable": true,
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "tripId",
+                          "visitId",
+                          "name",
+                          "intention",
+                          "arrangement",
+                          "purchase",
+                          "timing",
+                          "address",
+                          "reference",
+                          "sourceUrl",
+                          "ticketUrl",
+                          "notes",
+                          "sourceLinks",
+                          "venueLinks",
+                          "organiserLinks",
+                          "documentLinks",
+                          "createdAt",
+                          "updatedAt"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "journeyGroups": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "alternativeJourneyIds": {
+                            "items": {
+                              "exclusiveMinimum": true,
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "type": "array"
+                          },
+                          "createdAt": {
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                            "type": "string"
+                          },
+                          "currentJourneyId": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "id": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "revision": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "tripId": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "updatedAt": {
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "tripId",
+                          "currentJourneyId",
+                          "alternativeJourneyIds",
+                          "revision",
+                          "createdAt",
+                          "updatedAt"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "journeys": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "buffers": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "airportBufferMinutes": {
+                                "minimum": 0,
+                                "type": "number"
+                              },
+                              "minimumConnectionMinutes": {
+                                "minimum": 0,
+                                "type": "number"
+                              }
+                            },
+                            "type": "object"
+                          },
+                          "createdAt": {
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                            "type": "string"
+                          },
+                          "id": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "legs": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "arrangement": {
+                                  "enum": ["Booked", "Agreed", "Not arranged", "Not needed", null],
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "createdAt": {
+                                  "format": "date-time",
+                                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                                  "type": "string"
+                                },
+                                "from": {
+                                  "additionalProperties": false,
+                                  "properties": {
                                     "date": {
                                       "format": "date",
                                       "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
@@ -28778,7 +30190,7 @@
             "description": "503"
           }
         },
-        "summary": "Read one trip with complete ordered visits, journeys, groups, stays, events and document associations",
+        "summary": "Read one day-aware trip with complete ordered sources and independent Journey endpoint precision",
         "tags": ["mobileTrips"]
       }
     },

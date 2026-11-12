@@ -6,7 +6,10 @@ Trip selection is explicit and shared by the Timeline and app-level Search. Sear
 
 Visits retain the service's order; journeys remain separate because no mixed route order is published. The Timeline retains every original, including alternatives, until its explicit alternative filter excludes them through group membership; purchase never selects a journey. Now and Next use the selected sources. Day/month grouping, booking-date scope, inclusive date range and in-context search filter the same snapshot. Ordered recorded date spans can overlap a range without acquiring clocks or completed-travel state; contradictory endpoints remain separate facts. Unresolved dates remain visible, and reversed range selections display a warning. App-level Search retains every original. Booking intention, arrangement and purchase stay independent. Past bookings use explicit source end times, not audit timestamps. Source endpoints and their original zones remain visible in their own record.
 
-Journey endpoints retain an optional day-only `date` independently of clock resolution.
+The native repository explicitly calls the day-aware BFM
+`GET /mobile/v2/trips/:id` operation. The legacy detail wire remains unchanged for
+installed clients. Journey endpoints retain an optional day-only `date`
+independently of clock resolution.
 The Timeline shows its recorded day with time unknown; day/month grouping and range
 filters keep it on that day in every display zone. Independent day-only departure
 and arrival points do not establish an all-day interval, Now state or Next instant.

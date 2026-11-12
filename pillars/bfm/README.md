@@ -43,7 +43,8 @@ It also holds a service-account credential and one way to spend it — see
 | `GET /mobile/documents/:id`                         | Original Documents-owner metadata, independently gated by `documents.read`.                                                                      |
 | `GET /mobile/documents/:id/file`                    | Original bytes; Range and representation headers preserved.                                                                                      |
 | `GET /mobile/trips`                                 | A snapshot-bound cursor page of original trip metadata.                                                                                          |
-| `GET /mobile/trips/:id`                             | Complete source snapshot with ordered route records and explicit document associations.                                                          |
+| `GET /mobile/v2/trips/:id`                          | Day-aware complete source snapshot with independent Journey day precision and unchanged device/read capability checks.                           |
+| `GET /mobile/trips/:id`                             | Legacy-compatible complete source snapshot; Journey day-only fields are omitted without inventing clocks.                                        |
 | `GET /mobile/finance/transactions`                  | One cursor-paginated page of list rows — see [The mobile shape](#the-mobile-shape).                                                              |
 | `GET /mobile/finance/accounts`                      | One cursor-paginated page of accounts after search and filters — see [The mobile shape](#the-mobile-shape).                                      |
 | `GET /mobile/finance/summary`                       | Cost-of-credit totals for one window, by account, month and fee tag.                                                                             |
@@ -522,7 +523,12 @@ unpaginated list, so BFM reads it completely before paging.
 
 Detail retains source identities and producer visit/leg order. Endpoint local
 clocks and zones remain independent optional facts; date-only stays never gain
-an inferred clock. Journey endpoints also retain an optional day-only `date`, mutually
+an inferred clock. The installed-client `GET /mobile/trips/:id` response schema
+remains unchanged: its typed compatibility projection omits only endpoint `date`,
+retaining all other facts and leaving missing clocks absent. New native readers
+intentionally call `mobileTrips.getTripV2`; no header, app-build inference or
+additional grant selects the wire. The explicitly versioned
+`GET /mobile/v2/trips/:id` retains an optional Journey day-only `date`, mutually
 exclusive with `local`; BFM forwards it without inventing a clock, zone or instant.
 When remains opaque. Intention, arrangement and purchase
 stay independent, and journey groups retain explicit current/alternative IDs.

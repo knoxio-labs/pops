@@ -1,13 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
-import { MobileJourneyEndpointSchema } from '../../../contract/mobile-trips-journey-schemas.js';
+import { MobileTripDetailV2Schema } from '../../../contract/mobile-trips-detail-schemas.js';
+import { MobileJourneyEndpointV2Schema } from '../../../contract/mobile-trips-journey-schemas.js';
 import { MobileVisitTimingSchema } from '../../../contract/mobile-trips-schemas.js';
 import { tripsFixture, tripsEventFixture } from './fixtures.js';
 import { tripsClientOver } from './gateway.js';
 
 describe('reader-first source alignment', () => {
   it('preserves Journey day-only precision through the actual reader without a clock or zone', async () => {
-    const detail = tripsFixture();
+    const detail = MobileTripDetailV2Schema.parse(tripsFixture());
     const leg = detail.journeys[0]?.legs[0];
     if (!leg) throw new Error('Missing fixture leg');
     leg.from = { date: '2028-02-29' };
@@ -20,9 +21,9 @@ describe('reader-first source alignment', () => {
       date: '2028-03-01',
       timeZone: 'Pacific/Kiritimati',
     });
-    expect(MobileJourneyEndpointSchema.safeParse({ date: '2027-02-29' }).success).toBe(false);
+    expect(MobileJourneyEndpointV2Schema.safeParse({ date: '2027-02-29' }).success).toBe(false);
     expect(
-      MobileJourneyEndpointSchema.safeParse({ date: '2028-02-29', local: '2028-02-29T12:00' })
+      MobileJourneyEndpointV2Schema.safeParse({ date: '2028-02-29', local: '2028-02-29T12:00' })
         .success
     ).toBe(false);
   });
