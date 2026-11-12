@@ -75,7 +75,7 @@ The gate's semantics belong to the SDK and stay there. This package holds only t
 
 ## What the gate does not decide
 
-`requireCredential` is the adopting pillar's call, not this package's. It defaults to `false` — the ADR-044 posture, where a caller presenting a key is held to its grant and a caller presenting none is left to the perimeter that already governs it. Setting it `true` closes the unauthenticated in-network path, which is a decision about ADR-027's trust boundary and is only affordable for a pillar all of whose callers carry keys. Both `finance` and `purchases` hold `false` today, and each says so in its own README.
+`requireCredential` is the adopting pillar's call, not this package's. It defaults to `false` — the ADR-044 posture, where a caller presenting a key is held to its grant and a caller presenting none is left to the perimeter that already governs it. Setting it `true` closes the unauthenticated in-network path. A gate may separately opt verified Access operators with a non-null email into that keyless path; classification must be active, and any presented key is still checked as a service account. An unverified or unclassified request never qualifies. Trips uses this opt-in; `finance` and `purchases` keep the default posture.
 
 ## Testing an adoption
 
