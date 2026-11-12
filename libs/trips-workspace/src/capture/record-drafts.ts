@@ -1,4 +1,5 @@
-import { containsFields, sameFields } from './record-field-match';
+import { sameFields } from './record-field-match';
+import { ownRecordSuccessor } from './record-successor';
 
 import type { CaptureEditor } from './editor-types';
 import type {
@@ -17,7 +18,7 @@ export interface CaptureRecordDraft {
   revision: number;
   input: CapturePatch;
 }
-/** Idea drafts preserve optional input absence and the original editing revision. */
+/** Idea drafts preserve optional input absence and adopt only a proven own successor revision. */
 export interface IdeaRecordDraft {
   revision: number;
   input: IdeaInput;
@@ -117,6 +118,7 @@ export class CaptureRecordDrafts {
   }
   /** Explicitly discard only this row's unsaved fields, retaining all source records and other drafts. */
   discard(kind: 'capture' | 'idea' | 'organisation', id: number): void {
+    if (kind !== 'organisation' && !this.editor.discardRejectedEdit(kind, id)) return;
     if (kind === 'capture') this.captures.delete(id);
     else if (kind === 'idea') this.ideas.delete(id);
     else this.organisations.delete(id);
@@ -148,31 +150,34 @@ export class CaptureRecordDrafts {
     result: CaptureResult
   ): void {
     const draft = this.captures.get(command.id);
-    const row = result.current.captures.find((capture) => capture.id === command.id);
-    if (
-      draft?.revision === command.expectedRevision &&
-      row &&
-      sameFields(draft.input, command.input) &&
-      containsFields(row, command.input)
-    ) {
-      this.captures.delete(command.id);
-      this.changed();
-    }
+    const row = ownRecordSuccessor({
+      revision: command.expectedRevision,
+      input: command.input,
+      receipt: result.receipt.captures.find((value) => value.id === command.id),
+      current: result.current.captures.find((value) => value.id === command.id),
+      tripId: this.editor.getState().source.captures.find((value) => value.id === command.id)
+        ?.tripId,
+    });
+    if (draft?.revision !== command.expectedRevision || row === undefined) return;
+    if (sameFields(draft.input, command.input)) this.captures.delete(command.id);
+    else this.captures.set(command.id, { ...draft, revision: row.revision });
+    this.changed();
   }
   private acceptIdea(
     command: Extract<CaptureCommand, { kind: 'idea.update' }>,
     result: CaptureResult
   ): void {
     const draft = this.ideas.get(command.id);
-    const row = result.current.ideas.find((idea) => idea.id === command.id);
-    if (
-      draft?.revision === command.expectedRevision &&
-      row &&
-      sameFields(draft.input, command.input) &&
-      containsFields(row, command.input)
-    ) {
-      this.ideas.delete(command.id);
-      this.changed();
-    }
+    const row = ownRecordSuccessor({
+      revision: command.expectedRevision,
+      input: command.input,
+      receipt: result.receipt.ideas.find((value) => value.id === command.id),
+      current: result.current.ideas.find((value) => value.id === command.id),
+      tripId: this.editor.getState().source.ideas.find((value) => value.id === command.id)?.tripId,
+    });
+    if (draft?.revision !== command.expectedRevision || row === undefined) return;
+    if (sameFields(draft.input, command.input)) this.ideas.delete(command.id);
+    else this.ideas.set(command.id, { ...draft, revision: row.revision });
+    this.changed();
   }
 }

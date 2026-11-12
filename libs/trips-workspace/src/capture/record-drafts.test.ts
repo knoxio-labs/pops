@@ -2,7 +2,7 @@ import { expect, it, vi } from 'vitest';
 
 import { createCaptureEditor } from './editor';
 import { CaptureRecordDrafts } from './record-drafts';
-import { captureResult, captureSource, deferred, sourceCapture } from './test-utils';
+import { captureResult, captureSource, deferred, sourceCapture, sourceIdea } from './test-utils';
 
 import type { CapturePerformer, CaptureResult } from './types';
 
@@ -27,7 +27,15 @@ it('retains failed row fields and original revision through refetch and clears o
 
 it('keeps newer unsaved row fields when an older acknowledgement arrives', async () => {
   const response = deferred<CaptureResult>();
-  const perform = vi.fn<CapturePerformer>().mockReturnValue(response.promise);
+  const perform = vi
+    .fn<CapturePerformer>()
+    .mockReturnValueOnce(response.promise)
+    .mockImplementation(async (request) =>
+      captureResult(
+        request,
+        captureSource([sourceCapture({ revision: 3, notes: 'Newer unsaved note' })])
+      )
+    );
   const row = sourceCapture();
   const editor = createCaptureEditor({ source: captureSource([row]), tripId: 1, perform });
   const drafts = new CaptureRecordDrafts(editor);
@@ -40,7 +48,15 @@ it('keeps newer unsaved row fields when an older acknowledgement arrives', async
     captureResult(request, captureSource([sourceCapture({ revision: 2, notes: 'First note' })]))
   );
   expect(await pending).toBe(true);
-  expect(drafts.capture(row.id)).toEqual({ revision: 1, input: { notes: 'Newer unsaved note' } });
+  expect(drafts.capture(row.id)).toEqual({ revision: 2, input: { notes: 'Newer unsaved note' } });
+  expect(await drafts.saveCapture(row.id)).toBe(true);
+  expect(perform.mock.calls[1]?.[0].command).toEqual({
+    kind: 'capture.update',
+    id: row.id,
+    expectedRevision: 2,
+    input: { notes: 'Newer unsaved note' },
+  });
+  expect(drafts.capture(row.id)).toBeUndefined();
 });
 
 it('does not clear an intent from a replay whose current source was overwritten by another writer', async () => {
@@ -76,4 +92,46 @@ it('preserves explicit organisation input and precondition while another source 
   });
   expect(await editor.retry()).toBe(false);
   expect(perform.mock.calls[1]?.[0]).toEqual(perform.mock.calls[0]?.[0]);
+});
+
+it('preserves newer Idea fields while carrying only the unchanged own acknowledgement revision', async () => {
+  const response = deferred<CaptureResult>();
+  const source = { ...captureSource(), ideas: [sourceIdea()] };
+  const perform = vi
+    .fn<CapturePerformer>()
+    .mockReturnValueOnce(response.promise)
+    .mockImplementation(async (request) =>
+      captureResult(request, {
+        ...source,
+        ideas: [sourceIdea({ revision: 3, status: 'In plan', notes: 'Later explicit edit' })],
+      })
+    );
+  const editor = createCaptureEditor({ source, tripId: 1, perform });
+  const drafts = new CaptureRecordDrafts(editor);
+  const row = source.ideas[0];
+  if (!row) throw new Error('Missing fixture Idea');
+  drafts.editIdea(row, { status: 'In plan' });
+  const pending = drafts.saveIdea(row.id);
+  drafts.editIdea(row, { notes: 'Later explicit edit' });
+  const request = perform.mock.calls[0]?.[0];
+  if (!request) throw new Error('Missing request');
+  response.resolve(
+    captureResult(request, {
+      ...source,
+      ideas: [sourceIdea({ revision: 2, status: 'In plan' })],
+    })
+  );
+  expect(await pending).toBe(true);
+  expect(drafts.idea(row.id)).toEqual({
+    revision: 2,
+    input: { status: 'In plan', notes: 'Later explicit edit' },
+  });
+  expect(await drafts.saveIdea(row.id)).toBe(true);
+  expect(perform.mock.calls[1]?.[0].command).toEqual({
+    kind: 'idea.update',
+    id: row.id,
+    expectedRevision: 2,
+    input: { status: 'In plan', notes: 'Later explicit edit' },
+  });
+  expect(drafts.idea(row.id)).toBeUndefined();
 });

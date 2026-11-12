@@ -60,11 +60,7 @@ export function CaptureFields({
               : draft.input.classification
           }
         />
-        {draft ? (
-          <Button variant="ghost" onClick={() => session.records.discard('capture', capture.id)}>
-            Discard unsaved capture edits
-          </Button>
-        ) : null}
+        {draft ? <DiscardCaptureEdits session={session} id={capture.id} /> : null}
       </div>
     </details>
   );
@@ -98,5 +94,23 @@ function ClassificationField({
         void session.records.saveCapture(capture.id);
       }}
     />
+  );
+}
+
+function DiscardCaptureEdits({
+  session,
+  id,
+}: {
+  session: CaptureBrowserSession;
+  id: number;
+}): JSX.Element {
+  return (
+    <Button
+      variant="ghost"
+      disabled={!session.editor.canDiscardRejectedEdit('capture', id)}
+      onClick={() => session.records.discard('capture', id)}
+    >
+      Discard unsaved capture edits
+    </Button>
   );
 }

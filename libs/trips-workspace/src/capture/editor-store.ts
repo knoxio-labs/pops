@@ -2,6 +2,7 @@ import { ApiError } from '@pops/pillar-sdk/client';
 
 import { emptyCaptureDraft } from './draft';
 import { sourceBelongsToTrip } from './result';
+import { CaptureRevisionRecovery } from './revision-recovery';
 import { CaptureSelectionStore } from './selection-store';
 
 import type { CaptureEditorState, CaptureHistory, CaptureIntent } from './editor-types';
@@ -14,6 +15,7 @@ export class CaptureEditorStore {
   pending: CaptureIntent | null = null;
   failureIntent: CaptureIntent | null = null;
   selections = new CaptureSelectionStore();
+  readonly recovery: CaptureRevisionRecovery;
   private listeners = new Set<() => void>();
   private queued: { source: CaptureSource; generation: number } | null = null;
   constructor(
@@ -40,6 +42,7 @@ export class CaptureEditorStore {
       failure: null,
       confirmation: null,
     };
+    this.recovery = new CaptureRevisionRecovery(this);
   }
   /** Notify all mounted views of one atomic session-state update. */
   publish(update: Partial<CaptureEditorState>): void {
@@ -57,7 +60,10 @@ export class CaptureEditorStore {
   receive(source: CaptureSource, generation: number): void {
     if (generation !== this.state.generation || !sourceBelongsToTrip(source, this.tripId)) return;
     if (this.state.busy) this.queued = { source, generation };
-    else this.publish({ source });
+    else {
+      this.recovery.acceptedRead();
+      this.publish({ source });
+    }
   }
   /** Apply a queued read only if no confirmed mutation superseded its original generation. */
   flush(): void {
