@@ -1,3 +1,4 @@
+import { captureTimelineSourceVisible } from '../capture/timeline-filters';
 import { dateRange } from './model';
 import { sourceAction } from './source-action';
 import { SourceCard } from './SourceCard';
@@ -33,38 +34,45 @@ export function contextRecords(sources: OverviewSources, tripId: number): Overvi
 export function ContextSources(
   props: OverviewViewProps & { records: OverviewContextRecord[] }
 ): JSX.Element[] {
-  return props.records.map((record) => {
-    const { source } = record;
-    const facts = contextFacts(record, props);
-    const explored =
-      record.kind !== 'meeting' &&
-      props.sources.capture?.memberships.some(
-        (membership) =>
-          membership.removedAt === null &&
-          membership.tripId === props.tripId &&
-          membership.source.kind === record.kind &&
-          membership.source.id === source.id
+  return props.records
+    .filter((record) =>
+      captureTimelineSourceVisible(props.sourceVisibility, {
+        kind: record.kind,
+        id: record.source.id,
+      })
+    )
+    .map((record) => {
+      const { source } = record;
+      const facts = contextFacts(record, props);
+      const explored =
+        record.kind !== 'meeting' &&
+        props.sources.capture?.memberships.some(
+          (membership) =>
+            membership.removedAt === null &&
+            membership.tripId === props.tripId &&
+            membership.source.kind === record.kind &&
+            membership.source.id === source.id
+        );
+      return (
+        <SourceCard
+          key={`${record.kind}:${source.id}`}
+          kind={record.kind}
+          title={facts.title}
+          {...sourceAction(props, { kind: record.kind, id: source.id })}
+          statuses={[...facts.statuses, ...(explored ? ['explore'] : [])]}
+          labels={props.labels}
+        >
+          {facts.timing && <span className="block">{facts.timing}</span>}
+          {source.notes && <span className="block whitespace-pre-wrap">{source.notes}</span>}
+          {record.kind === 'meeting' && record.source.contactUri && (
+            <span className="block">{record.source.contactUri}</span>
+          )}
+          {record.kind === 'capture' && record.source.originalUrl && (
+            <span className="block">{record.source.originalUrl}</span>
+          )}
+        </SourceCard>
       );
-    return (
-      <SourceCard
-        key={`${record.kind}:${source.id}`}
-        kind={record.kind}
-        title={facts.title}
-        {...sourceAction(props, { kind: record.kind, id: source.id })}
-        statuses={[...facts.statuses, ...(explored ? ['explore'] : [])]}
-        labels={props.labels}
-      >
-        {facts.timing && <span className="block">{facts.timing}</span>}
-        {source.notes && <span className="block whitespace-pre-wrap">{source.notes}</span>}
-        {record.kind === 'meeting' && record.source.contactUri && (
-          <span className="block">{record.source.contactUri}</span>
-        )}
-        {record.kind === 'capture' && record.source.originalUrl && (
-          <span className="block">{record.source.originalUrl}</span>
-        )}
-      </SourceCard>
-    );
-  });
+    });
 }
 
 function contextFacts(

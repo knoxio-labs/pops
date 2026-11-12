@@ -1,3 +1,4 @@
+import { captureTimelineSourceVisible } from '../capture/timeline-filters';
 import { EventCard, StayCard } from './ArrangementCards';
 import { contextRecords, ContextSources } from './ContextSources';
 import { visitFacts } from './model';
@@ -12,7 +13,11 @@ export function VisitFacts(props: OverviewViewProps & { visitId: number }): JSX.
   const facts = visitFacts(
     props.visitId,
     (props.sources.stays ?? []).filter((stay) => stay.tripId === props.tripId),
-    (props.sources.events ?? []).filter((event) => event.tripId === props.tripId)
+    (props.sources.events ?? []).filter(
+      (event) =>
+        event.tripId === props.tripId &&
+        captureTimelineSourceVisible(props.sourceVisibility, { kind: 'event', id: event.id })
+    )
   );
   return (
     <>

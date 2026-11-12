@@ -4,10 +4,14 @@ The shell loads `dist/remote/trips.js` and `trips.css` from the Trips manifest. 
 
 The Documents route provides typed document associations and owner uploads. It owns no database and uses generated Trips and Tags clients at the shell's authenticated same-origin proxy paths.
 
-The selected Trip owns one Timeline at `:tripId`. People, Capture, Inbox and Explore
-open canonical contextual tools beneath the same shell QueryClient. Source rows open
+The selected Trip owns one Timeline at `:tripId`. Add opens People and Capture under
+the same shell QueryClient; there are no global People, Capture, Inbox or Explore buttons.
+Organisation, source-type and recorded-location filters apply inside the Timeline. Source rows open
 the existing canonical source editor in a sheet; nested source jumps replace only the
-selected source identity. Documents is the separate Trip list shortcut. The existing
+selected source identity. Removing a source from Explore changes only its exact revisioned
+collection membership through the retained Capture command history. Unavailable member
+references remain explicit and open the same contextual removal action. Unknown source
+identities are not silently filtered out. Documents is the separate Trip list shortcut. The existing
 `:tripId/arrangements` URL and `trips-arrangements` slot load this same Timeline.
 Source detail URLs remain available for existing links. The header metadata action
 opens the canonical settings form in the same sheet; it does not add a Trip destination.

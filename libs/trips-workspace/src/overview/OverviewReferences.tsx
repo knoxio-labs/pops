@@ -1,3 +1,4 @@
+import { captureTimelineSourceVisible } from '../capture/timeline-filters';
 import { EventCard, StayCard } from './ArrangementCards';
 import { contextRecords, ContextSources } from './ContextSources';
 import { dateLabel, detachedByVisit, detachedRecords } from './model';
@@ -15,9 +16,19 @@ import type { OverviewViewProps } from './types';
 export function OverviewDetached(props: OverviewViewProps): JSX.Element | null {
   const visits = renderedVisitReferences(props);
   const stays = detachedRecords(props.sources.stays ?? [], visits);
-  const events = detachedRecords(props.sources.events ?? [], visits);
+  const events = detachedRecords(
+    (props.sources.events ?? []).filter((event) =>
+      captureTimelineSourceVisible(props.sourceVisibility, { kind: 'event', id: event.id })
+    ),
+    visits
+  );
   const contextual = detachedByVisit(
-    contextRecords(props.sources, props.tripId),
+    contextRecords(props.sources, props.tripId).filter((record) =>
+      captureTimelineSourceVisible(props.sourceVisibility, {
+        kind: record.kind,
+        id: record.source.id,
+      })
+    ),
     visits,
     (record) => record.source.visitId
   );

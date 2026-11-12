@@ -669,3 +669,13 @@ explicit visit association remain outside this view; no place-label/date matchin
 Visit UI copy consumes the host i18next `trips` namespace, including the app-owned
 `visitWorkspace` catalogue in both supported locales. Calendar labels use the host
 resolved language while retaining literal source days without viewer-zone conversion.
+
+`CaptureTimelineFilters` renders controlled organisation, source-type and literal-location
+filters inside `TripOverview.sourceControls`. Its `known`/`visible` identity projection
+can be supplied as `sourceVisibility`; only classified Capture, Idea and Event cards
+are filtered, without changing any route, booking or source record. Unclassified
+identities remain visible. Optional catalogue failures remain diagnostics, and missing
+member sources retain their exact unavailable reference instead of an inferred location.
+`CaptureMembershipContext` shares the canonical Capture session for an Event context;
+selected Capture and Idea editors already include the same membership removal action.
+Removal uses the actual membership ID/revision, and shares retained retry, lock and Undo.

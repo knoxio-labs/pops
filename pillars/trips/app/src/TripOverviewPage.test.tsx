@@ -20,7 +20,7 @@ import type {
   AccommodationGapContext,
   EventWorkspaceProps,
   OverviewSource,
-  OverviewTool,
+  CaptureTimelineFiltersProps,
   StayWorkspaceProps,
   TripOverviewProps,
   VisitWorkspaceProps,
@@ -32,6 +32,7 @@ import type { PeopleContextProps } from './PeopleContext';
 
 const observed = vi.hoisted(() => ({
   overview: vi.fn<(props: TripOverviewProps) => void>(),
+  filters: vi.fn<(props: CaptureTimelineFiltersProps) => void>(),
   accommodation: vi.fn<(props: Parameters<typeof AccommodationGapContext>[0]) => void>(),
   stay: vi.fn<(props: StayWorkspaceProps) => void>(),
   event: vi.fn<(props: EventWorkspaceProps) => void>(),
@@ -56,6 +57,15 @@ vi.mock('@pops/trips-workspace', async (importOriginal) => ({
       </p>
     );
   },
+  CaptureTimelineFilters: (props: CaptureTimelineFiltersProps) => {
+    observed.filters(props);
+    return <p>Timeline source filters</p>;
+  },
+  CaptureMembershipContext: ({ source }: { source: OverviewSource }) => (
+    <p>
+      Membership {source.kind} {source.id}
+    </p>
+  ),
   useTripRoute: () => ({}),
   TripOverview: (props: TripOverviewProps) => {
     observed.overview(props);
@@ -70,7 +80,6 @@ vi.mock('@pops/trips-workspace', async (importOriginal) => ({
       { kind: 'capture', id: 108 },
       { kind: 'idea', id: 119 },
     ];
-    const tools: OverviewTool[] = ['people', 'capture', 'inbox', 'explore'];
     return (
       <>
         <main>
@@ -82,11 +91,7 @@ vi.mock('@pops/trips-workspace', async (importOriginal) => ({
               Open {source.kind}
             </button>
           ))}
-          {tools.map((tool) => (
-            <button key={tool} onClick={() => props.onOpenTool?.(tool)}>
-              Tool {tool}
-            </button>
-          ))}
+          {props.sourceControls}
           <a href={props.documentsHref}>{props.labels.documents}</a>
         </main>
         {props.contextualEditor}
@@ -315,18 +320,47 @@ describe('Selected Trip Timeline host', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it.each(['people', 'capture', 'inbox', 'explore'])(
-    'mounts %s as a contextual tool without another Trip destination',
+  it.each(['people', 'capture'] as const)(
+    'keeps %s under Add without duplicate global tools',
     async (tool) => {
       mount('/7');
-      await userEvent.click(screen.getByRole('button', { name: `Tool ${tool}` }));
-      expect(screen.getByRole('dialog')).toBeVisible();
-      expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+      for (const key of ['people', 'capture', 'inbox', 'explore'] as const)
+        expect(
+          screen.queryByRole('button', { name: enAU.timeline.tools[key] })
+        ).not.toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: enAU.timeline.create.title }));
+      await userEvent.click(screen.getByRole('button', { name: enAU.timeline.tools[tool] }));
       expect(
-        screen.getByText(tool === 'people' ? 'People context' : `Capture context ${tool}`)
+        screen.getByText(tool === 'people' ? 'People context' : 'Capture context capture')
       ).toBeVisible();
+      expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
     }
   );
+
+  it('controls filters in the owning Timeline and keeps an exact unavailable source opener', () => {
+    const client = createClient({ baseUrl: 'https://timeline-owner.invalid' });
+    mount('/7', { client });
+    const filters = observed.filters.mock.lastCall?.[0];
+    expect(screen.getByText('Timeline source filters')).toBeVisible();
+    expect(filters).toMatchObject({
+      tripId: 7,
+      client,
+      selection: { kind: 'all', organisation: 'all', location: 'all' },
+    });
+    act(() =>
+      filters?.onChange({ kind: 'idea', organisation: 'unverified', location: 'unassigned' })
+    );
+    expect(observed.filters.mock.lastCall?.[0].selection).toEqual({
+      kind: 'idea',
+      organisation: 'unverified',
+      location: 'unassigned',
+    });
+    const visibility = { known: [{ kind: 'idea' as const, id: 119 }], visible: [] };
+    act(() => filters?.onVisibility(visibility));
+    expect(observed.overview.mock.lastCall?.[0].sourceVisibility).toEqual(visibility);
+    act(() => filters?.onOpenSource({ kind: 'idea', id: 999 }));
+    expect(observed.capture.mock.lastCall?.[0].selectedSource).toEqual({ kind: 'idea', id: 999 });
+  });
 
   it('translates contextual labels and night counts through the active host locale', async () => {
     await translation.changeLanguage('pt-BR');

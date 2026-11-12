@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 
 import type { Rental } from '../arrangements/types';
 import type { CalendarSelection } from '../calendar/types';
+import type { CaptureTimelineVisibility } from '../capture/timeline-filters';
 import type { CaptureSource } from '../capture/types';
 import type { Journey, JourneyGroup } from '../journey/types';
 import type { MeetingPlan } from '../people/types';
@@ -87,6 +88,10 @@ interface OverviewBaseProps {
   onOpenPlacement?: (target: OverviewPlacementTarget) => void;
   onOpenTool?: (tool: OverviewTool) => void;
   controls?: ReactNode;
+  /** Inline Capture-domain filters/references; distinct from the header actions and contextual editor. */
+  sourceControls?: ReactNode;
+  /** Exact presentation-only Capture/Idea/Event visibility; unclassified IDs and other kinds stay visible. */
+  sourceVisibility?: CaptureTimelineVisibility;
   contextualEditor?: ReactNode;
   /** Host context follows resolved owning Visit facts; optional route outages do not hide a known Visit. */
   renderVisitContext?: (identity: { tripId: Trip['id']; visitId: Visit['id'] }) => ReactNode;
