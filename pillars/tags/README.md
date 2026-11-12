@@ -17,8 +17,13 @@ The service provides these routes:
 
 The vocabulary is stored in the tags pillar's own SQLite database.
 
-The route requires a service-account grant of `tags.tags`. `/health`,
-`/pillars`, and `/openapi` remain available for probes and discovery.
+Scoped routes require a service-account grant of `tags.tags`. The verified
+Cloudflare Access operator exception applies only to `GET /tags`, the shared
+vocabulary listing used by browser consumers. A presented key is still
+verified and must carry the route's scope. Other reads and all mutations
+require a valid scoped service-account key; missing or invalid Access identity
+and guests are refused. `/health`, `/pillars`, and `/openapi` remain available
+for probes and discovery.
 
 Run it locally with:
 
