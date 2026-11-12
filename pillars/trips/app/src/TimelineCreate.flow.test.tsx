@@ -118,6 +118,9 @@ it.each(cases)(
       target: { value },
     });
     fireEvent.click(within(sheet).getByRole('button', { name: 'Create' }));
+    await waitFor(() =>
+      expect(sheet).toHaveAccessibleName(new RegExp(`^${item.label} #\\d+$`, 'u'))
+    );
     const saved = await within(sheet).findByRole('textbox', { name: item.canonical });
     expect(saved).toHaveValue(value);
     expect(screen.getByRole('dialog')).toBe(sheet);
