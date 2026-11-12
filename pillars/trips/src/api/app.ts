@@ -14,6 +14,7 @@ import { buildTripsManifest } from './manifest.js';
 import { createServiceAccountScopeMiddleware } from './middleware/service-account-scope.js';
 import { makeTripsRestHandlers } from './rest/handlers.js';
 
+import type { AccessIdentityOptions } from '@pops/pillar-express';
 import type { ServiceAccountVerifier } from '@pops/pillar-sdk/server';
 
 const openapiDocument: unknown = JSON.parse(
@@ -25,6 +26,8 @@ const openapiDocument: unknown = JSON.parse(
 
 /** Dependencies for creating an in-process trips Express app. */
 export interface CreateTripsApiAppDeps extends TripsApiDeps {
+  /** Test-only Cloudflare Access verifier configuration for in-process apps. */
+  readonly accessIdentity?: AccessIdentityOptions;
   readonly serviceAccountVerifier?: ServiceAccountVerifier;
 }
 
@@ -54,7 +57,8 @@ export function createTripsApiApp(deps: CreateTripsApiAppDeps): Express {
 
   app.use(
     createServiceAccountScopeMiddleware(
-      deps.serviceAccountVerifier ?? createRegistryServiceAccountVerifier()
+      deps.serviceAccountVerifier ?? createRegistryServiceAccountVerifier(),
+      deps.accessIdentity
     )
   );
   createExpressEndpoints(tripsContract, makeTripsRestHandlers(deps), app, {
