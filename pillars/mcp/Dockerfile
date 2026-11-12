@@ -23,6 +23,7 @@ COPY libs/types/ ./libs/types/
 COPY pillars/mcp/tsconfig.json ./pillars/mcp/
 COPY pillars/mcp/tsconfig.build.json ./pillars/mcp/
 COPY pillars/mcp/src ./pillars/mcp/src
+COPY pillars/mcp/contracts ./pillars/mcp/contracts
 
 # Build the shared deps in pnpm topology order, then pops-mcp. Ordering is
 # derived from the workspace graph rather than hardcoded, so a new @pops/*
@@ -43,6 +44,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf 
 
 COPY --from=builder --chown=node:node /app/deploy ./
 COPY --from=builder --chown=node:node /app/pillars/mcp/dist ./dist
+COPY --from=builder --chown=node:node /app/pillars/mcp/contracts ./contracts
 
 ARG BUILD_VERSION=dev
 ENV BUILD_VERSION=$BUILD_VERSION
