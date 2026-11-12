@@ -514,6 +514,14 @@ new operation UUID while reusing accepted references, without another upload. No
 bytes or Undo history survive a browser reload. Organisation, source edits and collection
 removal use the producer's guarded inverses without restoring an old whole workspace.
 
+`IdeaCreateContext({ tripId, client?, onCreated })` captures an independent Idea
+without creating a Capture. It reuses the canonical command and receipt engine with
+its own retained name draft and operation UUID. A lost response retries the same
+command; a closed or replaced view cannot open a source from a late acknowledgement.
+The confirmed Idea remains available for explicit opening on remount. This session
+is isolated from the Capture composer and retained per QueryClient, actual client,
+captured origin and Trip, including through source-cache eviction and read failure.
+
 `CaptureWorkspace({ tripId, view, selectedSource?, client?, documentsClient?, contacts?, onViewEvent? })`
 provides embedded text-first Capture, inline Inbox and Explore tool views for the owning
 Trip workspace. The host controls the view and Event callback; the tool renders no

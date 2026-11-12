@@ -79,7 +79,7 @@ const VENDORED_SUFFIX = '.openapi.json';
  * unit kind's units live under, plus the path inside one unit that holds the
  * copies.
  *
- * The two differ in spelling because each follows its own language's
+ * The locations differ in spelling because each follows its own consumer's
  * convention, and neither is worth normalising: a pnpm app keeps its codegen
  * inputs in a lowercase `app/contracts/`, while the Swift client already has a
  * `Contracts/` directory for the artefacts it and the BFM agree on byte for
@@ -104,6 +104,7 @@ const VENDORED_SUFFIX = '.openapi.json';
 export const VENDOR_DIRECTORIES = [
   ['pillars', 'app', 'contracts'],
   ['clients', 'Contracts'],
+  ['pillars', 'contracts'],
 ];
 
 /**
@@ -170,6 +171,19 @@ const VENDOR_DECLARATIONS = [
         if (name !== undefined) names.push(name);
       }
       return names;
+    },
+  },
+  {
+    /** @param {string} consumerDir @returns {string[]} */
+    findDeclarationFiles(consumerDir) {
+      const declaration = join(consumerDir, 'src', 'contract-inputs.ts');
+      return existsSync(declaration) ? [declaration] : [];
+    },
+    /** @param {string} text @returns {string[]} */
+    extractDeclaredFilenames(text) {
+      return [...text.matchAll(/new URL\('\.\.\/contracts\/([^']+\.openapi\.json)'/g)].flatMap(
+        (match) => (match[1] === undefined ? [] : [match[1]])
+      );
     },
   },
 ];
@@ -777,10 +791,16 @@ function selfTestDeclaration() {
           join(consumerDir, 'app', `openapi-ts.${pillarId}.config.ts`),
           `export default { input: fileURLToPath(new URL('./contracts/${pillarId}.openapi.json', import.meta.url)) };\n`
         );
-      } else {
+      } else if (index === 1) {
         writeFileSync(
           join(consumerDir, 'mise.toml'),
           `[tasks."generate:${pillarId}-client"]\nrun = '''\nvendored=Contracts/${pillarId}.openapi.json\n'''\n`
+        );
+      } else {
+        mkdirSync(join(consumerDir, 'src'), { recursive: true });
+        writeFileSync(
+          join(consumerDir, 'src', 'contract-inputs.ts'),
+          `export const input = new URL('../contracts/${pillarId}.openapi.json', import.meta.url);\n`
         );
       }
     }
@@ -861,9 +881,7 @@ function selfTestDeclaration() {
  *   2. A legitimate vendored copy, sitting exactly where `VENDOR_DIRECTORIES`
  *      says it may, is never flagged.
  *   3. A `*.openapi.json` sitting ANYWHERE else under a `UNIT_KIND_ROOTS`
- *      entry — this fixture uses `pillars/<id>/contracts/`, the exact
- *      directory shape `pillars/bfm/contracts/` shows is real and reachable
- *      in this repo, not contrived — is reported by path, not silently
+ *      entry — outside the declared contract directories — is reported by path, not silently
  *      absent from an empty scan.
  *   4. The same stray shape under `libs/` is caught too (POPS-2235) — the
  *      walk covers every `UNIT_KIND_ROOTS` entry, not the `pillars/` and
@@ -903,14 +921,13 @@ function selfTestUnvendoredLocation() {
     mkdirSync(legitCopyDir, { recursive: true });
     writeFileSync(join(legitCopyDir, 'producer-b.openapi.json'), '{}\n');
 
-    // 3. A vendored-shaped copy OUTSIDE every declared shape — the
-    // `pillars/<id>/contracts/` case POPS-2207 found undiscovered.
+    // A copy outside the declared backend contracts directory must still fail.
     mkdirSync(join(root, 'pillars', 'producer-c', 'openapi'), { recursive: true });
     writeFileSync(
       join(root, 'pillars', 'producer-c', 'openapi', 'producer-c.openapi.json'),
       '{}\n'
     );
-    const strayDir = join(root, 'pillars', 'bfm-like', 'contracts');
+    const strayDir = join(root, 'pillars', 'bfm-like', 'unregistered-contracts');
     mkdirSync(strayDir, { recursive: true });
     const strayCopy = join(strayDir, 'producer-c.openapi.json');
     writeFileSync(strayCopy, '{}\n');
@@ -927,7 +944,7 @@ function selfTestUnvendoredLocation() {
     mkdirSync(join(root, 'pillars', 'producer-d', 'openapi'), { recursive: true });
     const symlinkTarget = join(root, 'pillars', 'producer-d', 'openapi', 'producer-d.openapi.json');
     writeFileSync(symlinkTarget, '{}\n');
-    const symlinkStrayDir = join(root, 'pillars', 'bfm-like', 'contracts');
+    const symlinkStrayDir = join(root, 'pillars', 'bfm-like', 'unregistered-contracts');
     const symlinkStrayCopy = join(symlinkStrayDir, 'symlinked.openapi.json');
     symlinkSync(relative(symlinkStrayDir, symlinkTarget), symlinkStrayCopy);
 
@@ -1017,6 +1034,7 @@ export const KNOWN_VENDORED_LEGS = [
   'contacts -> pillars/finance/app/contracts/contacts.openapi.json',
   'purchases -> pillars/finance/app/contracts/purchases.openapi.json',
   'purchases -> pillars/inventory/app/contracts/purchases.openapi.json',
+  'trips -> pillars/mcp/contracts/trips.openapi.json',
 ];
 
 /**

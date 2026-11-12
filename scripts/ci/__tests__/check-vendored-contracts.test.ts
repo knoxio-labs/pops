@@ -111,6 +111,22 @@ function declareTsPairWithoutCopy(root: string, consumer: string, pillarId: stri
   );
 }
 
+function plantBackendPair(root: string): string {
+  const producer = join(root, 'pillars', 'backend-source', 'openapi');
+  const consumer = join(root, 'pillars', 'backend-consumer');
+  mkdirSync(producer, { recursive: true });
+  mkdirSync(join(consumer, 'contracts'), { recursive: true });
+  mkdirSync(join(consumer, 'src'), { recursive: true });
+  writeFileSync(join(producer, 'backend-source.openapi.json'), '{}\n');
+  const copy = join(consumer, 'contracts', 'backend-source.openapi.json');
+  writeFileSync(copy, '{}\n');
+  writeFileSync(
+    join(consumer, 'src', 'contract-inputs.ts'),
+    "export const input = new URL('../contracts/backend-source.openapi.json', import.meta.url);\n"
+  );
+  return copy;
+}
+
 describe('discoverVendoredContracts / deriveExpectedContracts against the real repo', () => {
   it('agree on exactly the legs KNOWN_VENDORED_LEGS pins', () => {
     // KNOWN_VENDORED_LEGS is the guard's own independent pin (see its doc
@@ -153,19 +169,13 @@ describe('discoverVendoredContracts / deriveExpectedContracts against the real r
 
 describe('findUnvendoredContracts', () => {
   it('reports a vendored-shaped file sitting outside every VENDOR_DIRECTORIES entry', () => {
-    // The exact blind spot this function exists for: `pillars/<id>/contracts/`
-    // (no `app/` segment) is a real directory in this repo —
-    // `pillars/bfm/contracts/` already holds fixture copies — but is outside
-    // every `VENDOR_DIRECTORIES` shape, so `discoverVendoredContracts` alone
-    // never visits it and a copy planted there was previously invisible to
-    // the whole guard, not merely unpaired.
     const root = fixtureRoot();
     mkdirSync(join(root, 'pillars', 'producer-x', 'openapi'), { recursive: true });
     writeFileSync(
       join(root, 'pillars', 'producer-x', 'openapi', 'producer-x.openapi.json'),
       '{}\n'
     );
-    const strayDir = join(root, 'pillars', 'bfm-like', 'contracts');
+    const strayDir = join(root, 'pillars', 'bfm-like', 'unregistered-contracts');
     mkdirSync(strayDir, { recursive: true });
     const strayCopy = join(strayDir, 'producer-x.openapi.json');
     writeFileSync(strayCopy, '{"drifted":true}\n');
@@ -276,6 +286,25 @@ describe('isCanonicalContractSource', () => {
 });
 
 describe('deriveExpectedContracts', () => {
+  it('pairs a declared backend snapshot with its canonical source and checks fidelity', () => {
+    const root = fixtureRoot();
+    const copy = plantBackendPair(root);
+    const discovered = discoverVendoredContracts(root);
+    const expected = deriveExpectedContracts(root);
+    expect(discovered).toHaveLength(1);
+    expect(first(discovered).copy).toBe(copy);
+    expect(expected).toHaveLength(1);
+    expect(first(expected).copy).toBe(copy);
+    expect(first(expected).declaredBy).toBe(
+      join(root, 'pillars', 'backend-consumer', 'src', 'contract-inputs.ts')
+    );
+    expect(findMoved(expected, statKind)).toEqual([]);
+    expect(findDrift(discovered, readOrNull)).toEqual([]);
+    expect(findUnvendoredContracts(root)).toEqual([]);
+    writeFileSync(copy, '{"changed":true}\n');
+    expect(findDrift(discovered, readOrNull)).toHaveLength(1);
+  });
+
   it('derives a TS consumer’s declared copy from its openapi-ts config, matching discovery', () => {
     const root = fixtureRoot();
     plantTsPair(root, 'consumer-a', 'producer-a');
@@ -540,11 +569,37 @@ describe('readOrNull', () => {
 });
 
 describe('the guard CLI', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
+  it('rejects an undeclared backend snapshot through the independent leg-set pin', () => {
+    const sandbox = fixtureRoot();
+    cpSync(join(repoRoot, 'scripts', 'ci'), join(sandbox, 'scripts', 'ci'), { recursive: true });
+    plantBackendPair(sandbox);
+    rmSync(join(sandbox, 'pillars', 'backend-consumer', 'src', 'contract-inputs.ts'));
+    expect(deriveExpectedContracts(sandbox)).toEqual([]);
+    let stderr = '';
+    let threw = false;
+    try {
+      execFileSync(
+        'node',
+        [join(sandbox, 'scripts', 'ci', 'check-vendored-contracts.mjs'), '--self-test'],
+        { stdio: 'pipe' }
+      );
+    } catch (error) {
+      threw = true;
+      if (typeof error !== 'object' || error === null || !('stderr' in error)) throw error;
+      stderr = String(error.stderr);
+    }
+    expect(threw).toBe(true);
+    expect(stderr).toContain('extra (discovered, not pinned)');
+    expect(stderr).toContain(
+      'backend-source -> pillars/backend-consumer/contracts/backend-source.openapi.json'
+    );
+  });
+
   it('passes against the real repo, reporting both mechanisms agree', () => {
     const stdout = execFileSync('node', [guardPath], { encoding: 'utf8' });
     expect(stdout).toContain('OK —');
-    expect(stdout).toContain('4 vendored contract(s)');
-    expect(stdout).toContain('4 config-declared expectation(s)');
+    expect(stdout).toContain('5 vendored contract(s)');
+    expect(stdout).toContain('5 config-declared expectation(s)');
   });
 
   it('its self-test passes, including the independent leg-set pin', () => {
@@ -606,11 +661,6 @@ describe('the guard CLI', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
   });
 
   it('fails loudly, not with OK, on a vendored-shaped copy outside every declared shape', () => {
-    // The exact blindness this suite exists to close: a `*.openapi.json`
-    // sitting under `pillars/<id>/contracts/` — a real, reachable directory
-    // shape (`pillars/bfm/contracts/`) that no `VENDOR_DIRECTORIES` entry
-    // names — used to be invisible to both the plain guard run and its
-    // `--self-test`. Both must now report it by path.
     const sandbox = fixtureRoot();
     cpSync(join(repoRoot, 'scripts', 'ci'), join(sandbox, 'scripts', 'ci'), { recursive: true });
     plantTsPair(sandbox, 'consumer-intact', 'producer-intact');
@@ -620,7 +670,7 @@ describe('the guard CLI', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
       join(sandbox, 'pillars', 'stray-source', 'openapi', 'stray-source.openapi.json'),
       '{}\n'
     );
-    const strayDir = join(sandbox, 'pillars', 'bfm-like', 'contracts');
+    const strayDir = join(sandbox, 'pillars', 'bfm-like', 'unregistered-contracts');
     mkdirSync(strayDir, { recursive: true });
     writeFileSync(join(strayDir, 'stray-source.openapi.json'), '{"drifted":true}\n');
 
@@ -636,7 +686,9 @@ describe('the guard CLI', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
     }
 
     expect(threw).toBe(true);
-    expect(stderr).toContain(join('pillars', 'bfm-like', 'contracts', 'stray-source.openapi.json'));
+    expect(stderr).toContain(
+      join('pillars', 'bfm-like', 'unregistered-contracts', 'stray-source.openapi.json')
+    );
     expect(stderr).toContain('outside every VENDOR_DIRECTORIES shape');
 
     let selfTestStderr = '';
@@ -654,7 +706,7 @@ describe('the guard CLI', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
 
     expect(selfTestThrew).toBe(true);
     expect(selfTestStderr).toContain(
-      join('pillars', 'bfm-like', 'contracts', 'stray-source.openapi.json')
+      join('pillars', 'bfm-like', 'unregistered-contracts', 'stray-source.openapi.json')
     );
   });
 });

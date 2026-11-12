@@ -2,6 +2,7 @@ import { initServer } from '@ts-rest/express';
 
 import { tripsContract } from '../../contract/rest.js';
 import { createTrip, getTrip, listTrips, updateTrip } from '../../db/services/records.js';
+import { createTripOperation } from '../../db/services/trip-create-operations.js';
 import { prepareTripTag } from './trip-tags.js';
 import { withTripsErrors } from './with-errors.js';
 
@@ -15,6 +16,13 @@ export function makeTripMetadataHandlers(
 ): ReturnType<typeof server.router<typeof tripsContract.trips>> {
   const db = deps.tripsDb.db;
   return server.router(tripsContract.trips, {
+    createOperation: ({ body }) =>
+      withTripsErrors(async () => ({
+        status: 201 as const,
+        body: await createTripOperation(db, body, (input) =>
+          prepareTripTag(db, input, deps.fetchSharedTagIds)
+        ),
+      })),
     list: () => withTripsErrors(() => ({ status: 200 as const, body: { trips: listTrips(db) } })),
     get: ({ params }) =>
       withTripsErrors(() => ({ status: 200 as const, body: getTrip(db, params.id) })),

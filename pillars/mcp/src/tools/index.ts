@@ -7,6 +7,7 @@ import { inventoryTools } from './inventory.js';
 import { mediaTools } from './media.js';
 import { purchasesTools } from './purchases.js';
 import { tagsTools } from './tags.js';
+import { tripsTools } from './trips.js';
 
 import type { ToolDef } from './tool-def.js';
 
@@ -22,4 +23,5 @@ export const allTools: readonly ToolDef[] = [
   ...cerebrumTools,
   ...purchasesTools,
   ...tagsTools,
+  ...tripsTools,
 ];

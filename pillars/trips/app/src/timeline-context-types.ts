@@ -7,12 +7,14 @@ import type {
 
 import type { ApiClients } from './api/types';
 import type { CaptureContextProps } from './CaptureContext';
+import type { TimelineCreateKind } from './timeline-create-session';
 
 /** A contextual source or tool selection within the owning Trip Timeline. */
 export type TimelineSelection =
   | { kind: 'source'; source: OverviewSource }
   | { kind: 'tool'; tool: OverviewTool }
   | { kind: 'metadata' }
+  | { kind: 'create'; sourceKind: TimelineCreateKind | 'idea' | null }
   | { kind: 'placement'; target: OverviewPlacementTarget | null };
 
 /** Canonical owner capabilities and controlled selection; the host retains its QueryClient. */

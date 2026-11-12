@@ -16,8 +16,8 @@ run-name: >-
 # back to the `pull_request` run on the head of the PR the commit landed from.
 # That lane skips the analyzer and the UI flow, so such a build has passed less.
 #
-# Both apps ship from every run. `DesignPlayground` depends on every Feature
-# package and on AppCore and DesignSystem, so the two apps share nearly every
+# All three apps ship from every run. `DesignPlayground` depends on every Feature
+# package and on AppCore and DesignSystem, so all three apps share nearly every
 # input and a per-app filter would save little — while a filter diffed against
 # the parent commit would silently never ship a change whose own run failed.
 #
@@ -73,7 +73,7 @@ jobs:
         run: node scripts/ci/testflight-ship-sha.mjs
 
   upload:
-    name: Upload Pops and PopsPlayground
+    name: Upload iOS apps
     needs: [pick]
     if: always() && needs.pick.result == 'success' && needs.pick.outputs.sha != ''
     # The image carrying the Xcode `clients/ios/mise.toml` pins; the SDK
@@ -150,6 +150,7 @@ jobs:
           status=0
           mise run release:testflight Pops || status=1
           mise run release:testflight PopsPlayground || status=1
+          mise run release:testflight PopsTrips || status=1
           exit "$status"
 
       - name: Remove the App Store Connect key

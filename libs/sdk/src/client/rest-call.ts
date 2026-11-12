@@ -57,6 +57,7 @@ function resolveRouteMap(routes: RestRouteSource): RouteMap {
   return buildRouteMap(routes);
 }
 
+/** Issue one REST call; explicit HTTP 204 succeeds with undefined, while other successes require JSON. */
 export async function performRestCall(ctx: RestCallContext): Promise<CallResult<unknown>> {
   const operationId = ctx.path.join('.');
   const route = resolveRouteMap(ctx.routes).get(operationId);
@@ -175,6 +176,7 @@ async function buildHeaders(
 }
 
 async function mapResponse(pillarId: string, response: Response): Promise<CallResult<unknown>> {
+  if (response.status === 204) return { kind: 'ok', value: undefined };
   let parsed: unknown;
   let parseFailed = false;
   try {

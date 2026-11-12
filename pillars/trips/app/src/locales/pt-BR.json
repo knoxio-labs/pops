@@ -349,6 +349,24 @@
       "applied": "Aplicado",
       "rejected": "A alteração do roteiro foi rejeitada. Recarregue para reconciliar o estado atual.",
       "uncertain": "O resultado da alteração do roteiro é desconhecido. Tente novamente a mesma operação para reconciliá-lo."
+    },
+    "create": {
+      "title": "Adicionar à linha do tempo",
+      "provider": "Fornecedor",
+      "placeName": "Nome do lugar",
+      "place": "Lugar",
+      "choosePlace": "Escolher um lugar",
+      "newPlace": "Novo lugar",
+      "createPlace": "Criar lugar",
+      "submit": "Criar",
+      "details": "Adicione os detalhes que você sabe agora. Depois de criar, você pode editar horários, referências e outros dados.",
+      "failed": "A criação foi rejeitada. Seu rascunho foi mantido; revise e tente novamente.",
+      "uncertain": "A resposta não foi confirmada. Este registro pode já existir. Confira a linha do tempo antes de iniciar explicitamente outra criação.",
+      "confirmed": "Este registro foi criado.",
+      "back": "Escolher outro tipo",
+      "open": "Abrir registro criado",
+      "beginNew": "Iniciar outra criação",
+      "placesFailed": "Não foi possível carregar os lugares. Tente novamente ou crie explicitamente um novo lugar."
     }
   }
 }
