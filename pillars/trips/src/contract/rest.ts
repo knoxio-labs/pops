@@ -31,6 +31,10 @@ import {
   exploreContract,
 } from './source-workspace.js';
 import { staysContract } from './stays.js';
+import {
+  TripCreateOperationResultSchema,
+  TripCreateOperationSchema,
+} from './trip-create-operations.js';
 
 const c = initContract();
 const IdParams = z.object({ id: z.coerce.number().int().positive() });
@@ -59,6 +63,17 @@ export const tripsContract = c.router(
     journeys: journeysContract,
     journeyLegs: journeyLegsContract,
     trips: c.router({
+      createOperation: {
+        method: 'POST',
+        path: '/trips/operations',
+        body: TripCreateOperationSchema,
+        responses: {
+          201: TripCreateOperationResultSchema,
+          400: ErrorBodySchema,
+          409: ErrorBodySchema,
+          503: ErrorBodySchema,
+        },
+      },
       list: {
         method: 'GET',
         path: '/trips',

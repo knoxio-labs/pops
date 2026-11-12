@@ -100,6 +100,7 @@ describe('Trips manifest', () => {
       ])
     );
     expect(manifest.routes.mutations).toContain('trips.visits.reorder');
+    expect(manifest.routes.mutations).toContain('trips.trips.createOperation');
     expect(manifest.routes.queries).toContain('trips.route.get');
     expect(manifest.routes.mutations).toContain('trips.route.operate');
     expect(manifest.routes.mutations).toEqual(
