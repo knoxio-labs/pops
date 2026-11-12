@@ -34,8 +34,7 @@ secret-file readability and prefers that file over the local environment. No
 credential is created by Trips. Both compose variants mount the Trips-owned
 `pops_trips_api_key` secret; the operator must first provision the account and
 host file using the [Trips deployment runbook](../../infra/secrets.example/trips/README.md).
-Without credentials in a standalone local process, independent metadata remains
-usable and an unknown explicit tag selection returns retryable 503.
+Inbound domain routes require either a service account with the projected Trips scope or a verified Cloudflare Access operator. Missing or invalid Access identity is never treated as an operator when service-account credentials are required; a presented service-account key is always verified for its scope. This inbound authentication is separate from the outbound credentials Trips uses to read Tags and Contacts. An unknown explicit tag selection without the outbound Tags credential returns retryable 503.
 
 Equivalent `/places` routes manage reusable names and source links.
 `GET/POST /trips/:tripId/visits` and `GET/PATCH /trips/:tripId/visits/:id` manage
