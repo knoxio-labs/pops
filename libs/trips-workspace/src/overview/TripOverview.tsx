@@ -86,6 +86,7 @@ function OverviewContent(props: OverviewViewProps): JSX.Element | null {
   return (
     <>
       <OverviewHeader {...props} />
+      {props.sourceControls}
       {props.calendar && <OverviewCalendar {...props} calendar={props.calendar} />}
       <div className={cn('grid min-w-0 gap-6', hasReferences && 'xl:grid-cols-3')}>
         <div className={cn('min-w-0 space-y-6', hasReferences && 'xl:col-span-2')}>
