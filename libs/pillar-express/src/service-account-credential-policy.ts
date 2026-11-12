@@ -1,9 +1,22 @@
 import type { RequestPrincipal } from './request-principal.js';
-import type { ServiceAccountScopeGateOptions } from './service-account-scope-gate.js';
 
-/** Decide whether the verified-operator exception removes a missing-key requirement. */
+/** Credential posture shared by gates and their service-account decision. */
+export interface CredentialPolicyOptions {
+  /**
+   * Whether a credential is mandatory on scoped paths. Defaults to `false`,
+   * the ADR-044 posture: callers without a key are left to the perimeter.
+   */
+  readonly requireCredential?: boolean;
+  /**
+   * Permit verified-email Access operators without a key on scoped routes.
+   * A presented key is always checked. Requires `requireCredential: true`.
+   */
+  readonly allowVerifiedAccessOperatorWithoutServiceAccountCredential?: boolean;
+}
+
+/** Decide whether a verified operator qualifies for the keyless exception. */
 export function requiredCredentialFor(
-  options: ServiceAccountScopeGateOptions,
+  options: CredentialPolicyOptions,
   apiKey: string | undefined,
   principal: RequestPrincipal
 ): boolean | undefined {

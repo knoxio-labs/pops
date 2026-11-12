@@ -41,7 +41,10 @@ import {
   type AuthFailure,
   type ServiceAccountErrorHandlers,
 } from './scope-gate-rejection.js';
-import { requiredCredentialFor } from './service-account-credential-policy.js';
+import {
+  requiredCredentialFor,
+  type CredentialPolicyOptions,
+} from './service-account-credential-policy.js';
 
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
 
@@ -64,7 +67,7 @@ export interface RawRouteTree {
 }
 
 /** What a pillar has to say to get a gate. */
-export interface ServiceAccountScopeGateOptions {
+export interface ServiceAccountScopeGateOptions extends CredentialPolicyOptions {
   /**
    * The pillar's ts-rest contract router. Projected onto the scope table, so
    * a route added to the contract is gated the moment it exists and there is
@@ -79,20 +82,6 @@ export interface ServiceAccountScopeGateOptions {
   readonly rootScope: string;
   /** Prefix for rejection logs, conventionally `<pillar>-api`. */
   readonly logPrefix: string;
-  /**
-   * Whether a credential is mandatory on scoped paths. Defaults to `false`,
-   * the ADR-044 posture: a caller presenting a key is held to its grant, and a
-   * caller presenting none is left to the perimeter that already governs it.
-   * Setting `true` additionally closes the unauthenticated in-network path,
-   * which is a separate decision about ADR-027's trust boundary and only
-   * affordable for a pillar all of whose callers carry keys.
-   */
-  readonly requireCredential?: boolean;
-  /**
-   * Permit verified-email Access operators without a key on scoped routes.
-   * A presented key is always checked. Requires `requireCredential: true`.
-   */
-  readonly allowVerifiedAccessOperatorWithoutServiceAccountCredential?: boolean;
   /**
    * Routes served outside the contract that must still be scoped — raw byte
    * routes that cannot be ts-rest routes but carry data a grant should
@@ -231,12 +220,13 @@ async function decide(gate: GateContext, req: Request, res: Response): Promise<A
   const route = resolveContractRoute(scopeMap, req.method, req.path);
   const requiredScope = route?.scope ?? resolveContractScope(rawScopeMap, req.method, req.path);
   const apiKey = readApiKey(req);
+  const hasApiKey = apiKey !== undefined && apiKey !== '';
   const guestMayReach = route?.guest === true || isHealthPath(req.path);
 
   const principal = await identifyRequest({
     classify,
     req,
-    hasApiKey: apiKey !== undefined && apiKey !== '',
+    hasApiKey,
     scoped: requiredScope !== undefined,
   });
   if (principal === null) return { status: 401, details: { credential: 'cloudflare-access' } };
