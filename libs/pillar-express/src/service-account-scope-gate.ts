@@ -41,6 +41,10 @@ import {
   type AuthFailure,
   type ServiceAccountErrorHandlers,
 } from './scope-gate-rejection.js';
+import {
+  requiredCredentialFor,
+  type CredentialPolicyOptions,
+} from './service-account-credential-policy.js';
 
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
 
@@ -63,7 +67,7 @@ export interface RawRouteTree {
 }
 
 /** What a pillar has to say to get a gate. */
-export interface ServiceAccountScopeGateOptions {
+export interface ServiceAccountScopeGateOptions extends CredentialPolicyOptions {
   /**
    * The pillar's ts-rest contract router. Projected onto the scope table, so
    * a route added to the contract is gated the moment it exists and there is
@@ -78,15 +82,6 @@ export interface ServiceAccountScopeGateOptions {
   readonly rootScope: string;
   /** Prefix for rejection logs, conventionally `<pillar>-api`. */
   readonly logPrefix: string;
-  /**
-   * Whether a credential is mandatory on scoped paths. Defaults to `false`,
-   * the ADR-044 posture: a caller presenting a key is held to its grant, and a
-   * caller presenting none is left to the perimeter that already governs it.
-   * Setting `true` additionally closes the unauthenticated in-network path,
-   * which is a separate decision about ADR-027's trust boundary and only
-   * affordable for a pillar all of whose callers carry keys.
-   */
-  readonly requireCredential?: boolean;
   /**
    * Routes served outside the contract that must still be scoped — raw byte
    * routes that cannot be ts-rest routes but carry data a grant should
@@ -141,12 +136,9 @@ export interface ServiceAccountScopeGate {
 }
 
 function readApiKey(req: Request): string | undefined {
-  // `req.get` collapses a repeated header to one string, so a client sending
-  // it twice is not silently read as an array and rejected as malformed.
   return req.get(SERVICE_ACCOUNT_HEADER);
 }
 
-/** The liveness probe is the one path a guest reaches without a marked route. */
 function isHealthPath(path: string): boolean {
   const lower = path.toLowerCase();
   return lower === '/health' || lower === '/health/';
@@ -210,10 +202,6 @@ interface DelegationStep {
   readonly guestMayReach: boolean;
 }
 
-/**
- * Hand the request to the guest a delegating key names. A gate that did not
- * opt in, or a request with no subject header, is left exactly as it was.
- */
 function applyDelegatedSubject(step: DelegationStep): AuthFailure | null {
   const { options, req, res, service, requiredScope, guestMayReach } = step;
   const { delegatedSubjectScope: delegationScope, logPrefix } = options;
@@ -227,23 +215,18 @@ function applyDelegatedSubject(step: DelegationStep): AuthFailure | null {
   return guestMayReach ? null : refuseGuest(logPrefix, requiredScope);
 }
 
-/**
- * One request's decision: resolve the principal, refuse a guest anywhere the
- * contract has not opened to one, apply the service-account rule unchanged,
- * then let a key that may delegate hand the request to the guest it names.
- * Returns the refusal to send, or `null` to proceed.
- */
 async function decide(gate: GateContext, req: Request, res: Response): Promise<AuthFailure | null> {
   const { options, scopeMap, rawScopeMap, verify, classify } = gate;
   const route = resolveContractRoute(scopeMap, req.method, req.path);
   const requiredScope = route?.scope ?? resolveContractScope(rawScopeMap, req.method, req.path);
   const apiKey = readApiKey(req);
+  const hasApiKey = apiKey !== undefined && apiKey !== '';
   const guestMayReach = route?.guest === true || isHealthPath(req.path);
 
   const principal = await identifyRequest({
     classify,
     req,
-    hasApiKey: apiKey !== undefined && apiKey !== '',
+    hasApiKey,
     scoped: requiredScope !== undefined,
   });
   if (principal === null) return { status: 401, details: { credential: 'cloudflare-access' } };
@@ -257,7 +240,7 @@ async function decide(gate: GateContext, req: Request, res: Response): Promise<A
     requiredScope,
     apiKey,
     verify,
-    requireCredential: options.requireCredential,
+    requireCredential: requiredCredentialFor(options, apiKey, principal),
   });
   if (!result.ok) return scopeRejection(options.logPrefix, result);
 
@@ -282,6 +265,14 @@ async function decide(gate: GateContext, req: Request, res: Response): Promise<A
 export function createServiceAccountScopeGate(
   options: ServiceAccountScopeGateOptions
 ): ServiceAccountScopeGate {
+  if (
+    options.allowVerifiedAccessOperatorWithoutServiceAccountCredential === true &&
+    options.requireCredential !== true
+  ) {
+    throw new Error(
+      `[${options.logPrefix}] the verified Access operator exception requires requireCredential: true.`
+    );
+  }
   const scopeMap = buildContractScopeMap(options.contract, options.rootScope);
   const { logPrefix, rootScope } = options;
 
