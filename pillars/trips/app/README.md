@@ -11,6 +11,15 @@ selected source identity. Documents is the separate Trip list shortcut. The exis
 `:tripId/arrangements` URL and `trips-arrangements` slot load this same Timeline.
 Source detail URLs remain available for existing links. The header metadata action
 opens the canonical settings form in the same sheet; it does not add a Trip destination.
+Add to timeline opens a progressive source chooser in that sheet. Visit creation requires
+an explicitly selected reusable Place; capturing a new Place is a separate acknowledged
+operation before creating the Visit. Journey, Stay, Event and Rental capture only the
+initial name or provider and then open their existing editors. No dates, booking states
+or route placements are inferred. Non-idempotent creates retain drafts and dispatched
+outcomes per QueryClient, actual transport, captured origin, Trip and source kind.
+A lost response locks creation until the user explicitly starts another; a confirmed
+record can be reopened without another POST. Direct Idea creation uses the canonical
+Capture operation UUID and retained retry engine, independently of the Capture composer.
 Whole Journey, Stay, Event and Rental contexts reuse the independent Handled by controls;
 Rentals have no Documents target. Route controls use the canonical retained UUID/revision
 controller for explicit gaps, moves, complete order, alternative paths, apply and Undo.

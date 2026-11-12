@@ -349,6 +349,24 @@
       "applied": "Applied",
       "rejected": "The route change was rejected. Reload to reconcile its current state.",
       "uncertain": "The route change has an unknown outcome. Retry the same operation to reconcile it."
+    },
+    "create": {
+      "title": "Add to timeline",
+      "provider": "Provider",
+      "placeName": "Place name",
+      "place": "Place",
+      "choosePlace": "Choose a place",
+      "newPlace": "New place",
+      "createPlace": "Create place",
+      "submit": "Create",
+      "details": "Add the details you know now. You can edit timing, references and other facts after creation.",
+      "failed": "Creation was rejected. Your draft is retained; review it and try again.",
+      "uncertain": "The response was not confirmed. This record may already exist. Check the Timeline before explicitly starting another creation.",
+      "confirmed": "This record was created.",
+      "back": "Choose another type",
+      "open": "Open created record",
+      "beginNew": "Start another creation",
+      "placesFailed": "Places could not be loaded. Retry or explicitly create a new place."
     }
   }
 }
