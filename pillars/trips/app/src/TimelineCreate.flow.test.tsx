@@ -404,3 +404,72 @@ it('creates a direct Idea through the producer receipt without a synthetic Captu
   fireEvent.click(within(sheet).getByRole('button', { name: 'Close' }));
   expect(await screen.findByRole('button', { name: 'Direct Timeline Idea' })).toBeVisible();
 }, 60_000);
+
+it('recovers the original acknowledged source after returning from a changed origin without a second POST', async () => {
+  const originalOrigin = owner.client.getConfig().baseUrl;
+  if (!originalOrigin) throw new Error('The actual producer origin is missing');
+  const foreignOrigin = `${originalOrigin}/foreign`;
+  const held = owner.holdNextStayCreate();
+  try {
+    const view = mount();
+    const sheet = await start('Stay');
+    const original = timelineCreateSession(
+      cache,
+      { tripId: owner.tripId, client: owner.client },
+      'stay'
+    );
+    fireEvent.change(within(sheet).getByRole('textbox', { name: 'Name' }), {
+      target: { value: 'Original origin acknowledged Stay' },
+    });
+    fireEvent.click(within(sheet).getByRole('button', { name: 'Create' }));
+    await held.committed;
+    const persisted = unwrap(
+      await staysList({ client: owner.client, path: { tripId: owner.tripId } })
+    ).stays;
+    expect(persisted).toHaveLength(1);
+    const saved = persisted[0];
+    if (!saved) throw new Error('The actual created Stay is missing');
+    owner.client.setConfig({ baseUrl: foreignOrigin });
+    view.rerender(content(owner.client));
+    await waitFor(() =>
+      expect(
+        cache
+          .getQueryCache()
+          .findAll({ predicate: (query) => query.queryKey.includes(foreignOrigin) }).length
+      ).toBeGreaterThan(0)
+    );
+    await act(async () => {
+      held.release();
+      await waitFor(() => expect(original.snapshot().status).toBe('confirmed'));
+    });
+    expect(original.snapshot().created).toEqual({ kind: 'stay', id: saved.id });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    for (const query of cache
+      .getQueryCache()
+      .findAll({ predicate: (query) => query.queryKey.includes(foreignOrigin) }))
+      expect(query.state.data).toBeUndefined();
+    owner.client.setConfig({ baseUrl: originalOrigin });
+    view.rerender(content(owner.client));
+    fireEvent.click(await screen.findByRole('button', { name: 'Add to timeline' }));
+    const returned = screen.getByRole('dialog');
+    fireEvent.click(within(returned).getByRole('button', { name: 'Stay' }));
+    fireEvent.click(await within(returned).findByRole('button', { name: 'Open created record' }));
+    expect(await within(returned).findByRole('textbox', { name: 'Stay name' })).toHaveValue(
+      saved.name
+    );
+    expect(returned).toHaveAccessibleName(`Stay #${saved.id}`);
+    expect(
+      timelineCreateSession(cache, { tripId: owner.tripId, client: owner.client }, 'stay')
+    ).toBe(original);
+    expect(owner.requests.filter(({ method }) => method !== 'GET')).toEqual([
+      {
+        method: 'POST',
+        path: `/trips/${owner.tripId}/stays`,
+        body: { name: 'Original origin acknowledged Stay' },
+      },
+    ]);
+  } finally {
+    held.release();
+    owner.client.setConfig({ baseUrl: originalOrigin });
+  }
+}, 60_000);

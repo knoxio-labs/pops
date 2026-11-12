@@ -257,15 +257,18 @@ it('isolates QueryClient/client/origin/Trip/kind and fences dispatch after origi
   expect(session.snapshot().text).toBe(name);
 });
 
-it('retains an unknown acknowledgement when the original origin changes during dispatch', async () => {
+it('retains a validated acknowledgement for the original owner when its live origin changes during dispatch', async () => {
   const owner = fixture();
   owner.responses.push(() => {
     owner.identity.client.setConfig({ baseUrl: 'https://other.test' });
     return Response.json(replies.journey, { status: 201 });
   });
   const session = owner.session('journey');
-  expect(await session.submit()).toBeUndefined();
-  expect(session.snapshot().status).toBe('unknown');
+  expect(await session.submit()).toEqual({ kind: 'journey', id: 41 });
+  expect(session.snapshot()).toMatchObject({
+    status: 'confirmed',
+    created: { kind: 'journey', id: 41 },
+  });
   expect(owner.requests).toHaveLength(1);
 });
 
@@ -347,4 +350,74 @@ it('uses the app default client and fences its original configured origin', asyn
     defaultClient.setConfig(original);
     scope.clear();
   }
+});
+
+it('retains a known original-owner 201 across view loss and origin replacement without invalidating the replacement cache', async () => {
+  const owner = fixture();
+  const originalKey = ['trips', 'https://trips.test', 7];
+  const replacementKey = ['trips', 'https://other.test', 7];
+  owner.scope.setQueryData(originalKey, 'original source');
+  owner.scope.setQueryData(replacementKey, 'replacement source');
+  let release: (response: Response) => void = () => {
+    throw new Error('Response not initialized');
+  };
+  const response = new Promise<Response>((resolve) => {
+    release = resolve;
+  });
+  owner.responses.push(() => {
+    owner.identity.client.setConfig({ baseUrl: 'https://other.test' });
+    return response;
+  });
+  const original = owner.session('journey');
+  original.edit({ text: name });
+  const submitted = original.submit();
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  const replacement = owner.session('journey');
+  expect(replacement).not.toBe(original);
+  expect(replacement.snapshot().status).toBe('idle');
+  release(Response.json(replies.journey, { status: 201 }));
+  expect(await submitted).toEqual({ kind: 'journey', id: 41 });
+  expect(original.snapshot()).toMatchObject({
+    status: 'confirmed',
+    text: name,
+    created: { kind: 'journey', id: 41 },
+  });
+  expect(owner.scope.getQueryState(originalKey)?.isInvalidated).toBe(true);
+  expect(owner.scope.getQueryState(replacementKey)?.isInvalidated).toBe(false);
+  expect(replacement.snapshot().created).toBeUndefined();
+  owner.scope.clear();
+  owner.identity.client.setConfig({ baseUrl: 'https://trips.test' });
+  const reopened = owner.session('journey');
+  expect(reopened).toBe(original);
+  expect(reopened.snapshot().created).toEqual({ kind: 'journey', id: 41 });
+  expect(await reopened.submit()).toBeUndefined();
+  expect(owner.requests).toHaveLength(1);
+});
+
+it('retains pending and acknowledged creations on their actual client when another same-origin client is selected', async () => {
+  const owner = fixture();
+  const replacementClient = createClient({ baseUrl: 'https://trips.test' });
+  const replacement = timelineCreateSession(
+    owner.scope,
+    { tripId: 7, client: replacementClient },
+    'journey'
+  );
+  let release: (response: Response) => void = () => {
+    throw new Error('Response not initialized');
+  };
+  const response = new Promise<Response>((resolve) => {
+    release = resolve;
+  });
+  owner.responses.push(() => response);
+  const original = owner.session('journey');
+  const submitted = original.submit();
+  expect(replacement.snapshot().status).toBe('idle');
+  expect(original.snapshot().status).toBe('pending');
+  release(Response.json(replies.journey, { status: 201 }));
+  expect(await submitted).toEqual({ kind: 'journey', id: 41 });
+  expect(replacement.snapshot().created).toBeUndefined();
+  owner.scope.clear();
+  expect(owner.session('journey').snapshot().created).toEqual({ kind: 'journey', id: 41 });
+  expect(await original.submit()).toBeUndefined();
+  expect(owner.requests).toHaveLength(1);
 });

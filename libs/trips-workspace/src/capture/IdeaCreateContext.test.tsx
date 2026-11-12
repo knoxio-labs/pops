@@ -279,3 +279,49 @@ it('rejects a created Idea belonging to another Trip before invoking the host', 
   expect(created).not.toHaveBeenCalled();
   expect(screen.getByRole('button', { name: 'Create Idea' })).toBeDisabled();
 });
+
+it('settles a validated in-flight receipt into its original owner after the live origin changes', async () => {
+  const owner = fixture();
+  const pending = owner.defer();
+  const first = mount({ client: owner.client });
+  const secondOriginKey = ['trips', 'https://replacement.test', 1, 'capture_workspace'];
+  const secondOriginSource = { marker: 'Untouched second origin' };
+  first.cache.setQueryData(secondOriginKey, secondOriginSource);
+  const invalidate = vi.spyOn(first.cache, 'invalidateQueries');
+  fireEvent.change(await screen.findByLabelText('Name'), { target: { value: 'Original receipt' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Create Idea' }));
+  await waitFor(() => expect(owner.writes).toHaveLength(1));
+  owner.client.setConfig({ baseUrl: 'https://replacement.test' });
+  first.update({ client: owner.client, onCreated: first.created });
+  const body = z.object({ operationId: z.string() }).parse(owner.writes[0]);
+  await act(async () => {
+    pending.resolve(
+      Response.json(
+        captureResult(
+          {
+            operationId: body.operationId,
+            command: { kind: 'idea.create', input: { name: 'Original receipt' } },
+          },
+          { ...captureSource(), ideas: [sourceIdea({ id: 42, name: 'Original receipt' })] }
+        )
+      )
+    );
+  });
+  expect(first.created).not.toHaveBeenCalled();
+  expect(invalidate).toHaveBeenCalledWith({ queryKey: ['trips', 'https://idea-owner.test', 1] });
+  expect(invalidate).not.toHaveBeenCalledWith({
+    queryKey: ['trips', 'https://replacement.test', 1],
+  });
+  expect(first.cache.getQueryData(secondOriginKey)).toEqual(secondOriginSource);
+  first.unmount();
+  first.cache.removeQueries({
+    queryKey: ['trips', 'https://idea-owner.test', 1, 'idea-create-source'],
+  });
+  owner.failRead();
+  owner.client.setConfig({ baseUrl: 'https://idea-owner.test' });
+  const restored = mount({ client: owner.client }, first.cache);
+  await screen.findByText('Source unavailable');
+  fireEvent.click(await screen.findByRole('button', { name: 'Open created Idea' }));
+  expect(restored.created).toHaveBeenCalledWith({ kind: 'idea', id: 42 });
+  expect(owner.writes).toHaveLength(1);
+});

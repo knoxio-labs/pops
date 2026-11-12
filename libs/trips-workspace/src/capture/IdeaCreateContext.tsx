@@ -36,7 +36,6 @@ class IdeaCreationSession {
       perform: async (request) => {
         assertSourceOwner(this.owner);
         const result = await performCaptureRequest(this.owner, request);
-        assertSourceOwner(this.owner);
         createdIdea(result, this.owner.tripId);
         return result;
       },

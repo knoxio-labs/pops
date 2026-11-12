@@ -20,6 +20,8 @@ outcomes per QueryClient, actual transport, captured origin, Trip and source kin
 A lost response locks creation until the user explicitly starts another; a confirmed
 record can be reopened without another POST. Direct Idea creation uses the canonical
 Capture operation UUID and retained retry engine, independently of the Capture composer.
+An already-dispatched validated acknowledgement settles its original session and cache
+even after the live connection changes; only a current view may open the returned source.
 Whole Journey, Stay, Event and Rental contexts reuse the independent Handled by controls;
 Rentals have no Documents target. Route controls use the canonical retained UUID/revision
 controller for explicit gaps, moves, complete order, alternative paths, apply and Undo.

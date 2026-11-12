@@ -104,7 +104,6 @@ export class TimelineCreateSession {
     this.update({ status: 'pending', error: null });
     try {
       const created = await sendCreation(this.owner, input);
-      if (!this.isCurrent()) throw new CreateFailure(true);
       this.update({ status: 'confirmed', created });
       const queryKey =
         created.kind === 'place'
