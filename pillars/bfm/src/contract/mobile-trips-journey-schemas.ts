@@ -8,19 +8,25 @@ import {
   MobileTripTimeZoneSchema,
 } from './mobile-trips-schemas.js';
 
-/** Optional local wall clock and zone are separate source facts, never an invented UTC instant. */
-export const MobileJourneyEndpointSchema = z.object({
-  placeId: MobileTripIdSchema.optional(),
-  sourceLabel: z.string().optional(),
-  sourceLinks: z.array(MobileTripSourceLinkSchema).optional(),
-  local: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?$/u)
-    .refine((value) => MobileTripDateSchema.safeParse(value.slice(0, 10)).success)
-    .refine((value) => z.iso.time().safeParse(value.slice(11)).success)
-    .optional(),
-  timeZone: MobileTripTimeZoneSchema.optional(),
-});
+/** A calendar day or local datetime retains its source precision; neither fills a zone or instant. */
+export const MobileJourneyEndpointSchema = z
+  .object({
+    placeId: MobileTripIdSchema.optional(),
+    sourceLabel: z.string().optional(),
+    sourceLinks: z.array(MobileTripSourceLinkSchema).optional(),
+    local: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?$/u)
+      .refine((value) => MobileTripDateSchema.safeParse(value.slice(0, 10)).success)
+      .refine((value) => z.iso.time().safeParse(value.slice(11)).success)
+      .optional(),
+    timeZone: MobileTripTimeZoneSchema.optional(),
+    date: MobileTripDateSchema.optional(),
+  })
+  .refine((value) => value.date === undefined || value.local === undefined, {
+    message: 'Supply a calendar day or a local datetime, not both',
+    path: ['date'],
+  });
 /** Configured producer thresholds remain optional; BFM does not invent safety minimums. */
 export const MobileJourneyBuffersSchema = z.object({
   minimumConnectionMinutes: z.number().nonnegative().optional(),

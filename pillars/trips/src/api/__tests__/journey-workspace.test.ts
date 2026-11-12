@@ -62,6 +62,28 @@ it('publishes an authenticated trip-owned snapshot whose timing matches exactly 
     expect(next.legs).toEqual([changed]);
     expect(next.timing).toEqual(deriveJourneyTiming(journey.id, next.legs));
     expect(next.timing.findings).toMatchObject([{ code: 'arrival_before_departure' }]);
+    const legPath = `${origin}/trips/${trip.id}/journeys/${journey.id}/legs/${leg.id}`;
+    const patch = (body: unknown) =>
+      fetch(legPath, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json', 'x-api-key': 'legs' },
+        body: JSON.stringify(body),
+      });
+    expect((await patch({ from: { date: '2028-02-29' }, to: {} })).status).toBe(200);
+    const daySnapshot = JourneyWorkspaceSchema.parse(await (await read()).json());
+    expect(daySnapshot.legs[0]?.from).toEqual({ date: '2028-02-29' });
+    expect(daySnapshot.timing.legs[0]).toEqual({
+      legId: leg.id,
+      departure: null,
+      arrival: null,
+      elapsedMinutes: null,
+      departureSource: { date: '2028-02-29', precision: 'day' },
+      arrivalSource: { date: null, precision: 'unknown' },
+    });
+    expect((await patch({ from: { date: '2028-02-29', local: '2028-02-29T11:00' } })).status).toBe(
+      400
+    );
+    expect(JourneyWorkspaceSchema.parse(await (await read()).json())).toEqual(daySnapshot);
     expect(await (await fetch(`${origin}/openapi`)).json()).toMatchObject({
       paths: {
         '/trips/{tripId}/journeys/{id}/workspace': { get: { operationId: 'journeys.workspace' } },

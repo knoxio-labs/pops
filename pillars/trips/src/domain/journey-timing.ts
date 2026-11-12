@@ -1,6 +1,11 @@
 import { Temporal } from '@js-temporal/polyfill';
 
-import { elapsedJourneyInstants, journeyClockInstant, journeyDayBoundary } from './journey-time.js';
+import {
+  elapsedJourneyInstants,
+  journeyClockInstant,
+  journeyDayBoundary,
+  journeySourceDay,
+} from './journey-time.js';
 
 import type { JourneyLeg } from '../contract/journey-schemas.js';
 import type {
@@ -56,6 +61,8 @@ function resolveLeg(source: JourneyLeg): ResolvedLeg {
       departure: from?.toString() ?? null,
       arrival: to?.toString() ?? null,
       elapsedMinutes,
+      departureSource: journeySourceDay(source.from),
+      arrivalSource: journeySourceDay(source.to),
     },
     findings,
   };

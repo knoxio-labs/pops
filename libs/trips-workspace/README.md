@@ -236,6 +236,11 @@ and arrival journey editor. It reads ordered legs and independent grouping ident
 through the same generated Trips client. Endpoint edits submit complete retained
 endpoint values; clearing a clock or zone never clears location or provenance.
 Local times use plain ISO text, preserving optional seconds and fractional precision.
+The independent day control accepts a known calendar day without selecting a clock
+or zone. Clearing a local datetime retains its day; clearing the day removes both
+day and clock. Changing an existing datetime's day retains its exact clock precision.
+Complete endpoint snapshots, including Undo, explicitly send `date: null` when no
+day-only value is intended, so legacy omission-preservation cannot retain a removed day.
 Only explicit draft changes save on blur; untouched fields never normalize source values.
 Journey and leg notes support multiple lines.
 Mode remains open source text, and intention, arrangement and purchase are independent.
@@ -457,7 +462,10 @@ window. Journey windows come directly from usable owning timing projections.
 Floating dates are never midnight instants; complete skipped/repeated source clocks
 remain unresolved. Recorded boundaries and clipped ongoing intervals keep projection
 work proportional to sources rather than the number of days selected. Stay occupancy
-ends before checkout. Floating Event endpoints imply no intermediate occupancy. Unknown dates and chronology issues remain available to open.
+ends before checkout. Day-only Journey and floating Event endpoints imply no
+intermediate occupancy. Journey days stay on their supplied calendar date in every
+display zone, with time unknown. The Timeline also retains those source days.
+Unknown dates and chronology issues remain available to open.
 Required read failures never become empty collections; failed background refreshes
 retain the last complete read and explicit retry. The standalone `/calendar/:tripId`
 route mounts this workspace; source opening targets the shell's literal source paths.

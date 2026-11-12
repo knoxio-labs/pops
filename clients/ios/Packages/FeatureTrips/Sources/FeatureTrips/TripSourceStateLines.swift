@@ -7,6 +7,14 @@ internal struct TripSourceStateLines: View {
     internal var body: some View {
         if case .journey(let journey) = source {
             ForEach(journey.legs) { leg in
+                if let day = leg.from.date {
+                    Text("Departure \(day) · Time unknown")
+                        .font(.popsCaption).foregroundStyle(Color.popsMutedForeground)
+                }
+                if let day = leg.to.date {
+                    Text("Arrival \(day) · Time unknown")
+                        .font(.popsCaption).foregroundStyle(Color.popsMutedForeground)
+                }
                 let states = [leg.intention, leg.arrangement].compactMap { $0 }
                 if !states.isEmpty {
                     let name = journey.legs.count > 1 ? leg.service ?? "Leg \(leg.id)" : nil

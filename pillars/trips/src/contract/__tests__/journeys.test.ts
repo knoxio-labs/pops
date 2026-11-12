@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   JourneyBuffersSchema,
   JourneyEndpointSchema,
+  JourneyEndpointInputSchema,
   JourneyInputSchema,
   JourneyLegInputSchema,
 } from '../journey-schemas.js';
@@ -14,11 +15,32 @@ describe('Journey source contracts', () => {
     for (const source of [
       {},
       { placeId: 1 },
+      { date: '2028-02-29' },
       { local: '2028-01-01T10:00' },
       { timeZone: 'UTC' },
       { sourceLabel: 'Source location', sourceLinks: [{ uri: 'pops:documents/document/42' }] },
     ])
       expect(JourneyEndpointSchema.parse(source)).toEqual(source);
+  });
+
+  it('distinguishes omitted, cleared and day-only writes without defaulting precision', () => {
+    expect(JourneyEndpointInputSchema.parse({})).toEqual({});
+    expect(JourneyEndpointInputSchema.parse({ date: null })).toEqual({ date: null });
+    expect(JourneyEndpointInputSchema.parse({ date: '2028-02-29', timeZone: 'UTC' })).toEqual({
+      date: '2028-02-29',
+      timeZone: 'UTC',
+    });
+    expect(JourneyEndpointInputSchema.parse({ date: null, local: '2028-02-29T12:30' })).toEqual({
+      date: null,
+      local: '2028-02-29T12:30',
+    });
+    for (const date of ['2027-02-29', '2028-02-30', '2028-02-29T12:30', ''])
+      expect(JourneyEndpointInputSchema.safeParse({ date }).success).toBe(false);
+    expect(JourneyEndpointSchema.safeParse({ date: null }).success).toBe(false);
+    for (const schema of [JourneyEndpointSchema, JourneyEndpointInputSchema])
+      expect(schema.safeParse({ date: '2028-02-29', local: '2028-02-29T12:30' }).success).toBe(
+        false
+      );
   });
 
   it.each(['2028-02-29T10:00', '2028-01-01T23:59:59.123', '2028-03-12T02:30', '2028-11-05T01:30'])(

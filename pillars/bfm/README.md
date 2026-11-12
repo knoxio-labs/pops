@@ -522,7 +522,9 @@ unpaginated list, so BFM reads it completely before paging.
 
 Detail retains source identities and producer visit/leg order. Endpoint local
 clocks and zones remain independent optional facts; date-only stays never gain
-an inferred clock. When remains opaque. Intention, arrangement and purchase
+an inferred clock. Journey endpoints also retain an optional day-only `date`, mutually
+exclusive with `local`; BFM forwards it without inventing a clock, zone or instant.
+When remains opaque. Intention, arrangement and purchase
 stay independent, and journey groups retain explicit current/alternative IDs.
 Event date bounds, clocks and zone also remain independent; BFM creates no
 midnight or UTC fallback. Visit duration accepts either supplied bound and a

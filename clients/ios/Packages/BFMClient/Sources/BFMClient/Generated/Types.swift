@@ -100391,6 +100391,8 @@ internal enum Operations {
                                 internal var createdAt: Foundation.Date
                                 /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/from`.
                                 internal struct FromPayload: Codable, Hashable, Sendable {
+                                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/from/date`.
+                                    internal var date: Swift.String?
                                     /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/from/local`.
                                     internal var local: Swift.String?
                                     /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/from/placeId`.
@@ -100491,18 +100493,21 @@ internal enum Operations {
                                     /// Creates a new `FromPayload`.
                                     ///
                                     /// - Parameters:
+                                    ///   - date:
                                     ///   - local:
                                     ///   - placeId:
                                     ///   - sourceLabel:
                                     ///   - sourceLinks:
                                     ///   - timeZone:
                                     internal init(
+                                        date: Swift.String? = nil,
                                         local: Swift.String? = nil,
                                         placeId: Swift.Int? = nil,
                                         sourceLabel: Swift.String? = nil,
                                         sourceLinks: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.LegsPayloadPayload.FromPayload.SourceLinksPayload? = nil,
                                         timeZone: Swift.String? = nil
                                     ) {
+                                        self.date = date
                                         self.local = local
                                         self.placeId = placeId
                                         self.sourceLabel = sourceLabel
@@ -100510,6 +100515,7 @@ internal enum Operations {
                                         self.timeZone = timeZone
                                     }
                                     internal enum CodingKeys: String, CodingKey {
+                                        case date
                                         case local
                                         case placeId
                                         case sourceLabel
@@ -100518,6 +100524,10 @@ internal enum Operations {
                                     }
                                     internal init(from decoder: any Swift.Decoder) throws {
                                         let container = try decoder.container(keyedBy: CodingKeys.self)
+                                        self.date = try container.decodeIfPresent(
+                                            Swift.String.self,
+                                            forKey: .date
+                                        )
                                         self.local = try container.decodeIfPresent(
                                             Swift.String.self,
                                             forKey: .local
@@ -100539,6 +100549,7 @@ internal enum Operations {
                                             forKey: .timeZone
                                         )
                                         try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                            "date",
                                             "local",
                                             "placeId",
                                             "sourceLabel",
@@ -100670,6 +100681,8 @@ internal enum Operations {
                                 internal var sourceLinks: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.LegsPayloadPayload.SourceLinksPayload
                                 /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/to`.
                                 internal struct ToPayload: Codable, Hashable, Sendable {
+                                    /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/to/date`.
+                                    internal var date: Swift.String?
                                     /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/to/local`.
                                     internal var local: Swift.String?
                                     /// - Remark: Generated from `#/paths/mobile/trips/{id}/GET/responses/200/content/json/JourneysPayload/LegsPayload/to/placeId`.
@@ -100770,18 +100783,21 @@ internal enum Operations {
                                     /// Creates a new `ToPayload`.
                                     ///
                                     /// - Parameters:
+                                    ///   - date:
                                     ///   - local:
                                     ///   - placeId:
                                     ///   - sourceLabel:
                                     ///   - sourceLinks:
                                     ///   - timeZone:
                                     internal init(
+                                        date: Swift.String? = nil,
                                         local: Swift.String? = nil,
                                         placeId: Swift.Int? = nil,
                                         sourceLabel: Swift.String? = nil,
                                         sourceLinks: Operations.MobileTrips_getTrip.Output.Ok.Body.JsonPayload.JourneysPayloadPayload.LegsPayloadPayload.ToPayload.SourceLinksPayload? = nil,
                                         timeZone: Swift.String? = nil
                                     ) {
+                                        self.date = date
                                         self.local = local
                                         self.placeId = placeId
                                         self.sourceLabel = sourceLabel
@@ -100789,6 +100805,7 @@ internal enum Operations {
                                         self.timeZone = timeZone
                                     }
                                     internal enum CodingKeys: String, CodingKey {
+                                        case date
                                         case local
                                         case placeId
                                         case sourceLabel
@@ -100797,6 +100814,10 @@ internal enum Operations {
                                     }
                                     internal init(from decoder: any Swift.Decoder) throws {
                                         let container = try decoder.container(keyedBy: CodingKeys.self)
+                                        self.date = try container.decodeIfPresent(
+                                            Swift.String.self,
+                                            forKey: .date
+                                        )
                                         self.local = try container.decodeIfPresent(
                                             Swift.String.self,
                                             forKey: .local
@@ -100818,6 +100839,7 @@ internal enum Operations {
                                             forKey: .timeZone
                                         )
                                         try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                            "date",
                                             "local",
                                             "placeId",
                                             "sourceLabel",
