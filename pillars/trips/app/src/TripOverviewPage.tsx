@@ -154,6 +154,9 @@ function TimelineControls({
   const { t } = useTranslation('trips');
   return (
     <div className="flex min-w-0 flex-wrap gap-2">
+      <Button className="min-h-11" onClick={() => onSelect({ kind: 'create', sourceKind: null })}>
+        {t('timeline.create.title')}
+      </Button>
       <Button
         variant="outline"
         className="min-h-11"
