@@ -124,7 +124,13 @@
       "event": "Event",
       "decision": "Decision",
       "document": "Document",
-      "group": "Journey group"
+      "group": "Journey group",
+      "meeting": "Meeting",
+      "capture": "Capture",
+      "idea": "Idea",
+      "rental": "Rental",
+      "gap": "Gap",
+      "path": "Path"
     },
     "status": {
       "In plan": "In plan",
@@ -155,7 +161,28 @@
       "journeys": "Journeys",
       "groups": "Journey groups",
       "decisions": "Decisions",
-      "documents": "Documents"
+      "documents": "Documents",
+      "meeting": "Meeting",
+      "capture": "Capture",
+      "idea": "Idea",
+      "people": "People",
+      "inbox": "Inbox",
+      "explore": "Explore",
+      "rental": "Rental",
+      "calendar": {
+        "zone": "Choose a valid display time zone",
+        "range": "Choose a valid date range with the end on or after the start",
+        "window": "This journey window is unavailable. Choose another journey or all dates.",
+        "empty": "No entries in this range"
+      },
+      "unplaced": "Not placed in route",
+      "meetings": "Meetings",
+      "rentals": "Rentals",
+      "pickup": "Pickup",
+      "return": "Return",
+      "alternative": "Alternative",
+      "applied": "Applied",
+      "connectionChanged": "The Trips connection changed. Reopen the Trip before selecting a source."
     }
   },
   "arrangements": {
@@ -286,5 +313,42 @@
     "nights_one": "{{count}} night",
     "nights_other": "{{count}} nights"
   },
-  "calendar": "Calendar"
+  "calendar": "Calendar",
+  "timeline": {
+    "tools": {
+      "people": "People",
+      "capture": "Capture",
+      "inbox": "Inbox",
+      "explore": "Explore"
+    },
+    "route": {
+      "title": "Edit route",
+      "unavailable": "This route placement is unavailable. Reload the route to review its current state.",
+      "reload": "Reload route",
+      "undo": "Undo route change",
+      "addGap": "Add gap at end",
+      "upSource": "Move {{source}} up",
+      "downSource": "Move {{source}} down",
+      "up": "Move up",
+      "down": "Move down",
+      "gapBefore": "Insert gap before {{source}}",
+      "paths": "Alternative paths",
+      "gap": "Insertion gap",
+      "chooseGap": "Choose a gap",
+      "pathTitle": "Path title",
+      "createPath": "Create path",
+      "pathIdentity": "Path #{{id}}",
+      "applyPath": "Use this path",
+      "placement": "Route placement",
+      "move": "Move source",
+      "destination": "Destination",
+      "chooseDestination": "Choose a destination",
+      "before": "Insert before",
+      "end": "End",
+      "alternative": "Alternative",
+      "applied": "Applied",
+      "rejected": "The route change was rejected. Reload to reconcile its current state.",
+      "uncertain": "The route change has an unknown outcome. Retry the same operation to reconcile it."
+    }
+  }
 }

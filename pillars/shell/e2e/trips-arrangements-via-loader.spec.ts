@@ -97,6 +97,36 @@ async function stubSources(page: Page) {
   const staySources: unknown[] = [stay];
   await stubShellBoot(page, ['trips']);
   const owners = await stubArrangementOwners(page);
+  const timelineReads = {
+    'journey-groups': { groups: [] },
+    decisions: { decisions: [] },
+    'meeting-plans': { meetingPlans: [] },
+    'capture-workspace': {
+      captures: [],
+      ideas: [],
+      associations: [],
+      memberships: [],
+      events: [],
+      journeys: [],
+      stays: [],
+    },
+    route: {
+      tripId: 7,
+      revision: 0,
+      order: [
+        { kind: 'visit', id: 31 },
+        { kind: 'journey', id: 20 },
+        { kind: 'visit', id: 32 },
+      ],
+      paths: [],
+      missingSources: [],
+    },
+  };
+  for (const [collection, response] of Object.entries(timelineReads)) {
+    await page.route(new RegExp(`/trips-api/trips/7/${collection}$`), (route) =>
+      json(route, 200, response)
+    );
+  }
   await page.route(/\/trips-api\/places$/, (route) =>
     json(route, 200, { places: [{ id: 51, name: 'Wellington', sourceLinks: [], ...audit }] })
   );
@@ -218,19 +248,22 @@ for (const viewport of [
       await json(route, 200, responsibility());
     });
     await page.goto('/trips/7/arrangements');
-    await expect(page.getByRole('heading', { name: 'Arrangements', exact: true })).toBeVisible();
-    const rentalCard = page.getByRole('article', { name: 'Harbour cars' });
+    await expect(page.getByRole('heading', { name: 'Coast trip', exact: true })).toBeVisible();
+    const rentalCard = page
+      .getByRole('article')
+      .filter({ has: page.getByRole('button', { name: 'Harbour cars', exact: true }) });
     await expect(rentalCard).toHaveCount(1);
     await expect(
       page
-        .getByRole('region', { name: 'Wellington · Visit 1' })
-        .getByRole('article', { name: 'Harbour cars' })
+        .locator('[data-visit-id="31"]')
+        .getByRole('article')
+        .filter({ has: page.getByRole('button', { name: 'Harbour cars', exact: true }) })
     ).toBeVisible();
-    await expect(rentalCard.getByText('Wellington · Visit 2', { exact: true })).toBeVisible();
+    await expect(rentalCard.getByText('Return · Visit #32', { exact: true })).toBeVisible();
     await expect(
       page
-        .getByRole('region', { name: 'Journeys' })
-        .getByRole('article', { name: 'Harbour connection' })
+        .locator('[data-route-kind="journey"][data-route-id="20"]')
+        .getByRole('button', { name: 'Harbour connection', exact: true })
     ).toBeVisible();
     await expect(rentalCard.getByRole('button')).toHaveCSS('border-style', 'dashed');
     const layout = await page
@@ -246,7 +279,7 @@ for (const viewport of [
           Number.parseFloat(styles.paddingRight);
         return {
           actual: element.getBoundingClientRect().width,
-          expected: Math.min(available, Number.parseFloat(getComputedStyle(element).maxWidth)),
+          expected: available,
         };
       });
     expect(layout.actual).toBeCloseTo(layout.expected, 0);
@@ -291,7 +324,7 @@ for (const viewport of [
     await page.getByRole('button', { name: 'Close', exact: true }).click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
     const gap = page
-      .getByRole('region', { name: 'Wellington · Visit 1' })
+      .locator('[data-visit-id="31"]')
       .getByRole('button', { name: /Accommodation not arranged/ });
     const gapBounds = await gap.boundingBox();
     expect(gapBounds?.height).toBeGreaterThanOrEqual(44);
@@ -331,9 +364,7 @@ for (const viewport of [
     await expect(creation.getByText(/create outcome is unknown/)).toBeVisible();
     await creation.getByRole('button', { name: 'Close', exact: true }).click();
     await page.getByRole('button', { name: 'Close', exact: true }).click();
-    const createdStay = page
-      .locator('[data-source-kind="stay"][data-source-id="14"]')
-      .getByRole('button');
+    const createdStay = page.getByRole('button', { name: 'Stay #14', exact: true });
     await createdStay.click();
     await handledBy.getByRole('button', { name: 'Choose contact', exact: true }).click();
     await expect(creation.getByRole('textbox')).toHaveValue('New driver');
@@ -368,7 +399,8 @@ for (const viewport of [
     await page.getByRole('button', { name: 'Link file', exact: true }).click();
     await expect(page.getByText('Booking original', { exact: true })).toBeVisible();
     const overflowingFields = await page
-      .getByRole('article', { name: 'Stay editor', exact: true })
+      .getByRole('dialog')
+      .getByRole('main')
       .evaluate((element) => {
         const boundary = element.getBoundingClientRect();
         return [

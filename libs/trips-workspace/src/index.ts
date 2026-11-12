@@ -120,3 +120,32 @@ export type { CalendarWorkspaceProps, CalendarSource } from './calendar/types';
 /** Shared text-first Capture, inline Inbox and Explore source surfaces. */
 export { CaptureWorkspace } from './capture/CaptureWorkspace';
 export type { CaptureWorkspaceProps, CaptureSourceSelection } from './capture/types';
+
+/** Captured source ownership and retained view lifetimes shared by contextual app editors. */
+export {
+  RetainedSessionStore,
+  assertSourceOwner,
+  isSourceOwnerCurrent,
+  sourceOwnerProblem,
+} from './shared/retained-session-store';
+export type { RetainedSourceOwner } from './shared/retained-session-store';
+export { useRetainedSession } from './shared/use-retained-session';
+export { useSessionView } from './shared/use-session-view';
+export { useSourceQuery } from './shared/use-source-query';
+/** Generated canonical metadata response validation; no alternate Trip model is introduced. */
+export {
+  zTripsGetResponse as tripMetadataReadSchema,
+  zTripsUpdateResponse as tripMetadataWriteSchema,
+} from './trips-api/zod.gen';
+
+export {
+  AccommodationGapProvider,
+  AccommodationGapContext,
+} from './arrangements/AccommodationGapContext';
+export type {
+  AccommodationGapIdentity,
+  AccommodationGapLabels,
+  AccommodationGapStay,
+  AccommodationGapProviderProps,
+  AccommodationGapContextProps,
+} from './arrangements/accommodation-gap-types';

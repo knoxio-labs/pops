@@ -101,10 +101,20 @@ for (const viewport of [
       ['/trips/7', trip],
       ['/places', { places: [{ id: 51, name: 'Wellington', sourceLinks: [], ...audit }] }],
       ['/trips/7/visits', { visits: [visit, { ...visit, id: 32, timing: {} }] }],
+      ['/trips/7/visits/31', visit],
+      ['/trips/7/visits/32', { ...visit, id: 32, timing: {} }],
       ['/trips/7/stays', { stays: [stay] }],
       ['/trips/7/stays/13', stay],
       ['/trips/7/events', { events: [event] }],
       ['/trips/7/events/61', event],
+      [
+        '/trips/7/responsibilities/stay/13',
+        { tripId: 7, targetKind: 'stay', targetId: 13, responsibility: null, revision: 0 },
+      ],
+      [
+        '/trips/7/responsibilities/event/61',
+        { tripId: 7, targetKind: 'event', targetId: 61, responsibility: null, revision: 0 },
+      ],
       ['/trips/7/journeys', { journeys: [] }],
       ['/trips/7/journey-groups', { groups: [] }],
       [
@@ -163,6 +173,7 @@ for (const viewport of [
       })
     );
     let failEvents = false;
+    const sourceReads: string[] = [];
     await page.route(/\/trips-api\//u, (route) => {
       const path = new URL(route.request().url()).pathname.replace('/trips-api', '');
       if (failEvents && path === '/trips/7/events')
@@ -171,6 +182,8 @@ for (const viewport of [
           message: 'Event source unavailable',
           retryable: true,
         });
+      expect(route.request().method()).toBe('GET');
+      sourceReads.push(path);
       const body = responses.get(path);
       if (!body) throw new Error(`Unexpected source request: ${path}`);
       return json(route, 200, body);
@@ -181,12 +194,21 @@ for (const viewport of [
     await expect(page.getByRole('heading', { name: 'Coast trip', exact: true })).toBeVisible();
     await expect(page.getByText('After the exams', { exact: true })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Wellington', exact: true })).toHaveCount(2);
-    await expect(page.getByRole('link', { name: 'Wellington', exact: true })).toHaveCount(2);
-    expect(
-      await page
-        .getByRole('link', { name: 'Wellington', exact: true })
-        .evaluateAll((links) => links.map((link) => link.getAttribute('href')))
-    ).toEqual(['/trips/7/visits/31', '/trips/7/visits/32']);
+    await expect(page.getByRole('button', { name: 'Wellington', exact: true })).toHaveCount(2);
+    for (const [index, id] of [31, 32].entries()) {
+      await page.getByRole('button', { name: 'Wellington', exact: true }).nth(index).click();
+      const dialog = page.getByRole('dialog', { name: `Visit #${id}`, exact: true });
+      await expect(dialog.getByLabel('Visit notes', { exact: true })).toHaveValue('');
+      await expect(page).toHaveURL(/\/trips\/7$/u);
+      expect(sourceReads).toContain(`/trips/7/visits/${id}`);
+      await dialog.getByRole('button', { name: 'Close', exact: true }).click();
+      await expect(dialog).toHaveCount(0);
+    }
+    await expect(page.getByRole('link', { name: 'Documents', exact: true })).toHaveAttribute(
+      'href',
+      '/trips/7/documents'
+    );
+    await expect(page.getByRole('link', { name: 'Calendar', exact: true })).toHaveCount(0);
     const eventCard = page.locator('article').filter({ hasText: 'Harbour festival' });
     await expect(eventCard).toHaveAttribute('data-constraint', 'soft');
     await expect(eventCard.getByText('Alternative', { exact: true })).toBeVisible();
@@ -201,9 +223,9 @@ for (const viewport of [
       const contentBounds = await page.getByRole('main').last().boundingBox();
       expect(contentBounds?.width).toBeGreaterThanOrEqual(viewport.width - 32);
     }
-    const links = page.getByRole('main').last().getByRole('link');
-    for (const link of await links.all()) {
-      const box = await link.boundingBox();
+    const controls = page.getByRole('main').last().locator('a, button');
+    for (const control of await controls.all()) {
+      const box = await control.boundingBox();
       expect(box?.height).toBeGreaterThanOrEqual(44);
     }
     const artifacts = resolve(import.meta.dirname, '../../../tmp');
@@ -212,17 +234,55 @@ for (const viewport of [
       path: resolve(artifacts, `trips-overview-${viewport.width}.png`),
       fullPage: true,
     });
-    await page.getByRole('link', { name: /Harbour festival/ }).click();
-    await expect(page).toHaveURL(/\/trips\/7\/events\/61$/u);
+    await page.getByRole('button', { name: 'Harbour festival', exact: true }).click();
+    const eventDialog = page.getByRole('dialog', { name: 'Event #61', exact: true });
+    await expect(eventDialog.getByLabel('Event name', { exact: true })).toHaveValue(
+      'Harbour festival'
+    );
+    await expect(page).toHaveURL(/\/trips\/7$/u);
+    expect(sourceReads).toContain('/trips/7/events/61');
+    await eventDialog.getByRole('button', { name: 'Close', exact: true }).click();
+    await page.getByRole('button', { name: 'Cedar guesthouse', exact: true }).click();
+    const stayDialog = page.getByRole('dialog', { name: 'Stay #13', exact: true });
+    await expect(stayDialog.getByLabel('Stay name', { exact: true })).toHaveValue(
+      'Cedar guesthouse'
+    );
+    await expect(page).toHaveURL(/\/trips\/7$/u);
+    expect(sourceReads).toContain('/trips/7/stays/13');
+    await expect(stayDialog.getByText('Route original', { exact: true })).toBeVisible();
+    await expect(
+      stayDialog.getByRole('link', { name: 'Open original', exact: true })
+    ).toHaveAttribute('href', '/documents-api/paperless/documents/102/download?original=true');
+    await stayDialog.getByRole('button', { name: 'Close', exact: true }).click();
+    await page.goto('/trips/7/events/61');
     await expect(page.getByLabel('Event name', { exact: true })).toHaveValue('Harbour festival');
-    await page.goto('/trips/7');
-    await page.getByRole('link', { name: /Cedar guesthouse/ }).click();
-    await expect(page).toHaveURL(/\/trips\/7\/stays\/13$/u);
+    await page.goto('/trips/7/stays/13');
     await expect(page.getByLabel('Stay name', { exact: true })).toHaveValue('Cedar guesthouse');
+    await expect(
+      page
+        .getByRole('region', { name: 'Source documents', exact: true })
+        .getByText('Route original', { exact: true })
+    ).toBeVisible();
     failEvents = true;
     await page.goto('/trips/7');
-    await expect(page.getByText('trips.events.unavailable', { exact: true })).toBeVisible();
-    await expect(page.getByRole('link', { name: /Cedar guesthouse/ })).toBeVisible();
+    const eventsSource = page.getByRole('region', { name: 'Events', exact: true });
+    await expect(eventsSource.getByText('trips.events.unavailable', { exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Cedar guesthouse', exact: true })).toBeVisible();
     await expect(page.getByText('No route entries.', { exact: true })).toHaveCount(0);
+    const gapDiagnostics = [31, 32].map((id) =>
+      page.locator(`[data-visit-id="${id}"]`).getByText('trips.events.unavailable', { exact: true })
+    );
+    for (const diagnostic of gapDiagnostics) await expect(diagnostic).toBeVisible();
+    failEvents = false;
+    await eventsSource.getByRole('button', { name: 'Try again', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Harbour festival', exact: true })).toBeVisible();
+    await expect(eventsSource).toHaveCount(0);
+    for (const diagnostic of gapDiagnostics) await expect(diagnostic).toBeVisible();
+    await page
+      .locator('[data-visit-id="31"]')
+      .getByRole('button', { name: 'Reload source', exact: true })
+      .click();
+    for (const diagnostic of gapDiagnostics) await expect(diagnostic).toHaveCount(0);
+    await expect(page.getByText('trips.events.unavailable', { exact: true })).toHaveCount(0);
   });
 }

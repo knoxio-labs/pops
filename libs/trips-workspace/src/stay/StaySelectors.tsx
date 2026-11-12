@@ -12,7 +12,7 @@ export function StaySelectors({
   commit,
 }: StayFieldProps & { visits: Visit[]; places: Place[] }): JSX.Element {
   return (
-    <div className="grid gap-3 sm:grid-cols-3">
+    <div className="grid gap-3 @lg:grid-cols-3">
       <Select
         label="Stay kind"
         value={stay.kind ?? ''}
@@ -23,7 +23,8 @@ export function StaySelectors({
         onChange={(event) =>
           commit({ kind: kinds.find((kind) => kind === event.target.value) ?? null })
         }
-        className="min-h-11"
+        className="min-h-11 min-w-0 w-full"
+        containerClassName="min-w-0"
       />
       <Select
         label="Stay status"
@@ -35,7 +36,8 @@ export function StaySelectors({
         onChange={(event) =>
           commit({ status: statuses.find((status) => status === event.target.value) ?? null })
         }
-        className="min-h-11"
+        className="min-h-11 min-w-0 w-full"
+        containerClassName="min-w-0"
       />
       <Select
         label="Visit"
@@ -44,7 +46,8 @@ export function StaySelectors({
         onChange={(event) =>
           commit({ visitId: event.target.value ? Number(event.target.value) : null })
         }
-        className="min-h-11"
+        className="min-h-11 min-w-0 w-full"
+        containerClassName="min-w-0"
       />
     </div>
   );

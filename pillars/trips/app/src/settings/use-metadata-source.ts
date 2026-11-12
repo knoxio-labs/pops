@@ -1,42 +1,54 @@
-import { useState } from 'react';
+import { useLayoutEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 
-import { tripDraft } from './model';
+import {
+  assertSourceOwner,
+  isSourceOwnerCurrent,
+  sourceOwnerProblem,
+  useSessionView,
+  useSourceQuery,
+} from '@pops/trips-workspace';
 
-import type { Trip } from '../api/types';
+import { metadataKeys, readMetadata } from './metadata-persistence';
+import { metadataIdentity, useMetadataEntry } from './metadata-store';
 
-/** A failed save/Undo keeps the previous successful source and the user's current editable draft. */
-export interface MetadataFailure {
-  error: unknown;
-  undo?: Trip;
+import type { ApiClients, Trip } from '../api/types';
+export type { MetadataFailure } from './metadata-types';
+
+/** Bind the original metadata state to its captured owner; a fresh mount is not an acknowledgement of a new read. */
+export function useMetadataSource(initial: Trip, clients: ApiClients) {
+  const { owner, session: entry } = useMetadataEntry(initial.id, clients);
+  const view = useSessionView(owner);
+  const session = useMemo(() => entry.ensure(owner, initial), [entry, initial, owner]);
+  const state = useSyncExternalStore(session.subscribe, session.snapshot);
+  const observed = useRef({ session, source: initial });
+  useLayoutEffect(() => {
+    const previous = observed.current;
+    observed.current = { session, source: initial };
+    if (previous.session === session && previous.source !== initial && isSourceOwnerCurrent(owner))
+      session.receive(initial);
+  }, [initial, owner, session]);
+  return { owner, view, session, state };
 }
-/** Reset untouched metadata on fresh canonical reads while retaining pending edits and failures. */
-export function useMetadataSource(initial: Trip) {
-  const [saved, setSaved] = useState(initial);
-  const [observed, setObserved] = useState(initial);
-  const [draft, setDraft] = useState(() => tripDraft(initial));
-  const [history, setHistory] = useState<Trip[]>([]);
-  const [busy, setBusy] = useState(false);
-  const [failure, setFailure] = useState<MetadataFailure>();
-  const dirty = JSON.stringify(draft) !== JSON.stringify(tripDraft(saved));
-  if (observed !== initial && !busy && !failure && !dirty) {
-    setObserved(initial);
-    if (JSON.stringify(initial) !== JSON.stringify(saved)) {
-      setSaved(initial);
-      setDraft(tripDraft(initial));
-      setHistory([]);
-    }
-  }
+
+/** Guarded GET state remains distinct from retainedSource; cache eviction or a failed GET never proves a successful read. */
+export function useTripMetadataRead(tripId: number, clients: ApiClients) {
+  const retained = useMetadataEntry(tripId, clients);
+  const view = useSessionView(retained.owner);
+  const query = useSourceQuery(metadataIdentity(tripId, clients), (owner) => ({
+    queryKey: metadataKeys(owner).read,
+    load: async () => {
+      view.assertCurrent();
+      const generation = retained.session.session?.generation;
+      const value = await readMetadata(owner);
+      view.assertCurrent();
+      if (generation !== retained.session.session?.generation) throw sourceOwnerProblem();
+      assertSourceOwner(owner);
+      retained.session.session?.receive(value);
+      return value;
+    },
+  }));
   return {
-    saved,
-    setSaved,
-    draft,
-    setDraft,
-    history,
-    setHistory,
-    busy,
-    setBusy,
-    failure,
-    setFailure,
-    dirty,
+    ...query,
+    retainedSource: query.ownershipError ? undefined : retained.session.session?.snapshot().saved,
   };
 }

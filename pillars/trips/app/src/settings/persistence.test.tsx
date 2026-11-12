@@ -252,9 +252,11 @@ describe('TripSettingsPage persistence', () => {
     fireEvent.change(when, { target: { value: '  after graduation  ' } });
     failTripRead = true;
     await act(async () => {
-      await cache.refetchQueries({ queryKey: tripKeys().one(7), exact: true });
+      await cache.refetchQueries({ queryKey: [...tripKeys().one(7), 'metadata'], exact: true });
     });
-    await waitFor(() => expect(cache.getQueryState(tripKeys().one(7))?.status).toBe('error'));
+    await waitFor(() =>
+      expect(cache.getQueryState([...tripKeys().one(7), 'metadata'])?.status).toBe('error')
+    );
     expect(screen.getByLabelText('Destination')).toBe(destination);
     expect(destination).toHaveValue('  unsaved destination  ');
     expect(when).toHaveValue('  after graduation  ');
@@ -320,7 +322,7 @@ describe('TripSettingsPage persistence', () => {
   });
 
   it('keeps opaque source references visible and saves other metadata when both catalogues fail', async () => {
-    source = { ...original, tagId: 'opaque-tag-reference', parentId: 42 };
+    source = { ...original, tagId: '11111111-1111-4111-8111-111111111111', parentId: 42 };
     failTags = true;
     failTrips = true;
     const edited: Trip = { ...source, name: 'Edited with unavailable references' };
@@ -330,7 +332,7 @@ describe('TripSettingsPage persistence', () => {
     await screen.findByText('Shared tags could not be loaded.');
     await screen.findByText('Parent trips could not be loaded.');
     expect(
-      screen.getByText('Source reference unavailable: opaque-tag-reference')
+      screen.getByText('Source reference unavailable: 11111111-1111-4111-8111-111111111111')
     ).toBeInTheDocument();
     expect(screen.getByText('Source reference unavailable: 42')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
@@ -343,7 +345,7 @@ describe('TripSettingsPage persistence', () => {
     ]);
     expect(cache.getQueryData(['trips', tripClient.getConfig().baseUrl, 7])).toEqual(edited);
     expect(
-      screen.getByText('Source reference unavailable: opaque-tag-reference')
+      screen.getByText('Source reference unavailable: 11111111-1111-4111-8111-111111111111')
     ).toBeInTheDocument();
     expect(screen.getByText('Source reference unavailable: 42')).toBeInTheDocument();
   });

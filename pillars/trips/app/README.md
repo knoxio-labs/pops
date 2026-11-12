@@ -1,15 +1,27 @@
 # Trips browser app
 
-The shell loads `dist/remote/trips.js` and `trips.css` from the Trips manifest. The app exposes the grouped home, trip metadata settings, a trip calendar, and route adapters for the `@pops/trips-workspace` visit, stay, journey, event, options-first decision editors. It also exports router-free Capture tools. Event detail is registered at `:tripId/events/:eventId`; invalid route identities fail before making source requests. The separate Documents list is registered at `/trips/:tripId/documents`. The public router-free `CaptureContext({ tripId, view, selectedSource?, client?, documentsClient?, contacts?, onViewEvent? })` embeds the same retained engine in its owning Trip workspace. It publishes no Capture, Inbox or Explore destination or navigation; host placement and controlled view changes belong to the Trip workspace.
+The shell loads `dist/remote/trips.js` and `trips.css` from the Trips manifest. The app exposes the grouped home, selected-Trip Timeline, trip metadata settings, and route adapters for the `@pops/trips-workspace` visit, stay, journey, event, options-first decision editors. It also exports router-free Capture tools. Event detail is registered at `:tripId/events/:eventId`; invalid route identities fail before making source requests. The separate Documents list is registered at `/trips/:tripId/documents`. The public router-free `CaptureContext({ tripId, view, selectedSource?, client?, documentsClient?, contacts?, onViewEvent? })` embeds the same retained engine in its owning Trip workspace. It publishes no Capture, Inbox or Explore destination or navigation; host placement and controlled view changes belong to the Trip workspace.
 
 The Documents route provides typed document associations and owner uploads. It owns no database and uses generated Trips and Tags clients at the shell's authenticated same-origin proxy paths.
 
-`:tripId/arrangements` publishes the `trips-arrangements` slot. Its adapter validates
-the owning trip identity and supplies shell-selected translations and calendar locale
-to the route-grouped workspace. Only explicit Visit associations group sources;
-Journeys remain separately identifiable until their producer owns Visit placement.
-Opening an arrangement uses its actual source editor and independent responsibility
-writes; no external booking action is performed. The shell may inject the shared
+The selected Trip owns one Timeline at `:tripId`. People, Capture, Inbox and Explore
+open canonical contextual tools beneath the same shell QueryClient. Source rows open
+the existing canonical source editor in a sheet; nested source jumps replace only the
+selected source identity. Documents is the separate Trip list shortcut. The existing
+`:tripId/arrangements` URL and `trips-arrangements` slot load this same Timeline.
+Source detail URLs remain available for existing links. The header metadata action
+opens the canonical settings form in the same sheet; it does not add a Trip destination.
+Whole Journey, Stay, Event and Rental contexts reuse the independent Handled by controls;
+Rentals have no Documents target. Route controls use the canonical retained UUID/revision
+controller for explicit gaps, moves, complete order, alternative paths, apply and Undo.
+A mutable Trips-origin change rejects stale source-opening callbacks.
+Resolved Visit contexts reuse canonical accommodation coverage even when route placement
+is unavailable. A confirmed gap create opens the acknowledged Stay in the existing sheet.
+The owner provider retains uncertain creation state across sheet and Trip remounts;
+reloading source facts does not acknowledge a lost create response or repeat its POST.
+
+The reusable Arrangements workspace retains its independent responsibility writes;
+no external booking action is performed. The shell may inject the shared
 Contacts capability through `RemotePageHostProps`. The adapter retains one opaque
 owner picker intent per exact trip/source responsibility target across dialog
 remounts. An acknowledged responsibility PUT or explicit source reconciliation
@@ -39,6 +51,8 @@ the Trips app's source.
 Home groups use the first ordered visit's arrival and the last visit's departure, relative to the viewer's local calendar day. Missing, invalid, or contradictory outer dates remain in Other. Trip titles use trimmed custom name, then trimmed destination, then the translated Trip label. `when` is opaque source text and never supplies route dates.
 
 Creation is permanent: a successful POST selects the returned trip and offers no Undo. Failures and background refresh errors preserve the draft; explicit Cancel clears it. Settings save with PATCH, omit source links, and offer Undo of successful metadata edits using another PATCH. Blank optional associations and unchanged stored references do not require their catalogues to be available. Settings PATCH omits unchanged references; unavailable stored identities remain visible without claiming resolution. Explicit parent and tag selections must be valid source choices; the server remains authoritative for cycle and tag validation.
+
+Metadata state is retained per host QueryClient, actual Trips client, captured origin and trip, independently of view closure and query-cache eviction. Multiple views share the same draft, pending write and confirmed own inverse stack. A failed or uncertain PATCH retains its exact body for Retry even if the draft changes afterward. An already-dispatched matching acknowledgement settles its original session and cache even after navigation to another connection. Only a matching validated HTTP 200 establishes a saved edit and its Undo; another PATCH applies that confirmed inverse. Plain PATCH provides no server UUID deduplication or compare-and-swap protection against unseen concurrent writes. Guarded metadata reads use a distinct raw Trip key; retained source fallback does not claim a successful GET.
 
 A failed refresh with cached trip data keeps the current view and editor mounted and displays a retryable error. An initial read failure renders the source error without editable fabricated data.
 
@@ -77,16 +91,17 @@ owning SQLite producer, including a lost response after a committed create.
 ## Visit sources
 
 `/trips/:tripId/visits/:visitId` mounts `VisitWorkspace` with literal source identities.
-The route-first overview links each distinct visit occurrence to that route.
+The Timeline opens each distinct Visit occurrence in context; this source URL remains available for existing links.
 Visit navigation replaces the source URL; accommodation links open the existing stay route.
 Timing edits and Undo write only the visit, guarded by its confirmed source revision.
 
 ## Calendar
 
-The route-first trip overview links to `/trips/:tripId/calendar`. Its exported calendar
-workspace reads independent journey, stay and event sources through the generated
-Trips transport, requires an explicit display zone, and opens exact owning editor
-routes. Unavailable collections render retryable errors, retaining a prior complete
+Calendar is a controlled filter inside the Timeline. The existing
+`/trips/:tripId/calendar` URL and `trips-calendar` slot load the same Timeline with
+calendar controls enabled. Toggling the controls retains the explicit range, zone,
+source-kind and Journey selections for the mounted Trip. The source-backed calendar
+requires an explicit display zone and opens exact owning editors in context. Unavailable collections render retryable errors, retaining a prior complete
 read during refresh failures. Calendar date bounds remain separate from resolved
 source clocks; the optional journey window uses the owning timing endpoint.
 

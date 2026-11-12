@@ -87,15 +87,19 @@ test('Trips loads its real remote, creates permanently, and edits metadata throu
   await expect(page.getByRole('button', { name: 'Undo', exact: true })).toHaveCount(0);
   for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 900 });
-    for (const [name, path] of [
-      ['Calendar', 'calendar'],
-      ['Documents', 'documents'],
-    ]) {
-      const link = page.getByRole('link', { name, exact: true });
-      await expect(link).toBeVisible();
-      await expect(link).toHaveAttribute('href', `/trips/72/${path}`);
-      expect((await link.boundingBox())?.height).toBeGreaterThanOrEqual(44);
-    }
+    const documents = page.getByRole('link', { name: 'Documents', exact: true });
+    await expect(documents).toBeVisible();
+    await expect(documents).toHaveAttribute('href', '/trips/72/documents');
+    expect((await documents.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+    const calendar = page.getByRole('button', { name: 'Calendar', exact: true });
+    await expect(calendar).toHaveAttribute('aria-pressed', 'false');
+    expect((await calendar.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+    await calendar.click();
+    await expect(calendar).toHaveAttribute('aria-pressed', 'true');
+    await expect(page).toHaveURL(/\/trips\/72$/u);
+    await expect(page.getByRole('link', { name: 'Calendar', exact: true })).toHaveCount(0);
+    await calendar.click();
+    await expect(calendar).toHaveAttribute('aria-pressed', 'false');
     await page.screenshot({
       path: `../../tmp/trips-documents/preview-${width}.png`,
       fullPage: true,

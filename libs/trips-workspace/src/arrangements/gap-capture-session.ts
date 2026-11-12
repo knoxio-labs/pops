@@ -51,8 +51,12 @@ export class GapCaptureSession {
     this.publish(operation);
   }
   /** Explicitly abandon only the currently selected uncertain outcome; this action itself starts no POST. */
-  beginNew(): void {
-    if (this.state.kind !== 'uncertain') return;
+  beginNew(intent?: GapCaptureIntent): void {
+    if (
+      this.state.kind !== 'uncertain' ||
+      (intent && intentKey(intent) !== intentKey(this.state.intent))
+    )
+      return;
     this.operations.delete(intentKey(this.state.intent));
     this.publish(Object.freeze({ kind: 'ready' }));
   }

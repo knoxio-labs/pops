@@ -137,6 +137,7 @@ export async function captureOwner() {
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   return {
+    cache,
     requests: state.requests,
     source: state.source,
     client,

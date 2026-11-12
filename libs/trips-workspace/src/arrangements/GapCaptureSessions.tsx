@@ -1,36 +1,66 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { createContext, useContext, useLayoutEffect, useState } from 'react';
 
 import { GapCaptureRegistry } from './gap-capture-registry';
 
+import type { QueryClient } from '@tanstack/react-query';
 import type { JSX, ReactNode } from 'react';
 
+import type { AccommodationGapIdentity } from './accommodation-gap-types';
 import type { GapCaptureBinding } from './gap-capture-registry';
-import type { ArrangementsWorkspaceProps } from './types';
 
 const Sessions = createContext<GapCaptureRegistry | undefined>(undefined);
-/** Retain non-idempotent source receipts above keyed trip/origin views for the mounted host lifetime. */
+const registries = new WeakMap<QueryClient, GapCaptureRegistry>();
+function registry(cache: QueryClient): GapCaptureRegistry {
+  let retained = registries.get(cache);
+  if (!retained) {
+    retained = new GapCaptureRegistry();
+    registries.set(cache, retained);
+  }
+  return retained;
+}
+/** Retain non-idempotent receipts for the host QueryClient lifetime, including provider remount and cache eviction. */
 export function GapCaptureSessions({
   identity,
   children,
 }: {
-  identity: ArrangementsWorkspaceProps;
+  identity: AccommodationGapIdentity;
   children: ReactNode;
 }): JSX.Element {
-  const [sessions] = useState(() => new GapCaptureRegistry(identity));
-  useLayoutEffect(() => {
-    sessions.activate(identity);
-    return () => sessions.deactivate();
-  });
+  const sessions = registry(useQueryClient());
+  useLayoutEffect(() => sessions.acquire(identity));
   return <Sessions.Provider value={sessions}>{children}</Sessions.Provider>;
 }
-/** Resolve an owner-bound controller; standalone callers retain only their own mounted hook lifetime. */
-export function useGapCaptureSession(identity: ArrangementsWorkspaceProps): GapCaptureBinding {
+/** Resolve the original owner's controller; every mounted view holds an independent action lease. */
+export function useGapCaptureSession(identity: AccommodationGapIdentity): GapCaptureBinding {
   const shared = useContext(Sessions);
-  const [local] = useState(() => new GapCaptureRegistry(identity));
-  useLayoutEffect(() => {
-    if (shared) return;
-    local.activate(identity);
-    return () => local.deactivate();
+  const retained = registry(useQueryClient());
+  const sessions = shared === retained ? shared : retained;
+  const cache = useQueryClient();
+  const capture = (): {
+    cache: QueryClient;
+    sessions: GapCaptureRegistry;
+    client: AccommodationGapIdentity['client'];
+    tripId: number;
+    binding: GapCaptureBinding;
+  } => ({
+    cache,
+    sessions,
+    client: identity.client,
+    tripId: identity.tripId,
+    binding: sessions.get(identity),
   });
-  return (shared ?? local).get(identity);
+  const [stored, setStored] = useState(capture);
+  let current = stored;
+  if (
+    stored.cache !== cache ||
+    stored.sessions !== sessions ||
+    stored.client !== identity.client ||
+    stored.tripId !== identity.tripId
+  ) {
+    current = capture();
+    setStored(current);
+  }
+  useLayoutEffect(() => sessions.acquire(current.binding.identity));
+  return current.binding;
 }
