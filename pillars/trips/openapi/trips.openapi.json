@@ -3113,6 +3113,338 @@
         "tags": ["trips"]
       }
     },
+    "/trips/operations": {
+      "post": {
+        "operationId": "trips.createOperation",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "command": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "input": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "destination": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "notes": {
+                            "type": "string"
+                          },
+                          "parentId": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "nullable": true,
+                            "type": "integer"
+                          },
+                          "sourceLinks": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "label": {
+                                  "type": "string"
+                                },
+                                "uri": {
+                                  "anyOf": [
+                                    {
+                                      "format": "uri",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                      "type": "string"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": ["uri"],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "tagId": {
+                            "format": "uuid",
+                            "nullable": true,
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                            "type": "string"
+                          },
+                          "when": {
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "kind": {
+                        "enum": ["trip.create"],
+                        "type": "string"
+                      }
+                    },
+                    "required": ["kind", "input"],
+                    "type": "object"
+                  },
+                  "operationId": {
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                    "type": "string"
+                  }
+                },
+                "required": ["operationId", "command"],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "current": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "trip": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "createdAt": {
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                              "type": "string"
+                            },
+                            "destination": {
+                              "type": "string"
+                            },
+                            "id": {
+                              "exclusiveMinimum": true,
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "name": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "notes": {
+                              "type": "string"
+                            },
+                            "parentId": {
+                              "exclusiveMinimum": true,
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "nullable": true,
+                              "type": "integer"
+                            },
+                            "sourceLinks": {
+                              "items": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "label": {
+                                    "type": "string"
+                                  },
+                                  "uri": {
+                                    "anyOf": [
+                                      {
+                                        "format": "uri",
+                                        "type": "string"
+                                      },
+                                      {
+                                        "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                        "type": "string"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": ["uri"],
+                                "type": "object"
+                              },
+                              "type": "array"
+                            },
+                            "tagId": {
+                              "format": "uuid",
+                              "nullable": true,
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                              "type": "string"
+                            },
+                            "updatedAt": {
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                              "type": "string"
+                            },
+                            "when": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name",
+                            "destination",
+                            "when",
+                            "tagId",
+                            "parentId",
+                            "notes",
+                            "sourceLinks",
+                            "createdAt",
+                            "updatedAt"
+                          ],
+                          "type": "object"
+                        }
+                      },
+                      "required": ["trip"],
+                      "type": "object"
+                    },
+                    "receipt": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "operationId": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
+                        "trip": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "createdAt": {
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                              "type": "string"
+                            },
+                            "destination": {
+                              "type": "string"
+                            },
+                            "id": {
+                              "exclusiveMinimum": true,
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "name": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "notes": {
+                              "type": "string"
+                            },
+                            "parentId": {
+                              "exclusiveMinimum": true,
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "nullable": true,
+                              "type": "integer"
+                            },
+                            "sourceLinks": {
+                              "items": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "label": {
+                                    "type": "string"
+                                  },
+                                  "uri": {
+                                    "anyOf": [
+                                      {
+                                        "format": "uri",
+                                        "type": "string"
+                                      },
+                                      {
+                                        "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                        "type": "string"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": ["uri"],
+                                "type": "object"
+                              },
+                              "type": "array"
+                            },
+                            "tagId": {
+                              "format": "uuid",
+                              "nullable": true,
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                              "type": "string"
+                            },
+                            "updatedAt": {
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                              "type": "string"
+                            },
+                            "when": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name",
+                            "destination",
+                            "when",
+                            "tagId",
+                            "parentId",
+                            "notes",
+                            "sourceLinks",
+                            "createdAt",
+                            "updatedAt"
+                          ],
+                          "type": "object"
+                        }
+                      },
+                      "required": ["operationId", "trip"],
+                      "type": "object"
+                    },
+                    "replayed": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["receipt", "current", "replayed"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "201"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "409"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "503"
+          }
+        },
+        "tags": ["trips"]
+      }
+    },
     "/trips/{id}": {
       "get": {
         "operationId": "trips.get",

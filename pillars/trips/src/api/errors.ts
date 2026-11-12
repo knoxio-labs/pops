@@ -3,6 +3,12 @@ import { defineErrors } from '@pops/pillar-express';
 import { routeErrors } from './route-errors.js';
 
 const recordErrors = defineErrors('trips', {
+  trip_create_operation_mismatch: {
+    area: 'trip',
+    status: 409,
+    message: 'This trip creation operation identifier was already used with different input.',
+    retryable: false,
+  },
   meeting_revision_conflict: {
     area: 'meeting_plan',
     status: 409,
