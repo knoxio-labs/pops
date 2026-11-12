@@ -9,8 +9,8 @@ import type { GatewayOutcome, PillarGateway } from '../pillars/gateway.js';
 
 type Router = {
   trips: {
-    create(input: MobileTripInput): Promise<unknown>;
-    update(input: MobileTripInput & { id: number }): Promise<unknown>;
+    create: (input: MobileTripInput) => Promise<unknown>;
+    update: (input: MobileTripInput & { id: number }) => Promise<unknown>;
   };
 };
 /** Forwards one permanent canonical creation without inventing retry identity or automatically replaying. */

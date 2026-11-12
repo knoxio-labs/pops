@@ -17,12 +17,12 @@ import type {
 import type { GatewayOutcome, PillarGateway } from '../pillars/gateway.js';
 
 type Router = {
-  captureWorkspace: { get(input: { tripId: number }): Promise<unknown> };
+  captureWorkspace: { get: (input: { tripId: number }) => Promise<unknown> };
   captures: {
-    create(input: MobileCaptureCreate & { tripId: number }): Promise<unknown>;
-    update(input: MobileCaptureUpdate & { tripId: number }): Promise<unknown>;
-    attach(input: MobileCaptureAttach & { tripId: number }): Promise<unknown>;
-    undo(input: MobileCaptureUndo & { tripId: number }): Promise<unknown>;
+    create: (input: MobileCaptureCreate & { tripId: number }) => Promise<unknown>;
+    update: (input: MobileCaptureUpdate & { tripId: number }) => Promise<unknown>;
+    attach: (input: MobileCaptureAttach & { tripId: number }) => Promise<unknown>;
+    undo: (input: MobileCaptureUndo & { tripId: number }) => Promise<unknown>;
   };
 };
 /** Canonical producer operations; the BFM neither persists nor recreates receipts. */
