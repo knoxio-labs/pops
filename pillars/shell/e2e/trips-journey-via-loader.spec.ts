@@ -97,7 +97,7 @@ test('A real journey deep route loads the built remote and preserves endpoint so
   await page.getByLabel('Departure time zone').blur();
   await expect(page.getByRole('button', { name: 'Undo', exact: true })).toBeEnabled();
   expect(patches[0]).toEqual({
-    from: { ...leg.from, timeZone: 'Pacific/Auckland' },
+    from: { ...leg.from, timeZone: 'Pacific/Auckland', date: null },
     expectedRevision: 0,
   });
   await page.getByRole('button', { name: 'Undo', exact: true }).click();
@@ -105,8 +105,8 @@ test('A real journey deep route loads the built remote and preserves endpoint so
   expect(patches).toHaveLength(2);
   expect(patches[1]).toMatchObject({
     expectedRevision: 1,
-    from: leg.from,
-    to: leg.to,
+    from: { ...leg.from, date: null },
+    to: { ...leg.to, date: null },
     arrangement: 'Booked',
     purchase: null,
   });
