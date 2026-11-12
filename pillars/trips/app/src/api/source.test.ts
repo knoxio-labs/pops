@@ -10,7 +10,7 @@ import { client as defaultTagsClient } from '../tags-api/client.gen';
 import { createClient } from '../trips-api/client';
 import { client as defaultTripClient } from '../trips-api/client.gen';
 import {
-  createTrip,
+  createTripOperation,
   loadPlaces,
   loadTags,
   loadTrip,
@@ -23,7 +23,7 @@ import {
 
 import type { Server } from 'node:http';
 
-import type { ApiClients, Trip, TripInput, Visit } from './types';
+import type { ApiClients, Trip, TripCreateRequest, Visit } from './types';
 
 const trip: Trip = {
   id: 7,
@@ -83,6 +83,18 @@ beforeEach(async () => {
         response.end(JSON.stringify({ places: [] }));
       } else if (request.url === '/tags') {
         response.end(JSON.stringify({ tags: [] }));
+      } else if (request.url === '/trips/operations') {
+        const input: unknown = JSON.parse(body);
+        if (typeof input !== 'object' || input === null || !('operationId' in input))
+          throw new Error('Missing creation UUID');
+        response.writeHead(201);
+        response.end(
+          JSON.stringify({
+            receipt: { operationId: input.operationId, trip },
+            current: { trip },
+            replayed: false,
+          })
+        );
       } else {
         response.writeHead(request.method === 'POST' ? 201 : 200);
         response.end(JSON.stringify(trip));
@@ -125,14 +137,24 @@ describe('source adapters over generated HTTP clients', () => {
 
   it('sends only explicit create and update fields without injecting titles, dates or source links', async () => {
     const transport = clients();
-    const body: TripInput = { destination: trip.destination, when: trip.when, name: null };
-    expect(await createTrip(body, transport)).toEqual(trip);
+    const body: TripCreateRequest = {
+      operationId: crypto.randomUUID(),
+      command: {
+        kind: 'trip.create',
+        input: { destination: trip.destination, when: trip.when, name: null },
+      },
+    };
+    expect((await createTripOperation(body, transport)).current.trip).toEqual(trip);
     expect(await updateTrip(7, { notes: '  edited  ' }, transport)).toEqual(trip);
-    expect(await createTrip({}, transport)).toEqual(trip);
+    const empty: TripCreateRequest = {
+      operationId: crypto.randomUUID(),
+      command: { kind: 'trip.create', input: {} },
+    };
+    expect((await createTripOperation(empty, transport)).current.trip).toEqual(trip);
     expect(requests).toEqual([
-      { method: 'POST', path: '/trips', body: JSON.stringify(body) },
+      { method: 'POST', path: '/trips/operations', body: JSON.stringify(body) },
       { method: 'PATCH', path: '/trips/7', body: JSON.stringify({ notes: '  edited  ' }) },
-      { method: 'POST', path: '/trips', body: '{}' },
+      { method: 'POST', path: '/trips/operations', body: JSON.stringify(empty) },
     ]);
   });
 
@@ -162,7 +184,12 @@ describe('source adapters over generated HTTP clients', () => {
         headers: { 'x-api-key': 'test-account', 'x-test-refuse': 'true' },
       }),
     };
-    await expect(createTrip({}, refused)).rejects.toMatchObject({
+    await expect(
+      createTripOperation(
+        { operationId: crypto.randomUUID(), command: { kind: 'trip.create', input: {} } },
+        refused
+      )
+    ).rejects.toMatchObject({
       status: 400,
       code: 'trips.request.invalid',
       retryable: false,

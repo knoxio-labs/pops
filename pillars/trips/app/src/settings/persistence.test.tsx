@@ -118,7 +118,18 @@ beforeEach(async () => {
       }
       source = result;
       response.writeHead(request.method === 'POST' ? 201 : 200);
-      response.end(JSON.stringify(source));
+      if (request.url === '/trips/operations') {
+        const command: unknown = JSON.parse(body);
+        if (typeof command !== 'object' || command === null || !('operationId' in command))
+          throw new Error('Missing creation UUID');
+        response.end(
+          JSON.stringify({
+            receipt: { operationId: command.operationId, trip: source },
+            current: { trip: source },
+            replayed: false,
+          })
+        );
+      } else response.end(JSON.stringify(source));
     });
   }).listen(0, '127.0.0.1');
   await once(server, 'listening');
@@ -205,15 +216,24 @@ describe('NewTripDialog persistence', () => {
     await waitFor(() => expect(created).toHaveBeenCalledWith(persisted));
     expect(setOpen).toHaveBeenCalledWith(false);
     expect(cache.getQueryData(['trips', tripClient.getConfig().baseUrl, 7])).toEqual(persisted);
-    expect(mutations()).toEqual([
-      { method: 'POST', path: '/trips', body: JSON.stringify(metadata(persisted)) },
-    ]);
+    expect(mutations()).toHaveLength(1);
+    expect(mutations()[0]).toMatchObject({ method: 'POST', path: '/trips/operations' });
+    expect(JSON.parse(mutations()[0]?.body ?? '')).toEqual({
+      operationId: expect.any(String),
+      command: { kind: 'trip.create', input: metadata(persisted) },
+    });
     expect(screen.queryByRole('button', { name: 'Undo' })).not.toBeInTheDocument();
     expect(mutations().some(({ method }) => method === 'DELETE')).toBe(false);
   });
 
   it('retains a failed creation draft and retries the same explicit fields', async () => {
-    writes.push('error', { ...original, name: 'Retained draft' });
+    writes.push('error', {
+      ...original,
+      name: 'Retained draft',
+      destination: '',
+      when: '',
+      notes: '',
+    });
     const created = vi.fn<(trip: Trip) => void>();
     const setOpen = vi.fn<(open: boolean) => void>();
     const { user } = await mount(
@@ -230,16 +250,20 @@ describe('NewTripDialog persistence', () => {
     await waitFor(() => expect(created).toHaveBeenCalledTimes(1));
     expect(mutations()).toHaveLength(2);
     expect(mutations()[0]).toEqual(mutations()[1]);
-    expect(mutations()[0]?.body).toBe(
-      JSON.stringify({
-        name: 'Retained draft',
-        destination: '',
-        when: '',
-        tagId: null,
-        parentId: null,
-        notes: '',
-      })
-    );
+    expect(JSON.parse(mutations()[0]?.body ?? '')).toEqual({
+      operationId: expect.any(String),
+      command: {
+        kind: 'trip.create',
+        input: {
+          name: 'Retained draft',
+          destination: '',
+          when: '',
+          tagId: null,
+          parentId: null,
+          notes: '',
+        },
+      },
+    });
   });
 });
 

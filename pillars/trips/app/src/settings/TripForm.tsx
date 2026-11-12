@@ -20,6 +20,8 @@ export interface TripFormProps {
   tags: Tag[] | undefined;
   id?: number;
   busy: boolean;
+  /** Unresolved creation freezes its submitted fields while Retry and Close remain available. */
+  locked?: boolean;
   mode: 'create' | 'settings';
   submit: () => void;
   cancel?: () => void;
@@ -47,16 +49,16 @@ export function TripForm(props: TripFormProps) {
       className="space-y-4 text-sm"
       onSubmit={(event) => {
         event.preventDefault();
-        if (!busy && !issues.length) submit();
+        if (!busy && !props.locked && !issues.length) submit();
       }}
     >
-      <fieldset disabled={busy} className="space-y-4">
+      <fieldset disabled={busy || props.locked} className="space-y-4">
         <TripTextFields draft={draft} change={change} />
         <TripReferences {...props} />
         <NotesField draft={draft} change={change} mode={mode} />
-        {error}
-        <FormActions {...props} invalid={!!issues.length} />
       </fieldset>
+      {error}
+      <FormActions {...props} invalid={!!issues.length} />
     </form>
   );
 }
@@ -91,14 +93,8 @@ function NotesField({
   );
 }
 
-function FormActions({
-  busy,
-  mode,
-  cancel,
-  pristine,
-  discard,
-  invalid,
-}: TripFormProps & { invalid: boolean }) {
+function FormActions(props: TripFormProps & { invalid: boolean }) {
+  const { busy, mode, cancel, pristine, discard } = props;
   const { t } = useTranslation('trips');
   let label = mode === 'create' ? 'createTrip' : 'save';
   if (busy) label = 'saving';
@@ -108,7 +104,7 @@ function FormActions({
         <Button
           type="button"
           variant="ghost"
-          disabled={pristine}
+          disabled={busy || pristine === true}
           className="min-h-11"
           onClick={discard}
         >
@@ -116,17 +112,32 @@ function FormActions({
         </Button>
       )}
       {cancel && (
-        <Button type="button" variant="outline" className="min-h-11" onClick={cancel}>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={busy && mode === 'settings'}
+          className="min-h-11"
+          onClick={cancel}
+        >
           {t('cancel')}
         </Button>
       )}
       <Button
         type="submit"
-        disabled={invalid || (mode === 'settings' && pristine)}
+        disabled={submissionBlocked(props)}
         className="min-h-11 bg-app-accent text-app-accent-foreground hover:bg-app-accent/90"
       >
         {t(label)}
       </Button>
     </footer>
+  );
+}
+
+function submissionBlocked(props: TripFormProps & { invalid: boolean }): boolean {
+  return (
+    props.busy ||
+    props.locked === true ||
+    props.invalid ||
+    (props.mode === 'settings' && props.pristine === true)
   );
 }
