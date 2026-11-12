@@ -70,6 +70,7 @@ import {
 } from './cron/prune-credentials.js';
 import { createMobileDocumentsBytesClient } from './documents/bytes-client.js';
 import { createMobileDocumentsClient } from './documents/client.js';
+import { createMobileDocumentsUploadClient } from './documents/upload-client.js';
 import { createMobileEgoClient } from './ego/client.js';
 import { createEgoStreamClient } from './ego/stream-client.js';
 import { createMobileFinanceClient } from './finance/client.js';
@@ -182,6 +183,7 @@ const app = createBfmApiApp(
     trips,
     documents,
     documentBytes,
+    documentUploads: createMobileDocumentsUploadClient(),
     egoStream,
     barcodeLogger: {
       info: (message, context) => {

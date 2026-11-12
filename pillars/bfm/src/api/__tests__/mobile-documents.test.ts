@@ -34,10 +34,10 @@ function client(result: CallResult<unknown>, calls: { pillar: string; input: unk
 describe('Documents-original metadata', () => {
   it('requires device authentication and independent documents.read authority', async () => {
     const getDocument = vi.fn(client({ kind: 'ok', value: { data: source } }).getDocument);
-    const { app, token } = openWithOptions({ documents: { getDocument } }, [
-      'trips.read',
-      'inventory.read',
-    ]);
+    const { app, token } = openWithOptions(
+      { documents: { ...client({ kind: 'ok', value: { data: source } }), getDocument } },
+      ['trips.read', 'inventory.read']
+    );
     expect((await get(app, null, '/mobile/documents/31')).status).toBe(401);
     const denied = await get(app, token, '/mobile/documents/31');
     expect(denied.status).toBe(403);
@@ -82,7 +82,9 @@ describe('Documents-original metadata', () => {
     'rejects invalid original ID %s before source access',
     async (id) => {
       const getDocument = vi.fn(client({ kind: 'ok', value: { data: source } }).getDocument);
-      const { app, token } = openWithOptions({ documents: { getDocument } });
+      const { app, token } = openWithOptions({
+        documents: { ...client({ kind: 'ok', value: { data: source } }), getDocument },
+      });
       expect((await get(app, token, `/mobile/documents/${id}`)).status).toBe(400);
       expect(getDocument).not.toHaveBeenCalled();
     }

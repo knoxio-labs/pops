@@ -134,6 +134,8 @@ export const MOBILE_CAPABILITIES = [
   'ego.actions',
   'trips.read',
   'documents.read',
+  /** Raw Documents ingestion, explicitly granted and independent of reads. */
+  'documents.upload',
 ] as const;
 
 export type MobileCapability = (typeof MOBILE_CAPABILITIES)[number];
@@ -261,7 +263,13 @@ export const MOBILE_CAPABILITY_SCOPES: Readonly<Record<MobileCapability, readonl
   'ego.chat': ['cerebrum.ego'],
   'ego.actions': ['cerebrum.ego'],
   /** Exact published read operations; no Trips mutation authority is granted. */
-  'documents.read': ['documents.paperless.get', 'documents.paperless.download'],
+  'documents.read': [
+    'documents.paperless.get',
+    'documents.paperless.download',
+    'documents.paperless.status',
+    'documents.paperless.task',
+  ],
+  'documents.upload': ['documents.paperless.status', 'documents.write.upload'],
   'trips.read': [
     'trips.trips.list',
     'trips.trips.get',
@@ -279,13 +287,15 @@ export const MOBILE_CAPABILITY_SCOPES: Readonly<Record<MobileCapability, readonl
 /**
  * What pairing grants a new handset.
  *
- * The whole vocabulary today, and that is a deliberate starting point rather
+ * The established default vocabulary, excluding explicitly granted document uploads. This is a starting point rather
  * than an assumption baked into the model: there is exactly one handset, it is
  * the operator's own, and granting it less than the app needs would be
  * ceremony. What the model buys is that narrowing a grant is now expressible
  * at all — see ADR-048's consequences for the operator surface that will do it.
  */
-export const DEFAULT_DEVICE_CAPABILITIES: readonly MobileCapability[] = MOBILE_CAPABILITIES;
+export const DEFAULT_DEVICE_CAPABILITIES: readonly MobileCapability[] = MOBILE_CAPABILITIES.filter(
+  (capability) => capability !== 'documents.upload'
+);
 
 /**
  * What pairing grants a guest's handset, and all it will ever hold.
