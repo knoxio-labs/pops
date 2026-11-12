@@ -14,6 +14,7 @@ import { assertSecretFilesReadable } from '@pops/pillar-sdk/pillar-env';
 import { inboundAuth, isInboundAuthConfigured, requireInboundToken } from './auth.js';
 import { requireServiceAccountKey, resolveServiceAccountKey } from './service-account-key.js';
 import { allTools } from './tools/index.js';
+import { undeclaredArguments, undeclaredArgumentsMessage } from './tools/undeclared-arguments.js';
 import { createUploadRouter, UPLOAD_ROUTE_PREFIX } from './uploads/upload-route.js';
 
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
@@ -79,6 +80,19 @@ export function createMcpServer(context: ToolContext = {}): Server {
       };
     }
     const args: Record<string, unknown> = rawArgs ?? {};
+    const undeclared = undeclaredArguments(tool.inputSchema, args);
+    if (undeclared.length > 0) {
+      logToolCall(
+        name,
+        'error',
+        Date.now() - start,
+        `undeclared arguments ${undeclared.join(',')}`
+      );
+      return {
+        content: [{ type: 'text' as const, text: undeclaredArgumentsMessage(tool, undeclared) }],
+        isError: true,
+      };
+    }
     try {
       const result: CallToolResult = await tool.handler(args, context);
       logToolCall(name, result.isError ? 'error' : 'ok', Date.now() - start);
