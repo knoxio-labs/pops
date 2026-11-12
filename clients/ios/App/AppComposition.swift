@@ -69,6 +69,7 @@ internal final class AppComposition {
 
     internal let credentialStore: DeviceCredentialStore
     internal let streamAuthorizer: any BFMStreamAuthorizer
+    internal let boundStreamAuthorizer: @Sendable (PairedDevice) -> any BFMStreamAuthorizer
     internal let authenticated: @Sendable (PairedDevice) -> BFMHTTPClient
     internal let openInventoryReplica: (PairedDevice) throws -> InventoryReplica
     internal let backgroundRefresh: BackgroundRefresh
@@ -153,6 +154,7 @@ internal final class AppComposition {
         self.session = session
         self.credentialStore = credentialStore
         self.streamAuthorizer = refresher
+        self.boundStreamAuthorizer = Self.streamAuthorizerFactory(refresher: refresher)
         self.authenticated = authenticated
         self.openInventoryReplica = openInventoryReplica
         self.firstUnlock = firstUnlock

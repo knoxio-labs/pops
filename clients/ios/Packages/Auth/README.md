@@ -69,6 +69,8 @@ pairing from a delayed original response. An already-dispatched original request
 can still settle; this does not claim atomic cancellation of network traffic.
 The legacy unbound initializer remains available to existing callers.
 
+Documents-original raw reads use `PairedDeviceStreamAuthorizer` with the same captured device and shared refresher. It checks pairing metadata and revision before selecting credentials or spending a refresh grant. The raw transport also requires the expected origin/revision before either send, so a missing bound credential does not fall back to an unauthenticated request. Already-dispatched responses retain their original revision for conditional revocation.
+
 ## The signed message
 
 The refresh request proves possession of the Enclave key by signing bytes the BFM rebuilds and verifies:

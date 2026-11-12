@@ -48,6 +48,9 @@ internal struct RootView: View {
             .environment(\.errorPresenter, composition.errorPresenter)
             .errorBanner(composition.errorPresenter)
             .task { await composition.shell.restoreSession() }
+            .onChange(of: composition.session.state) { previous, current in
+                Task { await composition.captureSessionChanged(from: previous, to: current) }
+            }
             .task(id: pairedDevice) { await composition.shell.loadBootstrap() }
             // Fires on the pairing that just happened and, since `.task(id:)`
             // runs for the initial value too, on a launch that restores a

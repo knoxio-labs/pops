@@ -6,9 +6,11 @@ internal struct BFMDocumentsFileReader: Sendable {
     private let session: any BFMRawHTTPSession
 
     internal init(
-        baseURL: URL, authorizer: any BFMStreamAuthorizer, session: any BFMRawHTTPSession
+        baseURL: URL, authorizer: any BFMStreamAuthorizer, session: any BFMRawHTTPSession,
+        expectedDevice: PairedDevice? = nil
     ) {
-        authorization = BFMRawAuthorization(baseURL: baseURL, authorizer: authorizer)
+        authorization = BFMRawAuthorization(
+            baseURL: baseURL, authorizer: authorizer, expectedDevice: expectedDevice)
         self.session = session
     }
 
