@@ -39,7 +39,8 @@ const observed = vi.hoisted(() => ({
   capture: vi.fn<(props: CaptureContextProps) => void>(),
   people: vi.fn<(props: PeopleContextProps) => void>(),
 }));
-vi.mock('@pops/trips-workspace', () => ({
+vi.mock('@pops/trips-workspace', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@pops/trips-workspace')>()),
   AccommodationGapProvider: ({ children }: { children: ReactNode }) => children,
   AccommodationGapContext: (props: Parameters<typeof AccommodationGapContext>[0]) => {
     observed.accommodation(props);
