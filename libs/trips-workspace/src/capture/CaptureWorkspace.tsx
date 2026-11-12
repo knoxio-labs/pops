@@ -45,7 +45,7 @@ function WorkspaceSession({
       {query.isError ? (
         <ErrorState error={requestProblem(query.error)} onRetry={() => void query.refetch()} />
       ) : null}
-      <CaptureOperationProblem session={session} />
+      <CaptureOperationProblem session={session} scope={scope} identity={props} />
       {Object.entries(context)
         .filter(([, value]) => value.isError)
         .map(([key, value]) => (

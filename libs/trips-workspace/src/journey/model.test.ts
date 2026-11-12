@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { draftJourney, endpointText, journeySource, legSource, sameJourney } from './model';
+import {
+  draftJourney,
+  endpointInput,
+  endpointText,
+  journeySource,
+  legSource,
+  sameJourney,
+} from './model';
 import { sourceJourney, sourceLeg } from './test-utils';
 
 describe('Independent journey source edits', () => {
@@ -11,12 +18,49 @@ describe('Independent journey source edits', () => {
       sourceLabel: 'Old wharf',
       placeId: 51,
       sourceLinks: endpoint.sourceLinks,
+      date: '2029-02-01',
     });
     expect(endpoint.local).toBe('2029-02-01T22:15');
     expect(endpointText(changed, 'timeZone', 'Pacific/Auckland')).toEqual({
       ...changed,
       timeZone: 'Pacific/Auckland',
     });
+  });
+  it('retains nanosecond precision when changing the day and explicitly selects clock precision', () => {
+    const local = { ...sourceLeg().from, local: '2028-02-29T22:15:33.123456789' };
+    expect(endpointText(local, 'date', '2028-03-01')).toEqual({
+      ...local,
+      local: '2028-03-01T22:15:33.123456789',
+    });
+    const partial = endpointText(local, 'date', '2028-02-');
+    expect(partial.local).toBe('2028-02-T22:15:33.123456789');
+    expect(endpointText(partial, 'date', '2028-03-02').local).toBe('2028-03-02T22:15:33.123456789');
+    const { local: _local, ...withoutClock } = local;
+    expect(endpointText(local, 'date', '')).toEqual(withoutClock);
+    expect(
+      endpointInput(endpointText({ date: '2028-02-29' }, 'local', '2028-03-01T11:00'))
+    ).toEqual({ date: null, local: '2028-03-01T11:00' });
+    expect(endpointInput(endpointText({ date: '2028-02-29' }, 'date', ''))).toEqual({ date: null });
+  });
+  it('applies legacy omission and explicit precision clears to drafts and complete inverse snapshots', () => {
+    const source = {
+      journey: sourceJourney(),
+      legRevision: 0,
+      legs: [sourceLeg({ from: { date: '2028-02-29' } })],
+    };
+    const legacy = draftJourney(source, {
+      kind: 'leg',
+      id: 40,
+      patch: { from: { sourceLabel: 'Edited' } },
+    });
+    expect(legacy.legs[0]?.from).toEqual({ date: '2028-02-29', sourceLabel: 'Edited' });
+    const cleared = draftJourney(source, { kind: 'leg', id: 40, patch: { from: { date: null } } });
+    expect(cleared.legs[0]?.from).toEqual({});
+    const original = sourceLeg({ from: {} });
+    expect(legSource(original).from).toEqual({ date: null });
+    expect(
+      draftJourney(source, { kind: 'leg', id: 40, patch: legSource(original) }).legs[0]?.from
+    ).toEqual({});
   });
   it('snapshots all source fields but excludes owning identities and audit timestamps', () => {
     expect(journeySource(sourceJourney())).not.toHaveProperty('id');

@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { z } from 'zod';
 
 import { openTripsDb, type OpenedTripsDb } from '../index.js';
 import { journeys, journeyLegs } from '../schema.js';
@@ -21,6 +22,7 @@ import {
   listJourneys,
   updateJourney,
 } from '../services/journeys.js';
+import { requireLegRevision } from '../services/leg-revision.js';
 import { createPlace, createTrip, createVisit, listVisits } from '../services/records.js';
 
 let opened: OpenedTripsDb;
@@ -70,6 +72,68 @@ function fixture() {
 }
 
 describe('Journey source persistence', () => {
+  it('preserves a known day through old-client stripping and full endpoint replacement across reopen', () => {
+    const { db, trip, journey } = fixture();
+    const source = createJourneyLeg(db, trip.id, journey.id, {
+      from: { date: '2028-02-29', sourceLabel: 'Original', timeZone: 'Pacific/Kiritimati' },
+      to: { date: '2028-03-01' },
+    });
+    const legacyEndpoint = z.object({
+      sourceLabel: z.string().optional(),
+      local: z.string().optional(),
+      timeZone: z.string().optional(),
+    });
+    const stripped = legacyEndpoint.parse(source.from);
+    expect(stripped).toEqual({ sourceLabel: 'Original', timeZone: 'Pacific/Kiritimati' });
+    const identity = { tripId: trip.id, journeyId: journey.id, id: source.id };
+    expect(
+      updateJourneyLeg(db, identity, { from: { ...stripped, sourceLabel: 'Old writer' } }).from
+    ).toEqual({ date: '2028-02-29', sourceLabel: 'Old writer', timeZone: 'Pacific/Kiritimati' });
+    expect(
+      updateJourneyLeg(db, identity, { from: {}, notes: 'Old empty replacement' }).from
+    ).toEqual({ date: '2028-02-29' });
+    opened.raw.close();
+    opened = openTripsDb(join(directory, 'trips.db'));
+    expect(getJourneyLeg(opened.db, trip.id, journey.id, source.id)).toMatchObject({
+      from: { date: '2028-02-29' },
+      to: { date: '2028-03-01' },
+      notes: 'Old empty replacement',
+    });
+  });
+
+  it('changes precision explicitly and rolls back rejected or stale writes without advancing revision', () => {
+    const { db, trip, journey, first } = fixture();
+    const identity = { tripId: trip.id, journeyId: journey.id, id: first.id };
+    const day = updateJourneyLeg(db, identity, { from: { date: '2028-02-29' } });
+    expect(day.from).toEqual({ date: '2028-02-29' });
+    const revision = requireLegRevision(db, identity);
+    expect(() =>
+      updateJourneyLeg(db, identity, {
+        expectedRevision: revision - 1,
+        from: { date: null },
+        notes: 'stale',
+      })
+    ).toThrow('leg_revision_conflict');
+    expect(() =>
+      updateJourneyLeg(db, identity, {
+        expectedRevision: revision,
+        from: { date: '2028-02-29', local: '2028-02-29T12:30' },
+        notes: 'invalid',
+      })
+    ).toThrow();
+    expect(getJourneyLeg(db, trip.id, journey.id, first.id)).toEqual(day);
+    expect(requireLegRevision(db, identity)).toBe(revision);
+    expect(
+      updateJourneyLeg(db, identity, { from: { date: null }, expectedRevision: revision }).from
+    ).toEqual({});
+    updateJourneyLeg(db, identity, { from: { date: '2028-02-29' } });
+    expect(
+      updateJourneyLeg(db, identity, { from: { local: '2028-03-01T11:22:33.123456789' } }).from
+    ).toEqual({ local: '2028-03-01T11:22:33.123456789' });
+    expect(
+      updateJourneyLeg(db, identity, { from: { date: null, local: '2028-03-02T12:30' } }).from
+    ).toEqual({ local: '2028-03-02T12:30' });
+  });
   it('roundtrips independent source facts, partial legs and unavailable remote links across reopen', () => {
     const { db, trip, journey, first, second } = fixture();
     expect(second).toMatchObject({

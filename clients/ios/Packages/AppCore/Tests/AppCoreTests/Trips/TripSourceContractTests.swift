@@ -5,6 +5,20 @@ import Testing
 
 @Suite("Trip source contracts")
 internal struct TripSourceContractTests {
+    @Test("day-only endpoint round trips retain the supplied day without a clock or zone")
+    internal func endpointDay() throws {
+        let endpoint = try JSONDecoder().decode(
+            TripEndpoint.self, from: Data(#"{"date":"2028-02-29"}"#.utf8))
+        #expect(endpoint.date == "2028-02-29")
+        #expect(endpoint.local == nil)
+        #expect(endpoint.timeZone == nil)
+        let restored = try JSONDecoder().decode(
+            TripEndpoint.self, from: JSONEncoder().encode(endpoint))
+        #expect(restored == endpoint)
+        let legacy = try JSONDecoder().decode(TripEndpoint.self, from: Data(#"{}"#.utf8))
+        #expect(legacy.date == nil)
+    }
+
     @Test("independent endpoint components and unfamiliar source labels are retained verbatim")
     internal func endpointSource() throws {
         let decoder = JSONDecoder()

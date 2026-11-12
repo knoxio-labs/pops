@@ -58,11 +58,38 @@ describe('Departure and arrival source workspace', () => {
         {
           method: 'PATCH',
           path: '/trips/7/journeys/20/legs/40',
-          body: { from: changed.from, expectedRevision: 0 },
+          body: { from: { ...changed.from, date: null }, expectedRevision: 0 },
         },
       ])
     );
     expect(screen.getByLabelText('Arrival local time')).toHaveValue(original.to.local);
+  });
+  it('edits a known day without a clock or zone and restores the original empty endpoint through Undo', async () => {
+    const initial = sourceLeg({ from: {} });
+    const day = sourceLeg({ from: { date: '2028-02-29' } });
+    const transport = journeyTransport({
+      source: { journey: sourceJourney(), legs: [initial], legRevision: 0 },
+      writes: [
+        { status: 200, body: day },
+        { status: 200, body: initial },
+      ],
+    });
+    mount(transport);
+    await edit('Departure day', '2028-02-29');
+    await waitFor(() =>
+      expect(writes(transport)[0]?.body).toEqual({
+        from: { date: '2028-02-29' },
+        expectedRevision: 0,
+      })
+    );
+    expect(screen.getByLabelText('Departure local time')).toHaveValue('');
+    expect(screen.getByLabelText('Departure time zone')).toHaveValue('');
+    expect(screen.getByText('Departure time unknown')).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
+    await waitFor(() =>
+      expect(writes(transport)[1]?.body).toEqual({ ...legSource(initial), expectedRevision: 1 })
+    );
+    await waitFor(() => expect(screen.getByLabelText('Departure day')).toHaveValue(''));
   });
   it('persists Purchased without hardening arrangement and reverses all original source fields through PATCH', async () => {
     const initial = sourceLeg();

@@ -183,6 +183,7 @@ describe('GET /openapi', () => {
       '/mobile/purchases/{id}',
       '/mobile/trips',
       '/mobile/trips/{id}',
+      '/mobile/v2/trips/{id}',
     ]);
   });
 
@@ -190,6 +191,9 @@ describe('GET /openapi', () => {
     const body = await fetchDocument();
 
     expect(body.paths?.['/mobile/bootstrap']?.['get']?.operationId).toBe('mobile.bootstrap');
+    expect(body.paths?.['/mobile/v2/trips/{id}']?.['get']?.operationId).toBe(
+      'mobileTrips.getTripV2'
+    );
     expect(body.paths?.['/mobile/finance/transactions']?.['get']?.operationId).toBe(
       'mobileFinance.listTransactions'
     );

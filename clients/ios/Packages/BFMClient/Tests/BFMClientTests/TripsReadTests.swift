@@ -7,6 +7,23 @@ import Testing
 
 @Suite("BFM Trips source reads")
 internal struct TripsReadTests {
+    @Test("generated BFM delivery preserves a source day without promoting it to a clock")
+    internal func endpointDay() async throws {
+        let body = TripsWire.detail.replacingOccurrences(
+            of: #""local":"2026-01-02T12:00""#, with: #""date":"2028-02-29""#)
+        #expect(body != TripsWire.detail)
+        let transport = StubTransport(status: .ok, json: body)
+        let repository = try BFMTripsRepository.stubbed(transport)
+        let source = try #require(try await repository.trip(id: 1))
+        let endpoint = try #require(source.journeys.first?.legs.first?.from)
+        #expect(endpoint.date == "2028-02-29")
+        #expect(endpoint.local == nil)
+        #expect(endpoint.timeZone == nil)
+        let calls = await transport.recorded.all
+        #expect(calls.first?.operationID == "mobileTrips.getTripV2")
+        #expect(calls.first?.request.path == "/mobile/v2/trips/1")
+    }
+
     @Test("every page is consumed with exact source metadata and no implicit first-trip selection")
     internal func pagedCatalogue() async throws {
         let transport = StubTransport { request, _ in
@@ -75,6 +92,27 @@ internal struct TripsReadTests {
             StubTransport(
                 status: .serviceUnavailable, json: TripsWire.failure("upstream_unavailable")))
         await #expect(throws: RepositoryError.unavailable) { try await unavailable.trips() }
+    }
+
+    @Test("versioned detail distinguishes a missing read grant from revoked device access")
+    internal func versionedForbidden() async throws {
+        let refusals: [(body: String, failure: RepositoryError)] = [
+            (
+                #"{"code":"capability_not_granted","message":"Not granted","capability":"trips.read"}"#,
+                .featureUnavailable
+            ),
+            (
+                #"{"code":"bfm.auth.device_revoked","message":"Revoked","requestId":"trip-denied","retryable":false}"#,
+                .unauthorized
+            ),
+        ]
+        for refusal in refusals {
+            let repository = try BFMTripsRepository.stubbed(
+                StubTransport(status: .forbidden, json: refusal.body))
+            await #expect(throws: refusal.failure) {
+                try await repository.trip(id: 1)
+            }
+        }
     }
 
     @Test("rate-limit responses retain the service's recorded wait instead of inventing one")

@@ -174,6 +174,20 @@ describe('finite canonical Trips MCP surface', () => {
     expect(callDynamic).toHaveBeenCalledExactlyOnceWith('ideas', 'create', args, 'mutation');
   });
 
+  it.each([{}, { date: '2028-02-29' }, { date: null }, { local: '2028-02-29T11:22:33.123' }])(
+    'forwards exact Journey endpoint precision %j without adding a clock, zone or clear',
+    async (from) => {
+      const args = { tripId: 7, journeyId: 20, id: 40, expectedRevision: 3, from };
+      await tool('journeyLegs.update').handler(args);
+      expect(callDynamic).toHaveBeenCalledExactlyOnceWith(
+        'journeyLegs',
+        'update',
+        args,
+        'mutation'
+      );
+    }
+  );
+
   it('preserves tagged identity when capture and target share the same numeric ID', async () => {
     const args = {
       tripId: 7,

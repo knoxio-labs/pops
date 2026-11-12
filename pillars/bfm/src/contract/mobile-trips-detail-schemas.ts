@@ -5,6 +5,7 @@ import { MobileTripEventSchema } from './mobile-trips-event-schemas.js';
 import {
   MobileJourneyGroupSchema,
   MobileJourneyLegSchema,
+  MobileJourneyLegV2Schema,
   MobileJourneySchema,
 } from './mobile-trips-journey-schemas.js';
 import {
@@ -30,6 +31,10 @@ export const MobileTripDetailSchema = z.object({
   events: z.array(MobileTripEventSchema),
   documentAssociations: z.array(MobileTripDocumentAssociationSchema),
 });
+/** Explicit v2 detail retains source days without changing responses consumed by installed legacy clients. */
+export const MobileTripDetailV2Schema = MobileTripDetailSchema.extend({
+  journeys: z.array(MobileJourneyDetailSchema.extend({ legs: z.array(MobileJourneyLegV2Schema) })),
+});
 /** Snapshot-bound cursor page, with the exact total count of source trips. */
 export const MobileTripsPageSchema = z.object({
   items: z.array(MobileTripSchema),
@@ -43,6 +48,8 @@ export const MobileTripsQuerySchema = z.object({
 });
 /** Complete native trip read payload. */
 export type MobileTripDetail = z.infer<typeof MobileTripDetailSchema>;
+/** Day-aware detail returned only by the explicitly versioned mobile operation. */
+export type MobileTripDetailV2 = z.infer<typeof MobileTripDetailV2Schema>;
 /** One mobile trip-list page. */
 export type MobileTripsPage = z.infer<typeof MobileTripsPageSchema>;
 /** Validated mobile trip-list input. */

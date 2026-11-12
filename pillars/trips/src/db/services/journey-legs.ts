@@ -1,6 +1,10 @@
 import { and, asc, desc, eq, isNull } from 'drizzle-orm';
 
-import { JourneyLegSchema } from '../../contract/journey-schemas.js';
+import {
+  JourneyEndpointInputSchema,
+  JourneyEndpointSchema,
+  JourneyLegSchema,
+} from '../../contract/journey-schemas.js';
 import { journeyLegs } from '../schema.js';
 import { getJourney } from './journeys.js';
 import { writeLegOrder } from './leg-order.js';
@@ -10,14 +14,25 @@ import { requireOwnedRecord, TripsServiceError } from './source-record.js';
 
 import type {
   JourneyEndpoint,
+  JourneyEndpointInput,
   JourneyLeg,
   JourneyLegInput,
 } from '../../contract/journey-schemas.js';
 import type { LegWritePrecondition } from '../../contract/leg-removal-schemas.js';
 import type { TripsDb } from '../index.js';
 
-function checkEndpoint(db: TripsDb, endpoint: JourneyEndpoint | undefined): void {
+function checkEndpoint(db: TripsDb, endpoint: Pick<JourneyEndpoint, 'placeId'> | undefined): void {
   if (endpoint?.placeId !== undefined) getPlace(db, endpoint.placeId);
+}
+
+function sourceEndpoint(previous: JourneyEndpoint, input: JourneyEndpointInput): JourneyEndpoint {
+  const { date, ...fields } = JourneyEndpointInputSchema.parse(input);
+  if (fields.local !== undefined || date === null) return JourneyEndpointSchema.parse(fields);
+  const retainedDay = date ?? previous.date;
+  return JourneyEndpointSchema.parse({
+    ...fields,
+    ...(retainedDay === undefined ? {} : { date: retainedDay }),
+  });
 }
 
 /** List source legs in explicit order, retaining partial and contradictory timing. */
@@ -66,10 +81,14 @@ export function createJourneyLeg(
 ): JourneyLeg {
   return db.transaction(
     (tx) => {
-      const { expectedRevision, ...fields } = input;
+      const { expectedRevision, from, to, ...fields } = input;
       const revision = requireWritableLegRevision(tx, { tripId, journeyId }, expectedRevision);
-      checkEndpoint(tx, fields.from);
-      checkEndpoint(tx, fields.to);
+      checkEndpoint(tx, from);
+      checkEndpoint(tx, to);
+      const endpoints = {
+        ...(from === undefined ? {} : { from: sourceEndpoint({}, from) }),
+        ...(to === undefined ? {} : { to: sourceEndpoint({}, to) }),
+      };
       const last = tx
         .select({ position: journeyLegs.position })
         .from(journeyLegs)
@@ -81,7 +100,12 @@ export function createJourneyLeg(
         requireOwnedRecord(
           tx
             .insert(journeyLegs)
-            .values({ ...fields, journeyId, position: last === undefined ? 0 : last.position + 1 })
+            .values({
+              ...fields,
+              ...endpoints,
+              journeyId,
+              position: last === undefined ? 0 : last.position + 1,
+            })
             .returning()
             .get()
         )
@@ -93,7 +117,7 @@ export function createJourneyLeg(
   );
 }
 
-/** Patch supplied source facts; endpoint replacement never fills fields from a place or another leg. */
+/** Replace supplied endpoints while preserving an omitted new day-only field for legacy writers; null clears and explicit local changes precision in this transaction. */
 export function updateJourneyLeg(
   db: TripsDb,
   identity: { tripId: number; journeyId: number; id: number },
@@ -102,16 +126,20 @@ export function updateJourneyLeg(
   const { tripId, journeyId, id } = identity;
   return db.transaction(
     (tx) => {
-      const { expectedRevision, ...fields } = input;
+      const { expectedRevision, from, to, ...fields } = input;
       const revision = requireWritableLegRevision(tx, { tripId, journeyId }, expectedRevision);
-      getJourneyLeg(tx, tripId, journeyId, id);
-      checkEndpoint(tx, fields.from);
-      checkEndpoint(tx, fields.to);
+      const previous = getJourneyLeg(tx, tripId, journeyId, id);
+      checkEndpoint(tx, from);
+      checkEndpoint(tx, to);
+      const endpoints = {
+        ...(from === undefined ? {} : { from: sourceEndpoint(previous.from, from) }),
+        ...(to === undefined ? {} : { to: sourceEndpoint(previous.to, to) }),
+      };
       const leg = JourneyLegSchema.parse(
         requireOwnedRecord(
           tx
             .update(journeyLegs)
-            .set({ ...fields, updatedAt: new Date().toISOString() })
+            .set({ ...fields, ...endpoints, updatedAt: new Date().toISOString() })
             .where(
               and(
                 eq(journeyLegs.journeyId, journeyId),
