@@ -580,6 +580,18 @@ Idea detail retains source links, canonical Contacts references and recommendati
 notes as explicit fields. Optional timing and location discrepancies produce findings
 without blocking unrelated edits. Mutable reference text keeps its editing identity
 while typing; failed writes retain the exact draft and original source revision.
+A confirmed row edit may advance a newer retained draft only to its strict unchanged
+original receipt successor. A later read, foreign mutation or advanced replay never
+lends its revision to local edits. Definite row revision conflicts offer Reload source
+instead of replaying a permanently stale command. Reload reads the captured owner and
+retains all drafts; only the matching row's explicit Discard after that successful read
+clears its rejected command. A subsequent explicit edit starts a new UUID using the
+current canonical revision. Failed, stale, closed-view or foreign-owner reads cannot
+unlock discard, and ambiguous writes retain their exact request and Retry. Definite
+conflicts retain their exact rejected commands by owning trip, record kind and ID;
+unrelated acknowledgements and other row conflicts cannot release those fences.
+Only explicit matching Discard removes one conflict; remaining conflicts reuse the
+existing recovery controls without automatic retry or revision rebasing.
 Contact selection and creation use a host-injected opaque owner intent, which supplies its own
 catalogues to the host locale. Each organisation intent retains the owner session above
 route views, including pending creation and ambiguous outcomes. The canonical reference

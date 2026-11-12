@@ -29,6 +29,7 @@ export interface CaptureFailure {
   error: unknown;
   label: string;
   canRetry: boolean;
+  reloadSource?: boolean;
 }
 /** Observable shared state for Capture, Inbox and Explore, with session-only composer material. */
 export interface CaptureEditorState {
@@ -42,6 +43,13 @@ export interface CaptureEditorState {
   failure: CaptureFailure | null;
   confirmation: { request: CaptureRequest; result: CaptureResult } | null;
 }
+/** One explicit conflict reload, bound to the rejected operation and mutation generation. */
+export interface CaptureConflictReload {
+  readonly operationId: string;
+  readonly generation: number;
+  readonly readId: number;
+  readonly sourceVersion: number;
+}
 /** Serialized source operations with original draft recovery and exact request replay. */
 export interface CaptureEditor {
   getState: () => CaptureEditorState;
@@ -49,6 +57,14 @@ export interface CaptureEditor {
   getPendingRequest: () => CaptureRequest | null;
   subscribe: (listener: () => void) => () => void;
   receive: (source: CaptureSource, readGeneration: number) => void;
+  /** Begin a fresh read only for a definitely rejected row revision conflict. */
+  beginConflictReload: () => CaptureConflictReload | null;
+  /** Admit a successful owner-fenced fresh read without rebasing or discarding retained fields. */
+  completeConflictReload: (token: CaptureConflictReload, source: CaptureSource) => boolean;
+  /** Whether this row can be explicitly discarded without losing an unknown request or unreconciled conflict. */
+  canDiscardRejectedEdit: (kind: 'capture' | 'idea', id: number) => boolean;
+  /** Clear only a matching definite failure after its fresh read; unknown row writes remain retained. */
+  discardRejectedEdit: (kind: 'capture' | 'idea', id: number) => boolean;
   setPerformer: (perform: CapturePerformer) => void;
   editDraft: (fields: Partial<Omit<CaptureDraft, 'selections'>>) => boolean;
   clearDraft: () => boolean;

@@ -34,7 +34,7 @@ function Membership({ session, query, scope, ...props }: Props & CaptureSessionV
       {query.isError && (
         <ErrorState error={requestProblem(query.error)} onRetry={() => void query.refetch()} />
       )}
-      <CaptureOperationProblem session={session} />
+      <CaptureOperationProblem session={session} scope={scope} identity={props} />
       <CaptureMembershipAction session={session} source={props.source} tripId={props.tripId} />
       <Button
         variant="ghost"

@@ -1,6 +1,7 @@
 import { captureDraftCommand, copyCaptureDraft, emptyCaptureDraft } from './draft';
 import { CaptureEditorStore } from './editor-store';
 import { executeCaptureIntent } from './execute';
+import { captureRevisionConflict } from './failure';
 import { captureUndoScope } from './result';
 
 import type { CaptureEditor } from './editor-types';
@@ -34,6 +35,14 @@ class SourceCaptureEditor implements CaptureEditor {
   subscribe: CaptureEditor['subscribe'] = (listener) => this.store.subscribe(listener);
   receive: CaptureEditor['receive'] = (source, generation) =>
     this.store.receive(source, generation);
+  beginConflictReload: CaptureEditor['beginConflictReload'] = () =>
+    this.store.recovery.beginConflictReload();
+  completeConflictReload: CaptureEditor['completeConflictReload'] = (token, source) =>
+    this.store.recovery.completeConflictReload(token, source);
+  canDiscardRejectedEdit: CaptureEditor['canDiscardRejectedEdit'] = (kind, id) =>
+    this.store.recovery.canDiscardRejectedEdit(kind, id);
+  discardRejectedEdit: CaptureEditor['discardRejectedEdit'] = (kind, id) =>
+    this.store.recovery.discardRejectedEdit(kind, id);
   setPerformer(perform: CapturePerformer): void {
     this.store.perform = perform;
   }
@@ -89,7 +98,8 @@ class SourceCaptureEditor implements CaptureEditor {
     }
   }
   commit(command: CaptureCommand, label: string): Promise<boolean> {
-    if (this.store.pending !== null) return Promise.resolve(false);
+    if (this.store.pending !== null || this.store.recovery.blocksConflictedEdit(command))
+      return Promise.resolve(false);
     return executeCaptureIntent(this.store, {
       request: { operationId: this.store.newId(), command: structuredClone(command) },
       label,
@@ -116,7 +126,9 @@ class SourceCaptureEditor implements CaptureEditor {
   }
   retry(): Promise<boolean> {
     const intent = this.store.failureIntent;
-    return intent === null ? Promise.resolve(false) : executeCaptureIntent(this.store, intent);
+    return intent === null || captureRevisionConflict(this.store.state.failure?.error, intent)
+      ? Promise.resolve(false)
+      : executeCaptureIntent(this.store, intent);
   }
   private replaceSelections(draft: CaptureDraft): boolean {
     if (this.store.state.composerLocked) return false;
