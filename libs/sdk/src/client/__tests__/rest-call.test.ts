@@ -9,6 +9,7 @@ const OPENAPI: OpenApiDocument = {
   paths: {
     '/entities/{id}': {
       get: { operationId: 'entities.get', parameters: [{ name: 'id', in: 'path' }] },
+      delete: { operationId: 'entities.delete', parameters: [{ name: 'id', in: 'path' }] },
       patch: {
         operationId: 'entities.update',
         parameters: [{ name: 'id', in: 'path' }],
@@ -178,6 +179,24 @@ describe('performRestCall — request building', () => {
 });
 
 describe('performRestCall — response / error mapping', () => {
+  it('confirms explicit HTTP 204 without inventing JSON or retrying the mutation', async () => {
+    const { fetchImpl, calls } = recordingRest(() => new Response(null, { status: 204 }));
+    const result = await performRestCall(ctx(['entities', 'delete'], { id: 'ent-1' }, fetchImpl));
+    expect(result).toEqual({ kind: 'ok', value: undefined });
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toMatchObject({ method: 'DELETE', body: undefined });
+  });
+
+  it.each([200, 201, 202, 205, 403, 404, 409, 503])(
+    'does not turn an empty HTTP %i response into successful no-content',
+    async (status) => {
+      const { fetchImpl, calls } = recordingRest(() => new Response(null, { status }));
+      const result = await performRestCall(ctx(['entities', 'delete'], { id: 'ent-1' }, fetchImpl));
+      expect(result.kind).not.toBe('ok');
+      expect(calls).toHaveLength(1);
+    }
+  );
+
   it('decodes a plain-JSON success body directly (no tRPC envelope unwrap)', async () => {
     const { fetchImpl } = recordingRest(() => jsonOk({ data: [{ id: 'x' }] }));
     const result = await performRestCall(ctx(['settings', 'getMany'], { keys: [] }, fetchImpl));
