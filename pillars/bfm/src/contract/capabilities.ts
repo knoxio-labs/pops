@@ -133,6 +133,7 @@ export const MOBILE_CAPABILITIES = [
   /** Decide proposed-write batches and allow tools for the conversation. */
   'ego.actions',
   'trips.read',
+  'trips.capture.write',
   'documents.read',
 ] as const;
 
@@ -262,7 +263,9 @@ export const MOBILE_CAPABILITY_SCOPES: Readonly<Record<MobileCapability, readonl
   'ego.actions': ['cerebrum.ego'],
   /** Exact published read operations; no Trips mutation authority is granted. */
   'documents.read': ['documents.paperless.get', 'documents.paperless.download'],
+  'trips.capture.write': ['trips.captures.create', 'trips.captures.update', 'trips.captures.undo'],
   'trips.read': [
+    'trips.captureWorkspace.get',
     'trips.trips.list',
     'trips.trips.get',
     'trips.places.list',
@@ -277,15 +280,12 @@ export const MOBILE_CAPABILITY_SCOPES: Readonly<Record<MobileCapability, readonl
 };
 
 /**
- * What pairing grants a new handset.
- *
- * The whole vocabulary today, and that is a deliberate starting point rather
- * than an assumption baked into the model: there is exactly one handset, it is
- * the operator's own, and granting it less than the app needs would be
- * ceremony. What the model buys is that narrowing a grant is now expressible
- * at all — see ADR-048's consequences for the operator surface that will do it.
+ * Operator pairing defaults retain the existing grant. Trips capture writes
+ * require explicit per-device selection; a new build never opts a device in.
  */
-export const DEFAULT_DEVICE_CAPABILITIES: readonly MobileCapability[] = MOBILE_CAPABILITIES;
+export const DEFAULT_DEVICE_CAPABILITIES: readonly MobileCapability[] = MOBILE_CAPABILITIES.filter(
+  (capability) => capability !== 'trips.capture.write'
+);
 
 /**
  * What pairing grants a guest's handset, and all it will ever hold.

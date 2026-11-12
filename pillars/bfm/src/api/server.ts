@@ -84,6 +84,7 @@ import { createPillarGateway } from './pillars/gateway.js';
 import { configureBfmServerSdk } from './pillars/sdk-config.js';
 import { createMobilePurchasesClient } from './purchases/client.js';
 import { createRateLimiter, PAIRING_CODE_RATE_WINDOW_MS } from './rate-limit.js';
+import { createMobileCaptureClient } from './trips/capture.js';
 import { createMobileTripsClient } from './trips/client.js';
 
 // Before the port, the database, or anything that resolves a credential.
@@ -180,6 +181,7 @@ const app = createBfmApiApp(
     barcode,
     ego,
     trips,
+    captures: createMobileCaptureClient(gateway),
     documents,
     documentBytes,
     egoStream,

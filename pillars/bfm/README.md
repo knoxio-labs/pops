@@ -509,7 +509,7 @@ a handset — a cursor of the old offset shape simply fails to decode.
 
 ### Trips source snapshots
 
-`trips.read` gates both Trips routes. Operator devices tracking the default
+`trips.read` gates the Trips list, detail and atomic Capture workspace reads. Operator devices tracking the default
 grant receive it through the existing pairing/refresh capability resolution;
 explicit grants and guest grants remain unchanged. Bootstrap advertises the
 `trips` feature with the Trips pillar's actual reachability.
@@ -536,6 +536,25 @@ Every required collection must succeed. Missing referenced identities,
 duplicate IDs or wrong trip/journey ownership produce a contract mismatch;
 unavailable sources never become empty successful arrays. The exact upstream
 service-account grants are listed in [the federation client documentation](src/api/pillars/README.md).
+
+### Trips capture commands
+
+`trips.capture.write` independently gates canonical capture create, presentation
+update and explicit Undo. It grants only `trips.captures.create`,
+`trips.captures.update` and `trips.captures.undo`; explicit read-only and guest
+grants are not widened. This new write capability is excluded from operator
+defaults too: enable it explicitly for the intended device in Devices.
+The BFM forwards the caller's operation UUID unchanged.
+The Trips producer owns replay, revision conflicts and Undo receipts; BFM has
+no capture database, automatic retry or second deduplication key.
+
+The workspace retains removed source identities. Operation results distinguish
+the immutable original receipt from current affected records and replay/Undo
+state. Original text is verbatim, and update cannot replace originals. Attachments
+must already be accepted Documents task or original identities; local file
+metadata is never treated as an upload. Classification alone does not organise
+an Idea or booking. These commands do not remove sources or expose a generic
+operator mutation route. Normal mobile JSON request bounds apply.
 
 ### Documents originals
 
@@ -774,7 +793,7 @@ and send it in that header, against the registry's admin surface reachable
 externally through the shell proxy:
 
 ```bash
-curl -sS -X POST https://pops.local/registry-api/service-accounts -H 'Content-Type: application/json' -H "cf-access-jwt-assertion: $ACCESS_JWT" -d '{"name":"bfm","scopes":["finance.transactions","finance.transactionHistory","finance.transactionAttachments","finance.accounts","finance.checkpoints","finance.delegatedSubject","purchases.purchase","purchases.search","purchases.receipt","inventory.sync","inventory.types.catalogue","inventory.types.read","inventory.codes","inventory.media","inventory.documents","inventory.paperless.status","inventory.items.getParts","inventory.items.addPart","inventory.items.removePart","barcode.lookup","cerebrum.ego","documents.paperless.get","documents.paperless.download","trips.trips.list","trips.trips.get","trips.places.list","trips.visits.list","trips.journeys.list","trips.journeyLegs.list","trips.journeyGroups.list","trips.stays.list","trips.events.list","trips.documentAssociations.list"]}'
+curl -sS -X POST https://pops.local/registry-api/service-accounts -H 'Content-Type: application/json' -H "cf-access-jwt-assertion: $ACCESS_JWT" -d '{"name":"bfm","scopes":["finance.transactions","finance.transactionHistory","finance.transactionAttachments","finance.accounts","finance.checkpoints","finance.delegatedSubject","purchases.purchase","purchases.search","purchases.receipt","inventory.sync","inventory.types.catalogue","inventory.types.read","inventory.codes","inventory.media","inventory.documents","inventory.paperless.status","inventory.items.getParts","inventory.items.addPart","inventory.items.removePart","barcode.lookup","cerebrum.ego","documents.paperless.get","documents.paperless.download","trips.captureWorkspace.get","trips.captures.create","trips.captures.update","trips.captures.undo","trips.trips.list","trips.trips.get","trips.places.list","trips.visits.list","trips.journeys.list","trips.journeyLegs.list","trips.journeyGroups.list","trips.stays.list","trips.events.list","trips.documentAssociations.list"]}'
 ```
 
 Two deployment shapes let a bare `curl` through, which is why this can work on

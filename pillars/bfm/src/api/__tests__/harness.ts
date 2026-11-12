@@ -23,12 +23,12 @@ import { createMobileInventoryMediaClient } from '../inventory/media-client.js';
 import { createPillarGateway } from '../pillars/gateway.js';
 import { createMobilePurchasesClient } from '../purchases/client.js';
 import { createRateLimiter, type RateLimiter } from '../rate-limit.js';
-import { createMobileTripsClient, type MobileTripsClient } from '../trips/client.js';
 import { documentsDeps, type DocumentTestOptions } from './documents-deps.js';
 import {
   inventoryDocumentDeps,
   type InventoryDocumentTestOptions,
 } from './inventory-documents-deps.js';
+import { tripsDeps } from './trips-deps.js';
 
 import type { Express } from 'express';
 
@@ -136,7 +136,8 @@ export interface TestAppOptions extends InventoryDocumentTestOptions, DocumentTe
   barcode?: MobileBarcodeClient;
   /** Where the `/mobile/ego/*` routes get conversations and threads. */
   ego?: MobileEgoClient;
-  trips?: MobileTripsClient;
+  trips?: BfmApiDeps['trips'];
+  captures?: BfmApiDeps['captures'];
   /** Where the raw `/mobile/ego/chat/stream` route gets its SSE frames. */
   egoStream?: EgoStreamClient;
   /** Same, for the raw Ego stream's request budget. */
@@ -252,6 +253,7 @@ function clientDeps(
   | 'barcode'
   | 'ego'
   | 'trips'
+  | 'captures'
   | 'inventory'
   | 'inventoryMedia'
   | 'egoStream'
@@ -267,7 +269,7 @@ function clientDeps(
     barcode:
       options.barcode ?? createMobileBarcodeClient(createPillarGateway(unreachableHandleFactory)),
     ego: options.ego ?? createMobileEgoClient(createPillarGateway(unreachableHandleFactory)),
-    trips: options.trips ?? createMobileTripsClient(createPillarGateway(unreachableHandleFactory)),
+    ...tripsDeps(options, unreachableHandleFactory),
     egoStream:
       options.egoStream ?? createEgoStreamClient({ discovery: unreachableEgoStreamDiscovery }),
     inventory:
