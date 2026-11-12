@@ -12,7 +12,10 @@ describe('Direct Documents ingest authority', () => {
   it('separates read and upload and does not widen any existing default', () => {
     expect(MOBILE_CAPABILITIES).toContain('documents.upload');
     expect(DEFAULT_DEVICE_CAPABILITIES).toEqual(
-      MOBILE_CAPABILITIES.filter((value) => value !== 'documents.upload')
+      MOBILE_CAPABILITIES.filter(
+        (value) =>
+          value !== 'documents.upload' && value !== 'trips.capture.write' && value !== 'trips.write'
+      )
     );
     expect(GUEST_DEVICE_CAPABILITIES).not.toContain('documents.upload');
     expect(MOBILE_CAPABILITY_SCOPES['documents.upload']).toEqual([
