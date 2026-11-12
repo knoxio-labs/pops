@@ -3,7 +3,8 @@
  * lifecycle, sync, container state and in hand. Each pairs its icon with a
  * word, and each quiet case (active, synced, quantity 1) draws nothing.
  */
-import { Badge, cn } from '@pops/ui';
+import { inventoryCodeUri } from '@pops/inventory/labels';
+import { Badge, QrCodePopover, cn } from '@pops/ui';
 
 import { INVENTORY_ICONS } from '../model/icons';
 
@@ -53,13 +54,12 @@ export function ConceptBadge({
 
 /** The printed-label code, in mono. Draws nothing for an uncoded item unless asked. */
 export function CodeBadge({ code, showNone = false }: { code: string | null; showNone?: boolean }) {
-  const Icon = INVENTORY_ICONS.code;
   if (code === null) {
     return showNone ? <span className="text-xs text-muted-foreground">No code</span> : null;
   }
   return (
     <span className="relative inline-flex items-center gap-1 font-mono text-xs text-muted-foreground">
-      <Icon className="size-3.5" aria-hidden />
+      <QrCodePopover value={inventoryCodeUri(code)} label={code} />
       <span className="sr-only">Code</span>
       {code}
     </span>

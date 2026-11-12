@@ -1,4 +1,4 @@
-import { itemUri } from '@pops/inventory/labels';
+import { labelQrUri } from '@pops/inventory/labels';
 import { FieldIcon, FragileIcon, isFieldIconName, QrCode, cn } from '@pops/ui';
 
 import type { CSSProperties, ReactElement, ReactNode } from 'react';
@@ -16,7 +16,7 @@ export function LabelQr({ subject, sizeMm }: { subject: PrintSubject; sizeMm: nu
   return (
     <div className="shrink-0" style={{ width: size, height: size }}>
       <QrCode
-        value={itemUri(subject.id)}
+        value={labelQrUri(subject)}
         title={`QR code for ${subject.name}`}
         className="max-w-none"
       />

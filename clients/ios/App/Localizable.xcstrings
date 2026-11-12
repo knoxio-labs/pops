@@ -1,6 +1,36 @@
 {
   "sourceLanguage" : "en-AU",
   "strings" : {
+    "No Inventory item on this device matches this code. Sync Inventory and try again." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nenhum item do Inventário neste dispositivo corresponde a este código. Sincronize o Inventário e tente novamente."
+          }
+        }
+      }
+    },
+    "Pair this device with your Pops server, then open the Inventory link again." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Emparelhe este dispositivo com seu servidor Pops e abra o link do Inventário novamente."
+          }
+        }
+      }
+    },
+    "Pairing could not be restored. Try again, or pair this device with your Pops server." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível restaurar o emparelhamento. Tente novamente ou emparelhe este dispositivo com seu servidor Pops."
+          }
+        }
+      }
+    },
     "%@ is not available right now." : {
       "localizations" : {
         "pt-BR" : {

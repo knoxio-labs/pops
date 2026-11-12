@@ -1,4 +1,11 @@
-import { fitToSheet, LABEL_GAP_MM, MIN_QR_MM, planLabel } from '@pops/inventory/labels';
+import {
+  fitToSheet,
+  LABEL_GAP_MM,
+  labelQrLayout,
+  labelQrMinimumMm,
+  MIN_QR_MM,
+  planLabel,
+} from '@pops/inventory/labels';
 
 import type { LabelPlan, PrintSubject, ResolvedLabel, SheetLayout } from '@pops/inventory/labels';
 
@@ -9,7 +16,11 @@ function hasText(label: ResolvedLabel): boolean {
   return label.parts.some((part) => part !== 'qr') || label.fields.length > 0;
 }
 
-function symbolMm(label: ResolvedLabel, layout: SheetLayout): number | null {
+function symbolMm(
+  label: ResolvedLabel,
+  layout: SheetLayout,
+  minimumQrMm = MIN_QR_MM
+): number | null {
   const { paddingMm } = layout.scale;
   const innerWidthMm = layout.labelWidthMm - paddingMm * 2;
   const innerHeightMm = layout.labelHeightMm - paddingMm * 2;
@@ -19,7 +30,7 @@ function symbolMm(label: ResolvedLabel, layout: SheetLayout): number | null {
   const gapsMm = LABEL_GAP_MM * (count - 1 + Number(withText));
   const availableMm = (innerWidthMm - gapsMm - (withText ? MIN_TEXT_MM : 0)) / count;
   const sizeMm = Math.min(MAX_SYMBOL_MM, innerHeightMm, availableMm);
-  const minimumMm = withQr ? MIN_QR_MM : MIN_TEXT_MM;
+  const minimumMm = withQr ? minimumQrMm : MIN_TEXT_MM;
   return sizeMm >= minimumMm ? sizeMm : null;
 }
 
@@ -35,11 +46,16 @@ function contentLayout(layout: SheetLayout, sizeMm: number): SheetLayout {
 export function fitPrintedLabel(
   label: ResolvedLabel,
   layout: SheetLayout,
-  fragile: boolean
+  fragile: boolean,
+  subject?: Pick<PrintSubject, 'id' | 'code'>
 ): ResolvedLabel | null {
-  if (!fragile) return fitToSheet(label, layout);
-  const sizeMm = symbolMm(label, layout);
-  return sizeMm === null ? null : fitToSheet(label, contentLayout(layout, sizeMm));
+  const actualLayout = subject ? labelQrLayout(subject, layout) : layout;
+  const minimumQrMm = subject ? labelQrMinimumMm(subject) : MIN_QR_MM;
+  if (!fragile) return fitToSheet(label, actualLayout, minimumQrMm);
+  const sizeMm = symbolMm(label, actualLayout, minimumQrMm);
+  return sizeMm === null
+    ? null
+    : fitToSheet(label, contentLayout(actualLayout, sizeMm), minimumQrMm);
 }
 
 /** Plans a previously fitted label and returns the fragile symbol's printed side in millimetres. */
@@ -49,14 +65,17 @@ export function planPrintedLabel(
   layout: SheetLayout,
   fragile: boolean
 ): { plan: LabelPlan; fragileMm: number | null } {
-  if (!fragile) return { plan: planLabel(label, subject, layout), fragileMm: null };
-  const sizeMm = symbolMm(label, layout);
+  const actualLayout = labelQrLayout(subject, layout);
+  const minimumQrMm = labelQrMinimumMm(subject);
+  if (!fragile)
+    return { plan: planLabel(label, subject, actualLayout, { minimumQrMm }), fragileMm: null };
+  const sizeMm = symbolMm(label, actualLayout, minimumQrMm);
   if (sizeMm === null) throw new RangeError('fragile symbol does not fit on this label');
   const plan = planLabel(
     label,
     subject,
-    { ...layout, scale: { ...layout.scale, qrMm: sizeMm } },
-    sizeMm + LABEL_GAP_MM
+    { ...actualLayout, scale: { ...actualLayout.scale, qrMm: sizeMm } },
+    { inlineReservationMm: sizeMm + LABEL_GAP_MM, minimumQrMm }
   );
   return {
     plan: plan.arrangement === 'qr-fill' ? { ...plan, qrMm: sizeMm } : plan,

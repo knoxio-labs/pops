@@ -12,6 +12,20 @@ internal enum RootCopy {
     internal static var more: String { localized("More") }
     internal static var done: String { localized("Done") }
 
+    internal static var inventoryLinkNotFound: String {
+        localized(
+            "No Inventory item on this device matches this code. Sync Inventory and try again.")
+    }
+
+    internal static var inventoryLinkPairingRequired: String {
+        localized("Pair this device with your Pops server, then open the Inventory link again.")
+    }
+
+    internal static var inventoryLinkRestoreFailed: String {
+        localized(
+            "Pairing could not be restored. Try again, or pair this device with your Pops server.")
+    }
+
     internal static var retry: String { localized("Try again") }
 
     internal static var degraded: String {

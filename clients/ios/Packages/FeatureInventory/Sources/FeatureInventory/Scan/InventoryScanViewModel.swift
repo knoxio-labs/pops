@@ -80,11 +80,15 @@ internal final class InventoryScanViewModel {
     internal func didScan(_ payload: String) -> Bool {
         guard phase == .scanning else { return false }
 
+        if let code = parseInventoryCodeURI(payload) {
+            lookUp(code: code, externalIdentifiers: false)
+            return true
+        }
         if let uri = parsePopsURI(payload) {
             route(uri)
             return true
         }
-        guard !payload.hasPrefix("pops://") else {
+        guard !payload.hasPrefix("pops://"), !payload.hasPrefix("pops-i://") else {
             phase = .notPops
             return true
         }
@@ -104,10 +108,12 @@ internal final class InventoryScanViewModel {
         }
     }
 
-    private func lookUp(code: String) {
+    private func lookUp(code: String, externalIdentifiers: Bool = true) {
         phase = .loading
         pendingLookup = Task { [weak self, store] in
-            for await resolution in store.observe(Self.query(code: code)) {
+            for await resolution in store.observe(
+                Self.query(code: code, externalIdentifiers: externalIdentifiers))
+            {
                 self?.settle(resolution)
                 return
             }
@@ -144,14 +150,17 @@ internal final class InventoryScanViewModel {
     /// item names that item even if its text also appears as someone else's
     /// barcode. Only a code no item holds falls through to external
     /// identifiers, which nothing makes unique.
-    private static func query(code: String) -> InventoryQuery<InventoryScanResolution> {
+    private static func query(
+        code: String, externalIdentifiers: Bool
+    ) -> InventoryQuery<InventoryScanResolution> {
         InventoryQuery { source in
             let reader = InventoryRecordReader(source: source)
             if let item = source.inventoryItem(withCode: code) {
                 return .code(reader.record(item))
             }
             return .identifier(
-                source.inventoryItems(withExternalIdentifier: code).map(reader.record))
+                externalIdentifiers
+                    ? source.inventoryItems(withExternalIdentifier: code).map(reader.record) : [])
         }
     }
 }

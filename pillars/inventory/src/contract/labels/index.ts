@@ -42,10 +42,16 @@ export {
   type FittedList,
   type LabelArrangement,
   type LabelPlan,
+  type LabelPlanOptions,
 } from './label-layout.js';
 export {
   DEFAULT_COPIES,
+  inventoryCodeUri,
   itemUri,
+  labelQrUri,
+  labelQrExtent,
+  labelQrMinimumMm,
+  labelQrLayout,
   resolveTemplate,
   type CopiesByKind,
   type LabelTemplateChoice,
