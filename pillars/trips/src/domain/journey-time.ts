@@ -1,11 +1,24 @@
 import { Temporal } from '@js-temporal/polyfill';
+import { z } from 'zod';
 
 import { JourneyEndpointSchema } from '../contract/journey-schemas.js';
 
 import type { JourneyEndpoint } from '../contract/journey-schemas.js';
+import type { JourneyEndpointDay } from '../contract/journey-timing.js';
 
-const ClockSource = JourneyEndpointSchema.pick({ local: true, timeZone: true }).required();
+const ClockSource = z.object({
+  local: JourneyEndpointSchema.shape.local.unwrap(),
+  timeZone: JourneyEndpointSchema.shape.timeZone.unwrap(),
+});
 const NANOSECONDS_PER_MINUTE = 60_000_000_000;
+
+/** Project the supplied calendar day; unknown clocks/zones never create an instant or all-day interval. */
+export function journeySourceDay(endpoint: JourneyEndpoint): JourneyEndpointDay {
+  if (endpoint.date !== undefined) return { date: endpoint.date, precision: 'day' };
+  if (endpoint.local !== undefined)
+    return { date: endpoint.local.slice(0, 10), precision: 'local' };
+  return { date: null, precision: 'unknown' };
+}
 
 /** Resolve explicit source clocks only; missing, skipped, repeated or unsupported clocks remain unresolved.
  * @see https://tc39.es/proposal-temporal/docs/timezone.html

@@ -29,6 +29,30 @@ function leg(id: number, input: Partial<JourneyLeg> = {}): JourneyLeg {
 const endpoint = (local: string) => ({ local, timeZone: 'UTC' });
 
 describe('Source-only journey timing projection', () => {
+  it('retains day precision, including contradictory source days, without an instant, duration or window', () => {
+    const source = leg(1, {
+      from: { date: '2028-03-01', timeZone: 'Pacific/Kiritimati' },
+      to: { date: '2028-02-29' },
+    });
+    const before = structuredClone(source);
+    expect(deriveJourneyTiming(1, [source])).toEqual({
+      journeyId: 1,
+      legs: [
+        {
+          legId: 1,
+          departure: null,
+          arrival: null,
+          elapsedMinutes: null,
+          departureSource: { date: '2028-03-01', precision: 'day' },
+          arrivalSource: { date: '2028-02-29', precision: 'day' },
+        },
+      ],
+      connections: [],
+      window: null,
+      findings: [],
+    });
+    expect(source).toEqual(before);
+  });
   it('derives signed elapsed and available time across the date line and overnight without mutating sources', () => {
     const legs = [
       leg(1, {
@@ -73,8 +97,22 @@ describe('Source-only journey timing projection', () => {
       leg(2),
     ]);
     expect(timing.legs).toEqual([
-      { legId: 1, departure: null, arrival: null, elapsedMinutes: null },
-      { legId: 2, departure: null, arrival: null, elapsedMinutes: null },
+      {
+        legId: 1,
+        departure: null,
+        arrival: null,
+        elapsedMinutes: null,
+        departureSource: { date: '2028-01-01', precision: 'local' },
+        arrivalSource: { date: null, precision: 'unknown' },
+      },
+      {
+        legId: 2,
+        departure: null,
+        arrival: null,
+        elapsedMinutes: null,
+        departureSource: { date: null, precision: 'unknown' },
+        arrivalSource: { date: null, precision: 'unknown' },
+      },
     ]);
     expect(timing.connections[0]?.availableMinutes).toBeNull();
     expect(timing.window).toBeNull();

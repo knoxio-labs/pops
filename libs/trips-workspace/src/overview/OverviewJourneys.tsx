@@ -4,6 +4,7 @@ import { Badge, ErrorState } from '@pops/ui';
 import { useSourceQuery } from '../shared/use-source-query';
 import { requestProblem } from '../stay/api';
 import { journeyLegsList } from '../trips-api/sdk.gen';
+import { dateLabel } from './model';
 import { sourceAction } from './source-action';
 import { readOverviewSource } from './source-read';
 import { SourceCard } from './SourceCard';
@@ -120,7 +121,8 @@ function endpoint(source: JourneyLeg['from'], props: OverviewViewProps): string 
           ? (props.sources.places?.find((place) => place.id === source.placeId)?.name ??
             props.labels.source('place', source.placeId))
           : undefined),
-      source.local,
+      source.local ??
+        (source.date === undefined ? undefined : dateLabel(source.date, props.locale)),
       source.timeZone,
     ]
       .filter(Boolean)

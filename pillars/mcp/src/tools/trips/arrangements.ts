@@ -48,9 +48,9 @@ export const arrangementOperations = {
   'journeyLegs.list': 'List persisted transport legs belonging to the exact trip-owned journey.',
   'journeyLegs.get': 'Read one transport leg using its exact trip, journey and leg IDs.',
   'journeyLegs.create':
-    'Record an explicit transport leg under its owning journey, preserving supplied transport/timing/source fields and guard values.',
+    'Record an explicit transport leg under its owning journey, preserving supplied transport/timing/source fields and guard values. Endpoint date records a known day without a clock; do not invent local or timeZone.',
   'journeyLegs.update':
-    'Edit the exact journey leg with explicitly supplied fields and the producer’s required revision guard.',
+    'Edit the exact journey leg with explicitly supplied fields and the producer’s required revision guard. An omitted endpoint date preserves its known day, date:null clears it, and local selects datetime precision. Never send both nonnull date and local.',
   'journeyLegs.delete':
     'Delete the exact journey leg through the published producer operation; do not silently replace this action with removal or reorder.',
   'journeyLegs.remove':
