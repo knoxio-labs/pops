@@ -8,7 +8,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { TripCreateOperationResultSchema } from '../../contract/trip-create-operations.js';
 import { openTripsDb } from '../../db/index.js';
-import { trips } from '../../db/schema.js';
+import { tripCreateOperations, trips } from '../../db/schema.js';
 import { createTripOperation } from '../../db/services/trip-create-operations.js';
 import { createTripsApiApp } from '../app.js';
 
@@ -170,6 +170,21 @@ describe('Trip creation operation receipts', () => {
     expect(opened.db.select().from(trips).all()).toHaveLength(1);
   });
 
+  it('serializes concurrent changed input for one UUID into one success and one conflict', async () => {
+    const opened = open(databasePath);
+    const second = open(databasePath);
+    const [origin, secondOrigin] = await Promise.all([serve(opened), serve(second)]);
+    const request = operation({ destination: 'Lisbon' });
+    const changed = {
+      ...request,
+      command: { kind: 'trip.create', input: { destination: 'Porto' } },
+    };
+    const responses = await Promise.all([post(origin, request), post(secondOrigin, changed)]);
+    expect(responses.map((response) => response.status).toSorted()).toEqual([201, 409]);
+    expect(opened.db.select().from(trips).all()).toHaveLength(1);
+    expect(opened.db.select().from(tripCreateOperations).all()).toHaveLength(1);
+  });
+
   it('validates an explicit tag before creation and skips Tags on committed replay', async () => {
     const opened = open();
     const fetchIds = vi
@@ -181,6 +196,24 @@ describe('Trip creation operation receipts', () => {
     expect((await post(origin, request)).status).toBe(201);
     expect(fetchIds).toHaveBeenCalledTimes(1);
     expect(opened.db.select().from(trips).all()).toHaveLength(1);
+  });
+
+  it('rejects unavailable and unknown Tags selections without Trip or receipt writes', async () => {
+    const opened = open();
+    const fetchIds = vi
+      .fn<() => Promise<readonly string[] | undefined>>()
+      .mockResolvedValue(undefined);
+    const origin = await serve(opened, fetchIds);
+    const unavailable = await post(origin, operation({ tagId }));
+    expect(unavailable.status).toBe(503);
+    expect(await unavailable.json()).toMatchObject({ code: 'trips.trip.tags_unavailable' });
+
+    fetchIds.mockResolvedValue([]);
+    const unknown = await post(origin, operation({ tagId }));
+    expect(unknown.status).toBe(400);
+    expect(await unknown.json()).toMatchObject({ code: 'trips.trip.tag_unknown' });
+    expect(opened.db.select().from(trips).all()).toHaveLength(0);
+    expect(opened.db.select().from(tripCreateOperations).all()).toHaveLength(0);
   });
 
   it('keeps legacy plain creation permanent and does not accept its shape on the new endpoint', async () => {
