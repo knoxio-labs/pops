@@ -343,6 +343,23 @@ beforeEach(() => {
 });
 
 describe('OverviewPage', () => {
+  it('keeps the code QR action above the stretched item link without navigating', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+    renderPage();
+    const trigger = screen.getByRole('button', { name: 'Show QR code for B-1' });
+    const row = trigger.closest('li');
+    expect(row?.querySelector('a')).toHaveClass('absolute', 'inset-0');
+    expect(trigger).toHaveClass('relative', 'z-10');
+
+    fireEvent.click(trigger);
+
+    expect(await screen.findByText('Link copied')).toBeInTheDocument();
+    expect(writeText).toHaveBeenCalledWith('pops-i://B-1');
+    expect(screen.getByTestId('location')).toHaveTextContent('/inventory');
+    expect(verbs.setAccess).not.toHaveBeenCalled();
+  });
+
   it.each([
     ['Open containers', 'Open Blue box', 0, '/inventory/items/box-1'],
     ['In hand', 'Open Lamp', 0, '/inventory/items/item-1'],

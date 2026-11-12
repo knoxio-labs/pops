@@ -2225,6 +2225,9 @@ importers:
       express:
         specifier: ^5.1.0
         version: 5.2.1(supports-color@10.2.2)
+      qrcode:
+        specifier: ^1.5.4
+        version: 1.5.4
       sharp:
         specifier: ^0.35.4
         version: 0.35.4(@types/node@24.19.1)
@@ -2244,6 +2247,9 @@ importers:
       '@types/node':
         specifier: ^24.13.4
         version: 24.19.1
+      '@types/qrcode':
+        specifier: ^1.5.6
+        version: 1.5.6
       '@types/supertest':
         specifier: ^7.2.1
         version: 7.2.1

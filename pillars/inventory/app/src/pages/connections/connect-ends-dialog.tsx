@@ -4,6 +4,7 @@ import * as ui from '@pops/ui';
 
 import { ShortcutHint } from '../../foundation/shortcuts/shortcut-hint.js';
 import { useShortcutScope } from '../../foundation/shortcuts/shortcut-provider.js';
+import { optionElement } from './connect-candidate-option.js';
 import * as dialogOptions from './connect-dialog-options.js';
 import * as refusal from './connect-refusal.js';
 
@@ -89,21 +90,6 @@ const failedRows = (what: string, retry: () => void): ReactNode =>
     `${what} did not load`,
     h(ui.ButtonPrimitive, { type: 'button', onClick: retry }, 'Retry')
   );
-function optionElement(option: dialogOptions.PickOption, pick: (key: string) => void): ReactNode {
-  return h(
-    'button',
-    {
-      key: option.key,
-      type: 'button',
-      role: 'option',
-      'aria-disabled': option.refusal !== undefined,
-      onClick: () => option.refusal === undefined && pick(option.key),
-    },
-    option.mark,
-    `${option.title} ${option.refusal ?? ''}`,
-    option.meta
-  );
-}
 
 function CandidateList({ label, options, status, what, retry, pick }: CandidateListProps) {
   const list = (children: ReactNode) =>

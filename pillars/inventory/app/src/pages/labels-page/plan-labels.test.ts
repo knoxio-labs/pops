@@ -28,7 +28,7 @@ const job = {
 describe('label fit failure causes', () => {
   it('does not blame a fitting fragile label for another label’s oversized QR', () => {
     const stock = sheetLayout('L7165');
-    const layout = { ...stock, scale: { ...stock.scale, qrMm: stock.labelHeightMm } };
+    const layout = { ...stock, scale: { ...stock.scale, qrMm: stock.labelHeightMm * 2 } };
     const plan = planLabels({ ...job, layout });
     expect(plan.entries.map((entry) => entry.subject.id)).toEqual([marked.id]);
     expect(plan.tooSmall).toBe(true);

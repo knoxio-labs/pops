@@ -105,6 +105,12 @@ Other views keep field names. The shared `FieldIcon` component in `@pops/ui`
 renders these names synchronously for reuse, including `PackageOpenUp` for unpacking.
 Icon changes are presentation edits and remain available after publication.
 
+Printed QR labels encode `pops-i://<CODE>` (with the code percent-encoded) when the item has an assigned inventory
+code, otherwise `pops://inventory/item/<id>`. Suggested codes do not change the QR
+until assigned. Stable item references continue to use the item URI. QR dimensions
+and fit checks follow the actual encoded payload, including its quiet zone,
+preserving the sheet’s existing module scale and the 0.5 mm printable module minimum.
+
 Label copies accept a positive whole number per item or box. Jobs paginate across
 sheets, with a 1,000-label total limit to bound the browser's live preview. The
 available copies account for both kinds in a mixed job. Invalid edits leave the

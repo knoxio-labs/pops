@@ -10,6 +10,34 @@ import Testing
 @Suite("pops URL scheme routing")
 @MainActor
 internal struct PopsURLSchemeRoutingTests {
+    @Test("a code URL resolves to the registered Inventory item destination")
+    func routesCodeLink() async throws {
+        let router = EntityRouterRegistry()
+        var routed: PopsURI?
+        router.register(pillar: "inventory", type: "item") { routed = $0 }
+        let store = InMemoryInventoryStore(items: [
+            InventoryItem(
+                id: "item-42", revision: 1, seq: 1, name: "Drill", typeKey: nil,
+                code: "CAB/123", placement: .hand, createdAt: .now, updatedAt: .now)
+        ])
+        let url = try #require(URL(string: "pops-i://CAB%2F123"))
+        let outcome = await handleOpenPopsURL(url, router: router, inventory: store)
+        #expect(routed == PopsURI(pillar: "inventory", type: "item", id: "item-42"))
+        #expect(outcome == .handled)
+    }
+
+    @Test("a code URL with no holder does not route")
+    func unknownCodeLinkDoesNotRoute() async throws {
+        let router = EntityRouterRegistry()
+        var routed = false
+        router.register(pillar: "inventory", type: "item") { _ in routed = true }
+        let url = try #require(URL(string: "pops-i://MISSING"))
+        let outcome = await handleOpenPopsURL(
+            url, router: router, inventory: InMemoryInventoryStore())
+        #expect(outcome == nil)
+        #expect(!routed)
+    }
+
     /// The scanner and the URL scheme are documented to resolve through the
     /// same seam (`EntityRouter.swift`), so a label's soft reference opened
     /// via `onOpenURL` reaches whichever feature registered its `(pillar,
