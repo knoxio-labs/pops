@@ -37,7 +37,7 @@ export interface PageHeaderProps {
   backHref?: string;
   /** Breadcrumb segments — last segment is the current page (not clickable) */
   breadcrumbs?: BreadcrumbSegment[];
-  /** Optional actions rendered to the right of the title */
+  /** Actions share the title row when space permits and wrap below otherwise. */
   actions?: ReactNode;
   /** Custom link component for client-side routing (e.g. react-router Link) */
   renderLink?: ComponentType<{ to: string; className?: string; children: ReactNode }>;
@@ -161,15 +161,17 @@ function HeaderTitle({
   actions?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-      <div>
+    <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="min-w-0 flex-1 basis-64">
         <div className="flex items-center gap-3">
           {icon}
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{title}</h1>
         </div>
         {description && <p className="text-muted-foreground text-sm mt-1">{description}</p>}
       </div>
-      {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}
+      {actions && (
+        <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">{actions}</div>
+      )}
     </div>
   );
 }
