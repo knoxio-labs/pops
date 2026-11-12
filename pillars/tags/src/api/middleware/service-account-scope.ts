@@ -1,4 +1,7 @@
-import { createServiceAccountScopeGate } from '@pops/pillar-express';
+import { initContract } from '@ts-rest/core';
+
+import { createServiceAccountScopeGate, type AccessIdentityOptions } from '@pops/pillar-express';
+import { resolveContractScope } from '@pops/pillar-sdk/server';
 
 import { tagsContract } from '../../contract/rest.js';
 
@@ -6,19 +9,49 @@ import type { RequestHandler } from 'express';
 
 import type { ContractScopeMap, ServiceAccountVerifier } from '@pops/pillar-sdk/server';
 
-const gate = createServiceAccountScopeGate({
-  contract: tagsContract,
-  rootScope: 'tags',
-  logPrefix: 'tags-api',
-  requireCredential: true,
-});
+const contract = initContract();
+const listContract = contract.router(
+  { tags: { list: tagsContract.tags.list } },
+  { pathPrefix: '', strictStatusCodes: false }
+);
+
+function createGate(
+  routeContract: unknown,
+  identity?: AccessIdentityOptions,
+  allowVerifiedOperator = false
+): ReturnType<typeof createServiceAccountScopeGate> {
+  return createServiceAccountScopeGate({
+    contract: routeContract,
+    rootScope: 'tags',
+    logPrefix: 'tags-api',
+    requireCredential: true,
+    ...(allowVerifiedOperator
+      ? { allowVerifiedAccessOperatorWithoutServiceAccountCredential: true }
+      : {}),
+    identity,
+  });
+}
+
+const gate = createGate(tagsContract);
 
 /** Projected route scopes for the tags contract. */
 export const tagsScopeMap: ContractScopeMap = gate.scopeMap;
 
-/** Build the mandatory service-account middleware for tags routes. */
+/** Build Tags authorization for verified Access operators and scoped service accounts. */
 export function createServiceAccountScopeMiddleware(
-  verify: ServiceAccountVerifier
+  verify: ServiceAccountVerifier,
+  identity?: AccessIdentityOptions
 ): RequestHandler {
-  return gate.createMiddleware(verify);
+  const strictGate = identity === undefined ? gate : createGate(tagsContract, identity);
+  const operatorListGate = createGate(listContract, identity, true);
+  const strictMiddleware = strictGate.createMiddleware(verify);
+  const listMiddleware = operatorListGate.createMiddleware(verify);
+
+  return (req, res, next) => {
+    if (resolveContractScope(operatorListGate.scopeMap, req.method, req.path) !== undefined) {
+      listMiddleware(req, res, next);
+      return;
+    }
+    strictMiddleware(req, res, next);
+  };
 }

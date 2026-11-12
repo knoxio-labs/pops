@@ -62,6 +62,7 @@ interface HarnessOptions {
   readonly env?: NodeJS.ProcessEnv;
   readonly verify?: ServiceAccountVerifier;
   readonly requireCredential?: boolean;
+  readonly allowVerifiedAccessOperatorWithoutServiceAccountCredential?: boolean;
   readonly registeredErrors?: boolean;
 }
 
@@ -80,6 +81,8 @@ function harness(options: HarnessOptions = {}): Harness {
     logPrefix: 'widgets-api',
     rawRoutes,
     requireCredential: options.requireCredential,
+    allowVerifiedAccessOperatorWithoutServiceAccountCredential:
+      options.allowVerifiedAccessOperatorWithoutServiceAccountCredential,
     errors: options.registeredErrors === true ? registered : undefined,
     identity: { env: options.env ?? enforcing, fetchImpl },
   });
@@ -146,6 +149,71 @@ describe('a verified email on the operator list', () => {
       .set(ACCESS_JWT_HEADER, access.signForEmail(OPERATOR));
 
     expect(response.status).toBe(401);
+    expect(reached).not.toHaveBeenCalled();
+  });
+
+  it('allows only a verified operator without a service-account key when opted in', async () => {
+    const verify = vi.fn(rejecting);
+    const { app, reached } = harness({
+      requireCredential: true,
+      allowVerifiedAccessOperatorWithoutServiceAccountCredential: true,
+      verify,
+    });
+    const response = await request(app)
+      .get('/orders')
+      .set(ACCESS_JWT_HEADER, access.signForEmail(OPERATOR));
+
+    expect(response.status).toBe(200);
+    expect(reached).toHaveBeenCalledExactlyOnceWith({ kind: 'operator', email: OPERATOR });
+    expect(verify).not.toHaveBeenCalled();
+  });
+
+  it('does not allow the exception while Access classification is disabled', async () => {
+    const { app, reached } = harness({
+      env: {},
+      requireCredential: true,
+      allowVerifiedAccessOperatorWithoutServiceAccountCredential: true,
+    });
+    const response = await request(app)
+      .get('/orders')
+      .set(ACCESS_JWT_HEADER, access.signForEmail(OPERATOR));
+
+    expect(response.status).toBe(401);
+    expect(reached).not.toHaveBeenCalled();
+  });
+
+  it('requires the credential-enforcing posture when the exception is enabled', () => {
+    expect(() =>
+      createServiceAccountScopeGate({
+        contract,
+        rootScope: 'widgets',
+        logPrefix: 'widgets-api',
+        allowVerifiedAccessOperatorWithoutServiceAccountCredential: true,
+      })
+    ).toThrow('requires requireCredential: true');
+  });
+
+  it('rejects missing, invalid, guest and explicitly invalid service credentials', async () => {
+    const verify = vi.fn(rejecting);
+    const { app, reached } = harness({
+      requireCredential: true,
+      allowVerifiedAccessOperatorWithoutServiceAccountCredential: true,
+      verify,
+    });
+    const missing = await request(app).get('/orders');
+    const invalid = await request(app).get('/orders').set(ACCESS_JWT_HEADER, 'invalid');
+    const guest = await request(app)
+      .get('/orders')
+      .set(ACCESS_JWT_HEADER, access.signForEmail(GUEST));
+    const badKey = await request(app)
+      .get('/orders')
+      .set(ACCESS_JWT_HEADER, access.signForEmail(OPERATOR))
+      .set('x-api-key', 'rejected');
+
+    expect([missing.status, invalid.status, guest.status, badKey.status]).toEqual([
+      401, 401, 403, 401,
+    ]);
+    expect(verify).toHaveBeenCalledExactlyOnceWith('rejected');
     expect(reached).not.toHaveBeenCalled();
   });
 });
