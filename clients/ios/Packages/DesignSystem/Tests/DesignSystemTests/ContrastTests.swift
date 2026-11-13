@@ -29,6 +29,8 @@ internal struct ContrastTests {
         ("popsWarning", .popsWarning),
         ("popsInventory", .popsInventory),
         ("popsPurchases", .popsPurchases),
+        ("popsTrips", .popsTrips),
+        ("popsTripsAttention", .popsTripsAttention),
     ]
 
     private static func luminance(_ color: Color, in scheme: ColorScheme) -> Double {
@@ -61,6 +63,12 @@ internal struct ContrastTests {
                 "\(name) on \(surface.name) in \(scheme) is \(reading):1, below \(Self.minimumRatio):1"
             )
         }
+    }
+
+    @Test("Trips route emphasis remains readable on its wash", arguments: ColorScheme.allCases)
+    func tripsWashIsReadable(scheme: ColorScheme) {
+        #expect(Self.ratio(.popsTrips, on: .popsTripsTint, in: scheme) >= Self.minimumRatio)
+        #expect(Self.ratio(.popsForeground, on: .popsTripsTint, in: scheme) >= Self.minimumRatio)
     }
 
     /// The one inverted pair, and the reason a filled control can exist at

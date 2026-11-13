@@ -21,7 +21,10 @@ let package = Package(
         ),
         .testTarget(
             name: "FeatureTripsTests",
-            dependencies: ["FeatureTrips", "AppCore", "DesignSystem"],
+            dependencies: [
+                "FeatureTrips", "AppCore", "DesignSystem",
+                .product(name: "DesignSystemTestSupport", package: "DesignSystem"),
+            ],
             resources: [.process("Resources")],
             swiftSettings: strictSwiftSettings
         ),

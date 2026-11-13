@@ -50,7 +50,7 @@ public struct TripsRootView: View {
                 }
             }
         }
-        .tint(Color.popsAccent)
+        .tint(Color.popsTrips)
         .task { await model.load() }
         .sheet(item: $model.capture) { draft in
             TripCaptureComposer(draft: draft)
@@ -70,8 +70,8 @@ public struct TripsRootView: View {
                     TripsSelectionView(model: model)
                 }
             }
-            .navigationTitle(model.snapshot == nil ? "Trips" : "Timeline")
-            .popsTitleDisplay(large: true)
+            .navigationTitle(model.snapshot.map { tripName($0.trip) } ?? "Trips")
+            .popsTitleDisplay(large: model.snapshot == nil)
             .toolbar {
                 ToolbarItem(placement: .principal) { tripMenu }
                 ToolbarItem(placement: .primaryAction) {
@@ -115,13 +115,18 @@ public struct TripsRootView: View {
                 }
             }
         } label: {
-            Label(
-                model.snapshot.map { tripName($0.trip) } ?? "Choose Trip",
-                systemImage: "chevron.down"
-            )
-            .font(.popsSubheadline).frame(minHeight: PopsSize.touchTarget)
+            HStack(spacing: PopsSpacing.xs) {
+                Text(model.snapshot.map { tripName($0.trip) } ?? "Choose Trip")
+                    .lineLimit(1)
+                Image(systemName: "chevron.down")
+                    .font(.popsCaption)
+                    .accessibilityHidden(true)
+            }
+            .font(.popsSubheadline)
+            .frame(minHeight: PopsSize.touchTarget)
         }
         .accessibilityLabel("Choose Trip")
+        .accessibilityValue(model.snapshot.map { tripName($0.trip) } ?? "No selected Trip")
     }
 }
 

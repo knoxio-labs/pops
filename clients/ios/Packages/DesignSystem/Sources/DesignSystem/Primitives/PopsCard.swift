@@ -1,12 +1,24 @@
 import SwiftUI
 
-/// A raised container. It owns the surface colour, the padding and the corner
-/// radius so no screen picks its own, and stretches to the available width so
-/// a column of cards lines up.
+/// The shared card hierarchy; featured cards give a destination more generous shape and no outline.
+public enum PopsCardAppearance: Equatable, Sendable {
+    /// The compact, outlined surface used by existing cards.
+    case standard
+    /// A spacious destination or overview surface whose grouping comes from its background.
+    case featured
+}
+
+/// A raised container that owns surface, padding and shape and aligns with adjacent cards.
 public struct PopsCard<Content: View>: View {
     private let content: Content
+    private let appearance: PopsCardAppearance
 
-    public init(@ViewBuilder content: () -> Content) {
+    /// Creates a card; omitting appearance preserves the compact outlined presentation.
+    public init(
+        appearance: PopsCardAppearance = .standard,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.appearance = appearance
         self.content = content()
     }
 
@@ -14,22 +26,26 @@ public struct PopsCard<Content: View>: View {
         content
             .padding(PopsSpacing.lg)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.popsSurface, in: RoundedRectangle(cornerRadius: PopsRadius.card))
-            .overlay(
-                RoundedRectangle(cornerRadius: PopsRadius.card)
-                    .stroke(Color.popsSeparator, lineWidth: PopsBorder.hairline)
-            )
+            .background(Color.popsSurface, in: shape)
+            .overlay {
+                if appearance == .standard {
+                    shape.stroke(Color.popsSeparator, lineWidth: PopsBorder.hairline)
+                }
+            }
+    }
+
+    private var shape: RoundedRectangle {
+        RoundedRectangle(
+            cornerRadius: appearance == .featured ? PopsRadius.featuredCard : PopsRadius.card)
     }
 }
 
-#Preview("Card") {
+#Preview("Cards") {
     ColorSchemePreview {
-        PopsCard {
-            VStack(alignment: .leading, spacing: PopsSpacing.sm) {
-                Text("August")
-                    .font(.popsTitle)
-                    .foregroundStyle(Color.popsForeground)
-                PopsRow(title: "Groceries", subtitle: "12 transactions")
+        VStack(spacing: PopsSpacing.lg) {
+            PopsCard { PopsRow(title: "August", subtitle: "A recorded month") }
+            PopsCard(appearance: .featured) {
+                PopsRow(title: "Olinda", subtitle: "A recorded visit")
             }
         }
     }

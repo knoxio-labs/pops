@@ -10,41 +10,91 @@ internal struct TripsTimelineView: View {
     internal var body: some View {
         TimelineView(.everyMinute) { context in
             let sources = filter.sources(in: snapshot, at: context.date, zone: zone)
-            List {
-                TripsTimelineControls(filter: $filter)
-                ForEach(tripReferenceFindings(snapshot)) { finding in
-                    Label(finding.message, systemImage: "exclamationmark.triangle")
-                        .font(.popsSubheadline).foregroundStyle(Color.popsWarning)
+            let visits = filter.visits(in: snapshot, sources: sources)
+            let overview = TripOverviewProjection(
+                snapshot: snapshot, at: context.date, zone: zone,
+                visibleSources: sources, visibleVisits: visits)
+            ScrollViewReader { reader in
+                List {
+                    TripsOverviewView(projection: overview, date: context.date)
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.popsBackground)
+                    if !overview.chaptersFollowFocus {
+                        chapters(overview.chapters, reader: reader)
+                    }
+                    ForEach(overview.now) {
+                        TripsSourceRow(
+                            source: $0, zone: zone, places: snapshot.places, isCurrent: true)
+                    }
+                    ForEach(overview.nextFocus) {
+                        TripsNextSummaryRow(source: $0, zone: zone, places: snapshot.places)
+                    }
+                    attention
+                    if overview.chaptersFollowFocus {
+                        chapters(overview.chapters, reader: reader)
+                    }
+                    DisclosureGroup("Timeline options") {
+                        TripsTimelineControls(filter: $filter)
+                    }
+                    .font(.popsSubheadline)
+                    .foregroundStyle(Color.popsMutedForeground)
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.popsBackground)
+                    if filter.grouping == .sourceOrder {
+                        TripsTimelineRoute(snapshot: snapshot, sources: sources, visits: visits)
+                    } else {
+                        TripsTimelineVisits(snapshot: snapshot, sources: [], visits: visits)
+                        TripsTimelineCalendar(
+                            sources: sources, places: snapshot.places, filter: filter)
+                    }
+                    if sources.isEmpty && visits.isEmpty {
+                        Text("No matching recorded sources")
+                            .foregroundStyle(Color.popsMutedForeground)
+                    }
                 }
-                let today = TripTodayProjection(snapshot: snapshot, at: context.date)
-                nowNext("Now", today.now, visible: sources)
-                nowNext("Next", today.next, visible: sources)
-                if filter.grouping == .sourceOrder {
-                    TripsTimelineRoute(
-                        snapshot: snapshot, sources: sources,
-                        visits: filter.visits(in: snapshot, sources: sources))
-                } else {
-                    TripsTimelineVisits(
-                        snapshot: snapshot, sources: [],
-                        visits: filter.visits(in: snapshot, sources: sources))
-                    TripsTimelineCalendar(sources: sources, places: snapshot.places, filter: filter)
-                }
-                if sources.isEmpty && filter.visits(in: snapshot, sources: sources).isEmpty {
-                    Text("No matching recorded sources")
-                }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .background(Color.popsBackground)
             }
         }
-        .searchable(text: $filter.query, prompt: "Search this Trip")
     }
 
-    @ViewBuilder private func nowNext(
-        _ title: String, _ sources: [TripSource], visible: [TripSource]
-    ) -> some View {
-        let values = sources.filter { source in visible.contains { $0.id == source.id } }
-        if !values.isEmpty {
-            Section(title) {
-                ForEach(values) { TripsSourceRow(source: $0, zone: zone, places: snapshot.places) }
+    @ViewBuilder private var attention: some View {
+        let findings = tripReferenceFindings(snapshot)
+        if !findings.isEmpty {
+            Section {
+                PopsCard(appearance: .featured) {
+                    VStack(alignment: .leading, spacing: PopsSpacing.md) {
+                        ForEach(findings) { finding in
+                            Label(finding.message, systemImage: "exclamationmark.triangle")
+                                .font(.popsSubheadline)
+                                .foregroundStyle(Color.popsTripsAttention)
+                        }
+                    }
+                }
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.popsBackground)
+            } header: {
+                sectionTitle("Needs you")
             }
         }
+    }
+
+    @ViewBuilder private func chapters(
+        _ chapters: [TripOverviewChapter], reader: ScrollViewProxy
+    ) -> some View {
+        if !chapters.isEmpty {
+            TripsChapterRail(chapters: chapters) { id in
+                reader.scrollTo(id, anchor: .top)
+            }
+        }
+    }
+
+    private func sectionTitle(_ title: String) -> some View {
+        Text(title)
+            .font(.popsTitle)
+            .foregroundStyle(Color.popsForeground)
+            .textCase(nil)
+            .accessibilityAddTraits(.isHeader)
     }
 }
