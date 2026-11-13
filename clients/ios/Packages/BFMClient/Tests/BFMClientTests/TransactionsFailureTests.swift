@@ -65,7 +65,6 @@ internal struct TransactionsFailureTests {
         "every upstream code lands where a screen can act on it",
         arguments: [
             ("gateway.upstream_degraded", RepositoryError.unavailable),
-            ("gateway.upstream_misconfigured", RepositoryError.unavailable),
             ("gateway.upstream_conflict", RepositoryError.conflict("gateway.upstream_conflict")),
             ("upstream_invalid_request", RepositoryError.contractMismatch),
             ("not_found", RepositoryError.contractMismatch),
@@ -78,6 +77,21 @@ internal struct TransactionsFailureTests {
         // that is deliberately not part of the contract this asserts.
         #expect(isTransport(actual) == isTransport(expected))
         if !isTransport(expected) { #expect(actual == expected) }
+    }
+
+    @Test("explicit upstream misconfiguration remains typed and never permits cached reads")
+    func misconfiguration() async throws {
+        let result = await error(
+            status: .badGateway,
+            json: TransactionsWire.upstream(code: "gateway.upstream_misconfigured"))
+        let actual = try #require(result)
+        guard case .transport(let payload) = actual else {
+            Issue.record("Expected the retained misconfiguration refusal")
+            return
+        }
+        #expect(payload.configurationFailure == .upstreamMisconfigured)
+        #expect(payload.popsError?.code == "gateway.upstream_misconfigured")
+        #expect(!TripOfflineReadPolicy.permitsLastVerifiedRead(after: actual))
     }
 
     @Test("a rate limit stays distinct and carries its wait")

@@ -18,6 +18,12 @@ internal enum BFMRepositoryFailure {
     /// the reading that costs least when it is wrong.
     internal static func failure(_ error: ClientError, operation: String) -> RepositoryError {
         if let runtime = PopsError.runtimeFailureDetails(from: error) {
+            if let code = runtime.urlErrorCode,
+                runtime.statusCode == nil || error.response?.status.kind == .successful
+            {
+                return .transport(
+                    RepositoryTransportError(popsError: runtime.popsError, urlErrorCode: code))
+            }
             if runtime.popsError.code == PopsError.decodeFailureCode {
                 return .contractMismatch
             }
@@ -65,9 +71,13 @@ internal enum BFMRepositoryFailure {
             case "capability_not_granted":
                 return .featureUnavailable
             case "gateway.upstream_unavailable", "gateway.upstream_degraded",
-                "gateway.upstream_misconfigured", "upstream_unavailable", "upstream_degraded",
-                "upstream_misconfigured":
+                "upstream_unavailable", "upstream_degraded":
                 return .unavailable
+            case "bfm.upstream.misconfigured", "gateway.upstream_misconfigured",
+                "upstream_misconfigured":
+                return .transport(
+                    RepositoryTransportError(
+                        popsError: popsError, configurationFailure: .upstreamMisconfigured))
             case "gateway.upstream_contract_mismatch", "upstream_contract_mismatch",
                 "upstream_invalid_request", "not_found":
                 return .contractMismatch
@@ -113,18 +123,22 @@ internal enum BFMRepositoryFailure {
     /// not accept or a resource it cannot find. `upstream_conflict` remains a
     /// conflict because retrying the same write cannot resolve it.
     ///
-    /// `gateway.upstream_misconfigured` joins the unavailable side rather than the
-    /// mismatch one: a pillar whose configuration is wrong is not serving,
-    /// and nothing about the phone's build is implicated. Matched on the raw
+    /// Explicit misconfiguration stays a typed refusal rather than authorizing an offline fallback.
+    /// Matched on the raw
     /// string because the generator emits one closed enum per status and
     /// every response carrying this code is a distinct type with an
     /// identical case.
     internal static func upstreamFailure(_ code: String, operation: String) -> RepositoryError {
         switch code {
         case "gateway.upstream_unavailable", "gateway.upstream_degraded",
-            "gateway.upstream_misconfigured", "upstream_unavailable", "upstream_degraded",
-            "upstream_misconfigured":
+            "upstream_unavailable", "upstream_degraded":
             return .unavailable
+        case "bfm.upstream.misconfigured", "gateway.upstream_misconfigured",
+            "upstream_misconfigured":
+            return .transport(
+                RepositoryTransportError(
+                    diagnostic: "\(operation): upstream \(code)",
+                    configurationFailure: .upstreamMisconfigured))
         case "gateway.upstream_contract_mismatch", "upstream_contract_mismatch",
             "upstream_invalid_request", "not_found":
             return .contractMismatch

@@ -39,4 +39,25 @@ internal struct TripOfflineReadPolicyTests {
             #expect(!TripOfflineReadPolicy.permitsLastVerifiedRead(after: error))
         }
     }
+
+    @Test("an offline display label without original URL identity never authorizes fallback")
+    internal func collapsedDiagnostic() {
+        let display = PopsError(
+            code: "ios.net.offline", message: "The request could not reach the server",
+            retryable: true, kind: .offline)
+        #expect(
+            !TripOfflineReadPolicy.permitsLastVerifiedRead(
+                after: RepositoryError.transport(display)))
+        let typed = RepositoryError.transport(
+            RepositoryTransportError(popsError: display, urlErrorCode: .notConnectedToInternet))
+        #expect(TripOfflineReadPolicy.permitsLastVerifiedRead(after: typed))
+        let tls = RepositoryError.transport(
+            RepositoryTransportError(popsError: display, urlErrorCode: .serverCertificateUntrusted))
+        #expect(!TripOfflineReadPolicy.permitsLastVerifiedRead(after: tls))
+        let refused = RepositoryError.transport(
+            RepositoryTransportError(
+                popsError: display, urlErrorCode: .notConnectedToInternet,
+                configurationFailure: .upstreamMisconfigured))
+        #expect(!TripOfflineReadPolicy.permitsLastVerifiedRead(after: refused))
+    }
 }
