@@ -8,7 +8,11 @@ import {
   BreadcrumbSeparator,
 } from '../primitives/breadcrumb';
 
-import type { BreadcrumbSegment } from './PageHeader';
+/** A breadcrumb label and its optional router destination. */
+export interface BreadcrumbSegment {
+  label: string;
+  href?: string;
+}
 
 function SegmentLink({
   segment,

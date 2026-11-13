@@ -12,12 +12,9 @@ import { type ComponentType, type ReactNode } from 'react';
 
 import { cn } from '../lib/utils';
 import { Breadcrumb, BreadcrumbList } from '../primitives/breadcrumb';
-import { BreadcrumbItems } from './PageHeaderBreadcrumbs';
+import { BreadcrumbItems, type BreadcrumbSegment } from './PageHeaderBreadcrumbs';
 
-export interface BreadcrumbSegment {
-  label: string;
-  href?: string;
-}
+export type { BreadcrumbSegment } from './PageHeaderBreadcrumbs';
 
 export interface PageHeaderProps {
   /** Page title displayed as heading */

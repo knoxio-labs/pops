@@ -1,15 +1,19 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import { PageHeader } from './PageHeader';
+import { PageHeader, type BreadcrumbSegment } from './PageHeader';
 
 describe('PageHeader title typography', () => {
   it('retains breadcrumb routing and a current page with custom heading typography', () => {
+    const breadcrumbs: BreadcrumbSegment[] = [
+      { label: 'Trips', href: '/trips' },
+      { label: 'Coast trip' },
+    ];
     render(
       <PageHeader
         title="Coast trip"
         titleClassName="font-trip-display text-3xl"
-        breadcrumbs={[{ label: 'Trips', href: '/trips' }, { label: 'Coast trip' }]}
+        breadcrumbs={breadcrumbs}
       />
     );
     expect(screen.getByRole('link', { name: 'Trips' })).toHaveAttribute('href', '/trips');
