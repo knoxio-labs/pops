@@ -9,11 +9,12 @@ internal enum SwiftUIViewRendering {
 
     internal static func rendersSchemeAwareContent(
         _ view: some View, background: some View
-    ) throws -> Bool {
-        let light = try #require(render(view, in: .light))
-        let dark = try #require(render(view, in: .dark))
-        let lightBackground = try #require(render(background, in: .light))
-        let darkBackground = try #require(render(background, in: .dark))
+    ) async throws -> Bool {
+        let scene = try await HostWindowScene.require()
+        let light = try #require(render(view, scene: scene, in: .light))
+        let dark = try #require(render(view, scene: scene, in: .dark))
+        let lightBackground = try #require(render(background, scene: scene, in: .light))
+        let darkBackground = try #require(render(background, scene: scene, in: .dark))
 
         return hasNonUniformPixels(light) && hasNonUniformPixels(dark)
             && pixels(light) != pixels(dark)
@@ -21,17 +22,14 @@ internal enum SwiftUIViewRendering {
             && pixels(dark) != pixels(darkBackground)
     }
 
-    private static func render(_ view: some View, in scheme: ColorScheme) -> CGImage? {
+    private static func render(
+        _ view: some View, scene: UIWindowScene, in scheme: ColorScheme
+    ) -> CGImage? {
         let content = view.environment(\.colorScheme, scheme).frame(
             width: canvas.width, height: canvas.height)
         let controller = UIHostingController(rootView: content)
         controller.overrideUserInterfaceStyle = scheme == .dark ? .dark : .light
         controller.view.backgroundColor = .clear
-
-        guard
-            let scene = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene })
-                .first
-        else { return nil }
 
         let window = UIWindow(windowScene: scene)
         window.frame = CGRect(origin: .zero, size: canvas)

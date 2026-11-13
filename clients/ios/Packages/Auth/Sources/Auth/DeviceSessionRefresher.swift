@@ -117,10 +117,17 @@ public actor DeviceSessionRefresher {
         await currentCredentialSnapshot()?.tokens
     }
 
-    internal func currentCredentialSnapshot() async -> CredentialTokenSnapshot? {
+    internal func currentCredentialSnapshot(ifRevision expectedRevision: UInt64? = nil) async
+        -> CredentialTokenSnapshot?
+    {
         do {
-            return try credentialStore.tokenSnapshot()
+            let snapshot = try credentialStore.tokenSnapshot()
+            guard expectedRevision == nil || snapshot.revision == expectedRevision else {
+                return nil
+            }
+            return snapshot
         } catch CredentialSnapshotError.corruptedPayload(let revision) {
+            guard expectedRevision == nil || revision == expectedRevision else { return nil }
             await reportCredentialsRejected(ifRevision: revision)
             return nil
         } catch {
@@ -156,15 +163,26 @@ public actor DeviceSessionRefresher {
 
     internal func refreshedCredentials(
         replacing staleAccessToken: String,
-        at baseURL: URL
+        at baseURL: URL,
+        ifRevision expectedRevision: UInt64? = nil
     ) async throws -> CredentialTokenSnapshot {
-        if let current = await currentCredentialSnapshot(),
+        let snapshot = await currentCredentialSnapshot(ifRevision: expectedRevision)
+        if let expectedRevision, snapshot?.revision != expectedRevision {
+            throw SessionRefreshError.unavailable("paired client identity changed")
+        }
+        if let current = snapshot,
             let tokens = current.tokens,
             tokens.accessToken != staleAccessToken
         {
             return current
         }
-        if let rotation { return try await rotation.value }
+        if let rotation {
+            let result = try await rotation.value
+            guard expectedRevision == nil || result.revision == expectedRevision else {
+                throw SessionRefreshError.unavailable("paired client identity changed")
+            }
+            return result
+        }
 
         // Assigned before the first suspension point, so no caller can observe
         // the gap between deciding to refresh and this being visible to the
@@ -178,7 +196,10 @@ public actor DeviceSessionRefresher {
         // result, and in that case it retries once, is rejected again, and the
         // middleware escalates. There is no loop in it, so closing the window
         // would buy a wasted round trip in a case that is already handled.
-        let task = Task { try await self.rotateTokens(replacing: staleAccessToken, at: baseURL) }
+        let task = Task {
+            try await self.rotateTokens(
+                replacing: staleAccessToken, at: baseURL, ifRevision: expectedRevision)
+        }
         rotation = task
         defer { rotation = nil }
         return try await task.value

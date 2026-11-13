@@ -4,3 +4,6 @@ test = { run = "cargo test" }
 lint = { run = "cargo clippy --all-targets --all-features -- -D warnings && cargo fmt --check" }
 typecheck = { run = "cargo check --all-targets" }
 dev = { run = "cargo watch -x run" }
+
+[tasks."generate:openapi"]
+run = "node scripts/generate-openapi.mjs"

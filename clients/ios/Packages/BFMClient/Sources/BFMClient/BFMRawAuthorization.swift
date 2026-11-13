@@ -1,3 +1,4 @@
+import AppCore
 import Foundation
 
 /// The device credential, attached to a request the generated client cannot
@@ -19,10 +20,14 @@ internal struct BFMRawAuthorization: Sendable {
 
     internal let baseURL: URL
     private let authorizer: any BFMStreamAuthorizer
+    private let expectedDevice: PairedDevice?
 
-    internal init(baseURL: URL, authorizer: any BFMStreamAuthorizer) {
+    internal init(
+        baseURL: URL, authorizer: any BFMStreamAuthorizer, expectedDevice: PairedDevice? = nil
+    ) {
         self.baseURL = baseURL
         self.authorizer = authorizer
+        self.expectedDevice = expectedDevice
     }
 
     /// - Parameters:
@@ -33,6 +38,7 @@ internal struct BFMRawAuthorization: Sendable {
         discard: (Payload) async -> Void
     ) async throws -> Exchange<Payload> {
         let credential = await authorizer.currentStreamCredential()
+        try assertExpectedOwner(credential)
         let (response, payload) = try await send(credential?.accessToken)
         guard response.statusCode == 401, let credential else {
             return Exchange(
@@ -42,10 +48,18 @@ internal struct BFMRawAuthorization: Sendable {
         await discard(payload)
         let refreshed = try await authorizer.refreshedStreamCredential(
             replacing: credential.accessToken, at: baseURL)
+        try assertExpectedOwner(refreshed)
         let (retry, retryPayload) = try await send(refreshed.accessToken)
         return Exchange(
             response: retry, payload: retryPayload, credential: refreshed,
             tokens: [credential.accessToken, refreshed.accessToken])
+    }
+
+    private func assertExpectedOwner(_ credential: BFMStreamCredential?) throws {
+        guard let expectedDevice else { return }
+        guard baseURL == expectedDevice.baseURL,
+            credential?.revision == expectedDevice.credentialRevision
+        else { throw RepositoryError.unauthorized }
     }
 
     /// Ends the session when a refusal is an explicit device revocation.

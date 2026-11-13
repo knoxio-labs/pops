@@ -9,6 +9,9 @@ overrides:
   cssstyle: 6.0.2
   ioredis: 5.11.0
 
+patchedDependencies:
+  drizzle-kit@0.31.11: 24fa633f5f47ba16e425ee38e5ccd9b15c50fe50d379c84170cae50a373c7c8f
+
 importers:
 
   .:
@@ -1054,6 +1057,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: ^4.1.10
         version: 4.1.10(vitest@4.1.11)
+      drizzle-kit:
+        specifier: ^0.31.11
+        version: 0.31.11(patch_hash=24fa633f5f47ba16e425ee38e5ccd9b15c50fe50d379c84170cae50a373c7c8f)
       supertest:
         specifier: ^7.1.4
         version: 7.2.2(supports-color@10.2.2)
@@ -3283,8 +3289,8 @@ importers:
         specifier: ^4.1.10
         version: 4.1.10(vitest@4.1.11)
       supertest:
-        specifier: ^7.1.4
-        version: 7.2.2(supports-color@10.2.2)
+        specifier: ^7.3.1
+        version: 7.3.1(supports-color@10.2.2)
       tsx:
         specifier: ^4.23.13
         version: 4.23.13
@@ -3348,7 +3354,7 @@ importers:
         version: 4.1.10(vitest@4.1.11)
       drizzle-kit:
         specifier: ^0.31.11
-        version: 0.31.11
+        version: 0.31.11(patch_hash=24fa633f5f47ba16e425ee38e5ccd9b15c50fe50d379c84170cae50a373c7c8f)
       tsx:
         specifier: ^4.23.13
         version: 4.23.13
@@ -8579,6 +8585,7 @@ packages:
 
   node-abort-controller@3.1.1:
     resolution: {integrity: sha512-AGK2yQKIjRuqnc6VkX2Xj5d+QW8xZ87pa1UK6yA6ouUyuxfHuMP6umE5QK7UmTeOAymo+Zx1Fxiuw9rVx8taHQ==}
+    deprecated: This package is no longer needed on supported Node.js versions. Node.js 16+ includes AbortController and AbortSignal as built-in globals. All Node.js versions requiring this polyfill are end-of-life. Use the built-in globals instead.
 
   node-addon-api@8.9.2:
     resolution: {integrity: sha512-VijLXbi3UACN69I0JVXJsX4tjACjNoQDgv2gTF6sx2wWEi8tkSg2eX8p5gSIFi8z2+DL3oHmY6OyKce38SDolg==}
@@ -13254,7 +13261,7 @@ snapshots:
 
   dotenv@18.0.1: {}
 
-  drizzle-kit@0.31.11:
+  drizzle-kit@0.31.11(patch_hash=24fa633f5f47ba16e425ee38e5ccd9b15c50fe50d379c84170cae50a373c7c8f):
     dependencies:
       '@drizzle-team/brocli': 0.10.2
       '@esbuild-kit/esm-loader': 2.6.5

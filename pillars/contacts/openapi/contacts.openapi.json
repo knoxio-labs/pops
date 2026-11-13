@@ -26,12 +26,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "entityId",
-          "value",
-          "lastEditedTime"
-        ],
+        "required": ["id", "entityId", "value", "lastEditedTime"],
         "type": "object"
       },
       "AddressListResponse": {
@@ -44,9 +39,7 @@
             "type": "array"
           }
         },
-        "required": [
-          "data"
-        ],
+        "required": ["data"],
         "type": "object"
       },
       "AddressMutation": {
@@ -59,10 +52,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "data",
-          "message"
-        ],
+        "required": ["data", "message"],
         "type": "object"
       },
       "AppliedSelection": {
@@ -77,17 +67,11 @@
                 "$ref": "#/components/schemas/MergeField"
               },
               "kind": {
-                "enum": [
-                  "entity"
-                ],
+                "enum": ["entity"],
                 "type": "string"
               }
             },
-            "required": [
-              "field",
-              "entityId",
-              "kind"
-            ],
+            "required": ["field", "entityId", "kind"],
             "type": "object"
           },
           {
@@ -96,9 +80,7 @@
                 "$ref": "#/components/schemas/SourceMergeField"
               },
               "kind": {
-                "enum": [
-                  "sourceRecord"
-                ],
+                "enum": ["sourceRecord"],
                 "type": "string"
               },
               "sourceObservationId": {
@@ -108,20 +90,13 @@
                 "type": "string"
               }
             },
-            "required": [
-              "field",
-              "sourceRecordId",
-              "sourceObservationId",
-              "kind"
-            ],
+            "required": ["field", "sourceRecordId", "sourceObservationId", "kind"],
             "type": "object"
           },
           {
             "properties": {
               "kind": {
-                "enum": [
-                  "point"
-                ],
+                "enum": ["point"],
                 "type": "string"
               },
               "pointId": {
@@ -131,22 +106,14 @@
                 "$ref": "#/components/schemas/ContactPointKind"
               }
             },
-            "required": [
-              "pointKind",
-              "pointId",
-              "kind"
-            ],
+            "required": ["pointKind", "pointId", "kind"],
             "type": "object"
           }
         ]
       },
       "CandidateDecision": {
         "description": "The last explicit decision about a stable candidate identity for an import row.",
-        "enum": [
-          "merged",
-          "different",
-          "later"
-        ],
+        "enum": ["merged", "different", "later"],
         "type": "string"
       },
       "CommitBatchInput": {
@@ -167,11 +134,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "revision",
-          "idempotencyKey",
-          "decisions"
-        ],
+        "required": ["revision", "idempotencyKey", "decisions"],
         "type": "object"
       },
       "CommitReceipt": {
@@ -191,11 +154,7 @@
             "type": "array"
           }
         },
-        "required": [
-          "batchId",
-          "revision",
-          "rows"
-        ],
+        "required": ["batchId", "revision", "rows"],
         "type": "object"
       },
       "CommittedRow": {
@@ -216,10 +175,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "rowId",
-          "skipped"
-        ],
+        "required": ["rowId", "skipped"],
         "type": "object"
       },
       "ContactPoint": {
@@ -264,15 +220,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "entityId",
-          "kind",
-          "value",
-          "active",
-          "preferred",
-          "createdAt"
-        ],
+        "required": ["id", "entityId", "kind", "value", "active", "preferred", "createdAt"],
         "type": "object"
       },
       "ContactPointInput": {
@@ -295,21 +243,12 @@
             "type": "string"
           }
         },
-        "required": [
-          "kind",
-          "value"
-        ],
+        "required": ["kind", "value"],
         "type": "object"
       },
       "ContactPointKind": {
         "description": "A contact point's semantic kind; shared values never identify one person by themselves.",
-        "enum": [
-          "email",
-          "phone",
-          "social",
-          "url",
-          "other"
-        ],
+        "enum": ["email", "phone", "social", "url", "other"],
         "type": "string"
       },
       "ContactPointListResponse": {
@@ -322,9 +261,7 @@
             "type": "array"
           }
         },
-        "required": [
-          "data"
-        ],
+        "required": ["data"],
         "type": "object"
       },
       "ContactPointResponse": {
@@ -334,9 +271,7 @@
             "$ref": "#/components/schemas/ContactPoint"
           }
         },
-        "required": [
-          "data"
-        ],
+        "required": ["data"],
         "type": "object"
       },
       "CreateAddressBody": {
@@ -355,9 +290,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "value"
-        ],
+        "required": ["value"],
         "type": "object"
       },
       "CreateEntityBody": {
@@ -395,9 +328,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "name"
-        ],
+        "required": ["name"],
         "type": "object"
       },
       "Entity": {
@@ -452,14 +383,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "name",
-          "type",
-          "aliases",
-          "defaultTags",
-          "lastEditedTime"
-        ],
+        "required": ["id", "name", "type", "aliases", "defaultTags", "lastEditedTime"],
         "type": "object"
       },
       "EntityCatalogue": {
@@ -475,10 +399,7 @@
             "type": "array"
           }
         },
-        "required": [
-          "types",
-          "defaultType"
-        ],
+        "required": ["types", "defaultType"],
         "type": "object"
       },
       "EntityListResponse": {
@@ -494,10 +415,7 @@
             "$ref": "#/components/schemas/PaginationMeta"
           }
         },
-        "required": [
-          "data",
-          "pagination"
-        ],
+        "required": ["data", "pagination"],
         "type": "object"
       },
       "EntityLookup": {
@@ -519,12 +437,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "name",
-          "type",
-          "aliases"
-        ],
+        "required": ["id", "name", "type", "aliases"],
         "type": "object"
       },
       "EntityMutation": {
@@ -537,10 +450,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "data",
-          "message"
-        ],
+        "required": ["data", "message"],
         "type": "object"
       },
       "EntityReferenceResponse": {
@@ -553,10 +463,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "canonicalId",
-          "uri"
-        ],
+        "required": ["canonicalId", "uri"],
         "type": "object"
       },
       "EntityResponse": {
@@ -566,9 +473,7 @@
             "$ref": "#/components/schemas/Entity"
           }
         },
-        "required": [
-          "data"
-        ],
+        "required": ["data"],
         "type": "object"
       },
       "ErrorBody": {
@@ -588,12 +493,7 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "code",
-          "message",
-          "requestId",
-          "retryable"
-        ],
+        "required": ["code", "message", "requestId", "retryable"],
         "type": "object"
       },
       "ErrorCode": {
@@ -621,9 +521,7 @@
           {
             "properties": {
               "action": {
-                "enum": [
-                  "setEntity"
-                ],
+                "enum": ["setEntity"],
                 "type": "string"
               },
               "name": {
@@ -634,36 +532,26 @@
                 "type": "string"
               }
             },
-            "required": [
-              "name",
-              "action"
-            ],
+            "required": ["name", "action"],
             "type": "object"
           },
           {
             "properties": {
               "action": {
-                "enum": [
-                  "addPoint"
-                ],
+                "enum": ["addPoint"],
                 "type": "string"
               },
               "point": {
                 "$ref": "#/components/schemas/ContactPointInput"
               }
             },
-            "required": [
-              "point",
-              "action"
-            ],
+            "required": ["point", "action"],
             "type": "object"
           },
           {
             "properties": {
               "action": {
-                "enum": [
-                  "editPoint"
-                ],
+                "enum": ["editPoint"],
                 "type": "string"
               },
               "point": {
@@ -673,55 +561,39 @@
                 "type": "string"
               }
             },
-            "required": [
-              "pointId",
-              "point",
-              "action"
-            ],
+            "required": ["pointId", "point", "action"],
             "type": "object"
           },
           {
             "properties": {
               "action": {
-                "enum": [
-                  "removePoint"
-                ],
+                "enum": ["removePoint"],
                 "type": "string"
               },
               "pointId": {
                 "type": "string"
               }
             },
-            "required": [
-              "pointId",
-              "action"
-            ],
+            "required": ["pointId", "action"],
             "type": "object"
           },
           {
             "properties": {
               "action": {
-                "enum": [
-                  "addAddress"
-                ],
+                "enum": ["addAddress"],
                 "type": "string"
               },
               "address": {
                 "$ref": "#/components/schemas/CreateAddressBody"
               }
             },
-            "required": [
-              "address",
-              "action"
-            ],
+            "required": ["address", "action"],
             "type": "object"
           },
           {
             "properties": {
               "action": {
-                "enum": [
-                  "editAddress"
-                ],
+                "enum": ["editAddress"],
                 "type": "string"
               },
               "address": {
@@ -731,29 +603,20 @@
                 "type": "string"
               }
             },
-            "required": [
-              "addressId",
-              "address",
-              "action"
-            ],
+            "required": ["addressId", "address", "action"],
             "type": "object"
           },
           {
             "properties": {
               "action": {
-                "enum": [
-                  "removeAddress"
-                ],
+                "enum": ["removeAddress"],
                 "type": "string"
               },
               "addressId": {
                 "type": "string"
               }
             },
-            "required": [
-              "addressId",
-              "action"
-            ],
+            "required": ["addressId", "action"],
             "type": "object"
           }
         ]
@@ -776,11 +639,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "expectedVersion",
-          "idempotencyKey",
-          "changes"
-        ],
+        "required": ["expectedVersion", "idempotencyKey", "changes"],
         "type": "object"
       },
       "FactOperation": {
@@ -800,11 +659,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "createdAt",
-          "canUndo"
-        ],
+        "required": ["id", "createdAt", "canUndo"],
         "type": "object"
       },
       "FactOperationReceipt": {
@@ -818,9 +673,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id"
-        ],
+        "required": ["id"],
         "type": "object"
       },
       "FactReceipt": {
@@ -833,10 +686,7 @@
             "$ref": "#/components/schemas/FactOperationReceipt"
           }
         },
-        "required": [
-          "data",
-          "operation"
-        ],
+        "required": ["data", "operation"],
         "type": "object"
       },
       "FactUndoBody": {
@@ -851,10 +701,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "expectedVersion",
-          "idempotencyKey"
-        ],
+        "required": ["expectedVersion", "idempotencyKey"],
         "type": "object"
       },
       "FactsResponse": {
@@ -864,9 +711,7 @@
             "$ref": "#/components/schemas/FactsSnapshot"
           }
         },
-        "required": [
-          "data"
-        ],
+        "required": ["data"],
         "type": "object"
       },
       "FactsSnapshot": {
@@ -898,13 +743,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "version",
-          "entity",
-          "points",
-          "addresses",
-          "operations"
-        ],
+        "required": ["version", "entity", "points", "addresses", "operations"],
         "type": "object"
       },
       "FieldSelection": {
@@ -919,17 +758,11 @@
                 "$ref": "#/components/schemas/MergeField"
               },
               "kind": {
-                "enum": [
-                  "entity"
-                ],
+                "enum": ["entity"],
                 "type": "string"
               }
             },
-            "required": [
-              "field",
-              "entityId",
-              "kind"
-            ],
+            "required": ["field", "entityId", "kind"],
             "type": "object"
           },
           {
@@ -938,20 +771,14 @@
                 "$ref": "#/components/schemas/SourceMergeField"
               },
               "kind": {
-                "enum": [
-                  "sourceRecord"
-                ],
+                "enum": ["sourceRecord"],
                 "type": "string"
               },
               "sourceRecordId": {
                 "type": "string"
               }
             },
-            "required": [
-              "field",
-              "sourceRecordId",
-              "kind"
-            ],
+            "required": ["field", "sourceRecordId", "kind"],
             "type": "object"
           }
         ]
@@ -987,18 +814,14 @@
                 "$ref": "#/components/schemas/PersonProfile"
               },
               {
-                "enum": [
-                  null
-                ],
+                "enum": [null],
                 "nullable": true,
                 "type": "object"
               }
             ]
           }
         },
-        "required": [
-          "entity"
-        ],
+        "required": ["entity"],
         "type": "object"
       },
       "HealthResponse": {
@@ -1020,13 +843,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "ok",
-          "status",
-          "pillar",
-          "version",
-          "ts"
-        ],
+        "required": ["ok", "status", "pillar", "version", "ts"],
         "type": "object"
       },
       "IcloudConnectRequest": {
@@ -1049,10 +866,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "username",
-          "password"
-        ],
+        "required": ["username", "password"],
         "type": "object"
       },
       "IdentityGroup": {
@@ -1084,13 +898,7 @@
             "type": "array"
           }
         },
-        "required": [
-          "canonicalId",
-          "memberIds",
-          "revision",
-          "selections",
-          "members"
-        ],
+        "required": ["canonicalId", "memberIds", "revision", "selections", "members"],
         "type": "object"
       },
       "ImportBatch": {
@@ -1124,14 +932,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "id",
-          "accountId",
-          "collectionKey",
-          "revision",
-          "createdAt",
-          "rows"
-        ],
+        "required": ["id", "accountId", "collectionKey", "revision", "createdAt", "rows"],
         "type": "object"
       },
       "ImportPayload": {
@@ -1152,10 +953,7 @@
             "type": "array"
           }
         },
-        "required": [
-          "name",
-          "points"
-        ],
+        "required": ["name", "points"],
         "type": "object"
       },
       "ImportReview": {
@@ -1244,9 +1042,7 @@
                 "$ref": "#/components/schemas/ImportPayload"
               },
               {
-                "enum": [
-                  null
-                ],
+                "enum": [null],
                 "nullable": true,
                 "type": "object"
               }
@@ -1274,15 +1070,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "id",
-          "ordinal",
-          "recordKey",
-          "removed",
-          "errors",
-          "proposal",
-          "processed"
-        ],
+        "required": ["id", "ordinal", "recordKey", "removed", "errors", "proposal", "processed"],
         "type": "object"
       },
       "LookupBody": {
@@ -1322,18 +1110,11 @@
             "type": "string"
           }
         },
-        "required": [
-          "entities",
-          "fetchedAt"
-        ],
+        "required": ["entities", "fetchedAt"],
         "type": "object"
       },
       "MatchType": {
-        "enum": [
-          "exact",
-          "prefix",
-          "contains"
-        ],
+        "enum": ["exact", "prefix", "contains"],
         "type": "string"
       },
       "MergeBody": {
@@ -1372,13 +1153,7 @@
             "type": "array"
           }
         },
-        "required": [
-          "canonicalId",
-          "memberIds",
-          "expectedRevision",
-          "idempotencyKey",
-          "evidence"
-        ],
+        "required": ["canonicalId", "memberIds", "expectedRevision", "idempotencyKey", "evidence"],
         "type": "object"
       },
       "MergeField": {
@@ -1416,12 +1191,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "operationId",
-          "canonicalId",
-          "memberIds",
-          "revision"
-        ],
+        "required": ["operationId", "canonicalId", "memberIds", "revision"],
         "type": "object"
       },
       "MessageResponse": {
@@ -1431,18 +1201,12 @@
             "type": "string"
           }
         },
-        "required": [
-          "message"
-        ],
+        "required": ["message"],
         "type": "object"
       },
       "NameCompleteness": {
         "description": "Whether the source explicitly knows a name to be complete, incomplete, or unknown.",
-        "enum": [
-          "unknown",
-          "complete",
-          "incomplete"
-        ],
+        "enum": ["unknown", "complete", "incomplete"],
         "type": "string"
       },
       "PaginationMeta": {
@@ -1464,12 +1228,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "total",
-          "limit",
-          "offset",
-          "hasMore"
-        ],
+        "required": ["total", "limit", "offset", "hasMore"],
         "type": "object"
       },
       "PersonName": {
@@ -1523,11 +1282,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "entityId",
-          "name",
-          "updatedAt"
-        ],
+        "required": ["entityId", "name", "updatedAt"],
         "type": "object"
       },
       "PersonProfileResponse": {
@@ -1539,9 +1294,7 @@
                 "$ref": "#/components/schemas/PersonProfile"
               },
               {
-                "enum": [
-                  null
-                ],
+                "enum": [null],
                 "nullable": true,
                 "type": "object"
               }
@@ -1621,9 +1374,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "accountId"
-        ],
+        "required": ["accountId"],
         "type": "object"
       },
       "ProviderRunStatus": {
@@ -1686,12 +1437,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "batchRevision",
-          "directoryRevision",
-          "proposalRevision",
-          "idempotencyKey"
-        ],
+        "required": ["batchRevision", "directoryRevision", "proposalRevision", "idempotencyKey"],
         "type": "object"
       },
       "ReadyBatchReceipt": {
@@ -1801,9 +1547,7 @@
             "type": "array"
           }
         },
-        "required": [
-          "ids"
-        ],
+        "required": ["ids"],
         "type": "object"
       },
       "ResolveResponse": {
@@ -1820,10 +1564,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "data",
-          "revision"
-        ],
+        "required": ["data", "revision"],
         "type": "object"
       },
       "ResolvedIdentity": {
@@ -1837,10 +1578,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "canonicalId"
-        ],
+        "required": ["id", "canonicalId"],
         "type": "object"
       },
       "ReviewCandidate": {
@@ -1862,9 +1600,7 @@
                 "$ref": "#/components/schemas/PersonProfile"
               },
               {
-                "enum": [
-                  null
-                ],
+                "enum": [null],
                 "nullable": true,
                 "type": "object"
               }
@@ -1885,9 +1621,7 @@
                 "$ref": "#/components/schemas/PersonProfile"
               },
               {
-                "enum": [
-                  null
-                ],
+                "enum": [null],
                 "nullable": true,
                 "type": "object"
               }
@@ -1933,11 +1667,7 @@
       },
       "ReviewClassification": {
         "description": "Whether evidence permits an automatic match, requires a decision, or identifies a new person.",
-        "enum": [
-          "automatic",
-          "review",
-          "new"
-        ],
+        "enum": ["automatic", "review", "new"],
         "type": "string"
       },
       "ReviewCounts": {
@@ -1960,12 +1690,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "automatic",
-          "review",
-          "new",
-          "invalid"
-        ],
+        "required": ["automatic", "review", "new", "invalid"],
         "type": "object"
       },
       "ReviewDecisionInput": {
@@ -2189,9 +1914,7 @@
                 "$ref": "#/components/schemas/ImportPayload"
               },
               {
-                "enum": [
-                  null
-                ],
+                "enum": [null],
                 "nullable": true,
                 "type": "object"
               }
@@ -2302,75 +2025,54 @@
           {
             "properties": {
               "action": {
-                "enum": [
-                  "create_person"
-                ],
+                "enum": ["create_person"],
                 "type": "string"
               }
             },
-            "required": [
-              "action"
-            ],
+            "required": ["action"],
             "type": "object"
           },
           {
             "properties": {
               "action": {
-                "enum": [
-                  "link_person"
-                ],
+                "enum": ["link_person"],
                 "type": "string"
               },
               "entityId": {
                 "type": "string"
               }
             },
-            "required": [
-              "entityId",
-              "action"
-            ],
+            "required": ["entityId", "action"],
             "type": "object"
           },
           {
             "properties": {
               "action": {
-                "enum": [
-                  "update_source"
-                ],
+                "enum": ["update_source"],
                 "type": "string"
               }
             },
-            "required": [
-              "action"
-            ],
+            "required": ["action"],
             "type": "object"
           },
           {
             "properties": {
               "action": {
-                "enum": [
-                  "deactivate_source"
-                ],
+                "enum": ["deactivate_source"],
                 "type": "string"
               }
             },
-            "required": [
-              "action"
-            ],
+            "required": ["action"],
             "type": "object"
           },
           {
             "properties": {
               "action": {
-                "enum": [
-                  "skip"
-                ],
+                "enum": ["skip"],
                 "type": "string"
               }
             },
-            "required": [
-              "action"
-            ],
+            "required": ["action"],
             "type": "object"
           }
         ]
@@ -2386,30 +2088,17 @@
             "type": "string"
           }
         },
-        "required": [
-          "rowId",
-          "decision"
-        ],
+        "required": ["rowId", "decision"],
         "type": "object"
       },
       "RowIssue": {
         "description": "Sanitized validation failures retained alongside a preview row.",
-        "enum": [
-          "malformed_record",
-          "duplicate_source_key",
-          "invalid_record",
-          "invalid_removal"
-        ],
+        "enum": ["malformed_record", "duplicate_source_key", "invalid_record", "invalid_removal"],
         "type": "string"
       },
       "RowProposal": {
         "description": "The only automatic proposals concern recognized source identity, never similar names.",
-        "enum": [
-          "new_source",
-          "update_source",
-          "deactivate_source",
-          "invalid"
-        ],
+        "enum": ["new_source", "update_source", "deactivate_source", "invalid"],
         "type": "string"
       },
       "SearchHit": {
@@ -2432,13 +2121,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "uri",
-          "score",
-          "matchField",
-          "matchType",
-          "data"
-        ],
+        "required": ["uri", "score", "matchField", "matchType", "data"],
         "type": "object"
       },
       "SearchHitData": {
@@ -2456,11 +2139,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "name",
-          "type",
-          "aliases"
-        ],
+        "required": ["name", "type", "aliases"],
         "type": "object"
       },
       "SearchQuery": {
@@ -2469,9 +2148,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "text"
-        ],
+        "required": ["text"],
         "type": "object"
       },
       "SearchRequest": {
@@ -2482,9 +2159,7 @@
             "$ref": "#/components/schemas/SearchQuery"
           }
         },
-        "required": [
-          "query"
-        ],
+        "required": ["query"],
         "type": "object"
       },
       "SearchResponse": {
@@ -2497,9 +2172,7 @@
             "type": "array"
           }
         },
-        "required": [
-          "hits"
-        ],
+        "required": ["hits"],
         "type": "object"
       },
       "SeparateBody": {
@@ -2550,10 +2223,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "data",
-          "revision"
-        ],
+        "required": ["data", "revision"],
         "type": "object"
       },
       "SeparatePair": {
@@ -2566,10 +2236,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "leftId",
-          "rightId"
-        ],
+        "required": ["leftId", "rightId"],
         "type": "object"
       },
       "SeparateResult": {
@@ -2589,12 +2256,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "leftId",
-          "rightId",
-          "keepSeparate",
-          "revision"
-        ],
+        "required": ["leftId", "rightId", "keepSeparate", "revision"],
         "type": "object"
       },
       "SourceAccount": {
@@ -2617,12 +2279,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "provider",
-          "accountKey",
-          "createdAt"
-        ],
+        "required": ["id", "provider", "accountKey", "createdAt"],
         "type": "object"
       },
       "SourceAccountInput": {
@@ -2640,10 +2297,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "provider",
-          "accountKey"
-        ],
+        "required": ["provider", "accountKey"],
         "type": "object"
       },
       "SourceAccountListResponse": {
@@ -2656,9 +2310,7 @@
             "type": "array"
           }
         },
-        "required": [
-          "data"
-        ],
+        "required": ["data"],
         "type": "object"
       },
       "SourceAccountResponse": {
@@ -2668,17 +2320,12 @@
             "$ref": "#/components/schemas/SourceAccount"
           }
         },
-        "required": [
-          "data"
-        ],
+        "required": ["data"],
         "type": "object"
       },
       "SourceMergeField": {
         "description": "Source name fields selectable from an immutable imported observation.",
-        "enum": [
-          "name",
-          "personProfile"
-        ],
+        "enum": ["name", "personProfile"],
         "type": "string"
       },
       "SourceRecord": {
@@ -2760,9 +2407,7 @@
             "type": "array"
           }
         },
-        "required": [
-          "data"
-        ],
+        "required": ["data"],
         "type": "object"
       },
       "UndoBody": {
@@ -2777,10 +2422,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "expectedRevision",
-          "idempotencyKey"
-        ],
+        "required": ["expectedRevision", "idempotencyKey"],
         "type": "object"
       },
       "UndoResult": {
@@ -2800,11 +2442,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "operationId",
-          "restoredIds",
-          "revision"
-        ],
+        "required": ["operationId", "restoredIds", "revision"],
         "type": "object"
       },
       "UpdateEntityBody": {
@@ -2849,20 +2487,12 @@
       },
       "UploadEncoding": {
         "description": "Explicit text decoding for file uploads.",
-        "enum": [
-          "utf8",
-          "utf16_le",
-          "utf16_be",
-          "windows1252"
-        ],
+        "enum": ["utf8", "utf16_le", "utf16_be", "windows1252"],
         "type": "string"
       },
       "UploadFormat": {
         "description": "Supported export formats; the caller chooses explicitly rather than guessing from content.",
-        "enum": [
-          "google_csv",
-          "vcard"
-        ],
+        "enum": ["google_csv", "vcard"],
         "type": "string"
       }
     }
@@ -2894,9 +2524,7 @@
           }
         },
         "summary": "Stub root. A human-friendly landing string so `GET /` is not a 404 while\nthe real surface is still under construction.",
-        "tags": [
-          "crate::health"
-        ]
+        "tags": ["crate::health"]
       }
     },
     "/entities": {
@@ -2963,9 +2591,7 @@
             "description": "Paginated entity list"
           }
         },
-        "tags": [
-          "crate::entities::routes"
-        ]
+        "tags": ["crate::entities::routes"]
       },
       "post": {
         "operationId": "entities.create",
@@ -3011,9 +2637,7 @@
             "description": "Duplicate name"
           }
         },
-        "tags": [
-          "crate::entities::routes"
-        ]
+        "tags": ["crate::entities::routes"]
       }
     },
     "/entities/lookup": {
@@ -3051,9 +2675,7 @@
             "description": "More ids than the lookup cap allows"
           }
         },
-        "tags": [
-          "crate::entities::routes"
-        ]
+        "tags": ["crate::entities::routes"]
       }
     },
     "/entities/resolve": {
@@ -3090,9 +2712,7 @@
           }
         },
         "summary": "Resolve every historical ID and report the snapshot revision for multi-batch consumers.",
-        "tags": [
-          "crate::merges::routes"
-        ]
+        "tags": ["crate::merges::routes"]
       }
     },
     "/entities/{id}": {
@@ -3131,9 +2751,7 @@
             "description": "No such entity"
           }
         },
-        "tags": [
-          "crate::entities::routes"
-        ]
+        "tags": ["crate::entities::routes"]
       },
       "get": {
         "operationId": "entities.get",
@@ -3170,9 +2788,7 @@
             "description": "No such entity"
           }
         },
-        "tags": [
-          "crate::entities::routes"
-        ]
+        "tags": ["crate::entities::routes"]
       },
       "patch": {
         "operationId": "entities.update",
@@ -3229,9 +2845,7 @@
             "description": "Duplicate name"
           }
         },
-        "tags": [
-          "crate::entities::routes"
-        ]
+        "tags": ["crate::entities::routes"]
       }
     },
     "/entities/{id}/addresses": {
@@ -3270,9 +2884,7 @@
             "description": "No such entity"
           }
         },
-        "tags": [
-          "crate::entities::addresses_routes"
-        ]
+        "tags": ["crate::entities::addresses_routes"]
       },
       "post": {
         "operationId": "entities.addresses.create",
@@ -3329,9 +2941,7 @@
             "description": "No such entity"
           }
         },
-        "tags": [
-          "crate::entities::addresses_routes"
-        ]
+        "tags": ["crate::entities::addresses_routes"]
       }
     },
     "/entities/{id}/avatar": {
@@ -3371,9 +2981,7 @@
           }
         },
         "summary": "`DELETE /entities/{id}/avatar` — clear the entity's avatar and delete the\nbacking blob.",
-        "tags": [
-          "crate::entities::routes"
-        ]
+        "tags": ["crate::entities::routes"]
       },
       "get": {
         "operationId": "entities.get_avatar",
@@ -3413,9 +3021,7 @@
           }
         },
         "summary": "`GET /entities/{id}/avatar` — serve the entity's avatar bytes.",
-        "tags": [
-          "crate::entities::routes"
-        ]
+        "tags": ["crate::entities::routes"]
       },
       "put": {
         "operationId": "entities.upload_avatar",
@@ -3476,9 +3082,7 @@
           }
         },
         "summary": "`PUT /entities/{id}/avatar` — upload/replace the entity's avatar.",
-        "tags": [
-          "crate::entities::routes"
-        ]
+        "tags": ["crate::entities::routes"]
       }
     },
     "/entities/{id}/colour/reroll": {
@@ -3518,9 +3122,7 @@
           }
         },
         "summary": "`POST /entities/{id}/colour/reroll` — the only way a client can change an\nentity's `colour` after creation: a fresh pick from the fixed palette,\nguaranteed different from the entity's current value (POPS-3061 design\ncorrection — `colour` is otherwise immutable through the generic PATCH).",
-        "tags": [
-          "crate::entities::routes"
-        ]
+        "tags": ["crate::entities::routes"]
       }
     },
     "/entities/{id}/contact-points": {
@@ -3566,9 +3168,7 @@
           }
         },
         "summary": "Read local points for a person, company or organisation and source points for persons, retaining provenance and preference flags.",
-        "tags": [
-          "crate::persons::routes"
-        ]
+        "tags": ["crate::persons::routes"]
       },
       "post": {
         "operationId": "entities.points.create",
@@ -3622,9 +3222,7 @@
           }
         },
         "summary": "Add an explicit local contact point; source association is never client supplied here.",
-        "tags": [
-          "crate::persons::routes"
-        ]
+        "tags": ["crate::persons::routes"]
       }
     },
     "/entities/{id}/contact-points/{point_id}/preferred": {
@@ -3672,9 +3270,7 @@
           }
         },
         "summary": "Set a local preference independently of whether the source observation is still active.",
-        "tags": [
-          "crate::persons::routes"
-        ]
+        "tags": ["crate::persons::routes"]
       }
     },
     "/entities/{id}/facts": {
@@ -3720,9 +3316,7 @@
           }
         },
         "summary": "Read all editable person facts and the exact optimistic version from one snapshot.",
-        "tags": [
-          "crate::persons::facts_routes"
-        ]
+        "tags": ["crate::persons::facts_routes"]
       }
     },
     "/entities/{id}/facts/changes": {
@@ -3787,9 +3381,7 @@
           }
         },
         "summary": "Apply an explicit complete draft atomically without overwriting imported observations.",
-        "tags": [
-          "crate::persons::facts_routes"
-        ]
+        "tags": ["crate::persons::facts_routes"]
       }
     },
     "/entities/{id}/facts/changes/{operation_id}/undo": {
@@ -3862,9 +3454,7 @@
           }
         },
         "summary": "Undo only decisions and preferred selections still owned by the named operation.",
-        "tags": [
-          "crate::persons::facts_routes"
-        ]
+        "tags": ["crate::persons::facts_routes"]
       }
     },
     "/entities/{id}/person": {
@@ -3910,9 +3500,7 @@
           }
         },
         "summary": "Read the independently maintained local person profile.",
-        "tags": [
-          "crate::persons::routes"
-        ]
+        "tags": ["crate::persons::routes"]
       },
       "put": {
         "operationId": "entities.person.put",
@@ -3966,9 +3554,7 @@
           }
         },
         "summary": "Replace the local structured name without changing imported name observations.",
-        "tags": [
-          "crate::persons::routes"
-        ]
+        "tags": ["crate::persons::routes"]
       }
     },
     "/entities/{id}/poster": {
@@ -4008,9 +3594,7 @@
           }
         },
         "summary": "`DELETE /entities/{id}/poster` — clear the entity's poster and delete the\nbacking blob.",
-        "tags": [
-          "crate::entities::routes"
-        ]
+        "tags": ["crate::entities::routes"]
       },
       "get": {
         "operationId": "entities.get_poster",
@@ -4050,9 +3634,7 @@
           }
         },
         "summary": "`GET /entities/{id}/poster` — serve the entity's poster bytes.",
-        "tags": [
-          "crate::entities::routes"
-        ]
+        "tags": ["crate::entities::routes"]
       },
       "put": {
         "operationId": "entities.upload_poster",
@@ -4113,9 +3695,7 @@
           }
         },
         "summary": "`PUT /entities/{id}/poster` — upload/replace the entity's poster image.",
-        "tags": [
-          "crate::entities::routes"
-        ]
+        "tags": ["crate::entities::routes"]
       }
     },
     "/entities/{id}/reference": {
@@ -4154,9 +3734,7 @@
             "description": "No such entity"
           }
         },
-        "tags": [
-          "crate::entities::routes"
-        ]
+        "tags": ["crate::entities::routes"]
       }
     },
     "/entities/{id}/sources": {
@@ -4202,9 +3780,7 @@
           }
         },
         "summary": "List provenance for one canonical person, including inactive sources.",
-        "tags": [
-          "crate::sources::routes"
-        ]
+        "tags": ["crate::sources::routes"]
       }
     },
     "/entity-types": {
@@ -4222,9 +3798,7 @@
           }
         },
         "summary": "Publish the owning entity type catalogue without requiring clients to copy backend constants.",
-        "tags": [
-          "crate::entities::routes"
-        ]
+        "tags": ["crate::entities::routes"]
       }
     },
     "/health": {
@@ -4243,9 +3817,7 @@
           }
         },
         "summary": "Liveness probe.",
-        "tags": [
-          "crate::health"
-        ]
+        "tags": ["crate::health"]
       }
     },
     "/imports/files": {
@@ -4338,9 +3910,7 @@
           }
         },
         "summary": "Stage a raw export file; malformed records remain inspectable without directory writes.",
-        "tags": [
-          "crate::imports::routes"
-        ]
+        "tags": ["crate::imports::routes"]
       }
     },
     "/imports/{id}": {
@@ -4380,9 +3950,7 @@
           }
         },
         "summary": "Read a durable preview after a partial commit or a process restart.",
-        "tags": [
-          "crate::imports::routes"
-        ]
+        "tags": ["crate::imports::routes"]
       }
     },
     "/imports/{id}/apply-ready": {
@@ -4447,9 +4015,7 @@
           }
         },
         "summary": "Apply only complete-snapshot ready rows; every late failure rolls back the whole action.",
-        "tags": [
-          "crate::imports::ready_routes"
-        ]
+        "tags": ["crate::imports::ready_routes"]
       }
     },
     "/imports/{id}/commit": {
@@ -4519,9 +4085,7 @@
           }
         },
         "summary": "Apply selected decisions atomically, preserving a receipt for identical retries.",
-        "tags": [
-          "crate::imports::routes"
-        ]
+        "tags": ["crate::imports::routes"]
       }
     },
     "/imports/{id}/review-decisions": {
@@ -4591,9 +4155,7 @@
           }
         },
         "summary": "Apply only explicitly selected candidates atomically; exact retries return the stored receipt.",
-        "tags": [
-          "crate::imports::review_decision_routes"
-        ]
+        "tags": ["crate::imports::review_decision_routes"]
       }
     },
     "/imports/{id}/review-proposals": {
@@ -4705,9 +4267,7 @@
           }
         },
         "summary": "Read bounded evidence pages from complete-batch classification, rejecting stale page proofs.",
-        "tags": [
-          "crate::imports::review_routes"
-        ]
+        "tags": ["crate::imports::review_routes"]
       }
     },
     "/merges": {
@@ -4762,9 +4322,7 @@
           }
         },
         "summary": "Merge only selected groups with explicit field references and immutable retry receipts.",
-        "tags": [
-          "crate::merges::routes"
-        ]
+        "tags": ["crate::merges::routes"]
       }
     },
     "/merges/groups/{id}": {
@@ -4801,9 +4359,7 @@
           }
         },
         "summary": "Read the current canonical group and the conservative directory-wide revision.",
-        "tags": [
-          "crate::merges::routes"
-        ]
+        "tags": ["crate::merges::routes"]
       }
     },
     "/merges/keep-separate": {
@@ -4821,9 +4377,7 @@
           }
         },
         "summary": "List stable member-pair decisions for conservative matching.",
-        "tags": [
-          "crate::merges::routes"
-        ]
+        "tags": ["crate::merges::routes"]
       },
       "post": {
         "operationId": "merges.separate",
@@ -4876,9 +4430,7 @@
           }
         },
         "summary": "Persist or revoke candidate-specific separation across the two selected groups.",
-        "tags": [
-          "crate::merges::routes"
-        ]
+        "tags": ["crate::merges::routes"]
       }
     },
     "/merges/{id}/undo": {
@@ -4943,9 +4495,7 @@
           }
         },
         "summary": "Undo only an untouched merge. External references created after the merge remain unchanged.",
-        "tags": [
-          "crate::merges::routes"
-        ]
+        "tags": ["crate::merges::routes"]
       }
     },
     "/openapi": {
@@ -4962,9 +4512,7 @@
           }
         },
         "summary": "`GET /openapi` — serve the pinned 3.0.3 OpenAPI document.",
-        "tags": [
-          "crate::app"
-        ]
+        "tags": ["crate::app"]
       }
     },
     "/providers/accounts": {
@@ -5006,9 +4554,7 @@
           }
         },
         "summary": "List connection states after verifying a human operator; never return secrets.",
-        "tags": [
-          "crate::providers::routes"
-        ]
+        "tags": ["crate::providers::routes"]
       }
     },
     "/providers/accounts/{id}": {
@@ -5041,9 +4587,7 @@
           }
         },
         "summary": "Revoke credentials and fence callbacks, previews and in-flight provider results.",
-        "tags": [
-          "crate::providers::routes"
-        ]
+        "tags": ["crate::providers::routes"]
       }
     },
     "/providers/accounts/{id}/sync": {
@@ -5093,9 +4637,7 @@
           }
         },
         "summary": "Queue a discovered account scan for a verified human or a registry-verified\nservice account admitted by this operation's outer scope gate.",
-        "tags": [
-          "crate::providers::routes"
-        ]
+        "tags": ["crate::providers::routes"]
       }
     },
     "/providers/google/authorize": {
@@ -5145,9 +4687,7 @@
           }
         },
         "summary": "Start one-use Google authorization under the verified operator identity.",
-        "tags": [
-          "crate::providers::routes"
-        ]
+        "tags": ["crate::providers::routes"]
       }
     },
     "/providers/google/callback": {
@@ -5233,9 +4773,7 @@
           }
         },
         "summary": "Consume state before exchanging the callback code; human subject and account\nepoch must match the initiating authorization attempt. Successful browser\ncallbacks return to the fixed shell connections route without auth details.\nHTML failures return only a generic cancelled/failed code on that route;\nJSON clients retain the structured error response.",
-        "tags": [
-          "crate::providers::routes"
-        ]
+        "tags": ["crate::providers::routes"]
       }
     },
     "/providers/icloud/accounts": {
@@ -5284,9 +4822,7 @@
           }
         },
         "summary": "Validate iCloud credentials and actual principal before encrypted installation.",
-        "tags": [
-          "crate::providers::routes"
-        ]
+        "tags": ["crate::providers::routes"]
       }
     },
     "/providers/sync/{id}": {
@@ -5326,9 +4862,7 @@
           }
         },
         "summary": "Read safe scan progress without exposing cursor, raw card or credential values.",
-        "tags": [
-          "crate::providers::routes"
-        ]
+        "tags": ["crate::providers::routes"]
       }
     },
     "/search": {
@@ -5356,9 +4890,7 @@
             "description": "Ranked contact hits"
           }
         },
-        "tags": [
-          "crate::search::routes"
-        ]
+        "tags": ["crate::search::routes"]
       }
     },
     "/sources/accounts": {
@@ -5376,9 +4908,7 @@
           }
         },
         "summary": "List registered account identities without credential material.",
-        "tags": [
-          "crate::sources::routes"
-        ]
+        "tags": ["crate::sources::routes"]
       },
       "post": {
         "operationId": "sources.accounts.register",
@@ -5413,9 +4943,7 @@
           }
         },
         "summary": "Register or relabel an existing provider subject without changing its identity.",
-        "tags": [
-          "crate::sources::routes"
-        ]
+        "tags": ["crate::sources::routes"]
       }
     }
   }

@@ -13,6 +13,7 @@ WORKDIR /app
 
 # Workspace root manifests — needed for pnpm install to resolve.
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json .oxfmtrc.json ./
+COPY patches/ ./patches/
 
 # Phase 1: package.json of @pops/documents + its transitive @pops/* deps.
 # `pnpm install --filter "@pops/documents..."` scopes lockfile resolution to

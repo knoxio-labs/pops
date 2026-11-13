@@ -1,5 +1,10 @@
 import { captureDraftHasMaterial, emptyCaptureDraft } from './draft';
-import { alreadyUndoneCapture, captureRequestRejected, occupiedCaptureComposer } from './failure';
+import {
+  alreadyUndoneCapture,
+  captureRequestRejected,
+  captureRevisionConflict,
+  occupiedCaptureComposer,
+} from './failure';
 import { applyCaptureResult, requireCaptureResult } from './result';
 
 import type { CaptureEditorStore } from './editor-store';
@@ -13,14 +18,18 @@ function confirmed(
 ): boolean {
   const source = applyCaptureResult(store.state.source, result, intent.inverse);
   store.pending = null;
-  store.failureIntent = null;
+  const retainedFailure = store.recovery.restoreConflict();
   if (result.undone) {
     store.publish({
       source,
       generation: store.state.generation + 1,
       busy: false,
       composerLocked: false,
-      failure: { label: intent.label, error: alreadyUndoneCapture(), canRetry: false },
+      failure: retainedFailure ?? {
+        label: intent.label,
+        error: alreadyUndoneCapture(),
+        canRetry: false,
+      },
       confirmation: { request: intent.request, result },
     });
     return false;
@@ -53,7 +62,7 @@ function confirmed(
     generation: store.state.generation + 1,
     busy: false,
     composerLocked: false,
-    failure: null,
+    failure: retainedFailure,
     confirmation: { request: intent.request, result },
   });
   return true;
@@ -83,10 +92,18 @@ export async function executeCaptureIntent(
   } catch (error) {
     store.pending = captureRequestRejected(error) ? null : intent;
     store.failureIntent = intent;
+    const conflict = captureRevisionConflict(error, intent);
+    const failure = {
+      label: intent.label,
+      error,
+      canRetry: !conflict,
+      reloadSource: conflict,
+    };
+    store.recovery.retainConflict(intent, failure);
     store.publish({
       busy: false,
       composerLocked: store.pending !== null && restoresDraft,
-      failure: { label: intent.label, error, canRetry: true },
+      failure,
     });
     store.flush();
     return false;

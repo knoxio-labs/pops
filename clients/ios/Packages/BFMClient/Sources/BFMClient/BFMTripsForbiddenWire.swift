@@ -10,6 +10,12 @@ extension Operations.MobileTrips_getTrip.Output.Forbidden.Body.JsonPayload: Wire
     }
 }
 
+extension Operations.MobileTrips_updateTrip.Output.Forbidden.Body.JsonPayload: WireForbiddenBody {
+    internal var capabilityNotGranted: String? {
+        if case .case2(let denied) = self { denied.capability } else { nil }
+    }
+}
+
 extension Operations.MobileTrips_getTripV2.Output.Forbidden.Body.JsonPayload: WireForbiddenBody {
     internal var capabilityNotGranted: String? {
         if case .case2(let denied) = self { denied.capability } else { nil }

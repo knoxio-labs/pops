@@ -76,9 +76,9 @@ internal struct TripsCompositionTests {
     }
 
     @Test("the dummy screen renders visible content in both appearances")
-    func placeholderRenders() throws {
+    func placeholderRenders() async throws {
         #expect(
-            try SwiftUIViewRendering.rendersSchemeAwareContent(
+            try await SwiftUIViewRendering.rendersSchemeAwareContent(
                 TripsPlaceholderView(), background: Color.popsBackground))
     }
 

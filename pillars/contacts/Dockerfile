@@ -15,6 +15,7 @@
 FROM node:24-slim AS ui-builder
 WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json .oxfmtrc.json ./
+COPY patches/ ./patches/
 COPY libs ./libs
 COPY scripts ./scripts
 COPY pillars/contacts/app ./pillars/contacts/app

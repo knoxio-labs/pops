@@ -37,6 +37,7 @@ describe('native Trips capability, discovery and source contract', () => {
   it('declares only the precise producer read grants the aggregate actually calls', () => {
     const scopes = MOBILE_CAPABILITY_SCOPES['trips.read'];
     expect(scopes).toEqual([
+      'trips.captureWorkspace.get',
       'trips.trips.list',
       'trips.trips.get',
       'trips.places.list',
@@ -49,7 +50,25 @@ describe('native Trips capability, discovery and source contract', () => {
       'trips.documentAssociations.list',
     ]);
     for (const scope of scopes) expect(BFM_SERVICE_ACCOUNT_SCOPES).toContain(scope);
-    expect(BFM_SERVICE_ACCOUNT_SCOPES.filter((scope) => scope.startsWith('trips'))).toEqual(scopes);
+    expect(BFM_SERVICE_ACCOUNT_SCOPES.filter((scope) => scope.startsWith('trips'))).toEqual(
+      expect.arrayContaining([...scopes, ...MOBILE_CAPABILITY_SCOPES['trips.capture.write']])
+    );
+    expect(GUEST_DEVICE_CAPABILITIES).not.toContain('trips.capture.write');
+    expect(DEFAULT_DEVICE_CAPABILITIES).not.toContain('trips.capture.write');
+    expect(
+      resolveDeviceCapabilities({
+        id: 'device',
+        capabilities: '["trips.read"]',
+        capabilityMode: 'tracks-default',
+      })
+    ).not.toContain('trips.capture.write');
+    expect(
+      resolveDeviceCapabilities({
+        id: 'device',
+        capabilities: '["trips.read"]',
+        capabilityMode: 'explicit',
+      })
+    ).not.toContain('trips.capture.write');
   });
 
   it.each(['healthy', 'degraded', 'unavailable', 'contract-mismatch'] as const)(

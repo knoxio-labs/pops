@@ -13,7 +13,7 @@ internal struct PopsDividedRowsPerformanceTests {
 
     @Test("10,000 divided rows construct and start row work only near the viewport")
     func largeListKeepsRowAndAssetWorkBounded() async throws {
-        let fixture = try ListFixture()
+        let fixture = ListFixture(scene: try await HostWindowScene.require())
         defer { fixture.dismiss() }
 
         try await fixture.waitForRow(0)
@@ -58,7 +58,7 @@ internal struct PopsDividedRowsPerformanceTests {
         private let window: UIWindow
         private let host: UIHostingController<AnyView>
 
-        init() throws {
+        init(scene: UIWindowScene) {
             let counter = RowWorkCounter()
             let scrollControl = ScrollControl()
             let rows = (0..<10_000).map(Row.init(id:))
@@ -76,9 +76,6 @@ internal struct PopsDividedRowsPerformanceTests {
                 }
             }
 
-            let scene = try #require(
-                UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first,
-                "the app test host did not create a window scene")
             let window = UIWindow(windowScene: scene)
             let host = UIHostingController(rootView: AnyView(list))
             self.counter = counter

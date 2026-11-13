@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { afterEach, expect, it, vi } from 'vitest';
@@ -57,6 +57,7 @@ function harness() {
     const [session, setSession] = useState(() =>
       createDocumentUploadSession(new File(['file'], 'same.pdf', { type: 'application/pdf' }))
     );
+    const [pickerOpen, setPickerOpen] = useState(true);
     const controller = useDocumentUpload({
       session,
       onSessionChange: setSession,
@@ -68,7 +69,8 @@ function harness() {
     return controller.fields.uncertain ? (
       <DocumentPicker
         documentsClient={client}
-        open
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
         initialSearch="same"
         beforeRequest={controller.assertOwnerContext}
         onSelected={selected}
@@ -96,27 +98,44 @@ function harness() {
   };
 }
 
+async function closeRecoveryPicker(): Promise<void> {
+  const dialog = screen.queryByRole('dialog');
+  if (dialog === null) return;
+  const search = within(dialog).getByRole('textbox');
+  search.focus();
+  expect(search).toHaveFocus();
+  await userEvent.click(within(dialog).getByRole('button', { name: 'Close' }));
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: 'Choose existing document' })).toHaveFocus()
+  );
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+}
+
 it.each(['owner', 'parent'])(
   'fences standalone recovery picker search and cached selection after the %s context changes',
   async (changedContext) => {
     const owner = harness();
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Send' })).toBeEnabled());
-    await userEvent.click(screen.getByRole('button', { name: 'Send' }));
-    await screen.findByRole('button', { name: 'Choose' });
-    if (changedContext === 'owner')
-      owner.client.setConfig({ baseUrl: 'https://other.example/documents-api' });
-    else owner.invalidateParent();
-    const requestsBefore = owner.requests.length;
-    await userEvent.click(screen.getByRole('button', { name: 'Choose' }));
-    expect(
-      await screen.findByText('This original could not be selected. Retry your selection.')
-    ).toHaveAttribute('role', 'alert');
-    expect(owner.selected).not.toHaveBeenCalled();
-    fireEvent.change(screen.getByPlaceholderText('Search documents...'), {
-      target: { value: 'other' },
-    });
-    await screen.findByText('Documents search failed. Try again.');
-    expect(owner.requests).toHaveLength(requestsBefore);
-    expect(screen.getByRole('dialog')).toBeVisible();
+    try {
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Send' })).toBeEnabled());
+      await userEvent.click(screen.getByRole('button', { name: 'Send' }));
+      await screen.findByRole('button', { name: 'Choose' });
+      if (changedContext === 'owner')
+        owner.client.setConfig({ baseUrl: 'https://other.example/documents-api' });
+      else owner.invalidateParent();
+      const requestsBefore = owner.requests.length;
+      await userEvent.click(screen.getByRole('button', { name: 'Choose' }));
+      expect(
+        await screen.findByText('This original could not be selected. Retry your selection.')
+      ).toHaveAttribute('role', 'alert');
+      expect(owner.selected).not.toHaveBeenCalled();
+      fireEvent.change(screen.getByPlaceholderText('Search documents...'), {
+        target: { value: 'other' },
+      });
+      await screen.findByText('Documents search failed. Try again.');
+      expect(owner.requests).toHaveLength(requestsBefore);
+      expect(screen.getByRole('dialog')).toBeVisible();
+    } finally {
+      await closeRecoveryPicker();
+    }
   }
 );

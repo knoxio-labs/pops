@@ -10,31 +10,31 @@ import UIKit
 @MainActor
 internal struct ContentViewEmptyStateRenderingTests {
     @Test("zero available features renders real content rather than a blank screen")
-    func zeroFeaturesRendersRealContent() throws {
+    func zeroFeaturesRendersRealContent() async throws {
         let adaptiveFlat = Color(
             uiColor: UIColor { traits in
                 traits.userInterfaceStyle == .dark ? .red : .blue
             })
 
         #expect(
-            try SwiftUIViewRendering.rendersSchemeAwareContent(
+            try await SwiftUIViewRendering.rendersSchemeAwareContent(
                 ContentViewFixture.view(available: []).features,
                 background: Color.popsBackground))
         #expect(
-            try !SwiftUIViewRendering.rendersSchemeAwareContent(
-                Color.clear, background: Color.popsBackground))
+            !(try await SwiftUIViewRendering.rendersSchemeAwareContent(
+                Color.clear, background: Color.popsBackground)))
         #expect(
-            try !SwiftUIViewRendering.rendersSchemeAwareContent(
-                Color.popsBackground, background: Color.popsBackground))
+            !(try await SwiftUIViewRendering.rendersSchemeAwareContent(
+                Color.popsBackground, background: Color.popsBackground)))
         #expect(
-            try !SwiftUIViewRendering.rendersSchemeAwareContent(
-                adaptiveFlat.ignoresSafeArea(), background: Color.popsBackground))
+            !(try await SwiftUIViewRendering.rendersSchemeAwareContent(
+                adaptiveFlat.ignoresSafeArea(), background: Color.popsBackground)))
     }
 
     @Test("receipt-capture alone renders the nothing-available explanation")
-    func receiptCaptureAloneRendersNothingAvailable() throws {
+    func receiptCaptureAloneRendersNothingAvailable() async throws {
         #expect(
-            try SwiftUIViewRendering.rendersSchemeAwareContent(
+            try await SwiftUIViewRendering.rendersSchemeAwareContent(
                 ContentViewFixture.view(available: [.receiptCapture]).features,
                 background: Color.popsBackground))
     }

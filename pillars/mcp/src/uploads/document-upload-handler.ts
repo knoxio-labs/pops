@@ -6,7 +6,7 @@ import { uploadErrors } from './upload-errors.js';
 import type { Request, Response } from 'express';
 
 import type { DocumentUploadDeps } from './inventory-documents.js';
-import type { DocumentUploadTarget } from './upload-tokens.js';
+import type { DocumentUploadTarget, PaperlessUploadTarget } from './upload-tokens.js';
 
 /** Whether `mime` matches one of documents' allow-list entries (`image/*` style wildcards included). */
 export function mimeAllowed(mime: string, allowed: readonly string[]): boolean {
@@ -24,7 +24,10 @@ function declaredLength(req: Request): number | undefined {
 }
 
 /** Checks that need no body bytes, so a refused upload is never streamed anywhere. */
-function precheck(req: Request, target: DocumentUploadTarget): string {
+export function precheckDocumentUpload(
+  req: Request,
+  target: DocumentUploadTarget | PaperlessUploadTarget
+): string {
   const header = req.get('content-type');
   if (header === undefined || header.trim() === '') {
     return uploadErrors.missing_content_type({ allowedMimeTypes: target.allowedMimeTypes });
@@ -57,7 +60,7 @@ export async function storeDocumentUpload(
   deps?: DocumentUploadDeps
 ): Promise<void> {
   res.setHeader('Connection', 'close');
-  const contentType = precheck(req, target);
+  const contentType = precheckDocumentUpload(req, target);
   const contentLength = req.get('content-length');
   const result = await uploadInventoryDocument(
     { body: req, contentType, ...(contentLength === undefined ? {} : { contentLength }) },
@@ -66,6 +69,12 @@ export async function storeDocumentUpload(
   );
   if (result.kind === 'too-large')
     return uploadErrors.too_large({ maxUploadBytes: target.maxBytes });
+  if (result.kind === 'redirected')
+    return uploadErrors.outcome_unknown({
+      producer: 'inventory',
+      itemId: target.itemId,
+      status: result.status,
+    });
   if (result.kind === 'unavailable') {
     return uploadErrors.upstream_unavailable({ reason: result.message });
   }

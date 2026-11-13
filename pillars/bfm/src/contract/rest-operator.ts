@@ -1,9 +1,14 @@
+import { initContract } from '@ts-rest/core';
+import { z } from 'zod';
+
 /**
- * `operator.*` sub-router — pairing-code issuance and the device allow-list.
+ * `operator.*` sub-router — pairing-code issuance and human-only device administration.
  *
  *   - `issuePairingCode` (mutation) → `POST   /operator/pairing/codes`
  *   - `listDevices`      (query)    → `GET    /operator/devices`
  *   - `revokeDevice`     (mutation) → `DELETE /operator/devices/:id`
+ *   - `getDeviceGrant`   (query)    → `GET /operator/devices/:id/capabilities`
+ *   - `replaceDeviceGrant` (mutation) → `PUT /operator/devices/:id/capabilities`
  *
  * ## Why `/operator`
  *
@@ -13,7 +18,7 @@
  * `POST /devices/refresh` without an Access session. One Express app serves
  * both.
  *
- * So these three routes are reachable from the public internet, and the
+ * So these operator routes are reachable from the public internet, and the
  * `requireOperator` gate in their handlers is the actual perimeter. The prefix
  * does not add security by itself — it makes a second layer *expressible*: the
  * bypassed hostname can refuse `/operator/*` wholesale at the edge
@@ -25,9 +30,7 @@
  * `operator.issuePairingCode`; it does not expose the device list or
  * revocation operation.
  */
-import { initContract } from '@ts-rest/core';
-import { z } from 'zod';
-
+import { DeviceGrantSchema, ReplaceDeviceGrantSchema } from './device-grant-schemas.js';
 import {
   DeviceListSchema,
   ErrorBodySchema,
@@ -40,6 +43,33 @@ import {
 const c = initContract();
 
 export const bfmOperatorContract = c.router({
+  getDeviceGrant: {
+    method: 'GET',
+    path: '/operator/devices/:id/capabilities',
+    pathParams: z.object({ id: z.string().min(1) }),
+    responses: {
+      200: DeviceGrantSchema,
+      ...OPERATOR_ERR_RESPONSES,
+      404: ErrorBodySchema,
+      409: ErrorBodySchema,
+    },
+    summary: 'Read one live operator-owned device grant for explicit selection',
+  },
+  replaceDeviceGrant: {
+    method: 'PUT',
+    path: '/operator/devices/:id/capabilities',
+    pathParams: z.object({ id: z.string().min(1) }),
+    body: ReplaceDeviceGrantSchema,
+    responses: {
+      200: DeviceGrantSchema,
+      ...OPERATOR_ERR_RESPONSES,
+      400: ErrorBodySchema,
+      404: ErrorBodySchema,
+      409: ErrorBodySchema,
+    },
+    summary:
+      'Replace a complete explicit device capability selection using revision and policy CAS',
+  },
   issuePairingCode: {
     method: 'POST',
     path: '/operator/pairing/codes',

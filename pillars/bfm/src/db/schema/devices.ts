@@ -18,7 +18,7 @@
  * that can sign anything.
  */
 import { sql } from 'drizzle-orm';
-import { index, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
 import { DEVICE_CAPABILITY_MODES } from '../../contract/capabilities.js';
 
@@ -66,7 +66,7 @@ export const devices = sqliteTable(
      * caller does not hold it.
      *
      * JSON in one column rather than a join table because a grant is read on
-     * every authenticated request and written only at pairing, and because it
+     * every authenticated request and written at pairing or explicit operator selection, and because it
      * has no attributes of its own — a row per capability would buy a second
      * query per request to reassemble a set.
      *
@@ -99,6 +99,8 @@ export const devices = sqliteTable(
      * because pairing was the only writer of a grant and every one of those
      * rows therefore holds the default set of its day.
      */
+    /** Monotonic operator grant CAS; unrelated last-seen/token changes do not advance it. */
+    capabilityRevision: integer('capability_revision').notNull().default(0),
     capabilityMode: text('capability_mode', { enum: DEVICE_CAPABILITY_MODES })
       .notNull()
       .default('explicit'),

@@ -17,9 +17,11 @@
 //!     arbitrary objects.
 //!   - `examples` (3.1 array) → `example` (3.0 singular) on schema objects.
 //!
-//! The `openapi` version field is forced to `3.0.3`. `emit-openapi` writes
-//! the result to `openapi/contacts.openapi.json`; a drift check (regenerate
-//! + `git diff --exit-code`) keeps the committed copy honest.
+//! The `openapi` version field is forced to `3.0.3`. `emit-openapi` streams
+//! this value to the owner `scripts/generate-openapi.mjs` generator, which
+//! applies repository formatting and verifies semantic equality before writing
+//! `openapi/contacts.openapi.json`. Regeneration plus `git diff --exit-code`
+//! keeps the committed artifact honest; live serving uses this module directly.
 
 use serde_json::{Map, Value};
 use utoipa::OpenApi;

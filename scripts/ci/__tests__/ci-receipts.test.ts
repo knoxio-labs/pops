@@ -38,6 +38,7 @@ function workspace(): string {
     '.gitignore': 'node_modules\ntmp\ngenerated/\n',
     'package.json': manifest('pops-root'),
     'pnpm-lock.yaml': "lockfileVersion: '9.0'\n",
+    'patches/tool@1.0.0.patch': 'original patch\n',
     'pnpm-workspace.yaml': "packages: ['libs/*', 'pillars/*', 'pillars/*/*']\n",
     'mise.toml': '[tools]\nnode = "24.1.0"\n',
     'mise.ci.toml': '[tools]\nnode = "24.1.0"\n',
@@ -137,6 +138,19 @@ describe('receipt keys', { timeout: 30_000 }, () => {
     const before = key(root, 'unit-ts', alpha);
     write(root, file, `${readFileSync(join(root, file), 'utf8')}// changed\n`);
     expect(key(root, 'unit-ts', alpha)).toBe(before);
+  });
+
+  it.each(['unit-ts', 'app'] as const)('keys %s receipts on patch contents and removal', (lane) => {
+    const root = workspace();
+    const unit = lane === 'app' ? betaApp : alpha;
+    const patch = 'patches/tool@1.0.0.patch';
+    expect(receiptInputs(root, lane, unit)).toContain(patch);
+    const before = key(root, lane, unit);
+    write(root, patch, 'changed patch\n');
+    const changed = key(root, lane, unit);
+    expect(changed).not.toBe(before);
+    rmSync(join(root, patch));
+    expect(key(root, lane, unit)).not.toBe(changed);
   });
 
   it('ignores checkout timestamps, including on committed env examples', () => {

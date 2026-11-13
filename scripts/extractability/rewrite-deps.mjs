@@ -10,7 +10,9 @@
  *     proves the BUILD, and build/typecheck deps it actually needs are packed
  *     or external;
  *   - a root-owned tool used by the unit is added at the version declared by
- *     the root package manifest.
+ *     the root package manifest;
+ *   - dependency patch projection is deferred until the isolated graph has
+ *     resolved through the pinned package manager.
  *
  * The unit's source and exports stay unchanged. If its declared surface and
  * the sandbox's listed providers are incomplete, the isolated install/build
@@ -25,6 +27,8 @@ import { fileURLToPath } from 'node:url';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 
 import { sandboxToolDependencies } from './sandbox-tools.mjs';
+
+export { copyRootPatchFiles, rootPatchedDependencies } from './dependency-patches.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
@@ -88,12 +92,14 @@ export function rootAllowBuilds(
  *
  * @param {Record<string, string>} manifest Packed `@pops/*` name -> tarball path.
  * @param {Record<string, unknown> | null} allowBuilds
+ * @param {Record<string, string> | null} [patchedDependencies]
  * @returns {string}
  */
-export function sandboxWorkspaceYaml(manifest, allowBuilds) {
+export function sandboxWorkspaceYaml(manifest, allowBuilds, patchedDependencies = null) {
   /** @type {Record<string, unknown>} */
   const doc = { packages: [] };
   if (allowBuilds !== null) doc.allowBuilds = allowBuilds;
+  if (patchedDependencies !== null) doc.patchedDependencies = patchedDependencies;
   const packed = Object.entries(manifest);
   if (packed.length > 0) {
     doc.overrides = Object.fromEntries(packed.map(([name, tgz]) => [name, `file:${tgz}`]));
@@ -177,12 +183,10 @@ function main(argv) {
   // sandbox its own workspace root, which is what replaces the old
   // `--ignore-workspace` flag — that flag would now ignore this very file.
   const allowBuilds = rootAllowBuilds();
-  if (Object.keys(manifest).length > 0 || allowBuilds !== null) {
-    writeFileSync(
-      pkgPath.replace(/package\.json$/, 'pnpm-workspace.yaml'),
-      sandboxWorkspaceYaml(manifest, allowBuilds)
-    );
-  }
+  writeFileSync(
+    pkgPath.replace(/package\.json$/, 'pnpm-workspace.yaml'),
+    sandboxWorkspaceYaml(manifest, allowBuilds)
+  );
 
   writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`);
   process.stdout.write(

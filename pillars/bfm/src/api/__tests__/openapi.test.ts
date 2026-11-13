@@ -103,6 +103,12 @@ describe('GET /openapi', () => {
       'operator.issuePairingCode'
     );
     expect(body.paths?.['/operator/devices']?.['get']?.operationId).toBe('operator.listDevices');
+    expect(body.paths?.['/operator/devices/{id}/capabilities']?.['get']?.operationId).toBe(
+      'operator.getDeviceGrant'
+    );
+    expect(body.paths?.['/operator/devices/{id}/capabilities']?.['put']?.operationId).toBe(
+      'operator.replaceDeviceGrant'
+    );
     expect(body.paths?.['/operator/devices/{id}']?.['delete']?.operationId).toBe(
       'operator.revokeDevice'
     );
@@ -140,6 +146,8 @@ describe('GET /openapi', () => {
       '/mobile/contacts/merchants/search',
       '/mobile/contacts/merchants/{id}',
       '/mobile/contacts/merchants/{id}/addresses',
+      '/mobile/documents/status',
+      '/mobile/documents/tasks/{taskId}',
       '/mobile/documents/{id}',
       '/mobile/ego/action-batches/{batchId}/decide',
       '/mobile/ego/conversations',
@@ -183,6 +191,11 @@ describe('GET /openapi', () => {
       '/mobile/purchases/{id}',
       '/mobile/trips',
       '/mobile/trips/{id}',
+      '/mobile/trips/{tripId}/capture-workspace',
+      '/mobile/trips/{tripId}/captures/attach',
+      '/mobile/trips/{tripId}/captures/create',
+      '/mobile/trips/{tripId}/captures/undo',
+      '/mobile/trips/{tripId}/captures/update',
       '/mobile/v2/trips/{id}',
     ]);
   });

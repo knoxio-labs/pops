@@ -38,6 +38,44 @@ internal struct TripsModelTests {
         #expect(!model.loading)
         #expect(model.trips == [snapshot.trip])
     }
+
+    @Test(
+        "an injected saved selection restores its exact Timeline, while a fresh selection stays explicit"
+    )
+    internal func restoreSelection() async throws {
+        let snapshot = try TripTestSources.snapshot()
+        let repository = TripTestRepository(snapshot: snapshot)
+        let selection = TripSelectionMemory(id: snapshot.trip.id)
+        let model = TripsModel(repository: repository, selection: selection)
+        await model.load()
+        #expect(model.selectedID == snapshot.trip.id)
+        #expect(model.snapshot == snapshot)
+        #expect(selection.accepted == [snapshot.trip.id])
+        await model.select(987)
+        #expect(model.snapshot == nil)
+        #expect(selection.accepted == [snapshot.trip.id])
+    }
+
+    @Test("an absent saved Trip never falls back to another catalogue row")
+    internal func absentSelection() async throws {
+        let snapshot = try TripTestSources.snapshot()
+        let selection = TripSelectionMemory(id: 987)
+        let model = TripsModel(
+            repository: TripTestRepository(snapshot: snapshot), selection: selection)
+        await model.load()
+        #expect(model.selectedID == nil)
+        #expect(model.snapshot == nil)
+        #expect(selection.accepted.isEmpty)
+    }
+}
+
+@MainActor
+private final class TripSelectionMemory: TripOfflineSelection {
+    let id: Int?
+    private(set) var accepted: [Int] = []
+    init(id: Int?) { self.id = id }
+    func selectedTripID() throws -> Int? { id }
+    func selectTrip(_ id: Int) throws { accepted.append(id) }
 }
 
 private actor TripTestRepository: TripsReading {

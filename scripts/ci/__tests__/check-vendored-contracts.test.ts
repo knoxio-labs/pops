@@ -598,8 +598,8 @@ describe('the guard CLI', { timeout: REAL_SUBPROCESS_TIMEOUT_MS }, () => {
   it('passes against the real repo, reporting both mechanisms agree', () => {
     const stdout = execFileSync('node', [guardPath], { encoding: 'utf8' });
     expect(stdout).toContain('OK —');
-    expect(stdout).toContain('5 vendored contract(s)');
-    expect(stdout).toContain('5 config-declared expectation(s)');
+    expect(stdout).toContain('7 vendored contract(s)');
+    expect(stdout).toContain('7 config-declared expectation(s)');
   });
 
   it('its self-test passes, including the independent leg-set pin', () => {

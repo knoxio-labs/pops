@@ -1,3 +1,4 @@
+import AppCore
 import Foundation
 import HTTPTypes
 import OpenAPIRuntime
@@ -77,9 +78,19 @@ public struct AuthenticatingMiddleware: ClientMiddleware {
     private static let authenticatedPathPrefix = "/mobile/"
 
     private let refresher: DeviceSessionRefresher
+    private let expectedDevice: PairedDevice?
 
+    /// Creates the existing unbound middleware; retained paired clients use the explicit owner-bound initializer.
     public init(refresher: DeviceSessionRefresher) {
         self.refresher = refresher
+        expectedDevice = nil
+    }
+
+    /// Binds credential selection and refresh retry to the paired client identity and base URL.
+    /// Token rotation keeps the revision; a replacement pairing must use a new middleware.
+    public init(refresher: DeviceSessionRefresher, expectedDevice: PairedDevice) {
+        self.refresher = refresher
+        self.expectedDevice = expectedDevice
     }
 
     public func intercept(
@@ -105,9 +116,10 @@ public struct AuthenticatingMiddleware: ClientMiddleware {
             body: try await ReplayableBody(capturing: body),
             baseURL: baseURL
         )
-        guard let credentials = await refresher.currentCredentialSnapshot(),
-            let tokens = credentials.tokens
-        else {
+        let snapshot = await refresher.currentCredentialSnapshot(
+            ifRevision: expectedDevice?.credentialRevision)
+        try expectedDevice?.assertCredentialOwner(snapshot, baseURL: baseURL)
+        guard let credentials = snapshot, let tokens = credentials.tokens else {
             // Unpaired, or wiped by a `403` that landed while this request was
             // being prepared. Sent without a token so the BFM answers the
             // refusal, rather than short-circuited here into an error only this
@@ -140,8 +152,10 @@ extension AuthenticatingMiddleware {
             guard attempt.isReplayable else { return answered }
             let refreshed = try await refresher.refreshedCredentials(
                 replacing: staleAccessToken,
-                at: attempt.baseURL
+                at: attempt.baseURL,
+                ifRevision: expectedDevice?.credentialRevision
             )
+            try expectedDevice?.assertCredentialOwner(refreshed, baseURL: attempt.baseURL)
             guard let refreshedTokens = refreshed.tokens else {
                 throw SessionRefreshError.unauthenticated
             }

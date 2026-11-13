@@ -2,22 +2,48 @@ import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 
 import { requires } from './capabilities.js';
+import { MobileTripInputSchema, MobileTripPatchInputSchema } from './mobile-trip-write-schemas.js';
 import {
   MobileTripDetailSchema,
   MobileTripDetailV2Schema,
   MobileTripsPageSchema,
   MobileTripsQuerySchema,
 } from './mobile-trips-detail-schemas.js';
+import { MobileTripSchema } from './mobile-trips-schemas.js';
 import {
   MOBILE_PERIMETER_RESPONSES,
   MOBILE_REQUEST_RESPONSES,
   MOBILE_UPSTREAM_RESPONSES,
 } from './rest-mobile-responses.js';
-import { MobileUpstreamErrorSchema } from './rest-schemas.js';
+import { MobileRequestErrorSchema, MobileUpstreamErrorSchema } from './rest-schemas.js';
 
 const c = initContract();
-/** Native read-only Trips surface, preserving the published producer's source facts and ordering. */
+const writeErrors = {
+  ...MOBILE_PERIMETER_RESPONSES,
+  ...MOBILE_UPSTREAM_RESPONSES,
+  400: z.union([MobileRequestErrorSchema, MobileUpstreamErrorSchema]),
+  404: MobileUpstreamErrorSchema,
+  409: MobileUpstreamErrorSchema,
+};
+/** Native source-backed Trips surface, preserving the published producer's source facts and ordering. */
 export const mobileTripsContract = c.router({
+  createTrip: {
+    method: 'POST',
+    path: '/mobile/trips',
+    body: MobileTripInputSchema,
+    responses: { 201: MobileTripSchema, ...writeErrors },
+    metadata: requires('trips.write'),
+    summary: 'Create a permanent canonical Trip without inferred dates or creation Undo',
+  },
+  updateTrip: {
+    method: 'PATCH',
+    path: '/mobile/trips/:id',
+    pathParams: z.object({ id: z.coerce.number().int().positive() }),
+    body: MobileTripPatchInputSchema,
+    responses: { 200: MobileTripSchema, ...writeErrors },
+    metadata: requires('trips.write'),
+    summary: 'Patch explicit Trip metadata; omission retains and null clears nullable source facts',
+  },
   listTrips: {
     method: 'GET',
     path: '/mobile/trips',

@@ -39,6 +39,7 @@ on:
       - "libs/**"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
+      - "patches/**"
       - "tsconfig.base.json"
       - "tsconfig.build.json"
       - ".oxfmtrc.json"

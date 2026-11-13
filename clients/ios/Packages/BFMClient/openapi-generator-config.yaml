@@ -20,3 +20,7 @@ accessModifier: internal
 # apology. Both are stable per generator version, and the version is pinned in
 # Tools/OpenAPIGenerator/Package.swift, so the choice costs nothing to hold.
 namingStrategy: idiomatic
+
+typeOverrides:
+  schemas:
+    MobileTripPatchInput: BFMTripPatchBody

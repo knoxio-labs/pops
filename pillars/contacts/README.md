@@ -451,10 +451,18 @@ and works without merging any existing candidate. Review projections can reuse
 
 ## OpenAPI emit and cross-language consumption
 
-The committed JSON is generated, never hand-authored. The `emit-openapi` binary
-writes `openapi/contacts.openapi.json` from `src/openapi.rs`; CI runs it and
-`git diff --exit-code`s the result, so the document can never drift from the
-code — the Rust mirror of the TS pillars' `generate-openapi.ts` drift gate.
+The committed JSON is generated, never hand-authored. Run
+`mise run -C pillars/contacts generate:openapi` from the repository root.
+The owner generator consumes the Rust `emit-openapi` binary's stdout, formats
+it with the pinned repository formatter and verifies that the complete JSON
+value is unchanged before atomically replacing `openapi/contacts.openapi.json`.
+Formatter, parse or schema-equality failures preserve the previous artifact.
+CI runs that same generator and checks the committed bytes for drift.
+
+The live `/openapi` handler and service-account scope derivation still consume
+`src/openapi.rs` directly. The Node formatter is a development-time generator
+dependency; it is not part of the Contacts server. Refresh declared consumer
+copies byte-for-byte from the canonical artifact before regenerating clients.
 
 Because contacts is Rust and ships no npm package, consumers cannot depend on a
 `@pops/*` contract package. Per
@@ -592,7 +600,7 @@ mise run dev         # cargo watch -x run
 # Or call cargo directly:
 cargo run                                  # boot the server on :3010
 cargo test                                 # run all tests
-cargo run --bin emit-openapi               # regenerate openapi/contacts.openapi.json
+mise run generate:openapi                  # regenerate openapi/contacts.openapi.json
 ```
 
 The binary boots with zero env in local/dev: the port defaults to `3010`, the

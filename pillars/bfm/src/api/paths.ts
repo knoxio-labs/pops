@@ -120,3 +120,6 @@ export const MOBILE_FINANCE_ATTACH_PATH = bfmContract.mobileFinance.attachToTran
 
 /** Original Documents-owner bytes, independently authorized from trip associations. */
 export const MOBILE_DOCUMENT_FILE_PATH = '/mobile/documents/:id/file';
+
+/** Direct Documents ingestion, outside OpenAPI because its body is streamed bytes. */
+export const MOBILE_DOCUMENT_UPLOAD_PATH = '/mobile/documents';

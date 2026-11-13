@@ -6,9 +6,11 @@ internal struct BFMDocumentsFileReader: Sendable {
     private let session: any BFMRawHTTPSession
 
     internal init(
-        baseURL: URL, authorizer: any BFMStreamAuthorizer, session: any BFMRawHTTPSession
+        baseURL: URL, authorizer: any BFMStreamAuthorizer, session: any BFMRawHTTPSession,
+        expectedDevice: PairedDevice? = nil
     ) {
-        authorization = BFMRawAuthorization(baseURL: baseURL, authorizer: authorizer)
+        authorization = BFMRawAuthorization(
+            baseURL: baseURL, authorizer: authorizer, expectedDevice: expectedDevice)
         self.session = session
     }
 
@@ -28,7 +30,10 @@ internal struct BFMDocumentsFileReader: Sendable {
             }
         } catch let error as URLError {
             if error.code == .cancelled { throw CancellationError() }
-            throw RepositoryError.transport(error.code == .timedOut ? .timeout : .offline)
+            throw RepositoryError.transport(
+                RepositoryTransportError(
+                    popsError: error.code == .timedOut ? .timeout : .offline,
+                    urlErrorCode: error.code))
         }
         let location = exchange.payload
         guard exchange.response.statusCode == 200 else {

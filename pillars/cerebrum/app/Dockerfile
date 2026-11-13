@@ -19,6 +19,7 @@ WORKDIR /app
 # the playground's Dockerfiles already make: no hand-listed COPY blocks to
 # drift, and the builder stage is discarded anyway.
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json .oxfmtrc.json ./
+COPY patches/ ./patches/
 COPY libs/ ./libs/
 COPY pillars/ ./pillars/
 

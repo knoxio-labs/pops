@@ -142,9 +142,39 @@ internal struct DocumentsFileReaderTests {
     internal func transport(code: URLError.Code) async throws {
         let session = ScriptedRawSession([], failure: URLError(code))
         let expected = code == .timedOut ? PopsError.timeout : PopsError.offline
-        await #expect(throws: RepositoryError.transport(expected)) {
+        await #expect(
+            throws: RepositoryError.transport(
+                RepositoryTransportError(popsError: expected, urlErrorCode: code))
+        ) {
             _ = try await reader(session).file(id: 5)
         }
+    }
+
+    @Test(
+        "raw original reads preserve URL identity without admitting TLS or cancellation as fallback",
+        arguments: [
+            (URLError.Code.notConnectedToInternet, true), (.timedOut, true),
+            (.serverCertificateUntrusted, false), (.secureConnectionFailed, false),
+            (.userAuthenticationRequired, false),
+        ])
+    internal func offlinePolicy(code: URLError.Code, permits: Bool) async throws {
+        let session = ScriptedRawSession([], failure: URLError(code))
+        let thrown = await #expect(throws: RepositoryError.self) {
+            _ = try await reader(session).file(id: 5)
+        }
+        let error = try #require(thrown)
+        #expect(TripOfflineReadPolicy.permitsLastVerifiedRead(after: error) == permits)
+        guard case .transport(let failure) = error else {
+            Issue.record("Expected a typed transport error")
+            return
+        }
+        #expect(failure.urlErrorCode == code)
+    }
+
+    @Test("raw cancelled reads remain cancellation, never an offline original")
+    internal func cancelledFile() async throws {
+        let session = ScriptedRawSession([], failure: URLError(.cancelled))
+        await #expect(throws: CancellationError.self) { _ = try await reader(session).file(id: 5) }
     }
 
     private func reader(

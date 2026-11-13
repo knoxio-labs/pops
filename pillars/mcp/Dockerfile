@@ -3,6 +3,7 @@ WORKDIR /app
 
 # Copy workspace root files
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json .oxfmtrc.json ./
+COPY patches/ ./patches/
 
 # Copy workspace package.json files (for dep resolution)
 COPY libs/sdk/package.json ./libs/sdk/

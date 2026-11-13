@@ -176,7 +176,7 @@ cd "$unit_root"
 # `--ignore-workspace` would ignore it. The sandbox is a mktemp dir outside the
 # repo, so there is no ancestor workspace for pnpm to walk up to either way.
 echo "sandbox: installing (isolated, sandbox-local workspace root) …" >&2
-pnpm install --no-frozen-lockfile
+node "$repo_root/scripts/extractability/install-sandbox.mjs" "$unit_root"
 
 if [[ -n "$has_build" ]]; then
   echo "sandbox: building …" >&2

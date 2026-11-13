@@ -17,6 +17,10 @@ app.use(gate.createMiddleware(createRegistryServiceAccountVerifier()));
 
 Mount it **before** `createExpressEndpoints` and after any raw route (`/health`, `/pillars`, `/openapi`) — those are outside the contract, so the scope table has nothing to say about them and they pass untouched either way.
 
+## Server readiness
+
+Await `listenPillarServer(app, port, host?)` before reporting readiness or starting work that requires a bound server. It resolves with the HTTP server after Express 5 successfully listens and rejects bind errors, including an occupied port. Omitting `host` preserves Node's wildcard binding default; pass a host explicitly when a narrower bind is required.
+
 ## Who the request is
 
 The same middleware resolves a principal and puts it on the response; a handler reads it with `readPrincipal(res)`.
