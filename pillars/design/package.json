@@ -39,7 +39,7 @@
     "sonner": "^2.0.8",
     "tailwindcss": "4.3.3",
     "yaml": "^2.9.1",
-    "zod": "^4.6.2"
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "@babel/core": "^8.0.5",
