@@ -45,6 +45,7 @@ on:
       - "libs/**"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
+      - "patches/**"
       - "tsconfig.base.json"
       - "tsconfig.build.json"
       - ".github/workflows/fe-test-e2e.yml"

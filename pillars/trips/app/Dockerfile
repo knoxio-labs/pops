@@ -3,6 +3,7 @@ RUN apk add --no-cache python3 make g++
 WORKDIR /app
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json .oxfmtrc.json ./
+COPY patches/ ./patches/
 COPY libs/ ./libs/
 COPY pillars/ ./pillars/
 

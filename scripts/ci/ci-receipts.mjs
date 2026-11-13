@@ -77,6 +77,7 @@ const languageRootInputs = {
     'package.json',
     'pnpm-lock.yaml',
     'pnpm-workspace.yaml',
+    'patches',
     'tsconfig.base.json',
     'tsconfig.build.json',
   ],

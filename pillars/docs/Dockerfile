@@ -2,6 +2,7 @@ FROM node:24-alpine AS builder
 WORKDIR /app
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
+COPY patches/ ./patches/
 COPY pillars/docs/package.json ./pillars/docs/
 
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \

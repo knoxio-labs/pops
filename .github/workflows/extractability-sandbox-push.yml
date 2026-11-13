@@ -55,6 +55,7 @@ on:
       - "Cargo.toml"
       - "Cargo.lock"
       - "pnpm-lock.yaml"
+      - "patches/**"
       - "tsconfig.base.json"
       - "tsconfig.build.json"
 

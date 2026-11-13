@@ -23,6 +23,7 @@ RUN apk add --no-cache python3 make g++
 # discarded — only `pillars/shell/dist` reaches the nginx image — so the
 # wider copy adds no weight to the published artifact.
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json .oxfmtrc.json ./
+COPY patches/ ./patches/
 COPY libs/ ./libs/
 COPY pillars/ ./pillars/
 

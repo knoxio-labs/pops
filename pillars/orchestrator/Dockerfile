@@ -9,6 +9,7 @@ WORKDIR /app
 
 # Workspace root manifests — needed for pnpm install to resolve.
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json .oxfmtrc.json ./
+COPY patches/ ./patches/
 
 # Phase 1: package.json of @pops/orchestrator + its transitive @pops/* deps.
 # `pnpm install --filter "@pops/orchestrator..."` scopes lockfile

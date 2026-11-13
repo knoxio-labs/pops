@@ -18,6 +18,7 @@ on:
       - "pillars/*/nginx/**"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
+      - "patches/**"
       - "tsconfig.base.json"
       - ".github/workflows/docker-build.yml"
       - ".github/actions/**"
@@ -37,6 +38,7 @@ on:
       - "pillars/*/nginx/**"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
+      - "patches/**"
       - "tsconfig.base.json"
       - ".github/workflows/docker-build.yml"
       - ".github/actions/**"
@@ -122,6 +124,7 @@ jobs:
               - 'infra/docker-compose.yml'
               - 'pnpm-lock.yaml'
               - 'pnpm-workspace.yaml'
+              - 'patches/**'
               - 'tsconfig.base.json'
               - '.github/workflows/docker-build.yml'
               - '.github/actions/**'

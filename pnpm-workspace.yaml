@@ -76,3 +76,6 @@ ignoredOptionalDependencies:
 # trap as the `pnpm` package.json field above. In `pnpm-workspace.yaml` it
 # fails the command.
 engineStrict: true
+
+patchedDependencies:
+  drizzle-kit@0.31.11: patches/drizzle-kit@0.31.11.patch
