@@ -32,7 +32,7 @@ src/
   bfm-api-runtime-config.ts   client baseUrl ('/bfm-api')
   pages/
     DevicesPage.tsx           /bfm — composition only
-    devices-page/             the model and the three surfaces it drives
+    devices-page/             pairing, revocation and contextual permissions editors
 ```
 
 `bfm-api-helpers.ts` is deliberately a per-pillar copy rather than a shared
@@ -128,6 +128,25 @@ says the handset is still trusted. The refusal lives in `useRevocation`, not in
 the dialog: a guard written against the rendered `isRevoking` reads a value one
 commit behind the click, which real Chromium loses and jsdom does not.
 
+## Editing a device grant
+
+Permissions opens from an operator-owned live device's row or compact card.
+Guest and revoked devices have no edit action. The editor reads the canonical
+`GET /operator/devices/:id/capabilities` response and renders its raw selectable,
+stored and effective strings; no permission labels or groups are inferred.
+Values absent from the returned selectable set remain visible and block saving.
+
+Saving sends one complete explicit selection with the exact revision and policy
+token read when opened. Converting `tracks-default` freezes that selection;
+it does not follow future defaults. Only a successful PUT response confirms a
+save. A conflict keeps the draft locked without guessing its cause. A network,
+timeout or server failure after PUT is unconfirmed, because it may have applied.
+Neither state retries writes or automatically reapplies a draft. The explicit
+“Discard selection and reload permissions” action replaces the draft with a
+fresh read before another edit. Cancel/close clears the local session and restores
+the originating action, but dismissal is refused while a write is on the wire.
+Late reads from dismissed sessions are ignored; nothing is stored locally.
+
 ## Tests
 
 `src/pages/__tests__/DevicesPage.test.tsx` drives the whole page against a
@@ -140,7 +159,7 @@ readout assertion flaky.
 
 The browser-level walkthrough is `pillars/shell/e2e/bfm-devices-pairing.spec.ts`,
 run by the shell's Playwright suite on every pull request that touches this app.
-It fulfils bfm's three operator routes at the `/bfm-api` proxy path itself, so
+It fulfils the pairing/list/revoke operator routes at the `/bfm-api` proxy path itself, so
 the pillar does not have to be up for it.
 
 ## Run
