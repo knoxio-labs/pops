@@ -16,6 +16,7 @@ RUN apk add --no-cache python3 make g++
 # install is the same trade the shell's Dockerfile makes: no hand-listed
 # COPY blocks to drift, and the builder stage is discarded anyway.
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json .oxfmtrc.json ./
+COPY patches/ ./patches/
 COPY libs/ ./libs/
 COPY pillars/ ./pillars/
 

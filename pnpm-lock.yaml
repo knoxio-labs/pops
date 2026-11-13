@@ -9,6 +9,9 @@ overrides:
   cssstyle: 6.0.2
   ioredis: 5.11.0
 
+patchedDependencies:
+  drizzle-kit@0.31.11: 24fa633f5f47ba16e425ee38e5ccd9b15c50fe50d379c84170cae50a373c7c8f
+
 importers:
 
   .:
@@ -1054,6 +1057,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: ^4.1.10
         version: 4.1.10(vitest@4.1.11)
+      drizzle-kit:
+        specifier: ^0.31.11
+        version: 0.31.11(patch_hash=24fa633f5f47ba16e425ee38e5ccd9b15c50fe50d379c84170cae50a373c7c8f)
       supertest:
         specifier: ^7.1.4
         version: 7.2.2(supports-color@10.2.2)
@@ -3348,7 +3354,7 @@ importers:
         version: 4.1.10(vitest@4.1.11)
       drizzle-kit:
         specifier: ^0.31.11
-        version: 0.31.11
+        version: 0.31.11(patch_hash=24fa633f5f47ba16e425ee38e5ccd9b15c50fe50d379c84170cae50a373c7c8f)
       tsx:
         specifier: ^4.23.13
         version: 4.23.13
@@ -13254,7 +13260,7 @@ snapshots:
 
   dotenv@18.0.1: {}
 
-  drizzle-kit@0.31.11:
+  drizzle-kit@0.31.11(patch_hash=24fa633f5f47ba16e425ee38e5ccd9b15c50fe50d379c84170cae50a373c7c8f):
     dependencies:
       '@drizzle-team/brocli': 0.10.2
       '@esbuild-kit/esm-loader': 2.6.5

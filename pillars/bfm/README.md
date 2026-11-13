@@ -713,6 +713,14 @@ reasoning; the properties that span them are these:
   silently ignores both when the pragma is off, so an opener that forgot it
   would let an orphaned chain read as an intact one.
 
+For an existing history with no schema snapshots, `pnpm --filter @pops/bfm db:adopt-snapshot` bootstraps only the latest generated metadata. It replays the unchanged journal into an isolated private fixture under ignored repository `tmp/`, runs the pinned normal SQLite introspector, and requires normal generation against the current owner schema to produce zero changes. Only the byte-exact generated snapshot is adopted; all existing SQL, journal entries, migration hashes and applied ledger stay unchanged. It refuses existing snapshots, unsupported generated shapes, schema drift, or any changed fixture bytes. It opens no live database and accepts no database URL.
+
+Record the raw generated snapshot digest before the standard repository formatter runs. The committed snapshot may differ only in JSON layout; verify complete parsed-value equality, unchanged historical SQL/journal hashes, and normal zero-diff generation after formatting. Formatting must not repair or filter snapshot metadata.
+
+The exact Drizzle Kit 0.31.11 dependency patch allocates SQLite CHECK maps per table in its CLI and both API bundles. The upstream allocation shares one mutable map across tables, so introspection otherwise invents cross-table CHECKs and generation proposes table rebuilds. Generated snapshots and historical migrations are never filtered or repaired by the adoption command.
+
+After a schema change, run `pnpm --filter @pops/bfm db:generate` and review the generated migration and immutable old history. Never replace a historical migration or manually author its snapshot. The tool's generated commented introspection SQL/journal are private scratch and are not applied or substituted for the existing history.
+
 `migrations/0000_bfm_init.sql` was produced by `drizzle-kit generate` and
 committed, but this repo runs no generate step in its build or CI (see the
 "Database Management" note in the root `mise.toml`). The drizzle definitions

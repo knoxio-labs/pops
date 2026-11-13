@@ -123,6 +123,7 @@ export function selectAffectedApps(packages, changedFiles, forceAll = false) {
     requiresFullSweep = normalizedFiles.some(
       (file) =>
         fullSweepPaths.has(file) ||
+        file.startsWith('patches/') ||
         file.startsWith('.github/actions/') ||
         (file.endsWith('/package.json') && !apps.some((app) => touchesDir(file, app.dir)))
     );

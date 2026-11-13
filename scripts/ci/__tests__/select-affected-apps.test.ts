@@ -54,6 +54,17 @@ describe('affected app selection', () => {
     expect(selectedNames(['pnpm-lock.yaml'])).toEqual(['@pops/app-alpha', '@pops/app-beta']);
   });
 
+  it.each(['patches/tool@1.0.0.patch', 'patches/nested/tool.patch'])(
+    'runs every app for the root dependency patch %s',
+    (file) => {
+      expect(selectedNames([file])).toEqual(['@pops/app-alpha', '@pops/app-beta']);
+    }
+  );
+
+  it('does not treat a similarly named directory as dependency patches', () => {
+    expect(selectedNames(['patches-not-dependencies/tool.patch'])).toEqual([]);
+  });
+
   it('runs every app when the caller cannot establish a trustworthy base', () => {
     expect(selectedNames([], true)).toEqual(['@pops/app-alpha', '@pops/app-beta']);
   });

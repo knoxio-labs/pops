@@ -1,0 +1,30 @@
+--- a/bin.cjs
++++ b/bin.cjs
+@@ -19108,3 +19108,2 @@
+       let checkCounter = 0;
+-      const checkConstraints = {};
+       const checks = await db.query(`SELECT
+@@ -19118,2 +19117,3 @@
+         const { tableName, sql } = check2;
++        const checkConstraints = {};
+         let namedChecks = [...sql.matchAll(namedCheckPattern)];
+--- a/api.js
++++ b/api.js
+@@ -24534,3 +24534,2 @@
+       let checkCounter = 0;
+-      const checkConstraints = {};
+       const checks = await db.query(`SELECT
+@@ -24544,2 +24543,3 @@
+         const { tableName, sql } = check;
++        const checkConstraints = {};
+         let namedChecks = [...sql.matchAll(namedCheckPattern)];
+--- a/api.mjs
++++ b/api.mjs
+@@ -24557,3 +24557,2 @@
+       let checkCounter = 0;
+-      const checkConstraints = {};
+       const checks = await db.query(`SELECT
+@@ -24567,2 +24566,3 @@
+         const { tableName, sql } = check;
++        const checkConstraints = {};
+         let namedChecks = [...sql.matchAll(namedCheckPattern)];
