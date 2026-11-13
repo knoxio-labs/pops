@@ -164,6 +164,16 @@ export const EXPECTATIONS = [
   {
     consumer: 'bfm',
     producer: 'trips',
+    operationId: 'route.get',
+    path: '/trips/{tripId}/route',
+    method: 'get',
+    query: [],
+    pathParams: ['tripId'],
+    usedBy: 'pillars/bfm/src/api/trips/route.ts',
+  },
+  {
+    consumer: 'bfm',
+    producer: 'trips',
     operationId: 'captureWorkspace.get',
     path: '/trips/{tripId}/capture-workspace',
     method: 'get',

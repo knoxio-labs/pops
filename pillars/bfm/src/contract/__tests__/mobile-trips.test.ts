@@ -32,12 +32,14 @@ describe('native Trips capability, discovery and source contract', () => {
     expect(GUEST_DEVICE_CAPABILITIES).not.toContain('trips.read');
     expect(mobileTripsContract.listTrips.metadata).toEqual({ capability: 'trips.read' });
     expect(mobileTripsContract.getTrip.metadata).toEqual({ capability: 'trips.read' });
+    expect(mobileTripsContract.getRoute.metadata).toEqual({ capability: 'trips.read' });
   });
 
   it('declares only the precise producer read grants the aggregate actually calls', () => {
     const scopes = MOBILE_CAPABILITY_SCOPES['trips.read'];
     expect(scopes).toEqual([
       'trips.captureWorkspace.get',
+      'trips.route.get',
       'trips.trips.list',
       'trips.trips.get',
       'trips.places.list',
@@ -50,6 +52,7 @@ describe('native Trips capability, discovery and source contract', () => {
       'trips.documentAssociations.list',
     ]);
     for (const scope of scopes) expect(BFM_SERVICE_ACCOUNT_SCOPES).toContain(scope);
+    expect(BFM_SERVICE_ACCOUNT_SCOPES).not.toContain('trips.route.operate');
     expect(BFM_SERVICE_ACCOUNT_SCOPES.filter((scope) => scope.startsWith('trips'))).toEqual(
       expect.arrayContaining([...scopes, ...MOBILE_CAPABILITY_SCOPES['trips.capture.write']])
     );

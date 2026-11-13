@@ -44,6 +44,7 @@ It also holds a service-account credential and one way to spend it — see
 | `GET /mobile/documents/:id/file`                    | Original bytes; Range and representation headers preserved.                                                                                      |
 | `GET /mobile/trips`                                 | A snapshot-bound cursor page of original trip metadata.                                                                                          |
 | `GET /mobile/v2/trips/:id`                          | Day-aware complete source snapshot with independent Journey day precision and unchanged device/read capability checks.                           |
+| `GET /mobile/trips/:tripId/route`                   | Canonical mixed route order, alternatives, applied history and missing source identities at the route revision.                                  |
 | `GET /mobile/trips/:id`                             | Legacy-compatible complete source snapshot; Journey day-only fields are omitted without inventing clocks.                                        |
 | `GET /mobile/finance/transactions`                  | One cursor-paginated page of list rows — see [The mobile shape](#the-mobile-shape).                                                              |
 | `GET /mobile/finance/accounts`                      | One cursor-paginated page of accounts after search and filters — see [The mobile shape](#the-mobile-shape).                                      |
@@ -539,6 +540,15 @@ organiser and document source links remain opaque. Unreferenced global places ar
 association and Documents-original identities separately; trip/visit/journey/stay/event
 targets must belong to this snapshot. Shared originals retain every explicit crosslink.
 The aggregate does not resolve metadata or assert file/device availability.
+
+`GET /mobile/trips/:tripId/route` reads the producer's canonical mixed route
+under the same `trips.read` capability and exact `trips.route.get` backend scope.
+Root Visit/Journey/gap order, path member order, alternative/applied state and
+`missingSources` remain authoritative. Applied history can share identities with
+live placement; active alternatives cannot. Missing source records remain visible
+references rather than being dropped. Route and detail reads have independent
+snapshots and revisions; BFM does not claim atomicity across them or infer dates,
+transport, booking status or placement. This endpoint grants no route mutations.
 
 Every required collection must succeed. Missing referenced identities,
 duplicate IDs or wrong trip/journey ownership produce a contract mismatch;
