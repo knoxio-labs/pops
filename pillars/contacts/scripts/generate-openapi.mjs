@@ -58,6 +58,7 @@ export async function generateContactsOpenApi({
   return output;
 }
 
+/** @param {string} repoRoot */
 function emitOpenApi(repoRoot) {
   return execFileSync('cargo', ['run', '--quiet', '-p', 'contacts', '--bin', 'emit-openapi'], {
     cwd: repoRoot,
