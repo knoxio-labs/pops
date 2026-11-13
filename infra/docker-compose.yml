@@ -147,8 +147,7 @@ services:
       timeout: 5s
       retries: 3
 
-  # Paperless bridge pillar (ADR-035 bridge kind, ADR-039 workstream 22).
-  # Owns no SQLite; proxies inventory's document calls onto paperless-ngx.
+  # Documents owns upload admission/receipts/spool; Paperless owns the archive.
   # On `documents` to reach paperless-ngx, on `backend` for inventory + registry.
   # The paperless API token is operator-provisioned (minted in the paperless
   # admin UI, set via PAPERLESS_API_TOKEN); until then the pillar self-registers
@@ -161,6 +160,9 @@ services:
         BUILD_VERSION: ${BUILD_VERSION:-dev}
     image: ghcr.io/${POPS_IMAGE_OWNER:-knoxio-labs}/pops-documents:${POPS_IMAGE_TAG:-main}
     container_name: pops-documents-api
+    volumes:
+      - pops-documents-data:/data/documents
+      - pops-documents-upload-guard:/data/documents-upload-guard
     restart: unless-stopped
     labels:
       com.centurylinklabs.watchtower.enable: 'true'
@@ -174,6 +176,9 @@ services:
       CLOUDFLARE_ACCESS_AUD: ${CLOUDFLARE_ACCESS_AUD:-}
       POPS_OPERATOR_EMAILS: ${POPS_OPERATOR_EMAILS:-}
       DOCUMENTS_SELF_BASE_URL: http://documents-api:3012
+      DOCUMENTS_DATA_DIR: /data/documents
+      DOCUMENTS_UPLOAD_GUARD_DIR: /data/documents-upload-guard
+      DOCUMENTS_UPLOAD_GUARD_ID: ${DOCUMENTS_UPLOAD_GUARD_ID:-}
       PAPERLESS_BASE_URL: ${PAPERLESS_BASE_URL:-http://pops-paperless:8000}
       PAPERLESS_API_TOKEN: ${PAPERLESS_API_TOKEN:-}
       POPS_REGISTRY_ENABLED: 'true'
@@ -1019,13 +1024,10 @@ services:
   # Enable one explicitly with, e.g.:
   #   docker compose --profile litestream up -d registry-litestream
   #
-  # Each sidecar replicates its own `pops-<id>-data` volume — a NEW,
-  # per-pillar volume distinct from the `sqlite-data` volume most pillar API
-  # containers above still write to today. The greenfield bfm and barcode
-  # pillars, plus the design API, already mount their own volumes. The other
-  # sidecars are the in-repo half of the future per-pillar volume split,
-  # which is the ADR-039 rollout's hard-gated prod migration (behind a
-  # working restore drill), not this issue. The
+  # Each sidecar mounts the same configured volume and volume-relative DB file
+  # as its owning writer. Independent pillar DB files may share sqlite-data;
+  # this does not merge their databases. DATA is writable for shadow-WAL files,
+  # while each sidecar's config remains read-only. The
   # replication config for each sidecar is the canonical reference file at
   # `infra/litestream/<id>.yml`; the replica URL comes from the deployer's
   # environment.
@@ -1038,7 +1040,7 @@ services:
     networks:
       - backend
     volumes:
-      - pops-registry-data:/data/sqlite:ro
+      - sqlite-data:/data/sqlite
       - ./litestream/registry.yml:/etc/litestream.yml:ro
     environment:
       REGISTRY_LITESTREAM_REPLICA_URL: ${REGISTRY_LITESTREAM_REPLICA_URL:-}
@@ -1053,7 +1055,7 @@ services:
     networks:
       - backend
     volumes:
-      - pops-inventory-data:/data/sqlite:ro
+      - sqlite-data:/data/sqlite
       - ./litestream/inventory.yml:/etc/litestream.yml:ro
     environment:
       INVENTORY_LITESTREAM_REPLICA_URL: ${INVENTORY_LITESTREAM_REPLICA_URL:-}
@@ -1068,7 +1070,7 @@ services:
     networks:
       - backend
     volumes:
-      - pops-finance-data:/data/sqlite:ro
+      - sqlite-data:/data/sqlite
       - ./litestream/finance.yml:/etc/litestream.yml:ro
     environment:
       FINANCE_LITESTREAM_REPLICA_URL: ${FINANCE_LITESTREAM_REPLICA_URL:-}
@@ -1083,7 +1085,7 @@ services:
     networks:
       - backend
     volumes:
-      - pops-media-data:/data/sqlite:ro
+      - sqlite-data:/data/sqlite
       - ./litestream/media.yml:/etc/litestream.yml:ro
     environment:
       MEDIA_LITESTREAM_REPLICA_URL: ${MEDIA_LITESTREAM_REPLICA_URL:-}
@@ -1098,7 +1100,7 @@ services:
     networks:
       - backend
     volumes:
-      - pops-food-data:/data/sqlite:ro
+      - sqlite-data:/data/sqlite
       - ./litestream/food.yml:/etc/litestream.yml:ro
     environment:
       FOOD_LITESTREAM_REPLICA_URL: ${FOOD_LITESTREAM_REPLICA_URL:-}
@@ -1113,7 +1115,7 @@ services:
     networks:
       - backend
     volumes:
-      - pops-lists-data:/data/sqlite:ro
+      - sqlite-data:/data/sqlite
       - ./litestream/lists.yml:/etc/litestream.yml:ro
     environment:
       LISTS_LITESTREAM_REPLICA_URL: ${LISTS_LITESTREAM_REPLICA_URL:-}
@@ -1128,7 +1130,7 @@ services:
     networks:
       - backend
     volumes:
-      - pops-ai-data:/data/sqlite:ro
+      - sqlite-data:/data/sqlite
       - ./litestream/ai.yml:/etc/litestream.yml:ro
     environment:
       AI_LITESTREAM_REPLICA_URL: ${AI_LITESTREAM_REPLICA_URL:-}
@@ -1143,7 +1145,7 @@ services:
     networks:
       - backend
     volumes:
-      - pops-cerebrum-data:/data/sqlite:ro
+      - sqlite-data:/data/sqlite
       - ./litestream/cerebrum.yml:/etc/litestream.yml:ro
     environment:
       CEREBRUM_LITESTREAM_REPLICA_URL: ${CEREBRUM_LITESTREAM_REPLICA_URL:-}
@@ -1158,7 +1160,7 @@ services:
     networks:
       - backend
     volumes:
-      - pops-contacts-data:/data/sqlite:ro
+      - sqlite-data:/data/sqlite
       - ./litestream/contacts.yml:/etc/litestream.yml:ro
     environment:
       CONTACTS_LITESTREAM_REPLICA_URL: ${CONTACTS_LITESTREAM_REPLICA_URL:-}
@@ -1173,14 +1175,13 @@ services:
     networks:
       - backend
     volumes:
-      - pops-purchases-data:/data/sqlite:ro
+      - sqlite-data:/data/sqlite
       - ./litestream/purchases.yml:/etc/litestream.yml:ro
     environment:
       PURCHASES_LITESTREAM_REPLICA_URL: ${PURCHASES_LITESTREAM_REPLICA_URL:-}
     command: ['replicate']
 
-  # `pops-bfm-data` IS mounted by an API container (`bfm-api`), so this sidecar
-  # replicates a live database rather than an empty volume. Still
+  # `bfm-api` and its sidecar share the configured `pops-bfm-data` volume. Still
   # profile-gated like its siblings — enabling it needs a replica URL, and the
   # restore drill is unexercised.
   bfm-litestream:
@@ -1192,7 +1193,7 @@ services:
     networks:
       - backend
     volumes:
-      - pops-bfm-data:/data/sqlite:ro
+      - pops-bfm-data:/data/sqlite
       - ./litestream/bfm.yml:/etc/litestream.yml:ro
     environment:
       BFM_LITESTREAM_REPLICA_URL: ${BFM_LITESTREAM_REPLICA_URL:-}
@@ -1207,10 +1208,25 @@ services:
     networks:
       - backend
     volumes:
-      - pops-barcode-data:/data/sqlite:ro
+      - pops-barcode-data:/data/sqlite
       - ./litestream/barcode.yml:/etc/litestream.yml:ro
     environment:
       BARCODE_LITESTREAM_REPLICA_URL: ${BARCODE_LITESTREAM_REPLICA_URL:-}
+    command: ['replicate']
+
+  documents-litestream:
+    image: litestream/litestream:0.3.13
+    container_name: pops-documents-litestream
+    restart: unless-stopped
+    profiles:
+      - litestream
+    networks:
+      - backend
+    volumes:
+      - pops-documents-data:/data/documents
+      - ./litestream/documents.yml:/etc/litestream.yml:ro
+    environment:
+      DOCUMENTS_LITESTREAM_REPLICA_URL: ${DOCUMENTS_LITESTREAM_REPLICA_URL:-}
     command: ['replicate']
 
   tags-litestream:
@@ -1222,7 +1238,7 @@ services:
     networks:
       - backend
     volumes:
-      - pops-tags-data:/data/sqlite:ro
+      - pops-tags-data:/data/sqlite
       - ./litestream/tags.yml:/etc/litestream.yml:ro
     environment:
       TAGS_LITESTREAM_REPLICA_URL: ${TAGS_LITESTREAM_REPLICA_URL:-}
@@ -1237,14 +1253,13 @@ services:
     networks:
       - backend
     volumes:
-      - pops-trips-data:/data/sqlite:ro
+      - pops-trips-data:/data/sqlite
       - ./litestream/trips.yml:/etc/litestream.yml:ro
     environment:
       TRIPS_LITESTREAM_REPLICA_URL: ${TRIPS_LITESTREAM_REPLICA_URL:-}
     command: ['replicate']
 
-  # `pops-design-data` is mounted by `design-api`, so this sidecar replicates a
-  # live database rather than an empty volume — the same exception `bfm` is.
+  # `design-api` and its sidecar share the configured `pops-design-data` volume.
   design-litestream:
     image: litestream/litestream:0.3.13
     container_name: pops-design-litestream
@@ -1254,7 +1269,7 @@ services:
     networks:
       - backend
     volumes:
-      - pops-design-data:/data/sqlite:ro
+      - pops-design-data:/data/sqlite
       - ./litestream/design.yml:/etc/litestream.yml:ro
     environment:
       DESIGN_LITESTREAM_REPLICA_URL: ${DESIGN_LITESTREAM_REPLICA_URL:-}
@@ -1853,9 +1868,8 @@ volumes:
     name: pops-food-recipes-data
   inventory-images-data:
     name: pops-inventory-images-data
-  # Per-pillar volumes for the litestream sidecars above (ADR-039 workstream
-  # S11). Reference/opt-in only — nothing mounts these into a pillar API
-  # container yet, see the sidecars' section comment.
+  # Reserved per-pillar volume declarations remain available for a separately
+  # coordinated writer migration; current sidecars follow actual writer mounts.
   pops-registry-data:
     name: pops-registry-data
   pops-inventory-data:
@@ -1886,6 +1900,10 @@ volumes:
 
   pops-tags-data:
     name: pops-tags-data
+  pops-documents-data:
+    name: pops-documents-data
+  pops-documents-upload-guard:
+    name: pops-documents-upload-guard
   pops-trips-data:
     name: pops-trips-data
 

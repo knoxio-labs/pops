@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { getSourceRetry } from '../shared/source-retry-test-utils';
 import { JourneyWorkspace } from './JourneyWorkspace';
 import { legSource } from './model';
 import { journeyTransport, sourceJourney, sourceLeg, sourceProblem } from './test-utils';
@@ -122,7 +123,7 @@ describe('Departure and arrival source workspace', () => {
     await edit('Transport mode', 'Night coach');
     expect(await screen.findByText('trips.source.invalid')).toBeVisible();
     expect(screen.getByLabelText('Transport mode')).toHaveValue('Night coach');
-    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    fireEvent.click(getSourceRetry());
     await waitFor(() => expect(writes(transport)).toHaveLength(2));
     expect(writes(transport)[0]?.body).toEqual({ mode: 'Night coach', expectedRevision: 0 });
     expect(writes(transport)[1]?.body).toEqual({ mode: 'Night coach', expectedRevision: 0 });

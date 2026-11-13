@@ -3,7 +3,9 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect } from 'vitest';
 
-import { createClient as createDocumentsClient } from '../documents-api/client';
+import { documentOwnerUrl } from '../documents/document-owner-url';
+import { DocumentUploadProvider } from '../documents/DocumentUploadProvider';
+import { createDurableUploadWire } from '../documents/durable-upload-wire-test-utils';
 import { sourceEvent } from '../event/test-utils';
 import { journeyTransport, sourceJourney } from '../journey/test-utils';
 import { sourceUploadSession } from '../shared/source-upload-sessions';
@@ -15,22 +17,13 @@ import { arrangementsTransport, labels } from './test-utils';
 import type { RenderResult } from '@testing-library/react';
 import type { ReactElement } from 'react';
 
-import type { Client as DocumentsClient } from '../documents-api/client';
 import type { TripDocumentUploadSession } from '../documents/trip-document-upload-session';
-import type {
-  DocumentAssociationTarget,
-  PaperlessUploadPolicy,
-  TripDocumentAssociation,
-} from '../documents/types';
+import type { DocumentAssociationTarget, TripDocumentAssociation } from '../documents/types';
 import type { Client as TripsClient } from '../trips-api/client';
 import type { ArrangementsWorkspaceProps } from './types';
 
 /** Real generated Documents client with observable pending owner requests. */
-export interface ArrangementDocumentsOwner {
-  client: DocumentsClient;
-  requests: Request[];
-  responses: ((response: Response) => void)[];
-}
+export type ArrangementDocumentsOwner = ReturnType<typeof createDurableUploadWire>;
 
 /** Real generated Trips client and exact association writes. */
 export interface ArrangementDocumentTrips {
@@ -54,39 +47,11 @@ export interface ArrangementDocumentsHarness {
 
 /** Generated Documents transport retaining actual pending owner responses without replacing upload controllers. */
 export function arrangementDocumentsOwner(): ArrangementDocumentsOwner {
-  const requests: Request[] = [];
-  const responses: ((response: Response) => void)[] = [];
-  const policy: PaperlessUploadPolicy = {
-    configured: true,
-    available: true,
-    maxUploadBytes: 1000,
-    allowedMimeTypes: ['application/pdf'],
-  };
-  const client = createDocumentsClient({
-    baseUrl: 'http://documents.test',
-    fetch: async (input, init) => {
-      const request = new Request(input, init);
-      requests.push(request);
-      if (request.method === 'POST')
-        return new Promise<Response>((resolve) => responses.push(resolve));
-      const path = new URL(request.url).pathname;
-      if (path.endsWith('/paperless/status')) return Response.json({ data: policy });
-      if (path.includes('/paperless/tasks/'))
-        return Response.json({ data: { state: 'done', documentId: 91, reason: null } });
-      if (path.endsWith('/paperless/documents/91'))
-        return Response.json({
-          data: {
-            id: 91,
-            title: 'Accepted original',
-            originalFileName: 'accepted.pdf',
-            created: '',
-            thumbnailUrl: '',
-          },
-        });
-      throw new Error(`Unexpected Documents request ${request.method} ${path}`);
-    },
+  return createDurableUploadWire({
+    baseUrl: 'http://arrangements.test/documents-api',
+    taskId: 'accepted-original-91',
+    documentId: 91,
   });
-  return { client, requests, responses };
 }
 
 /** Actual arrangement collections and canonical source endpoints with explicit document association responses. */
@@ -142,7 +107,14 @@ export function arrangementDocumentsHarness(): ArrangementDocumentsHarness {
   };
   const content = (current = identity, generation = 0): ReactElement => (
     <QueryClientProvider client={cache}>
-      <ArrangementsWorkspace key={generation} {...current} />
+      <DocumentUploadProvider
+        tripId={current.tripId}
+        tripsClient={current.client}
+        documentsClient={current.documentsClient}
+        host={documents.host}
+      >
+        <ArrangementsWorkspace key={generation} {...current} />
+      </DocumentUploadProvider>
     </QueryClientProvider>
   );
   const view = render(content());
@@ -150,18 +122,30 @@ export function arrangementDocumentsHarness(): ArrangementDocumentsHarness {
     target: DocumentAssociationTarget = { kind: 'stay', id: 13 },
     current = identity
   ): TripDocumentUploadSession =>
-    sourceUploadSession(cache, {
-      tripId: current.tripId,
-      target,
-      tripsClient: current.client,
-      documentsClient: current.documentsClient,
-    });
+    sourceUploadSession(
+      cache,
+      {
+        tripId: current.tripId,
+        target,
+        tripsClient: current.client,
+        documentsClient: current.documentsClient,
+      },
+      documents
+        .createJournal({
+          tripId: current.tripId,
+          target,
+          tripsOrigin: documentOwnerUrl(current.client?.getConfig().baseUrl) ?? '',
+          documentsOrigin: documentOwnerUrl(current.documentsClient?.getConfig().baseUrl) ?? '',
+        })
+        .bindingKey()
+    );
   return { trips, documents, cache, identity, view, content, session };
 }
 
-/** Open one real arrangement card and wait for its canonical source upload entry. */
+/** Open a real source panel; readiness may be skipped when testing an intentionally blocked owner. */
 export async function openArrangementDocuments(
-  kind: 'stay' | 'event' | 'journey'
+  kind: 'stay' | 'event' | 'journey',
+  uploadsReady = true
 ): Promise<HTMLElement> {
   const title = {
     stay: sourceStay().name,
@@ -172,12 +156,14 @@ export async function openArrangementDocuments(
   const card = await screen.findByRole('article', { name: title });
   await userEvent.click(within(card).getByRole('button'));
   const dialog = await screen.findByRole('dialog');
-  await waitFor(() =>
-    expect(within(dialog).getByRole('button', { name: /^Upload a file/ })).not.toHaveAttribute(
-      'aria-disabled',
-      'true'
-    )
-  );
+  if (uploadsReady) {
+    await waitFor(() =>
+      expect(within(dialog).getByRole('button', { name: /^Upload a file/ })).not.toHaveAttribute(
+        'aria-disabled',
+        'true'
+      )
+    );
+  }
   return dialog;
 }
 

@@ -325,3 +325,26 @@ when two files claim one.
 `mise tasks` (from `pillars/shell/mise.toml`) wraps the same set plus `lint`
 (`oxlint src && oxfmt --check .`, which has no `package.json` equivalent):
 `mise run build | dev | typecheck | test | test:e2e | lint`.
+
+Upload metadata authority is supplied through `RemotePageHostProps.documentUploads`.
+`documentUploadHost` is the single authority for remote pages and actual host sign-out
+integrations. It uses the generated Registry `session.get` read and accepts only a verified,
+nonnull account on the captured server. Registry failures, null LAN identity and unavailable
+browser storage leave uploads blocked; neither operator labels nor client instances identify
+an account. The structural lease namespaces metadata by actual server, account and epoch.
+
+`DocumentUploadsLifecycle` verifies on startup, focus and pageshow and observes actual storage
+changes. Each independent upload action also verifies freshly. Observed authorization loss or
+account change purges the old scope; actual sign-out integrations call `invalidate`. Stale
+responses and storage events cannot revive old metadata or invalidate a newer account. External
+logout while the app is closed is observable only on the next verification; no synchronous
+external logout or account-switch UI is implied. Only UUID/name/fingerprint/source metadata is
+stored. File bytes and credentials are never stored by this capability.
+
+Upload action verification may share one in-flight Registry read only among sibling actions
+of an already verified, unchanged account/epoch/Registry URL. It retains that known lease
+while the check is pending, but every owner action awaits the check. Startup, focus,
+pageshow and explicit provider verification always start a new lifecycle generation and
+quarantine prior identity until its result; they never join an old upload check. Actual
+invalidation, marker/URL drift and failed verification revoke access immediately. A retired
+lease cannot start an action verification; explicit fresh host verification is required.

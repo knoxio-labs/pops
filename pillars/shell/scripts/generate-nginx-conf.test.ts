@@ -105,6 +105,18 @@ describe('generate-nginx-conf', () => {
       }
     });
 
+    it('routes Documents through the canonical owner in static and dynamic mode', async () => {
+      expect(PILLAR_UPSTREAMS.documents).toEqual({ host: 'documents-api', port: 3012 });
+      const staticConf = renderNginxConf();
+      expect(staticConf.match(/location \/documents-api\/ \{/gu)).toHaveLength(1);
+      expect(staticConf).toContain('set $documents_api_upstream http://documents-api:3012;');
+      const dynamicConf = await renderNginxConfDynamic(
+        'http://registry-api:3001',
+        makeTransport([{ pillarId: 'documents', baseUrl: 'http://untrusted.invalid:9999' }])
+      );
+      expect(dynamicConf).toContain('set $documents_api_upstream http://documents-api:3012;');
+    });
+
     it('PILLAR_RENDER_ORDER covers every PILLARS id with no extras', () => {
       expect(() => assertRenderOrderCoversAllPillars()).not.toThrow();
       expect(new Set(PILLAR_RENDER_ORDER)).toEqual(new Set(PILLARS));
@@ -1228,7 +1240,6 @@ describe('generate-nginx-conf', () => {
           pillarId: id,
           baseUrl: `http://${PILLAR_UPSTREAMS[id].host}:${PILLAR_UPSTREAMS[id].port}`,
         })),
-        { pillarId: 'documents', baseUrl: 'http://documents-api:3012' },
         { pillarId: 'orchestrator', baseUrl: 'http://pops-orchestrator:3009' },
       ]);
       const rendered = await renderNginxConfDynamic('http://registry-api:3001', transport);
@@ -1252,7 +1263,6 @@ describe('generate-nginx-conf', () => {
           pillarId: id,
           baseUrl: `http://${PILLAR_UPSTREAMS[id].host}:${PILLAR_UPSTREAMS[id].port}`,
         })),
-        { pillarId: 'documents', baseUrl: 'http://documents-api:3012' },
         { pillarId: 'orchestrator', baseUrl: 'http://pops-orchestrator:3009' },
         { pillarId: 'plugin-fitness', baseUrl: 'http://fitness-api:4242' },
       ]);

@@ -2,6 +2,7 @@ import { RotateCcw } from 'lucide-react';
 
 import { Button, ErrorState } from '@pops/ui';
 
+import { useUploadJournal } from '../documents/DocumentUploadProvider';
 import { requestProblem } from '../stay/api';
 import { CaptureComposer } from './CaptureComposer';
 import { CaptureContactChooser } from './CaptureContactChooser';
@@ -13,6 +14,7 @@ import { CaptureSelectedSource } from './CaptureSelectedSource';
 import { CaptureSessionBoundary } from './CaptureSessionBoundary';
 import { useCaptureContext } from './use-capture-context';
 import { useCaptureEditor } from './use-capture-editor';
+import { useCaptureUploadRestoration } from './use-capture-upload-restoration';
 
 import type { JSX } from 'react';
 
@@ -36,7 +38,10 @@ function WorkspaceSession({
   scope,
   ...props
 }: CaptureWorkspaceProps & CaptureSessionView): JSX.Element {
+  const persistence = useUploadJournal(null);
+  session.bindUploadContext(persistence.journal, props, props.documentsClient);
   const state = useCaptureEditor(session, props, query.data, scope.key);
+  const recoveryError = useCaptureUploadRestoration(session, persistence.journal, state);
   const context = useCaptureContext(props, scope);
   return (
     <section
@@ -47,6 +52,7 @@ function WorkspaceSession({
           : 'space-y-5'
       }
     >
+      <RestorationProblem error={recoveryError} />
       <WorkspaceHeader session={session} view={props.view} state={state} compact={props.compact} />
       <CaptureContactChooser session={session} />
       {query.isError ? (
@@ -132,5 +138,14 @@ function WorkspaceHeader({
         </Button>
       )}
     </header>
+  );
+}
+
+function RestorationProblem({ error }: { error: string | null }): JSX.Element | null {
+  if (error === null) return null;
+  return (
+    <ErrorState
+      error={{ code: 'trips.documents.recovery_unavailable', message: error, retryable: false }}
+    />
   );
 }

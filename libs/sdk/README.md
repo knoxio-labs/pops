@@ -128,3 +128,11 @@ the `status >= 500` that already covers it.
 ## Canonical identities
 
 `resolveCanonicalIds` from `/server` or `/client` accepts a typed injected operation, batches requested identifiers, and validates ordered, complete responses with explicit missing ids. Every batch must report the same producer revision; a revision change restarts the entire read with bounded retries. Transport failures and malformed or persistently changing responses fail explicitly. Historical ids remain separate map keys even when they resolve to the same canonical identity. Consumers keep transport, credentials, and missing-identity policy at their own boundary.
+
+`RemotePageHostProps.documentUploads` is a structural browser authority for upload metadata.
+It exposes fresh identity verification and scoped leases rather than an inferred account or
+an upload implementation. Lease methods reject unknown/retired account-server epochs;
+completion and authorization-loss cleanup cannot mutate another account's namespace. Hosts
+own verified identity, lifecycle observation, storage and explicit sign-out invalidation.
+Consumers own canonical operation/input validation, actual owner transport/source binding,
+metadata admission and task/original proof. The capability stores no File bytes or credentials.

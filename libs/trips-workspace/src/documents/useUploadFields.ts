@@ -6,12 +6,19 @@ import { retainOwnerOriginal } from './owner-task-receipt';
 import type { Dispatch, SetStateAction } from 'react';
 
 import type { DocumentUploadSnapshot } from './document-upload-session';
+import type { DurableUploadInput, DurableUploadRecord } from './durable-upload-api';
+import type { DurableUploadOperation } from './durable-upload-operation';
 import type { PaperlessTask } from './types';
 
 export type { DocumentUploadSession } from './document-upload-session';
 
 /** Stable operations bound to one intent; file replacement creates a distinct session generation. */
 export interface UploadFields extends DocumentUploadSnapshot {
+  readonly durable: DurableUploadOperation;
+  readonly metadata: DurableUploadInput | null;
+  readonly ownerRecord: DurableUploadRecord | null;
+  readonly ownerMatches: boolean | null;
+  reattachFile: (file: File) => Promise<void>;
   setFile: (file: File | null) => void;
   setUploadError: (message: string | null) => void;
   setUploadPending: (value: boolean) => void;
@@ -24,6 +31,7 @@ export interface UploadFields extends DocumentUploadSnapshot {
   clearSelectedFile: () => void;
   canStartUpload: () => boolean;
   claimUpload: () => boolean;
+  claimRecovery: () => boolean;
 }
 
 /** Initialize a distinct live file receipt; retain it above conditional views and alongside Undo history. */
@@ -58,8 +66,42 @@ export function useUploadFields(
     },
     [intent, setSession]
   );
+  const claims = useUploadClaims(intent, notify, setField);
+  const setters = useUploadSetters(setField);
+  const clearSelectedFile = useCallback(() => setFile(null), [setFile]);
+  return {
+    ...snapshot,
+    durable: intent.durable,
+    metadata: intent.durable.readInput(),
+    ownerRecord: intent.durable.readRecord(),
+    ownerMatches: intent.durable.ownerMatches(),
+    reattachFile: async (file) => {
+      await intent.reattach(file);
+      notify();
+    },
+    ...setters,
+    setFile,
+    clearSelectedFile,
+    ...claims,
+    canStartUpload: intent.canStart,
+  };
+}
+
+function useUploadClaims(
+  intent: DocumentUploadSession['intent'],
+  notify: () => void,
+  setField: <K extends Exclude<keyof DocumentUploadSnapshot, 'file'>>(
+    field: K,
+    value: DocumentUploadSnapshot[K]
+  ) => void
+): Pick<UploadFields, 'claimUpload' | 'claimRecovery' | 'setTaskReceipt'> {
   const claimUpload = useCallback(() => {
     if (!intent.claim()) return false;
+    notify();
+    return true;
+  }, [intent, notify]);
+  const claimRecovery = useCallback(() => {
+    if (!intent.claimRecovery()) return false;
     notify();
     return true;
   }, [intent, notify]);
@@ -73,17 +115,7 @@ export function useUploadFields(
     },
     [intent, setField]
   );
-  const setters = useUploadSetters(setField);
-  const clearSelectedFile = useCallback(() => setFile(null), [setFile]);
-  return {
-    ...snapshot,
-    ...setters,
-    setFile,
-    clearSelectedFile,
-    claimUpload,
-    setTaskReceipt,
-    canStartUpload: intent.canStart,
-  };
+  return { claimUpload, claimRecovery, setTaskReceipt };
 }
 
 function useUploadSetters(
@@ -97,8 +129,14 @@ function useUploadSetters(
   | 'clearSelectedFile'
   | 'setFile'
   | 'claimUpload'
+  | 'claimRecovery'
   | 'canStartUpload'
   | 'setTaskReceipt'
+  | 'durable'
+  | 'metadata'
+  | 'ownerRecord'
+  | 'ownerMatches'
+  | 'reattachFile'
 > {
   const setUploadError = useCallback(
     (value: string | null) => setField('uploadError', value),

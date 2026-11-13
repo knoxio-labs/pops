@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { getSourceRetry, querySourceRetry } from '../shared/source-retry-test-utils';
 import { journeyKey } from './api';
 import { JourneyWorkspace } from './JourneyWorkspace';
 import { journeyTransport, sourceJourney, sourceLeg, sourceProblem } from './test-utils';
@@ -183,7 +184,7 @@ describe('Journey persistence boundaries', () => {
     expect(await screen.findByText('trips.day.invalid')).toBeVisible();
     expect(field).toHaveValue('2028-02-');
     expect(screen.getByLabelText('Departure local time')).toHaveValue('');
-    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    fireEvent.click(getSourceRetry());
     await waitFor(() => expect(writes(transport)).toHaveLength(2));
     expect(writes(transport).map((request) => request.body)).toEqual([
       { from: { date: '2028-02-' }, expectedRevision: 0 },
@@ -202,7 +203,7 @@ describe('Journey persistence boundaries', () => {
       expect(await screen.findByText('No transport legs recorded')).toBeVisible();
       fireEvent.click(screen.getByRole('button', { name: 'Add transport' }));
       expect(await screen.findByText('trips.create.unknown')).toBeVisible();
-      expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull();
+      expect(querySourceRetry()).toBeNull();
       expect(screen.queryByRole('button', { name: 'Discard unsaved changes' })).toBeNull();
       transport.setSource({
         legRevision: 0,

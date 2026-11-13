@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, expect, it } from 'vitest';
 
+import { getSourceRetry, querySourceRetry } from '../shared/source-retry-test-utils';
 import { contactOwner, ownerSelection } from '../source-contacts/test-utils';
 import { stayQueryKey } from './api';
 import { StayWorkspace } from './StayWorkspace';
@@ -125,12 +126,12 @@ it('requires explicit conflict resolution while preserving the unrelated failed 
     name: 'Use refreshed values for conflicting fields',
   });
   expect(screen.getByRole('button', { name: 'Choose host' })).toBeDisabled();
-  expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument();
+  expect(querySourceRetry()).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Undo' })).toBeDisabled();
   fireEvent.click(reset);
   expect(screen.getByLabelText('Address')).toHaveValue('Pending address');
   expect(screen.getByRole('button', { name: 'Add selected host' })).toBeEnabled();
-  fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+  fireEvent.click(getSourceRetry());
   await waitFor(() => expect(transport.patches).toHaveLength(3));
   expect(transport.patches[2]).toEqual({ address: 'Pending address' });
 });

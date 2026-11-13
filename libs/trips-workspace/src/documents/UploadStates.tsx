@@ -4,20 +4,21 @@ import type { ReactElement } from 'react';
 
 import type { PaperlessTask } from './types';
 
-/** Offer owner lookup only when upload acceptance is ambiguous. */
+/** Recover an ambiguous upload by its immutable owner operation, without filename matching. */
 export function UploadOwnerLookup({
   uncertain,
-  file,
   onSearch,
+  pending = false,
 }: {
   uncertain: boolean;
   file: File | null;
   onSearch: () => void;
+  pending?: boolean;
 }): ReactElement | null {
-  if (!uncertain || file === null) return null;
+  if (!uncertain) return null;
   return (
-    <Button variant="outline" onClick={onSearch}>
-      Search Documents for {file.name}
+    <Button variant="outline" disabled={pending} onClick={onSearch}>
+      {pending ? 'Checking upload status…' : 'Check upload status'}
     </Button>
   );
 }

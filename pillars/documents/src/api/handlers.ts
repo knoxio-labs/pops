@@ -2,15 +2,15 @@
  * Top-level request handlers for the documents pillar container.
  *
  * Logic lives here (not inline in `app.ts`) so tests can call into the
- * shape directly without booting Express. The documents pillar owns no
- * domain DB — it bridges paperless-ngx — so `health` is a pure liveness
- * shape rather than a DB round-trip (contrast the data pillars, which
- * touch SQLite to surface a dead handle).
+ * shape directly without booting Express. Production health checks the
+ * private upload ledger, independently of upstream archive availability.
  */
 import { getPillarRegistry } from './pillars/registry.js';
 
 import type { ServiceAccountVerifier } from '@pops/pillar-sdk/server';
 import type { PillarRegistryEntry } from '@pops/types';
+
+import type { DurableUploads } from './uploads/service.js';
 
 /** Dependencies for the documents HTTP API. */
 export interface DocumentsApiDeps {
@@ -27,6 +27,10 @@ export interface DocumentsApiDeps {
    * verifier in `app.ts`; tests inject a fake.
    */
   serviceAccountVerifier?: ServiceAccountVerifier;
+  /** Durable upload producer, opened by the server and shared by all four upload operations. */
+  uploads?: DurableUploads;
+  /** Query the private ledger during production health probes. */
+  checkStorage?: () => void;
 }
 
 export interface HealthResponse {
@@ -47,6 +51,7 @@ export function makeRequestHandler(deps: DocumentsApiDeps): {
 } {
   return {
     health(): HealthResponse {
+      deps.checkStorage?.();
       return {
         ok: true,
         status: 'ok',

@@ -4,15 +4,23 @@ import { createDocumentsApiApp } from '../app.js';
 /**
  * Smoke tests for the documents-api Express app + health probe.
  *
- * The documents pillar owns no DB, so unlike the data pillars there is no
- * "fails closed when the handle is closed" case — health is a pure
- * liveness shape.
+ * Production checks its private upload ledger independently of Paperless.
  */
 import { createTestTransport } from './test-http.js';
 
 const { requestOn } = createTestTransport();
 
 describe('GET /health', () => {
+  it('fails when the production ledger probe is unavailable', async () => {
+    const app = createDocumentsApiApp({
+      version: 'test',
+      selfBaseUrl: 'http://localhost:3012',
+      checkStorage: () => {
+        throw new Error('Closed ledger');
+      },
+    });
+    expect((await requestOn(app).get('/health')).status).toBe(500);
+  });
   it('returns ok + status + pillar + version + ts', async () => {
     const app = createDocumentsApiApp({
       version: '0.0.1-test',

@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, expect, it } from 'vitest';
 
+import { getSourceRetry } from '../shared/source-retry-test-utils';
 import { contactOwner, ownerSelection } from '../source-contacts/test-utils';
 import { problem } from '../stay/test-utils';
 import { EventWorkspace } from './EventWorkspace';
@@ -52,7 +53,7 @@ it('retains the exact organiser draft after a lost source write and retries/undo
   await screen.findByText('Changes have not been saved');
   expect(transport.patches).toEqual([{ organiserLinks: changed.organiserLinks }]);
   expect(screen.getByRole('button', { name: 'Remove organiser 2' })).toBeEnabled();
-  fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+  fireEvent.click(getSourceRetry());
   await waitFor(() => expect(screen.getByRole('button', { name: 'Undo' })).toBeEnabled());
   fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
   await waitFor(() =>
@@ -76,7 +77,7 @@ it('recovers an issued owner reference after unmounting a failed source save wit
   mount();
   await screen.findByText('Changes have not been saved');
   expect(screen.getByRole('button', { name: 'Remove organiser 2' })).toBeEnabled();
-  fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+  fireEvent.click(getSourceRetry());
   await waitFor(() => expect(transport.patches).toHaveLength(2));
   expect(transport.patches).toEqual([
     { organiserLinks: changed.organiserLinks },

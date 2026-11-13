@@ -178,6 +178,9 @@ jobs:
                 ".github/workflows/docker-build.yml",
                 ".github/actions/**",
                 "scripts/ci/smoke-image.mjs",
+                "scripts/ci/litestream-storage.mjs",
+                "scripts/ci/smoke-authority-fixture.mjs",
+                "pillars/*/smoke-fixture.json",
                 "scripts/codegen/**",
                 "package.json"
               ],

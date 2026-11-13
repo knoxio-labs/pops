@@ -80,6 +80,7 @@ describe('PILLARS', () => {
       'design',
       'tags',
       'trips',
+      'documents',
     ]);
   });
 

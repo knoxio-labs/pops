@@ -1,4 +1,6 @@
 import { sourceOwner } from '../arrangements/source-owner';
+import { DocumentUploadSession } from '../documents/document-upload-session';
+import { UploadRestoration } from '../documents/upload-restoration';
 import { createDocumentUploadSession } from '../documents/useUploadFields';
 import { CaptureContactChoices } from './contact-choices';
 import { CaptureContactReferenceReads } from './contact-reference-reads';
@@ -6,6 +8,7 @@ import { createCaptureEditor } from './editor';
 import { CaptureRecordDrafts } from './record-drafts';
 import { CaptureReferenceIdentities } from './reference-identities';
 import { CaptureSourceOwner } from './source-owner';
+import { CaptureUploadAuthority } from './upload-authority';
 
 import type { QueryClient } from '@tanstack/react-query';
 import type { Dispatch, SetStateAction } from 'react';
@@ -13,7 +16,8 @@ import type { Dispatch, SetStateAction } from 'react';
 import type { ContactsHostCapability } from '@pops/pillar-sdk';
 
 import type { SourceOwner } from '../arrangements/source-owner';
-import type { DocumentUploadSession } from '../documents/useUploadFields';
+import type { Client as DocumentsClient } from '../documents-api/client';
+import type { UploadJournal } from '../documents/durable-upload-journal';
 import type { CaptureEditor } from './editor-types';
 import type { CaptureIdentity, CapturePerformer, CaptureSource } from './types';
 
@@ -35,14 +39,28 @@ export class CaptureBrowserSession {
   private uploads = new Map<string, DocumentUploadSession>();
   private listeners = new Set<() => void>();
   private version = 0;
+  /** Per-journal restore outcomes belong to the retained composer, never to a conditional view. */
+  readonly uploadRestoration = new UploadRestoration(() => this.changed());
   private owner: CaptureSourceOwner | undefined;
+  private readonly uploadAuthority = new CaptureUploadAuthority(
+    () =>
+      this.editor.getState().draft.selections.flatMap((selection) => {
+        const upload = this.uploads.get(selection.id);
+        return upload === undefined ? [] : [upload];
+      }),
+    () => [...this.uploads.values()]
+  );
   constructor(
     source: CaptureSource,
     tripId: number,
     perform: CapturePerformer,
     contacts?: ContactsHostCapability
   ) {
-    this.editor = createCaptureEditor({ source, tripId, perform });
+    this.editor = createCaptureEditor({
+      source,
+      tripId,
+      perform: (request) => this.uploadAuthority.perform(request, perform),
+    });
     this.records = new CaptureRecordDrafts(this.editor);
     this.contacts = new CaptureContactChoices(this.editor, this.records, contacts);
     this.contactReads = new CaptureContactReferenceReads(
@@ -53,7 +71,16 @@ export class CaptureBrowserSession {
   /** Rebind the current transport without permitting retained commands to change their semantic owner. */
   bindPerformer(identity: CaptureIdentity, perform: CapturePerformer): void {
     this.owner ??= new CaptureSourceOwner(identity);
-    this.editor.setPerformer(this.owner.bind(identity, perform));
+    const owned = this.owner.bind(identity, perform);
+    this.editor.setPerformer((request) => this.uploadAuthority.perform(request, owned));
+  }
+  /** Bind the current verified upload authority without discarding old-account drafts or acknowledgements. */
+  bindUploadContext(
+    journal: UploadJournal | null,
+    identity: CaptureIdentity,
+    documentsClient?: DocumentsClient
+  ): void {
+    this.uploadAuthority.bind(journal, identity, documentsClient);
   }
   /** Observe retained upload changes without storing bytes outside this browser session. */
   subscribe = (listener: () => void): (() => void) => {
@@ -76,6 +103,29 @@ export class CaptureBrowserSession {
     this.uploads.set(id, createDocumentUploadSession(file));
     this.changed();
   }
+  /** Restore pending unbound upload metadata into this Trip's file selections without restoring text or inventing owner IDs. */
+  restoreUploads(journal: UploadJournal): void {
+    this.uploadRestoration.run(
+      journal.bindingKey(),
+      () => {
+        for (const input of journal.list()) {
+          if ([...this.uploads.values()].some((upload) => upload.id === input.operationId))
+            continue;
+          const id = this.editor.addSelection({
+            file: null,
+            name: input.fileName,
+            mediaType: input.mimeType,
+            references: [],
+          });
+          if (id === undefined) continue;
+          this.uploads.set(id, DocumentUploadSession.restore(input, journal));
+          this.changed();
+        }
+      },
+      'Upload recovery storage could not be read.'
+    );
+  }
+
   /** Read the same controlled owner state after navigation, filtering or confirmed Undo. */
   upload(id: string): DocumentUploadSession | undefined {
     return this.uploads.get(id);

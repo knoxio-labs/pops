@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { getSourceRetry } from '../shared/source-retry-test-utils';
 import { stayQueryKey } from './api';
 import { staySource } from './model';
 import { StayWorkspace } from './StayWorkspace';
@@ -55,7 +56,7 @@ describe('Source-backed In visit stay workspace', () => {
     expect(await screen.findByText('trips.temporarily_unavailable')).toBeVisible();
     expect(screen.getByLabelText('Stay name')).toHaveValue('Uncommitted stay');
     expect(screen.getByText('Unsaved changes')).toBeVisible();
-    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    fireEvent.click(getSourceRetry());
     await waitFor(() => expect(screen.queryByText('trips.temporarily_unavailable')).toBeNull());
     expect(screen.getByLabelText('Stay name')).toHaveValue('Uncommitted stay');
     expect(transport.patches).toEqual([]);
@@ -169,7 +170,7 @@ describe('Source-backed In visit stay workspace', () => {
     expect(await screen.findByText('trips.temporarily_unavailable')).toBeVisible();
     expect(screen.getByLabelText('Stay name')).toHaveValue('Retry this source');
     expect(screen.getByRole('button', { name: 'Undo' })).toBeDisabled();
-    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    fireEvent.click(getSourceRetry());
     await waitFor(() =>
       expect(transport.patches).toEqual([
         { name: 'Retry this source' },
@@ -230,7 +231,7 @@ describe('Source-backed In visit stay workspace', () => {
     mount(transport);
     expect(await screen.findByText('trips.authentication.required')).toBeVisible();
     expect(screen.queryByLabelText('Stay name')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    fireEvent.click(getSourceRetry());
     expect(await screen.findByLabelText('Stay name')).toHaveValue('Cedar guesthouse');
     expect(transport.patches).toEqual([]);
   });
@@ -251,7 +252,7 @@ describe('Source-backed In visit stay workspace', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
     await screen.findByText('trips.temporarily_unavailable');
     expect(screen.getByLabelText('Stay name')).toHaveValue(initial.name);
-    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    fireEvent.click(getSourceRetry());
     await waitFor(() =>
       expect(transport.patches).toEqual([
         { name: 'Changed source' },
