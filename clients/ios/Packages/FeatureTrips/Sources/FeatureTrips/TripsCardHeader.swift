@@ -4,6 +4,7 @@ import SwiftUI
 internal struct TripsCardHeader<Content: View>: View {
     internal let symbol: String
     internal var decorated = true
+    internal var showsDisclosure = true
     @ViewBuilder internal var content: Content
     @Environment(\.dynamicTypeSize) private var typeSize
 
@@ -11,7 +12,8 @@ internal struct TripsCardHeader<Content: View>: View {
         Group {
             if typeSize.isAccessibilitySize {
                 VStack(alignment: .leading, spacing: PopsSpacing.md) {
-                    TripsCardDecoration(symbol: symbol, decorated: decorated)
+                    TripsCardDecoration(
+                        symbol: symbol, decorated: decorated, showsDisclosure: showsDisclosure)
                     content.frame(maxWidth: .infinity, alignment: .leading)
                 }
             } else {
@@ -19,7 +21,7 @@ internal struct TripsCardHeader<Content: View>: View {
                     TripsCardSymbol(symbol: symbol, decorated: decorated)
                     content
                     Spacer(minLength: PopsSpacing.zero)
-                    chevron
+                    if showsDisclosure { chevron }
                 }
             }
         }
@@ -30,12 +32,13 @@ internal struct TripsCardHeader<Content: View>: View {
 internal struct TripsCardDecoration: View {
     internal let symbol: String
     internal var decorated = true
+    internal var showsDisclosure = true
 
     internal var body: some View {
         HStack(alignment: .top, spacing: PopsSpacing.md) {
             TripsCardSymbol(symbol: symbol, decorated: decorated)
             Spacer(minLength: PopsSpacing.zero)
-            chevron
+            if showsDisclosure { chevron }
         }
         .accessibilityHidden(true)
     }
@@ -74,9 +77,10 @@ internal struct TripsSourceHeading: View {
     internal let title: String
     internal let symbol: String
     internal var context: String?
+    internal var showsDisclosure = true
 
     internal var body: some View {
-        TripsCardHeader(symbol: symbol) {
+        TripsCardHeader(symbol: symbol, showsDisclosure: showsDisclosure) {
             VStack(alignment: .leading, spacing: PopsSpacing.xs) {
                 Text(title)
                     .font(.popsHeadline)

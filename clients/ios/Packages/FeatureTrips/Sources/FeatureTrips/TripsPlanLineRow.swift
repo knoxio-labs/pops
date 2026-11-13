@@ -11,26 +11,9 @@ internal struct TripsPlanLineRow: View {
         Group {
             switch item.content {
             case .visit(let visit, let place, let sources):
-                VStack(alignment: .leading, spacing: PopsSpacing.sm) {
-                    PopsCard(appearance: .featured) {
-                        VStack(alignment: .leading, spacing: PopsSpacing.sm) {
-                            Label(place, systemImage: "mappin.circle")
-                                .font(.popsHeadline)
-                                .foregroundStyle(Color.popsForeground)
-                            Text(tripChapterTiming(visit.timing))
-                                .font(.popsCaption)
-                                .foregroundStyle(Color.popsMutedForeground)
-                            if !visit.notes.isEmpty {
-                                Text(visit.notes).font(.popsSubheadline)
-                            }
-                        }
-                        .accessibilityElement(children: .combine)
-                    }
-                    ForEach(sources) { source in
-                        TripsPlanLineSourceRow(
-                            source: source, places: places, openSource: openSource)
-                    }
-                }
+                TripsPlanVisitRow(
+                    visit: visit, place: place, sources: sources, places: places,
+                    openSource: openSource)
             case .source(let source):
                 TripsPlanLineSourceRow(source: source, places: places, openSource: openSource)
             case .missing(let source):
@@ -97,10 +80,32 @@ internal struct TripsPlanLineSourceRow: View {
     @Environment(\.timeZone) private var zone
 
     internal var body: some View {
+        let summary = TripNextSummary(source: source, places: places, zone: zone)
         Button {
             openSource(source)
         } label: {
-            TripsSourceCard(source: source, zone: zone, places: places)
+            TripsCardHeader(symbol: source.symbol, decorated: false) {
+                VStack(alignment: .leading, spacing: PopsSpacing.xs) {
+                    Text(summary.title)
+                        .font(.popsHeadline)
+                        .foregroundStyle(Color.popsForeground)
+                    Text(summary.when)
+                        .font(.popsCaption)
+                        .foregroundStyle(Color.popsMutedForeground)
+                    if let state = summary.stateLine {
+                        Text(state)
+                            .font(.popsCaption)
+                            .foregroundStyle(Color.popsMutedForeground)
+                    }
+                    if summary.hasConflictingTimes {
+                        Label("Recorded times conflict", systemImage: "exclamationmark.triangle")
+                            .font(.popsCaption)
+                            .foregroundStyle(Color.popsTripsAttention)
+                    }
+                }
+            }
+            .frame(minHeight: PopsSize.touchTarget, alignment: .leading)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityHint("Open source details")

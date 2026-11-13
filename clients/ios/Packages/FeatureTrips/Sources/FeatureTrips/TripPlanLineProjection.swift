@@ -27,6 +27,17 @@ internal struct TripPlanLineProjection {
             }
             return TripPlanLineItem(id: .root(token), content: .gap(token.id), paths: paths)
         }
+        recorded = join.recorded(route)
+    }
+}
+
+private struct TripPlanLineJoin {
+    let visits: [TripVisit]
+    let sources: [TripSource]
+    let places: [TripPlace]
+    let missing: Set<TripRouteSource>
+
+    func recorded(_ route: TripRouteSnapshot) -> [TripPlanLineItem] {
         let active = Set(
             route.order.compactMap(\.source)
                 + route.paths.filter { $0.state == .alternative }.flatMap(\.members))
@@ -34,11 +45,11 @@ internal struct TripPlanLineProjection {
             visits.filter {
                 !missing.contains(.visit($0.id))
             }.map(\.id))
-        recorded =
+        return
             visits.filter {
                 !active.contains(.visit($0.id)) && !missing.contains(.visit($0.id))
             }.map {
-                join.item(.visit($0.id), id: .recordedVisit($0.id))
+                item(.visit($0.id), id: .recordedVisit($0.id))
             }
             + sources.filter { source in
                 if case .journey(let journey) = source {
@@ -51,13 +62,6 @@ internal struct TripPlanLineProjection {
                 TripPlanLineItem(id: .recordedSource($0.id), content: .source($0), paths: [])
             }
     }
-}
-
-private struct TripPlanLineJoin {
-    let visits: [TripVisit]
-    let sources: [TripSource]
-    let places: [TripPlace]
-    let missing: Set<TripRouteSource>
 
     func item(_ source: TripRouteSource, id: TripPlanLineIdentity) -> TripPlanLineItem {
         TripPlanLineItem(id: id, content: content(source), paths: [])

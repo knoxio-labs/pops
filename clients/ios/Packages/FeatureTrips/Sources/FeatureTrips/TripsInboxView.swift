@@ -95,7 +95,7 @@ private struct TripsInboxCaptureCard: View {
             VStack(alignment: .leading, spacing: PopsSpacing.md) {
                 TripsSourceHeading(
                     title: record.title ?? "Capture \(record.id)", symbol: "tray",
-                    context: record.removedAt == nil ? nil : "Removed")
+                    context: record.removedAt == nil ? nil : "Removed", showsDisclosure: false)
                 if let classification = record.classification {
                     Text(classification.rawValue.capitalized)
                         .font(.popsCaption)
