@@ -55,9 +55,15 @@ public struct TripsRootView: View {
             Tab("Inbox", systemImage: "tray", value: TripsTab.inbox) {
                 stack(.inbox)
             }
-            Tab(value: TripsTab.search, role: .search) {
+            Tab(
+                "Search", systemImage: "magnifyingglass", value: TripsTab.search,
+                role: searchTabRole
+            ) {
                 NavigationStack {
-                    TripsSearchView(trips: model.trips, snapshot: model.snapshot) { id in
+                    TripsSearchView(
+                        trips: model.trips, snapshot: model.snapshot, query: $model.searchQuery,
+                        dismissSearch: model.dismissSearch
+                    ) { id in
                         model.openTrip(id)
                     } openSource: { source in
                         model.openTrip(source.tripID, sourceID: source.id)
@@ -69,6 +75,14 @@ public struct TripsRootView: View {
         .task { await model.load() }
         .sheet(item: $model.capture) { draft in
             TripCaptureComposer(draft: draft)
+        }
+    }
+
+    private var searchTabRole: TabRole {
+        if #available(iOS 27.0, macOS 27.0, *) {
+            .prominent
+        } else {
+            .search
         }
     }
 

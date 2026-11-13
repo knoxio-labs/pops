@@ -5,6 +5,8 @@ import Observation
 @MainActor
 @Observable
 internal final class TripsModel {
+    internal var searchQuery = ""
+    private var searchOrigin = TripsTab.trips
     internal private(set) var trips: [TripRecord] = []
     internal private(set) var snapshot: TripSnapshot?
     internal private(set) var selectedID: Int?
@@ -15,6 +17,7 @@ internal final class TripsModel {
     internal var tab = TripsTab.trips {
         didSet {
             if tab != oldValue {
+                if tab == .search { searchOrigin = oldValue }
                 navigationIntent = UUID()
                 source = nil
             }
@@ -40,6 +43,11 @@ internal final class TripsModel {
         self.selection = selection
         route = TripsRouteModel(reader: routeReader)
         inbox = TripsInboxModel(reader: captureReader)
+    }
+
+    internal func dismissSearch() {
+        guard tab == .search else { return }
+        tab = searchOrigin
     }
 
     internal func openTrip(_ id: Int, sourceID: String? = nil) {
