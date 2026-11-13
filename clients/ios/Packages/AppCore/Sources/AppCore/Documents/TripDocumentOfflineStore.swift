@@ -58,12 +58,15 @@ public struct TripDocumentOfflineNavigation: Codable, Hashable, Sendable {
     public let trips: [VerifiedTripSnapshot]
     public let originals: [VerifiedDocumentOriginal]
     public let selectedTripID: Int?
+    /// Persisted negative verifications. Nil is the backward-compatible pre-invalidation record format.
+    public let invalidatedResources: Set<TripOfflineReadResource>?
 
     /// A replacement is committed atomically; failed or partial network reads must not be supplied as empty success.
     public init(
         owner: TripDocumentOfflineOwner, generation: UUID = UUID(),
         catalogue: VerifiedTripCatalogue?,
-        trips: [VerifiedTripSnapshot], originals: [VerifiedDocumentOriginal], selectedTripID: Int?
+        trips: [VerifiedTripSnapshot], originals: [VerifiedDocumentOriginal], selectedTripID: Int?,
+        invalidatedResources: Set<TripOfflineReadResource>? = nil
     ) {
         self.owner = owner
         self.generation = generation
@@ -71,6 +74,7 @@ public struct TripDocumentOfflineNavigation: Codable, Hashable, Sendable {
         self.trips = trips
         self.originals = originals
         self.selectedTripID = selectedTripID
+        self.invalidatedResources = invalidatedResources
     }
 }
 
@@ -117,6 +121,15 @@ public enum TripDocumentOfflineError: Error, Hashable, Sendable {
     case corruptOriginal
 }
 
+/// Optional explicit selection retention shared by the Timeline and its owner-bound offline reader.
+@MainActor
+public protocol TripOfflineSelection {
+    /// Returns a previously selected, still-eligible Trip rather than implicitly choosing the first catalogue row.
+    func selectedTripID() throws -> Int?
+    /// Records only a selection whose full source read has been accepted by the current UI intent.
+    func selectTrip(_ id: Int) throws
+}
+
 /// Technical persistence only. No method starts network work, infers associations,
 /// replays writes or authorizes a fallback.
 @MainActor
@@ -130,7 +143,11 @@ public protocol TripDocumentOfflineStore {
         throws
     /// Returns a manifest only after validating its retained bytes; nil means no committed original.
     func original(id: Int) throws -> TripOfflineFileRecord?
+    /// Reads the validated owner/index generation without trusting or opening its old blob.
+    /// This is a replacement CAS token, never evidence that a local original is available.
+    func originalGeneration(id: Int) throws -> UUID?
     /// Commits completed bytes before publishing their manifest; the caller still owns the input temporary file.
+    /// The expected validated index generation permits replacing a damaged blob, but never a newer or foreign index.
     func retainOriginal(
         _ download: DownloadedDocument, id: Int, verifiedAt: Date, replacing generation: UUID?
     ) throws -> TripOfflineFileRecord

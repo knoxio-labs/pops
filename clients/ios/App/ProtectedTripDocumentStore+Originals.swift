@@ -2,6 +2,13 @@ import AppCore
 import Foundation
 
 extension ProtectedTripDocumentStore {
+    internal func originalGeneration(id: Int) throws -> UUID? {
+        try assertCurrent()
+        let generation = try manifest(id: id)?.record.generation
+        try assertCurrent()
+        return generation
+    }
+
     internal func original(id: Int) throws -> TripOfflineFileRecord? {
         try assertCurrent()
         guard let manifest = try manifest(id: id) else { return nil }
@@ -18,7 +25,7 @@ extension ProtectedTripDocumentStore {
             try download.temporaryURL.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile
                 == true
         else { throw TripDocumentOfflineError.invalidRecord }
-        guard try original(id: id)?.generation == generation else {
+        guard try originalGeneration(id: id) == generation else {
             throw TripDocumentOfflineError.generationChanged
         }
         let data = try Data(contentsOf: download.temporaryURL, options: .mappedIfSafe)
@@ -32,6 +39,9 @@ extension ProtectedTripDocumentStore {
         try write(data, to: blobURL(manifest.blobID))
         _ = try bytes(manifest)
         try assertCurrent()
+        guard try originalGeneration(id: id) == generation else {
+            throw TripDocumentOfflineError.generationChanged
+        }
         try write(JSONEncoder().encode(manifest), to: manifestURL(id: id))
         return record
     }
@@ -57,11 +67,17 @@ extension ProtectedTripDocumentStore {
 
     private func manifest(id: Int) throws -> OriginalEnvelope? {
         guard id > 0 else { throw TripDocumentOfflineError.invalidRecord }
-        guard let data = try readIfPresent(manifestURL(id: id)) else { return nil }
+        let url = try manifestURL(id: id)
+        guard let data = try readIfPresent(url) else { return nil }
+        let attributes = try url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+        guard attributes.isRegularFile == true, attributes.isSymbolicLink != true else {
+            throw TripDocumentOfflineError.invalidRecord
+        }
         let value: OriginalEnvelope = try decode(data)
         let record = value.record
         guard value.version == 1, record.owner == owner, record.documentID == id,
-            record.byteCount >= 0,
+            record.byteCount >= 0, record.sha256.utf8.count == 64,
+            record.sha256.utf8.allSatisfy({ (48...57).contains($0) || (97...102).contains($0) }),
             record.responseByteCount.map({ $0 >= 0 && $0 == record.byteCount }) ?? true
         else { throw TripDocumentOfflineError.invalidRecord }
         return value

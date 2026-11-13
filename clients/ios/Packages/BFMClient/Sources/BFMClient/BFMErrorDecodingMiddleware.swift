@@ -145,6 +145,17 @@ internal struct BFMRuntimeFailure: Sendable {
     internal let popsError: PopsError
     internal let statusCode: Int?
     internal let retryAfterSeconds: Int?
+    internal let urlErrorCode: URLError.Code?
+
+    internal init(
+        popsError: PopsError, statusCode: Int?, retryAfterSeconds: Int?,
+        urlErrorCode: URLError.Code? = nil
+    ) {
+        self.popsError = popsError
+        self.statusCode = statusCode
+        self.retryAfterSeconds = retryAfterSeconds
+        self.urlErrorCode = urlErrorCode
+    }
 }
 
 extension PopsError {
@@ -180,7 +191,8 @@ extension PopsError {
             return BFMRuntimeFailure(
                 popsError: urlError.code == .timedOut ? .timeout : .offline,
                 statusCode: error.response?.status.code,
-                retryAfterSeconds: nil
+                retryAfterSeconds: nil,
+                urlErrorCode: urlError.code
             )
         }
         if error.response?.status.kind == .successful, error.underlyingError is DecodingError {

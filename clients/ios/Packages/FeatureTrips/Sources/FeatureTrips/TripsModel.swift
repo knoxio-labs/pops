@@ -22,10 +22,14 @@ internal final class TripsModel {
     internal var capture: TripCaptureDraft?
     @ObservationIgnored internal private(set) var navigationTask: Task<Void, Never>?
     private let repository: any TripsReading
+    private let selection: (any TripOfflineSelection)?
     private var request = UUID()
     private var navigationIntent = UUID()
 
-    internal init(repository: any TripsReading) { self.repository = repository }
+    internal init(repository: any TripsReading, selection: (any TripOfflineSelection)? = nil) {
+        self.repository = repository
+        self.selection = selection
+    }
 
     internal func openTrip(_ id: Int, sourceID: String? = nil) {
         source = nil
@@ -60,6 +64,7 @@ internal final class TripsModel {
             let records = try await repository.trips()
             guard request == token else { return }
             trips = records
+            if selectedID == nil { selectedID = try selection?.selectedTripID() }
             if let id = selectedID, records.contains(where: { $0.id == id }) {
                 await select(id)
             } else {
@@ -93,6 +98,7 @@ internal final class TripsModel {
             guard result == nil || result?.trip.id == id else {
                 throw RepositoryError.contractMismatch
             }
+            if result != nil { try selection?.selectTrip(id) }
             snapshot = result
             loading = false
             return true

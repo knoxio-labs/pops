@@ -13,13 +13,15 @@ public struct TripsRootView: View {
     /// Creates the feature with authenticated readers and optional explicitly authorized capture writes.
     /// Omitting the writer keeps source browsing read-only. The app supplies an owner-bound durable store;
     /// omitting storage retains only in-memory drafts for injected previews and host tests.
+    /// Optional selection retention restores only an earlier explicit selection, never the first Trip by default.
     public init(
         repository: any TripsReading, documents: any DocumentsReading,
         captureWriter: (any TripCapturesWriting)? = nil,
-        captureStore: (any TripCaptureDraftStore)? = nil
+        captureStore: (any TripCaptureDraftStore)? = nil,
+        selection: (any TripOfflineSelection)? = nil
     ) {
         self.init(
-            model: TripsModel(repository: repository), documents: documents,
+            model: TripsModel(repository: repository, selection: selection), documents: documents,
             captureDrafts: captureWriter.map {
                 TripCaptureDrafts(writer: $0, storage: captureStore)
             })

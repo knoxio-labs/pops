@@ -30,7 +30,10 @@ internal struct BFMDocumentsFileReader: Sendable {
             }
         } catch let error as URLError {
             if error.code == .cancelled { throw CancellationError() }
-            throw RepositoryError.transport(error.code == .timedOut ? .timeout : .offline)
+            throw RepositoryError.transport(
+                RepositoryTransportError(
+                    popsError: error.code == .timedOut ? .timeout : .offline,
+                    urlErrorCode: error.code))
         }
         let location = exchange.payload
         guard exchange.response.statusCode == 200 else {

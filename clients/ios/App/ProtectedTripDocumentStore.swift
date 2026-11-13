@@ -112,6 +112,18 @@ internal final class ProtectedTripDocumentStore: TripDocumentOfflineStore {
                 tripIDs.contains(selected) || catalogue.contains { $0.id == selected }
             }) ?? true
         else { throw TripDocumentOfflineError.invalidRecord }
+        for resource in value.invalidatedResources ?? [] {
+            switch resource {
+            case .catalogue: break
+            case .trip(let id), .document(let id), .file(let id):
+                guard id > 0 else { throw TripDocumentOfflineError.invalidRecord }
+            }
+        }
+        if let selected = value.selectedTripID,
+            value.invalidatedResources?.contains(.trip(selected)) == true
+        {
+            throw TripDocumentOfflineError.invalidRecord
+        }
         for trip in value.trips { try validateAssociations(trip.snapshot) }
     }
 
