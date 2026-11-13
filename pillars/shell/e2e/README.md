@@ -30,8 +30,11 @@ them. The default config ignores it; it runs only through
 `helpers/pillar-rest.ts` covers the surfaces that are hit on _every_ page load,
 whichever pillar a spec is about: the registry snapshot boot resolves the
 install set from, the shell manifest `/` lands on, the pillar-health aggregator,
-the top-bar nudge poll, and federated search. `stubShellBoot(page)` is the
-default; take the registry off the air with `failRegistry(page)` when the
+the top-bar nudge poll, the Registry session used for upload recovery, and
+federated search. The session fixture is a fictional verified operator and uses
+the generated Registry response schema; `stubPillarHealth(page, pillarIds)` also
+supplies it when a spec controls registry boot separately. `stubShellBoot(page)`
+is the default; take the registry off the air with `failRegistry(page)` when the
 fallback IS the subject.
 
 Its route patterns are anchored regexes rather than `**` globs on purpose. `**`
