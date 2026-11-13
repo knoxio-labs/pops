@@ -4,7 +4,7 @@ import { MobileTripDocumentAssociationSchema } from '../../contract/mobile-trips
 import { MobileTripEventSchema } from '../../contract/mobile-trips-event-schemas.js';
 import {
   MobileJourneyGroupSchema,
-  MobileJourneyLegSchema,
+  MobileJourneyLegV2Schema,
   MobileJourneySchema,
 } from '../../contract/mobile-trips-journey-schemas.js';
 import {
@@ -25,7 +25,7 @@ export const TripsWire = {
   places: z.object({ places: z.array(MobileTripPlaceSchema).refine(uniqueTripsIds) }),
   visits: z.object({ visits: z.array(MobileTripVisitSchema).refine(uniqueTripsIds) }),
   journeys: z.object({ journeys: z.array(MobileJourneySchema).refine(uniqueTripsIds) }),
-  legs: z.object({ legs: z.array(MobileJourneyLegSchema).refine(uniqueTripsIds) }),
+  legs: z.object({ legs: z.array(MobileJourneyLegV2Schema).refine(uniqueTripsIds) }),
   groups: z.object({ groups: z.array(MobileJourneyGroupSchema).refine(uniqueTripsIds) }),
   stays: z.object({ stays: z.array(MobileStaySchema).refine(uniqueTripsIds) }),
   associations: z.object({

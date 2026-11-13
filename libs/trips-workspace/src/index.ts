@@ -151,3 +151,15 @@ export type {
   AccommodationGapProviderProps,
   AccommodationGapContextProps,
 } from './arrangements/accommodation-gap-types';
+
+export { CaptureTimelineFilters } from './capture/CaptureTimelineFilters';
+export { CaptureMembershipContext } from './capture/CaptureMembershipContext';
+export type {
+  CaptureTimelineFiltersProps,
+  CaptureTimelineFilterLabel,
+} from './capture/CaptureTimelineFilters';
+export type {
+  CaptureTimelineSelection,
+  CaptureTimelineSource,
+  CaptureTimelineVisibility,
+} from './capture/timeline-filters';

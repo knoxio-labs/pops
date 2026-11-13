@@ -112,3 +112,35 @@ it('retains cached Capture facts and readable meeting facts during a failed refr
   expect(await screen.findByText('Recovered capture')).toBeVisible();
   expect(screen.queryByText('trips.source.unavailable')).not.toBeInTheDocument();
 });
+
+it('applies controlled exact-source visibility to linked and detached cards without hiding route/booking facts or new IDs', async () => {
+  const responses = overviewResponses();
+  responses.set('/trips/7/capture-workspace', {
+    ...captureSource([
+      sourceCapture({ id: 1, tripId: 7, visitId: 31, title: 'Linked capture' }),
+      sourceCapture({ id: 2, tripId: 7, title: 'Unassigned capture' }),
+      sourceCapture({ id: 3, tripId: 7, title: 'New unclassified capture' }),
+    ]),
+    ideas: [sourceIdea({ id: 1, tripId: 7, name: 'Same ID idea' })],
+  });
+  const known = [
+    { kind: 'capture' as const, id: 1 },
+    { kind: 'capture' as const, id: 2 },
+    { kind: 'idea' as const, id: 1 },
+    { kind: 'event' as const, id: 61 },
+  ];
+  const mounted = mountOverview(responses, undefined, {
+    sourceVisibility: { known, visible: [{ kind: 'idea', id: 1 }] },
+  });
+  expect(await screen.findByText('New unclassified capture')).toBeVisible();
+  expect(screen.getByText('Same ID idea')).toBeVisible();
+  expect(screen.queryByText('Linked capture')).not.toBeInTheDocument();
+  expect(screen.queryByText('Unassigned capture')).not.toBeInTheDocument();
+  expect(screen.queryByText('Harbour festival')).not.toBeInTheDocument();
+  expect(await screen.findByText('Wellington')).toBeVisible();
+  expect(await screen.findByText('Cedar guesthouse')).toBeVisible();
+  mounted.rerender({ sourceVisibility: undefined });
+  expect(await screen.findByText('Linked capture')).toBeVisible();
+  expect(screen.getByText('Unassigned capture')).toBeVisible();
+  expect(screen.getByText('Harbour festival')).toBeVisible();
+});

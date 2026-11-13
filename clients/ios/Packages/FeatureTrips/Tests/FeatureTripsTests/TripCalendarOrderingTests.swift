@@ -6,6 +6,47 @@ import Testing
 
 @Suite("Calendar fact ordering")
 internal struct TripCalendarOrderingTests {
+    @Test(
+        "Journey day precision stays on the supplied day in every display zone without an instant")
+    internal func journeyDay() throws {
+        let original = try TripTestSources.snapshot()
+        let journey = try #require(original.journeys.first)
+        let leg = try #require(journey.legs.first)
+        let dayLeg = TripJourneyLeg(
+            id: leg.id, journeyId: leg.journeyId, mode: leg.mode,
+            from: TripEndpoint(
+                placeId: nil, sourceLabel: nil, sourceLinks: nil, local: nil,
+                timeZone: "Pacific/Kiritimati", date: "2028-02-29"),
+            to: TripEndpoint(
+                placeId: nil, sourceLabel: nil, sourceLinks: nil, local: nil,
+                timeZone: nil, date: "2028-03-02"),
+            intention: leg.intention, arrangement: leg.arrangement, purchase: leg.purchase,
+            operator: leg.operator, service: leg.service, reference: leg.reference,
+            notes: leg.notes, sourceLinks: leg.sourceLinks)
+        let source = TripJourney(
+            id: journey.id, tripId: journey.tripId, name: journey.name,
+            reference: journey.reference, notes: journey.notes, sourceLinks: journey.sourceLinks,
+            buffers: journey.buffers, legs: [dayLeg])
+        for identifier in ["Pacific/Honolulu", "Pacific/Kiritimati"] {
+            let facts = tripCalendarFacts(
+                sources: [.journey(source)], zone: try #require(TimeZone(identifier: identifier)))
+            #expect(facts.map(\.day) == ["2028-02-29", "2028-03-02"])
+            #expect(facts.allSatisfy { $0.instant == nil })
+            #expect(facts.map(\.label) == ["Departure · \(leg.id)", "Arrival · \(leg.id)"])
+            var filter = TripTimelineFilter()
+            filter.fromDay = "2028-03-01"
+            filter.throughDay = "2028-03-01"
+            #expect(
+                !filter.includes(
+                    .journey(source), zone: try #require(TimeZone(identifier: identifier))))
+            filter.fromDay = "2028-02-29"
+            filter.throughDay = "2028-02-29"
+            #expect(
+                filter.includes(
+                    .journey(source), zone: try #require(TimeZone(identifier: identifier))))
+        }
+    }
+
     @Test("resolved clocks precede floating dates consistently for every source permutation")
     internal func mixedPrecision() throws {
         let early = stay(id: 3, clock: "10:00")

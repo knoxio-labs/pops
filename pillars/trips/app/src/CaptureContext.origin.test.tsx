@@ -35,8 +35,9 @@ it('does not retarget the mounted context unknown request when its generated cli
   owner.client.setConfig({ baseUrl: originalOrigin });
   await user.click(screen.getByRole('button', { name: 'Retry Capture' }));
   await waitFor(() =>
-    expect(screen.queryByRole('button', { name: 'Retry Capture' })).not.toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Capture text' })).toHaveValue('')
   );
+  expect(screen.queryByRole('button', { name: 'Retry Capture' })).not.toBeInTheDocument();
   const posts = owner.requests.filter((request) => request.method === 'POST');
   expect(posts).toHaveLength(2);
   expect(posts[1]).toEqual(posts[0]);

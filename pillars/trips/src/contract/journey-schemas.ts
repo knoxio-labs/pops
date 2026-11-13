@@ -14,14 +14,29 @@ const LocalClock = z
   )
   .refine((value) => z.iso.time().safeParse(value.slice(11)).success, 'Invalid local clock');
 
-/** Independent endpoint source facts; an absent location, clock or zone stays unknown. */
-export const JourneyEndpointSchema = z.object({
+const EndpointFields = {
   placeId: Id.optional(),
   sourceLabel: z.string().optional(),
   sourceLinks: z.array(SourceLinkSchema).optional(),
   local: LocalClock.optional(),
   timeZone: SourceTimeZoneSchema.optional(),
-});
+};
+
+/** One explicit source precision; a calendar day never implies a clock, zone or instant. */
+export const JourneyEndpointSchema = z
+  .object({ ...EndpointFields, date: CalendarDateSchema.optional() })
+  .refine((value) => value.date === undefined || value.local === undefined, {
+    message: 'Supply a calendar day or a local datetime, not both',
+    path: ['date'],
+  });
+
+/** Omitted day preserves a previous day-only value on replacement; null clears it, while local explicitly selects datetime precision. */
+export const JourneyEndpointInputSchema = z
+  .object({ ...EndpointFields, date: CalendarDateSchema.nullable().optional() })
+  .refine((value) => value.date === undefined || value.date === null || value.local === undefined, {
+    message: 'Supply a calendar day or a local datetime, not both',
+    path: ['date'],
+  });
 
 /** Explicit user thresholds in physical minutes; missing thresholds have no default. */
 export const JourneyBuffersSchema = z.object({
@@ -85,8 +100,12 @@ export const JourneyLegSchema = z.object({
 
 /** Journey creation and patch input; omission retains fields, null clears nullable text. */
 export const JourneyInputSchema = z.object(JourneyFields);
-/** Leg creation and patch input; supplied endpoints replace complete endpoint values. */
-export const JourneyLegInputSchema = z.object(LegFields);
+/** Supplied endpoints replace old fields; omitted date preserves a day-only value, null clears it and local selects datetime precision. */
+export const JourneyLegInputSchema = z.object({
+  ...LegFields,
+  from: JourneyEndpointInputSchema.optional(),
+  to: JourneyEndpointInputSchema.optional(),
+});
 /** Complete ordered membership, containing every existing leg exactly once. */
 export const ReorderJourneyLegsBody = z.object({ legIds: z.array(Id) });
 /** A persisted journey source record. */
@@ -95,6 +114,8 @@ export type Journey = z.infer<typeof JourneySchema>;
 export type JourneyLeg = z.infer<typeof JourneyLegSchema>;
 /** Explicit source endpoint facts, without a derived instant. */
 export type JourneyEndpoint = z.infer<typeof JourneyEndpointSchema>;
+/** Endpoint write with an explicit day-only clear distinct from legacy omission. */
+export type JourneyEndpointInput = z.infer<typeof JourneyEndpointInputSchema>;
 /** Configured source thresholds, without implicit defaults. */
 export type JourneyBuffers = z.infer<typeof JourneyBuffersSchema>;
 /** Fields accepted by journey creation and patch operations. */

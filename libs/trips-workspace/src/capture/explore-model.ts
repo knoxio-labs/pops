@@ -24,25 +24,33 @@ export function projectExploreRows(
 ): ExploreRow[] {
   return source.memberships
     .filter((membership) => membership.removedAt === null)
-    .map((membership) => {
-      const { source: key } = membership;
-      if (key.kind === 'capture') return captureRow(source, places, membership, key.id);
-      if (key.kind === 'idea') return ideaRow(source, places, membership, key.id);
-      return eventRow({ source, places, visits, membership, id: key.id });
-    });
+    .map((membership) => ({
+      ...membershipFields(membership),
+      ...projectExploreSource(source, places, visits, membership.source),
+    }));
+}
+
+/** Resolve an exact source and its explicit location independently of collection membership. */
+export function projectExploreSource(
+  source: CaptureSource,
+  places: readonly Place[],
+  visits: readonly Visit[],
+  key: ExploreRow['source']
+): Omit<ExploreRow, 'membershipId' | 'membershipRevision'> {
+  if (key.kind === 'capture') return captureRow(source, places, key.id);
+  if (key.kind === 'idea') return ideaRow(source, places, key.id);
+  return eventRow({ source, places, visits, id: key.id });
 }
 
 function captureRow(
   source: CaptureSource,
   places: readonly Place[],
-  membership: CaptureSource['memberships'][number],
   id: number
-): ExploreRow {
+): Omit<ExploreRow, 'membershipId' | 'membershipRevision'> {
   const row = source.captures.find(
     (candidate) => candidate.id === id && candidate.removedAt === null
   );
   return {
-    ...membershipFields(membership),
     source: { kind: 'capture', id },
     label: row?.title ?? null,
     text: row?.originalText ?? null,
@@ -54,12 +62,10 @@ function captureRow(
 function ideaRow(
   source: CaptureSource,
   places: readonly Place[],
-  membership: CaptureSource['memberships'][number],
   id: number
-): ExploreRow {
+): Omit<ExploreRow, 'membershipId' | 'membershipRevision'> {
   const row = source.ideas.find((candidate) => candidate.id === id && candidate.removedAt === null);
   return {
-    ...membershipFields(membership),
     source: { kind: 'idea', id },
     label: row?.name ?? null,
     text: row?.notes ?? null,
@@ -72,21 +78,18 @@ function eventRow({
   source,
   places,
   visits,
-  membership,
   id,
 }: {
   source: CaptureSource;
   places: readonly Place[];
   visits: readonly Visit[];
-  membership: CaptureSource['memberships'][number];
   id: number;
-}): ExploreRow {
+}): Omit<ExploreRow, 'membershipId' | 'membershipRevision'> {
   const row = source.events.find((candidate) => candidate.id === id);
   const visitId = row?.visitId ?? null;
   const visit = visitId === null ? undefined : visits.find((candidate) => candidate.id === visitId);
   const location = eventLocation(row !== undefined, visitId, visit?.placeId ?? null, places);
   return {
-    ...membershipFields(membership),
     source: { kind: 'event', id },
     label: row?.name ?? null,
     text: row?.notes ?? null,

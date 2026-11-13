@@ -5,6 +5,8 @@ import type {
   PlacesListResponses,
   TripsGetResponses,
   TripsCreateData,
+  TripsCreateOperationData,
+  TripsCreateOperationResponses,
   VisitsListResponses,
 } from '../trips-api/types.gen';
 
@@ -12,6 +14,10 @@ import type {
 export type Trip = TripsGetResponses[200];
 /** Explicit trip metadata writes; omitted source links remain untouched. */
 export type TripInput = NonNullable<TripsCreateData['body']>;
+/** One durable creation command; retries preserve its UUID and exact explicit input. */
+export type TripCreateRequest = NonNullable<TripsCreateOperationData['body']>;
+/** Original creation receipt and current source are separate producer-owned facts. */
+export type TripCreateResult = TripsCreateOperationResponses[201];
 /** One ordered source visit, independent of trip planning text. */
 export type Visit = VisitsListResponses[200]['visits'][number];
 /** Reusable Trips-owned source place. */

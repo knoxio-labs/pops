@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import {
   ArrangementResponsibilityField,
   DecisionWorkspace,
+  CaptureMembershipContext,
   EventWorkspace,
   JourneyWorkspace,
   StayWorkspace,
@@ -30,6 +31,15 @@ export function TimelineSourceContext(
   return (
     <>
       <SourceContent {...props} />
+      {source.kind === 'event' && (
+        <CaptureMembershipContext
+          tripId={tripId}
+          client={client}
+          contacts={contacts}
+          source={source}
+        />
+      )}
+
       {(source.kind === 'visit' || source.kind === 'journey') && (
         <TimelineSourcePlacement identity={{ tripId, client }} source={source} />
       )}

@@ -74,11 +74,11 @@ function journeyEntries({
       source,
       title,
       boundary,
-      date: leg[side].local?.slice(0, 10),
+      date: leg[side].date ?? leg[side].local?.slice(0, 10),
       clock: leg[side].local?.slice(11),
       zone: leg[side].timeZone,
       instant,
-      ...(side === 'from'
+      ...(side === 'from' && leg.from.local !== undefined && leg.to.local !== undefined
         ? {
             endDate: leg.to.local?.slice(0, 10),
             endInstant: resolved.arrival,

@@ -145,7 +145,10 @@ describe('Journey persistence boundaries', () => {
     fireEvent.change(field, { target: { value: local } });
     fireEvent.blur(field);
     await waitFor(() => expect(writes(transport)).toHaveLength(1));
-    expect(writes(transport)[0]?.body).toEqual({ from, expectedRevision: 0 });
+    expect(writes(transport)[0]?.body).toEqual({
+      from: { ...from, date: null },
+      expectedRevision: 0,
+    });
     await waitFor(() => expect(screen.getByLabelText('Departure local time')).toHaveValue(local));
   });
   it('retains an invalid local draft after owner rejection without changing canonical source', async () => {
@@ -162,6 +165,30 @@ describe('Journey persistence boundaries', () => {
       cache.getQueryData(journeyKey({ tripId: 7, journeyId: 20, client: transport.client }))
     ).toEqual({ legRevision: 0, journey: sourceJourney(), legs: [sourceLeg()] });
     expect(screen.getByRole('button', { name: 'Undo' })).toBeDisabled();
+  });
+
+  it('retains a rejected partial day draft and retries the same precision without a clock', async () => {
+    const initial = sourceLeg({ from: {} });
+    const transport = journeyTransport({
+      source: { journey: sourceJourney(), legRevision: 0, legs: [initial] },
+      writes: [
+        { status: 400, body: sourceProblem('trips.day.invalid') },
+        { status: 400, body: sourceProblem('trips.day.invalid') },
+      ],
+    });
+    mount(transport);
+    const field = await screen.findByLabelText('Departure day');
+    fireEvent.change(field, { target: { value: '2028-02-' } });
+    fireEvent.blur(field);
+    expect(await screen.findByText('trips.day.invalid')).toBeVisible();
+    expect(field).toHaveValue('2028-02-');
+    expect(screen.getByLabelText('Departure local time')).toHaveValue('');
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    await waitFor(() => expect(writes(transport)).toHaveLength(2));
+    expect(writes(transport).map((request) => request.body)).toEqual([
+      { from: { date: '2028-02-' }, expectedRevision: 0 },
+      { from: { date: '2028-02-' }, expectedRevision: 0 },
+    ]);
   });
 
   it.each([false, true])(

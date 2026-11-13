@@ -4,10 +4,14 @@ The shell loads `dist/remote/trips.js` and `trips.css` from the Trips manifest. 
 
 The Documents route provides typed document associations and owner uploads. It owns no database and uses generated Trips and Tags clients at the shell's authenticated same-origin proxy paths.
 
-The selected Trip owns one Timeline at `:tripId`. People, Capture, Inbox and Explore
-open canonical contextual tools beneath the same shell QueryClient. Source rows open
+The selected Trip owns one Timeline at `:tripId`. Add opens People and Capture under
+the same shell QueryClient; there are no global People, Capture, Inbox or Explore buttons.
+Organisation, source-type and recorded-location filters apply inside the Timeline. Source rows open
 the existing canonical source editor in a sheet; nested source jumps replace only the
-selected source identity. Documents is the separate Trip list shortcut. The existing
+selected source identity. Removing a source from Explore changes only its exact revisioned
+collection membership through the retained Capture command history. Unavailable member
+references remain explicit and open the same contextual removal action. Unknown source
+identities are not silently filtered out. Documents is the separate Trip list shortcut. The existing
 `:tripId/arrangements` URL and `trips-arrangements` slot load this same Timeline.
 Source detail URLs remain available for existing links. The header metadata action
 opens the canonical settings form in the same sheet; it does not add a Trip destination.
@@ -61,7 +65,9 @@ the Trips app's source.
 
 Home groups use the first ordered visit's arrival and the last visit's departure, relative to the viewer's local calendar day. Missing, invalid, or contradictory outer dates remain in Other. Trip titles use trimmed custom name, then trimmed destination, then the translated Trip label. `when` is opaque source text and never supplies route dates.
 
-Creation is permanent: a successful POST selects the returned trip and offers no Undo. Failures and background refresh errors preserve the draft; explicit Cancel clears it. Settings save with PATCH, omit source links, and offer Undo of successful metadata edits using another PATCH. Blank optional associations and unchanged stored references do not require their catalogues to be available. Settings PATCH omits unchanged references; unavailable stored identities remain visible without claiming resolution. Explicit parent and tag selections must be valid source choices; the server remains authoritative for cycle and tag validation.
+Creation is permanent and uses `POST /trips/operations`, with no Undo or fallback to plain POST. Each submitted attempt retains its UUID and immutable explicit fields. Try again repeats that exact command. During unresolved recovery the form displays those submitted fields disabled; Close hides without forgetting the attempt. A later local draft remains separate and is not erased by that attempt's acknowledgement. Only the producer's explicit parent-invalid or tag-unknown rejection permits correcting the fields or cancelling that rejected attempt; other failures retain the command for recovery. If a definitely rejected attempt already has a newer draft, that draft remains visible and Create starts a new command; Retry is offered only when its submitted fields match the displayed draft. A matching HTTP 201 receipt verifies the original input, while its separate current Trip supplies cache admission and selection. Omitted defaults remain producer-owned and When stays verbatim.
+
+Creation state follows metadata's host QueryClient, actual Trips client and captured-origin boundary, independently of view closure or cache eviction. This is in-memory retention, not browser persistence or an authenticated-principal boundary. Mutable transport changes cannot retarget Retry. An accepted original-owner response remains retained after closure or connection changes; only an open view with active original-owner proof may cache, clear the matching submitted draft and select the current Trip. Settings save with PATCH, omit source links, and offer Undo of successful metadata edits using another PATCH. Blank optional associations and unchanged stored references do not require their catalogues to be available. Settings PATCH omits unchanged references; unavailable stored identities remain visible without claiming resolution. Explicit parent and tag selections must be valid source choices; the server remains authoritative for cycle and tag validation.
 
 Metadata state is retained per host QueryClient, actual Trips client, captured origin and trip, independently of view closure and query-cache eviction. Multiple views share the same draft, pending write and confirmed own inverse stack. A failed or uncertain PATCH retains its exact body for Retry even if the draft changes afterward. An already-dispatched matching acknowledgement settles its original session and cache even after navigation to another connection. Only a matching validated HTTP 200 establishes a saved edit and its Undo; another PATCH applies that confirmed inverse. Plain PATCH provides no server UUID deduplication or compare-and-swap protection against unseen concurrent writes. Guarded metadata reads use a distinct raw Trip key; retained source fallback does not claim a successful GET.
 

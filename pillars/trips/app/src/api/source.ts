@@ -1,18 +1,28 @@
 import { ApiError, unwrap } from '@pops/pillar-sdk/client';
+import { ErrorBodySchema } from '@pops/types';
 
 import { client as defaultTagsClient } from '../tags-api/client.gen';
 import { tagsList } from '../tags-api/sdk.gen';
 import { client as defaultTripClient } from '../trips-api/client.gen';
 import {
   placesList,
-  tripsCreate,
+  tripsCreateOperation,
   tripsGet,
   tripsList,
   tripsUpdate,
   visitsList,
 } from '../trips-api/sdk.gen';
 
-import type { ApiClients, Trip, TripInput, Visit, Place, Tag } from './types';
+import type {
+  ApiClients,
+  Trip,
+  TripInput,
+  TripCreateRequest,
+  TripCreateResult,
+  Visit,
+  Place,
+  Tag,
+} from './types';
 
 /** Read source trips without treating identity order as calendar order. */
 export async function loadTrips(clients: ApiClients = {}): Promise<Trip[]> {
@@ -25,9 +35,27 @@ export async function loadTrip(id: number, clients: ApiClients = {}): Promise<Tr
     throw new Error('Unexpected Trip read status');
   return unwrap(result);
 }
-/** Persist explicit creation fields, never a generated title or route dates. */
-export async function createTrip(body: TripInput, clients: ApiClients = {}): Promise<Trip> {
-  return unwrap(await tripsCreate({ client: clients.tripClient, body }));
+/** A validated producer rejection proves that this command did not create a Trip. */
+export class TripCreationRejection extends ApiError {}
+
+/** Submit the exact durable command once; unsupported capability never falls back to plain POST. */
+export async function createTripOperation(
+  body: TripCreateRequest,
+  clients: ApiClients = {}
+): Promise<TripCreateResult> {
+  const result = await tripsCreateOperation({ client: clients.tripClient, body });
+  const failure = ErrorBodySchema.safeParse(result.error);
+  if (
+    result.response?.status === 400 &&
+    failure.success &&
+    !failure.data.retryable &&
+    (failure.data.code === 'trips.trip.parent_invalid' ||
+      failure.data.code === 'trips.trip.tag_unknown')
+  )
+    throw new TripCreationRejection({ ...failure.data, kind: 'client', status: 400 });
+  const value = unwrap(result);
+  if (result.response?.status !== 201) throw new Error('Unexpected Trip creation status');
+  return value;
 }
 /** Change only supplied source metadata, preserving unrelated references. */
 export async function updateTrip(
