@@ -4,6 +4,7 @@ import { DEFAULT_PAIRING_CODE_TTL_MS } from '../../db/index.js';
 import {
   DEFAULT_PORT,
   DEFAULT_SQLITE_PATH,
+  resolveListenHost,
   resolvePairingCodeIssuanceLimit,
   resolvePairingCodeTtlMs,
   resolvePort,
@@ -14,6 +15,17 @@ import {
   shouldSelfRegister,
 } from '../boot-env.js';
 import { PAIRING_CODE_RATE_LIMIT } from '../rate-limit.js';
+
+describe('resolveListenHost', () => {
+  it('retains the wildcard default when BFM_HOST is absent or empty', () => {
+    expect(resolveListenHost({})).toBeUndefined();
+    expect(resolveListenHost({ BFM_HOST: '' })).toBeUndefined();
+  });
+
+  it.each(['127.0.0.1', '::1', 'localhost'])('preserves the explicit host %s', (host) => {
+    expect(resolveListenHost({ BFM_HOST: host })).toBe(host);
+  });
+});
 
 describe('resolvePort', () => {
   it('defaults to the pillar port when PORT is absent or empty', () => {

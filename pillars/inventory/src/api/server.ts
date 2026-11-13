@@ -13,6 +13,7 @@
  * `pillarHandle.stop()` so the heartbeat clears and the registry sees an
  * explicit deregister.
  */
+import { listenPillarServer } from '@pops/pillar-express';
 import {
   bootstrapPillar,
   shutdownPillar,
@@ -73,9 +74,8 @@ const app = createInventoryApiApp({
   documentUploads,
 });
 
-const server = app.listen(port, () => {
-  console.warn(`[inventory-api] Listening on port ${port}`);
-});
+const server = await listenPillarServer(app, port, process.env['INVENTORY_HOST']);
+console.warn(`[inventory-api] Listening on port ${port}`);
 
 // Off the boot path: it reads every legacy photo file, and nothing served
 // before it finishes depends on the hashes it adds.

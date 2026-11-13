@@ -104,6 +104,40 @@ export function pillarsReadingSecretFiles(root = repoRoot): { id: string; entry:
 
 const reading = pillarsReadingSecretFiles();
 
+function preflightPrecedesListener(source: string): boolean {
+  const preflight = source.indexOf(PREFLIGHT_CALL);
+  const listen = source.match(/\.listen\(|\blistenPillarServer\(/u)?.index ?? -1;
+  return preflight >= 0 && listen >= 0 && preflight < listen;
+}
+
+describe('the secret preflight startup-order guard', () => {
+  it.each(['app.listen(3000);', 'await listenPillarServer(app, 3000);'])(
+    'requires preflight before %s',
+    (listen) => {
+      expect(preflightPrecedesListener(`${PREFLIGHT_CALL}\n${listen}`)).toBe(true);
+      expect(preflightPrecedesListener(listen)).toBe(false);
+      expect(preflightPrecedesListener(`${listen}\n${PREFLIGHT_CALL}`)).toBe(false);
+    }
+  );
+
+  it('rejects an entry point with no listener', () => {
+    expect(preflightPrecedesListener(PREFLIGHT_CALL)).toBe(false);
+  });
+
+  it('checks the first listener when both forms exist', () => {
+    expect(
+      preflightPrecedesListener(
+        `app.listen(3000);\n${PREFLIGHT_CALL}\nawait listenPillarServer(app, 3001);`
+      )
+    ).toBe(false);
+    expect(
+      preflightPrecedesListener(
+        `await listenPillarServer(app, 3000);\n${PREFLIGHT_CALL}\napp.listen(3001);`
+      )
+    ).toBe(false);
+  });
+});
+
 describe('every pillar that reads a secret file proves at boot that it can', () => {
   it('finds pillars to check at all — an empty set would pass this file vacuously', () => {
     expect(reading.length).toBeGreaterThanOrEqual(5);
@@ -146,14 +180,6 @@ describe('every pillar that reads a secret file proves at boot that it can', () 
   });
 
   it.each(reading)('$id calls it before it listens', ({ entry }) => {
-    const source = readFileSync(entry, 'utf8');
-    const preflight = source.indexOf(PREFLIGHT_CALL);
-    // Everything that resolves a credential does so after this point, so the
-    // refusal has to come first. `.listen(` is the latest possible marker and
-    // the one every entry point has.
-    const listen = source.indexOf('.listen(');
-    expect(preflight).toBeGreaterThan(-1);
-    expect(listen).toBeGreaterThan(-1);
-    expect(preflight).toBeLessThan(listen);
+    expect(preflightPrecedesListener(readFileSync(entry, 'utf8'))).toBe(true);
   });
 });

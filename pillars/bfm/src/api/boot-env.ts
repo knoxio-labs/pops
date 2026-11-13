@@ -47,6 +47,12 @@ export function resolvePort(env: NodeJS.ProcessEnv = process.env): number {
   return parsed;
 }
 
+/** Returns the explicit BFM bind host; absent or empty retains Node's wildcard default. */
+export function resolveListenHost(env: NodeJS.ProcessEnv = process.env): string | undefined {
+  const host = env['BFM_HOST'];
+  return host === '' ? undefined : host;
+}
+
 /**
  * Whether to self-register with the `registry` pillar.
  *

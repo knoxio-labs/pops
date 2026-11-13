@@ -92,6 +92,7 @@ import {
   scanPairingArtifacts,
 } from './pairing-artifact-guard.mjs';
 import { createPairingHandoff } from './pairing-handoff.mjs';
+import { reserveTcpPort } from './port-reservation.mjs';
 import { createProcessRunner } from './process-runner.mjs';
 import { startPurchasesStub } from './purchases-stub.mjs';
 import { formatServeOnlyStatus, pairSimulatorForServeOnly } from './serve-only-pairing.mjs';
@@ -572,12 +573,13 @@ async function main() {
   };
 
   pairingLifecycle.phase = 'fixtures';
-  const port = await allocatePort();
+  const bfmPort = await reserveTcpPort(HOST);
+  const { port } = bfmPort;
   const baseURL = new URL(`http://${HOST}:${port}`);
   const buildVersion = `ios-e2e-${randomUUID()}`;
   const dataDir = mkdtempSync(join(tmpdir(), 'pops-ios-e2e-'));
   /** @type {Array<() => Promise<void>>} */
-  const teardown = [async () => rmSync(dataDir, { recursive: true, force: true })];
+  const teardown = [bfmPort.release, async () => rmSync(dataDir, { recursive: true, force: true })];
   let tornDown = false;
   let succeeded = false;
 
@@ -618,7 +620,9 @@ async function main() {
     // registry that advertises it, and the pillar after, because the pillar
     // verifies the BFM's key against that registry.
     await run('pnpm', ['--filter', '@pops/inventory...', 'build']);
-    const inventoryPort = await allocatePort();
+    const inventoryReservation = await reserveTcpPort(HOST);
+    teardown.unshift(inventoryReservation.release);
+    const { port: inventoryPort } = inventoryReservation;
     const inventoryBaseURL = new URL(`http://${HOST}:${inventoryPort}`);
     const inventory = await startInventoryGate({
       pillarBaseUrl: inventoryBaseURL.origin,
@@ -638,9 +642,11 @@ async function main() {
     teardown.unshift(upstream.close);
     process.stdout.write(`ios-e2e: registry + finance stub on ${upstream.url}\n`);
 
+    await inventoryReservation.release();
     const inventoryPillar = spawnInventoryPillar({
       repoRoot: REPO_ROOT,
       port: inventoryPort,
+      host: HOST,
       dataDir,
       buildVersion,
       selfBaseUrl: inventoryBaseURL.origin,
@@ -660,12 +666,14 @@ async function main() {
     pairingLifecycle.phase = 'bfm-startup';
     await run('pnpm', ['--filter', '@pops/bfm...', 'build']);
 
+    await bfmPort.release();
     const bfm = spawn('node', [join(REPO_ROOT, 'pillars/bfm/dist/api/server.js')], {
       cwd: REPO_ROOT,
       stdio: 'inherit',
       env: {
         ...process.env,
         PORT: String(port),
+        BFM_HOST: HOST,
         BUILD_VERSION: buildVersion,
         BFM_SQLITE_PATH: join(dataDir, 'bfm.db'),
         BFM_SELF_BASE_URL: baseURL.origin,

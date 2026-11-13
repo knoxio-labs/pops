@@ -104,8 +104,9 @@ BFM build supporting the new protocol before Inventory activates that minimum.
 
 When `POPS_REGISTRY_ENABLED=true` it self-registers with the `registry` pillar
 on boot via `bootstrapPillar` from `@pops/pillar-sdk/bootstrap`. Registration
-runs **after** `app.listen` and never gates boot: an unavailable registry
-delays bfm joining the fleet, it does not delay bfm serving traffic.
+runs after the HTTP listener binds. A bind error fails startup before credential
+pruning or registration begins. Registration never gates serving traffic: an
+unavailable registry delays bfm joining the fleet, it does not delay bfm serving traffic.
 `src/api/__tests__/registration.test.ts` is the proof — it boots against a
 registry that refuses every call and asserts `/health` still answers.
 
@@ -1033,6 +1034,7 @@ pnpm --filter @pops/bfm build
 | Var                                      | Default                    | Notes                                                                                       |
 | ---------------------------------------- | -------------------------- | ------------------------------------------------------------------------------------------- |
 | `PORT`                                   | `3014`                     | HTTP listen port.                                                                           |
+| `BFM_HOST`                               | Node wildcard default      | Explicit HTTP bind host. The iOS harness sets `127.0.0.1` to match its loopback URLs.       |
 | `BFM_SELF_BASE_URL`                      | `http://localhost:${PORT}` | Advertised to the registry as this pillar's `baseUrl`.                                      |
 | `BFM_PUBLIC_BASE_URL`                    | `BFM_SELF_BASE_URL`        | The origin the **phone** dials. Baked into the pairing QR — see below.                      |
 | `BFM_SQLITE_PATH`                        | `./data/bfm.db`            | Where `bfm.db` lives. Falls back to `dirname(SQLITE_PATH)`.                                 |

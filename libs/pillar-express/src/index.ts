@@ -1,4 +1,5 @@
 export { createServiceAccountScopeGate } from './service-account-scope-gate.js';
+export { listenPillarServer } from './server-listener.js';
 export { ACCESS_JWT_HEADER, readPrincipal } from './request-principal.js';
 export { DELEGATED_SUBJECT_HEADER } from './delegated-subject.js';
 export type { AccessIdentityOptions, RequestPrincipal } from './request-principal.js';
