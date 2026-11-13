@@ -133,7 +133,11 @@ export const MOBILE_CAPABILITIES = [
   /** Decide proposed-write batches and allow tools for the conversation. */
   'ego.actions',
   'trips.read',
+  'trips.capture.write',
+  'trips.write',
   'documents.read',
+  /** Raw Documents ingestion, explicitly granted and independent of reads. */
+  'documents.upload',
 ] as const;
 
 export type MobileCapability = (typeof MOBILE_CAPABILITIES)[number];
@@ -261,8 +265,22 @@ export const MOBILE_CAPABILITY_SCOPES: Readonly<Record<MobileCapability, readonl
   'ego.chat': ['cerebrum.ego'],
   'ego.actions': ['cerebrum.ego'],
   /** Exact published read operations; no Trips mutation authority is granted. */
-  'documents.read': ['documents.paperless.get', 'documents.paperless.download'],
+  'documents.read': [
+    'documents.paperless.get',
+    'documents.paperless.download',
+    'documents.paperless.status',
+    'documents.paperless.task',
+  ],
+  'trips.write': ['trips.trips.create', 'trips.trips.update'],
+  'trips.capture.write': [
+    'trips.captures.create',
+    'trips.captures.update',
+    'trips.captures.attach',
+    'trips.captures.undo',
+  ],
+  'documents.upload': ['documents.paperless.status', 'documents.write.upload'],
   'trips.read': [
+    'trips.captureWorkspace.get',
     'trips.trips.list',
     'trips.trips.get',
     'trips.places.list',
@@ -277,15 +295,15 @@ export const MOBILE_CAPABILITY_SCOPES: Readonly<Record<MobileCapability, readonl
 };
 
 /**
- * What pairing grants a new handset.
- *
- * The whole vocabulary today, and that is a deliberate starting point rather
- * than an assumption baked into the model: there is exactly one handset, it is
- * the operator's own, and granting it less than the app needs would be
- * ceremony. What the model buys is that narrowing a grant is now expressible
- * at all — see ADR-048's consequences for the operator surface that will do it.
+ * Operator pairing defaults retain the existing grant. Trips writes and
+ * Documents uploads require explicit per-device selection.
  */
-export const DEFAULT_DEVICE_CAPABILITIES: readonly MobileCapability[] = MOBILE_CAPABILITIES;
+export const DEFAULT_DEVICE_CAPABILITIES: readonly MobileCapability[] = MOBILE_CAPABILITIES.filter(
+  (capability) =>
+    capability !== 'trips.capture.write' &&
+    capability !== 'trips.write' &&
+    capability !== 'documents.upload'
+);
 
 /**
  * What pairing grants a guest's handset, and all it will ever hold.

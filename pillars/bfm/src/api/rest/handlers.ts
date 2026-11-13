@@ -42,6 +42,10 @@ import {
   makeMobilePurchasesHandlers,
   type MobilePurchasesHandlerDeps,
 } from './mobile-purchases-handlers.js';
+import {
+  makeMobileCaptureHandlers,
+  type MobileCaptureHandlerDeps,
+} from './mobile-trip-capture-handlers.js';
 import { makeMobileTripsHandlers, type MobileTripsHandlerDeps } from './mobile-trips-handlers.js';
 import { makeOperatorHandlers } from './operator-handlers.js';
 
@@ -62,6 +66,7 @@ export interface BfmRestHandlerDeps
     MobileBarcodeHandlerDeps,
     MobileEgoHandlerDeps,
     MobileTripsHandlerDeps,
+    MobileCaptureHandlerDeps,
     MobileDocumentsHandlerDeps,
     MobileFinanceHandlerDeps,
     MobileInventoryHandlerDeps,
@@ -176,6 +181,7 @@ export function makeBfmRestHandlers(
     mobileContacts: makeMobileContactsHandlers(deps),
     mobileEgo: makeMobileEgoHandlers(deps),
     mobileTrips: makeMobileTripsHandlers(deps),
+    mobileTripCaptures: makeMobileCaptureHandlers(deps),
     mobileDocuments: makeMobileDocumentsHandlers(deps),
     mobileBarcode: makeMobileBarcodeHandlers(deps),
     mobileFinance: makeMobileFinanceHandlers(deps),

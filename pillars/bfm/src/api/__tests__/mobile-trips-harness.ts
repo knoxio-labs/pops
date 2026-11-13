@@ -18,6 +18,10 @@ import type { TestApp } from './harness.js';
 /** Typed source reader for route tests; error overrides never bypass the real device perimeter. */
 export function mobileTripsReader(overrides: Partial<MobileTripsClient> = {}): MobileTripsClient {
   return {
+    createTrip:
+      overrides.createTrip ?? (() => Promise.resolve({ kind: 'ok', value: tripsFixture().trip })),
+    updateTrip:
+      overrides.updateTrip ?? (() => Promise.resolve({ kind: 'ok', value: tripsFixture().trip })),
     listTrips:
       overrides.listTrips ?? (() => Promise.resolve({ kind: 'ok', value: [tripsFixture().trip] })),
     getTrip: overrides.getTrip ?? (() => Promise.resolve({ kind: 'ok', value: tripsFixture() })),

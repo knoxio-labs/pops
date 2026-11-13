@@ -56,6 +56,21 @@ Only the explicit `bfm.auth.device_revoked` body destroys credentials. A rejecte
 
 Only `/mobile/*` gets a token, by allowlist. `POST /devices/refresh` answers `401` and `403` like any other route, so a middleware that acted on those statuses everywhere could attempt a refresh from inside a refresh — the allowlist makes that unreachable rather than merely unlikely.
 
+## Paired-client ownership
+
+The app creates an `AuthenticatingMiddleware` bound to each `PairedDevice` client’s
+base URL and credential revision. A retained old client cannot attach replacement
+pairing credentials to its original host or use them for a 401 retry. Ordinary
+token rotation keeps the pairing revision, so legitimate refresh still works.
+The refresher rejects wrong-revision fast-path and joined-rotation results before
+returning them to a bound caller, and checks the captured revision before spending
+a stored grant. Existing conditional credential saves/revocations protect a newer
+pairing from a delayed original response. An already-dispatched original request
+can still settle; this does not claim atomic cancellation of network traffic.
+The legacy unbound initializer remains available to existing callers.
+
+Documents-original raw reads use `PairedDeviceStreamAuthorizer` with the same captured device and shared refresher. It checks pairing metadata and revision before selecting credentials or spending a refresh grant. The raw transport also requires the expected origin/revision before either send, so a missing bound credential does not fall back to an unauthenticated request. Already-dispatched responses retain their original revision for conditional revocation.
+
 ## The signed message
 
 The refresh request proves possession of the Enclave key by signing bytes the BFM rebuilds and verifies:

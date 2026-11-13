@@ -86,7 +86,15 @@ adoption ticket.
 Original Documents metadata and bytes separately require `documents.paperless.get`
 and `documents.paperless.download`; no Inventory-link scopes authorize them.
 
-Trips reads require only `trips.trips.list`, `trips.trips.get`,
+Trip metadata creation/patches require only `trips.trips.create` and
+`trips.trips.update`; mobile `trips.write` remains an explicit device choice.
+
+Capture workspace reads also require `trips.captureWorkspace.get`. Capture writes
+require only `trips.captures.create`, `trips.captures.update`,
+`trips.captures.attach` and `trips.captures.undo`, matching their independent mobile capability.
+The producer owns operation UUID replay and revisions.
+
+Trips source detail reads require only `trips.trips.list`, `trips.trips.get`,
 `trips.places.list`, `trips.visits.list`, `trips.journeys.list`,
 `trips.journeyLegs.list`, `trips.journeyGroups.list`, `trips.stays.list` and
 `trips.events.list` and `trips.documentAssociations.list`.
@@ -110,3 +118,5 @@ there, not copied here.
 The one thing `env.ts` does not borrow is the variable name: overrides come
 from `POPS_INTERNAL_BASE_URLS`, not `POPS_PILLARS`. Its header says why, and
 the reason is worth reading before anyone "simplifies" it back.
+
+Direct Documents ingestion adds only `documents.paperless.status`, `documents.paperless.task`, and `documents.write.upload`. Mobile `documents.upload` is independent from `documents.read` and is not part of default or guest pairing grants. Its internal policy read does not require a handset read grant; task tracking does. Scope declarations do not mutate live credentials.

@@ -19,6 +19,7 @@ internal final class TripsModel {
         }
     }
     internal var source: TripSource?
+    internal var capture: TripCaptureDraft?
     @ObservationIgnored internal private(set) var navigationTask: Task<Void, Never>?
     private let repository: any TripsReading
     private var request = UUID()

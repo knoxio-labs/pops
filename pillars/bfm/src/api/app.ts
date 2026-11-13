@@ -64,6 +64,10 @@ import {
   makeMobileDocumentsBytesRouter,
   type MobileDocumentsBytesHandlerDeps,
 } from './rest/mobile-document-bytes.js';
+import {
+  makeMobileDocumentUploadRouter,
+  type MobileDocumentUploadDeps,
+} from './rest/mobile-document-upload.js';
 import { makeMobileEgoStreamRouter } from './rest/mobile-ego-stream.js';
 import {
   makeMobileInventoryDocumentBytesRouter,
@@ -101,7 +105,11 @@ const openapiDocument: unknown = JSON.parse(
 export { CHALLENGE_PATH, MOBILE_PATH_PREFIX, PAIRING_PATH, REFRESH_PATH } from './paths.js';
 
 export interface BfmApiDeps
-  extends BfmRestHandlerDeps, MobileInventoryDocumentBytesDeps, MobileDocumentsBytesHandlerDeps {
+  extends
+    BfmRestHandlerDeps,
+    MobileInventoryDocumentBytesDeps,
+    MobileDocumentsBytesHandlerDeps,
+    MobileDocumentUploadDeps {
   /**
    * Overrides for the perimeter's request budget. Optional because *whether*
    * the limiter runs is not a choice — it is mounted unconditionally below —
@@ -217,6 +225,7 @@ export function createBfmApiApp(deps: BfmApiDeps, options: CreateBfmApiAppOption
   // unread, and a parser matching its declared type would consume it first.
   app.use(makeMobileInventoryDocumentBytesRouter(deps));
   app.use(makeMobileDocumentsBytesRouter(deps));
+  app.use(makeMobileDocumentUploadRouter(deps));
 
   // The upload route's own ceiling, mounted ahead of the default parser so it
   // is the one that runs there — body-parser marks a request it has read, and

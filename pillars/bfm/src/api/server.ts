@@ -70,6 +70,7 @@ import {
 } from './cron/prune-credentials.js';
 import { createMobileDocumentsBytesClient } from './documents/bytes-client.js';
 import { createMobileDocumentsClient } from './documents/client.js';
+import { createMobileDocumentsUploadClient } from './documents/upload-client.js';
 import { createMobileEgoClient } from './ego/client.js';
 import { createEgoStreamClient } from './ego/stream-client.js';
 import { createMobileFinanceClient } from './finance/client.js';
@@ -84,6 +85,7 @@ import { createPillarGateway } from './pillars/gateway.js';
 import { configureBfmServerSdk } from './pillars/sdk-config.js';
 import { createMobilePurchasesClient } from './purchases/client.js';
 import { createRateLimiter, PAIRING_CODE_RATE_WINDOW_MS } from './rate-limit.js';
+import { createMobileCaptureClient } from './trips/capture.js';
 import { createMobileTripsClient } from './trips/client.js';
 
 // Before the port, the database, or anything that resolves a credential.
@@ -180,8 +182,10 @@ const app = createBfmApiApp(
     barcode,
     ego,
     trips,
+    captures: createMobileCaptureClient(gateway),
     documents,
     documentBytes,
+    documentUploads: createMobileDocumentsUploadClient(),
     egoStream,
     barcodeLogger: {
       info: (message, context) => {

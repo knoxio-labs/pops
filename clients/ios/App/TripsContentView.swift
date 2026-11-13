@@ -40,7 +40,9 @@ internal struct TripsContentView: View {
         if case .paired(let device) = composition.session.state {
             TripsRootView(
                 repository: composition.tripsRepository(for: device),
-                documents: composition.documentsRepository(for: device)
+                documents: composition.documentsRepository(for: device),
+                captureWriter: composition.tripCaptureRepository(for: device),
+                captureStore: composition.tripCaptureDraftStore(for: device)
             )
             .id(device)
         } else {

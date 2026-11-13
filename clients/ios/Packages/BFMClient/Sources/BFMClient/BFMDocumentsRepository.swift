@@ -8,18 +8,26 @@ public struct BFMDocumentsRepository: DocumentsReading {
     private let files: BFMDocumentsFileReader
 
     /// Uses the paired origin and existing credential refresher for streamed original-file reads.
-    public init(client: BFMHTTPClient, baseURL: URL, authorizer: any BFMStreamAuthorizer) {
+    /// Retained paired clients supply both expectedDevice and an owner-bound authorizer; nil preserves
+    /// legacy unbound behavior.
+    public init(
+        client: BFMHTTPClient, baseURL: URL, authorizer: any BFMStreamAuthorizer,
+        expectedDevice: PairedDevice? = nil
+    ) {
         self.init(
             client: client, baseURL: baseURL, authorizer: authorizer,
-            session: client.urlSession ?? URLSession(configuration: .ephemeral))
+            session: client.urlSession ?? URLSession(configuration: .ephemeral),
+            expectedDevice: expectedDevice)
     }
 
     internal init(
         client: BFMHTTPClient, baseURL: URL, authorizer: any BFMStreamAuthorizer,
-        session: any BFMRawHTTPSession
+        session: any BFMRawHTTPSession, expectedDevice: PairedDevice? = nil
     ) {
         self.client = client
-        files = BFMDocumentsFileReader(baseURL: baseURL, authorizer: authorizer, session: session)
+        files = BFMDocumentsFileReader(
+            baseURL: baseURL, authorizer: authorizer, session: session,
+            expectedDevice: expectedDevice)
     }
 
     /// Returns nil only for the owner's 404; configuration, grant and contract failures remain errors.

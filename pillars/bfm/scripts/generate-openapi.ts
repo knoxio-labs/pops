@@ -28,5 +28,5 @@ writePillarOpenApi({
     'Authored as a ts-rest contract (src/contract/rest.ts); ' +
     'consumed by the mobile client and by the pillar SDK to build its ' +
     'operationId route map.',
-  hoistRecursiveDefinitions: false,
+  hoistRecursiveDefinitions: true,
 });

@@ -510,7 +510,7 @@ a handset — a cursor of the old offset shape simply fails to decode.
 
 ### Trips source snapshots
 
-`trips.read` gates both Trips routes. Operator devices tracking the default
+`trips.read` gates the Trips list, detail and atomic Capture workspace reads. Operator devices tracking the default
 grant receive it through the existing pairing/refresh capability resolution;
 explicit grants and guest grants remain unchanged. Bootstrap advertises the
 `trips` feature with the Trips pillar's actual reachability.
@@ -544,6 +544,48 @@ Every required collection must succeed. Missing referenced identities,
 duplicate IDs or wrong trip/journey ownership produce a contract mismatch;
 unavailable sources never become empty successful arrays. The exact upstream
 service-account grants are listed in [the federation client documentation](src/api/pillars/README.md).
+
+### Trips metadata writes
+
+`trips.write` independently permits canonical Trip creation and metadata patches,
+with exact producer grants `trips.trips.create` and `trips.trips.update`. It is
+excluded from operator defaults, guest grants and explicit read-only grants;
+select it explicitly for the intended device. Creation is permanent and has no
+Undo. When stays opaque text; route dates never come from it. Empty input and
+nullable source facts follow the producer's existing semantics.
+
+The plain BFM create relay uses the producer's non-idempotent create route. It dispatches
+once and does not automatically replay an uncertain POST or correlate a result
+by name, When or dates. A phone must retain its unknown draft, allow explicit
+inspection/selection of existing Trips, and warn before a separate new creation.
+
+### Trips capture commands
+
+`trips.capture.write` independently gates canonical capture create, presentation
+update, attachment append and explicit Undo. It grants only `trips.captures.create`,
+`trips.captures.update`, `trips.captures.attach` and `trips.captures.undo`; explicit read-only and guest
+grants are not widened. This new write capability is excluded from operator
+defaults too: enable it explicitly for the intended device in Devices.
+The BFM forwards the caller's operation UUID unchanged.
+The Trips producer owns replay, revision conflicts and Undo receipts; BFM has
+no capture database, automatic retry or second deduplication key.
+
+`POST /mobile/trips/:tripId/captures/attach` forwards the original UUID, capture ID,
+expected revision and one Documents task/original reference. Accepted tasks remain
+tasks; only actual Documents results establish a completed original. Filenames,
+local files and Inventory links are not attachment identities. BFM does not add
+a Documents read or upload grant to this Trips operation or perform an extra
+owner lookup. A retry retains the exact original envelope; the producer replays
+its durable receipt without appending again. Capture Undo removes only the own
+attachment change, never the Documents original.
+
+The workspace retains removed source identities. Operation results distinguish
+the immutable original receipt from current affected records and replay/Undo
+state. Original text is verbatim, and update cannot replace originals. Attachments
+must already be accepted Documents task or original identities; local file
+metadata is never treated as an upload. Classification alone does not organise
+an Idea or booking. These commands do not remove sources or expose a generic
+operator mutation route. Normal mobile JSON request bounds apply.
 
 ### Documents originals
 
@@ -782,7 +824,7 @@ and send it in that header, against the registry's admin surface reachable
 externally through the shell proxy:
 
 ```bash
-curl -sS -X POST https://pops.local/registry-api/service-accounts -H 'Content-Type: application/json' -H "cf-access-jwt-assertion: $ACCESS_JWT" -d '{"name":"bfm","scopes":["finance.transactions","finance.transactionHistory","finance.transactionAttachments","finance.accounts","finance.checkpoints","finance.delegatedSubject","purchases.purchase","purchases.search","purchases.receipt","inventory.sync","inventory.types.catalogue","inventory.types.read","inventory.codes","inventory.media","inventory.documents","inventory.paperless.status","inventory.items.getParts","inventory.items.addPart","inventory.items.removePart","barcode.lookup","cerebrum.ego","documents.paperless.get","documents.paperless.download","trips.trips.list","trips.trips.get","trips.places.list","trips.visits.list","trips.journeys.list","trips.journeyLegs.list","trips.journeyGroups.list","trips.stays.list","trips.events.list","trips.documentAssociations.list"]}'
+curl -sS -X POST https://pops.local/registry-api/service-accounts -H 'Content-Type: application/json' -H "cf-access-jwt-assertion: $ACCESS_JWT" -d '{"name":"bfm","scopes":["finance.transactions","finance.transactionHistory","finance.transactionAttachments","finance.accounts","finance.checkpoints","finance.delegatedSubject","purchases.purchase","purchases.search","purchases.receipt","inventory.sync","inventory.types.catalogue","inventory.types.read","inventory.codes","inventory.media","inventory.documents","inventory.paperless.status","inventory.items.getParts","inventory.items.addPart","inventory.items.removePart","barcode.lookup","cerebrum.ego","documents.paperless.get","documents.paperless.download","documents.paperless.status","documents.paperless.task","documents.write.upload","trips.trips.create","trips.trips.update","trips.captureWorkspace.get","trips.captures.create","trips.captures.update","trips.captures.attach","trips.captures.undo","trips.trips.list","trips.trips.get","trips.places.list","trips.visits.list","trips.journeys.list","trips.journeyLegs.list","trips.journeyGroups.list","trips.stays.list","trips.events.list","trips.documentAssociations.list"]}'
 ```
 
 Two deployment shapes let a bare `curl` through, which is why this can work on
@@ -1067,3 +1109,13 @@ registry, not `/health`, when correlating a deployed build.
 
 - [ADR-035](../../docs/architecture/adr-035-pillar-redefinition-and-implicit-kinds.md) — the pillar kinds, and what registering with `registry` means
 - [ADR-036](../../docs/architecture/adr-036-pillar-id-tool-name-conventions.md) — the `bfm` pillar id convention
+
+### Direct Documents ingestion
+
+`GET /mobile/documents/status` returns live Documents-owned configured/available and MIME/byte upload policy. `GET /mobile/documents/tasks/:taskId` retains the owner task states and original ID. Both require `documents.read`; a genuine unknown task is 404, while unavailable/unconfigured sources remain errors. No internal Paperless URL or document count is exposed.
+
+Raw `POST /mobile/documents?fileName=...&title=...` takes bytes with their Content-Type, after the mobile perimeter and before body parsing. It requires the separately granted `documents.upload`, excluded from operator defaults and guest grants. This does not imply `documents.read`. BFM performs its own live policy read under the upload capability: an upload-only device does not need a successful client status request. BFM's service account needs `documents.paperless.status`, `documents.paperless.task` and `documents.write.upload` in addition to existing original-read scopes; declaring scopes does not provision credentials or change device grants.
+
+A validated owner 202 returns only `{taskId}`. Task tracking separately needs read authority; if it is unavailable, retain the accepted task without claiming a completed original. Only actual done/duplicate task facts with a document ID establish that identity. Filename/title are never a correlation key, and no Inventory item or link participates.
+
+The upload relay counts actual bytes against the owner policy, streams one POST without following redirects, and never retries it. `bfm.documents.upload_outcome_unknown` is non-retryable: a lost response, redirect, malformed acceptance or unexpected answer after dispatch may hide an accepted upload. An owner 401/403 remains an unknown non-retryable upload, with only finite upstream status/cause diagnostics; it never becomes a device 401 that could trigger refresh and replay. Neither another POST nor an archive search proves the outcome. BFM retains no upload intent and offers no restart recovery; authoritative lost-receipt recovery remains POPS-6266. Native callers retain their exact accepted task or ambiguous attempt.
