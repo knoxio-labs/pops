@@ -87,10 +87,10 @@ name: Inventory's search behaviour under the Inventory scope matches the shipped
 - tapOn: 'Name'
 - inputText: ${output.inventory.run} Garage
 - assertVisible: ${output.inventory.run} Garage
+- assertVisible: 'Create'
 - tapOn: 'Create'
 - extendedWaitUntil:
-    notVisible:
-      id: 'New place'
+    notVisible: 'Create'
     timeout: 60000
 - assertVisible: ${output.inventory.run} Garage, Place
 
