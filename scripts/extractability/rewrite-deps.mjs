@@ -11,8 +11,8 @@
  *     or external;
  *   - a root-owned tool used by the unit is added at the version declared by
  *     the root package manifest;
- *   - root dependency patches and their exact relative paths are carried into
- *     the unit-local workspace before installation.
+ *   - dependency patch projection is deferred until the isolated graph has
+ *     resolved through the pinned package manager.
  *
  * The unit's source and exports stay unchanged. If its declared surface and
  * the sandbox's listed providers are incomplete, the isolated install/build
@@ -20,13 +20,15 @@
  *
  * Usage: node scripts/extractability/rewrite-deps.mjs <copied-package.json> <deps-manifest.json>
  */
-import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
-import { dirname, isAbsolute, join, normalize, relative, resolve } from 'node:path';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 
 import { sandboxToolDependencies } from './sandbox-tools.mjs';
+
+export { copyRootPatchFiles, rootPatchedDependencies } from './dependency-patches.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
@@ -72,78 +74,6 @@ export function rootAllowBuilds(
     );
   }
   return /** @type {Record<string, unknown>} */ (allowBuilds);
-}
-
-/**
- * Read the authoritative dependency-patch map without discarding malformed policy.
- * Patch files must remain relative to the workspace so an extracted install can carry them.
- * @param {string} [source] The root workspace YAML.
- * @returns {Record<string, string> | null}
- */
-export function rootPatchedDependencies(
-  source = readFileSync(join(repoRoot, 'pnpm-workspace.yaml'), 'utf8')
-) {
-  const doc = parseYaml(source);
-  if (typeof doc !== 'object' || doc === null || Array.isArray(doc)) {
-    throw new Error('pnpm-workspace.yaml does not parse to a mapping');
-  }
-  if (!('patchedDependencies' in doc)) return null;
-  const patches = doc.patchedDependencies;
-  if (typeof patches !== 'object' || patches === null || Array.isArray(patches)) {
-    throw new Error('patchedDependencies must be a mapping');
-  }
-  /** @type {Record<string, string>} */
-  const result = {};
-  for (const [name, path] of Object.entries(patches)) {
-    if (
-      name === '' ||
-      typeof path !== 'string' ||
-      path === '' ||
-      isAbsolute(path) ||
-      normalize(path) === '.' ||
-      normalize(path) === '..' ||
-      normalize(path).startsWith('../')
-    ) {
-      throw new Error('patchedDependencies must name workspace-contained patch files');
-    }
-    result[name] = path;
-  }
-  return result;
-}
-
-/**
- * Stage every declared patch at its exact workspace-relative path before isolated install.
- * All sources are read first; missing or escaping source files cannot produce a partial copy.
- * Existing destination files are never overwritten.
- * @param {string} destination The sandbox's unit-local workspace root.
- * @param {Record<string, string> | null} patches The authoritative root mapping.
- * @param {string} [sourceRoot] The owning workspace root.
- */
-export function copyRootPatchFiles(destination, patches, sourceRoot = repoRoot) {
-  const source = realpathSync(sourceRoot);
-  const files = [...new Set(Object.values(patches ?? {}))].map((path) => {
-    const file = realpathSync(resolve(source, path));
-    const sourceRelative = relative(source, file);
-    if (sourceRelative === '..' || sourceRelative.startsWith('../') || isAbsolute(sourceRelative)) {
-      throw new Error('Dependency patch escapes the owning workspace');
-    }
-    return { path, bytes: readFileSync(file) };
-  });
-  for (const { path, bytes } of files) {
-    const target = resolve(destination, path);
-    const targetRelative = relative(resolve(destination), target);
-    if (targetRelative === '..' || targetRelative.startsWith('../') || isAbsolute(targetRelative)) {
-      throw new Error('Dependency patch escapes the sandbox workspace');
-    }
-    let existingParent = dirname(target);
-    while (!existsSync(existingParent)) existingParent = dirname(existingParent);
-    const parentRelative = relative(realpathSync(destination), realpathSync(existingParent));
-    if (parentRelative === '..' || parentRelative.startsWith('../') || isAbsolute(parentRelative)) {
-      throw new Error('Dependency patch destination escapes the sandbox workspace');
-    }
-    mkdirSync(dirname(target), { recursive: true });
-    writeFileSync(target, bytes, { flag: 'wx' });
-  }
 }
 
 /**
@@ -253,14 +183,10 @@ function main(argv) {
   // sandbox its own workspace root, which is what replaces the old
   // `--ignore-workspace` flag — that flag would now ignore this very file.
   const allowBuilds = rootAllowBuilds();
-  const patches = rootPatchedDependencies();
-  copyRootPatchFiles(dirname(pkgPath), patches);
-  if (Object.keys(manifest).length > 0 || allowBuilds !== null || patches !== null) {
-    writeFileSync(
-      pkgPath.replace(/package\.json$/, 'pnpm-workspace.yaml'),
-      sandboxWorkspaceYaml(manifest, allowBuilds, patches)
-    );
-  }
+  writeFileSync(
+    pkgPath.replace(/package\.json$/, 'pnpm-workspace.yaml'),
+    sandboxWorkspaceYaml(manifest, allowBuilds)
+  );
 
   writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`);
   process.stdout.write(
