@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "sync:contracts": "cp ../trips/openapi/trips.openapi.json contracts/trips.openapi.json",
+    "sync:contracts": "cp ../trips/openapi/trips.openapi.json contracts/trips.openapi.json && cp ../contacts/openapi/contacts.openapi.json contracts/contacts.openapi.json",
     "dev": "tsx watch --clear-screen=false src/index.ts",
     "build": "tsc -p tsconfig.build.json",
     "start": "node dist/index.js",

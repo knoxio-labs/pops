@@ -5,6 +5,7 @@ const { allTools } = await import('./index.js');
 const byName = new Map(allTools.map((tool) => [tool.name, tool]));
 
 const expectedWrites = [
+  'contacts.entities.create',
   'bfm.devicePairing.issueCode',
   'inventory.catalogue.createDraft',
   'inventory.catalogue.patchDraft',
