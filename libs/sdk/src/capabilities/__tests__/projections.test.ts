@@ -211,6 +211,7 @@ describe('KnownPillarId', () => {
         'design',
         'tags',
         'trips',
+        'documents',
       ]
     >();
   });

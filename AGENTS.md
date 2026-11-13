@@ -105,30 +105,30 @@ POPS (Personal Operations System) is a self-hosted personal operations platform 
 
 ### Pillars and ports
 
-| Pillar         | Port | Owns                                                        | Notes                                              |
-| -------------- | ---- | ----------------------------------------------------------- | -------------------------------------------------- |
-| `registry`     | 3001 | registry / settings / users / service-accounts / features   | data pillar; formerly `core`                       |
-| `inventory`    | 3002 | items, locations, warranties, insurance                     | data pillar                                        |
-| `media`        | 3003 | movies, TV, watchlist, watch history                        | data pillar; Plex/TMDB/TVDB                        |
-| `finance`      | 3004 | transactions, budgets, wishlists, entities, CSV import      | data pillar                                        |
-| `food`         | 3005 | food domain                                                 | data pillar; runs a worker                         |
-| `lists`        | 3006 | lists                                                       | data pillar                                        |
-| `cerebrum`     | 3007 | memory / retrieval / ego                                    | data pillar; runs a worker                         |
-| `ai`           | 3008 | AI-ops: providers, usage/telemetry, ingest                  |                                                    |
-| `orchestrator` | 3009 | federated search + AI-tool registry (`GET /ai/tools`)       | stateless, owns **no DB**                          |
-| `contacts`     | 3010 | contacts                                                    | **Rust** (axum + OpenAPI), `src/entities/`         |
-| `mcp`          | 3011 | MCP gateway                                                 | **binds :3011 in code** (`MCP_PORT ?? 3011`)       |
-| `documents`    | 3012 | paperless-ngx bridge (status/search proxy, thumbnails)      | bridge pillar (ADR-035), owns **no DB**            |
-| `purchases`    | 3013 | purchase documents, line items, transaction links           | data pillar; ADR-042                               |
-| `bfm`          | 3014 | devices, pairing codes, refresh tokens (Backend-for-Mobile) | data pillar; the only backend the iPhone app dials |
-| `shell`        | 5568 | React SPA host                                              | UI pillar; Vite + nginx, **not** the default 5173  |
-| `design`       | 5569 | design playground: screens, experiments, variants, states   | UI pillar; Vite + nginx, served at `/design/`      |
-| `design-api`   | 3015 | comment threads left on the playground                      | the design pillar's second image; see below        |
-| `barcode`      | 3016 | ISBN lookup and provider response cache                     | data pillar; books-only v1                         |
-| `tags`         | 3017 | shared tag vocabulary                                       | data pillar; ADR-056                               |
-| `trips`        | 3018 | trips, places and ordered visits                            | data pillar                                        |
+| Pillar         | Port | Owns                                                         | Notes                                               |
+| -------------- | ---- | ------------------------------------------------------------ | --------------------------------------------------- |
+| `registry`     | 3001 | registry / settings / users / service-accounts / features    | data pillar; formerly `core`                        |
+| `inventory`    | 3002 | items, locations, warranties, insurance                      | data pillar                                         |
+| `media`        | 3003 | movies, TV, watchlist, watch history                         | data pillar; Plex/TMDB/TVDB                         |
+| `finance`      | 3004 | transactions, budgets, wishlists, entities, CSV import       | data pillar                                         |
+| `food`         | 3005 | food domain                                                  | data pillar; runs a worker                          |
+| `lists`        | 3006 | lists                                                        | data pillar                                         |
+| `cerebrum`     | 3007 | memory / retrieval / ego                                     | data pillar; runs a worker                          |
+| `ai`           | 3008 | AI-ops: providers, usage/telemetry, ingest                   |                                                     |
+| `orchestrator` | 3009 | federated search + AI-tool registry (`GET /ai/tools`)        | stateless, owns **no DB**                           |
+| `contacts`     | 3010 | contacts                                                     | **Rust** (axum + OpenAPI), `src/entities/`          |
+| `mcp`          | 3011 | MCP gateway                                                  | **binds :3011 in code** (`MCP_PORT ?? 3011`)        |
+| `documents`    | 3012 | durable upload intents/receipts/spool; Paperless integration | data pillar; Paperless owns archive documents/tasks |
+| `purchases`    | 3013 | purchase documents, line items, transaction links            | data pillar; ADR-042                                |
+| `bfm`          | 3014 | devices, pairing codes, refresh tokens (Backend-for-Mobile)  | data pillar; the only backend the iPhone app dials  |
+| `shell`        | 5568 | React SPA host                                               | UI pillar; Vite + nginx, **not** the default 5173   |
+| `design`       | 5569 | design playground: screens, experiments, variants, states    | UI pillar; Vite + nginx, served at `/design/`       |
+| `design-api`   | 3015 | comment threads left on the playground                       | the design pillar's second image; see below         |
+| `barcode`      | 3016 | ISBN lookup and provider response cache                      | data pillar; books-only v1                          |
+| `tags`         | 3017 | shared tag vocabulary                                        | data pillar; ADR-056                                |
+| `trips`        | 3018 | trips, places and ordered visits                             | data pillar                                         |
 
-The **data pillars** (each owns a SQLite DB) are registry, inventory, media, finance, food, lists, cerebrum, ai, purchases, bfm, barcode, tags, trips, `design`, and the Rust `contacts` pillar. `orchestrator`, `mcp`, `documents`, `shell`, and `docs` own no DB.
+The **data pillars** (each owns a SQLite DB) are registry, inventory, media, finance, food, lists, cerebrum, ai, purchases, bfm, barcode, tags, trips, documents, `design`, and the Rust `contacts` pillar. `orchestrator`, `mcp`, `shell`, and `docs` own no DB. Documents owns only upload admission/receipts and a private byte spool; Paperless remains the document/task archive owner.
 
 `design` is the one pillar that ships **two images**: `pops-design` serves the playground as static files from nginx, and `pops-design-api` serves the comment threads written on it — one image cannot be both. `docker-build.yml` and `pillar-quality.yml` discover `Dockerfile.*` alongside `Dockerfile` for exactly this.
 
@@ -236,7 +236,7 @@ pillars/                   # One pillar per folder. A TS pillar: own SQLite DB (
 │                          # Which pillars exist is on disk (`ls pillars/`) and in the
 │                          #   ports table above — not enumerated again here.
 │                          # Exceptions to the shape: `contacts` is Rust (axum, src/entities,
-│                          #   Cargo.toml); `orchestrator`, `mcp` and `documents` own no DB;
+│                          #   Cargo.toml); `orchestrator` and `mcp` own no DB;
 │                          #   `shell` and `docs` are UI/static and serve no contract;
 │                          #   `design` is UI/static too but owns a DB anyway (comment
 │                          #     threads) and ships a second image, `Dockerfile.api`;

@@ -1,8 +1,8 @@
 /**
  * Entry point for the documents pillar HTTP server.
  *
- * The documents pillar owns no domain DB — it bridges paperless-ngx
- * (ADR-035 bridge kind, ADR-039 workstream 13). Port 3012 is the next
+ * Documents owns its durable upload ledger/spool; Paperless owns the archive.
+ * Port 3012 is the next
  * free slot after the existing fleet (see the `Pillars and ports` table
  * in AGENTS.md).
  *
@@ -24,6 +24,7 @@ import { resolveSelfBaseUrl } from '@pops/pillar-sdk/pillar-env';
 import { createDocumentsApiApp } from './app.js';
 import { buildDocumentsManifest } from './manifest.js';
 import { resolveMaxUploadBytes } from './modules/paperless/upload-limits.js';
+import { openUploadStorage } from './storage.js';
 
 const DEFAULT_PORT = 3012;
 
@@ -48,7 +49,13 @@ const selfBaseUrl = resolveSelfBaseUrl({
   processLabel: 'documents-api',
 });
 
-const app = createDocumentsApiApp({ version, selfBaseUrl });
+const storage = openUploadStorage();
+const app = createDocumentsApiApp({
+  version,
+  selfBaseUrl,
+  uploads: storage.uploads,
+  checkStorage: storage.check,
+});
 
 const server = app.listen(port, () => {
   console.warn(`[documents-api] Listening on port ${port}`);
@@ -71,6 +78,7 @@ function shutdown(signal: NodeJS.Signals): void {
     label: 'documents-api',
     steps: [{ name: 'deregister', run: () => pillarHandle?.stop() }],
     server,
+    closeDb: storage.close,
   });
 }
 

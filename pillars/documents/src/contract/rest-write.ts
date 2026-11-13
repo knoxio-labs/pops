@@ -11,6 +11,7 @@ import { z } from 'zod';
 
 import { PaperlessDocumentSchema } from './rest-paperless.js';
 import { ErrorBodySchema } from './rest-schemas.js';
+import { uploadWriteRoutes } from './rest-uploads.js';
 
 const c = initContract();
 
@@ -24,6 +25,7 @@ const failures = {
 } as const;
 
 export const documentsWriteContract = c.router({
+  ...uploadWriteRoutes,
   update: {
     method: 'PATCH',
     path: '/paperless/documents/:id',

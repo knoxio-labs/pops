@@ -1,0 +1,10 @@
+# SQLite receipts only. Complete in-flight recovery additionally requires a
+# cold consistent backup of the whole private DATA volume; see pillars/documents/README.md.
+dbs:
+  - path: /data/documents/documents.db
+    replicas:
+      - url: ${DOCUMENTS_LITESTREAM_REPLICA_URL}
+        sync-interval: 1s
+        retention: 24h
+        snapshot-interval: 1h
+        validation-interval: 12h

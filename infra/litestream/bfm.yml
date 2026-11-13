@@ -13,7 +13,7 @@
 ##
 ## Unlike its siblings this stream is NOT a stub: `bfm-api` mounts
 ## `pops-bfm-data` at `/data/sqlite` and `bfm-litestream` mounts the same
-## volume read-only, so the path below is a database that exists. Verified
+## volume read-write, so the path below is a database that exists. Verified
 ## against the running container, not inferred from compose:
 ##   docker compose exec bfm-api ls -la /data/sqlite
 ## Restore drill not yet exercised.

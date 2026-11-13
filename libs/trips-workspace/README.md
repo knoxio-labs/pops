@@ -409,8 +409,9 @@ error and captured target, including distinct files with identical names. Accept
 survive switching source context, and completed files are never resent when
 another file fails. Uploads retain the accepted task identity while
 processing, and attach only after the owner returns a canonical document ID. An
-interrupted upload is treated as an uncertain outcome and requires searching Documents
-before another upload is considered. Existing links remain visible while Documents is
+interrupted upload retains its immutable Documents operation UUID and input fingerprint.
+The existing recovery control reads that exact operation; filenames and empty search results
+never prove acceptance or authorize another upload. Existing links remain visible while Documents is
 unavailable; metadata does not imply offline file availability. The Trips app exposes
 the workspace at `/trips/:tripId/documents`; source editors can reuse the picker with
 their explicit target identity. `TripDocumentLinks({ tripId, target?, tripsClient?,
@@ -427,7 +428,8 @@ Conditional dialogs, collapses and routes retain a queue above the view with
 and pass it through `TripDocumentUpload`'s optional `session` prop on every mount.
 Key host storage by the exact trip, target kind/ID and owner client identities and origins.
 A host with a supported authentication-switch path must reset storage on that transition;
-transport changes require a separate queue. Reloading releases these in-memory queues.
+transport changes require a separate queue. Reloading releases File handles, while verified
+account/server-scoped operation metadata is recovered through the host authority.
 The queue keeps distinct File handles, pending requests, accepted tasks and uncertain
 outcomes across unmounts; overlapping views observe the same selections and upload
 claim. Supplying a different target, client identity or owner origin throws
@@ -439,9 +441,13 @@ Without the prop, the component keeps its existing view-local queue behavior.
 Source upload queues are retained outside the query cache for the Shell QueryClient's
 mount lifetime, including route/card unmounts and query eviction. Exact trip, target
 kind/ID, client instances and owner origins isolate queues; replacing a client or
-origin creates another queue. Full page reload releases browser File handles and
-receipts. This lifetime follows the current Shell, which has no supported in-app
-account-switch/reset contract; it does not establish an authenticated-principal scope.
+origin creates another queue. A verified persistence epoch additionally isolates account/server
+queues. Full page reload releases browser File handles and live receipts; it restores only
+UUID, immutable filename/MIME/length/SHA-256 metadata and the explicit Trip/source context.
+Recovered inputs first GET their original operation. Unknown dispatch cannot POST or PUT.
+After reload, any continuation requires explicit reattachment to that operation and an
+exact length/digest check, including already-admitted content; reattachment
+keeps the original metadata even if the local File name or MIME differs.
 `DocumentPicker({ onSelected, documentsClient? })` returns the actual owner original
 without writing a route association. `useDocumentUpload({ session, onSessionChange,
 documentsClient? })` is the same per-file owner workflow used by route uploads.
@@ -460,11 +466,43 @@ the receipt when its query cache is evicted; pending task lookup resumes on remo
 An older read without a canonical identity cannot erase a verified original.
 Retained task query namespaces stay bound to the file intent's captured owner;
 a mutable client origin change cannot seed that proof into another owner's cache.
-Separate recovery pickers pass the controller's `assertOwnerContext` to
-`DocumentPicker.beforeRequest`, preserving the same transport and retaining-parent guard
-for owner searches and cached selection callbacks.
-The controller never repeats an accepted or
-uncertain upload; a definite rejection can be retried explicitly.
+The same selected File intent drives Documents admission, raw content PUT and dispatch.
+Its UUID and SHA-256 metadata never change on retry. Only an explicit recovery GET can
+admit a later continuation: awaiting content may resend the original bytes, admitted
+content skips PUT, and accepted or unknown dispatch never sends another upstream POST.
+Every request rechecks the captured transport and retaining parent. Link actions capture
+that same journal/principal, explicit target and cache key at invocation; delayed mutation
+preparation cannot borrow a newer controller. Capture dispatch/retry/owned Undo also fences
+its managed upload references at the parent performer, so hiding a retired upload view does
+not make its accepted task available to another account. Drafts and old receipts remain dormant. Valid late owner
+acknowledgements settle their originating intent even after its view closes.
+The existing-original picker remains independent manual selection; it does not resolve
+an unknown upload by matching names. Recovery never clears that unresolved intent.
+Wrap upload consumers in `DocumentUploadProvider({ host, tripId, tripsClient?, documentsClient? })`.
+The Shell supplies the structural `documentUploads` capability from fresh published Registry
+identity. Only a nonnull verified account and the actual resolved server/owner URLs can
+open the metadata journal; there is no operator, null-account or client-instance fallback.
+Each operation has its own storage key, so independent tab admissions cannot overwrite
+a shared collection. The journal entry is admitted and read back before the first owner write. Missing, corrupt or
+unwritable browser storage disables upload with a recovery action; it never downgrades
+to a memory-only upload. Existing-original selection remains independent of this storage.
+Restoration outcomes belong to the retained queue/composer and exact journal binding. Views
+observe those owner snapshots; reopening rereads the journal, and edit-lock changes retry
+Capture admission without replacing Files, operation identities or unresolved receipts.
+Task/original proof remains attached to its original intent. An explicit archive-owner
+mismatch blocks opening/linking that original through a different configured archive.
+
+Only operation UUID, filename, MIME type, byte length, SHA-256 and typed Trip/source/owner
+binding are stored in browser localStorage under the verified account/server epoch. Optional
+owner titles, Capture text, notes, File bytes and credentials are not stored. Successful done/duplicate original proof
+clears its matching descriptor. Observed 401, account change and explicit host sign-out
+invalidate the captured epoch and purge that account/server's metadata. Older requests,
+storage events and acknowledgements cannot revive a retired epoch or purge a newer account.
+The host verifies at startup, focus, pageshow and before upload-owner actions. A closed web
+app cannot synchronously observe logout performed outside it; the next verification applies
+the purge before metadata use. No File bytes or credentials are serialized, and this does
+not provide offline files. Capture restores only its pending upload selections; it does
+not reconstruct unpersisted composer text or invent a server Capture record.
 
 Run `mise exec -- pnpm --filter @pops/trips-workspace dev` for the standalone development
 harness, then enter real trip/stay IDs. Its proxy targets the local Trips API on
@@ -593,8 +631,8 @@ to mark an unverified association organised.
 Failed row edits and target descriptions survive filters and navigation with their
 original preconditions. Upload views compose the Documents owner's controlled session;
 remounting a pending upload cannot issue another POST.
-Ambiguous-upload recovery searches and selections use that same session's published
-owner-context guard, so changing its Documents transport cannot accept another owner's original.
+Ambiguous-upload recovery reads the same immutable Documents operation under the session's
+published owner-context guard. It never selects an original through filename correlation.
 The host may unmount or change the controlled tool view without replacing its QueryClient.
 A full page reload ends the browser session and cannot restore File handles.
 

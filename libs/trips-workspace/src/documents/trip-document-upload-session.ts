@@ -1,13 +1,15 @@
+import { DocumentUploadSession } from './document-upload-session';
 import { documentQueryKeys } from './query-keys';
 import { TripDocumentUploadContextError, uploadSessionKey } from './upload-context';
+import { UploadRestoration } from './upload-restoration';
 import { createDocumentUploadSession } from './useUploadFields';
 
 import type { SetStateAction } from 'react';
 
 import type { Client as DocumentsClient } from '../documents-api/client';
 import type { Client as TripsClient } from '../trips-api/client';
+import type { UploadJournal } from './durable-upload-journal';
 import type { DocumentAssociationTarget } from './types';
-import type { DocumentUploadSession } from './useUploadFields';
 
 /** Exact owning target and transports captured by a retained browser upload queue. */
 export interface TripDocumentUploadContext {
@@ -20,7 +22,8 @@ export interface TripDocumentUploadContext {
 /** One distinct selected File and its live owner receipt; identical filenames remain independent. */
 export interface TripDocumentFileIntent {
   readonly id: string;
-  readonly file: File;
+  readonly file: File | null;
+  readonly name: string;
   readonly upload: DocumentUploadSession;
 }
 
@@ -35,8 +38,13 @@ export class TripDocumentUploadSession {
   /** Captured owner task namespace; mutable client configuration cannot rebind retained proof. */
   readonly taskScope: readonly [string, string];
   private readonly key: string;
+  private journalBinding: string | null = null;
   private intents: readonly TripDocumentFileIntent[] = [];
   private readonly listeners = new Set<() => void>();
+  /** Restore outcomes retained with this exact queue, observed through the existing subscription. */
+  readonly uploadRestoration = new UploadRestoration(() => {
+    for (const listener of this.listeners) listener();
+  });
 
   private constructor(context: TripDocumentUploadContext) {
     this.context = Object.freeze({ ...context, target: Object.freeze({ ...context.target }) });
@@ -79,10 +87,36 @@ export class TripDocumentUploadSession {
       ...files.map((file) => ({
         id: crypto.randomUUID(),
         file,
+        name: file.name,
         upload: createDocumentUploadSession(file),
       })),
     ]);
   };
+
+  /** Rehydrate only exact-context descriptors; no new UUID, File, task or original identity is invented. */
+  restore(journal: UploadJournal): void {
+    this.uploadRestoration.run(
+      journal.bindingKey(),
+      () => {
+        this.assertCurrentContext();
+        if (this.journalBinding !== null && this.journalBinding !== journal.bindingKey())
+          throw new TripDocumentUploadContextError();
+        this.journalBinding ??= journal.bindingKey();
+        const stored = journal.list();
+        const known = new Set(this.intents.map((intent) => intent.upload.id));
+        const added = stored
+          .filter((input) => !known.has(input.operationId))
+          .map((input) => ({
+            id: input.operationId,
+            file: null,
+            name: input.fileName,
+            upload: DocumentUploadSession.restore(input, journal),
+          }));
+        if (added.length > 0) this.publish([...this.intents, ...added]);
+      },
+      'Upload recovery metadata could not be read.'
+    );
+  }
 
   /** Apply an origin-guarded per-file controller update without replacing another queue entry. */
   updateFile(id: string, update: SetStateAction<DocumentUploadSession>): void {

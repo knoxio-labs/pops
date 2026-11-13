@@ -108,6 +108,7 @@ export const PILLAR_UPSTREAMS: Record<BuildPillarId, { host: string; port: numbe
   design: { host: 'design-api', port: 3015 },
   tags: { host: 'tags-api', port: 3017 },
   trips: { host: 'trips-api', port: 3018 },
+  documents: { host: 'documents-api', port: 3012 },
 };
 
 const PILLAR_UPSTREAMS_BY_ID: ReadonlyMap<string, { host: string; port: number }> = new Map(
@@ -144,6 +145,7 @@ export const PILLAR_RENDER_ORDER: readonly BuildPillarId[] = [
   'design',
   'tags',
   'trips',
+  'documents',
 ];
 
 export { DEFAULT_REGISTRY_URL };
@@ -168,8 +170,7 @@ export function assertRenderOrderCoversAllPillars(): void {
 }
 
 function upstreamForId(id: BuildPillarId): PillarUpstream {
-  const upstream = PILLAR_UPSTREAMS[id];
-  return { pillarId: id, host: upstream.host, port: upstream.port };
+  return { pillarId: id, ...PILLAR_UPSTREAMS[id] };
 }
 
 /**

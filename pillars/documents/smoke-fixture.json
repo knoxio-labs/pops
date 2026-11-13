@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "authorityEnvironment": "DOCUMENTS_UPLOAD_GUARD_ID",
+  "directoryEnvironment": "DOCUMENTS_UPLOAD_GUARD_DIR",
+  "directory": "/data/documents-upload-guard",
+  "provisionCommand": ["node", "dist/api/uploads/provision-guard.js"],
+  "refusalStatus": 500
+}

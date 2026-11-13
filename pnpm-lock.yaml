@@ -1680,6 +1680,12 @@ importers:
       '@ts-rest/open-api':
         specifier: 3.53.0-rc.1
         version: 3.53.0-rc.1(@ts-rest/core@3.53.0-rc.1(@types/node@24.19.1))(zod@4.6.5)
+      better-sqlite3:
+        specifier: ^13.0.3
+        version: 13.0.3
+      drizzle-orm:
+        specifier: ^0.45.2
+        version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@13.0.3)
       express:
         specifier: ^5.1.0
         version: 5.2.1(supports-color@10.2.2)
@@ -1690,6 +1696,9 @@ importers:
       '@pops/contract-openapi':
         specifier: workspace:*
         version: link:../../libs/contract-openapi
+      '@types/better-sqlite3':
+        specifier: ^7.6.12
+        version: 7.6.13
       '@types/express':
         specifier: ^5.0.4
         version: 5.0.6
@@ -1702,6 +1711,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: ^4.1.10
         version: 4.1.10(vitest@4.1.11)
+      drizzle-kit:
+        specifier: ^0.31.11
+        version: 0.31.11(patch_hash=24fa633f5f47ba16e425ee38e5ccd9b15c50fe50d379c84170cae50a373c7c8f)
       supertest:
         specifier: ^7.1.4
         version: 7.2.2(supports-color@10.2.2)

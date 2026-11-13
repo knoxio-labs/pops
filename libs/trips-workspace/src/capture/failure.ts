@@ -1,13 +1,16 @@
 import { ApiError } from '@pops/pillar-sdk/client';
 
+import { CaptureUploadContextError } from './upload-authority';
+
 import type { CaptureIntent } from './editor-types';
 
 /** This source's confirmed validation/auth/ownership conflicts cannot have committed its mutation. */
 export function captureRequestRejected(error: unknown): boolean {
   return (
-    error instanceof ApiError &&
-    error.status !== undefined &&
-    [400, 401, 403, 404, 409, 422].includes(error.status)
+    (error instanceof CaptureUploadContextError && !error.priorDispatch) ||
+    (error instanceof ApiError &&
+      error.status !== undefined &&
+      [400, 401, 403, 404, 409, 422].includes(error.status))
   );
 }
 /** Preserve the approved conflict wording and avoid changing either composer or source. */

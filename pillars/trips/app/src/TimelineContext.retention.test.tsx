@@ -6,6 +6,8 @@ import { useState } from 'react';
 import { I18nextProvider } from 'react-i18next';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import { DocumentUploadProvider } from '@pops/trips-workspace';
+
 import { captureOwner } from './capture-context-fixture';
 import { CaptureContext } from './CaptureContext';
 import enAU from './locales/en-AU.json';
@@ -28,7 +30,12 @@ function Host() {
   const [selection, onSelect] = useState<TimelineSelection | null>(null);
   const [tripId, setTripId] = useState(7);
   return (
-    <>
+    <DocumentUploadProvider
+      host={owner.documentUploads}
+      tripId={tripId}
+      tripsClient={owner.client}
+      documentsClient={owner.client}
+    >
       <main>
         <h1>Timeline {tripId}</h1>
         <button onClick={() => setTripId(tripId === 7 ? 8 : 7)}>Change Trip</button>
@@ -45,7 +52,7 @@ function Host() {
         selection={selection}
         onSelect={onSelect}
       />
-    </>
+    </DocumentUploadProvider>
   );
 }
 function mount() {
@@ -115,7 +122,12 @@ it('retries the exact unknown command after closing and reopening a different co
 function InlineCaptureHost() {
   const [selection, onSelect] = useState<TimelineSelection | null>(null);
   return (
-    <>
+    <DocumentUploadProvider
+      host={owner.documentUploads}
+      tripId={7}
+      tripsClient={owner.client}
+      documentsClient={owner.client}
+    >
       <button type="button" onClick={() => onSelect({ kind: 'tool', tool: 'capture' })}>
         Open full Capture
       </button>
@@ -136,7 +148,7 @@ function InlineCaptureHost() {
         onSelect={onSelect}
         workspace
       />
-    </>
+    </DocumentUploadProvider>
   );
 }
 

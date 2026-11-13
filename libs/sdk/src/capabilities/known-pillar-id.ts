@@ -44,6 +44,7 @@ export const PILLARS = [
   'design',
   'tags',
   'trips',
+  'documents',
 ] as const;
 
 /**

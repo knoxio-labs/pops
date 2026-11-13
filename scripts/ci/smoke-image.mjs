@@ -56,6 +56,7 @@ import { promisify } from 'node:util';
 import { load as parseYaml } from 'js-yaml';
 
 import { ComposeFileSchema } from './compose-schema.mjs';
+import { prepareAuthorityFixture, readAuthorityFixture } from './smoke-authority-fixture.mjs';
 
 const execFileAsync = promisify(execFile);
 
@@ -210,19 +211,9 @@ export function normalizeDockerfilePath(path) {
  *   Every pops service names it explicitly, so demand that rather than guess.
  */
 export function dataMountsForDockerfile(composeText, dockerfilePath) {
-  const compose = ComposeFileSchema.parse(parseYaml(composeText));
-  const wanted = normalizeDockerfilePath(dockerfilePath);
-  /** @type {Set<string>} */
   const targets = new Set();
-  for (const [name, service] of Object.entries(compose.services)) {
-    const build = service?.build;
-    if (build === undefined) continue;
-    const declared = typeof build === 'string' ? undefined : build.dockerfile;
-    if (declared === undefined) {
-      throw new Error(`compose service '${name}' builds without naming a dockerfile`);
-    }
-    if (normalizeDockerfilePath(declared) !== wanted) continue;
-    for (const entry of service?.volumes ?? []) {
+  for (const service of servicesForDockerfile(composeText, dockerfilePath)) {
+    for (const entry of service.volumes ?? []) {
       const mount = normalizeVolumeEntry(entry);
       if (mount === undefined || mount.readOnly || mount.isBind) continue;
       if (mount.target === DATA_ROOT || mount.target.startsWith(`${DATA_ROOT}/`)) {
@@ -231,6 +222,42 @@ export function dataMountsForDockerfile(composeText, dockerfilePath) {
     }
   }
   return [...targets].toSorted();
+}
+
+/** @param {string} composeText @param {string} dockerfilePath */
+function servicesForDockerfile(composeText, dockerfilePath) {
+  const compose = ComposeFileSchema.parse(parseYaml(composeText));
+  const wanted = normalizeDockerfilePath(dockerfilePath);
+  const services = [];
+  for (const [name, service] of Object.entries(compose.services)) {
+    const build = service?.build;
+    if (build === undefined) continue;
+    const declared = typeof build === 'string' ? undefined : build.dockerfile;
+    if (declared === undefined) {
+      throw new Error(`compose service '${name}' builds without naming a dockerfile`);
+    }
+    if (normalizeDockerfilePath(declared) === wanted && service !== null) services.push(service);
+  }
+  return services;
+}
+
+/**
+ * Preserve source, mode and shadow mounts when validating an image's declared database paths.
+ * Unlike the write-probe projection this includes binds and read-only mounts so neither can hide a DB.
+ * @param {string} composeText
+ * @param {string} dockerfilePath
+ * @returns {{ source: string, target: string, readOnly: boolean, isBind: boolean }[]}
+ */
+export function databaseMountsForDockerfile(composeText, dockerfilePath) {
+  return servicesForDockerfile(composeText, dockerfilePath).flatMap((service) =>
+    (service.volumes ?? []).flatMap((entry) => {
+      const mount = normalizeVolumeEntry(entry);
+      if (!mount) return [];
+      const source =
+        typeof entry === 'string' ? (/^(.*):\//u.exec(entry)?.[1] ?? '') : (entry.source ?? '');
+      return [{ source, target: mount.target, readOnly: mount.readOnly, isBind: mount.isBind }];
+    })
+  );
 }
 
 /**
@@ -328,11 +355,11 @@ export function resolveHealthPath(baseImage) {
  * gate pass by making the image worse — the image states its own liveness and
  * freshness routes and the harness asks for those.
  *
- * Only these two keys are read, and only as overrides. An image that declares
- * neither is probed exactly as before.
+ * The optional `fixture` key names an image-owned isolated authority setup contract.
+ * Health and freshness remain overrides only; images without metadata retain their normal probes.
  *
  * @param {string} dockerfile Dockerfile contents.
- * @param {string} key `health` or `freshness`.
+ * @param {string} key `health`, `freshness` or `fixture`.
  * @returns {string | undefined} The declared value.
  */
 export function smokeLabel(dockerfile, key) {
@@ -692,9 +719,10 @@ async function isRunning(containerId) {
  * @param {string} args.containerId
  * @param {string} args.url
  * @param {number} args.timeoutMs
+ * @param {number} [args.expectedStatus] Only the named negative authority fixture supplies this.
  * @returns {Promise<{ ok: true, body: string } | { ok: false, reason: string }>}
  */
-async function waitForHealth({ containerId, url, timeoutMs }) {
+async function waitForHealth({ containerId, url, timeoutMs, expectedStatus }) {
   const deadline = Date.now() + timeoutMs;
   /** @type {string} */
   let lastError = 'never attempted';
@@ -705,6 +733,14 @@ async function waitForHealth({ containerId, url, timeoutMs }) {
     try {
       const response = await fetch(url, { signal: AbortSignal.timeout(5_000) });
       const body = (await response.text()).slice(0, 500);
+      if (expectedStatus !== undefined) {
+        return response.status === expectedStatus
+          ? { ok: true, body }
+          : {
+              ok: false,
+              reason: `expected intentional refusal HTTP ${expectedStatus}, received ${response.status}`,
+            };
+      }
       if (response.ok) return { ok: true, body };
       lastError = `HTTP ${response.status}: ${body}`;
     } catch (err) {
@@ -858,6 +894,61 @@ async function servedFiles(containerId) {
   return listing.split('\n').filter((line) => line.trim() !== '');
 }
 
+/** @param {{image: string, port: number, volumes: {name:string,path:string}[], environment: Record<string,string>}} options */
+async function startSmokeContainer({ image, port, volumes, environment }) {
+  const name = `pops-smoke-${randomUUID()}`;
+  return startDockerContainerWithRetry({
+    start: () =>
+      docker([
+        'run',
+        '--detach',
+        '--name',
+        name,
+        '--publish',
+        `127.0.0.1::${port}`,
+        ...volumes.flatMap((volume) => ['--volume', `${volume.name}:${volume.path}`]),
+        '--env',
+        `PORT=${port}`,
+        ...Object.entries(environment).flatMap(([key, value]) => ['--env', `${key}=${value}`]),
+        image,
+      ]),
+    remove: () => dockerBestEffort(['rm', '--force', name]),
+  });
+}
+
+/** @param {{image:string,port:number,healthPath:string,environment:Record<string,string>,volumes:{name:string,path:string}[],expectedStatus:number}} options */
+async function assertAuthorityRefusal({
+  image,
+  port,
+  healthPath,
+  environment,
+  volumes,
+  expectedStatus,
+}) {
+  const containerId = await startSmokeContainer({ image, port, volumes, environment });
+  try {
+    const hostPort = await resolveHostPort(containerId, port);
+    const result = await waitForHealth({
+      containerId,
+      url: `http://127.0.0.1:${hostPort}${healthPath}`,
+      timeoutMs: HEALTH_TIMEOUT_MS,
+      expectedStatus,
+    });
+    if (!result.ok) {
+      await reportFailure(
+        containerId,
+        image,
+        volumes.map((volume) => volume.path)
+      );
+      throw new Error(
+        `Unprovisioned or mismatched authority did not fail closed: ${result.reason}`
+      );
+    }
+  } finally {
+    await dockerBestEffort(['rm', '--force', containerId]);
+  }
+}
+
 async function main() {
   const [dockerfilePath, image] = process.argv.slice(2);
   if (dockerfilePath === undefined || image === undefined) {
@@ -865,9 +956,15 @@ async function main() {
     process.exit(2);
   }
 
-  const { port, healthPath, baseImage } = planSmoke(readFileSync(dockerfilePath, 'utf8'));
+  const dockerfile = readFileSync(dockerfilePath, 'utf8');
+  const { port, healthPath, baseImage } = planSmoke(dockerfile);
   const mountPaths = dataMountsForDockerfile(readFileSync(COMPOSE_PATH, 'utf8'), dockerfilePath);
   const volumePlan = planVolumes(dockerfilePath, mountPaths);
+  const fixture = readAuthorityFixture(
+    dockerfilePath,
+    smokeLabel(dockerfile, 'fixture'),
+    mountPaths
+  );
   console.log(
     `Smoking ${image} (${dockerfilePath}): runtime base ${baseImage}, ` +
       `expecting ${healthPath} on container port ${port}, with ` +
@@ -879,28 +976,33 @@ async function main() {
 
   for (const { name } of volumePlan) await docker(['volume', 'create', name]);
   try {
-    // Deliberately NOT `--rm`: a container that dies on its first import is
-    // exactly the failure this exists to catch, and its logs are the evidence.
-    // `--rm` would delete them the instant it exited.
-    const containerName = `pops-smoke-${randomUUID()}`;
-    const containerId = await startDockerContainerWithRetry({
-      start: () =>
-        docker([
-          'run',
-          '--detach',
-          '--name',
-          containerName,
-          '--publish',
-          `127.0.0.1::${port}`,
-          ...volumePlan.flatMap(({ name, path }) => ['--volume', `${name}:${path}`]),
-          '--env',
-          `PORT=${port}`,
-          ...Object.entries(bootPlaceholdersForDockerfile(dockerfilePath)).flatMap(
-            ([name, value]) => ['--env', `${name}=${value}`]
-          ),
-          image,
-        ]),
-      remove: () => dockerBestEffort(['rm', '--force', containerName]),
+    const bootEnvironment = bootPlaceholdersForDockerfile(dockerfilePath);
+    const authority =
+      fixture === undefined
+        ? {}
+        : await prepareAuthorityFixture({
+            fixture,
+            image,
+            volumes: volumePlan,
+            docker,
+            cleanup: async (args) => {
+              await dockerBestEffort(args);
+            },
+            refuse: (environment, volumes, expectedStatus) =>
+              assertAuthorityRefusal({
+                image,
+                port,
+                healthPath,
+                volumes,
+                expectedStatus,
+                environment: { ...bootEnvironment, ...environment },
+              }),
+          });
+    const containerId = await startSmokeContainer({
+      image,
+      port,
+      volumes: volumePlan,
+      environment: { ...bootEnvironment, ...authority },
     });
 
     try {

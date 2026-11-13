@@ -2,7 +2,7 @@
 ##
 ## The barcode pillar owns its lookup cache and its API mounts
 ## `pops-barcode-data` at `/data/sqlite`; the matching sidecar in
-## `infra/docker-compose.yml` mounts this file and the same volume read-only.
+## `infra/docker-compose.yml` mounts this file and the same volume read-write.
 ## The replica target is supplied by the deployment environment.
 
 dbs:

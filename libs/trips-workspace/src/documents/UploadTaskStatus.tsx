@@ -29,7 +29,7 @@ export function UploadTaskStatus({
   if (task === undefined || task.state === 'pending') {
     return (
       <p role="status" className="text-sm">
-        Documents is processing the upload…
+        Upload accepted. Waiting for the owner to verify its original identity…
       </p>
     );
   }

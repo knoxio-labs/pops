@@ -1,8 +1,6 @@
-import { Button } from '@pops/ui';
-
-import { DocumentAssociationPicker } from './DocumentAssociationPicker';
 import { runUploadContextAction } from './upload-context';
 import { UploadControls } from './UploadControls';
+import { UploadRecovery } from './UploadRecovery';
 
 import type { ReactElement } from 'react';
 
@@ -11,12 +9,10 @@ import type { Client as TripsClient } from '../trips-api/client';
 import type { DocumentAssociationTarget } from './types';
 import type { useTripDocumentUpload } from './useTripDocumentUpload';
 
-/** Render one selected file's independent task, retry and owner-lookup controls. */
+/** Render one selected file's independent task, retry and UUID recovery controls. */
 export function UploadContent({
   workflow,
-  active,
   beforeRequest,
-  ...context
 }: {
   workflow: ReturnType<typeof useTripDocumentUpload>;
   tripId: number;
@@ -26,34 +22,10 @@ export function UploadContent({
   active: boolean;
   beforeRequest?: () => void;
 }): ReactElement {
-  const fields = workflow.fields;
   return (
     <>
+      <UploadRecovery workflow={workflow} />
       <ActiveUploadControls workflow={workflow} beforeRequest={beforeRequest} />
-      {fields.uncertain ? (
-        <DocumentAssociationPicker
-          {...context}
-          beforeRequest={beforeRequest}
-          open={active && fields.pickerOpen}
-          onOpenChange={fields.setPickerOpen}
-          initialSearch={fields.file?.name}
-          onSearchCompleted={workflow.actions.searchCompleted}
-          onAssociated={workflow.actions.recoverAssociation}
-          noResultsAction={
-            fields.ownerLookupCount === 0 ? (
-              <Button
-                variant="ghost"
-                onClick={() =>
-                  runUploadContextAction(fields, beforeRequest, fields.clearSelectedFile)
-                }
-              >
-                No original found; choose a different file
-              </Button>
-            ) : undefined
-          }
-          hideTrigger
-        />
-      ) : null}
     </>
   );
 }
@@ -72,6 +44,7 @@ function ActiveUploadControls({
     <UploadControls
       policy={workflow.policy}
       file={fields.file}
+      verifiedInput={fields.metadata}
       task={workflow.taskQuery.data}
       taskError={workflow.taskQuery.isError}
       taskRefetch={() => void workflow.taskQuery.refetch()}
@@ -89,12 +62,7 @@ function ActiveUploadControls({
           : undefined
       }
       onUpload={actions.submitUpload}
-      onSearchOwner={() => {
-        runUploadContextAction(fields, beforeRequest, () => {
-          fields.setOwnerLookupCount(null);
-          fields.setPickerOpen(true);
-        });
-      }}
+      onSearchOwner={actions.recoverSelection}
       onAssociate={() => {
         if (workflow.documentId !== undefined)
           actions.associationMutation.mutate(workflow.documentId);

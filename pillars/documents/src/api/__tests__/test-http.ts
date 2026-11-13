@@ -58,6 +58,7 @@ const keepAliveAgent = new http.Agent({ keepAlive: true });
 export interface BoundAgent {
   get(url: string): supertest.Test;
   post(url: string): supertest.Test;
+  put(url: string): supertest.Test;
   patch(url: string): supertest.Test;
   delete(url: string): supertest.Test;
 }
@@ -131,6 +132,7 @@ export function createTestTransport(): TestTransport {
       return {
         get: (url) => agent.get(url).set(APP_HEADER, id).agent(keepAliveAgent),
         post: (url) => agent.post(url).set(APP_HEADER, id).agent(keepAliveAgent),
+        put: (url) => agent.put(url).set(APP_HEADER, id).agent(keepAliveAgent),
         patch: (url) => agent.patch(url).set(APP_HEADER, id).agent(keepAliveAgent),
         delete: (url) => agent.delete(url).set(APP_HEADER, id).agent(keepAliveAgent),
       };

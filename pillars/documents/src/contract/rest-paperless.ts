@@ -20,6 +20,10 @@ import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 
 import { ErrorBodySchema } from './rest-schemas.js';
+import { uploadReadRoute } from './rest-uploads.js';
+import { PaperlessTaskIdSchema, PaperlessTaskStatusSchema } from './task-schemas.js';
+
+export { PaperlessTaskIdSchema, PaperlessTaskStatusSchema } from './task-schemas.js';
 
 const c = initContract();
 
@@ -32,21 +36,8 @@ export const PaperlessDocumentSchema = z.object({
   thumbnailUrl: z.string(),
 });
 
-/** A Paperless (Celery) task id as `POST /paperless/documents` returns it. */
-export const PaperlessTaskIdSchema = z.string().regex(/^[A-Za-z0-9_-]{1,72}$/);
-
-/**
- * Where an upload stands. `documentId` is the new document on `done` and the
- * existing one on `duplicate`; `reason` says why a task produced no new
- * document, when Paperless reports one.
- */
-export const PaperlessTaskStatusSchema = z.object({
-  state: z.enum(['pending', 'done', 'duplicate', 'failed']),
-  documentId: z.number().int().positive().nullable(),
-  reason: z.string().nullable(),
-});
-
 export const documentsPaperlessContract = c.router({
+  upload: uploadReadRoute,
   status: {
     method: 'GET',
     path: '/paperless/status',

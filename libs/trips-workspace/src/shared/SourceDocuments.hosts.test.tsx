@@ -12,6 +12,7 @@ import {
   unlinkPaperlessDocument,
 } from '../documents/api';
 import { sourceDocumentHost } from './source-document-test-utils';
+import { getSourceRetry } from './source-retry-test-utils';
 
 import type { TripDocumentAssociation } from '../documents/types';
 
@@ -123,7 +124,7 @@ describe.each(['event', 'stay', 'journey'] as const)('%s source documents', (kin
     expect(field).toHaveValue(host.next);
     expect(searchPaperlessDocuments).toHaveBeenCalledWith('ticket', host.documentsClient);
     expect(host.writes()).toHaveLength(1);
-    await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    await userEvent.click(getSourceRetry());
     await waitFor(() => expect(screen.getByRole('button', { name: 'Undo' })).toBeEnabled());
     await userEvent.click(screen.getByRole('button', { name: 'Undo' }));
     await waitFor(() => expect(field).toHaveValue(host.initial));
