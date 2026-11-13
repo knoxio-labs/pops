@@ -29,13 +29,16 @@ internal final class TripCaptureDraft: Identifiable {
     private var loaded = false
     private var restoring = false
     private let writer: any TripCapturesWriting
+    private let didAccept: (Int) -> Void
 
     internal init(
-        tripID: Int, writer: any TripCapturesWriting, storage: (any TripCaptureDraftStore)? = nil
+        tripID: Int, writer: any TripCapturesWriting, storage: (any TripCaptureDraftStore)? = nil,
+        didAccept: @escaping (Int) -> Void = { _ in }
     ) {
         self.tripID = tripID
         self.writer = writer
         self.storage = storage
+        self.didAccept = didAccept
         restore()
     }
 
@@ -80,6 +83,7 @@ internal final class TripCaptureDraft: Identifiable {
                 restoring = false
             }
             _ = persist()
+            didAccept(tripID)
         } catch {
             failure = error as? RepositoryError ?? .unavailable
         }
@@ -144,14 +148,20 @@ internal final class TripCaptureDraft: Identifiable {
 internal final class TripCaptureDrafts {
     private let writer: any TripCapturesWriting
     private let storage: (any TripCaptureDraftStore)?
+    private let didAccept: (Int) -> Void
     private var drafts: [Int: TripCaptureDraft] = [:]
-    internal init(writer: any TripCapturesWriting, storage: (any TripCaptureDraftStore)? = nil) {
+    internal init(
+        writer: any TripCapturesWriting, storage: (any TripCaptureDraftStore)? = nil,
+        didAccept: @escaping (Int) -> Void = { _ in }
+    ) {
         self.writer = writer
         self.storage = storage
+        self.didAccept = didAccept
     }
     internal func draft(tripID: Int) -> TripCaptureDraft {
         if let draft = drafts[tripID] { return draft }
-        let draft = TripCaptureDraft(tripID: tripID, writer: writer, storage: storage)
+        let draft = TripCaptureDraft(
+            tripID: tripID, writer: writer, storage: storage, didAccept: didAccept)
         drafts[tripID] = draft
         return draft
     }

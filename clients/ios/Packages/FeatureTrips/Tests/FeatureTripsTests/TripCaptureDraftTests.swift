@@ -10,7 +10,8 @@ internal struct TripCaptureDraftTests {
     @Test("empty capture never dispatches and verbatim material survives an unavailable save")
     internal func failedSave() async {
         let writer = CaptureWriter()
-        let model = TripCaptureDraft(tripID: 7, writer: writer)
+        var accepted: [Int] = []
+        let model = TripCaptureDraft(tripID: 7, writer: writer) { accepted.append($0) }
         await model.submit()
         #expect(await writer.operations.isEmpty)
         model.input.originalText = "  original source\n"
@@ -20,12 +21,14 @@ internal struct TripCaptureDraftTests {
         #expect(model.failure == .unavailable)
         #expect(!model.saving)
         #expect(await writer.operations.count == 1)
+        #expect(accepted.isEmpty)
     }
 
     @Test("retry is explicit and reuses the entire original operation with its UUID")
     internal func exactRetry() async throws {
         let writer = CaptureWriter()
-        let model = TripCaptureDraft(tripID: 7, writer: writer)
+        var accepted: [Int] = []
+        let model = TripCaptureDraft(tripID: 7, writer: writer) { accepted.append($0) }
         model.input.originalText = "Saved source"
         await model.submit()
         let pending = try #require(model.pending)
@@ -37,6 +40,8 @@ internal struct TripCaptureDraftTests {
         #expect(model.pending == nil)
         #expect(model.result?.receipt.operationId == pending.operationId)
         #expect(model.input.originalText.isEmpty)
+        await model.retry()
+        #expect(accepted == [7])
     }
 
     @Test(
@@ -62,14 +67,41 @@ internal struct TripCaptureDraftTests {
     internal func mismatchedReceipt() async {
         let writer = CaptureWriter()
         await writer.returnWrongReceipt()
-        let model = TripCaptureDraft(tripID: 7, writer: writer)
+        var accepted: [Int] = []
+        let model = TripCaptureDraft(tripID: 7, writer: writer) { accepted.append($0) }
         model.input.originalText = "Keep this draft"
         await model.submit()
         #expect(model.pending != nil)
         #expect(model.result == nil)
         #expect(model.failure == .contractMismatch)
         #expect(model.input.originalText == "Keep this draft")
+        #expect(accepted.isEmpty)
     }
+
+    @Test("an accepted write still notifies after its composer was dismissed")
+    internal func acceptedAfterDismissal() async throws {
+        let writer = CaptureWriter()
+        await writer.succeed()
+        let snapshot = try TripTestSources.snapshot()
+        let model = TripsModel(repository: CaptureSourceReader(snapshot: snapshot))
+        var accepted: [Int] = []
+        let drafts = TripCaptureDrafts(writer: writer) { accepted.append($0) }
+        let draft = drafts.draft(tripID: snapshot.trip.id)
+        draft.input.originalText = "Retained original"
+        model.capture = draft
+        draft.save()
+        model.capture = nil
+        await draft.writeTask?.value
+        #expect(model.capture == nil)
+        #expect(accepted == [snapshot.trip.id])
+        #expect(drafts.draft(tripID: snapshot.trip.id) === draft)
+    }
+}
+
+private struct CaptureSourceReader: TripsReading {
+    let snapshot: TripSnapshot
+    func trips() async throws -> [TripRecord] { [snapshot.trip] }
+    func trip(id: Int) async throws -> TripSnapshot? { snapshot }
 }
 
 private actor CaptureWriter: TripCapturesWriting {

@@ -10,6 +10,8 @@ internal final class TripsModel {
     internal private(set) var selectedID: Int?
     internal private(set) var loading = false
     internal private(set) var failure: RepositoryError?
+    internal let route: TripsRouteModel
+    internal let inbox: TripsInboxModel
     internal var tab = TripsTab.trips {
         didSet {
             if tab != oldValue {
@@ -18,7 +20,10 @@ internal final class TripsModel {
             }
         }
     }
-    internal var source: TripSource?
+    internal var source: TripSource? {
+        didSet { sourceEpoch = UUID() }
+    }
+    internal private(set) var sourceEpoch = UUID()
     internal var capture: TripCaptureDraft?
     @ObservationIgnored internal private(set) var navigationTask: Task<Void, Never>?
     private let repository: any TripsReading
@@ -26,9 +31,15 @@ internal final class TripsModel {
     private var request = UUID()
     private var navigationIntent = UUID()
 
-    internal init(repository: any TripsReading, selection: (any TripOfflineSelection)? = nil) {
+    internal init(
+        repository: any TripsReading, selection: (any TripOfflineSelection)? = nil,
+        routeReader: (any TripsRouteReading)? = nil,
+        captureReader: (any TripCapturesReading)? = nil
+    ) {
         self.repository = repository
         self.selection = selection
+        route = TripsRouteModel(reader: routeReader)
+        inbox = TripsInboxModel(reader: captureReader)
     }
 
     internal func openTrip(_ id: Int, sourceID: String? = nil) {
@@ -53,6 +64,11 @@ internal final class TripsModel {
         return allTripSources(snapshot).first { $0.id == source.id }
     }
 
+    internal func captureAccepted(tripID: Int) {
+        guard selectedID == tripID, inbox.selectedID == tripID else { return }
+        inbox.retry()
+    }
+
     internal func load() async {
         navigationIntent = UUID()
         source = nil
@@ -70,6 +86,8 @@ internal final class TripsModel {
             } else {
                 selectedID = nil
                 snapshot = nil
+                route.clear()
+                inbox.clear()
                 loading = false
             }
         } catch {
@@ -89,6 +107,8 @@ internal final class TripsModel {
         let token = UUID()
         request = token
         selectedID = id
+        route.select(id)
+        inbox.select(id)
         snapshot = nil
         failure = nil
         loading = true
