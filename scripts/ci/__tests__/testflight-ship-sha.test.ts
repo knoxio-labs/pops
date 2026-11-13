@@ -127,6 +127,44 @@ describe('verdictFor', () => {
     expect(await verdictFor('abc', a)).toBe('failure');
   });
 
+  it.each(['success', 'failure', 'cancelled', 'skipped'])(
+    'uses only aggregate %s despite successful worker jobs',
+    async (conclusion) => {
+      const doc = workflow('ios-quality.yml');
+      const jobs = doc.jobs;
+      if (!isMapping(jobs)) throw new Error('iOS workflow jobs are missing');
+      const workers = ['native', 'ui'].map((id) => {
+        const job = jobs[id];
+        if (!isMapping(job) || typeof job.name !== 'string') {
+          throw new Error(`Missing worker name: ${id}`);
+        }
+        return { name: job.name, conclusion: 'success' };
+      });
+      for (const promotion of [false, true]) {
+        const jobName = promotion ? PROMOTION_QUALITY_JOB_NAME : QUALITY_JOB_NAME;
+        const namedWorkers = workers.map((job) => ({
+          ...job,
+          name: promotion ? `ios / ${job.name}` : job.name,
+        }));
+        const a = promotion
+          ? api(
+              [],
+              { 7: [...namedWorkers, { name: jobName, conclusion }] },
+              {
+                pulls: [merged('abc', 'head')],
+                prRuns: [run(7, 3, 1, 'completed', PROMOTION_QUALITY_WORKFLOW_NAME)],
+              }
+            )
+          : api([run(7, 3, 1)], { 7: [...namedWorkers, { name: jobName, conclusion }] });
+        const verdict = await verdictFor('abc', a);
+        expect(verdict).toBe(conclusion);
+        expect(pickShipSha(['abc'], new Map([['abc', verdict]]))).toBe(
+          conclusion === 'success' ? 'abc' : null
+        );
+      }
+    }
+  );
+
   it('ignores other workflows at the same commit', async () => {
     const other = { ...run(9, 99, 1), name: 'Docker Build' };
     const a = api([other], { 9: [{ name: QUALITY_JOB_NAME, conclusion: 'success' }] });
