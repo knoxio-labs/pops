@@ -31,13 +31,17 @@ name: Inventory's search behaviour under the Inventory scope matches the shipped
     env:
       SERVER_URL: ${CONTROL_BASE_URL}
 
-# Pairing starts the first download on its own. Wait for the normal dashboard
-# before creating the records that Search will query; `inventory-smoke.yaml`
-# covers the same automatic initial-sync boundary.
+# Browse appears before the first snapshot arrives. Require a healthy settled
+# dashboard before creating records, so a downloading replica cannot satisfy
+# the initial-sync boundary merely by exposing its Items control.
 - tapOn: 'Inventory'
 - extendedWaitUntil:
     visible: 'Items, \d+'
     timeout: 60000
+- extendedWaitUntil:
+    notVisible: 'Sync status: .*'
+    timeout: 60000
+- assertVisible: 'Items, \d+'
 - assertVisible: 'Locations, \d+'
 
 # Two items and a place, all named from this run's own suffix. One item's
@@ -51,6 +55,10 @@ name: Inventory's search behaviour under the Inventory scope matches the shipped
 - inputText: ${output.inventory.run} Drill
 - assertVisible: ${output.inventory.run} Drill
 - tapOn: 'Create'
+- extendedWaitUntil:
+    notVisible:
+      id: 'inventory-item-name-field'
+    timeout: 60000
 - assertVisible: ${output.inventory.run} Drill
 
 - tapOn: 'Inventory'
@@ -61,15 +69,29 @@ name: Inventory's search behaviour under the Inventory scope matches the shipped
 - inputText: Drill ${output.inventory.run}
 - assertVisible: Drill ${output.inventory.run}
 - tapOn: 'Create'
+- extendedWaitUntil:
+    notVisible:
+      id: 'inventory-item-name-field'
+    timeout: 60000
 - assertVisible: Drill ${output.inventory.run}
 
 - tapOn: 'Inventory'
 - tapOn: 'Locations, \d+'
 - tapOn: 'Add a place|New place'
+# Expand before typing so the keyboard cannot move Create out of Maestro's
+# pre-wait hierarchy: https://github.com/mobile-dev-inc/Maestro/issues/3475.
+- swipe:
+    from:
+      text: 'Sheet Grabber'
+    direction: UP
 - tapOn: 'Name'
 - inputText: ${output.inventory.run} Garage
 - assertVisible: ${output.inventory.run} Garage
 - tapOn: 'Create'
+- extendedWaitUntil:
+    notVisible:
+      id: 'New place'
+    timeout: 60000
 - assertVisible: ${output.inventory.run} Garage, Place
 
 # Open Search, scope to Inventory, and ask for the suffix. Locations has its
@@ -202,6 +224,10 @@ name: Inventory's search behaviour under the Inventory scope matches the shipped
 - inputText: ${output.inventory.run} Waiting
 - assertVisible: ${output.inventory.run} Waiting
 - tapOn: 'Create'
+- extendedWaitUntil:
+    notVisible:
+      id: 'inventory-item-name-field'
+    timeout: 60000
 # Items has its own Search field, so tab-bar Search is again the second match.
 - tapOn:
     text: 'Search'
