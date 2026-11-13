@@ -189,6 +189,9 @@ for (const viewport of [
     page,
   }) => {
     await page.setViewportSize(viewport);
+    const contextRole = viewport.width >= 1280 ? 'region' : 'dialog';
+    const rentalEditor = page.getByRole(contextRole, { name: 'Rental #61', exact: true });
+    const stayEditor = page.getByRole(contextRole, { name: 'Stay #14', exact: true });
     const errors: string[] = [];
     page.on('pageerror', (error) => errors.push(error.message));
     const writes: { path: string; body: unknown }[] = [];
@@ -265,24 +268,40 @@ for (const viewport of [
         .locator('[data-route-kind="journey"][data-route-id="20"]')
         .getByRole('button', { name: 'Harbour connection', exact: true })
     ).toBeVisible();
-    await expect(rentalCard.getByRole('button')).toHaveCSS('border-style', 'dashed');
-    const layout = await page
-      .getByRole('main')
-      .last()
-      .evaluate((element) => {
-        const parent = element.parentElement;
-        if (!parent) throw new Error('Expected the shell workspace host');
-        const styles = getComputedStyle(parent);
-        const available =
-          parent.clientWidth -
-          Number.parseFloat(styles.paddingLeft) -
-          Number.parseFloat(styles.paddingRight);
-        return {
-          actual: element.getBoundingClientRect().width,
-          expected: available,
-        };
-      });
+    for (const name of ['Harbour cars', 'Cedar guesthouse', 'Harbour connection']) {
+      const row = page
+        .getByRole('article')
+        .filter({ has: page.getByRole('button', { name, exact: true }) });
+      await expect(row).toHaveAttribute('data-constraint', 'soft');
+      await expect(row.getByRole('button', { name, exact: true })).toHaveCSS(
+        'border-left-width',
+        '0px'
+      );
+    }
+    const workspace = page.locator('[data-workspace-layout]');
+    await expect(workspace).toHaveAttribute('data-workspace-layout', 'full');
+    const layout = await workspace.evaluate((element) => {
+      const parent = element.parentElement;
+      if (!parent) throw new Error('Expected the shell workspace host');
+      const styles = getComputedStyle(parent);
+      const available =
+        parent.clientWidth -
+        Number.parseFloat(styles.paddingLeft) -
+        Number.parseFloat(styles.paddingRight);
+      return {
+        actual: element.getBoundingClientRect().width,
+        expected: available,
+        columns: getComputedStyle(element).gridTemplateColumns.split(' ').length,
+        content: element.querySelector('main')?.getBoundingClientRect().width,
+        inner:
+          element.clientWidth -
+          Number.parseFloat(getComputedStyle(element).paddingLeft) -
+          Number.parseFloat(getComputedStyle(element).paddingRight),
+      };
+    });
     expect(layout.actual).toBeCloseTo(layout.expected, 0);
+    expect(layout.columns).toBe(1);
+    expect(layout.content).toBeCloseTo(layout.inner, 0);
     const open = rentalCard.getByRole('button');
     const bounds = await open.boundingBox();
     expect(bounds?.height).toBeGreaterThanOrEqual(44);
@@ -293,6 +312,7 @@ for (const viewport of [
       fullPage: true,
     });
     await open.click();
+    await expect(rentalEditor).toBeVisible();
     await expect(page.getByLabel('Provider', { exact: true })).toHaveValue('Harbour cars');
     await expect(page.getByRole('region', { name: 'Add files', exact: true })).toHaveCount(0);
     await page.getByLabel('Provider', { exact: true }).fill('Updated provider');
@@ -322,7 +342,9 @@ for (const viewport of [
       )
     ).toBe(true);
     await page.getByRole('button', { name: 'Close', exact: true }).click();
+    await expect(rentalEditor).toHaveCount(0);
     await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(workspace).toHaveAttribute('data-workspace-layout', 'full');
     const gap = page
       .locator('[data-visit-id="31"]')
       .getByRole('button', { name: /Accommodation not arranged/ });
@@ -330,13 +352,12 @@ for (const viewport of [
     expect(gapBounds?.height).toBeGreaterThanOrEqual(44);
     expect(gapBounds?.width).toBeGreaterThanOrEqual(44);
     await gap.click();
+    await expect(stayEditor).toBeVisible();
     await expect(page.getByLabel('Stay name', { exact: true })).toHaveValue('');
-    await expect(page.getByRole('dialog').getByLabel('Check-in date', { exact: true })).toHaveValue(
-      '2030-04-12'
+    await expect(stayEditor.getByLabel('Check-in date', { exact: true })).toHaveValue('2030-04-12');
+    await expect(stayEditor.getByLabel('Check-out date', { exact: true })).toHaveValue(
+      '2030-04-13'
     );
-    await expect(
-      page.getByRole('dialog').getByLabel('Check-out date', { exact: true })
-    ).toHaveValue('2030-04-13');
     const handledBy = page.getByRole('region', { name: 'Handled by', exact: true });
     await handledBy.getByRole('button', { name: 'Choose contact', exact: true }).click();
     const picker = page.getByRole('dialog', { name: 'Choose a contact', exact: true });
@@ -398,34 +419,28 @@ for (const viewport of [
     await page.getByRole('button', { name: 'Retry status check', exact: true }).click();
     await page.getByRole('button', { name: 'Link file', exact: true }).click();
     await expect(page.getByText('Booking original', { exact: true })).toBeVisible();
-    const overflowingFields = await page
-      .getByRole('dialog')
-      .getByRole('main')
-      .evaluate((element) => {
-        const boundary = element.getBoundingClientRect();
-        return [
-          ...element.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(
-            'input, select, textarea'
-          ),
-        ]
-          .map((field) => ({
-            field: [...(field.labels ?? [])].map((label) => label.textContent).join(' '),
-            type: field.getAttribute('type'),
-            width: field.getBoundingClientRect().width,
-            right: field.getBoundingClientRect().right,
-          }))
-          .filter((field) => field.width > 0 && field.right > boundary.right);
-      });
+    const overflowingFields = await stayEditor.getByRole('main').evaluate((element) => {
+      const boundary = element.getBoundingClientRect();
+      return [
+        ...element.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(
+          'input, select, textarea'
+        ),
+      ]
+        .map((field) => ({
+          field: [...(field.labels ?? [])].map((label) => label.textContent).join(' '),
+          type: field.getAttribute('type'),
+          width: field.getBoundingClientRect().width,
+          right: field.getBoundingClientRect().right,
+        }))
+        .filter((field) => field.width > 0 && field.right > boundary.right);
+    });
     expect(overflowingFields).toEqual([]);
-    const dialogWidth = await page.getByRole('dialog').evaluate((element) => ({
+    const editorWidth = await stayEditor.evaluate((element) => ({
       content: element.scrollWidth,
       viewport: element.clientWidth,
     }));
-    expect(dialogWidth.content).toBeLessThanOrEqual(dialogWidth.viewport);
-    await page
-      .getByRole('dialog')
-      .getByLabel('Check-in date', { exact: true })
-      .scrollIntoViewIfNeeded();
+    expect(editorWidth.content).toBeLessThanOrEqual(editorWidth.viewport);
+    await stayEditor.getByLabel('Check-in date', { exact: true }).scrollIntoViewIfNeeded();
     await page.screenshot({
       path: new URL(`../../../tmp/arrangements-source-${viewport.width}.png`, import.meta.url)
         .pathname,

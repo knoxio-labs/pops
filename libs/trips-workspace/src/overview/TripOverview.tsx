@@ -156,11 +156,8 @@ function OverviewHeader(props: OverviewViewProps): JSX.Element {
   return (
     <>
       <PageHeader
-        title={
-          <span className="break-words font-trip-display text-3xl font-semibold tracking-tight sm:text-4xl">
-            {title}
-          </span>
-        }
+        title={title}
+        titleClassName="break-words font-trip-display text-3xl font-semibold tracking-tight sm:text-4xl"
         description={
           trip.when ? (
             <span className="whitespace-pre-wrap break-words">{trip.when}</span>
