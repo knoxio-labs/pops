@@ -201,3 +201,36 @@ export const AllColoursDark: Story = {
   render: () => <AllColoursGrid />,
   globals: { theme: 'dark' },
 };
+
+/** Approved travel category roles stay distinct from the attention treatment in both themes. */
+export const TripsWorkspace: Story = {
+  render: () => (
+    <section className="trips-workspace space-y-5 rounded-2xl bg-trip-canvas p-6 font-trip-body text-trip-ink">
+      <h2 className="font-trip-display text-3xl font-semibold">A trip, gradually taking shape</h2>
+      <p className="text-trip-muted">
+        Inter for reading. Space Grotesk for the places and journey.
+      </p>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className="rounded-xl bg-trip-transport-soft p-4 text-trip-transport">
+          Getting around
+        </div>
+        <div className="rounded-xl bg-trip-stay-soft p-4 text-trip-stay">Where you sleep</div>
+        <div className="rounded-xl bg-trip-experience-soft p-4 text-trip-experience">
+          Experiences and people
+        </div>
+      </div>
+      <div className="rounded-xl border border-trip-attention bg-trip-attention-soft p-4 text-trip-attention">
+        An actual unresolved finding
+      </div>
+      <div className="flex flex-wrap gap-3">
+        <span className="rounded-lg bg-trip-transport px-3 py-2 text-trip-on-solid">
+          Purchased transport
+        </span>
+        <span className="rounded-lg bg-trip-stay px-3 py-2 text-trip-on-solid">Purchased stay</span>
+        <span className="rounded-lg bg-trip-experience px-3 py-2 text-trip-on-solid">
+          Purchased experience
+        </span>
+      </div>
+    </section>
+  ),
+};

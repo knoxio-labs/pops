@@ -161,3 +161,14 @@ export const NoAcceptHint: Story = {
     onFilesSelected: () => {},
   },
 };
+
+/** Inline attachments retain the same real file input, drop handling and validation. */
+export const Compact: Story = {
+  args: {
+    compact: true,
+    multiple: true,
+    prompt: 'Upload a file',
+    acceptHint: null,
+    onFilesSelected: () => {},
+  },
+};

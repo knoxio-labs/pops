@@ -16,6 +16,26 @@ Beyond the shadcn set (`background`, `card`, `primary`, `muted`, `border`, `ring
 
 Three groups are deliberately theme-invariant, with no `.dark` override on purpose: `--qr-*` (an inverted QR refuses to scan on some handsets), `--print-*` (paper is white whichever theme the screen is in — only `print:` utilities may use these), and `--brand-gradient-*` (the POPS wordmark reads the same in both themes).
 
+## Trips workspace tokens
+
+The approved Trips workspace opts into `font-trip-body` (bundled Inter Variable)
+and `font-trip-display` (bundled Space Grotesk Variable). The other pillars retain
+their existing typography. `trip-canvas`, `trip-surface`, `trip-sunken`, `trip-ink`,
+`trip-muted` and `trip-line` provide its light/dark reading surfaces. Its category
+roles are `trip-transport` (blue), `trip-stay` (teal) and `trip-experience` (plum),
+with corresponding soft surfaces. `trip-attention` is reserved for an actual
+attention finding, never a source kind. `trip-on-solid` supplies readable text on
+the solid category treatments. Values live here as OKLCH, not in consumers.
+
+The optional `trips-workspace` scope aliases the shared background, text, border
+and accent roles for existing editors, including portalled Sheet content. These
+aliases apply only within that scope; the font utilities remain explicit.
+
+`useWideWorkspace` reads the emitted `--breakpoint-xl` theme value for responsive
+rail selection. This breakpoint is static so JavaScript and Tailwind's `xl:`
+utilities consume the same definition. An absent theme yields compact presentation
+rather than inventing a second width.
+
 ## `.app-*` accent classes
 
 Apply one of `app-emerald`, `app-indigo`, `app-amber`, `app-rose`, `app-sky`, `app-violet` to an ancestor and every descendant using `bg-app-accent` / `text-app-accent` retints. Each class also overrides `--primary`, so it re-tints token-driven components that never mention `app-accent` at all. This is the mechanism behind per-pillar identity — set it once at the surface root, not per component.

@@ -1,6 +1,6 @@
 import { FileText, Search } from 'lucide-react';
 
-import { Button, SearchPickerDialog } from '@pops/ui';
+import { Button, cn, SearchPickerDialog } from '@pops/ui';
 
 import { paperlessThumbnailUrl } from './api';
 
@@ -16,6 +16,7 @@ export function PickerDialog({
   problem,
   noResultsAction,
   hideTrigger,
+  compact,
   query,
   pending,
   onSelect,
@@ -29,6 +30,7 @@ export function PickerDialog({
   problem: string | null;
   noResultsAction: ReactNode;
   hideTrigger?: boolean;
+  compact?: boolean;
   query: UseQueryResult<PaperlessSearchDocument[], Error>;
   pending: boolean;
   onSelect: (document: PaperlessSearchDocument) => void;
@@ -41,7 +43,7 @@ export function PickerDialog({
     <SearchPickerDialog
       open={open}
       onOpenChange={onOpenChange}
-      trigger={pickerTrigger(hideTrigger)}
+      trigger={pickerTrigger(hideTrigger, compact)}
       title="Choose existing"
       description="Search Documents to choose an original file."
       searchPlaceholder="Search documents..."
@@ -122,15 +124,20 @@ function PickerResult({
   );
 }
 
-function pickerTrigger(hidden: boolean | undefined): ReactElement {
+function pickerTrigger(hidden: boolean | undefined, compact: boolean | undefined): ReactElement {
   return (
     <Button
       hidden={hidden}
       variant="outline"
-      className="size-32 shrink-0 flex-col gap-2 whitespace-normal border-2 border-dashed border-foreground/30 bg-background px-3 text-sm"
+      className={cn(
+        'shrink-0 gap-2 border-dashed bg-background px-3 text-sm',
+        compact
+          ? 'h-11 flex-row'
+          : 'size-32 flex-col whitespace-normal border-2 border-foreground/30'
+      )}
       aria-label="Choose existing document"
     >
-      <Search className="size-8 text-muted-foreground" />
+      <Search className={cn('text-muted-foreground', compact ? 'size-4' : 'size-8')} aria-hidden />
       Choose existing
     </Button>
   );

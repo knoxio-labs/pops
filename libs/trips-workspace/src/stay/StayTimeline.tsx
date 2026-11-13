@@ -26,9 +26,9 @@ export function StayTimeline({
     return arrivalOrder || left.id - right.id;
   });
   return (
-    <section aria-label="Accommodation timeline" className="space-y-4">
+    <section aria-label="Accommodation timeline" className="@container space-y-4">
       {periods.map((period) => (
-        <div key={period.id} className="flex flex-col gap-3 sm:flex-row">
+        <div key={period.id} className="flex flex-col gap-3 @xl:flex-row">
           <div className="flex shrink-0 gap-3">
             <div className="flex w-24 shrink-0 flex-col gap-2 pt-3 text-right text-sm text-muted-foreground">
               {period.timing.arrival && (

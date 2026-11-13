@@ -122,3 +122,12 @@ describe('Sheet', () => {
     expect(className).toContain('pb-[env(safe-area-inset-bottom)]');
   });
 });
+
+it('applies an opt-in surface scope to portalled content without changing its accessible identity', () => {
+  render(
+    <Sheet {...CONTENT} open onOpenChange={vi.fn()} className="trips-workspace font-trip-body" />
+  );
+  const dialog = screen.getByRole('dialog', { name: 'Set a field' });
+  expect(dialog).toHaveClass('trips-workspace', 'font-trip-body');
+  expect(dialog).toHaveTextContent('Field values');
+});

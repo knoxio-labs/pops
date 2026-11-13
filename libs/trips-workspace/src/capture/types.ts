@@ -90,6 +90,8 @@ export type CapturePerformer = (request: CaptureRequest) => Promise<CaptureResul
 /** Approved source surfaces share one browser session for an owning trip. */
 export interface CaptureWorkspaceProps extends CaptureIdentity {
   view: 'capture' | 'inbox' | 'explore';
+  /** Inline workspace presentation reuses this same retained composer and command engine. */
+  compact?: boolean;
   /** Edit only this exact active source; undefined/null show the ordinary tool view, never a fallback source. */
   selectedSource?: CaptureSourceSelection | null;
   /** Optional host-owned Contacts chooser and reader; absent capabilities leave retained references unverified. */

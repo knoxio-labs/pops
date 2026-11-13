@@ -13,11 +13,11 @@ type DetailsProps = CaptureComposerProps;
 export function CaptureDetails(props: DetailsProps): JSX.Element {
   const { session, state } = props;
   return (
-    <details className="space-y-3">
+    <details className="@container space-y-3">
       <summary className="min-h-11 cursor-pointer py-3 text-sm text-muted-foreground">
         Optional details
       </summary>
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className="grid gap-3 @lg:grid-cols-2">
         <KindDetails {...props} />
         <TextInput
           label="Source URL"

@@ -182,7 +182,20 @@
       "return": "Devolução",
       "alternative": "Alternativo",
       "applied": "Aplicado",
-      "connectionChanged": "A conexão de Viagens mudou. Reabra a viagem antes de selecionar uma fonte."
+      "connectionChanged": "A conexão de Viagens mudou. Reabra a viagem antes de selecionar uma fonte.",
+      "workspace": {
+        "when": "Quando",
+        "what": "O quê",
+        "state": "Estado",
+        "with": "Com quem",
+        "originals": "Originais",
+        "sleep": "Onde dormir",
+        "unjudged": "Sem avaliação · datas ou estadias incompletas",
+        "covered": "Coberto",
+        "open": "Noites em aberto",
+        "host": "Anfitrião",
+        "organiser": "Organizador"
+      }
     }
   },
   "arrangements": {

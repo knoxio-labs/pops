@@ -234,3 +234,27 @@ describe('FileUpload — the accept hint', () => {
     expect(screen.getByText('Photos and PDFs only')).toBeInTheDocument();
   });
 });
+
+it('keeps real file selection and refused-type validation in compact attachment actions', async () => {
+  const onFilesSelected = vi.fn();
+  const onError = vi.fn();
+  render(
+    <FileUpload
+      compact
+      multiple
+      accept=".pdf"
+      prompt="Upload a file"
+      acceptHint={null}
+      onFilesSelected={onFilesSelected}
+      onError={onError}
+    />
+  );
+  const zone = screen.getByRole('button', { name: 'Upload a file' });
+  expect(document.querySelector('input[type="file"]')).not.toBeVisible();
+  fireEvent.drop(zone, { dataTransfer: { files: [jpg('refused.jpg'), pdf('accepted.pdf')] } });
+  expect(onError).toHaveBeenCalledTimes(1);
+  expect(onFilesSelected).toHaveBeenCalledWith([expect.objectContaining({ name: 'accepted.pdf' })]);
+  onFilesSelected.mockClear();
+  await chooseFiles([pdf('chosen.pdf')]);
+  expect(onFilesSelected).toHaveBeenCalledWith([expect.objectContaining({ name: 'chosen.pdf' })]);
+});

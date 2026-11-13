@@ -181,3 +181,5 @@ export * from './components/ConditionalModalButton';
 export * from './components/RequestDialog';
 export * from './components/ResponsiveActionBar';
 export * from './components/CardWithActionOverlay';
+
+export { useWideWorkspace } from './lib/use-breakpoint';
