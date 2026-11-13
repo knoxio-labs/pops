@@ -38,7 +38,11 @@ export function IdeaFields({
         <IdeaTimingFields {...props} />
         <IdeaReferences {...props} />
         {draft ? (
-          <Button variant="ghost" onClick={() => session.records.discard('idea', row.id)}>
+          <Button
+            variant="ghost"
+            disabled={!session.editor.canDiscardRejectedEdit('idea', row.id)}
+            onClick={() => session.records.discard('idea', row.id)}
+          >
             Discard unsaved Idea edits
           </Button>
         ) : null}

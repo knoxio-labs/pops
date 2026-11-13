@@ -26,6 +26,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends python3 make g+
 
 # Workspace root manifests.
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json .oxfmtrc.json ./
+COPY patches/ ./patches/
 
 # Phase 1: package.json of @pops/food + its transitive @pops/* deps.
 COPY pillars/food/package.json ./pillars/food/

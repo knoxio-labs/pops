@@ -7,22 +7,27 @@ import {
   ArrangementResponsibilityProvider,
   TripOverview,
 } from '@pops/trips-workspace';
-import { Button, ErrorState } from '@pops/ui';
+import { ErrorState } from '@pops/ui';
 
 import { useArrangementContacts } from './arrangements/use-arrangement-contacts';
 import { sourceId } from './source-id';
 import { useOverviewLabels } from './timeline-labels';
 import { accommodationContext } from './TimelineAccommodation';
 import { TimelineContext } from './TimelineContext';
+import { TimelineControls, TimelineFilters } from './TimelineControls';
 import { client as defaultClient } from './trips-api/client.gen';
 import { useTimelineSelection } from './use-timeline-selection';
 
 import type { RemotePageHostProps } from '@pops/pillar-sdk';
-import type { OverviewCalendarSelection, OverviewKind } from '@pops/trips-workspace';
+import type {
+  CaptureTimelineSelection,
+  CaptureTimelineVisibility,
+  OverviewCalendarSelection,
+  OverviewKind,
+} from '@pops/trips-workspace';
 
 import type { ApiClients } from './api/types';
 import type { CaptureContextProps } from './CaptureContext';
-import type { TimelineSelection } from './TimelineContext';
 
 type TimelineOwnerProps = RemotePageHostProps &
   Pick<CaptureContextProps, 'client' | 'documentsClient'> & {
@@ -74,15 +79,8 @@ function TimelineSession(
 ) {
   const { tripId } = props;
   const { i18n } = useTranslation('trips');
+  const presentation = useTimelinePresentationState(props.initialCalendar);
   const { selection, onSelect, changed } = useTimelineSelection(props.client);
-  const [calendarEnabled, setCalendarEnabled] = useState(props.initialCalendar ?? false);
-  const [calendarSelection, setCalendarSelection] = useState<OverviewCalendarSelection>({
-    from: '',
-    to: '',
-    zone: '',
-    kind: 'all',
-    journey: '',
-  });
   const labels = useOverviewLabels();
   if (changed)
     return (
@@ -107,16 +105,24 @@ function TimelineSession(
       onOpenSource={(source) => onSelect({ kind: 'source', source })}
       onOpenTool={(tool) => onSelect({ kind: 'tool', tool })}
       onOpenPlacement={(target) => onSelect({ kind: 'placement', target })}
-      controls={
-        <TimelineControls
-          calendarEnabled={calendarEnabled}
-          toggleCalendar={() => setCalendarEnabled((enabled) => !enabled)}
+      controls={<TimelineControls {...presentation} onSelect={onSelect} />}
+      sourceVisibility={presentation.sourceVisibility}
+      sourceControls={
+        <TimelineFilters
+          {...props}
+          selection={presentation.sourceFilter}
+          onChange={presentation.setSourceFilter}
+          onVisibility={presentation.setSourceVisibility}
           onSelect={onSelect}
         />
       }
+
       calendar={
-        calendarEnabled
-          ? { selection: calendarSelection, onChange: setCalendarSelection }
+        presentation.calendarEnabled
+          ? {
+              selection: presentation.calendarSelection,
+              onChange: presentation.setCalendarSelection,
+            }
           : undefined
       }
       renderVisitContext={accommodationContext({ tripId, client: props.client, onSelect })}
@@ -142,49 +148,29 @@ function sourceHref(tripId: number, kind: OverviewKind, id: number) {
   }
 }
 
-function TimelineControls({
-  calendarEnabled,
-  toggleCalendar,
-  onSelect,
-}: {
-  calendarEnabled: boolean;
-  toggleCalendar: () => void;
-  onSelect: (selection: TimelineSelection) => void;
-}) {
-  const { t } = useTranslation('trips');
-  return (
-    <div className="flex min-w-0 flex-wrap gap-2">
-      <Button className="min-h-11" onClick={() => onSelect({ kind: 'create', sourceKind: null })}>
-        {t('timeline.create.title')}
-      </Button>
-      <Button
-        variant="outline"
-        className="min-h-11"
-        aria-pressed={calendarEnabled}
-        onClick={toggleCalendar}
-      >
-        {t('calendar')}
-      </Button>
-      <Button
-        variant="outline"
-        className="min-h-11"
-        onClick={() => onSelect({ kind: 'placement', target: null })}
-      >
-        {t('timeline.route.title')}
-      </Button>
-      <Button variant="outline" className="min-h-11" onClick={() => onSelect({ kind: 'metadata' })}>
-        {t('settings')}
-      </Button>
-      {(['people', 'capture', 'inbox', 'explore'] as const).map((tool) => (
-        <Button
-          key={tool}
-          variant="outline"
-          className="min-h-11"
-          onClick={() => onSelect({ kind: 'tool', tool })}
-        >
-          {t(`timeline.tools.${tool}`)}
-        </Button>
-      ))}
-    </div>
-  );
+function useTimelinePresentationState(initialCalendar?: boolean) {
+  const [sourceFilter, setSourceFilter] = useState<CaptureTimelineSelection>({
+    kind: 'all',
+    organisation: 'all',
+    location: 'all',
+  });
+  const [sourceVisibility, setSourceVisibility] = useState<CaptureTimelineVisibility>();
+  const [calendarEnabled, setCalendarEnabled] = useState(initialCalendar ?? false);
+  const [calendarSelection, setCalendarSelection] = useState<OverviewCalendarSelection>({
+    from: '',
+    to: '',
+    zone: '',
+    kind: 'all',
+    journey: '',
+  });
+  return {
+    sourceFilter,
+    setSourceFilter,
+    sourceVisibility,
+    setSourceVisibility,
+    calendarEnabled,
+    toggleCalendar: () => setCalendarEnabled((enabled) => !enabled),
+    calendarSelection,
+    setCalendarSelection,
+  };
 }

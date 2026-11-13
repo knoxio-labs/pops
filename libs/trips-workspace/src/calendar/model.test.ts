@@ -16,6 +16,143 @@ const selection: CalendarSelection = {
 };
 
 describe('source calendar clocks', () => {
+  it.each([false, true])(
+    'preserves explicit local/local interval clipping with resolved instants: %s',
+    (resolved) => {
+      const snapshot = calendarSnapshot();
+      const row = snapshot.journeys[0];
+      if (!row) throw new Error('fixture missing');
+      row.legs = [
+        sourceLeg({
+          from: { local: '2028-02-29T12:00', ...(resolved ? { timeZone: 'UTC' } : {}) },
+          to: { local: '2028-03-02T12:00', ...(resolved ? { timeZone: 'UTC' } : {}) },
+        }),
+      ];
+      row.timing = {
+        journeyId: 20,
+        legs: [
+          {
+            legId: 40,
+            departure: resolved ? '2028-02-29T12:00:00Z' : null,
+            arrival: resolved ? '2028-03-02T12:00:00Z' : null,
+            elapsedMinutes: resolved ? 2880 : null,
+          },
+        ],
+        connections: [],
+        findings: [],
+        window: null,
+      };
+      const entries = visibleEntries(snapshot, {
+        ...selection,
+        kind: 'journey',
+        zone: 'UTC',
+        from: '2028-03-01',
+        to: '2028-03-01',
+      });
+      expect(entries).toHaveLength(1);
+      expect(entries[0]).toMatchObject({
+        key: 'leg:40:departure',
+        date: '2028-02-29',
+        clock: '12:00',
+        instant: resolved ? '2028-02-29T12:00:00Z' : null,
+        endDate: '2028-03-02',
+        endInstant: resolved ? '2028-03-02T12:00:00Z' : null,
+        endExclusive: true,
+        placementDate: '2028-03-01',
+        continuing: true,
+      });
+    }
+  );
+
+  it.each([
+    { precision: 'day/local', from: { date: '2028-02-29' }, to: { local: '2028-03-02T12:00' } },
+    { precision: 'local/day', from: { local: '2028-02-29T12:00' }, to: { date: '2028-03-02' } },
+  ])('keeps mixed $precision endpoints as independent source-day points', ({ from, to }) => {
+    const snapshot = calendarSnapshot();
+    const row = snapshot.journeys[0];
+    if (!row) throw new Error('fixture missing');
+    row.legs = [sourceLeg({ from, to })];
+    row.timing = {
+      journeyId: 20,
+      legs: [{ legId: 40, departure: null, arrival: null, elapsedMinutes: null }],
+      connections: [],
+      findings: [],
+      window: null,
+    };
+    const entries = calendarEntries(snapshot).filter((entry) => entry.source.kind === 'journey');
+    expect(entries.map((entry) => entry.date)).toEqual(['2028-02-29', '2028-03-02']);
+    for (const entry of entries) {
+      expect(entry.instant).toBeNull();
+      expect(entry).not.toHaveProperty('endDate');
+      expect(entry).not.toHaveProperty('endInstant');
+      expect(entry).not.toHaveProperty('endExclusive');
+    }
+    expect(
+      visibleEntries(snapshot, {
+        ...selection,
+        kind: 'journey',
+        zone: 'UTC',
+        from: '2028-03-01',
+        to: '2028-03-01',
+      })
+    ).toEqual([]);
+  });
+
+  it('places day-only Journey endpoints on their exact supplied days without a duration or all-day range', () => {
+    const snapshot = calendarSnapshot();
+    const row = snapshot.journeys[0];
+    if (!row) throw new Error('fixture missing');
+    row.legs = [
+      sourceLeg({
+        from: { date: '2028-02-29', timeZone: 'Pacific/Kiritimati' },
+        to: { date: '2028-03-02' },
+      }),
+    ];
+    row.timing = {
+      journeyId: 20,
+      legs: [
+        {
+          legId: 40,
+          departure: null,
+          arrival: null,
+          elapsedMinutes: null,
+          departureSource: { date: '2028-02-29', precision: 'day' },
+          arrivalSource: { date: '2028-03-02', precision: 'day' },
+        },
+      ],
+      connections: [],
+      findings: [],
+      window: null,
+    };
+    const entries = calendarEntries(snapshot).filter((entry) => entry.source.kind === 'journey');
+    expect(entries.map((entry) => entry.date)).toEqual(['2028-02-29', '2028-03-02']);
+    for (const entry of entries) {
+      expect(entry.instant).toBeNull();
+      expect(entry.clock).toBeUndefined();
+      expect(entry).not.toHaveProperty('endDate');
+      expect(entry).not.toHaveProperty('endExclusive');
+    }
+    for (const zone of ['Pacific/Honolulu', 'Pacific/Kiritimati']) {
+      expect(
+        visibleEntries(snapshot, {
+          ...selection,
+          kind: 'journey',
+          zone,
+          from: '2028-03-01',
+          to: '2028-03-01',
+        })
+      ).toEqual([]);
+      expect(
+        visibleEntries(snapshot, {
+          ...selection,
+          kind: 'journey',
+          zone,
+          from: '2028-02-29',
+          to: '2028-02-29',
+        }).map((entry) => entry.key)
+      ).toEqual(['leg:40:departure']);
+    }
+  });
   it('rejects both DST folds and gaps, absent fields, unsupported zones and invalid dates', () => {
     expect(calendarInstant('2029-03-11', '02:30', 'America/New_York')).toBeNull();
     expect(calendarInstant('2029-11-04', '01:30', 'America/New_York')).toBeNull();

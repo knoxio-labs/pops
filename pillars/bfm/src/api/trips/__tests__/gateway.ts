@@ -7,7 +7,7 @@ import { createMobileTripsClient } from '../client.js';
 
 import type { CallResult } from '@pops/pillar-sdk/server';
 
-import type { MobileTripDetail } from '../../../contract/mobile-trips-detail-schemas.js';
+import type { MobileTripDetailV2 } from '../../../contract/mobile-trips-detail-schemas.js';
 import type { PillarHandleFactory } from '../../pillars/gateway.js';
 import type { MobileTripsClient } from '../client.js';
 
@@ -25,20 +25,20 @@ export interface TripsResponses {
   legs?: CallResult<unknown>;
 }
 function sourceLegs(
-  detail: MobileTripDetail,
+  detail: MobileTripDetailV2,
   input: unknown
-): { legs: MobileTripDetail['journeys'][number]['legs'] } {
+): { legs: MobileTripDetailV2['journeys'][number]['legs'] } {
   const parsed = z.object({ tripId: z.number(), journeyId: z.number() }).parse(input);
   return { legs: detail.journeys.find((journey) => journey.id === parsed.journeyId)?.legs ?? [] };
 }
-function sourceJourneys(detail: MobileTripDetail): {
-  journeys: Omit<MobileTripDetail['journeys'][number], 'legs'>[];
+function sourceJourneys(detail: MobileTripDetailV2): {
+  journeys: Omit<MobileTripDetailV2['journeys'][number], 'legs'>[];
 } {
   return { journeys: detail.journeys.map(({ legs: _legs, ...journey }) => journey) };
 }
 /** Drives the actual authenticated gateway/client mapping without a network or unsafe handle casts. */
 export function tripsClientOver(
-  detail: MobileTripDetail,
+  detail: MobileTripDetailV2,
   responses: TripsResponses = {}
 ): { client: MobileTripsClient; calls: { operation: string; input: unknown }[] } {
   const calls: { operation: string; input: unknown }[] = [];

@@ -27,8 +27,7 @@ internal struct ContentViewCaptureAvailabilityTests {
     private func captureAvailability(
         available: [MobileFeature], captureAvailable: Bool
     ) async throws -> Bool {
-        let scene = try #require(
-            UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+        let scene = try await HostWindowScene.require()
         let window = UIWindow(windowScene: scene)
         window.frame = CGRect(x: 0, y: 0, width: 390, height: 844)
         defer { window.isHidden = true }

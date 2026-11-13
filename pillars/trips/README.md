@@ -41,8 +41,7 @@ secret-file readability and prefers that file over the local environment. No
 credential is created by Trips. Both compose variants mount the Trips-owned
 `pops_trips_api_key` secret; the operator must first provision the account and
 host file using the [Trips deployment runbook](../../infra/secrets.example/trips/README.md).
-Without credentials in a standalone local process, independent metadata remains
-usable and an unknown explicit tag selection returns retryable 503.
+Inbound domain routes require either a service account with the projected Trips scope or a verified Cloudflare Access operator. Missing or invalid Access identity is never treated as an operator when service-account credentials are required; a presented service-account key is always verified for its scope. This inbound authentication is separate from the outbound credentials Trips uses to read Tags and Contacts. An unknown explicit tag selection without the outbound Tags credential returns retryable 503.
 
 Equivalent `/places` routes manage reusable names and source links.
 `GET/POST /trips/:tripId/visits` and `GET/PATCH /trips/:tripId/visits/:id` manage
@@ -333,13 +332,21 @@ return `409` until their grouping is explicitly removed. Neither deletion cancel
 an external booking.
 
 Each endpoint independently retains an optional existing `placeId`, source label
-and links, local calendar wallclock, and explicit supported IANA zone. Place data
+and links, either a calendar `date` or a local calendar wallclock, and explicit supported IANA zone. Place data
 never fills a clock or zone. Local clocks have ISO date and time syntax without
 an offset; seconds and fractional seconds are optional. Calendar and zone validity
 are checked independently. DST gaps/overlaps and reversed or overlapping journey
 chronology remain recorded source facts without forcing an instant. Missing
-endpoint values stay absent. A supplied endpoint object replaces its complete
-value; `{}` clears it.
+endpoint values stay absent. A day-only `date` never implies a clock, arrival or
+instant. Supplying both nonnull `date` and `local` is rejected, even if their days agree.
+A supplied endpoint object replaces its existing fields, with one additive compatibility
+exception: omitting `date` preserves a previous day-only value when no `local` is
+supplied. This prevents an older reader that strips the new field from erasing it
+on full endpoint replacement, including `{}`. Explicit `date: null` clears the day;
+supplying `local` selects datetime precision and clears any previous day-only value.
+These transitions and the collection revision guard run in the same transaction.
+Stored endpoints contain neither null dates nor dual precision; historical lifecycle
+receipts are not rewritten.
 
 Mode is optional, nonblank free-form source text with no inferred transport
 classification. Per-leg intention (`In plan`, `Considering`, `Alternative`),
@@ -361,7 +368,11 @@ scope and never rewrites source records or selection.
 `GET /trips/:tripId/journeys/:id/timing` projects the persisted source legs in
 one read transaction. It returns resolved endpoint instants, signed leg elapsed
 minutes, signed time available between adjacent legs, a local-calendar window,
-and nonblocking clock/chronology findings. Negative elapsed or available minutes
+and nonblocking clock/chronology findings. Each leg also returns independent
+`departureSource`/`arrivalSource` calendar-day and precision metadata (`unknown`,
+`day`, or `local`). Missing source metadata remains compatible with earlier responses.
+Day-only endpoints do not resolve instants, elapsed minutes, connections or a window.
+Negative elapsed or available minutes
 record contradictions; zero is not an overlap. An absent clock or zone remains
 unknown without a filler finding. A complete clock that cannot be resolved
 unambiguously produces `clock_unresolved` and a null instant; no DST side is

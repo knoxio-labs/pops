@@ -3,19 +3,36 @@ import DesignSystem
 import SwiftUI
 
 /// One selected-Trip timeline and app-level search backed only by injected source reads.
-/// It performs no trip writes and opens files only after an actual authenticated download.
+/// Optional device-authorized capture writes retain their own operation identities; documents open only after
+/// an authenticated download.
 public struct TripsRootView: View {
     @State private var model: TripsModel
     private let documents: any DocumentsReading
+    @State private var captureDrafts: TripCaptureDrafts?
 
-    /// Creates the feature with authenticated trip and original-document readers from the composition root.
-    public init(repository: any TripsReading, documents: any DocumentsReading) {
-        self.init(model: TripsModel(repository: repository), documents: documents)
+    /// Creates the feature with authenticated readers and optional explicitly authorized capture writes.
+    /// Omitting the writer keeps source browsing read-only. The app supplies an owner-bound durable store;
+    /// omitting storage retains only in-memory drafts for injected previews and host tests.
+    /// Optional selection retention restores only an earlier explicit selection, never the first Trip by default.
+    public init(
+        repository: any TripsReading, documents: any DocumentsReading,
+        captureWriter: (any TripCapturesWriting)? = nil,
+        captureStore: (any TripCaptureDraftStore)? = nil,
+        selection: (any TripOfflineSelection)? = nil
+    ) {
+        self.init(
+            model: TripsModel(repository: repository, selection: selection), documents: documents,
+            captureDrafts: captureWriter.map {
+                TripCaptureDrafts(writer: $0, storage: captureStore)
+            })
     }
 
-    internal init(model: TripsModel, documents: any DocumentsReading) {
+    internal init(
+        model: TripsModel, documents: any DocumentsReading, captureDrafts: TripCaptureDrafts? = nil
+    ) {
         self.documents = documents
         _model = State(initialValue: model)
+        _captureDrafts = State(initialValue: captureDrafts)
     }
 
     public var body: some View {
@@ -35,6 +52,9 @@ public struct TripsRootView: View {
         }
         .tint(Color.popsAccent)
         .task { await model.load() }
+        .sheet(item: $model.capture) { draft in
+            TripCaptureComposer(draft: draft)
+        }
     }
 
     private var stack: some View {
@@ -54,6 +74,13 @@ public struct TripsRootView: View {
             .popsTitleDisplay(large: true)
             .toolbar {
                 ToolbarItem(placement: .principal) { tripMenu }
+                ToolbarItem(placement: .primaryAction) {
+                    if let id = model.snapshot?.trip.id, let captureDrafts {
+                        Button("Capture", systemImage: "plus") {
+                            model.capture = captureDrafts.draft(tripID: id)
+                        }
+                    }
+                }
                 ToolbarItem(placement: .primaryAction) {
                     if let snapshot = model.snapshot {
                         TripsDocumentShortcut(snapshot: snapshot, repository: documents)

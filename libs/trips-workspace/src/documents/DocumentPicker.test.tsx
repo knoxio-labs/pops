@@ -56,6 +56,9 @@ describe('DocumentPicker owner selection', () => {
     await waitFor(() => expect(onSelected).toHaveBeenCalledOnce());
     expect(onSelected.mock.calls[0]?.[0]).toBe(document);
     expect(associatePaperlessDocument).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Choose existing document' })).toHaveFocus()
+    );
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
@@ -76,5 +79,9 @@ describe('DocumentPicker owner selection', () => {
     await waitFor(() => expect(onSelected).toHaveBeenCalledTimes(2));
     expect(onSelected.mock.calls[1]?.[0]).toBe(document);
     expect(associatePaperlessDocument).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Choose existing document' })).toHaveFocus()
+    );
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });

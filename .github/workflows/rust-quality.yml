@@ -147,11 +147,11 @@ jobs:
           # diff` alone ignores untracked files, so a never-committed spec
           # would slip through silently. Assert the file is tracked first.
           if ! git ls-files --error-unmatch "$spec" >/dev/null 2>&1; then
-            echo "::error::$spec is not committed. Run 'cargo run -p contacts --bin emit-openapi' and commit the result."
+            echo "::error::$spec is not committed. Run 'node pillars/contacts/scripts/generate-openapi.mjs' and commit the result."
             exit 1
           fi
 
-          cargo run -p contacts --bin emit-openapi
+          node pillars/contacts/scripts/generate-openapi.mjs
 
           if [ ! -s "$spec" ]; then
             echo "::error::$spec is empty after emission — the generator produced no document."
@@ -161,6 +161,6 @@ jobs:
           # Drift gate: the freshly emitted spec must equal the committed one.
           if ! git diff --exit-code -- "$spec"; then
             echo "::error::$spec is out of date."
-            echo "Run 'cargo run -p contacts --bin emit-openapi' and commit the result."
+            echo "Run 'node pillars/contacts/scripts/generate-openapi.mjs' and commit the result."
             exit 1
           fi

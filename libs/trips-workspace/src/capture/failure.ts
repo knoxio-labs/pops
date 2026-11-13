@@ -1,5 +1,7 @@
 import { ApiError } from '@pops/pillar-sdk/client';
 
+import type { CaptureIntent } from './editor-types';
+
 /** This source's confirmed validation/auth/ownership conflicts cannot have committed its mutation. */
 export function captureRequestRejected(error: unknown): boolean {
   return (
@@ -25,4 +27,16 @@ export function alreadyUndoneCapture(): ApiError {
     message: 'This operation was already undone. Review the retained draft and capture again.',
     retryable: false,
   });
+}
+
+/** Exact owning revision rejection; other conflicts and ambiguous outcomes keep immutable Retry. */
+export function captureRevisionConflict(error: unknown, intent: CaptureIntent | null): boolean {
+  return (
+    error instanceof ApiError &&
+    error.status === 409 &&
+    error.code === 'trips.source.source_revision_conflict' &&
+    intent !== null &&
+    (intent.request.command.kind === 'capture.update' ||
+      intent.request.command.kind === 'idea.update')
+  );
 }

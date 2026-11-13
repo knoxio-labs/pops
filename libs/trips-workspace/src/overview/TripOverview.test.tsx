@@ -12,6 +12,15 @@ import { overviewResponses, overviewTrip } from './test-utils';
 afterEach(cleanup);
 
 describe('source-backed TripOverview', () => {
+  it('shows the known Journey day without inventing a clock or changing its independent source', async () => {
+    const responses = overviewResponses();
+    responses.set('/trips/7/journeys/20/legs', {
+      legs: [sourceLeg({ from: { date: '2028-02-29' }, to: {} })],
+    });
+    mount(responses);
+    expect(await screen.findByText('29 Feb 2028 → …')).toBeVisible();
+    expect(screen.queryByText(/2028-02-29T00:00/)).not.toBeInTheDocument();
+  });
   it('opens the published Documents workspace even before the first association exists', async () => {
     mount(overviewResponses(), undefined, { documentsHref: '/trips/7/documents' });
     expect(await screen.findByRole('link', { name: 'Documents' })).toHaveAttribute(

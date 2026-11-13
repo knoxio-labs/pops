@@ -315,6 +315,21 @@
   },
   "calendar": "Calendário",
   "timeline": {
+    "filters": {
+      "organisation": "Organização",
+      "kind": "Tipo de fonte",
+      "location": "Local registrado",
+      "all": "Todos",
+      "unassigned": "Sem local",
+      "unavailable": "Indisponível",
+      "capture": "Capturas",
+      "idea": "Ideias",
+      "event": "Eventos",
+      "unorganised": "Não organizado",
+      "organised": "Organizado",
+      "unresolved": "Não resolvido",
+      "unverified": "Responsável não verificado"
+    },
     "tools": {
       "people": "Pessoas",
       "capture": "Capturar",

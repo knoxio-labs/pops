@@ -315,6 +315,21 @@
   },
   "calendar": "Calendar",
   "timeline": {
+    "filters": {
+      "organisation": "Organisation",
+      "kind": "Source type",
+      "location": "Recorded location",
+      "all": "All",
+      "unassigned": "Unassigned",
+      "unavailable": "Unavailable",
+      "capture": "Captures",
+      "idea": "Ideas",
+      "event": "Events",
+      "unorganised": "Unorganised",
+      "organised": "Organised",
+      "unresolved": "Unresolved",
+      "unverified": "Unverified owner"
+    },
     "tools": {
       "people": "People",
       "capture": "Capture",

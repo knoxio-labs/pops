@@ -3,9 +3,21 @@ import Auth
 import BFMClient
 
 extension AppComposition {
+    internal static func streamAuthorizerFactory(refresher: DeviceSessionRefresher)
+        -> @Sendable (PairedDevice) -> any BFMStreamAuthorizer
+    {
+        { PairedDeviceStreamAuthorizer(refresher: refresher, device: $0) }
+    }
+
     internal func documentsRepository(for device: PairedDevice) -> any DocumentsReading {
         BFMDocumentsRepository(
-            client: authenticated(device), baseURL: device.baseURL, authorizer: streamAuthorizer)
+            client: authenticated(device), baseURL: device.baseURL,
+            authorizer: boundStreamAuthorizer(device),
+            expectedDevice: device)
+    }
+
+    internal func tripCaptureRepository(for device: PairedDevice) -> BFMTripCapturesRepository {
+        BFMTripCapturesRepository(client: authenticated(device))
     }
 
     internal func tripsRepository(for device: PairedDevice) -> any TripsReading {

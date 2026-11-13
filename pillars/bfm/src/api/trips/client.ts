@@ -6,10 +6,12 @@ import {
   validTripsReferences,
 } from './references.js';
 import { TripsWire } from './wire.js';
+import { createMobileTrip, updateMobileTrip } from './write.js';
 
 import type { z } from 'zod';
 
-import type { MobileTripDetail } from '../../contract/mobile-trips-detail-schemas.js';
+import type { MobileTripInput } from '../../contract/mobile-trip-write-schemas.js';
+import type { MobileTripDetailV2 } from '../../contract/mobile-trips-detail-schemas.js';
 import type { MobileJourney } from '../../contract/mobile-trips-journey-schemas.js';
 import type { MobileTrip } from '../../contract/mobile-trips-schemas.js';
 
@@ -26,15 +28,20 @@ type TripsReadRouter = {
   stays: { list: (input: { tripId: number }) => Promise<unknown> };
 };
 
-/** Complete source reads used by the native contract, not a persistence or booking mutation layer. */
+/** Source-backed reads and explicit metadata writes; all persistence remains in Trips. */
 export interface MobileTripsClient {
+  createTrip(input: MobileTripInput): Promise<GatewayOutcome<MobileTrip>>;
+  updateTrip(id: number, input: MobileTripInput): Promise<GatewayOutcome<MobileTrip>>;
   listTrips(): Promise<GatewayOutcome<MobileTrip[]>>;
-  getTrip(id: number): Promise<GatewayOutcome<MobileTripDetail>>;
+  /** Assembles day-aware source once; each published handler selects its explicit wire projection. */
+  getTrip(id: number): Promise<GatewayOutcome<MobileTripDetailV2>>;
 }
 
 /** Builds the source-backed native Trips reader over BFM's authenticated federation gateway. */
 export function createMobileTripsClient(gateway: PillarGateway): MobileTripsClient {
   return {
+    createTrip: (input) => createMobileTrip(gateway, input),
+    updateTrip: (id, input) => updateMobileTrip(gateway, id, input),
     listTrips: async () => {
       const response = await gateway.call<TripsReadRouter, unknown>('trips', (handle) =>
         handle.trips.list()
@@ -113,7 +120,7 @@ async function readJourney(
   gateway: PillarGateway,
   tripId: number,
   journey: MobileJourney
-): Promise<GatewayOutcome<MobileTripDetail['journeys'][number]>> {
+): Promise<GatewayOutcome<MobileTripDetailV2['journeys'][number]>> {
   const response = await gateway.call<TripsReadRouter, unknown>('trips', (h) =>
     h.journeyLegs.list({ tripId, journeyId: journey.id })
   );
@@ -126,7 +133,7 @@ async function readJourney(
 async function getTrip(
   gateway: PillarGateway,
   id: number
-): Promise<GatewayOutcome<MobileTripDetail>> {
+): Promise<GatewayOutcome<MobileTripDetailV2>> {
   const response = await gateway.call<TripsReadRouter, unknown>('trips', (h) =>
     h.trips.get({ id })
   );
@@ -137,13 +144,13 @@ async function getTrip(
   const collectionRead = checkedCollections(await readCollections(gateway, id));
   if (!isGatewayOk(collectionRead)) return collectionRead;
   const reads = collectionRead.value;
-  const journeys: MobileTripDetail['journeys'] = [];
+  const journeys: MobileTripDetailV2['journeys'] = [];
   for (const journey of reads.journeys.journeys) {
     const detailed = await readJourney(gateway, id, journey);
     if (!isGatewayOk(detailed)) return detailed;
     journeys.push(detailed.value);
   }
-  const detail: MobileTripDetail = {
+  const detail: MobileTripDetailV2 = {
     trip: trip.value,
     places: reads.places.places,
     visits: reads.visits.visits,

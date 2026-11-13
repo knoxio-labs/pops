@@ -17,6 +17,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends python3 make g+
 
 # Workspace root manifests — needed for pnpm install to resolve.
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json .oxfmtrc.json ./
+COPY patches/ ./patches/
 
 # Phase 1: package.json of @pops/finance + its transitive @pops/* deps.
 # `pnpm install --filter "@pops/finance..."` (below) scopes lockfile

@@ -21,6 +21,13 @@ export const MobileJourneyEndpointSchema = z.object({
     .optional(),
   timeZone: MobileTripTimeZoneSchema.optional(),
 });
+/** Versioned source precision preserves a day without supplying a clock, zone or instant. */
+export const MobileJourneyEndpointV2Schema = MobileJourneyEndpointSchema.extend({
+  date: MobileTripDateSchema.optional(),
+}).refine((value) => value.date === undefined || value.local === undefined, {
+  message: 'Supply a calendar day or a local datetime, not both',
+  path: ['date'],
+});
 /** Configured producer thresholds remain optional; BFM does not invent safety minimums. */
 export const MobileJourneyBuffersSchema = z.object({
   minimumConnectionMinutes: z.number().nonnegative().optional(),
@@ -59,6 +66,11 @@ export const MobileJourneyLegSchema = z.object({
   notes: z.string(),
   sourceLinks: z.array(MobileTripSourceLinkSchema),
   ...MobileTripAuditFields,
+});
+/** Versioned source legs add explicit day precision while the installed legacy wire remains unchanged. */
+export const MobileJourneyLegV2Schema = MobileJourneyLegSchema.extend({
+  from: MobileJourneyEndpointV2Schema,
+  to: MobileJourneyEndpointV2Schema,
 });
 /** Explicit selected and alternative journey IDs; no selection is inferred from status or time. */
 export const MobileJourneyGroupSchema = z.object({

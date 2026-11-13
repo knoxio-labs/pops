@@ -12,7 +12,7 @@ lookup, so a name is the whole routing table.
 
 ## Published contract inputs
 
-`src/contract-inputs.ts` declares the Trips- and Documents-owned OpenAPI snapshots in
+`src/contract-inputs.ts` declares the Trips-, Contacts- and Documents-owned OpenAPI snapshots in
 `contracts/`. The vendored-contract guard checks each copy byte-for-byte
 against its owner and rejects undeclared locations or missing inputs. The
 MCP image carries the same files beside both `src/` and `dist/`; no producer
@@ -39,11 +39,28 @@ constraints, not domain limits. See the
 [OpenAPI 3.0 data types](https://spec.openapis.org/oas/v3.0.3#data-types).
 
 After a producer contract changes, run `pnpm --filter @pops/mcp sync:contracts`
-to copy the canonical Trips snapshot, then run the affected adapter tests
+to copy the canonical owner snapshots, then run the affected adapter tests
 and vendored-contract guard. Projection and response validators read that
 snapshot directly; there is no separate handwritten domain schema or
 generated client to refresh. This helper performs no dispatch, discovery,
 authorization or retry; each adapter owns its finite operation list.
+
+## Canonical Contacts operations
+
+`contacts.entities.catalogue`, `.list`, `.get`, `.create` and `.reference` call
+only the owning Contacts operations. Each advertises its exact matching
+`contacts.entities.<operation>` service-account scope. Only `.create` writes.
+Read the live catalogue before selecting a type; omission retains the producer
+default rather than a gateway-owned choice. Inputs and successful owner responses
+use the same declared Contacts snapshot and pure schema projector as Trips.
+A malformed argument never dispatches an owner call. Unsupported schema changes
+fail adapter startup instead of exposing a weaker contract.
+
+Only `.reference` supplies a canonical URI; historical IDs can resolve to a
+different canonical entity. The gateway validates the owner-issued canonical
+ID/URI pair and does not infer a URI from the requested ID. Owner unavailability,
+authorization refusal and rejected writes remain errors; mutations are never
+automatically retried. `finance.entities.list` remains its existing read-only alias.
 
 ## Invariants every handler upholds
 

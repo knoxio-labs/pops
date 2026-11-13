@@ -105,8 +105,22 @@ describe('Persisted journey timing projection', () => {
     opened = openTripsDb(join(directory, 'trips.db'));
     const timing = getJourneyTiming(opened.db, trip.id, journey.id);
     expect(timing.legs).toEqual([
-      { legId: first.id, departure: null, arrival: null, elapsedMinutes: null },
-      { legId: second.id, departure: null, arrival: null, elapsedMinutes: null },
+      {
+        legId: first.id,
+        departure: null,
+        arrival: null,
+        elapsedMinutes: null,
+        departureSource: { date: '2028-03-12', precision: 'local' },
+        arrivalSource: { date: '2028-11-05', precision: 'local' },
+      },
+      {
+        legId: second.id,
+        departure: null,
+        arrival: null,
+        elapsedMinutes: null,
+        departureSource: { date: null, precision: 'unknown' },
+        arrivalSource: { date: null, precision: 'unknown' },
+      },
     ]);
     expect(timing.connections[0]?.availableMinutes).toBeNull();
     expect(timing.window).toBeNull();

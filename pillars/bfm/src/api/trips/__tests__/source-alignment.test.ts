@@ -1,10 +1,32 @@
 import { describe, expect, it } from 'vitest';
 
+import { MobileTripDetailV2Schema } from '../../../contract/mobile-trips-detail-schemas.js';
+import { MobileJourneyEndpointV2Schema } from '../../../contract/mobile-trips-journey-schemas.js';
 import { MobileVisitTimingSchema } from '../../../contract/mobile-trips-schemas.js';
 import { tripsFixture, tripsEventFixture } from './fixtures.js';
 import { tripsClientOver } from './gateway.js';
 
 describe('reader-first source alignment', () => {
+  it('preserves Journey day-only precision through the actual reader without a clock or zone', async () => {
+    const detail = MobileTripDetailV2Schema.parse(tripsFixture());
+    const leg = detail.journeys[0]?.legs[0];
+    if (!leg) throw new Error('Missing fixture leg');
+    leg.from = { date: '2028-02-29' };
+    leg.to = { date: '2028-03-01', timeZone: 'Pacific/Kiritimati' };
+    const result = await tripsClientOver(detail).client.getTrip(7);
+    expect(result.kind).toBe('ok');
+    if (result.kind !== 'ok') throw new Error('Expected canonical source snapshot');
+    expect(result.value.journeys[0]?.legs[0]?.from).toEqual({ date: '2028-02-29' });
+    expect(result.value.journeys[0]?.legs[0]?.to).toEqual({
+      date: '2028-03-01',
+      timeZone: 'Pacific/Kiritimati',
+    });
+    expect(MobileJourneyEndpointV2Schema.safeParse({ date: '2027-02-29' }).success).toBe(false);
+    expect(
+      MobileJourneyEndpointV2Schema.safeParse({ date: '2028-02-29', local: '2028-02-29T12:00' })
+        .success
+    ).toBe(false);
+  });
   it.each([{ min: 0 }, { min: 3 }, { max: 2 }, { min: 1, max: 4 }])(
     'preserves supplied duration bounds $min/$max',
     async (bounds) => {

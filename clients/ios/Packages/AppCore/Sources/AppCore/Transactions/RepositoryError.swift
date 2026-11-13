@@ -1,3 +1,5 @@
+import Foundation
+
 /// What a repository call can fail with, in terms a screen can act on.
 ///
 /// Shared across every repository seam in ``AppCore`` rather than one enum
@@ -46,23 +48,39 @@ public enum RepositoryError: Error, Hashable, Sendable {
     }
 }
 
+/// An explicit upstream configuration refusal, distinct from network reachability and owner availability.
+public enum RepositoryConfigurationFailure: Hashable, Sendable {
+    case upstreamMisconfigured
+}
+
 /// The diagnostic payload retained by ``RepositoryError/transport(_:)``.
 public struct RepositoryTransportError: Hashable, Sendable, CustomStringConvertible {
     /// A credential-free diagnostic retained for compatibility with existing logging.
     public let diagnostic: String
     /// The structured failure, when the runtime could classify one safely.
     public let popsError: PopsError?
+    /// Original Foundation URL error identity when the transport actually observed one; never inferred from text.
+    public let urlErrorCode: URLError.Code?
+    /// A source-classified configuration refusal; never derived from a diagnostic's text or display kind.
+    public let configurationFailure: RepositoryConfigurationFailure?
 
     /// Creates a legacy diagnostic payload.
-    public init(diagnostic: String) {
+    public init(diagnostic: String, configurationFailure: RepositoryConfigurationFailure? = nil) {
         self.diagnostic = diagnostic
         self.popsError = nil
+        self.urlErrorCode = nil
+        self.configurationFailure = configurationFailure
     }
 
     /// Creates a payload backed by a structured POPS failure.
-    public init(popsError: PopsError) {
+    public init(
+        popsError: PopsError, urlErrorCode: URLError.Code? = nil,
+        configurationFailure: RepositoryConfigurationFailure? = nil
+    ) {
         self.diagnostic = popsError.code
         self.popsError = popsError
+        self.urlErrorCode = urlErrorCode
+        self.configurationFailure = configurationFailure
     }
 
     /// The credential-free diagnostic used for string interpolation.

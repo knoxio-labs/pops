@@ -28,6 +28,8 @@ The rule is worth holding to because the lanes do not cost the same. `mise run t
 
 ## Mounting a view here buys a view-controller hierarchy, not an accessibility tree
 
+Mounted and pixel-rendering fixtures admit a real connected `UIWindowScene` through `HostWindowScene`. App-host injection does not guarantee scene connection has finished: the helper subscribes to UIKit’s scene connection event before rechecking, and fails after the existing five-second appearance deadline if no window scene connects. Cancellation removes its observer and deadline; no scene is manufactured.
+
 `ContentViewTabSwitcherTests` mounts a `UIHostingController` in a real `UIWindow` and reads the `UITabBarController` SwiftUI built for a `TabView`. That works, and it is tempting to read it as "this target can mount SwiftUI and inspect what UIKit made of it". It cannot, in general — and the thing it most obviously cannot do is check that an `accessibilityIdentifier` reached the rendered tree.
 
 Probed here, on a booted simulator, in this target: a `UIWindow(windowScene:)` given a real frame, made key and visible and laid out, holds a `_UIHostingView` of the right type at the right size whose `subviews` and `accessibilityElements` are **both empty** — and stay empty after `drawHierarchy(in:afterScreenUpdates:)` and after six tenths of a second of run loop. The same walk over a `UIViewController` holding a plain `UILabel` and `UIButton` finds both by identifier immediately, so the emptiness is SwiftUI's rather than the walk's.

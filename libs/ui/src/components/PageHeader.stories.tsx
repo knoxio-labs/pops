@@ -44,6 +44,31 @@ export const TopLevelFull: Story = {
   },
 };
 
+export const ManyActions: Story = {
+  args: {
+    title: 'Coast and mountain journey',
+    description: 'After the exams · return date undecided',
+    actions: (
+      <div className="flex min-w-0 flex-wrap gap-2">
+        {[
+          'Calendar',
+          'Edit route',
+          'Trip settings',
+          'People',
+          'Capture',
+          'Inbox',
+          'Explore',
+          'Documents',
+        ].map((label) => (
+          <Button key={label} variant="outline">
+            {label}
+          </Button>
+        ))}
+      </div>
+    ),
+  },
+};
+
 export const DrillDown: Story = {
   args: {
     title: 'The Shawshank Redemption',

@@ -24,8 +24,8 @@ import type {
   ScopeInferenceResult,
 } from './types.js';
 
-/** Accessor returning the curation queue, or `null` when Redis is unconfigured. */
-export type CurationQueueAccessor = () => Queue<ClassifyEngramJobData> | null;
+/** Lazily expose only the enqueue operation consumed here; a full production Queue remains compatible, and null means unconfigured. */
+export type CurationQueueAccessor = () => Pick<Queue<ClassifyEngramJobData>, 'add'> | null;
 
 export interface IngestServiceDeps {
   db: CerebrumDb;
