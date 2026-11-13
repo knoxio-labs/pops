@@ -103,6 +103,12 @@ describe('GET /openapi', () => {
       'operator.issuePairingCode'
     );
     expect(body.paths?.['/operator/devices']?.['get']?.operationId).toBe('operator.listDevices');
+    expect(body.paths?.['/operator/devices/{id}/capabilities']?.['get']?.operationId).toBe(
+      'operator.getDeviceGrant'
+    );
+    expect(body.paths?.['/operator/devices/{id}/capabilities']?.['put']?.operationId).toBe(
+      'operator.replaceDeviceGrant'
+    );
     expect(body.paths?.['/operator/devices/{id}']?.['delete']?.operationId).toBe(
       'operator.revokeDevice'
     );
