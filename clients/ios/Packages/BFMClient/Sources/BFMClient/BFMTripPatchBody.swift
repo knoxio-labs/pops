@@ -1,5 +1,4 @@
 import AppCore
-import Foundation
 
 /// The generator's supported override for MobileTripPatchInput, preserving absent versus explicit null.
 internal struct BFMTripPatchBody: Codable, Hashable, Sendable {
