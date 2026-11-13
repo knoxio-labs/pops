@@ -86,3 +86,37 @@ export interface CraftTimeline {
   rows: readonly (CraftVisit | CraftFlight)[];
   documents: readonly { id: string; title: string; source: string }[];
 }
+
+/** Fictional Finance record facts are display-only; membership comes from the explicit trip tag. */
+export interface CraftSpendingRecord {
+  readonly id: string;
+  readonly merchant: string;
+  readonly date: string;
+  readonly account: string;
+  readonly amount: string;
+  readonly unit: string;
+  readonly type: string;
+}
+
+/** Read and owner-recovery states shown inline without making Finance writes in Trips. */
+export type CraftSpendingState =
+  | { kind: 'tag-missing' }
+  | { kind: 'loading' }
+  | { kind: 'unavailable' }
+  | { kind: 'partial'; tagLabel: string; records: readonly CraftSpendingRecord[] }
+  | { kind: 'ready'; tagLabel: string; records: readonly CraftSpendingRecord[] }
+  | { kind: 'creating'; tagLabel: string }
+  | { kind: 'attachment-failed'; tagLabel: string; transaction: CraftSpendingRecord }
+  | { kind: 'uncertain-create'; tagLabel: string }
+  | { kind: 'choose-existing'; tagLabel: string; records: readonly CraftSpendingRecord[] }
+  | { kind: 'linked'; tagLabel: string; transaction: CraftSpendingRecord };
+
+/** Typed UI intents let the Finance owner retain create, retry, and recovery authority. */
+export type CraftFinanceIntent =
+  | { kind: 'choose-trip-tag' }
+  | { kind: 'refresh-spending' }
+  | { kind: 'open-manual-entry' }
+  | { kind: 'open-transaction'; transactionId: string }
+  | { kind: 'retry-trip-link'; transactionId: string }
+  | { kind: 'find-existing-transaction' }
+  | { kind: 'link-existing-transaction'; transactionId: string };

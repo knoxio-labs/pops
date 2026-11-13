@@ -13,6 +13,9 @@ export type {
   CraftVisitItem,
   CraftVisit,
   CraftTimeline,
+  CraftSpendingRecord,
+  CraftSpendingState,
+  CraftFinanceIntent,
 } from './trip-timeline-craft-types';
 
 const hotel = tripRouteArrangements.find((item) => item.id === 'hotel');
