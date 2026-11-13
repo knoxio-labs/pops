@@ -7,44 +7,42 @@ internal struct TripsSourceRow: View {
     internal let zone: TimeZone
     internal let places: [TripPlace]
     internal var context: String?
+    internal var isCurrent = false
 
     internal var body: some View {
         NavigationLink {
             TripsSourceView(source: source, places: places)
         } label: {
-            HStack(alignment: .top, spacing: PopsSpacing.md) {
-                Image(systemName: source.symbol).foregroundStyle(Color.popsAccent)
-                    .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: PopsSpacing.xs) {
-                    Text(source.displayName(places: places)).font(.popsHeadline)
-                    if let context {
-                        Text(context).font(.popsCaption).foregroundStyle(Color.popsMutedForeground)
+            PopsCard(appearance: .featured) {
+                VStack(alignment: .leading, spacing: isCurrent ? PopsSpacing.md : PopsSpacing.lg) {
+                    TripsSourceHeading(
+                        title: source.displayName(places: places), symbol: source.symbol,
+                        context: context)
+                    if case .journey(let journey) = source {
+                        ForEach(journey.legs) {
+                            TripsJourneyLegView(
+                                leg: $0, places: places, showsReference: !isCurrent)
+                        }
+                    } else {
+                        TripsSourceScheduleView(
+                            value: TripSourceSchedulePresentation(
+                                source: source, isCurrent: isCurrent),
+                            zone: zone)
                     }
-                    if !source.routeLabel(places: places).isEmpty
-                        && source.displayName(places: places) != source.routeLabel(places: places)
-                    {
-                        Text(source.routeLabel(places: places)).font(.popsSubheadline)
+                    if let status = source.status, !status.isEmpty {
+                        Text(status)
+                            .font(.popsSubheadline)
+                            .foregroundStyle(Color.popsMutedForeground)
                     }
-                    if let start = source.start {
-                        Text(TripClock.dateLabel(start, zone: zone))
-                            .font(.popsCaption)
-                        Text("\(TripClock.clockLabel(start, zone: zone)) · \(zone.identifier)")
-                            .font(.popsCaption).foregroundStyle(Color.popsMutedForeground)
-                    }
-                    if let status = source.status {
-                        Label(
-                            status,
-                            systemImage: status == "Purchased" ? "checkmark.circle.fill" : "circle"
-                        )
-                        .font(.popsCaption)
-                        .foregroundStyle(
-                            status == "Purchased" ? Color.popsSuccess : Color.popsMutedForeground)
-                    }
-                    TripSourceStateLines(source: source)
+                    TripSourceStateLines(source: source, showsReferences: !isCurrent)
                 }
+                .frame(minHeight: PopsSize.touchTarget, alignment: .leading)
             }
-            .frame(minHeight: PopsSize.touchTarget, alignment: .leading)
             .accessibilityElement(children: .combine)
         }
+        .buttonStyle(.plain)
+        .navigationLinkIndicatorVisibility(.hidden)
+        .listRowSeparator(.hidden)
+        .listRowBackground(Color.popsBackground)
     }
 }

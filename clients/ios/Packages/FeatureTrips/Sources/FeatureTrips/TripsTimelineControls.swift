@@ -10,6 +10,7 @@ internal struct TripsTimelineControls: View {
 
     internal var body: some View {
         Section("Timeline") {
+            PopsTextField("Search this Trip", placeholder: "Search this Trip", text: $filter.query)
             Picker("Group by", selection: $filter.grouping) {
                 ForEach(TripTimelineGrouping.allCases) { Text($0.rawValue).tag($0) }
             }
