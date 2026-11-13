@@ -7,6 +7,7 @@ import { StaySchema } from '../../contract/stay-schemas.js';
 import { events, journeys, stays, sourceOperations } from '../schema.js';
 import { getTrip } from './records.js';
 import { canonicalSourceValue } from './source-canonical.js';
+import { currentJourneyLegSets } from './source-journey-leg-sets.js';
 import {
   getCapture,
   getIdea,
@@ -54,6 +55,11 @@ function emptyWorkspace(): SourceWorkspace {
 }
 function currentAffected(db: TripsDb, tripId: number, receipt: SourceReceipt): SourceWorkspace {
   return {
+    ...(receipt.journeyLegSets === undefined
+      ? {}
+      : {
+          journeyLegSets: currentJourneyLegSets(db, tripId, receipt.journeyLegSets),
+        }),
     captures: receipt.captures.map((row) => getCapture(db, tripId, row.id)),
     ideas: receipt.ideas.map((row) => getIdea(db, tripId, row.id)),
     associations: receipt.associations.map((row) => getCaptureAssociation(db, tripId, row.id)),

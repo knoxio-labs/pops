@@ -760,6 +760,238 @@
             },
             "type": "array"
           },
+          "journeyLegSets": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "journeyId": {
+                  "exclusiveMinimum": true,
+                  "maximum": 9007199254740991,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "legs": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "arrangement": {
+                        "enum": ["Booked", "Agreed", "Not arranged", "Not needed", null],
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "createdAt": {
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                        "type": "string"
+                      },
+                      "from": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "date": {
+                            "format": "date",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+                            "type": "string"
+                          },
+                          "local": {
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d+)?)?$",
+                            "type": "string"
+                          },
+                          "placeId": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "sourceLabel": {
+                            "type": "string"
+                          },
+                          "sourceLinks": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "label": {
+                                  "type": "string"
+                                },
+                                "uri": {
+                                  "anyOf": [
+                                    {
+                                      "format": "uri",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                      "type": "string"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": ["uri"],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "timeZone": {
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "id": {
+                        "exclusiveMinimum": true,
+                        "maximum": 9007199254740991,
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "intention": {
+                        "enum": ["In plan", "Considering", "Alternative", null],
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "journeyId": {
+                        "exclusiveMinimum": true,
+                        "maximum": 9007199254740991,
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "mode": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "notes": {
+                        "type": "string"
+                      },
+                      "operator": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "purchase": {
+                        "enum": ["Purchased", null],
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "reference": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "service": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "sourceLinks": {
+                        "items": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "label": {
+                              "type": "string"
+                            },
+                            "uri": {
+                              "anyOf": [
+                                {
+                                  "format": "uri",
+                                  "type": "string"
+                                },
+                                {
+                                  "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                  "type": "string"
+                                }
+                              ]
+                            }
+                          },
+                          "required": ["uri"],
+                          "type": "object"
+                        },
+                        "type": "array"
+                      },
+                      "to": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "date": {
+                            "format": "date",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+                            "type": "string"
+                          },
+                          "local": {
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d+)?)?$",
+                            "type": "string"
+                          },
+                          "placeId": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "sourceLabel": {
+                            "type": "string"
+                          },
+                          "sourceLinks": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "label": {
+                                  "type": "string"
+                                },
+                                "uri": {
+                                  "anyOf": [
+                                    {
+                                      "format": "uri",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                      "type": "string"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": ["uri"],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "timeZone": {
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "updatedAt": {
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "journeyId",
+                      "mode",
+                      "from",
+                      "to",
+                      "intention",
+                      "arrangement",
+                      "purchase",
+                      "operator",
+                      "service",
+                      "reference",
+                      "notes",
+                      "sourceLinks",
+                      "createdAt",
+                      "updatedAt"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "revision": {
+                  "maximum": 9007199254740991,
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              },
+              "required": ["revision", "legs", "journeyId"],
+              "type": "object"
+            },
+            "type": "array"
+          },
           "journeys": {
             "items": {
               "additionalProperties": false,
@@ -1940,6 +2172,238 @@
                 "createdAt",
                 "updatedAt"
               ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "journeyLegSets": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "journeyId": {
+                  "exclusiveMinimum": true,
+                  "maximum": 9007199254740991,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "legs": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "arrangement": {
+                        "enum": ["Booked", "Agreed", "Not arranged", "Not needed", null],
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "createdAt": {
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                        "type": "string"
+                      },
+                      "from": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "date": {
+                            "format": "date",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+                            "type": "string"
+                          },
+                          "local": {
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d+)?)?$",
+                            "type": "string"
+                          },
+                          "placeId": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "sourceLabel": {
+                            "type": "string"
+                          },
+                          "sourceLinks": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "label": {
+                                  "type": "string"
+                                },
+                                "uri": {
+                                  "anyOf": [
+                                    {
+                                      "format": "uri",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                      "type": "string"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": ["uri"],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "timeZone": {
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "id": {
+                        "exclusiveMinimum": true,
+                        "maximum": 9007199254740991,
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "intention": {
+                        "enum": ["In plan", "Considering", "Alternative", null],
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "journeyId": {
+                        "exclusiveMinimum": true,
+                        "maximum": 9007199254740991,
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "mode": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "notes": {
+                        "type": "string"
+                      },
+                      "operator": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "purchase": {
+                        "enum": ["Purchased", null],
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "reference": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "service": {
+                        "nullable": true,
+                        "type": "string"
+                      },
+                      "sourceLinks": {
+                        "items": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "label": {
+                              "type": "string"
+                            },
+                            "uri": {
+                              "anyOf": [
+                                {
+                                  "format": "uri",
+                                  "type": "string"
+                                },
+                                {
+                                  "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                  "type": "string"
+                                }
+                              ]
+                            }
+                          },
+                          "required": ["uri"],
+                          "type": "object"
+                        },
+                        "type": "array"
+                      },
+                      "to": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "date": {
+                            "format": "date",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+                            "type": "string"
+                          },
+                          "local": {
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d+)?)?$",
+                            "type": "string"
+                          },
+                          "placeId": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "sourceLabel": {
+                            "type": "string"
+                          },
+                          "sourceLinks": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "label": {
+                                  "type": "string"
+                                },
+                                "uri": {
+                                  "anyOf": [
+                                    {
+                                      "format": "uri",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                      "type": "string"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": ["uri"],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "timeZone": {
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "updatedAt": {
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "journeyId",
+                      "mode",
+                      "from",
+                      "to",
+                      "intention",
+                      "arrangement",
+                      "purchase",
+                      "operator",
+                      "service",
+                      "reference",
+                      "notes",
+                      "sourceLinks",
+                      "createdAt",
+                      "updatedAt"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "revision": {
+                  "maximum": 9007199254740991,
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              },
+              "required": ["revision", "legs", "journeyId"],
               "type": "object"
             },
             "type": "array"
@@ -4648,6 +5112,186 @@
                                 },
                                 "type": "object"
                               },
+                              "legs": {
+                                "items": {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "arrangement": {
+                                      "enum": [
+                                        "Booked",
+                                        "Agreed",
+                                        "Not arranged",
+                                        "Not needed",
+                                        null
+                                      ],
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
+                                    "from": {
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "date": {
+                                          "format": "date",
+                                          "nullable": true,
+                                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+                                          "type": "string"
+                                        },
+                                        "local": {
+                                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d+)?)?$",
+                                          "type": "string"
+                                        },
+                                        "placeId": {
+                                          "exclusiveMinimum": true,
+                                          "maximum": 9007199254740991,
+                                          "minimum": 0,
+                                          "type": "integer"
+                                        },
+                                        "sourceLabel": {
+                                          "type": "string"
+                                        },
+                                        "sourceLinks": {
+                                          "items": {
+                                            "additionalProperties": false,
+                                            "properties": {
+                                              "label": {
+                                                "type": "string"
+                                              },
+                                              "uri": {
+                                                "anyOf": [
+                                                  {
+                                                    "format": "uri",
+                                                    "type": "string"
+                                                  },
+                                                  {
+                                                    "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                                    "type": "string"
+                                                  }
+                                                ]
+                                              }
+                                            },
+                                            "required": ["uri"],
+                                            "type": "object"
+                                          },
+                                          "type": "array"
+                                        },
+                                        "timeZone": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "type": "object"
+                                    },
+                                    "intention": {
+                                      "enum": ["In plan", "Considering", "Alternative", null],
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
+                                    "mode": {
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
+                                    "notes": {
+                                      "type": "string"
+                                    },
+                                    "operator": {
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
+                                    "purchase": {
+                                      "enum": ["Purchased", null],
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
+                                    "reference": {
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
+                                    "service": {
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
+                                    "sourceLinks": {
+                                      "items": {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "label": {
+                                            "type": "string"
+                                          },
+                                          "uri": {
+                                            "anyOf": [
+                                              {
+                                                "format": "uri",
+                                                "type": "string"
+                                              },
+                                              {
+                                                "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                                "type": "string"
+                                              }
+                                            ]
+                                          }
+                                        },
+                                        "required": ["uri"],
+                                        "type": "object"
+                                      },
+                                      "type": "array"
+                                    },
+                                    "to": {
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "date": {
+                                          "format": "date",
+                                          "nullable": true,
+                                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+                                          "type": "string"
+                                        },
+                                        "local": {
+                                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d+)?)?$",
+                                          "type": "string"
+                                        },
+                                        "placeId": {
+                                          "exclusiveMinimum": true,
+                                          "maximum": 9007199254740991,
+                                          "minimum": 0,
+                                          "type": "integer"
+                                        },
+                                        "sourceLabel": {
+                                          "type": "string"
+                                        },
+                                        "sourceLinks": {
+                                          "items": {
+                                            "additionalProperties": false,
+                                            "properties": {
+                                              "label": {
+                                                "type": "string"
+                                              },
+                                              "uri": {
+                                                "anyOf": [
+                                                  {
+                                                    "format": "uri",
+                                                    "type": "string"
+                                                  },
+                                                  {
+                                                    "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                                    "type": "string"
+                                                  }
+                                                ]
+                                              }
+                                            },
+                                            "required": ["uri"],
+                                            "type": "object"
+                                          },
+                                          "type": "array"
+                                        },
+                                        "timeZone": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "type": "object"
+                                    }
+                                  },
+                                  "type": "object"
+                                },
+                                "type": "array"
+                              },
                               "mode": {
                                 "enum": ["createJourney"],
                                 "type": "string"
@@ -5466,6 +6110,186 @@
                                   }
                                 },
                                 "type": "object"
+                              },
+                              "legs": {
+                                "items": {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "arrangement": {
+                                      "enum": [
+                                        "Booked",
+                                        "Agreed",
+                                        "Not arranged",
+                                        "Not needed",
+                                        null
+                                      ],
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
+                                    "from": {
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "date": {
+                                          "format": "date",
+                                          "nullable": true,
+                                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+                                          "type": "string"
+                                        },
+                                        "local": {
+                                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d+)?)?$",
+                                          "type": "string"
+                                        },
+                                        "placeId": {
+                                          "exclusiveMinimum": true,
+                                          "maximum": 9007199254740991,
+                                          "minimum": 0,
+                                          "type": "integer"
+                                        },
+                                        "sourceLabel": {
+                                          "type": "string"
+                                        },
+                                        "sourceLinks": {
+                                          "items": {
+                                            "additionalProperties": false,
+                                            "properties": {
+                                              "label": {
+                                                "type": "string"
+                                              },
+                                              "uri": {
+                                                "anyOf": [
+                                                  {
+                                                    "format": "uri",
+                                                    "type": "string"
+                                                  },
+                                                  {
+                                                    "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                                    "type": "string"
+                                                  }
+                                                ]
+                                              }
+                                            },
+                                            "required": ["uri"],
+                                            "type": "object"
+                                          },
+                                          "type": "array"
+                                        },
+                                        "timeZone": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "type": "object"
+                                    },
+                                    "intention": {
+                                      "enum": ["In plan", "Considering", "Alternative", null],
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
+                                    "mode": {
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
+                                    "notes": {
+                                      "type": "string"
+                                    },
+                                    "operator": {
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
+                                    "purchase": {
+                                      "enum": ["Purchased", null],
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
+                                    "reference": {
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
+                                    "service": {
+                                      "nullable": true,
+                                      "type": "string"
+                                    },
+                                    "sourceLinks": {
+                                      "items": {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "label": {
+                                            "type": "string"
+                                          },
+                                          "uri": {
+                                            "anyOf": [
+                                              {
+                                                "format": "uri",
+                                                "type": "string"
+                                              },
+                                              {
+                                                "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                                "type": "string"
+                                              }
+                                            ]
+                                          }
+                                        },
+                                        "required": ["uri"],
+                                        "type": "object"
+                                      },
+                                      "type": "array"
+                                    },
+                                    "to": {
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "date": {
+                                          "format": "date",
+                                          "nullable": true,
+                                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+                                          "type": "string"
+                                        },
+                                        "local": {
+                                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d+)?)?$",
+                                          "type": "string"
+                                        },
+                                        "placeId": {
+                                          "exclusiveMinimum": true,
+                                          "maximum": 9007199254740991,
+                                          "minimum": 0,
+                                          "type": "integer"
+                                        },
+                                        "sourceLabel": {
+                                          "type": "string"
+                                        },
+                                        "sourceLinks": {
+                                          "items": {
+                                            "additionalProperties": false,
+                                            "properties": {
+                                              "label": {
+                                                "type": "string"
+                                              },
+                                              "uri": {
+                                                "anyOf": [
+                                                  {
+                                                    "format": "uri",
+                                                    "type": "string"
+                                                  },
+                                                  {
+                                                    "pattern": "^pops:[a-z][a-z0-9-]*\\/[^/\\s]+\\/[^/\\s]+$",
+                                                    "type": "string"
+                                                  }
+                                                ]
+                                              }
+                                            },
+                                            "required": ["uri"],
+                                            "type": "object"
+                                          },
+                                          "type": "array"
+                                        },
+                                        "timeZone": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "type": "object"
+                                    }
+                                  },
+                                  "type": "object"
+                                },
+                                "type": "array"
                               },
                               "mode": {
                                 "enum": ["createJourney"],

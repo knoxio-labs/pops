@@ -189,6 +189,18 @@ actions use `/trips/:tripId/explore/{add,remove,undo}`. Each action projects its
 typed command. Organisation explicitly associates an existing Idea, Event,
 Journey or Stay, or a canonical external Contacts reference. It can also
 atomically create an explicitly described Idea, Event, Journey or Stay, retaining both identities and provenance.
+A Journey creation target may also supply explicit ordered `legs`, using the
+same canonical leg inputs and writer as direct Journey editing. Omitted legs
+retain the metadata-only contract; no dates, modes, statuses, route visits or
+places are inferred. Supplied legs are created in the same source-operation
+transaction and return an optional complete `journeyLegSets` receipt/current
+projection containing the owning Journey ID, ordered source rows and collection
+revision. Replay retains the original leg-set proof separately from current
+facts. Historical receipts and inverses without this optional field remain valid.
+Creation Undo first verifies the exact created leg set and revision, removes only
+those unchanged own legs, and applies every existing source/dependency refusal.
+Later append, edit, reorder or removal/restore history blocks Undo even if visible
+facts match again; any later refusal rolls back provisional leg removals.
 Capture creation may include that explicit target in the same transaction; an
 Explore activity/place/destination choice therefore retains its Idea subtype and
 independent raw capture rather than being reduced to a generic classification.
