@@ -15,6 +15,7 @@ const RELAYED_STATUSES: ReadonlySet<number> = new Set([400, 404, 412, 413, 415, 
 export type DocumentUploadResult =
   | { readonly kind: 'accepted'; readonly ingestion: unknown }
   | { readonly kind: 'too-large' }
+  | { readonly kind: 'redirected'; readonly status: number }
   | {
       readonly kind: 'refused';
       readonly status: number;
@@ -119,36 +120,64 @@ export async function uploadInventoryDocument(
   target: DocumentUploadTarget,
   deps: DocumentUploadDeps = {}
 ): Promise<DocumentUploadResult> {
+  return forwardDocument(request, target.maxBytes, {
+    deps,
+    pillar: 'inventory',
+    failureMessage: 'inventory did not answer',
+    url: (baseUrl) => uploadUrl(baseUrl, target),
+    classifyResponse: classify,
+  });
+}
+
+type Failure = Exclude<DocumentUploadResult, { kind: 'accepted' }>;
+/** Configuration for the shared raw stream transport; routing and accepted receipts remain owner-specific. */
+export interface DocumentForwarding<Accepted> {
+  readonly deps: DocumentUploadDeps;
+  readonly pillar: string;
+  readonly failureMessage: string;
+  readonly url: (baseUrl: string) => string;
+  readonly classifyResponse: (response: Response) => Promise<Accepted | Failure>;
+}
+
+/** Forward once with service-account authentication. Never follow 3xx responses: bytes may already be committed, so neither owner may acknowledge or automatically retry them. */
+export async function forwardDocument<Accepted>(
+  request: DocumentUploadRequest,
+  maxBytes: number,
+  options: DocumentForwarding<Accepted>
+): Promise<Accepted | Failure> {
+  const { deps, pillar, failureMessage, url, classifyResponse } = options;
   const discovery = deps.discovery ?? getRawDiscovery();
-  const found = await discovery.lookup('inventory');
-  if (found === undefined) return { kind: 'unavailable', message: 'inventory is not discoverable' };
+  const found = await discovery.lookup(pillar);
+  if (found === undefined) return { kind: 'unavailable', message: `${pillar} is not discoverable` };
   const key = (deps.apiKey ?? resolveServiceAccountKey)();
   if (key === undefined) return { kind: 'unavailable', message: 'no service-account key' };
-
   const headers: Record<string, string> = {
     [SERVICE_ACCOUNT_HEADER]: key,
     'content-type': request.contentType,
     accept: 'application/json',
   };
   if (request.contentLength !== undefined) headers['content-length'] = request.contentLength;
-  // Node's fetch refuses a stream body without `duplex`, which the DOM
-  // `RequestInit` this package compiles against does not declare.
   const init: RequestInit & { duplex: 'half' } = {
     method: 'POST',
+    redirect: 'manual',
     headers,
-    body: cappedStream(request.body, target.maxBytes),
+    body: cappedStream(request.body, maxBytes),
     duplex: 'half',
   };
   try {
-    const response = await (deps.fetchImpl ?? fetch)(uploadUrl(found.baseUrl, target), init);
-    return await classify(response);
+    const response = await (deps.fetchImpl ?? fetch)(url(found.baseUrl), init);
+    if (isRedirectStatus(response.status)) return { kind: 'redirected', status: response.status };
+    return await classifyResponse(response);
   } catch (err) {
     if (
       err instanceof TooLargeError ||
       (err instanceof Error && err.cause instanceof TooLargeError)
-    ) {
+    )
       return { kind: 'too-large' };
-    }
-    return { kind: 'unavailable', message: 'inventory did not answer' };
+    return { kind: 'unavailable', message: failureMessage };
   }
+}
+
+function isRedirectStatus(status: number): boolean {
+  return status >= 300 && status < 400;
 }

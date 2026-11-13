@@ -32,8 +32,18 @@ export interface DocumentUploadTarget {
   readonly allowedMimeTypes: readonly string[];
 }
 
+/** A direct Documents upload has no Inventory target; limits are the owner status snapshot at mint time. */
+export interface PaperlessUploadTarget {
+  readonly kind: 'paperless-document';
+  readonly uploadId: string;
+  readonly fileName: string;
+  readonly title?: string;
+  readonly maxBytes: number;
+  readonly allowedMimeTypes: readonly string[];
+}
+
 /** What a minted upload URL is for; the upload route dispatches on `kind`. */
-export type UploadTarget = PhotoUploadTarget | DocumentUploadTarget;
+export type UploadTarget = PhotoUploadTarget | DocumentUploadTarget | PaperlessUploadTarget;
 
 /** A minted single-use upload credential. */
 export interface UploadGrant {
@@ -45,7 +55,8 @@ export interface UploadGrant {
  * In-memory single-use upload credentials. The token in an upload URL is the
  * only credential `PUT /uploads/:token` checks, so it must be unguessable,
  * short-lived and spent on first use. State is per-process: a restart voids
- * every outstanding URL, which only costs the caller a new `createUpload`.
+ * every outstanding URL. Direct Documents callers retain their uploadId and
+ * must treat a missing post-restart receipt as uncertain, never safe to replay.
  */
 export interface UploadTokenStore {
   /** Mint a token for `target`, or `undefined` when {@link MAX_PENDING_UPLOADS} unexpired tokens are outstanding. */

@@ -2,11 +2,18 @@ import { defineErrors } from '@pops/pillar-express';
 
 /** The refusals `PUT /uploads/:token` answers with, coded `mcp.upload.<reason>`. */
 export const uploadErrors = defineErrors('mcp', {
+  outcome_unknown: {
+    area: 'upload',
+    status: 502,
+    message:
+      'The upload outcome is unknown. Do not resend automatically. For direct Documents uploads, read documents.uploadStatus with the original uploadId. For Inventory documents, inspect inventory.documents.list for the original item before explicit recovery.',
+    retryable: false,
+  },
   not_found: {
     area: 'upload',
     status: 404,
     message:
-      'This upload URL is unknown, expired or already used. Mint a new one with the tool that issued it (inventory.photos.createUpload or inventory.documents.createUpload).',
+      'This upload URL is unknown, expired or already used. For a direct Documents upload, inspect documents.uploadStatus with the original uploadId; the file may have been accepted, so do not resend automatically. Other upload tools can mint a new URL.',
     retryable: false,
   },
   empty_body: {
