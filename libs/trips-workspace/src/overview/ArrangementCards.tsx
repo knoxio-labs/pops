@@ -5,13 +5,13 @@ import { SourceCard } from './SourceCard';
 import type { JSX } from 'react';
 
 import type { Stay } from '../stay/types';
-import type { OverviewEvent, TripOverviewProps } from './types';
+import type { OverviewEvent, OverviewViewProps } from './types';
 
 /** Source accommodation keeps its own timing and status, independent of its containing visit. */
 export function StayCard({
   stay,
   ...props
-}: TripOverviewProps & { stay: Stay }): JSX.Element | null {
+}: OverviewViewProps & { stay: Stay }): JSX.Element | null {
   const timing = stay.timing;
   return (
     <SourceCard
@@ -21,10 +21,19 @@ export function StayCard({
       purchased={stay.status === 'Purchased'}
       statuses={[stay.status]}
       labels={props.labels}
-    >
-      {dateRange(timing.arrival, timing.departure, props.locale) && (
-        <span className="block">{dateRange(timing.arrival, timing.departure, props.locale)}</span>
+      when={dateRange(timing.arrival, timing.departure, props.locale)}
+      withWhom={
+        stay.hostLinks.length
+          ? `${props.labels.status('workspace.host')} · ${stay.hostLinks.map((link) => link.label ?? link.uri).join(' · ')}`
+          : undefined
+      }
+      documents={props.sources.documents?.filter(
+        (document) =>
+          document.tripId === props.tripId &&
+          document.targetKind === 'stay' &&
+          document.targetId === stay.id
       )}
+    >
       {(timing.checkIn || timing.checkOut || timing.timeZone) && (
         <span className="block">
           {[timing.checkIn, timing.checkOut, timing.timeZone].filter(Boolean).join(' · ')}
@@ -39,7 +48,7 @@ export function StayCard({
 export function EventCard({
   event,
   ...props
-}: TripOverviewProps & { event: OverviewEvent }): JSX.Element | null {
+}: OverviewViewProps & { event: OverviewEvent }): JSX.Element | null {
   const timing = event.timing;
   return (
     <SourceCard
@@ -49,10 +58,19 @@ export function EventCard({
       purchased={event.purchase === 'Purchased'}
       statuses={[event.intention, event.arrangement, event.purchase]}
       labels={props.labels}
-    >
-      {dateRange(timing.start, timing.end, props.locale) && (
-        <span className="block">{dateRange(timing.start, timing.end, props.locale)}</span>
+      when={dateRange(timing.start, timing.end, props.locale)}
+      withWhom={
+        event.organiserLinks.length
+          ? `${props.labels.status('workspace.organiser')} · ${event.organiserLinks.map((link) => link.label ?? link.uri).join(' · ')}`
+          : undefined
+      }
+      documents={props.sources.documents?.filter(
+        (document) =>
+          document.tripId === props.tripId &&
+          document.targetKind === 'event' &&
+          document.targetId === event.id
       )}
+    >
       {(timing.startTime || timing.endTime || timing.timeZone) && (
         <span className="block">
           {[timing.startTime, timing.endTime, timing.timeZone].filter(Boolean).join(' · ')}

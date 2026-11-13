@@ -7,6 +7,7 @@ import { cn } from '../lib/utils';
 import { Button } from '../primitives/button';
 
 export interface DropZoneProps {
+  compact?: boolean;
   inputRef: React.RefObject<HTMLInputElement | null>;
   inputId: string;
   isDragging: boolean;
@@ -22,6 +23,7 @@ export interface DropZoneProps {
 
 export function DropZone(props: DropZoneProps) {
   const {
+    compact = false,
     inputRef,
     inputId,
     isDragging,
@@ -29,13 +31,7 @@ export function DropZone(props: DropZoneProps) {
     disabled,
     multiple,
     accept,
-    prompt,
-    acceptHint,
   } = props;
-  const { t } = useTranslation('ui');
-  const defaultPrompt = multiple ? t('fileUpload.dragMultiple') : t('fileUpload.dragSingle');
-  const defaultHint = accept === undefined ? null : t('fileUpload.accepts', { types: accept });
-  const hint = acceptHint === undefined ? defaultHint : acceptHint;
   return (
     <div
       role="button"
@@ -56,24 +52,37 @@ export function DropZone(props: DropZoneProps) {
       className={cn(
         'flex flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed border-input bg-background p-8 text-center transition-colors',
         'hover:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        compact && 'min-h-11 flex-row gap-2 border p-2',
         isDragging && 'border-ring bg-accent/40',
         disabled && 'opacity-50 pointer-events-none'
       )}
     >
-      <Upload className="h-8 w-8 text-muted-foreground" aria-hidden />
-      <div className="text-sm font-medium">{prompt ?? defaultPrompt}</div>
-      {hint === null ? null : <div className="text-xs text-muted-foreground">{hint}</div>}
+      <Upload className={cn('size-8 text-muted-foreground', compact && 'size-4')} aria-hidden />
+      <DropZoneCopy {...props} />
       <input
         ref={inputRef}
         id={inputId}
         type="file"
+        hidden
         accept={accept}
         multiple={multiple}
         disabled={disabled}
         onChange={props.onChange}
-        className="sr-only"
       />
     </div>
+  );
+}
+
+function DropZoneCopy({ multiple, accept, prompt, acceptHint }: DropZoneProps) {
+  const { t } = useTranslation('ui');
+  const defaultPrompt = multiple ? t('fileUpload.dragMultiple') : t('fileUpload.dragSingle');
+  const defaultHint = accept === undefined ? null : t('fileUpload.accepts', { types: accept });
+  const hint = acceptHint === undefined ? defaultHint : acceptHint;
+  return (
+    <>
+      <div className="text-sm font-medium">{prompt ?? defaultPrompt}</div>
+      {hint === null ? null : <div className="text-xs text-muted-foreground">{hint}</div>}
+    </>
   );
 }
 

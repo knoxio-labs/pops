@@ -39,20 +39,21 @@ function WorkspaceSession({
   const state = useCaptureEditor(session, props, query.data, scope.key);
   const context = useCaptureContext(props, scope);
   return (
-    <section aria-label="Capture tools" className="space-y-5">
-      <WorkspaceHeader session={session} view={props.view} state={state} />
+    <section
+      aria-label="Capture tools"
+      className={
+        props.compact
+          ? 'space-y-2 rounded-2xl border border-trip-line bg-trip-surface p-3'
+          : 'space-y-5'
+      }
+    >
+      <WorkspaceHeader session={session} view={props.view} state={state} compact={props.compact} />
       <CaptureContactChooser session={session} />
       {query.isError ? (
         <ErrorState error={requestProblem(query.error)} onRetry={() => void query.refetch()} />
       ) : null}
       <CaptureOperationProblem session={session} scope={scope} identity={props} />
-      {Object.entries(context)
-        .filter(([, value]) => value.isError)
-        .map(([key, value]) => (
-          <section aria-label={`${key} unavailable`} key={key}>
-            <ErrorState error={requestProblem(value.error)} onRetry={() => void value.refetch()} />
-          </section>
-        ))}
+      <ContextProblems context={context} />
       {props.selectedSource ? (
         <CaptureSelectedSource
           selected={props.selectedSource}
@@ -86,28 +87,50 @@ function WorkspaceSession({
   );
 }
 
+function ContextProblems({
+  context,
+}: {
+  context: ReturnType<typeof useCaptureContext>;
+}): JSX.Element {
+  return (
+    <>
+      {Object.entries(context)
+        .filter(([, value]) => value.isError)
+        .map(([key, value]) => (
+          <section aria-label={`${key} unavailable`} key={key}>
+            <ErrorState error={requestProblem(value.error)} onRetry={() => void value.refetch()} />
+          </section>
+        ))}
+    </>
+  );
+}
+
 function WorkspaceHeader({
   session,
   view,
   state,
+  compact,
 }: {
   session: CaptureBrowserSession;
   view: CaptureWorkspaceProps['view'];
   state: CaptureEditorState;
+  compact?: boolean;
 }): JSX.Element {
   return (
     <header className="flex items-center justify-between gap-3">
-      <h2 className="text-lg font-semibold">
+      <h2 className={compact ? 'text-sm font-semibold' : 'text-lg font-semibold'}>
         {{ capture: 'Capture', inbox: 'Inbox', explore: 'Explore' }[view]}
       </h2>
-      <Button
-        variant="ghost"
-        disabled={state.busy || state.undoCount === 0}
-        onClick={() => void session.editor.undo()}
-      >
-        <RotateCcw className="size-4" aria-hidden />
-        Undo
-      </Button>
+      {(!compact || state.undoCount > 0) && (
+        <Button
+          variant="ghost"
+          disabled={state.busy || state.undoCount === 0}
+          onClick={() => void session.editor.undo()}
+        >
+          <RotateCcw className="size-4" aria-hidden />
+          Undo
+        </Button>
+      )}
     </header>
   );
 }

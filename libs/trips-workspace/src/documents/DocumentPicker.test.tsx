@@ -29,12 +29,12 @@ afterEach(() => {
   vi.resetAllMocks();
 });
 
-function mount(onSelected: DocumentPickerProps['onSelected']): void {
+function mount(onSelected: DocumentPickerProps['onSelected'], compact = false): void {
   const cache = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 60_000 } } });
   caches.push(cache);
   render(
     <QueryClientProvider client={cache}>
-      <DocumentPicker onSelected={onSelected} />
+      <DocumentPicker onSelected={onSelected} compact={compact} />
     </QueryClientProvider>
   );
 }
@@ -84,4 +84,18 @@ describe('DocumentPicker owner selection', () => {
     );
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
+});
+
+it('uses the same owner chooser from its compact inline attachment action', async () => {
+  vi.mocked(searchPaperlessDocuments).mockResolvedValue([document]);
+  const onSelected = vi.fn<DocumentPickerProps['onSelected']>();
+  mount(onSelected, true);
+  const trigger = screen.getByRole('button', { name: 'Choose existing document' });
+  expect(trigger).toHaveClass('h-11');
+  expect(trigger).not.toHaveClass('size-32');
+  await searchOriginal();
+  await userEvent.click(await screen.findByRole('button', { name: 'Choose' }));
+  await waitFor(() => expect(onSelected).toHaveBeenCalledOnce());
+  expect(onSelected.mock.calls[0]?.[0]).toBe(document);
+  expect(associatePaperlessDocument).not.toHaveBeenCalled();
 });

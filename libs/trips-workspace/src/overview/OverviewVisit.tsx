@@ -25,26 +25,29 @@ export function OverviewVisit({
       data-route-kind="visit"
       data-route-id={visit.id}
       data-route-state="resolved"
-      className="grid min-w-0 grid-cols-1 gap-2 pb-5 sm:grid-cols-4 sm:gap-4"
+      className="mb-4 min-w-0 overflow-hidden rounded-2xl border border-trip-line bg-trip-surface"
     >
-      <p className="min-w-0 break-words pl-10 text-xs font-medium text-muted-foreground sm:pl-0 sm:pt-3 sm:text-right">
-        {visitTiming(visit, props.locale, props.labels.status)}
-      </p>
-      <div className="relative min-w-0 border-l border-dotted border-border pl-5 sm:col-span-3">
-        <span className="absolute -left-4 top-2 flex size-8 items-center justify-center rounded-full border border-border bg-background">
-          <MapPin className="size-4 text-app-accent" aria-hidden />
-        </span>
-        <div className="min-w-0 space-y-3 rounded-lg border border-dashed border-border p-3">
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-1 bg-trip-sunken/40 px-4 py-2">
+        <span className="flex min-w-0 items-center gap-2">
+          <MapPin className="size-4 shrink-0 text-trip-transport" aria-hidden />
           <VisitTitle {...props} id={visit.id} title={title} />
-          {visit.notes && (
-            <p className="whitespace-pre-wrap break-words text-sm text-muted-foreground">
-              {visit.notes}
-            </p>
-          )}
-          <VisitFacts {...props} visitId={visit.id} />
-          {visit.tripId === props.tripId &&
-            props.renderVisitContext?.({ tripId: props.tripId, visitId: visit.id })}
-        </div>
+        </span>
+        <p className="break-words text-xs font-medium text-muted-foreground">
+          {visitTiming(visit, props.locale, props.labels.status)}
+        </p>
+      </div>
+      <div className="min-w-0 space-y-0">
+        {visit.notes && (
+          <p className="whitespace-pre-wrap break-words px-4 py-2 text-xs leading-relaxed text-muted-foreground">
+            {visit.notes}
+          </p>
+        )}
+        <VisitFacts {...props} visitId={visit.id} />
+        {visit.tripId === props.tripId && props.renderVisitContext && (
+          <div className="px-4 py-3">
+            {props.renderVisitContext({ tripId: props.tripId, visitId: visit.id })}
+          </div>
+        )}
       </div>
     </li>
   );
@@ -52,7 +55,8 @@ export function OverviewVisit({
 
 function VisitTitle(props: OverviewViewProps & { id: number; title: string }): JSX.Element {
   const action = sourceAction(props, { kind: 'visit', id: props.id });
-  const className = 'h-auto min-h-11 w-full justify-start whitespace-normal px-0 text-left text-lg';
+  const className =
+    'h-auto min-h-11 justify-start whitespace-normal px-0 text-left font-trip-display text-base font-semibold';
   let content: JSX.Element;
   if (action.onOpen)
     content = (

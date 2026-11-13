@@ -16,7 +16,8 @@ export function OverviewRoute(props: OverviewViewProps): JSX.Element {
   return (
     <>
       <section aria-label={props.labels.route} className="min-w-0 space-y-4">
-        <h2 className="border-b pb-2 text-lg font-semibold">{props.labels.route}</h2>
+        <h2 className="text-sm font-semibold">{props.labels.route}</h2>
+        <WorkspaceColumns {...props} />
         {props.route.reading && <p role="status">{props.labels.loading}</p>}
         {props.route.readError && (
           <ErrorState
@@ -61,5 +62,20 @@ export function OverviewRoute(props: OverviewViewProps): JSX.Element {
       <OverviewUnplaced {...props} />
       <OverviewJourneys {...props} />
     </>
+  );
+}
+
+function WorkspaceColumns(props: OverviewViewProps): JSX.Element {
+  return (
+    <div
+      aria-hidden
+      className="hidden grid-cols-12 gap-3 px-3 text-xs font-medium uppercase tracking-wide text-muted-foreground lg:grid"
+    >
+      {(['when', 'what', 'state', 'with', 'originals'] as const).map((column) => (
+        <span key={column} className={column === 'what' ? 'col-span-4' : 'col-span-2'}>
+          {props.labels.status(`workspace.${column}`)}
+        </span>
+      ))}
+    </div>
   );
 }

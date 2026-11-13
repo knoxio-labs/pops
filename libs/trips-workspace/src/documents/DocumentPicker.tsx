@@ -13,6 +13,8 @@ import type { PaperlessSearchDocument } from './types';
 
 /** Choose an actual owner original through a callback; no Trips association is created by this picker. */
 export interface DocumentPickerProps {
+  /** Inline attachment contexts use a 44px action instead of the square drop-zone trigger. */
+  compact?: boolean;
   documentsClient?: DocumentsClient;
   onSelected: (document: PaperlessSearchDocument) => void | Promise<void>;
   open?: boolean;
@@ -67,6 +69,7 @@ export function DocumentPicker(props: DocumentPickerProps): ReactElement {
       problem={problem}
       noResultsAction={props.noResultsAction}
       hideTrigger={props.hideTrigger}
+      compact={props.compact}
       query={query}
       pending={selection.isPending}
       onSelect={selection.mutate}

@@ -61,8 +61,8 @@ export function ContextSources(
           {...sourceAction(props, { kind: record.kind, id: source.id })}
           statuses={[...facts.statuses, ...(explored ? ['explore'] : [])]}
           labels={props.labels}
+          when={facts.timing}
         >
-          {facts.timing && <span className="block">{facts.timing}</span>}
           {source.notes && <span className="block whitespace-pre-wrap">{source.notes}</span>}
           {record.kind === 'meeting' && record.source.contactUri && (
             <span className="block">{record.source.contactUri}</span>
