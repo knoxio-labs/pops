@@ -44957,6 +44957,346 @@
         "tags": ["operator"]
       }
     },
+    "/operator/devices/{id}/capabilities": {
+      "get": {
+        "operationId": "operator.getDeviceGrant",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "effective": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "id": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "mode": {
+                      "enum": ["tracks-default", "explicit"],
+                      "type": "string"
+                    },
+                    "policyToken": {
+                      "pattern": "^[a-f0-9]{64}$",
+                      "type": "string"
+                    },
+                    "revision": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "selectable": {
+                      "items": {
+                        "enum": [
+                          "session.read",
+                          "finance.transactions.read",
+                          "finance.transactions.write",
+                          "finance.accounts.read",
+                          "purchases.read",
+                          "purchases.receipts.read",
+                          "purchases.receipts.write",
+                          "purchases.write",
+                          "purchases.edit",
+                          "inventory.read",
+                          "inventory.write",
+                          "barcode.read",
+                          "contacts.entities.read",
+                          "contacts.entities.write",
+                          "ego.chat",
+                          "ego.actions",
+                          "trips.read",
+                          "trips.capture.write",
+                          "trips.write",
+                          "documents.read",
+                          "documents.upload"
+                        ],
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "stored": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "revision",
+                    "policyToken",
+                    "mode",
+                    "stored",
+                    "effective",
+                    "selectable"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "401"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "403"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "409"
+          }
+        },
+        "summary": "Read one live operator-owned device grant for explicit selection",
+        "tags": ["operator"]
+      },
+      "put": {
+        "operationId": "operator.replaceDeviceGrant",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "capabilities": {
+                    "items": {
+                      "enum": [
+                        "session.read",
+                        "finance.transactions.read",
+                        "finance.transactions.write",
+                        "finance.accounts.read",
+                        "purchases.read",
+                        "purchases.receipts.read",
+                        "purchases.receipts.write",
+                        "purchases.write",
+                        "purchases.edit",
+                        "inventory.read",
+                        "inventory.write",
+                        "barcode.read",
+                        "contacts.entities.read",
+                        "contacts.entities.write",
+                        "ego.chat",
+                        "ego.actions",
+                        "trips.read",
+                        "trips.capture.write",
+                        "trips.write",
+                        "documents.read",
+                        "documents.upload"
+                      ],
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "expectedPolicyToken": {
+                    "pattern": "^[a-f0-9]{64}$",
+                    "type": "string"
+                  },
+                  "expectedRevision": {
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                },
+                "required": ["expectedRevision", "expectedPolicyToken", "capabilities"],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "effective": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "id": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "mode": {
+                      "enum": ["tracks-default", "explicit"],
+                      "type": "string"
+                    },
+                    "policyToken": {
+                      "pattern": "^[a-f0-9]{64}$",
+                      "type": "string"
+                    },
+                    "revision": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "selectable": {
+                      "items": {
+                        "enum": [
+                          "session.read",
+                          "finance.transactions.read",
+                          "finance.transactions.write",
+                          "finance.accounts.read",
+                          "purchases.read",
+                          "purchases.receipts.read",
+                          "purchases.receipts.write",
+                          "purchases.write",
+                          "purchases.edit",
+                          "inventory.read",
+                          "inventory.write",
+                          "barcode.read",
+                          "contacts.entities.read",
+                          "contacts.entities.write",
+                          "ego.chat",
+                          "ego.actions",
+                          "trips.read",
+                          "trips.capture.write",
+                          "trips.write",
+                          "documents.read",
+                          "documents.upload"
+                        ],
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "stored": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "revision",
+                    "policyToken",
+                    "mode",
+                    "stored",
+                    "effective",
+                    "selectable"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "401"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "403"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "409"
+          }
+        },
+        "summary": "Replace a complete explicit device capability selection using revision and policy CAS",
+        "tags": ["operator"]
+      }
+    },
     "/operator/pairing/codes": {
       "post": {
         "operationId": "operator.issuePairingCode",

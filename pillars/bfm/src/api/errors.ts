@@ -4,6 +4,13 @@ import { getRequestId, mintRequestId } from '@pops/pillar-sdk/server';
 import type { ErrorBody } from '@pops/types';
 
 const BFM_ERROR_DEFINITIONS = {
+  device_grant_conflict: {
+    area: 'device',
+    status: 409,
+    message:
+      'The device grant or its published policy changed. Read it again before selecting capabilities.',
+    retryable: false,
+  },
   upload_outcome_unknown: {
     area: 'documents',
     status: 502,
@@ -122,6 +129,10 @@ export function bfmErrorBody(
 ): ErrorBody & { readonly code: 'bfm.resource.not_found' };
 export function bfmErrorBody(
   reason: 'upload_outcome_unknown' | 'upload_too_large' | 'upload_unsupported_type',
+  options?: { readonly details?: unknown; readonly requestId?: string }
+): ErrorBody;
+export function bfmErrorBody(
+  reason: 'device_grant_conflict',
   options?: { readonly details?: unknown; readonly requestId?: string }
 ): ErrorBody;
 export function bfmErrorBody(

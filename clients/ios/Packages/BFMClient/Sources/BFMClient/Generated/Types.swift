@@ -366,6 +366,16 @@ internal protocol APIProtocol: Sendable {
     /// - Remark: HTTP `DELETE /operator/devices/{id}`.
     /// - Remark: Generated from `#/paths//operator/devices/{id}/delete(operator.revokeDevice)`.
     func operator_revokeDevice(_ input: Operations.Operator_revokeDevice.Input) async throws -> Operations.Operator_revokeDevice.Output
+    /// Read one live operator-owned device grant for explicit selection
+    ///
+    /// - Remark: HTTP `GET /operator/devices/{id}/capabilities`.
+    /// - Remark: Generated from `#/paths//operator/devices/{id}/capabilities/get(operator.getDeviceGrant)`.
+    func operator_getDeviceGrant(_ input: Operations.Operator_getDeviceGrant.Input) async throws -> Operations.Operator_getDeviceGrant.Output
+    /// Replace a complete explicit device capability selection using revision and policy CAS
+    ///
+    /// - Remark: HTTP `PUT /operator/devices/{id}/capabilities`.
+    /// - Remark: Generated from `#/paths//operator/devices/{id}/capabilities/put(operator.replaceDeviceGrant)`.
+    func operator_replaceDeviceGrant(_ input: Operations.Operator_replaceDeviceGrant.Input) async throws -> Operations.Operator_replaceDeviceGrant.Output
     /// Mint a single-use pairing code. The plaintext is returned once and never again
     ///
     /// - Remark: HTTP `POST /operator/pairing/codes`.
@@ -1316,6 +1326,34 @@ extension APIProtocol {
         try await operator_revokeDevice(Operations.Operator_revokeDevice.Input(
             path: path,
             headers: headers
+        ))
+    }
+    /// Read one live operator-owned device grant for explicit selection
+    ///
+    /// - Remark: HTTP `GET /operator/devices/{id}/capabilities`.
+    /// - Remark: Generated from `#/paths//operator/devices/{id}/capabilities/get(operator.getDeviceGrant)`.
+    internal func operator_getDeviceGrant(
+        path: Operations.Operator_getDeviceGrant.Input.Path,
+        headers: Operations.Operator_getDeviceGrant.Input.Headers = .init()
+    ) async throws -> Operations.Operator_getDeviceGrant.Output {
+        try await operator_getDeviceGrant(Operations.Operator_getDeviceGrant.Input(
+            path: path,
+            headers: headers
+        ))
+    }
+    /// Replace a complete explicit device capability selection using revision and policy CAS
+    ///
+    /// - Remark: HTTP `PUT /operator/devices/{id}/capabilities`.
+    /// - Remark: Generated from `#/paths//operator/devices/{id}/capabilities/put(operator.replaceDeviceGrant)`.
+    internal func operator_replaceDeviceGrant(
+        path: Operations.Operator_replaceDeviceGrant.Input.Path,
+        headers: Operations.Operator_replaceDeviceGrant.Input.Headers = .init(),
+        body: Operations.Operator_replaceDeviceGrant.Input.Body? = nil
+    ) async throws -> Operations.Operator_replaceDeviceGrant.Output {
+        try await operator_replaceDeviceGrant(Operations.Operator_replaceDeviceGrant.Input(
+            path: path,
+            headers: headers,
+            body: body
         ))
     }
     /// Mint a single-use pairing code. The plaintext is returned once and never again
@@ -153954,6 +153992,1053 @@ internal enum Operations {
                     default:
                         try throwUnexpectedResponseStatus(
                             expectedStatus: "notFound",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        internal enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            internal init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            internal var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            internal static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
+    /// Read one live operator-owned device grant for explicit selection
+    ///
+    /// - Remark: HTTP `GET /operator/devices/{id}/capabilities`.
+    /// - Remark: Generated from `#/paths//operator/devices/{id}/capabilities/get(operator.getDeviceGrant)`.
+    internal enum Operator_getDeviceGrant {
+        internal static let id: Swift.String = "operator.getDeviceGrant"
+        internal struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/GET/path`.
+            internal struct Path: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/GET/path/id`.
+                internal var id: Swift.String
+                /// Creates a new `Path`.
+                ///
+                /// - Parameters:
+                ///   - id:
+                internal init(id: Swift.String) {
+                    self.id = id
+                }
+            }
+            internal var path: Operations.Operator_getDeviceGrant.Input.Path
+            /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/GET/header`.
+            internal struct Headers: Sendable, Hashable {
+                internal var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.Operator_getDeviceGrant.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                internal init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.Operator_getDeviceGrant.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            internal var headers: Operations.Operator_getDeviceGrant.Input.Headers
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - path:
+            ///   - headers:
+            internal init(
+                path: Operations.Operator_getDeviceGrant.Input.Path,
+                headers: Operations.Operator_getDeviceGrant.Input.Headers = .init()
+            ) {
+                self.path = path
+                self.headers = headers
+            }
+        }
+        internal enum Output: Sendable, Hashable {
+            internal struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/GET/responses/200/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/GET/responses/200/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/GET/responses/200/content/json/effective`.
+                        internal var effective: [Swift.String]
+                        /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/GET/responses/200/content/json/id`.
+                        internal var id: Swift.String
+                        /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/GET/responses/200/content/json/mode`.
+                        internal enum ModePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case tracksDefault = "tracks-default"
+                            case explicit = "explicit"
+                        }
+                        /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/GET/responses/200/content/json/mode`.
+                        internal var mode: Operations.Operator_getDeviceGrant.Output.Ok.Body.JsonPayload.ModePayload
+                        /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/GET/responses/200/content/json/policyToken`.
+                        internal var policyToken: Swift.String
+                        /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/GET/responses/200/content/json/revision`.
+                        internal var revision: Swift.Int
+                        /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/GET/responses/200/content/json/SelectablePayload`.
+                        internal enum SelectablePayloadPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case session_read = "session.read"
+                            case finance_transactions_read = "finance.transactions.read"
+                            case finance_transactions_write = "finance.transactions.write"
+                            case finance_accounts_read = "finance.accounts.read"
+                            case purchases_read = "purchases.read"
+                            case purchases_receipts_read = "purchases.receipts.read"
+                            case purchases_receipts_write = "purchases.receipts.write"
+                            case purchases_write = "purchases.write"
+                            case purchases_edit = "purchases.edit"
+                            case inventory_read = "inventory.read"
+                            case inventory_write = "inventory.write"
+                            case barcode_read = "barcode.read"
+                            case contacts_entities_read = "contacts.entities.read"
+                            case contacts_entities_write = "contacts.entities.write"
+                            case ego_chat = "ego.chat"
+                            case ego_actions = "ego.actions"
+                            case trips_read = "trips.read"
+                            case trips_capture_write = "trips.capture.write"
+                            case trips_write = "trips.write"
+                            case documents_read = "documents.read"
+                            case documents_upload = "documents.upload"
+                        }
+                        /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/GET/responses/200/content/json/selectable`.
+                        internal typealias SelectablePayload = [Operations.Operator_getDeviceGrant.Output.Ok.Body.JsonPayload.SelectablePayloadPayload]
+                        /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/GET/responses/200/content/json/selectable`.
+                        internal var selectable: Operations.Operator_getDeviceGrant.Output.Ok.Body.JsonPayload.SelectablePayload
+                        /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/GET/responses/200/content/json/stored`.
+                        internal var stored: [Swift.String]
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - effective:
+                        ///   - id:
+                        ///   - mode:
+                        ///   - policyToken:
+                        ///   - revision:
+                        ///   - selectable:
+                        ///   - stored:
+                        internal init(
+                            effective: [Swift.String],
+                            id: Swift.String,
+                            mode: Operations.Operator_getDeviceGrant.Output.Ok.Body.JsonPayload.ModePayload,
+                            policyToken: Swift.String,
+                            revision: Swift.Int,
+                            selectable: Operations.Operator_getDeviceGrant.Output.Ok.Body.JsonPayload.SelectablePayload,
+                            stored: [Swift.String]
+                        ) {
+                            self.effective = effective
+                            self.id = id
+                            self.mode = mode
+                            self.policyToken = policyToken
+                            self.revision = revision
+                            self.selectable = selectable
+                            self.stored = stored
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case effective
+                            case id
+                            case mode
+                            case policyToken
+                            case revision
+                            case selectable
+                            case stored
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.effective = try container.decode(
+                                [Swift.String].self,
+                                forKey: .effective
+                            )
+                            self.id = try container.decode(
+                                Swift.String.self,
+                                forKey: .id
+                            )
+                            self.mode = try container.decode(
+                                Operations.Operator_getDeviceGrant.Output.Ok.Body.JsonPayload.ModePayload.self,
+                                forKey: .mode
+                            )
+                            self.policyToken = try container.decode(
+                                Swift.String.self,
+                                forKey: .policyToken
+                            )
+                            self.revision = try container.decode(
+                                Swift.Int.self,
+                                forKey: .revision
+                            )
+                            self.selectable = try container.decode(
+                                Operations.Operator_getDeviceGrant.Output.Ok.Body.JsonPayload.SelectablePayload.self,
+                                forKey: .selectable
+                            )
+                            self.stored = try container.decode(
+                                [Swift.String].self,
+                                forKey: .stored
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "effective",
+                                "id",
+                                "mode",
+                                "policyToken",
+                                "revision",
+                                "selectable",
+                                "stored"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/GET/responses/200/content/application\/json`.
+                    case json(Operations.Operator_getDeviceGrant.Output.Ok.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.Operator_getDeviceGrant.Output.Ok.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.Operator_getDeviceGrant.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.Operator_getDeviceGrant.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// 200
+            ///
+            /// - Remark: Generated from `#/paths//operator/devices/{id}/capabilities/get(operator.getDeviceGrant)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.Operator_getDeviceGrant.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            internal var ok: Operations.Operator_getDeviceGrant.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Unauthorized: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/GET/responses/401/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/GET/responses/401/content/application\/json`.
+                    case json(Components.Schemas.ErrorBody)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.ErrorBody {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.Operator_getDeviceGrant.Output.Unauthorized.Body
+                /// Creates a new `Unauthorized`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.Operator_getDeviceGrant.Output.Unauthorized.Body) {
+                    self.body = body
+                }
+            }
+            /// 401
+            ///
+            /// - Remark: Generated from `#/paths//operator/devices/{id}/capabilities/get(operator.getDeviceGrant)/responses/401`.
+            ///
+            /// HTTP response code: `401 unauthorized`.
+            case unauthorized(Operations.Operator_getDeviceGrant.Output.Unauthorized)
+            /// The associated value of the enum case if `self` is `.unauthorized`.
+            ///
+            /// - Throws: An error if `self` is not `.unauthorized`.
+            /// - SeeAlso: `.unauthorized`.
+            internal var unauthorized: Operations.Operator_getDeviceGrant.Output.Unauthorized {
+                get throws {
+                    switch self {
+                    case let .unauthorized(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unauthorized",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Forbidden: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/GET/responses/403/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/GET/responses/403/content/application\/json`.
+                    case json(Components.Schemas.ErrorBody)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.ErrorBody {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.Operator_getDeviceGrant.Output.Forbidden.Body
+                /// Creates a new `Forbidden`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.Operator_getDeviceGrant.Output.Forbidden.Body) {
+                    self.body = body
+                }
+            }
+            /// 403
+            ///
+            /// - Remark: Generated from `#/paths//operator/devices/{id}/capabilities/get(operator.getDeviceGrant)/responses/403`.
+            ///
+            /// HTTP response code: `403 forbidden`.
+            case forbidden(Operations.Operator_getDeviceGrant.Output.Forbidden)
+            /// The associated value of the enum case if `self` is `.forbidden`.
+            ///
+            /// - Throws: An error if `self` is not `.forbidden`.
+            /// - SeeAlso: `.forbidden`.
+            internal var forbidden: Operations.Operator_getDeviceGrant.Output.Forbidden {
+                get throws {
+                    switch self {
+                    case let .forbidden(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "forbidden",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct NotFound: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/GET/responses/404/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/GET/responses/404/content/application\/json`.
+                    case json(Components.Schemas.ErrorBody)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.ErrorBody {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.Operator_getDeviceGrant.Output.NotFound.Body
+                /// Creates a new `NotFound`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.Operator_getDeviceGrant.Output.NotFound.Body) {
+                    self.body = body
+                }
+            }
+            /// 404
+            ///
+            /// - Remark: Generated from `#/paths//operator/devices/{id}/capabilities/get(operator.getDeviceGrant)/responses/404`.
+            ///
+            /// HTTP response code: `404 notFound`.
+            case notFound(Operations.Operator_getDeviceGrant.Output.NotFound)
+            /// The associated value of the enum case if `self` is `.notFound`.
+            ///
+            /// - Throws: An error if `self` is not `.notFound`.
+            /// - SeeAlso: `.notFound`.
+            internal var notFound: Operations.Operator_getDeviceGrant.Output.NotFound {
+                get throws {
+                    switch self {
+                    case let .notFound(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "notFound",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Conflict: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/GET/responses/409/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/GET/responses/409/content/application\/json`.
+                    case json(Components.Schemas.ErrorBody)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.ErrorBody {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.Operator_getDeviceGrant.Output.Conflict.Body
+                /// Creates a new `Conflict`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.Operator_getDeviceGrant.Output.Conflict.Body) {
+                    self.body = body
+                }
+            }
+            /// 409
+            ///
+            /// - Remark: Generated from `#/paths//operator/devices/{id}/capabilities/get(operator.getDeviceGrant)/responses/409`.
+            ///
+            /// HTTP response code: `409 conflict`.
+            case conflict(Operations.Operator_getDeviceGrant.Output.Conflict)
+            /// The associated value of the enum case if `self` is `.conflict`.
+            ///
+            /// - Throws: An error if `self` is not `.conflict`.
+            /// - SeeAlso: `.conflict`.
+            internal var conflict: Operations.Operator_getDeviceGrant.Output.Conflict {
+                get throws {
+                    switch self {
+                    case let .conflict(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "conflict",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        internal enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            internal init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            internal var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            internal static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
+    /// Replace a complete explicit device capability selection using revision and policy CAS
+    ///
+    /// - Remark: HTTP `PUT /operator/devices/{id}/capabilities`.
+    /// - Remark: Generated from `#/paths//operator/devices/{id}/capabilities/put(operator.replaceDeviceGrant)`.
+    internal enum Operator_replaceDeviceGrant {
+        internal static let id: Swift.String = "operator.replaceDeviceGrant"
+        internal struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/PUT/path`.
+            internal struct Path: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/PUT/path/id`.
+                internal var id: Swift.String
+                /// Creates a new `Path`.
+                ///
+                /// - Parameters:
+                ///   - id:
+                internal init(id: Swift.String) {
+                    self.id = id
+                }
+            }
+            internal var path: Operations.Operator_replaceDeviceGrant.Input.Path
+            /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/PUT/header`.
+            internal struct Headers: Sendable, Hashable {
+                internal var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.Operator_replaceDeviceGrant.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                internal init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.Operator_replaceDeviceGrant.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            internal var headers: Operations.Operator_replaceDeviceGrant.Input.Headers
+            /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/PUT/requestBody`.
+            internal enum Body: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/PUT/requestBody/json`.
+                internal struct JsonPayload: Codable, Hashable, Sendable {
+                    /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/PUT/requestBody/json/CapabilitiesPayload`.
+                    internal enum CapabilitiesPayloadPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case session_read = "session.read"
+                        case finance_transactions_read = "finance.transactions.read"
+                        case finance_transactions_write = "finance.transactions.write"
+                        case finance_accounts_read = "finance.accounts.read"
+                        case purchases_read = "purchases.read"
+                        case purchases_receipts_read = "purchases.receipts.read"
+                        case purchases_receipts_write = "purchases.receipts.write"
+                        case purchases_write = "purchases.write"
+                        case purchases_edit = "purchases.edit"
+                        case inventory_read = "inventory.read"
+                        case inventory_write = "inventory.write"
+                        case barcode_read = "barcode.read"
+                        case contacts_entities_read = "contacts.entities.read"
+                        case contacts_entities_write = "contacts.entities.write"
+                        case ego_chat = "ego.chat"
+                        case ego_actions = "ego.actions"
+                        case trips_read = "trips.read"
+                        case trips_capture_write = "trips.capture.write"
+                        case trips_write = "trips.write"
+                        case documents_read = "documents.read"
+                        case documents_upload = "documents.upload"
+                    }
+                    /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/PUT/requestBody/json/capabilities`.
+                    internal typealias CapabilitiesPayload = [Operations.Operator_replaceDeviceGrant.Input.Body.JsonPayload.CapabilitiesPayloadPayload]
+                    /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/PUT/requestBody/json/capabilities`.
+                    internal var capabilities: Operations.Operator_replaceDeviceGrant.Input.Body.JsonPayload.CapabilitiesPayload
+                    /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/PUT/requestBody/json/expectedPolicyToken`.
+                    internal var expectedPolicyToken: Swift.String
+                    /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/PUT/requestBody/json/expectedRevision`.
+                    internal var expectedRevision: Swift.Int
+                    /// Creates a new `JsonPayload`.
+                    ///
+                    /// - Parameters:
+                    ///   - capabilities:
+                    ///   - expectedPolicyToken:
+                    ///   - expectedRevision:
+                    internal init(
+                        capabilities: Operations.Operator_replaceDeviceGrant.Input.Body.JsonPayload.CapabilitiesPayload,
+                        expectedPolicyToken: Swift.String,
+                        expectedRevision: Swift.Int
+                    ) {
+                        self.capabilities = capabilities
+                        self.expectedPolicyToken = expectedPolicyToken
+                        self.expectedRevision = expectedRevision
+                    }
+                    internal enum CodingKeys: String, CodingKey {
+                        case capabilities
+                        case expectedPolicyToken
+                        case expectedRevision
+                    }
+                    internal init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self.capabilities = try container.decode(
+                            Operations.Operator_replaceDeviceGrant.Input.Body.JsonPayload.CapabilitiesPayload.self,
+                            forKey: .capabilities
+                        )
+                        self.expectedPolicyToken = try container.decode(
+                            Swift.String.self,
+                            forKey: .expectedPolicyToken
+                        )
+                        self.expectedRevision = try container.decode(
+                            Swift.Int.self,
+                            forKey: .expectedRevision
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "capabilities",
+                            "expectedPolicyToken",
+                            "expectedRevision"
+                        ])
+                    }
+                }
+                /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/PUT/requestBody/content/application\/json`.
+                case json(Operations.Operator_replaceDeviceGrant.Input.Body.JsonPayload)
+            }
+            internal var body: Operations.Operator_replaceDeviceGrant.Input.Body?
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - path:
+            ///   - headers:
+            ///   - body:
+            internal init(
+                path: Operations.Operator_replaceDeviceGrant.Input.Path,
+                headers: Operations.Operator_replaceDeviceGrant.Input.Headers = .init(),
+                body: Operations.Operator_replaceDeviceGrant.Input.Body? = nil
+            ) {
+                self.path = path
+                self.headers = headers
+                self.body = body
+            }
+        }
+        internal enum Output: Sendable, Hashable {
+            internal struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/PUT/responses/200/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/PUT/responses/200/content/json`.
+                    internal struct JsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/PUT/responses/200/content/json/effective`.
+                        internal var effective: [Swift.String]
+                        /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/PUT/responses/200/content/json/id`.
+                        internal var id: Swift.String
+                        /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/PUT/responses/200/content/json/mode`.
+                        internal enum ModePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case tracksDefault = "tracks-default"
+                            case explicit = "explicit"
+                        }
+                        /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/PUT/responses/200/content/json/mode`.
+                        internal var mode: Operations.Operator_replaceDeviceGrant.Output.Ok.Body.JsonPayload.ModePayload
+                        /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/PUT/responses/200/content/json/policyToken`.
+                        internal var policyToken: Swift.String
+                        /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/PUT/responses/200/content/json/revision`.
+                        internal var revision: Swift.Int
+                        /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/PUT/responses/200/content/json/SelectablePayload`.
+                        internal enum SelectablePayloadPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case session_read = "session.read"
+                            case finance_transactions_read = "finance.transactions.read"
+                            case finance_transactions_write = "finance.transactions.write"
+                            case finance_accounts_read = "finance.accounts.read"
+                            case purchases_read = "purchases.read"
+                            case purchases_receipts_read = "purchases.receipts.read"
+                            case purchases_receipts_write = "purchases.receipts.write"
+                            case purchases_write = "purchases.write"
+                            case purchases_edit = "purchases.edit"
+                            case inventory_read = "inventory.read"
+                            case inventory_write = "inventory.write"
+                            case barcode_read = "barcode.read"
+                            case contacts_entities_read = "contacts.entities.read"
+                            case contacts_entities_write = "contacts.entities.write"
+                            case ego_chat = "ego.chat"
+                            case ego_actions = "ego.actions"
+                            case trips_read = "trips.read"
+                            case trips_capture_write = "trips.capture.write"
+                            case trips_write = "trips.write"
+                            case documents_read = "documents.read"
+                            case documents_upload = "documents.upload"
+                        }
+                        /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/PUT/responses/200/content/json/selectable`.
+                        internal typealias SelectablePayload = [Operations.Operator_replaceDeviceGrant.Output.Ok.Body.JsonPayload.SelectablePayloadPayload]
+                        /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/PUT/responses/200/content/json/selectable`.
+                        internal var selectable: Operations.Operator_replaceDeviceGrant.Output.Ok.Body.JsonPayload.SelectablePayload
+                        /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/PUT/responses/200/content/json/stored`.
+                        internal var stored: [Swift.String]
+                        /// Creates a new `JsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - effective:
+                        ///   - id:
+                        ///   - mode:
+                        ///   - policyToken:
+                        ///   - revision:
+                        ///   - selectable:
+                        ///   - stored:
+                        internal init(
+                            effective: [Swift.String],
+                            id: Swift.String,
+                            mode: Operations.Operator_replaceDeviceGrant.Output.Ok.Body.JsonPayload.ModePayload,
+                            policyToken: Swift.String,
+                            revision: Swift.Int,
+                            selectable: Operations.Operator_replaceDeviceGrant.Output.Ok.Body.JsonPayload.SelectablePayload,
+                            stored: [Swift.String]
+                        ) {
+                            self.effective = effective
+                            self.id = id
+                            self.mode = mode
+                            self.policyToken = policyToken
+                            self.revision = revision
+                            self.selectable = selectable
+                            self.stored = stored
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case effective
+                            case id
+                            case mode
+                            case policyToken
+                            case revision
+                            case selectable
+                            case stored
+                        }
+                        internal init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self.effective = try container.decode(
+                                [Swift.String].self,
+                                forKey: .effective
+                            )
+                            self.id = try container.decode(
+                                Swift.String.self,
+                                forKey: .id
+                            )
+                            self.mode = try container.decode(
+                                Operations.Operator_replaceDeviceGrant.Output.Ok.Body.JsonPayload.ModePayload.self,
+                                forKey: .mode
+                            )
+                            self.policyToken = try container.decode(
+                                Swift.String.self,
+                                forKey: .policyToken
+                            )
+                            self.revision = try container.decode(
+                                Swift.Int.self,
+                                forKey: .revision
+                            )
+                            self.selectable = try container.decode(
+                                Operations.Operator_replaceDeviceGrant.Output.Ok.Body.JsonPayload.SelectablePayload.self,
+                                forKey: .selectable
+                            )
+                            self.stored = try container.decode(
+                                [Swift.String].self,
+                                forKey: .stored
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "effective",
+                                "id",
+                                "mode",
+                                "policyToken",
+                                "revision",
+                                "selectable",
+                                "stored"
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/PUT/responses/200/content/application\/json`.
+                    case json(Operations.Operator_replaceDeviceGrant.Output.Ok.Body.JsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Operations.Operator_replaceDeviceGrant.Output.Ok.Body.JsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.Operator_replaceDeviceGrant.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.Operator_replaceDeviceGrant.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// 200
+            ///
+            /// - Remark: Generated from `#/paths//operator/devices/{id}/capabilities/put(operator.replaceDeviceGrant)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.Operator_replaceDeviceGrant.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            internal var ok: Operations.Operator_replaceDeviceGrant.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/PUT/responses/400/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/PUT/responses/400/content/application\/json`.
+                    case json(Components.Schemas.ErrorBody)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.ErrorBody {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.Operator_replaceDeviceGrant.Output.BadRequest.Body
+                /// Creates a new `BadRequest`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.Operator_replaceDeviceGrant.Output.BadRequest.Body) {
+                    self.body = body
+                }
+            }
+            /// 400
+            ///
+            /// - Remark: Generated from `#/paths//operator/devices/{id}/capabilities/put(operator.replaceDeviceGrant)/responses/400`.
+            ///
+            /// HTTP response code: `400 badRequest`.
+            case badRequest(Operations.Operator_replaceDeviceGrant.Output.BadRequest)
+            /// The associated value of the enum case if `self` is `.badRequest`.
+            ///
+            /// - Throws: An error if `self` is not `.badRequest`.
+            /// - SeeAlso: `.badRequest`.
+            internal var badRequest: Operations.Operator_replaceDeviceGrant.Output.BadRequest {
+                get throws {
+                    switch self {
+                    case let .badRequest(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "badRequest",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Unauthorized: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/PUT/responses/401/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/PUT/responses/401/content/application\/json`.
+                    case json(Components.Schemas.ErrorBody)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.ErrorBody {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.Operator_replaceDeviceGrant.Output.Unauthorized.Body
+                /// Creates a new `Unauthorized`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.Operator_replaceDeviceGrant.Output.Unauthorized.Body) {
+                    self.body = body
+                }
+            }
+            /// 401
+            ///
+            /// - Remark: Generated from `#/paths//operator/devices/{id}/capabilities/put(operator.replaceDeviceGrant)/responses/401`.
+            ///
+            /// HTTP response code: `401 unauthorized`.
+            case unauthorized(Operations.Operator_replaceDeviceGrant.Output.Unauthorized)
+            /// The associated value of the enum case if `self` is `.unauthorized`.
+            ///
+            /// - Throws: An error if `self` is not `.unauthorized`.
+            /// - SeeAlso: `.unauthorized`.
+            internal var unauthorized: Operations.Operator_replaceDeviceGrant.Output.Unauthorized {
+                get throws {
+                    switch self {
+                    case let .unauthorized(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unauthorized",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Forbidden: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/PUT/responses/403/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/PUT/responses/403/content/application\/json`.
+                    case json(Components.Schemas.ErrorBody)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.ErrorBody {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.Operator_replaceDeviceGrant.Output.Forbidden.Body
+                /// Creates a new `Forbidden`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.Operator_replaceDeviceGrant.Output.Forbidden.Body) {
+                    self.body = body
+                }
+            }
+            /// 403
+            ///
+            /// - Remark: Generated from `#/paths//operator/devices/{id}/capabilities/put(operator.replaceDeviceGrant)/responses/403`.
+            ///
+            /// HTTP response code: `403 forbidden`.
+            case forbidden(Operations.Operator_replaceDeviceGrant.Output.Forbidden)
+            /// The associated value of the enum case if `self` is `.forbidden`.
+            ///
+            /// - Throws: An error if `self` is not `.forbidden`.
+            /// - SeeAlso: `.forbidden`.
+            internal var forbidden: Operations.Operator_replaceDeviceGrant.Output.Forbidden {
+                get throws {
+                    switch self {
+                    case let .forbidden(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "forbidden",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct NotFound: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/PUT/responses/404/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/PUT/responses/404/content/application\/json`.
+                    case json(Components.Schemas.ErrorBody)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.ErrorBody {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.Operator_replaceDeviceGrant.Output.NotFound.Body
+                /// Creates a new `NotFound`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.Operator_replaceDeviceGrant.Output.NotFound.Body) {
+                    self.body = body
+                }
+            }
+            /// 404
+            ///
+            /// - Remark: Generated from `#/paths//operator/devices/{id}/capabilities/put(operator.replaceDeviceGrant)/responses/404`.
+            ///
+            /// HTTP response code: `404 notFound`.
+            case notFound(Operations.Operator_replaceDeviceGrant.Output.NotFound)
+            /// The associated value of the enum case if `self` is `.notFound`.
+            ///
+            /// - Throws: An error if `self` is not `.notFound`.
+            /// - SeeAlso: `.notFound`.
+            internal var notFound: Operations.Operator_replaceDeviceGrant.Output.NotFound {
+                get throws {
+                    switch self {
+                    case let .notFound(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "notFound",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Conflict: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/PUT/responses/409/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/operator/devices/{id}/capabilities/PUT/responses/409/content/application\/json`.
+                    case json(Components.Schemas.ErrorBody)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.ErrorBody {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.Operator_replaceDeviceGrant.Output.Conflict.Body
+                /// Creates a new `Conflict`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.Operator_replaceDeviceGrant.Output.Conflict.Body) {
+                    self.body = body
+                }
+            }
+            /// 409
+            ///
+            /// - Remark: Generated from `#/paths//operator/devices/{id}/capabilities/put(operator.replaceDeviceGrant)/responses/409`.
+            ///
+            /// HTTP response code: `409 conflict`.
+            case conflict(Operations.Operator_replaceDeviceGrant.Output.Conflict)
+            /// The associated value of the enum case if `self` is `.conflict`.
+            ///
+            /// - Throws: An error if `self` is not `.conflict`.
+            /// - SeeAlso: `.conflict`.
+            internal var conflict: Operations.Operator_replaceDeviceGrant.Output.Conflict {
+                get throws {
+                    switch self {
+                    case let .conflict(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "conflict",
                             response: self
                         )
                     }
