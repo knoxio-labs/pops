@@ -984,13 +984,9 @@ fi
 xcrun simctl bootstatus "$udid" -b > /dev/null
 xcrun simctl install "$udid" "$app"
 
-# POPS_E2E_FLOWS names flows explicitly, for the ones kept out of the glob on
-# purpose: `.maestro/acceptance/` is driven only by `mise run
-# inventory:acceptance -- --ios` (`.maestro/README.md`).
-if [ -n "${POPS_E2E_FLOWS:-}" ]; then
-  flows="$POPS_E2E_FLOWS"
-else
-  flows=$(find .maestro -maxdepth 1 -name '*.yaml' | sort)
+if ! flows=$(node ../../scripts/ios-e2e/flow-selection.mjs); then
+  echo "e2e: could not select a complete UI flow partition." >&2
+  exit 1
 fi
 if [ -z "$flows" ]; then
   echo "e2e: no flows under .maestro. A lane that drives nothing and reports success is" >&2
