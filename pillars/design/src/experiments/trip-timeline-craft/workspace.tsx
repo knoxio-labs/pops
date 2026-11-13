@@ -5,9 +5,14 @@ import { CraftDateSummary, CraftHeader, CraftToolbar } from './header';
 import { visibleCraftRows } from './model';
 import { CraftPanels } from './panels';
 import { CraftVisitRow } from './rows';
+import { CraftSpendingSection } from './spending';
 import { useCraftWorkspace } from './use-workspace';
 
-import type { CraftTimeline } from '@/fixtures/trip-timeline-craft';
+import type {
+  CraftFinanceIntent,
+  CraftSpendingState,
+  CraftTimeline,
+} from '@/fixtures/trip-timeline-craft';
 
 import type { CraftWorkspace } from './use-workspace';
 
@@ -52,8 +57,16 @@ function UnplacedThoughts({ workspace }: { workspace: CraftWorkspace }) {
   );
 }
 
-/** One cohesive fictional Timeline, with local context and no production command side effects. */
-export function CraftWorkspaceView({ timeline }: { timeline: CraftTimeline }) {
+/** One cohesive fictional Timeline with explicit spending context and owner-bound action intents. */
+export function CraftWorkspaceView({
+  timeline,
+  spending,
+  onFinanceIntent,
+}: {
+  timeline: CraftTimeline;
+  spending: CraftSpendingState;
+  onFinanceIntent?: (intent: CraftFinanceIntent) => void;
+}) {
   const workspace = useCraftWorkspace();
   return (
     <main className="app-trips mx-auto w-full min-w-0 max-w-6xl px-4 pb-16 pt-5 text-foreground sm:px-8 sm:pt-8 lg:px-10">
@@ -63,6 +76,7 @@ export function CraftWorkspaceView({ timeline }: { timeline: CraftTimeline }) {
       {workspace.state.calendarOpen && (
         <CraftDateSummary timeline={timeline} showIdeas={workspace.state.showIdeas} />
       )}
+      <CraftSpendingSection state={spending} onIntent={onFinanceIntent} />
       <ol aria-label="Trip timeline" className="min-w-0">
         {visibleCraftRows(timeline.rows, workspace.state.showIdeas).map((row) => (
           <TimelineRow key={row.id} row={row} workspace={workspace} />
