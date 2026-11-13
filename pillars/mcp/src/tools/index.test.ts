@@ -3,8 +3,23 @@ import { describe, expect, it } from 'vitest';
 const { allTools } = await import('./index.js');
 
 describe('allTools', () => {
-  it('exports exactly 193 tools', () => {
-    expect(allTools).toHaveLength(193);
+  it('registers exactly the five canonical Contacts operations with their owner scopes', () => {
+    const contacts = allTools.filter((tool) => tool.name.startsWith('contacts.'));
+    expect(contacts.map((tool) => tool.name).toSorted()).toEqual([
+      'contacts.entities.catalogue',
+      'contacts.entities.create',
+      'contacts.entities.get',
+      'contacts.entities.list',
+      'contacts.entities.reference',
+    ]);
+    for (const tool of contacts) {
+      expect(tool.scope).toBe(tool.name);
+      expect(tool.readOnly).toBe(tool.name !== 'contacts.entities.create');
+    }
+  });
+
+  it('exports exactly 198 tools', () => {
+    expect(allTools).toHaveLength(198);
   });
 
   it('registers purchases inventory proposal tools', () => {
