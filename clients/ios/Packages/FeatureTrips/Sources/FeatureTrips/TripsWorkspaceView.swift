@@ -6,6 +6,8 @@ internal struct TripsWorkspaceView: View {
     @Bindable internal var model: TripsModel
     internal let tab: TripsTab
     internal var capture: (() -> Void)?
+    @State private var planLens = TripsPlanLens.line
+    @State private var calendarSelection = TripsPlanCalendarSelection()
 
     internal var body: some View {
         Group {
@@ -22,6 +24,9 @@ internal struct TripsWorkspaceView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.popsBackground)
+        .onChange(of: model.selectedID) {
+            planLens = .line
+        }
     }
 
     @ViewBuilder private var today: some View {
@@ -40,8 +45,13 @@ internal struct TripsWorkspaceView: View {
         switch model.route.state {
         case .loaded(let route):
             ScrollView {
-                TripsPlanLineView(route: route, snapshot: model.snapshot) { model.source = $0 }
-                    .padding(PopsSpacing.xl)
+                TripsPlanView(
+                    route: route, snapshot: model.snapshot, lens: $planLens,
+                    selectedDay: calendarSelection.binding(for: model)
+                ) {
+                    model.source = $0
+                }
+                .padding(PopsSpacing.xl)
             }
         case .failed(let error):
             TripsFailureView(failure: error) { model.route.retry() }

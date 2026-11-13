@@ -7,7 +7,12 @@ import Observation
 internal final class TripsModel {
     internal private(set) var trips: [TripRecord] = []
     internal private(set) var snapshot: TripSnapshot?
-    internal private(set) var selectedID: Int?
+    internal private(set) var selectedID: Int? {
+        didSet {
+            if selectedID != oldValue { tripSelectionEpoch = UUID() }
+        }
+    }
+    internal private(set) var tripSelectionEpoch = UUID()
     internal private(set) var loading = false
     internal private(set) var failure: RepositoryError?
     internal let route: TripsRouteModel
