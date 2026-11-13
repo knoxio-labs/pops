@@ -281,6 +281,7 @@ export const MOBILE_CAPABILITY_SCOPES: Readonly<Record<MobileCapability, readonl
   'documents.upload': ['documents.paperless.status', 'documents.write.upload'],
   'trips.read': [
     'trips.captureWorkspace.get',
+    'trips.route.get',
     'trips.trips.list',
     'trips.trips.get',
     'trips.places.list',

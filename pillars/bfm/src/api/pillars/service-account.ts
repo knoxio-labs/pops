@@ -110,6 +110,7 @@ export const BFM_SERVICE_ACCOUNT_SCOPES: readonly string[] = [
   'trips.captures.update',
   'trips.captures.attach',
   'trips.captures.undo',
+  'trips.route.get',
   'trips.trips.list',
   'trips.trips.get',
   'trips.places.list',

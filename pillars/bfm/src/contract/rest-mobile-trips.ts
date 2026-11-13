@@ -2,6 +2,7 @@ import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 
 import { requires } from './capabilities.js';
+import { MobileTripRouteSchema } from './mobile-trip-route-schemas.js';
 import { MobileTripInputSchema, MobileTripPatchInputSchema } from './mobile-trip-write-schemas.js';
 import {
   MobileTripDetailSchema,
@@ -27,6 +28,21 @@ const writeErrors = {
 };
 /** Native source-backed Trips surface, preserving the published producer's source facts and ordering. */
 export const mobileTripsContract = c.router({
+  getRoute: {
+    method: 'GET',
+    path: '/mobile/trips/:tripId/route',
+    pathParams: z.object({ tripId: z.coerce.number().int().positive().safe() }),
+    responses: {
+      200: MobileTripRouteSchema,
+      ...MOBILE_REQUEST_RESPONSES,
+      ...MOBILE_PERIMETER_RESPONSES,
+      404: MobileUpstreamErrorSchema,
+      ...MOBILE_UPSTREAM_RESPONSES,
+    },
+    summary:
+      'Read canonical mixed route order, alternative paths, applied history and missing sources',
+    metadata: requires('trips.read'),
+  },
   createTrip: {
     method: 'POST',
     path: '/mobile/trips',

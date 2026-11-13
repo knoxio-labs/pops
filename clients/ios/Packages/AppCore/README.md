@@ -61,6 +61,14 @@ Numbers never pass through a binary float. Decimals are an `Int128` coefficient 
 
 `InventoryDocumentsService` is an item's Paperless documents, online only: the list with its upload limits, edits that send only the changed keys, unlink (Paperless keeps the file), dismissing a refused upload, a streamed upload, and the file. `InventoryDocumentCache` keeps downloaded files and each item's last list under Caches; `InventoryDocumentOpener` opens the cached copy when its size matches the server's or the server cannot be reached, downloads otherwise, and answers `needsConnection` offline with no copy.
 
+`TripsRouteReading` exposes the producer's canonical mixed route separately from
+`TripsReading` source details. `TripRouteSnapshot` retains typed Visit/Journey/gap
+identities, route revision, ordered alternatives, applied history and explicit
+missing references. Decoding rejects unsafe integers, duplicate active placement
+and inconsistent membership without dropping absent sources. A route read and a
+separate source-detail read do not form one atomic snapshot; neither supplies
+inferred dates, booking status or transport.
+
 `TripOfflineReadCoordinator` combines injected authenticated Trip and Documents readers with an exact-pairing protected store. Complete successful reads retain their original verification instant; only explicit service unavailability or eligible typed Foundation reachability failures allow a last-verified fallback. Cancellation, TLS errors, authorization refusals, malformed responses and owner changes do not. Missing Trip/metadata/file responses persist resource-specific invalidation before returning; later outages cannot resurrect those records. Metadata recovery alone does not clear a missing file. The coordinator retains actual completed original bytes and returns only disposable preview copies. It never downloads unrequested files, infers document associations, replays writes or changes the source order. Its provenance distinguishes remote verification from last-verified reads; consumers must disclose that distinction before mounting offline results. `TripOfflineSelection` restores only a previously explicit selection accepted by the current navigation intent. Session observation irreversibly retires a context even when A→B→A changes coalesce before rendering; every point of use also checks the current persisted pairing.
 
 Original replacement uses a validated owner/index generation independently of old blob integrity. A successful remote download can replace missing or corrupted retained bytes; availability and preview still validate the bytes. Index ownership, identity, shape and publication CAS remain mandatory, including a final generation check before publishing the replacement manifest.

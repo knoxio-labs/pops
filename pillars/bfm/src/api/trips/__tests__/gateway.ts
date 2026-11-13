@@ -4,6 +4,7 @@ import { fakePillarHandle } from '@pops/pillar-sdk/testing';
 
 import { createPillarGateway } from '../../pillars/gateway.js';
 import { createMobileTripsClient } from '../client.js';
+import { tripRouteFixture } from './route-fixture.js';
 
 import type { CallResult } from '@pops/pillar-sdk/server';
 
@@ -14,6 +15,7 @@ import type { MobileTripsClient } from '../client.js';
 /** A producer-route override can supply real SDK failure outcomes or malformed source bodies. */
 export interface TripsResponses {
   trip?: CallResult<unknown>;
+  route?: CallResult<unknown>;
   trips?: CallResult<unknown>;
   places?: CallResult<unknown>;
   visits?: CallResult<unknown>;
@@ -53,6 +55,9 @@ export function tripsClientOver(
   }
   const factory: PillarHandleFactory = <TRouter>() =>
     fakePillarHandle<TRouter>('trips', {
+      route: {
+        get: (input) => answer('route.get', input, tripRouteFixture(), responses.route),
+      },
       trips: {
         list: (input) => answer('trips.list', input, { trips: [detail.trip] }, responses.trips),
         get: (input) => answer('trips.get', input, detail.trip, responses.trip),

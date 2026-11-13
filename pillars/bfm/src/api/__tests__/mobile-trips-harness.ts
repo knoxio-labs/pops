@@ -24,6 +24,13 @@ export function mobileTripsReader(overrides: Partial<MobileTripsClient> = {}): M
       overrides.updateTrip ?? (() => Promise.resolve({ kind: 'ok', value: tripsFixture().trip })),
     listTrips:
       overrides.listTrips ?? (() => Promise.resolve({ kind: 'ok', value: [tripsFixture().trip] })),
+    getRoute:
+      overrides.getRoute ??
+      ((tripId) =>
+        Promise.resolve({
+          kind: 'ok',
+          value: { tripId, revision: 0, order: [], paths: [], missingSources: [] },
+        })),
     getTrip: overrides.getTrip ?? (() => Promise.resolve({ kind: 'ok', value: tripsFixture() })),
   };
 }

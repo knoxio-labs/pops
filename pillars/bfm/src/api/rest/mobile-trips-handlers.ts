@@ -18,6 +18,12 @@ export interface MobileTripsHandlerDeps {
 /** Native metadata commands and complete source reads, without inferred relations or replay. */
 export function makeMobileTripsHandlers(deps: MobileTripsHandlerDeps) {
   return {
+    getRoute: async ({ params }: Req['getRoute']) => {
+      const outcome = await deps.trips.getRoute(params.tripId);
+      return isGatewayOk(outcome)
+        ? { status: 200 as const, body: outcome.value }
+        : toUpstreamErrorResponse(outcome);
+    },
     createTrip: async ({ body }: Req['createTrip']) => {
       const outcome = await deps.trips.createTrip(body);
       return isGatewayOk(outcome)
