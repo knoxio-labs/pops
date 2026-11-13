@@ -1,5 +1,4 @@
 import AppCore
-import Foundation
 import SwiftUI
 import Testing
 import ViewInspector
@@ -9,12 +8,12 @@ import ViewInspector
 @Suite("One Trip workspace")
 @MainActor
 internal struct TripsNavigationTests {
-    @Test("only Trips and app-level Search are navigation tabs")
+    @Test("Today, Plan, Inbox and native Search are navigation tabs")
     internal func appDestinations() throws {
         let reader = NavigationReader()
         let view = TripsRootView(repository: reader, documents: reader)
         let tabs = try view.inspect().find(ViewType.TabView.self)
-        #expect(tabs.count == 2)
+        #expect(tabs.count == 4)
     }
 
     @Test("the selected snapshot is the one Timeline and retains its exact reader identity")
@@ -28,6 +27,38 @@ internal struct TripsNavigationTests {
         #expect(timeline.snapshot == snapshot)
         #expect(try root.inspect().findAll(ViewType.TabView.self).count == 1)
         #expect(await reader.requested == [snapshot.trip.id])
+    }
+
+    @Test("source destinations belong only to the active tab and switching clears detail")
+    internal func tabScopedDetails() async throws {
+        let snapshot = try TripNavigationTestContext.snapshot()
+        let reader = NavigationReader(snapshot: snapshot)
+        let model = TripsModel(repository: reader)
+        await model.select(snapshot.trip.id)
+        let source = try #require(allTripSources(snapshot).first)
+        let today = TripsSelectedTripStack(
+            model: model, tab: .trips, documents: reader, capture: nil)
+        let plan = TripsSelectedTripStack(
+            model: model, tab: .plan, documents: reader, capture: nil)
+        let inbox = TripsSelectedTripStack(
+            model: model, tab: .inbox, documents: reader, capture: nil)
+        model.source = source
+        #expect(today.sourceSelection.wrappedValue == source)
+        #expect(plan.sourceSelection.wrappedValue == nil)
+        #expect(inbox.sourceSelection.wrappedValue == nil)
+        plan.sourceSelection.wrappedValue = nil
+        #expect(model.source == source)
+        model.tab = .plan
+        #expect(model.source == nil)
+        plan.sourceSelection.wrappedValue = source
+        #expect(plan.sourceSelection.wrappedValue == source)
+        #expect(today.sourceSelection.wrappedValue == nil)
+        today.sourceSelection.wrappedValue = nil
+        #expect(model.source == source)
+        model.tab = .inbox
+        #expect(model.source == nil)
+        #expect(model.selectedID == snapshot.trip.id)
+        #expect(model.snapshot == snapshot)
     }
 
     @Test("calendar grouping preserves undated originals and spanning intervals inside a range")

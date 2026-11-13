@@ -24,6 +24,10 @@ extension AppComposition {
         BFMTripsRepository(client: authenticated(device))
     }
 
+    internal func tripsRouteRepository(for device: PairedDevice) -> any TripsRouteReading {
+        BFMTripRouteRepository(client: authenticated(device))
+    }
+
     /// Everything a paired device's screens may reach. Built per device rather
     /// than at launch, for the reason in this type's note, and kept until the
     /// device changes.

@@ -2,28 +2,37 @@ import AppCore
 import DesignSystem
 import SwiftUI
 
-/// One selected-Trip timeline and app-level search backed only by injected source reads.
-/// Optional device-authorized capture writes retain their own operation identities; documents open only after
-/// an authenticated download.
+/// Native Today, Plan, Inbox and Search destinations sharing one explicit Trip selection.
+/// Documents open only after an authenticated download; capture writes retain their operation identities.
 public struct TripsRootView: View {
     @State private var model: TripsModel
     private let documents: any DocumentsReading
     @State private var captureDrafts: TripCaptureDrafts?
 
     /// Creates the feature with authenticated readers and optional explicitly authorized capture writes.
-    /// Omitting the writer keeps source browsing read-only. The app supplies an owner-bound durable store;
+    /// Omitting the writer keeps capture read-only. The app supplies an owner-bound durable store;
     /// omitting storage retains only in-memory drafts for injected previews and host tests.
     /// Optional selection retention restores only an earlier explicit selection, never the first Trip by default.
+    /// Route, capture and detail readers complete independently and do not promise an atomic snapshot.
+    /// Omitting a reader presents its destination as unbound, never as a successful empty read.
     public init(
         repository: any TripsReading, documents: any DocumentsReading,
         captureWriter: (any TripCapturesWriting)? = nil,
         captureStore: (any TripCaptureDraftStore)? = nil,
-        selection: (any TripOfflineSelection)? = nil
+        selection: (any TripOfflineSelection)? = nil,
+        routeReader: (any TripsRouteReading)? = nil,
+        captureReader: (any TripCapturesReading)? = nil
     ) {
+        let model = TripsModel(
+            repository: repository, selection: selection, routeReader: routeReader,
+            captureReader: captureReader)
         self.init(
-            model: TripsModel(repository: repository, selection: selection), documents: documents,
+            model: model,
+            documents: documents,
             captureDrafts: captureWriter.map {
-                TripCaptureDrafts(writer: $0, storage: captureStore)
+                TripCaptureDrafts(writer: $0, storage: captureStore) { [weak model] tripID in
+                    model?.captureAccepted(tripID: tripID)
+                }
             })
     }
 
@@ -37,15 +46,21 @@ public struct TripsRootView: View {
 
     public var body: some View {
         TabView(selection: $model.tab) {
-            Tab("Trips", systemImage: "map.fill", value: TripsTab.trips) {
-                stack
+            Tab("Today", systemImage: "sun.max", value: TripsTab.trips) {
+                stack(.trips)
+            }
+            Tab("Plan", systemImage: "map", value: TripsTab.plan) {
+                stack(.plan)
+            }
+            Tab("Inbox", systemImage: "tray", value: TripsTab.inbox) {
+                stack(.inbox)
             }
             Tab(value: TripsTab.search, role: .search) {
                 NavigationStack {
                     TripsSearchView(trips: model.trips, snapshot: model.snapshot) { id in
-                        openTrip(id)
+                        model.openTrip(id)
                     } openSource: { source in
-                        openTrip(source.tripID, sourceID: source.id)
+                        model.openTrip(source.tripID, sourceID: source.id)
                     }
                 }
             }
@@ -57,77 +72,16 @@ public struct TripsRootView: View {
         }
     }
 
-    private var stack: some View {
-        NavigationStack {
-            Group {
-                if model.loading {
-                    LoadingStateView()
-                } else if let failure = model.failure {
-                    TripsFailureView(failure: failure) { Task { await model.load() } }
-                } else if let snapshot = model.snapshot {
-                    TripsTimelineView(snapshot: snapshot)
-                } else {
-                    TripsSelectionView(model: model)
-                }
-            }
-            .navigationTitle(model.snapshot.map { tripName($0.trip) } ?? "Trips")
-            .popsTitleDisplay(large: model.snapshot == nil)
-            .toolbar {
-                ToolbarItem(placement: .principal) { tripMenu }
-                ToolbarItem(placement: .primaryAction) {
-                    if let id = model.snapshot?.trip.id, let captureDrafts {
-                        Button("Capture", systemImage: "plus") {
-                            model.capture = captureDrafts.draft(tripID: id)
-                        }
-                    }
-                }
-                ToolbarItem(placement: .primaryAction) {
-                    if let snapshot = model.snapshot {
-                        TripsDocumentShortcut(snapshot: snapshot, repository: documents)
-                    }
-                }
-            }
-            .navigationDestination(item: $model.source) { source in
-                if let current = model.canonicalSource(source), let snapshot = model.snapshot {
-                    TripsSourceView(source: current, places: snapshot.places)
-                } else {
-                    ContentUnavailableView(
-                        "Recorded source unavailable", systemImage: "exclamationmark.triangle")
-                }
-            }
-            .refreshable { await model.load() }
-        }
-        .id(model.selectedID)
+    private func stack(_ tab: TripsTab) -> some View {
+        TripsSelectedTripStack(
+            model: model, tab: tab, documents: documents,
+            capture: captureAction)
     }
 
-    private func openTrip(_ id: Int, sourceID: String? = nil) {
-        model.openTrip(id, sourceID: sourceID)
-    }
-
-    private var tripMenu: some View {
-        Menu {
-            ForEach(model.trips) { trip in
-                Button {
-                    openTrip(trip.id)
-                } label: {
-                    Text(tripName(trip))
-                    if !trip.when.isEmpty { Text(trip.when) }
-                }
-            }
-        } label: {
-            HStack(spacing: PopsSpacing.xs) {
-                Text(model.snapshot.map { tripName($0.trip) } ?? "Choose Trip")
-                    .lineLimit(1)
-                Image(systemName: "chevron.down")
-                    .font(.popsCaption)
-                    .accessibilityHidden(true)
-            }
-            .font(.popsSubheadline)
-            .frame(minHeight: PopsSize.touchTarget)
-        }
-        .accessibilityLabel("Choose Trip")
-        .accessibilityValue(model.snapshot.map { tripName($0.trip) } ?? "No selected Trip")
+    private var captureAction: (() -> Void)? {
+        guard let id = model.selectedID, let captureDrafts else { return nil }
+        return { model.capture = captureDrafts.draft(tripID: id) }
     }
 }
 
-internal enum TripsTab: Hashable { case trips, search }
+internal enum TripsTab: Hashable { case trips, plan, inbox, search }

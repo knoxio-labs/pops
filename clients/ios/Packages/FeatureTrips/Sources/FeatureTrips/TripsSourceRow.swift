@@ -13,32 +13,8 @@ internal struct TripsSourceRow: View {
         NavigationLink {
             TripsSourceView(source: source, places: places)
         } label: {
-            PopsCard(appearance: .featured) {
-                VStack(alignment: .leading, spacing: isCurrent ? PopsSpacing.md : PopsSpacing.lg) {
-                    TripsSourceHeading(
-                        title: source.displayName(places: places), symbol: source.symbol,
-                        context: context)
-                    if case .journey(let journey) = source {
-                        ForEach(journey.legs) {
-                            TripsJourneyLegView(
-                                leg: $0, places: places, showsReference: !isCurrent)
-                        }
-                    } else {
-                        TripsSourceScheduleView(
-                            value: TripSourceSchedulePresentation(
-                                source: source, isCurrent: isCurrent),
-                            zone: zone)
-                    }
-                    if let status = source.status, !status.isEmpty {
-                        Text(status)
-                            .font(.popsSubheadline)
-                            .foregroundStyle(Color.popsMutedForeground)
-                    }
-                    TripSourceStateLines(source: source, showsReferences: !isCurrent)
-                }
-                .frame(minHeight: PopsSize.touchTarget, alignment: .leading)
-            }
-            .accessibilityElement(children: .combine)
+            TripsSourceCard(
+                source: source, zone: zone, places: places, context: context, isCurrent: isCurrent)
         }
         .buttonStyle(.plain)
         .navigationLinkIndicatorVisibility(.hidden)

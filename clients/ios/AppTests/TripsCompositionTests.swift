@@ -20,11 +20,13 @@ internal struct TripsCompositionTests {
             replicaOpens += 1
             return try InventoryReplica()
         }
-        let dependencies = root.dependencies(for: try device("first"))
+        let paired = try device("first")
+        let dependencies = root.dependencies(for: paired)
 
         #expect(dependencies.pairing is BFMDevicePairingService)
         #expect(dependencies.ego is BFMEgoRepository)
         #expect(dependencies.inventory is UnboundInventoryStore)
+        #expect(root.tripsRouteRepository(for: paired) is BFMTripRouteRepository)
         #expect(replicaOpens == 0)
         #expect(root.synchronizeInventory == nil)
         #expect(!root.inventoryStorageFull)

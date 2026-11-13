@@ -13,9 +13,13 @@ public struct BFMTripRouteRepository: TripsRouteReading {
         guard tripId > 0 else {
             throw RepositoryError.requestRejected
         }
-        let output: Operations.MobileTrips_getRoute.Output
+        guard let output = try await response(tripId: tripId) else { return nil }
+        return try snapshot(output, tripId: tripId)
+    }
+
+    private func response(tripId: Int) async throws -> Operations.MobileTrips_getRoute.Output? {
         do {
-            output = try await client.generated.mobileTrips_getRoute(path: .init(tripId: tripId))
+            return try await client.generated.mobileTrips_getRoute(path: .init(tripId: tripId))
         } catch let error as ClientError {
             if BFMRepositoryFailure.statusCode(in: error) == 404 {
                 guard let upstream = (error.underlyingError as? BFMRuntimePopsError)?.upstream,
@@ -25,6 +29,11 @@ public struct BFMTripRouteRepository: TripsRouteReading {
             }
             throw bfmReadFailure(error, operation: "mobileTrips.getRoute")
         }
+    }
+
+    private func snapshot(
+        _ output: Operations.MobileTrips_getRoute.Output, tripId: Int
+    ) throws -> TripRouteSnapshot? {
         switch output {
         case .ok(let ok):
             let value: TripRouteSnapshot = try tripDomain(try ok.body.json)

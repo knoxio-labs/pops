@@ -81,7 +81,7 @@ internal struct TripRouteRepositoryTests {
     }
 
     private func payload(_ value: TripRouteSnapshot) throws -> String {
-        String(decoding: try JSONEncoder().encode(value), as: UTF8.self)
+        try #require(String(bytes: JSONEncoder().encode(value), encoding: .utf8))
     }
 
     private func repository(_ transport: StubTransport) throws -> BFMTripRouteRepository {
