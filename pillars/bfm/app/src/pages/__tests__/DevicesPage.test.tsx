@@ -10,6 +10,8 @@ const issuePairingCodeMock = vi.hoisted(() => vi.fn());
 const revokeDeviceMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../../bfm-api/index.js', () => ({
+  operatorGetDeviceGrant: vi.fn(),
+  operatorReplaceDeviceGrant: vi.fn(),
   operatorListDevices: (...args: unknown[]) => listDevicesMock(...args),
   operatorIssuePairingCode: (...args: unknown[]) => issuePairingCodeMock(...args),
   operatorRevokeDevice: (...args: unknown[]) => revokeDeviceMock(...args),

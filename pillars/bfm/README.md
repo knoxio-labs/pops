@@ -774,6 +774,12 @@ have installed a phantom app — which is why it waited for the app. Registry
 registration is a separate mechanism and still goes through the
 `ManifestPayload` in `src/api/manifest.ts`.
 
+Device grant editing is available through the operator-only GET/PUT
+capability routes and the contextual Permissions editor on the shell's Devices
+page. It replaces a complete explicit selection against revision and policy
+CAS; guest and revoked devices remain unavailable. Conflicts and uncertain
+writes require an explicit fresh read and never replay a pending selection.
+
 ## What deliberately does not live here
 
 - **Destructive and administrative operations.** Deleting a record, revoking a
@@ -788,8 +794,6 @@ registration is a separate mechanism and still goes through the
   the vocabulary in `src/contract/capabilities.ts` and
   `src/contract/__tests__/mobile-capabilities.test.ts` enforcing that no mobile
   route is reachable without declaring one.
-- **A way to see or narrow a device's grant.** Every device is granted the full
-  vocabulary at pairing and nothing reads it back to an operator (POPS-2460).
 - **The bootstrap route and the nginx route.** `GET /mobile/bootstrap`
   (POPS-1378) and the nginx route plus the compiled pillar roster (POPS-1386)
   are each their own ticket. Revocation here sets `devices.revokedAt`, which is

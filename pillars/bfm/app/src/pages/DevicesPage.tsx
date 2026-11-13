@@ -6,6 +6,8 @@ import { Button, PageHeader } from '@pops/ui';
 
 import { DeviceTable } from './devices-page/DeviceTable.js';
 import { PairingDialog } from './devices-page/PairingDialog.js';
+import { DevicePermissionsDialog } from './devices-page/permissions/DevicePermissionsDialog.js';
+import { useDevicePermissions } from './devices-page/permissions/useDevicePermissions.js';
 import { RevokeDialog } from './devices-page/RevokeDialog.js';
 import { useDevicesPageModel } from './devices-page/useDevicesPageModel.js';
 
@@ -23,6 +25,7 @@ import type { ReactElement } from 'react';
 export function DevicesPage(): ReactElement {
   const { t } = useTranslation('bfm');
   const { list, pairing, revocation } = useDevicesPageModel();
+  const permissions = useDevicePermissions();
   const [isPairingOpen, setIsPairingOpen] = useState(false);
 
   const openPairing = (): void => {
@@ -47,7 +50,7 @@ export function DevicesPage(): ReactElement {
         }
       />
 
-      <DeviceTable list={list} onRevoke={revocation.request} />
+      <DeviceTable list={list} onRevoke={revocation.request} onPermissions={permissions.request} />
 
       <PairingDialog
         pairing={pairing}
@@ -55,6 +58,7 @@ export function DevicesPage(): ReactElement {
         onOpenChange={(open) => (open ? setIsPairingOpen(true) : closePairing())}
       />
       <RevokeDialog revocation={revocation} />
+      <DevicePermissionsDialog editor={permissions} />
     </div>
   );
 }
