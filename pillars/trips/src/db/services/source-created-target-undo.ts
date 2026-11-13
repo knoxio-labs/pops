@@ -1,5 +1,7 @@
 import { deleteEvent, getEvent } from './events.js';
+import { deleteJourneyLeg } from './journey-legs.js';
 import { deleteJourney, getJourney } from './journeys.js';
+import { getJourneyLegSet } from './leg-set.js';
 import { canonicalSourceValue } from './source-canonical.js';
 import { TripsServiceError } from './source-record.js';
 import { assertCreatedTargetUnreferenced } from './source-references.js';
@@ -21,6 +23,14 @@ export function undoCreatedTargets(write: SourceWrite, inverse: SourceInverse): 
   }
   for (const journey of inverse.createdJourneys) {
     requireUnchanged(getJourney(write.db, write.tripId, journey.id), journey);
+    const proof = inverse.createdJourneyLegSets?.find((entry) => entry.journeyId === journey.id);
+    if (proof !== undefined) {
+      requireUnchanged(getJourneyLegSet(write.db, write.tripId, journey.id), {
+        revision: proof.revision,
+        legs: proof.legs,
+      });
+      for (const leg of proof.legs) deleteJourneyLeg(write.db, write.tripId, journey.id, leg.id);
+    }
     assertCreatedTargetUnreferenced(write.db, write.tripId, { kind: 'journey', id: journey.id });
     deleteJourney(write.db, write.tripId, journey.id);
   }
