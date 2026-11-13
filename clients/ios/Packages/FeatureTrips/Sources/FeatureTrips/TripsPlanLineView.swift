@@ -57,7 +57,7 @@ internal struct TripsPlanLineView: View {
     }
 }
 
-private struct TripsPlanLinePathView: View {
+internal struct TripsPlanLinePathView: View {
     let path: TripPlanLinePath
     let places: [TripPlace]
     let openSource: (TripSource) -> Void
