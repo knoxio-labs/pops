@@ -476,7 +476,7 @@ jobs:
           if-no-files-found: warn
 
   ui:
-    name: Release + UI flow
+    name: Release + UI flow (${{ matrix.shard }})
     needs: [scope]
     if: >-
       ${{ !cancelled() && (
@@ -487,6 +487,10 @@ jobs:
           !startsWith(github.head_ref, 'promotion/') &&
           !startsWith(github.head_ref, 'integration/'))
       ) }}
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON((github.event_name == 'merge_group' || inputs['full-validation'] == true) && '[0,1]' || '[0]') }}
     runs-on: xcode-27
     # Worker budgets retain the existing limits; measured durations are not guarantees.
     timeout-minutes: ${{ (github.event_name == 'merge_group' || inputs['full-validation'] == true) && 190 || 100 }}
@@ -498,6 +502,8 @@ jobs:
       # install the root `mise.toml`'s Rust — a full rustup toolchain download
       # in a job that compiles no Rust.
       MISE_DISABLE_TOOLS: rust
+      POPS_E2E_SHARD_INDEX: ${{ strategy.job-index }}
+      POPS_E2E_SHARD_COUNT: ${{ strategy.job-total }}
 
     steps:
       - uses: actions/checkout@v7
@@ -536,6 +542,7 @@ jobs:
         run: mise run build:for-testing
 
       - name: Release carries no BFM host
+        if: strategy.job-index == 0
         run: mise run verify:release-carries-no-host
 
       # Maestro drives this worker's Debug products against a real BFM.
@@ -575,7 +582,7 @@ jobs:
         if: github.event_name == 'merge_group' || inputs['full-validation'] == true
         run: |
           set -euo pipefail
-          simulator_udid="$(xcrun simctl create "POPS-E2E-disposable-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+          simulator_udid="$(xcrun simctl create "POPS-E2E-disposable-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${POPS_E2E_SHARD_INDEX}" \
             com.apple.CoreSimulator.SimDeviceType.iPhone-17 \
             com.apple.CoreSimulator.SimRuntime.iOS-27-0)"
           echo "POPS_IOS_E2E_SIMULATOR_UDID=$simulator_udid" >> "$GITHUB_ENV"
@@ -597,7 +604,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: maestro-debug
+          name: maestro-debug-${{ strategy.job-index }}
           path: ~/.maestro/tests
           retention-days: 7
           if-no-files-found: warn

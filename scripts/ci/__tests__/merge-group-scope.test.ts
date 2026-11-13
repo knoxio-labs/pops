@@ -304,7 +304,7 @@ describe('the scope job is wired to the workflow it scopes', () => {
     expect(uiStep('Release carries no BFM host')?.run).toBe(
       'mise run verify:release-carries-no-host'
     );
-    expect(uiStep('Release carries no BFM host')?.if).toBeUndefined();
+    expect(uiStep('Release carries no BFM host')?.if).toBe('strategy.job-index == 0');
 
     const workflowCall = triggersOf('ios-quality.yml').workflow_call;
     expect(isMapping(workflowCall)).toBe(true);
@@ -371,6 +371,53 @@ describe('the scope job is wired to the workflow it scopes', () => {
 });
 
 describe('parallel iOS admission', () => {
+  it.each([
+    ['pull_request', false, [0]],
+    ['pull_request', true, [0, 1]],
+    ['merge_group', false, [0, 1]],
+  ])('selects the %s full=%s UI partitions', (eventName, fullValidation, expected) => {
+    const ui = jobsOf('ios-quality.yml').get('ui');
+    const strategy = isMapping(ui?.strategy) ? ui.strategy : undefined;
+    const matrix = isMapping(strategy?.matrix) ? strategy.matrix : undefined;
+    expect(strategy?.['fail-fast']).toBe(false);
+    const expression = scalarText(matrix?.shard);
+    if (expression === undefined) throw new Error('UI shard matrix expression is missing');
+    const body = expression.replace(/^\s*\$\{\{\s*|\s*\}\}\s*$/gu, '').replace(/==/gu, '===');
+    const evaluate = new Function('github', 'inputs', 'fromJSON', `return (${body});`) as (
+      github: { event_name: string },
+      inputs: { 'full-validation': boolean },
+      fromJSON: (source: string) => unknown
+    ) => unknown;
+    expect(
+      evaluate({ event_name: eventName }, { 'full-validation': fullValidation }, JSON.parse)
+    ).toEqual(expected);
+  });
+
+  it('binds each UI partition to its actual matrix position and isolated diagnostics', () => {
+    const ui = jobsOf('ios-quality.yml').get('ui');
+    const env = isMapping(ui?.env) ? ui.env : undefined;
+    expect(env?.POPS_E2E_SHARD_INDEX).toBe('${{ strategy.job-index }}');
+    expect(env?.POPS_E2E_SHARD_COUNT).toBe('${{ strategy.job-total }}');
+    const steps = stepsOf(ui);
+    expect(
+      steps.find((step) => step.name === "Maestro's screenshots and view hierarchies")?.with
+    ).toEqual({
+      name: 'maestro-debug-${{ strategy.job-index }}',
+      path: '~/.maestro/tests',
+      'retention-days': 7,
+      'if-no-files-found': 'warn',
+    });
+    const simulator = steps.find(
+      (step) => step.name === 'Create a disposable simulator for Maestro'
+    );
+    expect(scalarText(simulator?.run)).toContain('${POPS_E2E_SHARD_INDEX}');
+    const taskSource = readFileSync(join(repoRoot, 'clients/ios/mise.toml'), 'utf8');
+    expect(taskSource).toContain('flows=$(node ../../scripts/ios-e2e/flow-selection.mjs)');
+    expect(taskSource).not.toContain("flows=$(find .maestro -maxdepth 1 -name '*.yaml' | sort)");
+    expect(taskSource).toContain('for flow in $flows; do');
+    expect(taskSource).toContain('maestro --device "$udid" test "$flow"');
+  });
+
   it('joins independent macOS workers in the existing terminal admission job', () => {
     const jobs = jobsOf('ios-quality.yml');
     for (const jobName of ['native', 'ui']) {
