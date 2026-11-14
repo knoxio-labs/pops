@@ -125,6 +125,29 @@ describe('attributionLines', () => {
   });
 });
 
+describe('findViolations', () => {
+  it('ignores generated release notes and commits but reports credits outside them', () => {
+    const releaseNotes = `<details>\n<summary>Release notes</summary>\n${TRAILER}\n</details>`;
+    const commits = `<details>\n<summary>Commits</summary>\n${TRAILER}\n</details>`;
+
+    expect(
+      findViolations({ commits: [], prBody: `${releaseNotes}\n\n${commits}\n\n${TRAILER}` })
+    ).toEqual([`PR body credits an assistant — "${TRAILER}"`]);
+  });
+
+  it('still scans non-generated and unclosed details blocks', () => {
+    const nonGenerated = `<details>\n<summary>Notes</summary>\n${TRAILER}\n</details>`;
+    const unclosed = `<details>\n<summary>Release notes</summary>\n${TRAILER}`;
+
+    expect(findViolations({ commits: [], prBody: nonGenerated })).toEqual([
+      `PR body credits an assistant — "${TRAILER}"`,
+    ]);
+    expect(findViolations({ commits: [], prBody: unclosed })).toEqual([
+      `PR body credits an assistant — "${TRAILER}"`,
+    ]);
+  });
+});
+
 describe('commitViolations', () => {
   const clean = {
     sha: 'abcdef1234567890',
