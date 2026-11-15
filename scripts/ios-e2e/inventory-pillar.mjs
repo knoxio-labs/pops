@@ -181,12 +181,13 @@ export async function startInventoryGate({ pillarBaseUrl, host = '127.0.0.1' }) 
  * still the registry the pillar verifies the BFM's service-account key
  * against, which `upstream-stub.mjs` answers.
  *
- * @param {{ repoRoot: string, port: number, dataDir: string, buildVersion: string, selfBaseUrl: string, registryUrl: string }} options
+ * @param {{ repoRoot: string, port: number, host: string, dataDir: string, buildVersion: string, selfBaseUrl: string, registryUrl: string }} options
  * @returns {import('node:child_process').ChildProcess}
  */
 export function spawnInventoryPillar({
   repoRoot,
   port,
+  host,
   dataDir,
   buildVersion,
   selfBaseUrl,
@@ -198,6 +199,7 @@ export function spawnInventoryPillar({
     env: {
       ...process.env,
       PORT: String(port),
+      INVENTORY_HOST: host,
       BUILD_VERSION: buildVersion,
       INVENTORY_SQLITE_PATH: join(dataDir, 'inventory.db'),
       INVENTORY_IMAGES_DIR: join(dataDir, 'inventory-images'),
