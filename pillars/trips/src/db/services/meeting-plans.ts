@@ -12,7 +12,7 @@ import {
   requireMeetingRevision,
 } from './meeting-plan-queries.js';
 import { undoMeetingPlanOperation } from './meeting-plan-undo.js';
-import { getTrip, getVisit } from './records.js';
+import { getTrip, validateRetainedVisitReference } from './records.js';
 import { requireOwnedRecord, TripsServiceError } from './source-record.js';
 
 import type {
@@ -56,8 +56,7 @@ function applyCommand(context: Context): MeetingPlanReceipt {
     requireMeetingRevision(before, command.expectedRevision);
   const input = commandPatch(command);
   const patch = verifiedPatch(input, before?.contactUri ?? null, resolvedContactUri);
-  if (patch.visitId !== undefined && patch.visitId !== null && patch.visitId !== before?.visitId)
-    getVisit(db, tripId, patch.visitId);
+  validateRetainedVisitReference(db, tripId, patch.visitId, before?.visitId);
   const row =
     before === null
       ? db
@@ -70,6 +69,7 @@ function applyCommand(context: Context): MeetingPlanReceipt {
           .set({
             ...patch,
             removed: command.kind === 'remove',
+            removalOperationId: command.kind === 'remove' ? operation.operationId : null,
             revision: before.revision + 1,
             updatedAt: new Date().toISOString(),
           })

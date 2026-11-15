@@ -15,8 +15,8 @@ import { createJourneyLeg, listJourneyLegs } from '../services/journey-legs.js';
 import { createJourney, getJourney } from '../services/journeys.js';
 import { getJourneyLegSet } from '../services/leg-set.js';
 import { createPlace, getTrip, listVisits } from '../services/records.js';
-import { createRental, getRental } from '../services/rentals.js';
-import { getResponsibility, replaceResponsibility } from '../services/responsibilities.js';
+import { getRental } from '../services/rentals.js';
+import { getResponsibility } from '../services/responsibilities.js';
 import { readSourceWorkspace } from '../services/source-queries.js';
 import { createStay, getStay } from '../services/stays.js';
 
@@ -135,18 +135,56 @@ it.each([1, 2, 3, 4, 11, 12])(
       };
       const previous =
         migrationCount >= 2 ? seedLegacyJourney(raw, trip.id, place.id, timestamp) : undefined;
-      const rental =
+      const rentalId =
         migrationCount >= 11
-          ? createRental(db, trip.id, { provider: 'Independent provider', status: 'Reserved' })
+          ? Number(
+              raw
+                .prepare(
+                  'INSERT INTO rentals (trip_id, provider, status, revision, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)'
+                )
+                .run(trip.id, 'Independent provider', 'Reserved', 0, timestamp, timestamp)
+                .lastInsertRowid
+            )
           : undefined;
-      const responsibility = rental
-        ? replaceResponsibility(
-            db,
-            trip.id,
-            { kind: 'rental', id: rental.id },
-            { expectedRevision: 0, responsibility: { kind: 'self' } }
+      const rental =
+        rentalId === undefined
+          ? undefined
+          : {
+              id: rentalId,
+              tripId: trip.id,
+              provider: 'Independent provider',
+              pickupVisitId: null,
+              returnVisitId: null,
+              start: null,
+              end: null,
+              status: 'Reserved',
+              revision: 0,
+              createdAt: timestamp,
+              updatedAt: timestamp,
+            };
+      const responsibility =
+        rental === undefined
+          ? undefined
+          : {
+              tripId: trip.id,
+              targetKind: 'rental' as const,
+              targetId: rental.id,
+              responsibility: { kind: 'self' as const },
+              revision: 1,
+            };
+      if (responsibility !== undefined) {
+        raw
+          .prepare(
+            'INSERT INTO arrangement_responsibilities (trip_id, target_kind, target_id, responsibility, revision) VALUES (?, ?, ?, ?, ?)'
           )
-        : undefined;
+          .run(
+            responsibility.tripId,
+            responsibility.targetKind,
+            responsibility.targetId,
+            JSON.stringify(responsibility.responsibility),
+            responsibility.revision
+          );
+      }
       raw.close();
       const upgraded = openTripsDb(path);
       try {

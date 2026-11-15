@@ -2,7 +2,9 @@ import { integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core
 
 import { trips } from './records.js';
 
+import type { RouteDraftOperation, RouteDraftReceipt } from '../../contract/route-draft-schemas.js';
 import type { RouteOperation, RouteReceipt, TripRoute } from '../../contract/route-schemas.js';
+import type { RouteDraftInverse } from '../services/route-draft-effects.js';
 
 /** Single aggregate owns root and alternative order; JSON preserves typed, heterogeneous membership. */
 export const tripRoutes = sqliteTable('trip_routes', {
@@ -26,7 +28,7 @@ export const routePaths = sqliteTable('route_paths', {
     .notNull()
     .references(() => trips.id),
 });
-/** Immutable UUID outcomes and separate own-Undo guards; no source rows are cloned or rewritten. */
+/** Shared UUID outcomes preserve capability families and independent route/source own-Undo guards. */
 export const routeOperations = sqliteTable(
   'route_operations',
   {
@@ -35,8 +37,14 @@ export const routeOperations = sqliteTable(
       .notNull()
       .references(() => trips.id),
     operationId: text('operation_id').notNull(),
-    request: text('request', { mode: 'json' }).$type<RouteOperation>().notNull(),
-    receipt: text('receipt', { mode: 'json' }).$type<RouteReceipt>().notNull(),
+    family: text('family', { enum: ['placement', 'draft'] })
+      .notNull()
+      .default('placement'),
+    request: text('request', { mode: 'json' })
+      .$type<RouteOperation | RouteDraftOperation>()
+      .notNull(),
+    receipt: text('receipt', { mode: 'json' }).$type<RouteReceipt | RouteDraftReceipt>().notNull(),
+    sourceInverse: text('source_inverse', { mode: 'json' }).$type<RouteDraftInverse>(),
     expectedAfter: text('expected_after', { mode: 'json' }).$type<TripRoute>().notNull(),
     undoneBy: text('undone_by'),
   },

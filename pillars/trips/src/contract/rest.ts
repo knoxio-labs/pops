@@ -11,6 +11,7 @@ import { journeysContract, journeyLegsContract } from './journeys.js';
 import { meetingPlansContract } from './meeting-plans.js';
 import { rentalsContract } from './rentals.js';
 import { responsibilitiesContract } from './responsibilities.js';
+import { routeDraftsContract } from './route-drafts.js';
 import { routeContract } from './route.js';
 import {
   CreatePlaceBody,
@@ -47,6 +48,7 @@ const VisitList = z.object({ visits: z.array(VisitSchema) });
 export const tripsContract = c.router(
   {
     route: routeContract,
+    routeDrafts: routeDraftsContract,
     captureWorkspace: captureWorkspaceContract,
     captures: capturesContract,
     ideas: ideasContract,

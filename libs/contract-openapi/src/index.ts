@@ -4,6 +4,7 @@ export { isRecord, sortJson } from './json.js';
 export {
   buildPillarOpenApiDocument,
   writePillarOpenApi,
+  type PillarOpenApiOperationMapper,
   type PillarOpenApiProjection,
 } from './write-pillar-openapi.js';
 export { zodSchemaTransformer } from './zod-schema-transformer.js';

@@ -15,6 +15,7 @@ const validator = new AjvJsonSchemaValidator();
 /** One published operation's flat MCP argument contract, validated without coercion or default insertion. */
 export interface OpenApiToolInput {
   readonly method: string;
+  readonly readOnly: boolean;
   readonly inputSchema: Tool['inputSchema'];
   readonly validate: (
     input: unknown
@@ -133,7 +134,12 @@ export function projectOperationInput(document: unknown, operationId: string): O
     additionalProperties: false,
   };
   const validate = validator.getValidator<Record<string, unknown>>(inputSchema);
-  return { method: match.method, inputSchema, validate };
+  return {
+    method: match.method,
+    readOnly: match.method === 'GET' || match.operation['x-pops-read-only'] === true,
+    inputSchema,
+    validate,
+  };
 }
 
 /** Validate a declared JSON response without mapping, dropping fields or rewriting owner-issued identities. */

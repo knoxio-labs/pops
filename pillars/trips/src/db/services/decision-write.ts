@@ -19,7 +19,7 @@ export function advanceDecision(
     .run();
   return getDecision(db, decision.tripId, decision.id);
 }
-/** Validate exact accepted history against live ownership, returning the accumulated private provenance. */
+/** Admit live same-trip sources or exact accepted unavailable history, never current foreign ownership. */
 export function validateDecisionSources(
   db: TripsDb,
   tripId: number,
@@ -30,25 +30,37 @@ export function validateDecisionSources(
   for (const source of sources ?? []) {
     const owner = sourceOwner(db, source);
     const key = `${source.kind}/${source.id}`;
-    if (owner !== undefined ? owner !== tripId : !validated.has(key))
+    if (
+      (owner !== undefined && owner.tripId !== tripId) ||
+      ((owner === undefined || owner.removed) && !validated.has(key))
+    )
       throw new TripsServiceError('not_found');
     validated.set(key, source);
   }
   return [...validated.values()];
 }
-function sourceOwner(db: TripsDb, source: DecisionSource): number | undefined {
+function sourceOwner(
+  db: TripsDb,
+  source: DecisionSource
+): { tripId: number; removed: boolean } | undefined {
+  const table = decisionSourceTable(source);
+  const row = db
+    .select({ tripId: table.tripId, removedAt: table.removedAt })
+    .from(table)
+    .where(eq(table.id, source.id))
+    .get();
+  return row === undefined ? undefined : { tripId: row.tripId, removed: row.removedAt !== null };
+}
+
+function decisionSourceTable(
+  source: DecisionSource
+): typeof visits | typeof journeys | typeof stays {
   switch (source.kind) {
     case 'visit':
-      return db.select({ tripId: visits.tripId }).from(visits).where(eq(visits.id, source.id)).get()
-        ?.tripId;
+      return visits;
     case 'journey':
-      return db
-        .select({ tripId: journeys.tripId })
-        .from(journeys)
-        .where(eq(journeys.id, source.id))
-        .get()?.tripId;
+      return journeys;
     case 'stay':
-      return db.select({ tripId: stays.tripId }).from(stays).where(eq(stays.id, source.id)).get()
-        ?.tripId;
+      return stays;
   }
 }

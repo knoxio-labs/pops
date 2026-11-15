@@ -1,6 +1,7 @@
 import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
 import { trips } from './records.js';
+import { removalColumns } from './removal-columns.js';
 
 import type { Rental } from '../../contract/rental-schemas.js';
 
@@ -19,6 +20,7 @@ export const rentals = sqliteTable(
     end: text('end'),
     status: text('status').$type<Rental['status']>(),
     revision: integer('revision').notNull().default(0),
+    ...removalColumns(),
     createdAt: text('created_at')
       .notNull()
       .$defaultFn(() => new Date().toISOString()),

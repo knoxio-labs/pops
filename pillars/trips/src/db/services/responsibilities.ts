@@ -7,6 +7,7 @@ import { getEvent } from './events.js';
 import { getJourney } from './journeys.js';
 import { getTrip } from './records.js';
 import { getRental } from './rentals.js';
+import { isSourceTargetLive } from './source-availability.js';
 import { requireOwnedRecord } from './source-record.js';
 import { getStay } from './stays.js';
 
@@ -49,16 +50,19 @@ function targetWhere(
     eq(arrangementResponsibilities.targetId, id)
   );
 }
-/** Read explicit records, including cleared revision tombstones, without contacting Contacts. */
+/** Read live-target records, including cleared revision tombstones, while retaining archived-target history. */
 export function listResponsibilities(db: TripsDb, tripId: number): ArrangementResponsibility[] {
-  getTrip(db, tripId);
-  return db
-    .select()
-    .from(arrangementResponsibilities)
-    .where(eq(arrangementResponsibilities.tripId, tripId))
-    .orderBy(asc(arrangementResponsibilities.id))
-    .all()
-    .map((row) => ArrangementResponsibilitySchema.parse(row));
+  return db.transaction((tx) => {
+    getTrip(tx, tripId);
+    return tx
+      .select()
+      .from(arrangementResponsibilities)
+      .where(eq(arrangementResponsibilities.tripId, tripId))
+      .orderBy(asc(arrangementResponsibilities.id))
+      .all()
+      .filter((row) => isSourceTargetLive(tx, tripId, row.targetKind, row.targetId))
+      .map((row) => ArrangementResponsibilitySchema.parse(row));
+  });
 }
 /** Read one same-trip target; untouched associations are unset at revision zero. */
 export function getResponsibility(

@@ -23,6 +23,7 @@ import { makeMeetingPlanHandlers } from './meeting-plans.js';
 import { makePlaceHandlers } from './places.js';
 import { makeRentalHandlers } from './rentals.js';
 import { makeResponsibilityHandlers } from './responsibilities.js';
+import { makeRouteDraftHandlers } from './route-drafts.js';
 import { makeRouteHandlers } from './route.js';
 import { makeStayHandlers } from './stays.js';
 import { makeTripMetadataHandlers } from './trip-metadata.js';
@@ -39,6 +40,7 @@ export function makeTripsRestHandlers(
   const db = deps.tripsDb.db;
   return server.router(tripsContract, {
     route: makeRouteHandlers(db),
+    routeDrafts: makeRouteDraftHandlers(db),
     captureWorkspace: makeCaptureWorkspaceHandlers(db),
     captures: makeCaptureHandlers(db),
     ideas: makeIdeaHandlers(db),

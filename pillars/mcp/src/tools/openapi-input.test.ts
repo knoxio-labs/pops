@@ -9,12 +9,17 @@ import {
   projectOperationSuccess,
 } from './openapi-input.js';
 
-function documentFor(body: unknown, parameters: unknown[] = []) {
+function documentFor(
+  body: unknown,
+  parameters: unknown[] = [],
+  operationExtensions: Record<string, unknown> = {}
+) {
   return {
     openapi: '3.0.3',
     paths: {
       '/things/{id}': {
         post: {
+          ...operationExtensions,
           operationId: 'things.create',
           parameters,
           requestBody: { content: { 'application/json': { schema: body } } },
@@ -49,12 +54,25 @@ describe('published OpenAPI MCP input admission', () => {
     );
     const args = { id: 7, name: null, count: 0 };
     expect(input.method).toBe('POST');
+    expect(input.readOnly).toBe(false);
     expect(input.inputSchema.required).toEqual(['id']);
     expect(input.validate(args)).toEqual({ valid: true, data: args, errorMessage: undefined });
     expect(input.validate({ id: 7 }).valid).toBe(true);
     expect(input.validate({ id: '7' }).valid).toBe(false);
     expect(input.validate({ id: 7, unexpected: 1 }).valid).toBe(false);
     expect(args).toEqual({ id: 7, name: null, count: 0 });
+  });
+
+  it('classifies an explicitly published read-only POST without changing ordinary POST semantics', () => {
+    const mutation = projectOperationInput(documentFor(closed({})), 'things.create');
+    const preview = projectOperationInput(
+      documentFor(closed({}), [], { 'x-pops-read-only': true }),
+      'things.create'
+    );
+
+    expect(mutation.readOnly).toBe(false);
+    expect(preview.method).toBe('POST');
+    expect(preview.readOnly).toBe(true);
   });
 
   it('retains nested exact unions, required fields and formats', () => {
@@ -243,7 +261,7 @@ describe('published OpenAPI MCP input admission', () => {
     expect(input.validate({ id: 10 }).valid).toBe(false);
   });
 
-  it('admits every input and successful response from the 89 canonical Trips operations', () => {
+  it('admits every input and successful response from the 91 canonical Trips operations', () => {
     const trips = read('trips');
     if (
       typeof trips !== 'object' ||
@@ -266,7 +284,7 @@ describe('published OpenAPI MCP input admission', () => {
           operations.push(operation.operationId);
       }
     }
-    expect(operations).toHaveLength(89);
+    expect(operations).toHaveLength(91);
     for (const operation of operations) {
       expect(() => projectOperationInput(trips, operation), operation).not.toThrow();
       expect(() => projectOperationSuccess(trips, operation), operation).not.toThrow();

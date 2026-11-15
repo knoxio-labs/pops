@@ -1,4 +1,4 @@
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, isNull } from 'drizzle-orm';
 
 import { StaySchema } from '../../contract/stay-schemas.js';
 import { stays } from '../schema.js';
@@ -7,6 +7,7 @@ import { getTrip, getVisit } from './records.js';
 import { deleteResponsibilityForTarget } from './responsibility-cleanup.js';
 import { requireOwnedRecord } from './source-record.js';
 import { assertSourceUnreferenced } from './source-references.js';
+import { nextSourceWriteGeneration } from './source-write-generation.js';
 
 import type { Stay, StayInput } from '../../contract/stay-schemas.js';
 import type { TripsDb } from '../index.js';
@@ -17,7 +18,7 @@ export function listStays(db: TripsDb, tripId: number): Stay[] {
   return db
     .select()
     .from(stays)
-    .where(eq(stays.tripId, tripId))
+    .where(and(eq(stays.tripId, tripId), isNull(stays.removedAt)))
     .orderBy(asc(stays.id))
     .all()
     .map((row) => StaySchema.parse(row));
@@ -30,7 +31,7 @@ export function getStay(db: TripsDb, tripId: number, id: number): Stay {
       db
         .select()
         .from(stays)
-        .where(and(eq(stays.tripId, tripId), eq(stays.id, id)))
+        .where(and(eq(stays.tripId, tripId), eq(stays.id, id), isNull(stays.removedAt)))
         .get()
     )
   );
@@ -62,13 +63,14 @@ export function updateStay(db: TripsDb, tripId: number, id: number, input: StayI
   return db.transaction(
     (tx) => {
       getStay(tx, tripId, id);
+      const removalRevision = nextSourceWriteGeneration(tx, stays, tripId, id);
       if (input.visitId !== undefined && input.visitId !== null)
         getVisit(tx, tripId, input.visitId);
       return StaySchema.parse(
         requireOwnedRecord(
           tx
             .update(stays)
-            .set({ ...input, updatedAt: new Date().toISOString() })
+            .set({ ...input, removalRevision, updatedAt: new Date().toISOString() })
             .where(and(eq(stays.tripId, tripId), eq(stays.id, id)))
             .returning()
             .get()

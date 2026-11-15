@@ -110,6 +110,39 @@ describe('buildPillarOpenApiDocument', () => {
     expect(JSON.stringify(document)).toContain('"label"');
   });
 
+  it('applies an explicitly configured operation mapper to published OpenAPI operations', () => {
+    const contract = c.router({
+      preview: {
+        method: 'POST',
+        path: '/preview',
+        body: z.object({}),
+        metadata: { readOnly: true },
+        responses: { 200: z.object({ ok: z.boolean() }) },
+      },
+    });
+    const document = buildPillarOpenApiDocument(
+      projection({
+        contract,
+        operationMapper: (operation, route) => {
+          const metadata = route.metadata;
+          if (
+            typeof metadata === 'object' &&
+            metadata !== null &&
+            'readOnly' in metadata &&
+            metadata.readOnly === true
+          ) {
+            return { ...operation, 'x-pops-read-only': true };
+          }
+          return operation;
+        },
+      })
+    );
+
+    expect(document).toMatchObject({
+      paths: { '/preview': { post: { 'x-pops-read-only': true } } },
+    });
+  });
+
   it('strips the JSON-Schema draft marker that would break 3.0 consumers', () => {
     const document = buildPillarOpenApiDocument(projection());
 

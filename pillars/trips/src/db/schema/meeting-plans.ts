@@ -18,6 +18,7 @@ export const meetingPlans = sqliteTable(
       .references(() => trips.id),
     revision: integer('revision').notNull().default(1),
     removed: integer('removed', { mode: 'boolean' }).notNull().default(false),
+    removalOperationId: text('removal_operation_id'),
     contactUri: text('contact_uri'),
     visitId: integer('visit_id'),
     title: text('title').notNull().default(''),

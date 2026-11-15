@@ -9,6 +9,7 @@ import {
   readMeetingPlan,
   requireMeetingRevision,
 } from './meeting-plan-queries.js';
+import { getVisit } from './records.js';
 import { requireOwnedRecord, TripsServiceError } from './source-record.js';
 
 import type { MeetingPlan, MeetingPlanReceipt } from '../../contract/meeting-plan-schemas.js';
@@ -49,15 +50,30 @@ export function undoMeetingPlanOperation(
   if (prior === undefined || prior.undoneBy !== null || prior.request.command.kind === 'undo')
     throw new TripsServiceError('meeting_undo_conflict');
   const current = readMeetingPlan(db, tripId, prior.receipt.after.id);
+  const lifecycle = requireOwnedRecord(
+    db
+      .select({ removalOperationId: meetingPlans.removalOperationId })
+      .from(meetingPlans)
+      .where(and(eq(meetingPlans.id, current.id), eq(meetingPlans.tripId, tripId)))
+      .get()
+  );
+  if (lifecycle.removalOperationId !== null && lifecycle.removalOperationId !== targetOperationId)
+    throw new TripsServiceError('meeting_undo_conflict');
   if (!isDeepStrictEqual(current, prior.expectedAfter))
     throw new TripsServiceError('meeting_undo_conflict');
   requireMeetingRevision(current, prior.expectedAfter.revision);
   const restored = prior.receipt.before ?? { ...current, removed: true };
+  if (!restored.removed && restored.visitId !== null) getVisit(db, tripId, restored.visitId);
   const after = MeetingPlanSchema.parse(
     requireOwnedRecord(
       db
         .update(meetingPlans)
-        .set({ ...restored, revision: current.revision + 1, updatedAt: new Date().toISOString() })
+        .set({
+          ...restored,
+          removalOperationId: restored.removed ? operationId : null,
+          revision: current.revision + 1,
+          updatedAt: new Date().toISOString(),
+        })
         .where(and(eq(meetingPlans.id, current.id), eq(meetingPlans.tripId, tripId)))
         .returning()
         .get()

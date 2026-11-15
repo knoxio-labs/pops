@@ -1,4 +1,4 @@
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, isNull } from 'drizzle-orm';
 
 import { PlaceSchema, TripSchema, VisitSchema } from '../../contract/schemas.js';
 import { places, trips, visits } from '../schema.js';
@@ -108,7 +108,7 @@ export function listVisits(db: TripsDb, tripId: number): Visit[] {
   const rows = db
     .select()
     .from(visits)
-    .where(eq(visits.tripId, tripId))
+    .where(and(eq(visits.tripId, tripId), isNull(visits.removedAt)))
     .orderBy(asc(visits.position), asc(visits.id))
     .all()
     .map((row) => VisitSchema.parse(row));
@@ -122,10 +122,26 @@ export function getVisit(db: TripsDb, tripId: number, id: number): Visit {
       db
         .select()
         .from(visits)
-        .where(and(eq(visits.tripId, tripId), eq(visits.id, id)))
+        .where(and(eq(visits.tripId, tripId), eq(visits.id, id), isNull(visits.removedAt)))
         .get()
     )
   );
+}
+
+/** Validate supplied Visit links; unchanged missing or archived identities survive, but known foreign owners never do. */
+export function validateRetainedVisitReference(
+  db: TripsDb,
+  tripId: number,
+  id: number | null | undefined,
+  previousId: number | null | undefined
+): void {
+  if (id === undefined || id === null) return;
+  if (id !== previousId) {
+    getVisit(db, tripId, id);
+    return;
+  }
+  const owner = db.select({ tripId: visits.tripId }).from(visits).where(eq(visits.id, id)).get();
+  if (owner !== undefined && owner.tripId !== tripId) throw new TripsServiceError('not_found');
 }
 
 /** Append a distinct occurrence of a place without copying dates from other visits. */
