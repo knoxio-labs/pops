@@ -99,8 +99,8 @@ internal final class TripsModel {
             } else {
                 selectedID = nil
                 snapshot = nil
-                route.clear()
-                inbox.clear()
+                route.reset()
+                inbox.reset()
                 loading = false
             }
         } catch {

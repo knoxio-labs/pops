@@ -15,7 +15,7 @@ internal struct TripsInboxModelTests {
         unbound.retry()
         #expect(unbound.state == .unbound)
         #expect(unbound.readTask == nil)
-        unbound.clear()
+        unbound.reset()
         #expect(unbound.selectedID == nil)
         #expect(unbound.state == .unbound)
         let reader = InboxDeferredReader()
@@ -91,7 +91,7 @@ internal struct TripsInboxModelTests {
         model.select(7)
         let first = model.readTask
         let call = await reader.waitForNext()
-        model.clear()
+        model.reset()
         await reader.succeed(call, workspace: TripCaptureWorkspace(captures: [capture(1)]))
         await first?.value
         #expect(model.state == .idle)
