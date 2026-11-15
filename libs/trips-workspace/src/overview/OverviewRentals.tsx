@@ -30,12 +30,8 @@ export function RentalCard({ row, ...props }: TripOverviewProps & { row: RentalR
       labels={props.labels}
       purchased={purchased(row)}
       statuses={[rental.status]}
+      when={dateRange(rental.start ?? undefined, rental.end ?? undefined, props.locale)}
     >
-      {dateRange(rental.start ?? undefined, rental.end ?? undefined, props.locale) && (
-        <span className="block">
-          {dateRange(rental.start ?? undefined, rental.end ?? undefined, props.locale)}
-        </span>
-      )}
       {(['pickup', 'return'] as const).map((endpoint) => {
         const id = endpoint === 'pickup' ? rental.pickupVisitId : rental.returnVisitId;
         return (

@@ -42,6 +42,29 @@ GET. Monotonic read generations and revisions prevent late reads or historical
 own receipt IDs in LIFO order, with the producer validating the untouched route;
 newer foreign revisions and already-undone replay outcomes grant no inverse.
 
+The selected-Trip workspace presents source rows in a dense reading sheet with
+independent When, source, state, related-person and original-document columns.
+Document chips use the already loaded association's exact owner ID; they do not
+fetch metadata per row or assert original-file availability. Stay host and Event
+organiser labels remain explicitly role-labelled source references, separate from
+Handled by. Journey purchase and arrangement remain per-leg facts.
+
+The accommodation strip reuses the Visit coverage classifier for each distinct
+Visit, including unplaced sources. It shows recorded intervals or an unjudged
+state, never a fixed planning horizon or a gap inferred from an Idea date range.
+Unknown bounds and incomplete Stay reads cannot establish open nights. Missing-night
+claims require both Visit and Stay reads to be successful and not fetching; cached
+rows during a pending or failed refresh retain proven coverage but not gap certainty. The host
+may supply `captureComposer` to mount the same retained Capture engine inline.
+Its compact presentation wraps a one-row textarea, 44px upload and existing-original
+actions and submit controls horizontally, with optional metadata collapsed below.
+The compact Documents trigger opens the same owner picker; it changes no selection
+or upload semantics. Event source fields use their available container width,
+stacking state/date controls in a narrow context rail instead of using viewport width.
+Its compact presentation and the full contextual tools share drafts, accepted
+Files, exact pending commands and own Undo; presentation does not create another
+command engine.
+
 `TripOverview` is the shared Trip Timeline. Its host supplies translated labels,
 controlled tools and exact `onOpenSource({ kind, id })` callbacks for existing editors.
 The `controls` slot belongs to that host; `contextualEditor` renders after the Timeline's

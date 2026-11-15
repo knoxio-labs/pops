@@ -182,7 +182,20 @@
       "return": "Return",
       "alternative": "Alternative",
       "applied": "Applied",
-      "connectionChanged": "The Trips connection changed. Reopen the Trip before selecting a source."
+      "connectionChanged": "The Trips connection changed. Reopen the Trip before selecting a source.",
+      "workspace": {
+        "when": "When",
+        "what": "What",
+        "state": "State",
+        "with": "With",
+        "originals": "Originals",
+        "sleep": "Where you sleep",
+        "unjudged": "Not judged · dates or stays incomplete",
+        "covered": "Covered",
+        "open": "Open nights",
+        "host": "Host",
+        "organiser": "Organiser"
+      }
     }
   },
   "arrangements": {

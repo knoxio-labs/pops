@@ -21,6 +21,15 @@ export const TopLevel: Story = {
   },
 };
 
+export const TripsDisplay: Story = {
+  args: {
+    title: 'Coast and mountain journey',
+    titleClassName: 'font-trip-display text-3xl font-semibold tracking-tight sm:text-4xl',
+    description: 'After the exams · return date undecided',
+    actions: <Button variant="outline">Documents</Button>,
+  },
+};
+
 export const TopLevelWithDescription: Story = {
   args: {
     title: 'Budgets',

@@ -17,6 +17,9 @@ public enum PopsSpacing {
 public enum PopsRadius {
     public static let control: CGFloat = 8
     public static let card: CGFloat = 12
+
+    /// Spacious destination and overview cards that group several related facts.
+    public static let featuredCard: CGFloat = 22
 }
 
 /// Stroke widths.

@@ -23,29 +23,25 @@ export function EventFields(
       label: `Visit ${event.visitId} unavailable`,
     });
   return (
-    <div className="space-y-4">
+    <div className="@container min-w-0 space-y-4">
       <TextInput
         label="Event name"
         value={event.name ?? ''}
         onChange={(e) => edit({ name: e.target.value || null })}
         onBlur={(e) => commit({ name: e.currentTarget.value || null })}
-        className="min-h-11"
+        className="min-h-11 min-w-0 w-full"
+        containerClassName="min-w-0"
       />
       <Select
         label="Associated visit"
         value={event.visitId === null ? '' : String(event.visitId)}
         options={[{ value: '', label: 'No visit linked' }, ...visitOptions]}
         onChange={(e) => commit({ visitId: e.target.value ? Number(e.target.value) : null })}
-        className="min-h-11"
+        className="min-h-11 min-w-0 w-full"
+        containerClassName="min-w-0"
       />
       <EventStates {...props} />
-      <div className="grid gap-3 sm:grid-cols-2">
-        <TimingField {...props} field="start" label="Start date" type="date" />
-        <TimingField {...props} field="startTime" label="Start time" type="time" />
-        <TimingField {...props} field="end" label="End date" type="date" />
-        <TimingField {...props} field="endTime" label="End time" type="time" />
-      </div>
-      <TimingField {...props} field="timeZone" label="Time zone" type="text" />
+      <EventTimingFields {...props} />
       {scalarFields.map(({ field, label, type }) => (
         <TextInput
           key={field}
@@ -54,7 +50,8 @@ export function EventFields(
           value={event[field] ?? ''}
           onChange={(e) => edit({ [field]: e.target.value || null })}
           onBlur={(e) => commit({ [field]: e.currentTarget.value || null })}
-          className="min-h-11"
+          className="min-h-11 min-w-0 w-full"
+          containerClassName="min-w-0"
         />
       ))}
       <label className="block space-y-2 text-sm">
@@ -66,6 +63,20 @@ export function EventFields(
         />
       </label>
     </div>
+  );
+}
+
+function EventTimingFields(props: EventFieldProps): JSX.Element {
+  return (
+    <>
+      <div className="grid gap-3 @sm:grid-cols-2">
+        <TimingField {...props} field="start" label="Start date" type="date" />
+        <TimingField {...props} field="startTime" label="Start time" type="time" />
+        <TimingField {...props} field="end" label="End date" type="date" />
+        <TimingField {...props} field="endTime" label="End time" type="time" />
+      </div>
+      <TimingField {...props} field="timeZone" label="Time zone" type="text" />
+    </>
   );
 }
 
@@ -92,7 +103,8 @@ function TimingField({
       label={label}
       type={type}
       value={event.timing[field] ?? ''}
-      className="min-h-11"
+      className="min-h-11 min-w-0 w-full"
+      containerClassName="min-w-0"
       onChange={(e) => edit({ timing: changeEventTiming(event.timing, field, e.target.value) })}
       onBlur={(e) =>
         commit({ timing: changeEventTiming(event.timing, field, e.currentTarget.value) })

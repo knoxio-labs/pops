@@ -98,6 +98,7 @@ Trips source detail reads require only `trips.trips.list`, `trips.trips.get`,
 `trips.places.list`, `trips.visits.list`, `trips.journeys.list`,
 `trips.journeyLegs.list`, `trips.journeyGroups.list`, `trips.stays.list` and
 `trips.events.list` and `trips.documentAssociations.list`.
+Canonical route reads additionally require only `trips.route.get`; they grant no route operations.
 Deployment must grant these operations to the existing BFM service account;
 adding the mobile capability alone does not authorize upstream calls. Credential
 and deployed grant configuration is tracked by POPS-6170.

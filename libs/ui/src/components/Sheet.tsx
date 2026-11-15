@@ -94,12 +94,14 @@ function useOpenerRef(open: boolean): React.MutableRefObject<HTMLElement | null>
 
 /** Props for {@link Sheet}. */
 export interface SheetProps extends SheetContentProps {
+  /** Optional surface tokens; inherited by portalled content as well as the panel itself. */
+  className?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
 /** The sheet as a modal side panel over the page. */
-export function Sheet({ open, onOpenChange, ...content }: SheetProps): ReactElement {
+export function Sheet({ open, onOpenChange, className, ...content }: SheetProps): ReactElement {
   const openerRef = useOpenerRef(open);
 
   return (
@@ -110,7 +112,10 @@ export function Sheet({ open, onOpenChange, ...content }: SheetProps): ReactElem
           event.preventDefault();
           openerRef.current?.focus();
         }}
-        className="flex flex-col gap-0 overflow-hidden p-0 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] md:inset-y-0 md:right-0 md:left-auto md:top-0 md:h-full md:max-h-none md:w-120 md:max-w-full md:p-0 md:translate-x-0 md:translate-y-0 md:rounded-none md:rounded-l-xl md:data-[state=open]:zoom-in-100 md:data-[state=closed]:zoom-out-100 data-[state=open]:slide-in-from-right"
+        className={cn(
+          'flex flex-col gap-0 overflow-hidden p-0 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] md:inset-y-0 md:right-0 md:left-auto md:top-0 md:h-full md:max-h-none md:w-120 md:max-w-full md:p-0 md:translate-x-0 md:translate-y-0 md:rounded-none md:rounded-l-xl md:data-[state=open]:zoom-in-100 md:data-[state=closed]:zoom-out-100 data-[state=open]:slide-in-from-right',
+          className
+        )}
       >
         <Layout content={content} onClose={() => onOpenChange(false)} asDialog />
       </DialogContent>

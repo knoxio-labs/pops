@@ -10,6 +10,7 @@ import {
 import { ErrorState } from '@pops/ui';
 
 import { useArrangementContacts } from './arrangements/use-arrangement-contacts';
+import { CaptureContext } from './CaptureContext';
 import { sourceId } from './source-id';
 import { useOverviewLabels } from './timeline-labels';
 import { accommodationContext } from './TimelineAccommodation';
@@ -28,6 +29,7 @@ import type {
 
 import type { ApiClients } from './api/types';
 import type { CaptureContextProps } from './CaptureContext';
+import type { TimelineContextProps } from './TimelineContext';
 
 type TimelineOwnerProps = RemotePageHostProps &
   Pick<CaptureContextProps, 'client' | 'documentsClient'> & {
@@ -126,9 +128,27 @@ function TimelineSession(
           : undefined
       }
       renderVisitContext={accommodationContext({ tripId, client: props.client, onSelect })}
-      contextualEditor={<TimelineContext {...props} selection={selection} onSelect={onSelect} />}
+      {...timelineContexts({ ...props, selection, onSelect })}
     />
   );
+}
+
+function timelineContexts(props: TimelineContextProps) {
+  const { selection, onSelect } = props;
+  const captureComposer =
+    selection?.kind === 'tool' && selection.tool !== 'people' ? undefined : (
+      <CaptureContext
+        tripId={props.tripId}
+        client={props.client}
+        documentsClient={props.documentsClient}
+        contacts={props.contacts}
+        view="capture"
+        compact
+        onViewEvent={(id) => onSelect({ kind: 'source', source: { kind: 'event', id } })}
+      />
+    );
+  const contextualEditor = selection ? <TimelineContext {...props} workspace /> : undefined;
+  return { captureComposer, contextualEditor };
 }
 
 function sourceHref(tripId: number, kind: OverviewKind, id: number) {

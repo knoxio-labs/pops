@@ -6,7 +6,7 @@ import type { EventFieldProps, TripEvent } from './types';
 /** Independent source states; recording purchase never changes intention or arrangement. */
 export function EventStates({ event, commit }: EventFieldProps): JSX.Element {
   return (
-    <div className="grid gap-3 lg:grid-cols-3">
+    <div className="grid gap-3 @lg:grid-cols-3">
       <Select
         label="Intention"
         value={event.intention ?? ''}
@@ -14,7 +14,8 @@ export function EventStates({ event, commit }: EventFieldProps): JSX.Element {
         onChange={(e) =>
           commit({ intention: intentions.find((value) => value === e.target.value) ?? null })
         }
-        className="min-h-11"
+        className="min-h-11 min-w-0 w-full"
+        containerClassName="min-w-0"
       />
       <Select
         label="Arrangement"
@@ -23,7 +24,8 @@ export function EventStates({ event, commit }: EventFieldProps): JSX.Element {
         onChange={(e) =>
           commit({ arrangement: arrangements.find((value) => value === e.target.value) ?? null })
         }
-        className="min-h-11"
+        className="min-h-11 min-w-0 w-full"
+        containerClassName="min-w-0"
       />
       <Select
         label="Purchase"
@@ -32,7 +34,8 @@ export function EventStates({ event, commit }: EventFieldProps): JSX.Element {
         onChange={(e) =>
           commit({ purchase: purchases.find((value) => value === e.target.value) ?? null })
         }
-        className="min-h-11"
+        className="min-h-11 min-w-0 w-full"
+        containerClassName="min-w-0"
       />
     </div>
   );

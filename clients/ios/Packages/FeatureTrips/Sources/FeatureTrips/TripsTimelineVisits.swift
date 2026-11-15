@@ -33,6 +33,7 @@ internal struct TripsTimelineVisits: View {
             if !visit.notes.isEmpty { Text(visit.notes).font(.popsSubheadline) }
         }
         .frame(minHeight: PopsSize.touchTarget, alignment: .leading)
+        .id(visit.id)
         ForEach(sources.filter { $0.visitID == visit.id }) {
             TripsSourceRow(source: $0, zone: zone, places: snapshot.places)
         }

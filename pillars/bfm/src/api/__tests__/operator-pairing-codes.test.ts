@@ -246,13 +246,25 @@ describe('POST /operator/pairing/codes — authentication', () => {
     expect(res.status).toBe(401);
   });
 
-  it('does not disclose what would have been accepted', async () => {
-    harness = createTestApp({ env: PRODUCTION_ENV });
+  it.each(['ordinary', 'JWT', 'token', 'header', 'assertion'])(
+    'does not disclose what would have been accepted with %s in the request ID',
+    async (requestIdPart) => {
+      harness = createTestApp({ env: PRODUCTION_ENV });
+      const requestId = `pairing-${requestIdPart}-fixture`;
 
-    const res = await issueCode(harness);
+      const res = await requestOn(harness.app, (r) =>
+        r.post('/operator/pairing/codes').set('X-Request-Id', requestId).send({})
+      );
 
-    expect(JSON.stringify(res.body)).not.toMatch(/jwt|token|header|assertion/i);
-  });
+      expect(res.status).toBe(401);
+      expect(res.body).toEqual({
+        code: 'bfm.auth.operator_unauthorized',
+        message: 'This endpoint requires an operator session.',
+        requestId,
+        retryable: false,
+      });
+    }
+  );
 });
 
 describe('POST /operator/pairing/codes — rate limiting', () => {

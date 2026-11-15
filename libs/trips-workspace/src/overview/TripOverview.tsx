@@ -8,19 +8,16 @@ import { OverviewDetached, OverviewReferences } from './OverviewReferences';
 import { OverviewRoute } from './OverviewRoute';
 import { routeDateRange } from './route-context';
 import { useOverviewSources } from './use-overview-sources';
+import { WorkspaceCoverage } from './WorkspaceCoverage';
 
 import type { JSX } from 'react';
 
 import type { TripOverviewProps, OverviewViewProps } from './types';
+import type { OverviewQueries } from './use-overview-sources';
 
 /** Approved route-first overview, reading each trip-owned source independently through its generated client. */
 export function TripOverview(props: TripOverviewProps): JSX.Element | null {
-  return (
-    <>
-      <OverviewSession {...props} />
-      {props.contextualEditor}
-    </>
-  );
+  return <OverviewSession {...props} />;
 }
 
 function OverviewSession(props: TripOverviewProps): JSX.Element | null {
@@ -53,43 +50,90 @@ function OverviewSession(props: TripOverviewProps): JSX.Element | null {
     rentals: context.rentals.data,
   };
   return (
-    <main className="w-full min-w-0 space-y-5 text-sm">
+    <OverviewFrame
+      {...props}
+      queries={queries}
+      trip={trip.data}
+      sources={sources}
+      accommodationComplete={
+        context.visits.isSuccess &&
+        !context.visits.isFetching &&
+        context.stays.isSuccess &&
+        !context.stays.isFetching
+      }
+      route={route}
+      projection={route.view ? projectTripRoute(route.view, sources) : undefined}
+    />
+  );
+}
+
+function OverviewFrame({
+  queries,
+  ...props
+}: OverviewViewProps & { queries: OverviewQueries }): JSX.Element {
+  return (
+    <div
+      data-workspace-layout={props.contextualEditor ? 'split' : 'full'}
+      className={cn(
+        'trips-workspace grid min-w-0 items-start gap-6 rounded-2xl bg-trip-canvas p-4 font-trip-body text-trip-ink sm:p-6',
+        props.contextualEditor && 'xl:grid-cols-3'
+      )}
+    >
+      <main
+        className={cn(
+          'w-full min-w-0 space-y-5 text-sm',
+          props.contextualEditor && 'xl:col-span-2'
+        )}
+      >
+        <OverviewErrors queries={queries} labels={props.labels} />
+        <OverviewContent {...props} />
+        {Object.values(queries).some((query) => query.isPending) && (
+          <p role="status" className="text-muted-foreground">
+            {props.labels.loading}
+          </p>
+        )}
+      </main>
+      {props.contextualEditor && (
+        <div className="min-w-0 xl:sticky xl:top-6">{props.contextualEditor}</div>
+      )}
+    </div>
+  );
+}
+
+function OverviewErrors({
+  queries,
+  labels,
+}: {
+  queries: OverviewQueries;
+  labels: TripOverviewProps['labels'];
+}): JSX.Element {
+  return (
+    <>
       {Object.entries(queries).map(([name, query]) =>
         query.isError ? (
-          <section key={name} aria-label={props.labels.status(name)} className="space-y-1">
+          <section key={name} aria-label={labels.status(name)} className="space-y-1">
             <p className="font-medium">
-              {props.labels.status(name)} · {props.labels.unavailable}
+              {labels.status(name)} · {labels.unavailable}
             </p>
             <ErrorState error={requestProblem(query.error)} onRetry={() => void query.refetch()} />
           </section>
         ) : null
       )}
-      <OverviewContent
-        {...props}
-        trip={trip.data}
-        sources={sources}
-        route={route}
-        projection={route.view ? projectTripRoute(route.view, sources) : undefined}
-      />
-      {Object.values(context).some((query) => query.isPending) && (
-        <p role="status" className="text-muted-foreground">
-          {props.labels.loading}
-        </p>
-      )}
-    </main>
+    </>
   );
 }
 
 function OverviewContent(props: OverviewViewProps): JSX.Element | null {
-  const { trip, sources } = props;
-  const hasReferences = !!(sources.decisions?.length || sources.documents?.length);
+  const { trip } = props;
   return (
     <>
       <OverviewHeader {...props} />
+      <WorkspaceCoverage {...props} />
+      {props.captureComposer}
       {props.sourceControls}
       {props.calendar && <OverviewCalendar {...props} calendar={props.calendar} />}
-      <div className={cn('grid min-w-0 gap-6', hasReferences && 'xl:grid-cols-3')}>
-        <div className={cn('min-w-0 space-y-6', hasReferences && 'xl:col-span-2')}>
+      <div className="min-w-0 space-y-6">
+        <div className="min-w-0 space-y-6">
           <OverviewRoute {...props} />
           <OverviewDetached {...props} />
           {trip.notes && (
@@ -99,7 +143,7 @@ function OverviewContent(props: OverviewViewProps): JSX.Element | null {
             </section>
           )}
         </div>
-        {hasReferences && <OverviewReferences {...props} />}
+        <OverviewReferences {...props} />
       </div>
     </>
   );
@@ -112,7 +156,8 @@ function OverviewHeader(props: OverviewViewProps): JSX.Element {
   return (
     <>
       <PageHeader
-        title={<span className="break-words">{title}</span>}
+        title={title}
+        titleClassName="break-words font-trip-display text-3xl font-semibold tracking-tight sm:text-4xl"
         description={
           trip.when ? (
             <span className="whitespace-pre-wrap break-words">{trip.when}</span>

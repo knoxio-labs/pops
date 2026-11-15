@@ -82,6 +82,12 @@ export function JourneyRecord({
         title={journey.name ?? props.labels.source('journey', journey.id)}
         {...sourceAction(props, { kind: 'journey', id: journey.id })}
         labels={props.labels}
+        documents={props.sources.documents?.filter(
+          (document) =>
+            document.tripId === props.tripId &&
+            document.targetKind === 'journey' &&
+            document.targetId === journey.id
+        )}
       />
       {legs.isPending && (
         <p role="status" className="text-xs text-muted-foreground">
@@ -100,6 +106,7 @@ export function JourneyRecord({
             [leg.mode, leg.operator, leg.service].filter(Boolean).join(' · ') ||
             props.labels.source('leg', leg.id)
           }
+          when={endpoint(leg.from, props)}
           purchased={leg.purchase === 'Purchased'}
           statuses={[leg.intention, leg.arrangement, leg.purchase]}
           labels={props.labels}

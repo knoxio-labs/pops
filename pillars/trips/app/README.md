@@ -4,6 +4,14 @@ The shell loads `dist/remote/trips.js` and `trips.css` from the Trips manifest. 
 
 The Documents route provides typed document associations and owner uploads. It owns no database and uses generated Trips and Tags clients at the shell's authenticated same-origin proxy paths.
 
+The approved web workspace uses dense source rows, a recorded-accommodation strip
+and the canonical Capture composer inline. Capture stays under the same host
+QueryClient and owner boundary; opening the full contextual Capture tools replaces
+its inline presentation while retaining its session. Desktop selection opens the
+existing source editor in a nonmodal reading rail; narrow screens use the existing
+Sheet. Resizing changes presentation without changing source identity or providing
+another mutation engine. Documents remains the exact existing Trip shortcut.
+
 The selected Trip owns one Timeline at `:tripId`. Add opens People and Capture under
 the same shell QueryClient; there are no global People, Capture, Inbox or Explore buttons.
 Organisation, source-type and recorded-location filters apply inside the Timeline. Source rows open
