@@ -10,12 +10,19 @@ export type DocumentsOwnerShape = {
     search: (input: { query: string }) => unknown;
     get: (input: { id: number }) => unknown;
     task: (input: { taskId: string }) => unknown;
+    upload: (input: { operationId: string }) => unknown;
+  };
+  write: {
+    createUpload: (input: Record<string, unknown>) => unknown;
+    dispatchUpload: (input: { operationId: string }) => unknown;
   };
 };
 
+const documentsFetch: typeof fetch = (input, init) => fetch(input, { ...init, redirect: 'manual' });
+
 /** Direct owner handle; no Inventory record or association is involved. */
 export function documentsOwner(): PillarHandle<DocumentsOwnerShape> {
-  return getPillar<DocumentsOwnerShape>('documents');
+  return getPillar<DocumentsOwnerShape>('documents', { fetchImpl: documentsFetch });
 }
 
 /** Upload limits are accepted only as explicit current owner metadata, never filename guesses or local defaults. */

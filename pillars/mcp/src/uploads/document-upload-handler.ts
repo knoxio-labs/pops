@@ -6,7 +6,7 @@ import { uploadErrors } from './upload-errors.js';
 import type { Request, Response } from 'express';
 
 import type { DocumentUploadDeps } from './inventory-documents.js';
-import type { DocumentUploadTarget, PaperlessUploadTarget } from './upload-tokens.js';
+import type { DocumentUploadTarget } from './upload-tokens.js';
 
 /** Whether `mime` matches one of documents' allow-list entries (`image/*` style wildcards included). */
 export function mimeAllowed(mime: string, allowed: readonly string[]): boolean {
@@ -24,10 +24,7 @@ function declaredLength(req: Request): number | undefined {
 }
 
 /** Checks that need no body bytes, so a refused upload is never streamed anywhere. */
-export function precheckDocumentUpload(
-  req: Request,
-  target: DocumentUploadTarget | PaperlessUploadTarget
-): string {
+export function precheckDocumentUpload(req: Request, target: DocumentUploadTarget): string {
   const header = req.get('content-type');
   if (header === undefined || header.trim() === '') {
     return uploadErrors.missing_content_type({ allowedMimeTypes: target.allowedMimeTypes });
