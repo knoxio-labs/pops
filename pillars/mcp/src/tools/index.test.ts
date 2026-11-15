@@ -18,8 +18,8 @@ describe('allTools', () => {
     }
   });
 
-  it('exports exactly 203 tools', () => {
-    expect(allTools).toHaveLength(203);
+  it('exports exactly 204 tools', () => {
+    expect(allTools).toHaveLength(204);
   });
 
   it('registers the finite direct Documents owner/recovery family alongside Inventory associations', () => {
@@ -31,8 +31,9 @@ describe('allTools', () => {
       ['documents.search', true, 'documents.paperless.search'],
       ['documents.get', true, 'documents.paperless.get'],
       ['documents.task', true, 'documents.paperless.task'],
-      ['documents.createUpload', false, 'documents.write.upload'],
-      ['documents.uploadStatus', true, undefined],
+      ['documents.uploadStatus', true, 'documents.paperless.upload'],
+      ['documents.createUpload', false, 'documents.write.createUpload'],
+      ['documents.dispatchUpload', false, 'documents.write.dispatchUpload'],
     ]);
   });
 

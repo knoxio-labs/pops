@@ -9,6 +9,7 @@ const paperless = vi.hoisted(() => ({
   search: vi.fn(),
   get: vi.fn(),
   task: vi.fn(),
+  upload: vi.fn(),
 }));
 vi.mock('../pillar-client.js', () => ({
   getPillar: (id: string) => {
@@ -53,11 +54,14 @@ beforeEach(() => {
 });
 it('registers only finite direct-owner reads with producer scopes and retains exact metadata', async () => {
   expect(documentsOwnerReadTools.map((entry) => [entry.name, entry.readOnly, entry.scope])).toEqual(
-    ['status', 'search', 'get', 'task'].map((name) => [
-      `documents.${name}`,
-      true,
-      `documents.paperless.${name}`,
-    ])
+    [
+      ...['status', 'search', 'get', 'task'].map((name) => [
+        `documents.${name}`,
+        true,
+        `documents.paperless.${name}`,
+      ]),
+      ['documents.uploadStatus', true, 'documents.paperless.upload'],
+    ]
   );
   expect(parseResult(await tool('search').handler({ query: 'ticket' }))).toEqual({
     data: [original],
@@ -84,6 +88,8 @@ it.each<[string, Record<string, unknown>]>([
   ['task', { taskId: 'x'.repeat(73) }],
   ['task', { taskId: '../other' }],
   ['task', { taskId: 'valid', bytes: 'no' }],
+  ['uploadStatus', { operationId: 'invalid' }],
+  ['uploadStatus', { operationId: '11111111-1111-4111-8111-111111111111', extra: true }],
 ])('rejects canonical invalid %s input before dispatch %j', async (name, args) => {
   expect((await tool(String(name)).handler(args)).isError).toBe(true);
   for (const call of Object.values(paperless)) expect(call).not.toHaveBeenCalled();

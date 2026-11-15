@@ -11,7 +11,6 @@ import { uploadTokens } from './upload-tokens.js';
 
 import type { DocumentUploadDeps } from './inventory-documents.js';
 import type { MediaStoreDeps } from './inventory-media.js';
-import type { PaperlessUploadIntents } from './paperless-upload-intents.js';
 import type { UploadTokenStore } from './upload-tokens.js';
 
 /** Path of the upload route; the `createUpload` tools build URLs from it. */
@@ -22,7 +21,6 @@ export interface UploadRouterDeps {
   readonly tokens?: UploadTokenStore;
   readonly media?: MediaStoreDeps;
   readonly documents?: DocumentUploadDeps;
-  readonly paperlessIntents?: PaperlessUploadIntents;
 }
 
 const photoBodyParser = express.raw({ type: () => true, limit: INVENTORY_MEDIA_MAX_BYTES });
@@ -66,14 +64,16 @@ async function storePhoto(req: Request, res: Response, media?: MediaStoreDeps): 
  * `inventory.items.attachPhoto`. A document
  * (`inventory.documents.createUpload`) is streamed to inventory's item
  * document upload under documents' size cap and answered with the pending
- * ingestion. A direct Documents file (`documents.createUpload`) is streamed
- * to Documents without an association, retaining the actual accepted task or
- * unknown outcome under its uploadId before replying. The token is the
+ * ingestion. A direct Documents original (`documents.createUpload`) is
+ * streamed to the durable Documents content route under its caller-retained
+ * operationId, then explicitly dispatched through Documents' durable claim.
+ * The token is the
  * credential, so the route sits outside the
  * `/mcp` bearer check: a client that can call tools hands the URL to a shell
  * (`curl -T`), which has no bearer token. The token is spent before the body
- * is read. Direct Documents callers recover with documents.uploadStatus;
- * a lost or unknown outcome must not be retried automatically.
+ * is read. Direct Documents callers recover with documents.uploadStatus. An
+ * admitted operation can be explicitly dispatched with the same operationId;
+ * accepted or outcome_unknown proof never authorizes resending bytes.
  */
 export function createUploadRouter(deps: UploadRouterDeps = {}): Router {
   const tokens = deps.tokens ?? uploadTokens;
@@ -89,7 +89,6 @@ export function createUploadRouter(deps: UploadRouterDeps = {}): Router {
     if (target.kind === 'paperless-document')
       return storePaperlessUpload(req, res, target, {
         deps: deps.documents,
-        intents: deps.paperlessIntents,
       });
     return storeDocumentUpload(req, res, target, deps.documents);
   };

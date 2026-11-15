@@ -1,26 +1,33 @@
-import { readFileSync } from 'node:fs';
-
 import express from 'express';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { createPillarErrorHandlers } from '@pops/pillar-express';
+import { __resetSharedOpenApiCache, __resetSharedPillarClient } from '@pops/pillar-sdk/client';
 import {
   __resetServerPillarCache,
   __resetServerSdkConfig,
   configureServerSdk,
 } from '@pops/pillar-sdk/server';
 
-import { contractInputs } from '../contract-inputs.js';
-import { createPaperlessUploadIntents } from '../uploads/paperless-upload-intents.js';
 import { createUploadRouter } from '../uploads/upload-route.js';
 import { createUploadTokenStore } from '../uploads/upload-tokens.js';
+import {
+  createDocumentsOwnerHttpFixture,
+  uploadInput,
+  original,
+  originalBytes,
+} from './documents-owner-http-fixture.js';
 import { documentsOwnerReadTools } from './documents-owner-read.js';
-import { documentsCreateUploadTool, documentsUploadStatusTool } from './documents-owner-upload.js';
+import {
+  documentsCreateUploadTool,
+  documentsDispatchUploadTool,
+} from './documents-owner-upload.js';
 import { parseResult } from './test-helpers.js';
 
 import type { Server } from 'node:http';
 
 import type { DiscoveryTransport } from '@pops/pillar-sdk/client';
+import type { PillarHandle, ServerPillarOptions } from '@pops/pillar-sdk/server';
 
 const state = vi.hoisted(() => ({ origin: '' }));
 vi.mock('../pillar-client.js', async () => {
@@ -52,70 +59,28 @@ vi.mock('../pillar-client.js', async () => {
     ],
   };
   return {
-    getPillar: (id: string) => {
+    getPillar: <TRouter>(id: string, options?: ServerPillarOptions): PillarHandle<TRouter> => {
       if (id !== 'documents') throw new Error('Unexpected nonowner call');
-      return pillar(id, { transport });
+      return pillar<TRouter>(id, { ...options, transport });
     },
   };
 });
 let server: Server;
-let taskState: 'pending' | 'done' | 'duplicate';
-let posts: number;
-let originalBytes: Buffer;
-const original = {
-  id: 91,
-  title: 'Rail original',
-  created: '2026-11-12',
-  originalFileName: 'rail.pdf',
-  thumbnailUrl: '/91/thumb',
-};
-const policy = {
-  configured: true,
-  available: true,
-  baseUrl: null,
-  documentCount: 1,
-  maxUploadBytes: 47,
-  allowedMimeTypes: ['application/pdf'],
-};
 let tokens: ReturnType<typeof createUploadTokenStore>;
-let intents: ReturnType<typeof createPaperlessUploadIntents>;
-function fixture(): express.Express {
+let owner: ReturnType<typeof createDocumentsOwnerHttpFixture>;
+
+beforeEach(async () => {
+  tokens = createUploadTokenStore();
+  owner = createDocumentsOwnerHttpFixture();
+  configureServerSdk({ apiKey: 'fixture' });
   const app = express();
-  app.get('/openapi', (_req, res) =>
-    res.json(JSON.parse(readFileSync(contractInputs.documents, 'utf8')))
-  );
-  app.use('/paperless', (req, res, next) => {
-    if (req.get('x-api-key') === 'fixture') next();
-    else
-      res.status(403).json({
-        code: 'documents.auth.forbidden',
-        message: 'Forbidden',
-        requestId: 'fixture',
-        retryable: false,
-      });
-  });
-  app.get('/paperless/status', (_req, res) => res.json({ data: policy }));
-  app.get('/paperless/search', (_req, res) => res.json({ data: [original] }));
-  app.get('/paperless/documents/:id', (_req, res) => res.json({ data: original }));
-  app.get('/paperless/tasks/:taskId', (_req, res) =>
-    res.json({
-      data: { state: taskState, documentId: taskState === 'pending' ? null : 91, reason: null },
-    })
-  );
-  app.post('/paperless/documents', express.raw({ type: 'application/pdf' }), (req, res) => {
-    posts++;
-    if (!Buffer.isBuffer(req.body)) throw new Error('Expected streamed bytes');
-    originalBytes = req.body;
-    expect(req.query).toEqual({ fileName: 'rail.pdf', title: 'Rail original' });
-    res.status(202).json({ data: { taskId: 'owner-ingestion' } });
-  });
   const errors = createPillarErrorHandlers({ pillar: 'mcp' });
   app.use(errors.requestId);
+  app.use(owner.app);
   app.use(
     '/uploads',
     createUploadRouter({
       tokens,
-      paperlessIntents: intents,
       documents: {
         discovery: { lookup: async () => ({ baseUrl: state.origin }) },
         apiKey: () => 'fixture',
@@ -123,17 +88,8 @@ function fixture(): express.Express {
     })
   );
   app.use(errors.final);
-  return app;
-}
-beforeEach(async () => {
-  tokens = createUploadTokenStore();
-  intents = createPaperlessUploadIntents();
-  taskState = 'pending';
-  posts = 0;
-  originalBytes = Buffer.alloc(0);
-  configureServerSdk({ apiKey: 'fixture' });
   await new Promise<void>((resolve) => {
-    server = fixture().listen(0, '127.0.0.1', () => resolve());
+    server = app.listen(0, '127.0.0.1', () => resolve());
   });
   const address = server.address();
   if (!address || typeof address === 'string') throw new Error('No address');
@@ -144,54 +100,118 @@ afterEach(async () => {
   await new Promise<void>((resolve) => server.close(() => resolve()));
   __resetServerPillarCache();
   __resetServerSdkConfig();
+  __resetSharedPillarClient();
+  __resetSharedOpenApiCache();
 });
 function read(name: string) {
   const tool = documentsOwnerReadTools.find((entry) => entry.name === `documents.${name}`);
   if (!tool) throw new Error('No read tool');
   return tool;
 }
-function object(value: unknown): Record<string, unknown> {
-  if (typeof value !== 'object' || value === null) throw new Error('No object');
+async function create(tokensToUse = tokens) {
+  const result = await documentsCreateUploadTool(tokensToUse).handler(uploadInput, {
+    publicBaseUrl: state.origin,
+  });
+  expect(result.isError).not.toBe(true);
+  const value = parseResult(result);
+  if (typeof value !== 'object' || value === null || Array.isArray(value))
+    throw new Error('No object');
   return Object.fromEntries(Object.entries(value));
 }
+async function send(url: unknown): Promise<Response> {
+  if (typeof url !== 'string') throw new Error('No upload URL');
+  return fetch(url, {
+    method: 'PUT',
+    headers: { 'content-type': uploadInput.mimeType },
+    body: originalBytes,
+  });
+}
+async function status() {
+  return read('uploadStatus').handler({ operationId: uploadInput.operationId });
+}
+
 it.each(['done', 'duplicate'] as const)(
-  'crosses actual SDK/HTTP and streamed URL, retaining task/original identity through %s without an Inventory target',
+  'crosses actual SDK/HTTP and streamed URL through durable %s proof without an Inventory target',
   async (completed) => {
-    const minted = object(
-      parseResult(
-        await documentsCreateUploadTool(tokens, intents).handler(
-          { fileName: 'rail.pdf', title: 'Rail original' },
-          { publicBaseUrl: state.origin }
-        )
-      )
-    );
-    if (typeof minted['uploadUrl'] !== 'string' || typeof minted['uploadId'] !== 'string')
-      throw new Error('No upload identities');
-    const bytes = Buffer.from('%PDF-fictional-test');
-    const reply = await fetch(minted['uploadUrl'], {
-      method: 'PUT',
-      headers: { 'content-type': 'application/pdf' },
-      body: bytes,
+    const minted = await create();
+    expect(minted).toMatchObject({
+      operationId: uploadInput.operationId,
+      upload: { input: uploadInput, state: 'awaiting_content' },
     });
-    expect(reply.status).toBe(202);
-    expect(originalBytes).toEqual(bytes);
-    expect(
-      parseResult(
-        await documentsUploadStatusTool(intents).handler({ uploadId: minted['uploadId'] })
-      )
-    ).toMatchObject({ state: 'accepted', taskId: 'owner-ingestion' });
+    const reply = await send(minted['uploadUrl']);
+    expect(reply.status).toBe(200);
+    expect(await reply.json()).toMatchObject({
+      data: { input: uploadInput, state: 'accepted', taskId: 'owner-ingestion' },
+    });
+    expect(owner.bytes).toEqual(originalBytes);
+    expect(parseResult(await status())).toMatchObject({
+      data: { input: uploadInput, state: 'accepted', taskId: 'owner-ingestion' },
+    });
     expect(parseResult(await read('task').handler({ taskId: 'owner-ingestion' }))).toEqual({
       data: { state: 'pending', documentId: null, reason: null },
     });
-    taskState = completed;
+    owner.taskState = completed;
     expect(parseResult(await read('task').handler({ taskId: 'owner-ingestion' }))).toEqual({
       data: { state: completed, documentId: 91, reason: null },
+    });
+    expect(parseResult(await status())).toMatchObject({
+      data: { input: uploadInput, state: completed, documentId: 91 },
     });
     expect(parseResult(await read('get').handler({ id: 91 }))).toEqual({ data: original });
     expect(parseResult(await read('search').handler({ query: 'rail' }))).toEqual({
       data: [original],
     });
-    expect((await fetch(minted['uploadUrl'], { method: 'PUT', body: bytes })).status).toBe(404);
-    expect(posts).toBe(1);
+    expect(await create(createUploadTokenStore())).not.toHaveProperty('uploadUrl');
+    expect(
+      (await documentsDispatchUploadTool().handler({ operationId: uploadInput.operationId }))
+        .isError
+    ).not.toBe(true);
+    expect((await send(minted['uploadUrl'])).status).toBe(404);
+    expect(owner.contentWrites).toBe(1);
+    expect(owner.posts).toBe(1);
+    expect(owner.legacyPosts).toBe(0);
+    expect(owner.createBodies).toEqual([uploadInput, uploadInput]);
   }
 );
+
+it('recovers admitted content after a refused dispatch using owner proof and explicit same-ID dispatch', async () => {
+  owner.refuseDispatch = true;
+  const minted = await create();
+  expect((await send(minted['uploadUrl'])).status).toBe(502);
+  expect(owner.posts).toBe(0);
+  expect(parseResult(await status())).toMatchObject({
+    data: { state: 'admitted', input: uploadInput },
+  });
+  expect(await create(createUploadTokenStore())).not.toHaveProperty('uploadUrl');
+  owner.refuseDispatch = false;
+  const dispatched = await documentsDispatchUploadTool().handler({
+    operationId: uploadInput.operationId,
+  });
+  expect(dispatched.isError).not.toBe(true);
+  expect(parseResult(dispatched)).toMatchObject({
+    input: uploadInput,
+    state: 'accepted',
+    taskId: 'owner-ingestion',
+  });
+  await documentsDispatchUploadTool().handler({ operationId: uploadInput.operationId });
+  expect(parseResult(await status())).toMatchObject({
+    data: { state: 'accepted', input: uploadInput },
+  });
+  expect(owner.contentWrites).toBe(1);
+  expect(owner.posts).toBe(1);
+  expect(owner.legacyPosts).toBe(0);
+});
+
+it('keeps real owner service-account refusals distinct from successful durable proof', async () => {
+  configureServerSdk({ apiKey: 'wrong-fixture' });
+  const result = await documentsCreateUploadTool(tokens).handler(uploadInput, {
+    publicBaseUrl: state.origin,
+  });
+  expect(result.isError).toBe(true);
+  expect(result.content).toContainEqual({
+    type: 'text',
+    text: expect.stringContaining('documents.write.createUpload'),
+  });
+  expect(owner.createBodies).toEqual([]);
+  expect(owner.posts).toBe(0);
+});

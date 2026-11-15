@@ -48,6 +48,7 @@ const expectedWrites = [
   'inventory.documents.dismissFailed',
   'documents.delete',
   'documents.createUpload',
+  'documents.dispatchUpload',
   'media.watchlist.add',
   'purchases.inventoryProposals.accept',
   'tags.assignments.attach',

@@ -216,19 +216,22 @@ though nothing enforces it mechanically.
   `documents.paperless.*` scopes. An actual 404 remains missing; unavailable
   or unconfigured remains unverifiable. Search metadata and completed task IDs
   do not create associations: use the owning Trips or Inventory command.
-- `documents.createUpload` reads the owner's current size/MIME policy, then
-  mints a single-use URL for raw bytes with no Inventory target. It requires
-  `documents.paperless.status` and `documents.write.upload`. Keep `uploadId`: the
-  authenticated `documents.uploadStatus` reads its process-local receipt if the
-  uploader loses its HTTP reply. A task is accepted, not complete; poll
-  `documents.task` until the owner supplies a done/duplicate document ID.
-  The gateway retains receipts before replying, never retries POST and never
-  treats unknown/expired/restarted memory as safe to reupload. URLs and settled
-  receipts expire after ten minutes; active streams retain their capacity slot
-  until settlement. Raw document POSTs never follow redirects or admit redirected
-  receipts, including same-origin redirects. Both direct Documents and legacy
-  Inventory document redirects remain unknown and non-retryable. Durable
-  producer recovery remains POPS-6266.
+- `documents.createUpload` requires a caller-supplied stable `operationId` and
+  the exact immutable filename, MIME type, byte length and SHA-256. Documents
+  owns durable intent, content admission, dispatch claim and proof. The gateway
+  only mints a short-lived single-use URL for an `awaiting_content` intent and
+  streams raw bytes to Documents; it never buffers bytes in tool arguments or
+  chooses a new operation ID. A lost/expired URL can be replaced only by calling
+  `documents.createUpload` again with the exact same input. `admitted` proof is
+  resumed explicitly with `documents.dispatchUpload` and the same ID. `accepted`
+  returns the actual Paperless task, which must be polled with `documents.task`
+  until a done/duplicate response supplies the actual Documents original ID.
+  `documents.uploadStatus` reads durable owner proof after gateway restart.
+  `outcome_unknown` never authorizes another upload or operation ID. These
+  tools use the narrow scopes `documents.write.createUpload`,
+  `documents.write.uploadContent`, `documents.write.dispatchUpload`, and
+  `documents.paperless.upload`; declaring scopes does not activate grants.
+  Inventory document upload and association tools are unchanged.
 - Item documents live in Paperless; Inventory keeps its own links.
   `inventory.documents.list`, `.link`, `.update`, `.unlink` and `.dismissFailed`
   retain their Inventory routes. `list` adds each link's `webPath`, relative to

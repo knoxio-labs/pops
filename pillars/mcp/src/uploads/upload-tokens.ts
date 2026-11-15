@@ -32,14 +32,15 @@ export interface DocumentUploadTarget {
   readonly allowedMimeTypes: readonly string[];
 }
 
-/** A direct Documents upload has no Inventory target; limits are the owner status snapshot at mint time. */
+/** A direct Documents upload binds the caller-retained UUID to the exact immutable input admitted by its owner. */
 export interface PaperlessUploadTarget {
   readonly kind: 'paperless-document';
-  readonly uploadId: string;
+  readonly operationId: string;
   readonly fileName: string;
   readonly title?: string;
-  readonly maxBytes: number;
-  readonly allowedMimeTypes: readonly string[];
+  readonly mimeType: string;
+  readonly byteLength: number;
+  readonly sha256: string;
 }
 
 /** What a minted upload URL is for; the upload route dispatches on `kind`. */
@@ -55,8 +56,8 @@ export interface UploadGrant {
  * In-memory single-use upload credentials. The token in an upload URL is the
  * only credential `PUT /uploads/:token` checks, so it must be unguessable,
  * short-lived and spent on first use. State is per-process: a restart voids
- * every outstanding URL. Direct Documents callers retain their uploadId and
- * must treat a missing post-restart receipt as uncertain, never safe to replay.
+ * every outstanding URL. Direct Documents callers retain their operationId;
+ * a fresh token only authorizes bytes for the same durable immutable input.
  */
 export interface UploadTokenStore {
   /** Mint a token for `target`, or `undefined` when {@link MAX_PENDING_UPLOADS} unexpired tokens are outstanding. */
