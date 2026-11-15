@@ -12,7 +12,7 @@ internal struct TripsRouteModelTests {
         model.select(1)
         #expect(model.state == .unbound)
         #expect(model.readTask == nil)
-        model.clear()
+        model.reset()
         #expect(model.selectedID == nil)
         #expect(model.state == .unbound)
     }
@@ -80,7 +80,7 @@ internal struct TripsRouteModelTests {
         model.select(1)
         let pending = model.readTask
         await reader.waitFor(1)
-        model.clear()
+        model.reset()
         await reader.complete(1, value: route(1, revision: 2))
         await pending?.value
         #expect(model.state == .idle)

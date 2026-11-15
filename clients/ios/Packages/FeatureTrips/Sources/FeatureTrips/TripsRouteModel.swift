@@ -52,7 +52,7 @@ internal final class TripsRouteModel {
         }
     }
 
-    internal func clear() {
+    internal func reset() {
         readTask?.cancel()
         readTask = nil
         request = UUID()
