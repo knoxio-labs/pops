@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 
-import { StayWorkspace } from '@pops/trips-workspace';
+import { DocumentUploadProvider, StayWorkspace } from '@pops/trips-workspace';
 import { ErrorState } from '@pops/ui';
 
 import { sourceId } from './source-id';
@@ -9,7 +9,7 @@ import { sourceId } from './source-id';
 import type { RemotePageHostProps } from '@pops/pillar-sdk';
 
 /** Route adapter mounts the existing source-backed stay library with real owning identities. */
-export function StayPage({ contacts }: RemotePageHostProps) {
+export function StayPage({ contacts, documentUploads }: RemotePageHostProps) {
   const { t } = useTranslation('trips');
   const params = useParams();
   const tripId = sourceId(params.tripId);
@@ -23,11 +23,13 @@ export function StayPage({ contacts }: RemotePageHostProps) {
       }}
     />
   ) : (
-    <StayWorkspace
-      tripId={tripId}
-      stayId={stayId}
-      contacts={contacts}
-      formatNights={(count) => t('stay.nights', { count })}
-    />
+    <DocumentUploadProvider host={documentUploads} tripId={tripId}>
+      <StayWorkspace
+        tripId={tripId}
+        stayId={stayId}
+        contacts={contacts}
+        formatNights={(count) => t('stay.nights', { count })}
+      />
+    </DocumentUploadProvider>
   );
 }

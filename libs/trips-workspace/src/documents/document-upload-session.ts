@@ -1,8 +1,11 @@
 import { client as defaultDocumentsClient } from '../documents-api/client.gen';
+import { DurableUploadOperation } from './durable-upload-operation';
 import { documentQueryKeys } from './query-keys';
 import { TripDocumentUploadContextError } from './upload-context-error';
 
 import type { Client as DocumentsClient } from '../documents-api/client';
+import type { DurableUploadInput } from './durable-upload-api';
+import type { UploadJournal } from './durable-upload-journal';
 
 /** Live state for one immutable file intent; File bytes remain browser-session data. */
 export interface DocumentUploadSnapshot {
@@ -18,19 +21,25 @@ export interface DocumentUploadSnapshot {
 }
 
 class DocumentUploadIntent {
-  readonly id = crypto.randomUUID();
+  readonly id: string;
+  readonly durable: DurableUploadOperation;
   private snapshot: DocumentUploadSnapshot;
   private readonly listeners = new Set<() => void>();
   private taskOwner: DocumentsClient | null = null;
   private taskScope: readonly [string, string] | null = null;
 
-  constructor(file: File | null) {
+  constructor(file: File | null, restored?: { input: DurableUploadInput; journal: UploadJournal }) {
+    this.id = restored?.input.operationId ?? crypto.randomUUID();
+    this.durable =
+      restored === undefined
+        ? new DurableUploadOperation(this.id, file)
+        : DurableUploadOperation.restore(restored.input, restored.journal);
     this.snapshot = {
       file,
       uploadError: null,
       uploadPending: false,
       uploadRejected: false,
-      uncertain: false,
+      uncertain: restored !== undefined,
       pickerOpen: false,
       ownerLookupCount: null,
       taskId: null,
@@ -78,6 +87,17 @@ class DocumentUploadIntent {
     return true;
   }
 
+  async reattach(file: File): Promise<void> {
+    await this.durable.reattach(file);
+    this.publish({ ...this.snapshot, file });
+  }
+
+  claimRecovery(): boolean {
+    if (this.snapshot.uploadPending) return false;
+    this.publish({ ...this.snapshot, uploadPending: true, uploadError: null });
+    return true;
+  }
+
   update<K extends Exclude<keyof DocumentUploadSnapshot, 'file'>>(
     field: K,
     value: DocumentUploadSnapshot[K]
@@ -104,6 +124,11 @@ export class DocumentUploadSession implements DocumentUploadSnapshot {
   /** Initialize a distinct intent; identical File objects never share an upload claim implicitly. */
   static create(file: File | null): DocumentUploadSession {
     return new DocumentUploadSession(new DocumentUploadIntent(file));
+  }
+
+  /** Restore a validated persisted descriptor with no File bytes; its first owner action is GET recovery. */
+  static restore(input: DurableUploadInput, journal: UploadJournal): DocumentUploadSession {
+    return new DocumentUploadSession(new DocumentUploadIntent(null, { input, journal }));
   }
 
   /** Return a React storage notification sharing this intent's live receipt and claim. */

@@ -3,6 +3,7 @@ import { createServiceAccountScopeGate, defineErrors } from '@pops/pillar-expres
 import { documentsContract } from '../../contract/rest.js';
 import { DOWNLOAD_ROUTE_PATH } from '../files/download-route.js';
 import { UPLOAD_ROUTE_PATH } from '../files/upload-route.js';
+import { UPLOAD_CONTENT_ROUTE_PATH } from '../uploads/raw-route.js';
 
 import type { RequestHandler } from 'express';
 
@@ -22,6 +23,7 @@ const DOCUMENTS_RAW_ROUTE_SCOPES = {
   },
   write: {
     upload: { method: 'POST', path: UPLOAD_ROUTE_PATH },
+    uploadContent: { method: 'PUT', path: UPLOAD_CONTENT_ROUTE_PATH },
   },
 } as const satisfies RawRouteTree;
 

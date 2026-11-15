@@ -26,6 +26,8 @@ import { createDocumentsFilesRouter } from './files/router.js';
 import { type DocumentsApiDeps, makeRequestHandler } from './handlers.js';
 import { createServiceAccountScopeMiddleware } from './middleware/service-account-scope.js';
 import { makeDocumentsRestHandlers } from './rest/handlers.js';
+import { requireDurableUploads } from './rest/upload-handlers.js';
+import { UPLOAD_CONTENT_ROUTE_PATH, uploadContentHandler } from './uploads/raw-route.js';
 
 /**
  * The committed OpenAPI projection (`pillars/documents/openapi/documents.openapi.json`),
@@ -90,7 +92,11 @@ export function createDocumentsApiApp(deps: DocumentsApiDeps): Express {
     )
   );
 
-  createExpressEndpoints(documentsContract, makeDocumentsRestHandlers(), app, {
+  app.put(UPLOAD_CONTENT_ROUTE_PATH, (req, res, next) => {
+    void uploadContentHandler(requireDurableUploads(deps.uploads))(req, res).catch(next);
+  });
+
+  createExpressEndpoints(documentsContract, makeDocumentsRestHandlers(deps.uploads), app, {
     requestValidationErrorHandler: (error, _req, _res, next) => {
       try {
         documentsErrors.invalid({ issues: validationIssues(error) });

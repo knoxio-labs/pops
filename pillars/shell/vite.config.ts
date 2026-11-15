@@ -90,6 +90,7 @@ export default defineConfig({
       '/cerebrum-api': createDevApiProxy('http://localhost:3007', '/cerebrum-api'),
       '/ai-api': createDevApiProxy('http://localhost:3008', '/ai-api'),
       '/contacts-api': createDevApiProxy('http://localhost:3010', '/contacts-api'),
+      '/documents-api': createDevApiProxy('http://localhost:3012', '/documents-api'),
       '/purchases-api': createDevApiProxy('http://localhost:3013', '/purchases-api'),
       '/bfm-api': createDevApiProxy('http://localhost:3014', '/bfm-api'),
       '/barcode-api': createDevApiProxy('http://localhost:3016', '/barcode-api'),

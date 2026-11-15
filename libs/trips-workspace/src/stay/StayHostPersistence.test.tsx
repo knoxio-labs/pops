@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, expect, it } from 'vitest';
 
+import { getSourceRetry } from '../shared/source-retry-test-utils';
 import { contactOwner, ownerSelection } from '../source-contacts/test-utils';
 import { StayWorkspace } from './StayWorkspace';
 import { testNightLabel, problem, sourceStay, workspaceTransport } from './test-utils';
@@ -51,7 +52,7 @@ it('retries a lost Host source write and persists Undo without rewriting address
   await screen.findByText('Changes have not been saved');
   expect(transport.patches).toEqual([{ hostLinks: changed.hostLinks }]);
   expect(screen.getByLabelText('Address')).toHaveValue(original.address);
-  fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+  fireEvent.click(getSourceRetry());
   await waitFor(() => expect(screen.getByRole('button', { name: 'Undo' })).toBeEnabled());
   fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
   await waitFor(() =>
@@ -78,7 +79,7 @@ it('retains owner-issued evidence across a failed source save and route remount 
   mount();
   await screen.findByText('Changes have not been saved');
   expect(screen.getByRole('button', { name: 'Remove host link 2' })).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+  fireEvent.click(getSourceRetry());
   await waitFor(() => expect(transport.patches).toHaveLength(2));
   expect(transport.patches).toEqual([
     { hostLinks: changed.hostLinks },

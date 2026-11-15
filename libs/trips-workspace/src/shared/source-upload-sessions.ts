@@ -20,18 +20,20 @@ const registries = new WeakMap<QueryClient, RetainedUpload[]>();
 /**
  * Retain owner queues for the Shell's QueryClient lifetime, independently of query-cache eviction.
  * Client replacement, origin changes and explicit source identities isolate queues; a full page
- * reload releases them. This is mount-lifetime storage, not an authenticated-principal boundary.
+ * reload releases File handles. A supplied persistenceBinding adds the verified account/server epoch;
+ * omitting it never supplies upload authorization or durable recovery.
  */
 export function sourceUploadSession(
   scope: QueryClient,
-  context: TripDocumentUploadContext
+  context: TripDocumentUploadContext,
+  persistenceBinding?: string
 ): TripDocumentUploadSession {
   let entries = registries.get(scope);
   if (entries === undefined) {
     entries = [];
     registries.set(scope, entries);
   }
-  const key = contextKey(context);
+  const key = JSON.stringify([contextKey(context), persistenceBinding]);
   const previous = entries.find(
     (entry) =>
       entry.key === key &&

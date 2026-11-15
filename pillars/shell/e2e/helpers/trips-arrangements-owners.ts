@@ -1,6 +1,7 @@
 import { expect } from '@playwright/test';
 
 import { json } from './pillar-rest';
+import { stubDurableUploadOwner } from './trips-durable-uploads';
 
 import type { Page } from '@playwright/test';
 
@@ -17,7 +18,8 @@ export interface ArrangementOwners {
   acceptUpload: () => void;
   completeTask: () => void;
   uploadCount: () => number;
-  taskReads: string[];
+  uploadReads: string[];
+  operationIds: string[];
   associations: unknown[];
 }
 
@@ -73,7 +75,8 @@ function ownerEntity() {
 }
 async function stubDocumentOwner(page: Page): Promise<Omit<ArrangementOwners, 'contactCreates'>> {
   const associations: unknown[] = [];
-  const taskReads: string[] = [];
+  const uploadReads: string[] = [];
+  const operationIds: string[] = [];
   let uploads = 0;
   let completed = false;
   let notifyStarted: () => void = () => {};
@@ -96,24 +99,25 @@ async function stubDocumentOwner(page: Page): Promise<Omit<ArrangementOwners, 'c
       },
     })
   );
-  await page.route(/\/documents-api\/paperless\/documents(?:\?.*)?$/, async (route) => {
-    expect(route.request().method()).toBe('POST');
-    expect(new URL(route.request().url()).searchParams.get('fileName')).toBe('booking.pdf');
-    expect(route.request().postDataBuffer()?.toString()).toBe('original booking');
-    uploads += 1;
-    notifyStarted();
-    await acceptance;
-    await json(route, 202, { data: { taskId: 'arrangement-upload-1' } });
-  });
-  await page.route(/\/documents-api\/paperless\/tasks\/arrangement-upload-1$/, (route) => {
-    taskReads.push(route.request().url());
-    return completed
-      ? json(route, 200, { data: { state: 'done', documentId: 91, reason: null } })
-      : json(route, 503, {
-          code: 'documents.task.unavailable',
-          message: 'Task lookup unavailable',
-          retryable: true,
-        });
+  await stubDurableUploadOwner(page, {
+    admit: (input) => {
+      expect(input.fileName).toBe('booking.pdf');
+      operationIds.push(input.operationId);
+      return 'arrangement-upload-1';
+    },
+    content: (_input, bytes) => {
+      expect(bytes.toString()).toBe('original booking');
+    },
+    dispatch: async () => {
+      uploads += 1;
+      notifyStarted();
+      await acceptance;
+    },
+    read: (_input, taskId, url) => {
+      expect(taskId).toBe('arrangement-upload-1');
+      uploadReads.push(url);
+      return completed ? { state: 'done', documentId: 91 } : { state: 'unavailable' };
+    },
   });
   await page.route(/\/documents-api\/paperless\/documents\/91$/, (route) =>
     json(route, 200, {
@@ -144,7 +148,8 @@ async function stubDocumentOwner(page: Page): Promise<Omit<ArrangementOwners, 'c
   });
   return {
     associations,
-    taskReads,
+    uploadReads,
+    operationIds,
     uploadStarted,
     acceptUpload,
     completeTask: () => {

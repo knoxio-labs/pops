@@ -53,6 +53,7 @@ import { lazy, Suspense, type ComponentType, type ReactNode } from 'react';
 import { ErrorBoundary } from '@pops/ui';
 
 import { createContactsHostCapability } from './contacts-host-capability';
+import { documentUploadHost } from './document-upload-authority';
 import { navConfigFromDescriptor } from './nav/nav-from-descriptor';
 import { entryUrlForThisLoad, uncachedProbeUrl } from './remote-entry-url';
 import { installRemoteStylesheet } from './remote-stylesheet';
@@ -221,7 +222,7 @@ function remotePageElement(
       staleChunkProbeUrl={() => uncachedProbeUrl(descriptor.assetsBaseUrl)}
     >
       <Suspense fallback={RemoteSuspenseFallback}>
-        <LazyComponent contacts={contactsHostCapability} />
+        <LazyComponent contacts={contactsHostCapability} documentUploads={documentUploadHost} />
       </Suspense>
     </ErrorBoundary>
   );

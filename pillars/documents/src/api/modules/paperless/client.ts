@@ -8,7 +8,7 @@
  */
 import { ensureOk, paperlessFetch, type PaperlessConnection } from './http.js';
 import { multipartUpload, type PaperlessUploadMeta, type SizedFile } from './multipart.js';
-import { mapPaperlessTask, RawTaskPageSchema, type PaperlessTaskStatus } from './task-state.js';
+import { readPaperlessTask } from './task-client.js';
 import { PAPERLESS_TIMEOUTS } from './timeouts.js';
 import {
   PaperlessApiError,
@@ -25,8 +25,7 @@ import {
   type RawPaperlessTag,
 } from './types.js';
 
-/** Paperless 3.2.1's default; pinned so a server-side default change cannot reshape tasks. */
-const TASKS_ACCEPT = 'application/json; version=10';
+import type { PaperlessTaskStatus } from './task-state.js';
 
 export class PaperlessClient {
   private readonly baseUrl: string;
@@ -119,7 +118,11 @@ export class PaperlessClient {
    * Stream `file` to `post_document` and return the consumption task id.
    * Consumption is asynchronous: the id resolves through {@link getTask}.
    */
-  async postDocument(file: SizedFile, meta: PaperlessUploadMeta): Promise<string> {
+  async postDocument(
+    file: SizedFile,
+    meta: PaperlessUploadMeta,
+    options?: { readonly redirect: 'manual' }
+  ): Promise<string> {
     const { body, headers } = multipartUpload(file, meta);
     const response = await paperlessFetch(this.connection, '/api/documents/post_document/', {
       method: 'POST',
@@ -127,6 +130,7 @@ export class PaperlessClient {
       body,
       duplex: 'half',
       timeoutMs: PAPERLESS_TIMEOUTS.transfer,
+      ...(options === undefined ? {} : { redirect: options.redirect }),
     });
     const taskId: unknown = await (await ensureOk(response)).json();
     if (typeof taskId !== 'string' || taskId === '') {
@@ -137,17 +141,7 @@ export class PaperlessClient {
 
   /** Resolve a consumption task, or `null` when Paperless has no task with that id. */
   async getTask(taskId: string): Promise<PaperlessTaskStatus | null> {
-    const response = await paperlessFetch(
-      this.connection,
-      `/api/tasks/?${new URLSearchParams({ task_id: taskId }).toString()}`,
-      { headers: { Accept: TASKS_ACCEPT }, timeoutMs: PAPERLESS_TIMEOUTS.read }
-    );
-    const parsed = RawTaskPageSchema.safeParse(await (await ensureOk(response)).json());
-    if (!parsed.success) {
-      throw new PaperlessApiError(response.status, 'Unrecognised Paperless task shape');
-    }
-    const [task] = parsed.data.results.filter((candidate) => candidate.task_id === taskId);
-    return task === undefined ? null : mapPaperlessTask(task);
+    return readPaperlessTask(this.connection, taskId);
   }
 
   /** Change the given fields of a document; absent keys are not sent. */

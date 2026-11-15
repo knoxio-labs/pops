@@ -5,11 +5,15 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render } from '@testing-library/react';
 import { z } from 'zod';
 
+import { DocumentUploadProvider } from '@pops/trips-workspace';
+
+import { createDocumentUploadHost } from './document-upload-host-fixture';
 import { CaptureContext } from './index';
 import { createClient } from './trips-api/client';
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
+import type { DocumentUploadHostCapability } from '@pops/pillar-sdk';
 import type { CaptureSource } from '@pops/trips-workspace/capture-client';
 
 import type { CaptureContextProps } from './index';
@@ -89,20 +93,29 @@ async function answerOwner(
 function renderContext(
   cache: QueryClient,
   client: CaptureContextProps['client'],
+  documentUploads: DocumentUploadHostCapability,
   props: Partial<CaptureContextProps>
 ) {
+  const context = {
+    tripId: 7,
+    view: 'capture' as const,
+    client,
+    documentsClient: client,
+    ...props,
+  };
   return render(
     <QueryClientProvider client={cache}>
-      <main>
-        <h1>Owning Trip workspace</h1>
-        <CaptureContext
-          tripId={7}
-          view="capture"
-          client={client}
-          documentsClient={client}
-          {...props}
-        />
-      </main>
+      <DocumentUploadProvider
+        host={documentUploads}
+        tripId={context.tripId}
+        tripsClient={context.client}
+        documentsClient={context.documentsClient}
+      >
+        <main>
+          <h1>Owning Trip workspace</h1>
+          <CaptureContext {...context} />
+        </main>
+      </DocumentUploadProvider>
     </QueryClientProvider>
   );
 }
@@ -133,6 +146,7 @@ export async function captureOwner() {
   if (!address || typeof address === 'string') throw new Error('Missing capture owner address');
   const origin = `http://127.0.0.1:${address.port}`;
   const client = createClient({ baseUrl: origin });
+  const documentUploads = createDocumentUploadHost(origin);
   const cache = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -141,12 +155,15 @@ export async function captureOwner() {
     requests: state.requests,
     source: state.source,
     client,
+    documentUploads,
     alternateClient: createClient({ baseUrl: `${origin}/another-origin` }),
     loseNextWrite: () => {
       state.loseNextWrite = true;
     },
-    mount: (props: Partial<CaptureContextProps> = {}) => renderContext(cache, client, props),
+    mount: (props: Partial<CaptureContextProps> = {}) =>
+      renderContext(cache, client, documentUploads, props),
     close: async () => {
+      documentUploads.invalidate();
       cache.clear();
       server.closeAllConnections();
       await new Promise<void>((resolve, reject) =>

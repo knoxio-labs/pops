@@ -21,15 +21,18 @@ import { z } from 'zod';
 
 /**
  * One `volumes:` list entry: Compose's short `[source:]target[:mode]` string
- * form, or its long object form. Only `type`, `target` and `read_only` are
- * read; everything else passes through unexamined.
+ * form, or its long object form. `source`, `type`, `target` and `read_only`
+ * preserve the owning DATA-volume relationship and its effective mount mode.
+ * Nested volume options are unsupported: stripping a subpath would change the physical DB identity.
  */
 export const ComposeVolumeEntrySchema = z.union([
   z.string(),
   z.object({
     type: z.string().optional(),
+    source: z.string().optional(),
     target: z.string(),
     read_only: z.boolean().optional(),
+    volume: z.never().optional(),
   }),
 ]);
 

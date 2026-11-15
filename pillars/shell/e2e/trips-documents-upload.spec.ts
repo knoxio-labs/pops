@@ -3,10 +3,9 @@ import { join } from 'node:path';
 
 import { expect, test } from './fixtures/pillar-rest-guard';
 import { json, stubShellBoot } from './helpers/pillar-rest';
+import { stubDurableUploadOwner } from './helpers/trips-durable-uploads';
 
 const associationUrl = /\/trips-api\/trips\/71\/document-associations$/;
-const uploadUrl = /\/documents-api\/paperless\/documents(?:\?.*)?$/;
-const taskUrl = /\/documents-api\/paperless\/tasks\/task_71$/;
 const policy = {
   configured: true,
   available: true,
@@ -57,28 +56,19 @@ test('Trips Documents uploads, retries a rejected file, resolves the owner task 
   await page.route(/\/documents-api\/paperless\/status$/, (route) =>
     json(route, 200, { data: policy })
   );
-  await page.route(uploadUrl, async (route) => {
-    uploadRequests += 1;
-    if (uploadRequests === 1) {
-      await json(route, 415, {
-        code: 'paperless.unsupported_media_type',
-        message: 'Unsupported file type',
-        requestId: 'browser-test',
-        retryable: false,
-      });
-      return;
-    }
-    await json(route, 202, { data: { taskId: 'task_71' } });
-  });
-  await page.route(taskUrl, async (route) => {
-    taskRequests += 1;
-    await json(route, 200, {
-      data: {
-        state: taskRequests === 1 ? 'pending' : 'done',
-        documentId: taskRequests === 1 ? null : 711,
-        reason: null,
-      },
-    });
+  await stubDurableUploadOwner(page, {
+    admit: () => {
+      uploadRequests += 1;
+      return uploadRequests === 1 ? 'rejected_71' : 'task_71';
+    },
+    content: (_input, bytes) => {
+      expect(bytes.toString()).toBe('booking');
+    },
+    read: (_input, taskId) => {
+      if (taskId === 'rejected_71') return { state: 'failed', reason: 'Unsupported file type' };
+      taskRequests += 1;
+      return taskRequests === 1 ? { state: 'pending' } : { state: 'done', documentId: 711 };
+    },
   });
   await page.route(/\/documents-api\/paperless\/documents\/711$/, (route) =>
     json(route, 200, {
@@ -105,7 +95,9 @@ test('Trips Documents uploads, retries a rejected file, resolves the owner task 
     buffer: Buffer.from('booking'),
   });
   await page.getByRole('button', { name: 'Send to Documents' }).click();
-  await expect(page.getByText(/Documents rejected this file/)).toBeVisible();
+  await expect(
+    page.getByText('Documents could not accept this file: Unsupported file type', { exact: true })
+  ).toBeVisible();
   await expect(page.getByText('Something went wrong')).toHaveCount(0);
   await page.screenshot({ path: capturePath('upload-error-wide.png'), fullPage: true });
   await page.getByRole('button', { name: 'Remove booking.pdf' }).click();
@@ -115,12 +107,19 @@ test('Trips Documents uploads, retries a rejected file, resolves the owner task 
     buffer: Buffer.from('booking'),
   });
   await page.getByRole('button', { name: 'Send to Documents' }).click();
-  await expect(page.getByText('Documents is processing the upload…')).toBeVisible();
+  await expect(
+    page.getByText('Upload accepted. Waiting for the owner to verify its original identity…', {
+      exact: true,
+    })
+  ).toBeVisible();
   await page.screenshot({ path: capturePath('upload-pending-wide.png'), fullPage: true });
   await expect(page.getByRole('button', { name: 'Link file' })).toBeVisible();
   await page.getByRole('button', { name: 'Link file' }).click();
   await expect(page.getByRole('heading', { name: 'Trip documents' })).toBeVisible();
-  await expect(page.getByText('booking.pdf')).toBeVisible();
+  await expect(
+    page.getByText('Documents could not accept this file: Unsupported file type', { exact: true })
+  ).toHaveCount(0);
+  await expect(page.getByText('booking.pdf', { exact: true })).toBeVisible();
   const originalLink = page.getByRole('link', { name: 'Open original' });
   const unlinkButton = page.getByRole('button', { name: 'Unlink Harbour booking' });
   expect((await originalLink.boundingBox())?.height).toBeGreaterThanOrEqual(44);
@@ -128,7 +127,7 @@ test('Trips Documents uploads, retries a rejected file, resolves the owner task 
   await page.screenshot({ path: capturePath('upload-linked-wide.png'), fullPage: true });
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await expect(page.getByText('booking.pdf')).toBeVisible();
+  await expect(page.getByText('booking.pdf', { exact: true })).toBeVisible();
   await page.screenshot({ path: capturePath('upload-linked-narrow.png'), fullPage: true });
   expect(uploadRequests).toBe(2);
   expect(taskRequests).toBeGreaterThanOrEqual(2);
@@ -139,6 +138,7 @@ test('multiple same-name files keep independent owner tasks beside explicit rout
   page,
 }) => {
   let uploadRequests = 0;
+  let contentRequests = 0;
   const taskRequests = new Set<string>();
   const associations = [
     { id: 1, tripId: 71, documentId: 711, targetKind: 'trip', targetId: 71, createdAt: '' },
@@ -178,25 +178,20 @@ test('multiple same-name files keep independent owner tasks beside explicit rout
       data: { ...policy, allowedMimeTypes: ['application/pdf', 'image/*', 'text/*'] },
     })
   );
-  await page.route(uploadUrl, async (route) => {
-    uploadRequests += 1;
-    if (uploadRequests === 2) {
-      await json(route, 415, {
-        code: 'paperless.unsupported_media_type',
-        message: 'Unsupported file type',
-        requestId: 'browser-multi',
-        retryable: false,
-      });
-      return;
-    }
-    await json(route, 202, { data: { taskId: `task_${String(uploadRequests)}` } });
-  });
-  await page.route(/\/documents-api\/paperless\/tasks\/task_[13]$/, (route) => {
-    const taskId = new URL(route.request().url()).pathname.split('/').at(-1) ?? '';
-    taskRequests.add(taskId);
-    return json(route, 200, {
-      data: { state: 'done', documentId: taskId === 'task_1' ? 721 : 723, reason: null },
-    });
+  await stubDurableUploadOwner(page, {
+    admit: () => {
+      uploadRequests += 1;
+      return `task_${String(uploadRequests)}`;
+    },
+    content: (_input, bytes) => {
+      expect(bytes.toString()).toBe(['first', 'other', 'replacement'][contentRequests]);
+      contentRequests += 1;
+    },
+    read: (_input, taskId) => {
+      taskRequests.add(taskId);
+      if (taskId === 'task_2') return { state: 'failed', reason: 'Unsupported file type' };
+      return { state: 'done', documentId: taskId === 'task_1' ? 721 : 723 };
+    },
   });
   await page.route(/\/documents-api\/paperless\/documents\/7[0-9]+$/, (route) => {
     const id = Number(new URL(route.request().url()).pathname.split('/').at(-1));
@@ -241,7 +236,11 @@ test('multiple same-name files keep independent owner tasks beside explicit rout
   await rows.nth(0).getByRole('button', { name: 'Send to Documents' }).click();
   await rows.nth(1).getByRole('button', { name: 'Send to Documents' }).click();
   await expect(rows.nth(0).getByRole('button', { name: 'Link file' })).toBeVisible();
-  await expect(rows.nth(1).getByText(/Documents rejected this file/)).toBeVisible();
+  await expect(
+    rows
+      .nth(1)
+      .getByText('Documents could not accept this file: Unsupported file type', { exact: true })
+  ).toBeVisible();
   await page.screenshot({ path: capturePath('queue-wide.png'), fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({ path: capturePath('queue-narrow.png'), fullPage: true });
@@ -266,7 +265,8 @@ test('multiple same-name files keep independent owner tasks beside explicit rout
   await expect(page.getByRole('button', { name: 'Unlink Original 721' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Unlink Original 723' })).toBeVisible();
   expect(uploadRequests).toBe(3);
-  expect([...taskRequests].toSorted()).toEqual(['task_1', 'task_3']);
+  expect(contentRequests).toBe(3);
+  expect([...taskRequests].toSorted()).toEqual(['task_1', 'task_2', 'task_3']);
   await page.screenshot({ path: capturePath('route-groups-narrow.png'), fullPage: true });
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.screenshot({ path: capturePath('route-groups-wide.png'), fullPage: true });

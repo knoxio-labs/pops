@@ -2,7 +2,7 @@
 
 The shell loads `dist/remote/trips.js` and `trips.css` from the Trips manifest. The app exposes the grouped home, selected-Trip Timeline, trip metadata settings, and route adapters for the `@pops/trips-workspace` visit, stay, journey, event, options-first decision editors. It also exports router-free Capture tools. Event detail is registered at `:tripId/events/:eventId`; invalid route identities fail before making source requests. The separate Documents list is registered at `/trips/:tripId/documents`. The public router-free `CaptureContext({ tripId, view, selectedSource?, client?, documentsClient?, contacts?, onViewEvent? })` embeds the same retained engine in its owning Trip workspace. It publishes no Capture, Inbox or Explore destination or navigation; host placement and controlled view changes belong to the Trip workspace.
 
-The Documents route provides typed document associations and owner uploads. It owns no database and uses generated Trips and Tags clients at the shell's authenticated same-origin proxy paths.
+The Documents route provides typed document associations and owner uploads. Standalone Stay, Event and Journey routes bind their source upload controls to the same shell-provided upload authority and validated owning Trip, using the shared `DocumentUploadProvider` boundary. It owns no database and uses generated Trips and Tags clients at the shell's authenticated same-origin proxy paths.
 
 The approved web workspace uses dense source rows, a recorded-accommodation strip
 and the canonical Capture composer inline. Capture stays under the same host

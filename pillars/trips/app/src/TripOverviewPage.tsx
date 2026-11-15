@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 
 import {
+  DocumentUploadProvider,
   AccommodationGapProvider,
   ArrangementResponsibilityProvider,
   TripOverview,
@@ -59,16 +60,23 @@ export function TripOverviewPage(props: TimelineOwnerProps = {}) {
       />
     );
   return (
-    <AccommodationGapProvider identity={{ tripId, client: props.client }}>
-      <ArrangementResponsibilityProvider identity={{ tripId, client: props.client }}>
-        <TimelineSession
-          key={`${(props.client ?? defaultClient).getConfig().baseUrl}:${tripId}`}
-          {...props}
-          tripId={tripId}
-          {...chooser}
-        />
-      </ArrangementResponsibilityProvider>
-    </AccommodationGapProvider>
+    <DocumentUploadProvider
+      host={props.documentUploads}
+      tripId={tripId}
+      tripsClient={props.client}
+      documentsClient={props.documentsClient}
+    >
+      <AccommodationGapProvider identity={{ tripId, client: props.client }}>
+        <ArrangementResponsibilityProvider identity={{ tripId, client: props.client }}>
+          <TimelineSession
+            key={`${(props.client ?? defaultClient).getConfig().baseUrl}:${tripId}`}
+            {...props}
+            tripId={tripId}
+            {...chooser}
+          />
+        </ArrangementResponsibilityProvider>
+      </AccommodationGapProvider>
+    </DocumentUploadProvider>
   );
 }
 

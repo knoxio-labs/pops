@@ -15,7 +15,7 @@
  * present under the right name but wired to somebody else's file. So this
  * guard also opens each matched sidecar's body and checks that it mounts
  * *its own* config (`./litestream/<id>.yml` at `/etc/litestream.yml`) and
- * *its own* data volume (`pops-<id>-data` at `/data/sqlite`) — not merely a
+ * the owning writer's declared data volume and relative database file — not merely a
  * config and a volume. It also checks that the replica-URL env var it reads
  * is named after its own id (`<ID>_LITESTREAM_REPLICA_URL`), the convention
  * used by its config.
@@ -56,6 +56,12 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import {
+  databaseReplicaViolations,
+  declaredDatabasePaths,
+  storageContains,
+} from './litestream-storage.mjs';
+
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '..', '..');
 const LITESTREAM_DIR = join(repoRoot, 'infra', 'litestream');
@@ -63,7 +69,6 @@ const COMPOSE_PATH = join(repoRoot, 'infra', 'docker-compose.yml');
 
 const SIDECAR_SUFFIX = '-litestream';
 const CONFIG_TARGET = '/etc/litestream.yml';
-const DATA_TARGET = '/data/sqlite';
 
 /**
  * Discover the ids of every Litestream reference config, from disk.
@@ -86,16 +91,11 @@ export function discoverConfigIds(litestreamDir, listDir = (d) => readdirSync(d)
  */
 
 /**
- * Split Compose source into one block per top-level `<id>-litestream:`
- * service — its id and its own body lines, unparsed. Everything downstream
- * (volume mounts, the env var name) reads from a block's `lines` rather than
- * re-scanning the whole file, so each sidecar is only ever compared against
- * its own body.
- *
+ * Read all direct Compose service bodies for writer/backup mount correspondence without dependencies.
  * @param {string} source
- * @returns {SidecarBlock[]}
+ * @returns {{id: string, lines: string[]}[]}
  */
-export function extractSidecarBlocks(source) {
+export function extractServiceBlocks(source) {
   const lines = source.split(/\r?\n/);
   let inServices = false;
   /** @type {SidecarBlock[]} */
@@ -109,6 +109,10 @@ export function extractSidecarBlocks(source) {
       continue;
     }
     if (!inServices) continue;
+    if (/^\s*(?:#.*)?$/u.test(line)) {
+      current?.lines.push(line);
+      continue;
+    }
 
     // A non-blank, non-comment line with no leading whitespace is the next
     // top-level key — the `services:` mapping has ended.
@@ -121,17 +125,27 @@ export function extractSidecarBlocks(source) {
     const serviceKey = /^ {2}([A-Za-z0-9_-]+):\s*$/.exec(line);
     const serviceName = serviceKey?.[1];
     if (serviceName !== undefined) {
-      current = serviceName.endsWith(SIDECAR_SUFFIX)
-        ? { id: serviceName.slice(0, -SIDECAR_SUFFIX.length), lines: [] }
-        : null;
-      if (current) blocks.push(current);
+      current = { id: serviceName, lines: [] };
+      blocks.push(current);
       continue;
     }
 
+    if (/^ {2}\S/u.test(line)) throw new Error('Unsupported Compose service declaration');
     current?.lines.push(line);
   }
 
   return blocks;
+}
+
+/**
+ * Project backup service ids and their own bodies from the same service scanner used for writers.
+ * @param {string} source
+ * @returns {SidecarBlock[]}
+ */
+export function extractSidecarBlocks(source) {
+  return extractServiceBlocks(source)
+    .filter((block) => block.id.endsWith(SIDECAR_SUFFIX))
+    .map((block) => ({ id: block.id.slice(0, -SIDECAR_SUFFIX.length), lines: block.lines }));
 }
 
 /**
@@ -151,6 +165,8 @@ export function extractSidecarIds(source) {
  * @typedef {object} VolumeMount
  * @property {string} source  What is mounted — a named volume or a relative host path.
  * @property {string} target  Where it lands in the container.
+ * @property {boolean} readOnly Whether the mount is read-only.
+ * @property {boolean} isBind Whether this is a host bind rather than a named volume.
  */
 
 /**
@@ -165,12 +181,18 @@ export function extractVolumeMounts(lines) {
   /** @type {VolumeMount[]} */
   const mounts = [];
   let inVolumes = false;
-  /** @type {{ source?: string, target?: string } | null} */
+  /** @type {{ source?: string, target?: string, readOnly?: boolean, isBind?: boolean } | null} */
   let longEntry = null;
 
   const flushLongEntry = () => {
-    if (longEntry?.source !== undefined && longEntry.target !== undefined) {
-      mounts.push({ source: longEntry.source, target: longEntry.target });
+    if (longEntry !== null) {
+      if (longEntry.target === undefined) throw new Error('Invalid Compose volume target');
+      mounts.push({
+        source: longEntry.source ?? '',
+        target: longEntry.target,
+        readOnly: longEntry.readOnly === true,
+        isBind: longEntry.isBind === true,
+      });
     }
     longEntry = null;
   };
@@ -180,7 +202,10 @@ export function extractVolumeMounts(lines) {
       inVolumes = true;
       continue;
     }
-    if (!inVolumes) continue;
+    if (!inVolumes) {
+      if (/^ {4}volumes:/u.test(line)) throw new Error('Unsupported Compose volumes declaration');
+      continue;
+    }
 
     // Back to 4-space indent with no leading `-` means the `volumes:` list
     // ended and the next key of the service body started.
@@ -190,30 +215,155 @@ export function extractVolumeMounts(lines) {
       continue;
     }
 
-    if (/^ {6}- type: (?:volume|bind)\s*$/.test(line)) {
+    const typeMatch = /^ {6}- type: (\S+)\s*$/.exec(line);
+    if (typeMatch) {
       flushLongEntry();
-      longEntry = {};
+      longEntry = { isBind: typeMatch[1] !== 'volume' };
       continue;
     }
 
-    const shortForm = /^ {6}- ([^\s:]+):([^:]+?)(?::\w+)?\s*$/.exec(line);
+    const shortForm = /^ {6}- (.+):(\/[^:]*?)(?::([\w,]+))?\s*$/.exec(line);
     const shortSource = shortForm?.[1];
     const shortTarget = shortForm?.[2];
     if (shortSource !== undefined && shortTarget !== undefined) {
       flushLongEntry();
-      mounts.push({ source: shortSource, target: shortTarget });
+      mounts.push({
+        source: shortSource,
+        target: shortTarget,
+        readOnly: (shortForm?.[3] ?? '').split(',').includes('ro'),
+        isBind: /^[.~/]/u.test(shortSource),
+      });
       continue;
     }
+    if (/^ {6}-/u.test(line)) throw new Error('Unsupported Compose volume declaration');
     if (longEntry) {
       const sourceMatch = /^ {8}source: (\S+)\s*$/.exec(line);
-      if (sourceMatch) longEntry.source = sourceMatch[1];
+      if (sourceMatch) {
+        if (longEntry.source !== undefined) throw new Error('Duplicate Compose volume source');
+        longEntry.source = sourceMatch[1];
+        continue;
+      }
       const targetMatch = /^ {8}target: (\S+)\s*$/.exec(line);
-      if (targetMatch) longEntry.target = targetMatch[1];
+      if (targetMatch) {
+        if (longEntry.target !== undefined) throw new Error('Duplicate Compose volume target');
+        longEntry.target = targetMatch[1];
+        continue;
+      }
+      const readOnlyMatch = /^ {8}read_only: (true|false)\s*$/.exec(line);
+      if (readOnlyMatch) {
+        if (longEntry.readOnly !== undefined) throw new Error('Duplicate Compose volume mode');
+        longEntry.readOnly = readOnlyMatch[1] === 'true';
+        continue;
+      }
+      if (line.trim() !== '' && !line.trimStart().startsWith('#')) {
+        throw new Error('Unsupported Compose volume options');
+      }
     }
   }
   flushLongEntry();
 
   return mounts;
+}
+
+/** @param {string} value @returns {string} */
+function buildDockerfileScalar(value) {
+  const single = /^'((?:[^']|'')*)'(?:\s+#.*)?$/u.exec(value);
+  const double = /^("(?:[^"\\]|\\.)*")(?:\s+#.*)?$/u.exec(value);
+  const plain = /^([A-Za-z0-9_./-]+)(?:\s+#.*)?$/u.exec(value);
+  /** @type {unknown} */
+  let path;
+  if (single) path = single[1]?.replaceAll("''", "'");
+  else if (double) path = JSON.parse(double[1] ?? '');
+  else path = plain?.[1];
+  if (
+    typeof path !== 'string' ||
+    !path.includes('/') ||
+    !/^[A-Za-z0-9_./-]+$/u.test(path) ||
+    path
+      .replace(/^\.\//u, '')
+      .split('/')
+      .some((part) => part === '' || part === '.' || part === '..')
+  )
+    throw new Error('Unsupported Compose Dockerfile scalar');
+  return path.replace(/^\.\//u, '');
+}
+
+/** @param {string[]} lines @returns {string | undefined} */
+function declaredBuildDockerfile(lines) {
+  let inBuild = false;
+  let seenBuild = false;
+  /** @type {string | undefined} */
+  let dockerfile;
+  for (const line of lines) {
+    if (/^ {4}(?:['"]build['"]|<<):/u.test(line))
+      throw new Error('Unsupported Compose build declaration');
+    if (/^ {4}build:/u.test(line)) {
+      if (seenBuild || !/^ {4}build:\s*(?:#.*)?$/u.test(line))
+        throw new Error('Unsupported Compose build declaration');
+      seenBuild = true;
+      inBuild = true;
+      continue;
+    }
+    if (/^ {4}\S/u.test(line)) inBuild = false;
+    if (!inBuild) continue;
+    const match = /^ {6}dockerfile:\s*(.*?)\s*$/u.exec(line);
+    if (match) {
+      if (dockerfile !== undefined) throw new Error('Duplicate Compose Dockerfile declaration');
+      dockerfile = buildDockerfileScalar(match[1] ?? '');
+    } else if (/^ {6}['"]?dockerfile/u.test(line)) {
+      throw new Error('Unsupported Compose Dockerfile declaration');
+    }
+  }
+  if (seenBuild && dockerfile === undefined)
+    throw new Error('Missing explicit Compose Dockerfile declaration');
+  return dockerfile;
+}
+
+/**
+ * Discover owning images from their explicit build declaration and configured database storage.
+ * Keep every writer's complete mounts, including shadows; a REST-only worker has no database mount.
+ * @param {string} id
+ * @param {string} composeSource
+ * @param {string[]} paths The database paths declared by the owning Litestream config.
+ * @returns {VolumeMount[][]}
+ */
+export function extractWriterMounts(id, composeSource, paths) {
+  return extractServiceBlocks(composeSource)
+    .filter((block) => !block.id.endsWith(SIDECAR_SUFFIX))
+    .filter((block) => declaredBuildDockerfile(block.lines)?.startsWith(`pillars/${id}/`) === true)
+    .flatMap((block) => {
+      const mounts = extractVolumeMounts(block.lines);
+      /** @type {Map<string, string>} */
+      const variables = new Map();
+      let inEnvironment = false;
+      for (const line of block.lines) {
+        if (/^ {4}environment:\s*$/u.test(line)) {
+          inEnvironment = true;
+          continue;
+        }
+        if (/^ {4}\S/u.test(line)) inEnvironment = false;
+        const match = inEnvironment
+          ? /^ {6}([A-Z0-9_]+):\s*([^#]*?)\s*(?:#.*)?$/u.exec(line)
+          : null;
+        if (match?.[1] !== undefined) {
+          if (variables.has(match[1])) throw new Error('Duplicate Compose environment declaration');
+          variables.set(match[1], (match[2] ?? '').replace(/^['"]|['"]$/gu, ''));
+        }
+      }
+      const configured = variables.get(`${id.toUpperCase()}_SQLITE_PATH`);
+      if (configured !== undefined && !paths.includes(configured))
+        throw new Error(`${block.id} database path does not match its Litestream declaration`);
+      const directory = variables.get(`${id.toUpperCase()}_DATA_DIR`);
+      if (directory !== undefined && !paths.every((path) => storageContains(directory, path)))
+        throw new Error(`${block.id} DATA directory does not match its Litestream declaration`);
+      return configured !== undefined ||
+        directory !== undefined ||
+        mounts.some((mount) =>
+          paths.some((path) => mount.target === path || storageContains(mount.target, path))
+        )
+        ? [mounts]
+        : [];
+    });
 }
 
 /**
@@ -250,27 +400,36 @@ export function extractEnvVarName(lines) {
  *
  * @param {string} id
  * @param {string[]} lines  The sidecar's own body lines, as produced by `extractSidecarBlocks`.
+ * @param {string} configSource The actual owning Litestream config.
+ * @param {VolumeMount[][]} writers Each owning writer's complete mount set.
  * @returns {string[]} One human-readable violation per thing wrong; empty when clean.
  */
-export function checkSidecarWiring(id, lines) {
+export function checkSidecarWiring(id, lines, configSource, writers) {
   /** @type {string[]} */
   const violations = [];
   const mounts = extractVolumeMounts(lines);
 
   const expectedConfig = `./litestream/${id}.yml`;
-  const configMount = mounts.find((mount) => mount.target === CONFIG_TARGET);
+  const configMounts = mounts.filter((mount) => mount.target === CONFIG_TARGET);
+  const configMount = configMounts[0];
   if (!configMount) {
     violations.push(`missing a volume mounting ${CONFIG_TARGET}`);
-  } else if (configMount.source !== expectedConfig) {
+  } else if (
+    configMounts.length !== 1 ||
+    configMount.source !== expectedConfig ||
+    !configMount.readOnly
+  ) {
     violations.push(`mounts ${configMount.source} at ${CONFIG_TARGET}, expected ${expectedConfig}`);
   }
 
-  const expectedDataVolume = `pops-${id}-data`;
-  const dataMount = mounts.find((mount) => mount.target === DATA_TARGET);
-  if (!dataMount) {
-    violations.push(`missing a volume mounting ${DATA_TARGET}`);
-  } else if (dataMount.source !== expectedDataVolume) {
-    violations.push(`mounts ${dataMount.source} at ${DATA_TARGET}, expected ${expectedDataVolume}`);
+  try {
+    violations.push(
+      ...databaseReplicaViolations(id, declaredDatabasePaths(configSource), mounts, writers)
+    );
+  } catch (error) {
+    violations.push(
+      error instanceof Error ? error.message : 'Invalid Litestream database declaration'
+    );
   }
 
   const expectedEnvVar = `${id.toUpperCase()}_LITESTREAM_REPLICA_URL`;
@@ -392,19 +551,19 @@ function selfTest() {
     'services:',
     '  correct-litestream:',
     '    volumes:',
-    '      - pops-correct-data:/data/sqlite:ro',
+    '      - pops-correct-data:/data/sqlite',
     '      - ./litestream/correct.yml:/etc/litestream.yml:ro',
     '    environment:',
     '      CORRECT_LITESTREAM_REPLICA_URL: ${CORRECT_LITESTREAM_REPLICA_URL:-}',
     '  wrongconfig-litestream:',
     '    volumes:',
-    '      - pops-wrongconfig-data:/data/sqlite:ro',
+    '      - pops-wrongconfig-data:/data/sqlite',
     '      - ./litestream/finance.yml:/etc/litestream.yml:ro',
     '    environment:',
     '      WRONGCONFIG_LITESTREAM_REPLICA_URL: ${WRONGCONFIG_LITESTREAM_REPLICA_URL:-}',
     '  wrongvolume-litestream:',
     '    volumes:',
-    '      - pops-finance-data:/data/sqlite:ro',
+    '      - pops-finance-data:/data/sqlite',
     '      - ./litestream/wrongvolume.yml:/etc/litestream.yml:ro',
     '    environment:',
     '      WRONGVOLUME_LITESTREAM_REPLICA_URL: ${WRONGVOLUME_LITESTREAM_REPLICA_URL:-}',
@@ -415,13 +574,13 @@ function selfTest() {
     '      MISSINGMOUNT_LITESTREAM_REPLICA_URL: ${MISSINGMOUNT_LITESTREAM_REPLICA_URL:-}',
     '  registry-litestream:',
     '    volumes:',
-    '      - pops-registry-data:/data/sqlite:ro',
+    '      - pops-registry-data:/data/sqlite',
     '      - ./litestream/registry.yml:/etc/litestream.yml:ro',
     '    environment:',
     '      CORE_LITESTREAM_REPLICA_URL: ${CORE_LITESTREAM_REPLICA_URL:-}',
     '  unlisted-litestream:',
     '    volumes:',
-    '      - pops-unlisted-data:/data/sqlite:ro',
+    '      - pops-unlisted-data:/data/sqlite',
     '      - ./litestream/unlisted.yml:/etc/litestream.yml:ro',
     '    environment:',
     '      CORE_LITESTREAM_REPLICA_URL: ${CORE_LITESTREAM_REPLICA_URL:-}',
@@ -430,7 +589,7 @@ function selfTest() {
     '      - type: volume',
     '        source: pops-longform-data',
     '        target: /data/sqlite',
-    '        read_only: true',
+    '        read_only: false',
     '      - type: bind',
     '        source: ./litestream/longform.yml',
     '        target: /etc/litestream.yml',
@@ -442,7 +601,10 @@ function selfTest() {
     extractSidecarBlocks(wiringFixture).map((block) => [block.id, block.lines])
   );
   /** @param {string} id */
-  const wiringOf = (id) => checkSidecarWiring(id, wiringBlocks.get(id) ?? []);
+  const wiringOf = (id) =>
+    checkSidecarWiring(id, wiringBlocks.get(id) ?? [], `dbs:\n  - path: /data/sqlite/${id}.db\n`, [
+      [{ source: `pops-${id}-data`, target: '/data/sqlite', readOnly: false, isBind: false }],
+    ]);
 
   const correctOk = wiringOf('correct').length === 0;
   const wrongConfigOk = wiringOf('wrongconfig').some((v) => v.includes('litestream/finance.yml'));
@@ -536,7 +698,14 @@ function main() {
   /** @type {Map<string, string[]>} */
   const wiringViolations = new Map();
   for (const block of sidecarBlocks) {
-    const violations = checkSidecarWiring(block.id, block.lines);
+    const configPath = join(LITESTREAM_DIR, `${block.id}.yml`);
+    const configSource = configIds.includes(block.id) ? readFileSync(configPath, 'utf8') : '';
+    const violations = checkSidecarWiring(
+      block.id,
+      block.lines,
+      configSource,
+      extractWriterMounts(block.id, composeSource, declaredDatabasePaths(configSource))
+    );
     if (violations.length > 0) wiringViolations.set(block.id, violations);
   }
 
@@ -553,7 +722,7 @@ function main() {
   if (missingSidecar.length > 0) {
     console.error(
       `FAIL — config(s) with no matching sidecar service: ${missingSidecar.join(', ')}. ` +
-        'Either add a `<id>-litestream` service + `pops-<id>-data` volume to ' +
+        'Either add a `<id>-litestream` service matching its owning writer storage to ' +
         'infra/docker-compose.yml, or delete the orphaned infra/litestream/<id>.yml ' +
         'with the reason recorded.'
     );

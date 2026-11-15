@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
@@ -166,7 +166,13 @@ it('edits the actual Idea source and removes only its Explore membership', async
       },
     ],
   };
-  vi.mocked(performCaptureRequest).mockImplementation(async (_, request) => captureResult(request));
+  const edited = { ...source, ideas: [{ ...idea, notes: 'Explicit note', revision: 2 }] };
+  vi.mocked(performCaptureRequest).mockImplementation(async (_, request) => {
+    if (request.command.kind === 'idea.update') return captureResult(request, edited);
+    if (request.command.kind === 'explore.remove')
+      return captureResult(request, { ...edited, memberships: [] });
+    throw new Error('Unexpected capture command');
+  });
   const user = userEvent.setup();
   mount('explore', source);
   const row = await screen.findByRole('article', { name: 'idea 7' });
@@ -186,9 +192,13 @@ it('edits the actual Idea source and removes only its Explore membership', async
       },
     })
   );
-  await user.click(within(row).getByRole('button', { name: 'Remove from Explore' }));
-  expect(performCaptureRequest).toHaveBeenLastCalledWith(
-    expect.anything(),
-    expect.objectContaining({ command: { kind: 'explore.remove', id: 4, expectedRevision: 3 } })
+  const remove = within(row).getByRole('button', { name: 'Remove from Explore' });
+  await waitFor(() => expect(remove).toBeEnabled());
+  await user.click(remove);
+  await waitFor(() =>
+    expect(performCaptureRequest).toHaveBeenLastCalledWith(
+      expect.anything(),
+      expect.objectContaining({ command: { kind: 'explore.remove', id: 4, expectedRevision: 3 } })
+    )
   );
 });

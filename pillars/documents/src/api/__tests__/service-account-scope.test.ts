@@ -68,9 +68,14 @@ describe('documents scope maps', () => {
           scope: 'documents.paperless.download',
         },
         { method: 'POST', path: '/paperless/documents', scope: 'documents.write.upload' },
+        {
+          method: 'PUT',
+          path: '/paperless/uploads/:operationId/content',
+          scope: 'documents.write.uploadContent',
+        },
       ])
     );
-    expect(documentsRawScopeMap.routes).toHaveLength(3);
+    expect(documentsRawScopeMap.routes).toHaveLength(4);
   });
 
   it('puts task reads under documents.paperless and document changes under documents.write', () => {
@@ -84,6 +89,17 @@ describe('documents scope maps', () => {
         { method: 'GET', path: '/paperless/tasks/:taskId', scope: 'documents.paperless.task' },
         { method: 'PATCH', path: '/paperless/documents/:id', scope: 'documents.write.update' },
         { method: 'DELETE', path: '/paperless/documents/:id', scope: 'documents.write.delete' },
+        {
+          method: 'GET',
+          path: '/paperless/uploads/:operationId',
+          scope: 'documents.paperless.upload',
+        },
+        { method: 'POST', path: '/paperless/uploads', scope: 'documents.write.createUpload' },
+        {
+          method: 'POST',
+          path: '/paperless/uploads/:operationId/dispatch',
+          scope: 'documents.write.dispatchUpload',
+        },
       ])
     );
   });

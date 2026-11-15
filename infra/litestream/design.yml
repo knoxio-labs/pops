@@ -11,9 +11,9 @@
 ## credentials) is provided by the deployer's environment — left as a
 ## `${DESIGN_LITESTREAM_REPLICA_URL}` style placeholder here.
 ##
-## Like bfm's and unlike the older stubs, this stream is real: `design-api`
+## Like the other configured sidecars, this stream follows its writer: `design-api`
 ## mounts `pops-design-data` at `/data/sqlite` and `design-litestream` mounts
-## the same volume read-only, so the path below is a database that exists.
+## the same volume read-write, so the path below is a database that exists.
 ## Restore drill not yet exercised.
 ##
 ## Restore drill (single line — safe to copy/paste during an incident):

@@ -24,10 +24,10 @@ breaking change for every downstream deployer.
 `pops-redis-data`, `pops-metabase-data`, `pops-paperless-{data,media,consume}`,
 `pops-paperless-redis`, `pops-food-ingest-data`, `pops-food-recipes-data`,
 `pops-cerebrum-engrams-data`, `pops-media-images-data`,
-`pops-inventory-images-data`, plus 11 per-pillar `pops-<id>-data`. Of those 11
-only `pops-bfm-data` is mounted by an API container; the other 10 exist for the
-Litestream sidecars and the pillars they belong to still write to the shared
-`pops-sqlite-data`.
+`pops-inventory-images-data`, plus per-pillar `pops-<id>-data` declarations.
+Each sidecar follows its writer's actual volume: independent pillar DB files
+on `pops-sqlite-data` remain separate databases, while newer writers retain
+their dedicated volumes. Reserved declarations do not redirect any writer.
 
 The five non-`pops-<id>-data` blob volumes hold bytes the pillar writes at
 runtime rather than a database: ingest media, recipe hero images, engram
@@ -106,23 +106,37 @@ no such dependency; dev has no food worker at all.
 
 ## `litestream/`
 
-Eleven configs — `ai`, `bfm`, `cerebrum`, `contacts`, `finance`, `food`,
-`inventory`, `lists`, `media`, `purchases`, `registry` — each mounted
-read-only at `/etc/litestream.yml` into the matching `<id>-litestream`
-sidecar. `check-litestream-sidecar-parity.mjs` (wired into `Infra Lint`)
-fails the build if a config ever loses its sidecar or a sidecar its config,
-and also opens each matched sidecar to check that it mounts its own config
-and its own `pops-<id>-data` volume rather than another pillar's — matching
-ids alone would let a sidecar point at the wrong file and still pass. Every
-config replicates `/data/sqlite/<id>.db` with `sync-interval: 1s`,
-`retention: 24h`, `snapshot-interval: 1h`, `validation-interval: 12h`, and
-interpolates `<ID>_LITESTREAM_REPLICA_URL`, and its matching sidecar passes
-through that name. The guard enforces the sidecar's ID-based variable name.
+Each `litestream/<id>.yml` config is mounted read-only at `/etc/litestream.yml`
+into its matching `<id>-litestream` sidecar. The parity guard rejects orphan
+configs/sidecars, another pillar's config, mismatched writer/backup volume files,
+read-only DATA mounts, and missing, unsafe or shadowed database paths. DATA is
+writable for Litestream's shadow WAL; configuration remains read-only. It reads each config's
+actual `dbs[].path` declarations instead of assuming every database lives under
+`/data/sqlite`. The maintained plain-Node parser accepts block-style database
+lists with literal absolute `/data/...` paths and fails closed for unsupported
+or interpolated declarations. Writer and backup mounts must address the same
+volume-relative database file; nested volume options (including subpaths) are
+unsupported and fail closed instead of being discarded. Each sidecar passes through its own
+`<ID>_LITESTREAM_REPLICA_URL` variable.
 
-Each sidecar mounts `pops-<id>-data:/data/sqlite:ro`. Only `bfm` has an API
-container writing to that volume; the other ten pillars still write to
-`pops-sqlite-data`, so their sidecars would replicate an empty volume and the
-configs are reference-only until the per-pillar split lands.
+The reference Compose sidecars mount the same configured storage as their
+writers without moving writer data. Writer discovery uses owning build and
+database-path declarations; volume names are not inferred from pillar IDs.
+A sidecar/config pair alone is not evidence of coverage. Storage migration and
+deployer activation require their own coordinated data handling; these source
+declarations do not verify an operational replica or restore drill.
+
+Documents keeps its ledger and private spool together under `/data/documents`.
+Its Litestream sidecar sees only `pops-documents-data`, read-write, and replicates
+`documents.db`; that SQLite replica alone cannot recover admitted file bytes.
+Complete upload recovery requires a cold consistent backup of the **whole DATA
+volume**, with the writer stopped. Its separate upload-authority volume is
+never backed up or rolled back alongside DATA. Restore preserves the current
+independent authority and deployment identity; full-host recovery requires a
+fresh identity and deliberately leaves a restored ledger quarantined. The
+owning [Documents storage contract](../pillars/documents/README.md) specifies
+provisioning and restore boundaries; the reference Compose file does not
+activate or provision a deployer's storage.
 
 `backup/cerebrum-engrams.yml` is the rclone+age counterpart for the cerebrum
 engram Markdown tree, which is files rather than SQLite.

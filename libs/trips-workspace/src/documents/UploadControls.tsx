@@ -4,12 +4,14 @@ import { UploadTaskStatus } from './UploadTaskStatus';
 
 import type { ReactElement } from 'react';
 
+import type { DurableUploadInput } from './durable-upload-api';
 import type { PaperlessTask, PaperlessUploadPolicy } from './types';
 
 /** Render file selection, upload status and linking actions for one upload. */
 export function UploadControls(props: {
   policy: PaperlessUploadPolicy | null;
   file: File | null;
+  verifiedInput?: DurableUploadInput | null;
   task: PaperlessTask | undefined;
   taskError: boolean;
   taskRefetch: () => void;
@@ -49,6 +51,7 @@ function UploadStateActions(props: Parameters<typeof UploadControls>[0]): ReactE
         uncertain={props.uncertain}
         file={props.file}
         onSearch={props.onSearchOwner}
+        pending={props.uploadPending}
       />
       <UploadLinkAction
         task={props.task}

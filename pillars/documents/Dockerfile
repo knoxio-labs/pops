@@ -1,15 +1,8 @@
-# DO NOT EDIT blindly — hand-written for the documents bridge pillar
-# (@pops/documents, ADR-035 bridge kind, ADR-039 workstream 13). Mirrors the
-# collapsed-pillar build shape (pillars/orchestrator/Dockerfile): scope the
-# install + build to the @pops/documents subgraph so unrelated pillars never
-# enter this image's context.
-#
-# This is a source-only scaffold build — it does not wire paperless-ngx /
-# paperless-redis containers, networks, volumes, or secrets. That is a
-# separate, later, prod-gated step (ADR-039 workstream 22).
-
 FROM node:24-slim AS builder
 WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ \
+    && rm -rf /var/lib/apt/lists/*
 
 # Workspace root manifests — needed for pnpm install to resolve.
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json .oxfmtrc.json ./
@@ -48,6 +41,7 @@ COPY libs/types/tsconfig.build.json ./libs/types/tsconfig.build.json
 COPY pillars/documents/src ./pillars/documents/src
 COPY pillars/documents/scripts ./pillars/documents/scripts
 COPY pillars/documents/openapi ./pillars/documents/openapi
+COPY pillars/documents/migrations ./pillars/documents/migrations
 COPY pillars/documents/tsconfig.json ./pillars/documents/tsconfig.json
 COPY pillars/documents/tsconfig.build.json ./pillars/documents/tsconfig.build.json
 
@@ -66,9 +60,18 @@ WORKDIR /app
 COPY --from=builder --chown=node:node /app/deploy ./
 COPY --from=builder --chown=node:node /app/pillars/documents/dist ./dist
 COPY --from=builder --chown=node:node /app/pillars/documents/openapi ./openapi
+COPY --from=builder --chown=node:node /app/pillars/documents/migrations ./migrations
+
+RUN mkdir -p /data/documents /data/documents-upload-guard \
+    && chmod 0700 /data/documents /data/documents-upload-guard \
+    && chown node:node /data/documents /data/documents-upload-guard
+ENV DOCUMENTS_DATA_DIR=/data/documents
+ENV DOCUMENTS_UPLOAD_GUARD_DIR=/data/documents-upload-guard
 
 ARG BUILD_VERSION=dev
 ENV BUILD_VERSION=$BUILD_VERSION
+
+LABEL pops.smoke.fixture="smoke-fixture.json"
 
 EXPOSE 3012
 USER node

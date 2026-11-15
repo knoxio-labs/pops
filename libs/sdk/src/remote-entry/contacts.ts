@@ -1,5 +1,7 @@
 import type { ComponentType } from 'react';
 
+import type { DocumentUploadHostCapability } from './document-uploads.js';
+
 /** Actual owner selection; the canonical reference is never reconstructed from a display label. */
 export interface ContactChooserSelection {
   name: string;
@@ -45,5 +47,6 @@ export interface ContactsHostCapability {
 
 /** Optional host capabilities forwarded to remote pages; a standalone host may omit them. */
 export interface RemotePageHostProps {
+  documentUploads?: DocumentUploadHostCapability;
   contacts?: ContactsHostCapability;
 }

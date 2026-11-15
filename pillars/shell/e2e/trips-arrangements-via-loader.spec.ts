@@ -448,9 +448,13 @@ for (const viewport of [
     });
     expect(context.owners.associations).toHaveLength(1);
     expect(context.owners.uploadCount()).toBe(1);
-    expect(context.owners.taskReads.every((url) => url.endsWith('/arrangement-upload-1'))).toBe(
-      true
-    );
+    expect(context.owners.operationIds).toHaveLength(1);
+    expect(context.owners.uploadReads.length).toBeGreaterThanOrEqual(2);
+    expect(
+      context.owners.uploadReads.every((url) =>
+        url.endsWith(`/paperless/uploads/${context.owners.operationIds[0]}`)
+      )
+    ).toBe(true);
     expect(context.stayCreates).toEqual([
       { visitId: 31, timing: { arrival: '2030-04-12', departure: '2030-04-13' } },
     ]);
