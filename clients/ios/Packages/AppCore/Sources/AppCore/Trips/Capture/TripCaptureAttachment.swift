@@ -1,5 +1,3 @@
-import Foundation
-
 /// An accepted Documents identity. A local file or its metadata is never an attachment identity.
 public enum TripCaptureAttachment: Codable, Hashable, Sendable {
     case task(String)
