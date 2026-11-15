@@ -1,6 +1,7 @@
 import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
 import { trips, visits } from './records.js';
+import { removalColumns } from './removal-columns.js';
 
 import type { SourceLink } from '../../contract/schemas.js';
 import type { Stay, StayTiming } from '../../contract/stay-schemas.js';
@@ -14,6 +15,7 @@ export const stays = sqliteTable(
       .notNull()
       .references(() => trips.id),
     visitId: integer('visit_id').references(() => visits.id),
+    ...removalColumns(),
     name: text('name'),
     kind: text('kind').$type<Stay['kind']>(),
     status: text('status').$type<Stay['status']>(),

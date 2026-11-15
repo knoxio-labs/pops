@@ -54,12 +54,15 @@ describe('finite canonical Trips MCP surface', () => {
       for (const [method, value] of Object.entries(openApiObject(path, 'path'))) {
         const operation = openApiObject(value, 'operation');
         if (typeof operation['operationId'] === 'string')
-          expected.set(`trips.${operation['operationId']}`, method === 'get');
+          expected.set(
+            `trips.${operation['operationId']}`,
+            method === 'get' || operation['x-pops-read-only'] === true
+          );
       }
     }
-    expect(expected.size).toBe(89);
-    expect(tripsTools).toHaveLength(89);
-    expect(new Set(tripsTools.map((entry) => entry.name)).size).toBe(89);
+    expect(expected.size).toBe(91);
+    expect(tripsTools).toHaveLength(91);
+    expect(new Set(tripsTools.map((entry) => entry.name)).size).toBe(91);
     expect(tripsTools.map((entry) => entry.name).toSorted()).toEqual(
       [...expected.keys()].toSorted()
     );
@@ -69,6 +72,19 @@ describe('finite canonical Trips MCP surface', () => {
       expect(entry.description.trim()).not.toBe('');
       expect(allTools.find((registered) => registered.name === entry.name)).toBe(entry);
     }
+    expect(tool('routeDrafts.preview').readOnly).toBe(true);
+    expect(tool('routeDrafts.operate').readOnly).toBe(false);
+  });
+
+  it('calls the POST route-draft deletion preview as a query', async () => {
+    await tool('routeDrafts.preview').handler({ tripId: 7, pathId: 3 });
+
+    expect(callDynamic).toHaveBeenCalledExactlyOnceWith(
+      'routeDrafts',
+      'preview',
+      { tripId: 7, pathId: 3 },
+      'query'
+    );
   });
 
   it('reads the canonical workspace unchanged through the owning SDK operation', async () => {

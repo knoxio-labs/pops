@@ -11,6 +11,7 @@ const TRIPS_WIRE_NAV = { ...TRIPS_NAV, items: [...TRIPS_NAV.items] } satisfies N
 const TRIPS_WIRE_PAGES = [...TRIPS_PAGES] satisfies PageDescriptor[];
 const TRIPS_QUERIES = [
   'trips.route.get',
+  'trips.routeDrafts.preview',
   'trips.meetingPlans.list',
   'trips.meetingPlans.get',
   'trips.captureWorkspace.get',
@@ -45,6 +46,7 @@ const TRIPS_QUERIES = [
 ] as const;
 const TRIPS_MUTATIONS = [
   'trips.route.operate',
+  'trips.routeDrafts.operate',
   'trips.meetingPlans.operate',
   'trips.captures.create',
   'trips.captures.update',

@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 
 import { EventSchema } from '../../contract/event-schemas.js';
 import { JourneySchema } from '../../contract/journey-schemas.js';
@@ -68,7 +68,7 @@ function currentAffected(db: TripsDb, tripId: number, receipt: SourceReceipt): S
       const current = db
         .select()
         .from(events)
-        .where(and(eq(events.tripId, tripId), eq(events.id, event.id)))
+        .where(and(eq(events.tripId, tripId), eq(events.id, event.id), isNull(events.removedAt)))
         .get();
       return current === undefined ? [] : [EventSchema.parse(current)];
     }),
@@ -76,7 +76,9 @@ function currentAffected(db: TripsDb, tripId: number, receipt: SourceReceipt): S
       const current = db
         .select()
         .from(journeys)
-        .where(and(eq(journeys.tripId, tripId), eq(journeys.id, journey.id)))
+        .where(
+          and(eq(journeys.tripId, tripId), eq(journeys.id, journey.id), isNull(journeys.removedAt))
+        )
         .get();
       return current === undefined ? [] : [JourneySchema.parse(current)];
     }),
@@ -84,7 +86,7 @@ function currentAffected(db: TripsDb, tripId: number, receipt: SourceReceipt): S
       const current = db
         .select()
         .from(stays)
-        .where(and(eq(stays.tripId, tripId), eq(stays.id, stay.id)))
+        .where(and(eq(stays.tripId, tripId), eq(stays.id, stay.id), isNull(stays.removedAt)))
         .get();
       return current === undefined ? [] : [StaySchema.parse(current)];
     }),

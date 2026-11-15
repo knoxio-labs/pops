@@ -5,6 +5,7 @@ import { getPillar } from '../pillar-client.js';
 import { projectOperationInput, projectOperationSuccess } from './openapi-input.js';
 import { arrangementOperations } from './trips/arrangements.js';
 import { planningOperations } from './trips/planning.js';
+import { routeDraftOperations } from './trips/route-drafts.js';
 import { sourceOperations } from './trips/sources.js';
 import { mapCallResult, toolError } from './utils.js';
 
@@ -13,9 +14,15 @@ import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import type { ToolDef } from './tool-def.js';
 
 const document: unknown = JSON.parse(readFileSync(contractInputs.trips, 'utf8'));
-const operations = { ...planningOperations, ...sourceOperations, ...arrangementOperations };
+const operations = {
+  ...planningOperations,
+  ...sourceOperations,
+  ...arrangementOperations,
+  ...routeDraftOperations,
+};
 const receiptOperations = new Set([
   'route.operate',
+  'routeDrafts.operate',
   'meetingPlans.operate',
   'journeyLegs.remove',
   'captures.create',
@@ -61,7 +68,7 @@ function defineTool(operationId: string, description: string): ToolDef {
   if (parts.length !== 2 || router === undefined || procedure === undefined)
     throw new Error(`Invalid finite Trips operation: ${operationId}`);
   const scope = `trips.${operationId}`;
-  const readOnly = input.method === 'GET';
+  const readOnly = input.readOnly;
   return {
     name: scope,
     scope,

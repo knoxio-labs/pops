@@ -1,6 +1,7 @@
 import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
 import { trips, visits } from './records.js';
+import { removalColumns } from './removal-columns.js';
 
 import type { EventTiming, TripEvent } from '../../contract/event-schemas.js';
 import type { SourceLink } from '../../contract/schemas.js';
@@ -14,6 +15,7 @@ export const events = sqliteTable(
       .notNull()
       .references(() => trips.id),
     visitId: integer('visit_id').references(() => visits.id),
+    ...removalColumns(),
     name: text('name'),
     intention: text('intention').$type<TripEvent['intention']>(),
     arrangement: text('arrangement').$type<TripEvent['arrangement']>(),

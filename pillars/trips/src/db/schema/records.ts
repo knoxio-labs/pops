@@ -1,5 +1,7 @@
 import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
+import { removalColumns } from './removal-columns.js';
+
 import type { AnySQLiteColumn } from 'drizzle-orm/sqlite-core';
 
 import type { SourceLink, VisitTiming } from '../../contract/schemas.js';
@@ -47,6 +49,7 @@ export const visits = sqliteTable(
       .references(() => places.id),
     position: integer('position').notNull(),
     revision: integer('revision').notNull().default(0),
+    ...removalColumns(),
     timing: text('timing', { mode: 'json' }).$type<VisitTiming>().notNull().default({}),
     notes: text('notes').notNull().default(''),
     sourceLinks: text('source_links', { mode: 'json' }).$type<SourceLink[]>().notNull().default([]),

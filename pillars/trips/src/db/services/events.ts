@@ -1,4 +1,4 @@
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, isNull } from 'drizzle-orm';
 
 import { EventSchema } from '../../contract/event-schemas.js';
 import { events } from '../schema.js';
@@ -7,6 +7,7 @@ import { getTrip, getVisit } from './records.js';
 import { deleteResponsibilityForTarget } from './responsibility-cleanup.js';
 import { requireOwnedRecord } from './source-record.js';
 import { assertSourceUnreferenced } from './source-references.js';
+import { nextSourceWriteGeneration } from './source-write-generation.js';
 
 import type { TripEvent, EventInput } from '../../contract/event-schemas.js';
 import type { TripsDb } from '../index.js';
@@ -17,7 +18,7 @@ export function listEvents(db: TripsDb, tripId: number): TripEvent[] {
   return db
     .select()
     .from(events)
-    .where(eq(events.tripId, tripId))
+    .where(and(eq(events.tripId, tripId), isNull(events.removedAt)))
     .orderBy(asc(events.id))
     .all()
     .map((row) => EventSchema.parse(row));
@@ -30,7 +31,7 @@ export function getEvent(db: TripsDb, tripId: number, id: number): TripEvent {
       db
         .select()
         .from(events)
-        .where(and(eq(events.tripId, tripId), eq(events.id, id)))
+        .where(and(eq(events.tripId, tripId), eq(events.id, id), isNull(events.removedAt)))
         .get()
     )
   );
@@ -62,13 +63,14 @@ export function updateEvent(db: TripsDb, tripId: number, id: number, input: Even
   return db.transaction(
     (tx) => {
       getEvent(tx, tripId, id);
+      const removalRevision = nextSourceWriteGeneration(tx, events, tripId, id);
       if (input.visitId !== undefined && input.visitId !== null)
         getVisit(tx, tripId, input.visitId);
       return EventSchema.parse(
         requireOwnedRecord(
           tx
             .update(events)
-            .set({ ...input, updatedAt: new Date().toISOString() })
+            .set({ ...input, removalRevision, updatedAt: new Date().toISOString() })
             .where(and(eq(events.tripId, tripId), eq(events.id, id)))
             .returning()
             .get()

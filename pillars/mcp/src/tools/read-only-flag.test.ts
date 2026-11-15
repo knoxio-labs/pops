@@ -105,6 +105,7 @@ const expectedWrites = [
   'trips.rentals.update',
   'trips.responsibilities.replace',
   'trips.route.operate',
+  'trips.routeDrafts.operate',
   'trips.stays.create',
   'trips.stays.delete',
   'trips.stays.update',

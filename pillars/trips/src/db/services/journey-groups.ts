@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 
 import { journeyGroups, journeyGroupMembers } from '../schema.js';
 import { getJourneyGroup, requireJourneyGroupRevision } from './journey-group-queries.js';
@@ -59,11 +59,18 @@ export function addBlankJourneyAlternative(
       const group = requireJourneyGroupRevision(tx, identity, expectedRevision);
       const current = getJourney(tx, identity.tripId, group.currentJourneyId);
       const journey = createJourney(tx, identity.tripId, { buffers: current.buffers });
+      const last = tx
+        .select({ position: journeyGroupMembers.position })
+        .from(journeyGroupMembers)
+        .where(eq(journeyGroupMembers.groupId, group.id))
+        .orderBy(desc(journeyGroupMembers.position))
+        .limit(1)
+        .get();
       tx.insert(journeyGroupMembers)
         .values({
           groupId: group.id,
           journeyId: journey.id,
-          position: group.alternativeJourneyIds.length + 1,
+          position: last === undefined ? 0 : last.position + 1,
         })
         .run();
       advanceGroup(tx, group, group.currentJourneyId);
@@ -82,11 +89,24 @@ export function selectJourneyAlternative(
   return db.transaction(
     (tx) => {
       const group = requireJourneyGroupRevision(tx, identity, input.expectedRevision);
+      getJourney(tx, identity.tripId, input.journeyId);
       if (group.currentJourneyId === input.journeyId) return group;
-      const index = group.alternativeJourneyIds.indexOf(input.journeyId);
-      if (index < 0) throw new TripsServiceError('not_found');
+      if (!group.alternativeJourneyIds.includes(input.journeyId))
+        throw new TripsServiceError('not_found');
+      const selected = requireOwnedRecord(
+        tx
+          .select({ position: journeyGroupMembers.position })
+          .from(journeyGroupMembers)
+          .where(
+            and(
+              eq(journeyGroupMembers.groupId, group.id),
+              eq(journeyGroupMembers.journeyId, input.journeyId)
+            )
+          )
+          .get()
+      );
       tx.update(journeyGroupMembers)
-        .set({ position: index + 1 })
+        .set({ position: selected.position })
         .where(
           and(
             eq(journeyGroupMembers.groupId, group.id),

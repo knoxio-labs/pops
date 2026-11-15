@@ -98,6 +98,54 @@ restores original path/gap identities without recreating source records or
 rewriting independent source edits. No-op receipts cannot be undone. These routes
 use the projected `trips.route` scope for both UI and MCP callers.
 
+Draft deletion uses the separate `trips.routeDrafts` scope. Placement credentials
+cannot delete source records or use placement Undo/replay to adopt a draft-delete
+receipt. `POST /trips/:tripId/route/paths/:pathId/deletion-preview` is read-only;
+its optional `deleteSources` body names the exact canonical selection. The response
+contains candidates, independent confirmation facts, source guards, retention
+reasons and a fingerprint. The default selection covers unconfirmed, unshared
+direct Visit/Journey members, their Journey legs and related Stays, Events,
+Rentals and Meetings within the draft's canonical candidate set. Explicit
+unchecked selection remains authoritative; shared records and required context
+remain protected. Changing the selection requires a new preview.
+
+`POST /trips/:tripId/route/draft-operations` accepts the same UUID/route-CAS
+envelope with `path.delete` (`pathId`, `expectedPreviewFingerprint`, exact
+`deleteSources`) or draft-scoped `undo`. Only alternative paths can be deleted;
+applied paths remain history. The producer re-reads source and reference facts
+inside one immediate transaction, rejects a stale preview, and removes the path
+plus selected unconfirmed, unshared source records atomically. Surviving former
+members remain unplaced. Other route order, paths, structural gaps and allocated
+identities are retained.
+
+Stay Agreed/Reserved/Purchased, Rental Reserved/Purchased, Meeting agreement Agreed,
+and each Event or live Journey leg with arrangement Agreed/Booked **or** purchase
+Purchased are protected. Intention never cancels purchase or arrangement. A Visit
+or Journey has no inferred confirmation status: the producer retains its exact
+identity when a confirmed/shared descendant or independent reference needs that
+context. An exclusive mixed Journey keeps confirmed legs while selected
+unconfirmed legs may be removed. Active Capture/Explore/Decision references and
+Journey groups protect shared sources; unselected independent candidates remain.
+Names, dates, reference numbers and document links never establish confirmation.
+
+Draft removal archives source identities instead of hard-deleting them. Ordinary
+source lists, gets, writes, placement adoption and association projections exclude
+archived sources; historical receipts and original data remain retained. Document
+and responsibility relation rows remain in storage but are omitted from live
+lists when their target is archived. Places, Contacts, Capture originals,
+Documents originals and external bookings are never deleted or cancelled.
+
+The immutable draft receipt records its route outcome and candidate dispositions;
+`currentSources` separately reports each affected identity's current lifecycle.
+Exact retries replay the original outcome, including after Undo. Draft Undo
+requires both the owned route after-state and untouched source, collection and
+reference guards. It restores only this operation's archived records under their
+original IDs with new lifecycle revisions, never an old whole workspace or
+independent edits to retained sources. Any failure rolls back source changes,
+route state, Undo lineage and receipt insertion together. Journey/Stay/Event
+metadata writes advance a private generation so identical-field round trips
+cannot regain an older creation-Undo claim.
+
 `PUT /trips/:tripId/visit-order` retains its complete unique canonical `visitIds`
 permutation contract. It ranks only Visit slots **within each current container**;
 Journey/gap tokens, their endpoints and root/alternative membership stay fixed.
