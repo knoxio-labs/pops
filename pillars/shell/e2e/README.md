@@ -37,6 +37,11 @@ supplies it when a spec controls registry boot separately. `stubShellBoot(page)`
 is the default; take the registry off the air with `failRegistry(page)` when the
 fallback IS the subject.
 
+Trips upload scenarios use `helpers/trips-durable-uploads.ts` for immutable UUID
+admission, fingerprint-checked original bytes, dispatch and GET recovery proof.
+The fixture mirrors the Documents upload contract. Known rejection is represented
+by a failed owner task; unavailable reads retain the accepted operation for retry.
+
 Its route patterns are anchored regexes rather than `**` globs on purpose. `**`
 spans `/`, so a glob for the pillar-boot endpoint `/pillars` also swallows
 `/registry-api/registry/pillars`, and Playwright serves the most recently

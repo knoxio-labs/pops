@@ -1,3 +1,4 @@
+import { dismissFailedUpload } from './dismiss-failed-upload';
 import {
   createDurableUpload,
   dispatchDurableUpload,
@@ -5,7 +6,7 @@ import {
   readDurableUpload,
 } from './durable-upload-api';
 import { DurableUploadRecoveryRequired } from './durable-upload-errors';
-import { digestFile, prepareUploadInput } from './durable-upload-input';
+import { prepareUploadInput, verifyReattachedFile } from './durable-upload-input';
 import { DurableUploadPersistence } from './durable-upload-persistence';
 import { retainDurableRecord } from './durable-upload-proof';
 
@@ -28,6 +29,7 @@ export class DurableUploadOperation {
   private readonly persistence = new DurableUploadPersistence();
   private restoredRead = false;
   private archiveMatches: boolean | null = null;
+  private latestState: DurableUploadRecord['state'] | null = null;
 
   constructor(
     readonly operationId: string,
@@ -78,23 +80,14 @@ export class DurableUploadOperation {
 
   /** Verify a specifically reattached File against immutable bytes; metadata and operation UUID remain unchanged. */
   async reattach(file: File): Promise<void> {
-    if (
-      this.active ||
-      this.input === null ||
-      this.needsRecovery() ||
-      (this.record !== null &&
-        this.record.state !== 'awaiting_content' &&
-        this.record.state !== 'admitted')
-    )
-      throw new Error('Check upload status before reattaching the original file.');
+    if (this.active) throw new Error('Check upload status before reattaching the original file.');
     this.active = true;
     try {
-      await this.persistence.require().verify();
-      if (file.size !== this.input.byteLength || (await digestFile(file)) !== this.input.sha256)
-        throw new Error(
-          'This file does not match the retained upload fingerprint. Select the original file.'
-        );
-      this.persistence.require().assertCurrent();
+      await verifyReattachedFile(
+        file,
+        { input: this.input, needsRecovery: this.needsRecovery(), record: this.record },
+        this.persistence.require()
+      );
       this.file = file;
     } finally {
       this.active = false;
@@ -118,6 +111,26 @@ export class DurableUploadOperation {
     this.active = true;
     try {
       return await this.resume(transport);
+    } finally {
+      this.active = false;
+    }
+  }
+
+  /** Forget only an explicitly dismissed, owner-proven failed intent after exact journal removal succeeds. */
+  async dismissFailed(): Promise<void> {
+    if (this.active) throw new Error('This upload operation already has a request in progress.');
+    this.active = true;
+    try {
+      await dismissFailedUpload(
+        this.operationId,
+        this.persistence,
+        () =>
+          !this.recoveryRequired &&
+          this.record?.state === 'failed' &&
+          this.latestState === 'failed' &&
+          this.archiveMatches === true &&
+          this.record.ownerMatches
+      );
     } finally {
       this.active = false;
     }
@@ -160,6 +173,7 @@ export class DurableUploadOperation {
       await this.persistence.require().verify();
       const record = await readDurableUpload(input, transport);
       if (record === null) {
+        this.latestState = null;
         if (this.record?.taskId !== null && this.record?.taskId !== undefined)
           return structuredClone(this.record);
         this.record = null;
@@ -180,16 +194,14 @@ export class DurableUploadOperation {
   private adopt(record: DurableUploadRecord): void {
     this.record = retainDurableRecord(this.record, record);
     this.archiveMatches = record.ownerMatches;
+    this.latestState = record.state;
     this.recoveryRequired = this.record.state === 'outcome_unknown';
   }
 
   private prepare(): Promise<DurableUploadInput> {
     if (this.input !== null) return Promise.resolve(this.input);
     if (this.preparing !== null) return this.preparing;
-    const file = this.file;
-    if (file === null)
-      return Promise.reject(new Error('Select the original file before uploading.'));
-    this.preparing ??= prepareUploadInput(this.operationId, file).then((input) => {
+    this.preparing ??= prepareUploadInput(this.operationId, this.file).then((input) => {
       this.input = input;
       return input;
     });
@@ -214,6 +226,7 @@ export class DurableUploadOperation {
       throw error;
     }
     this.archiveMatches = record.ownerMatches;
+    this.latestState = record.state;
     this.recoveryRequired = record.state === 'outcome_unknown';
     return record;
   }

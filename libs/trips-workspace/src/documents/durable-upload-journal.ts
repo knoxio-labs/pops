@@ -155,7 +155,7 @@ export class UploadJournal {
     this.persist(key, canonical);
   }
 
-  /** Remove only this operation from this exact context after independently confirmed completion. */
+  /** Remove only this operation after proven completion or explicit dismissal of a proven failed upload. */
   complete(operationId: string): void {
     const key = this.operationKey(operationId);
     if (this.read(key) === null) return;

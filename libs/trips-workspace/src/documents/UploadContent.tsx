@@ -58,7 +58,14 @@ function ActiveUploadControls({
       associationPending={actions.associationMutation.isPending}
       onRemoveFile={
         removeAllowed
-          ? () => runUploadContextAction(fields, beforeRequest, fields.clearSelectedFile)
+          ? () =>
+              runUploadContextAction(fields, beforeRequest, () => {
+                if (workflow.taskFailed) {
+                  void fields.dismissFailedFile();
+                } else {
+                  fields.clearSelectedFile();
+                }
+              })
           : undefined
       }
       onUpload={actions.submitUpload}

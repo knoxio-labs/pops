@@ -29,6 +29,8 @@ export interface UploadFields extends DocumentUploadSnapshot {
   setTaskId: (id: string | null) => void;
   setTaskReceipt: (taskId: string, result: PaperlessTask) => void;
   clearSelectedFile: () => void;
+  /** Dismiss a proven failed operation's exact durable metadata before clearing its live view. */
+  dismissFailedFile: () => Promise<void>;
   canStartUpload: () => boolean;
   claimUpload: () => boolean;
   claimRecovery: () => boolean;
@@ -66,9 +68,9 @@ export function useUploadFields(
     },
     [intent, setSession]
   );
-  const claims = useUploadClaims(intent, notify, setField);
   const setters = useUploadSetters(setField);
   const clearSelectedFile = useCallback(() => setFile(null), [setFile]);
+  const claims = useUploadClaims(intent, notify, setField, clearSelectedFile);
   return {
     ...snapshot,
     durable: intent.durable,
@@ -93,8 +95,9 @@ function useUploadClaims(
   setField: <K extends Exclude<keyof DocumentUploadSnapshot, 'file'>>(
     field: K,
     value: DocumentUploadSnapshot[K]
-  ) => void
-): Pick<UploadFields, 'claimUpload' | 'claimRecovery' | 'setTaskReceipt'> {
+  ) => void,
+  clearSelectedFile: () => void
+): Pick<UploadFields, 'claimUpload' | 'claimRecovery' | 'setTaskReceipt' | 'dismissFailedFile'> {
   const claimUpload = useCallback(() => {
     if (!intent.claim()) return false;
     notify();
@@ -115,7 +118,26 @@ function useUploadClaims(
     },
     [intent, setField]
   );
-  return { claimUpload, claimRecovery, setTaskReceipt };
+  return {
+    claimUpload,
+    claimRecovery,
+    setTaskReceipt,
+    dismissFailedFile: async () => {
+      if (!intent.claimRecovery()) return;
+      notify();
+      try {
+        await intent.durable.dismissFailed();
+        clearSelectedFile();
+      } catch (error) {
+        setField(
+          'uploadError',
+          error instanceof Error ? error.message : 'Upload recovery storage is unavailable.'
+        );
+      } finally {
+        setField('uploadPending', false);
+      }
+    },
+  };
 }
 
 function useUploadSetters(
@@ -127,6 +149,7 @@ function useUploadSetters(
   UploadFields,
   | keyof DocumentUploadSnapshot
   | 'clearSelectedFile'
+  | 'dismissFailedFile'
   | 'setFile'
   | 'claimUpload'
   | 'claimRecovery'

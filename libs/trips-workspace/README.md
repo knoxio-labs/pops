@@ -486,6 +486,11 @@ Each operation has its own storage key, so independent tab admissions cannot ove
 a shared collection. The journal entry is admitted and read back before the first owner write. Missing, corrupt or
 unwritable browser storage disables upload with a recovery action; it never downgrades
 to a memory-only upload. Existing-original selection remains independent of this storage.
+Explicit Remove of an owner-proven failed upload deletes only that operation's
+recovery metadata before clearing its view. Storage failure retains the row and
+retryable removal action. Pending, accepted and uncertain operations retain their
+recovery records; a failed outcome alone does not dismiss an intent.
+
 Restoration outcomes belong to the retained queue/composer and exact journal binding. Views
 observe those owner snapshots; reopening rereads the journal, and edit-lock changes retry
 Capture admission without replacing Files, operation identities or unresolved receipts.

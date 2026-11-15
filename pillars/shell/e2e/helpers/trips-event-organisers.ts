@@ -47,7 +47,13 @@ export async function stubSourceContactOwners(page: Page, kind: 'event' | 'stay'
   await stubUnavailableSourceDocuments(page, 7);
   const writes = await stubSourceRecord(page, kind);
   const owner = await stubContactOwner(page);
-  return { ...owner, writes };
+  return {
+    ...owner,
+    writes,
+    sourceFailure: page.getByRole('alert').filter({
+      has: page.getByText('trips.temporarily_unavailable', { exact: true }),
+    }),
+  };
 }
 
 async function stubSourceRecord(page: Page, kind: 'event' | 'stay'): Promise<unknown[]> {
