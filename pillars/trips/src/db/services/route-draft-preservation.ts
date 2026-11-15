@@ -13,7 +13,7 @@ import type {
   RouteDraftSource,
 } from '../../contract/route-draft-schemas.js';
 import type { RoutePath } from '../../contract/route-schemas.js';
-import type { RouteDraftRecord } from './route-draft-records.js';
+import type { RouteDraftRecord } from '../schema/route-draft-types.js';
 import type { RouteDraftSnapshot } from './route-draft-snapshot.js';
 
 type Reason = RouteDraftCandidate['reasons'][number];

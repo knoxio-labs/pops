@@ -15,7 +15,7 @@ import { nextRouteDraftRevision, writeRouteDraftLifecycle } from './route-draft-
 import { requireOwnedRecord, TripsServiceError } from './source-record.js';
 
 import type { TripsDb } from '../index.js';
-import type { RouteDraftInverse } from './route-draft-effects.js';
+import type { RouteDraftInverse } from '../schema/route-draft-types.js';
 import type { RouteDraftSnapshot } from './route-draft-snapshot.js';
 
 function assertRemovedRecordsOwned(

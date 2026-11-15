@@ -8,7 +8,7 @@ import { createEvent } from '../services/events.js';
 import { createJourneyLeg } from '../services/journey-legs.js';
 import { operateMeetingPlan } from '../services/meeting-plans.js';
 import { createRental } from '../services/rentals.js';
-import { previewRouteDraftDeletion } from '../services/route-draft-snapshot.js';
+import { previewRouteDraftDeletion } from '../services/route-draft-preview.js';
 import { createStay } from '../services/stays.js';
 import { draftCandidate, draftState } from './route-draft-test-utils.js';
 import { withRouteFixture } from './route-test-utils.js';

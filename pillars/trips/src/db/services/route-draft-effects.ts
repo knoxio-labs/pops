@@ -9,24 +9,8 @@ import { requireOwnedRecord, TripsServiceError } from './source-record.js';
 
 import type { RouteDraftPreview } from '../../contract/route-draft-schemas.js';
 import type { TripsDb } from '../index.js';
-import type { RouteDraftRecord } from './route-draft-records.js';
+import type { RouteDraftInverse, RouteDraftRecord } from '../schema/route-draft-types.js';
 import type { RouteDraftSnapshot } from './route-draft-snapshot.js';
-
-/** One collection guard advances independently of retained Journey metadata. */
-export interface RouteDraftCollectionInverse {
-  journeyId: number;
-  beforeRevision: number;
-  expectedRevision: number;
-  beforeLegIds: number[];
-  afterLegIds: number[];
-}
-
-/** Mutable own-Undo guards accompany immutable public operation proof; originals are never deleted. */
-export interface RouteDraftInverse {
-  records: { before: RouteDraftRecord; after: RouteDraftRecord }[];
-  collections: RouteDraftCollectionInverse[];
-  referenceGuard: string;
-}
 
 /** Read one exact collection revision/order without dropping archived source identities from history. */
 export function routeDraftCollection(

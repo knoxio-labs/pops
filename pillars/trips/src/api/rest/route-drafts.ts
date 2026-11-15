@@ -2,7 +2,7 @@ import { initServer } from '@ts-rest/express';
 
 import { routeDraftsContract } from '../../contract/route-drafts.js';
 import { operateRouteDraft } from '../../db/services/route-draft-operations.js';
-import { previewRouteDraftDeletion } from '../../db/services/route-draft-snapshot.js';
+import { previewRouteDraftDeletion } from '../../db/services/route-draft-preview.js';
 import { withTripsErrors } from './with-errors.js';
 
 import type { TripsDb } from '../../db/index.js';

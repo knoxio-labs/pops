@@ -4,7 +4,7 @@ import { expect, it } from 'vitest';
 
 import { getVisit, updateVisit } from '../services/records.js';
 import { operateRouteDraft } from '../services/route-draft-operations.js';
-import { previewRouteDraftDeletion } from '../services/route-draft-snapshot.js';
+import { previewRouteDraftDeletion } from '../services/route-draft-preview.js';
 import { operateTripRoute } from '../services/route-operations.js';
 import { getTripRoute } from '../services/route-queries.js';
 import { deleteDraft, deletionRequest, draftState, undoDraft } from './route-draft-test-utils.js';

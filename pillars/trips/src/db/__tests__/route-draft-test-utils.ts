@@ -2,10 +2,8 @@ import { randomUUID } from 'node:crypto';
 
 import { routeGaps, routeOperations, routePaths } from '../schema.js';
 import { operateRouteDraft } from '../services/route-draft-operations.js';
-import {
-  previewRouteDraftDeletion,
-  readRouteDraftSnapshot,
-} from '../services/route-draft-snapshot.js';
+import { previewRouteDraftDeletion } from '../services/route-draft-preview.js';
+import { readRouteDraftSnapshot } from '../services/route-draft-snapshot.js';
 
 import type {
   RouteDraftCandidate,

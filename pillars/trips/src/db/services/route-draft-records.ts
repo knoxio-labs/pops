@@ -10,25 +10,7 @@ import { canonicalSourceValue } from './source-canonical.js';
 import { TripsServiceError } from './source-record.js';
 
 import type { RouteDraftCandidate, RouteDraftSource } from '../../contract/route-draft-schemas.js';
-import type {
-  events,
-  journeys,
-  journeyLegs,
-  meetingPlans,
-  rentals,
-  stays,
-  visits,
-} from '../schema.js';
-
-/** Raw owned rows retain lifecycle facts omitted from ordinary live source DTOs. */
-export type RouteDraftRecord =
-  | { kind: 'visit'; row: typeof visits.$inferSelect }
-  | { kind: 'journey'; row: typeof journeys.$inferSelect }
-  | { kind: 'journey-leg'; row: typeof journeyLegs.$inferSelect }
-  | { kind: 'stay'; row: typeof stays.$inferSelect }
-  | { kind: 'event'; row: typeof events.$inferSelect }
-  | { kind: 'rental'; row: typeof rentals.$inferSelect }
-  | { kind: 'meeting'; row: typeof meetingPlans.$inferSelect };
+import type { RouteDraftRecord } from '../schema/route-draft-types.js';
 
 /** Stable value guard; this is not an own-operation or Undo-lineage proof. */
 export function routeDraftFingerprint(value: unknown): string {

@@ -19,16 +19,11 @@ import {
   tripDocumentAssociations,
   arrangementResponsibilities,
 } from '../schema.js';
-import { planRouteDraftDeletion } from './route-draft-plan.js';
 import { readRouteSnapshot } from './route-storage.js';
 
-import type {
-  RouteDraftPreview,
-  RouteDraftPreviewInput,
-} from '../../contract/route-draft-schemas.js';
 import type { TripRoute } from '../../contract/route-schemas.js';
 import type { TripsDb } from '../index.js';
-import type { RouteDraftRecord } from './route-draft-records.js';
+import type { RouteDraftRecord } from '../schema/route-draft-types.js';
 
 /** One transaction's canonical source graph and explicit live/historical relation sets. */
 export interface RouteDraftSnapshot {
@@ -190,17 +185,4 @@ export function readRouteDraftSnapshot(db: TripsDb, tripId: number): RouteDraftS
     ...readDraftGroups(db, tripId),
     ...readDraftSourceLinks(db, tripId),
   };
-}
-
-/** Preview explicit canonical candidates without allocating identities or changing any source or route. */
-export function previewRouteDraftDeletion(
-  db: TripsDb,
-  tripId: number,
-  pathId: number,
-  input: RouteDraftPreviewInput
-): RouteDraftPreview {
-  return db.transaction(
-    (tx) => planRouteDraftDeletion(readRouteDraftSnapshot(tx, tripId), pathId, input),
-    { behavior: 'deferred' }
-  );
 }

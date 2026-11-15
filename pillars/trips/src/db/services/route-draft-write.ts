@@ -4,7 +4,7 @@ import { events, journeys, journeyLegs, meetingPlans, rentals, stays, visits } f
 import { requireOwnedRecord, TripsServiceError } from './source-record.js';
 
 import type { TripsDb } from '../index.js';
-import type { RouteDraftRecord } from './route-draft-records.js';
+import type { RouteDraftRecord } from '../schema/route-draft-types.js';
 
 /** One verified lifecycle transition; callers own the encompassing immediate transaction and guards. */
 export type RouteDraftLifecycleChange =

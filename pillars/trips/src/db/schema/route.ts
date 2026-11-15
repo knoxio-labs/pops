@@ -4,7 +4,7 @@ import { trips } from './records.js';
 
 import type { RouteDraftOperation, RouteDraftReceipt } from '../../contract/route-draft-schemas.js';
 import type { RouteOperation, RouteReceipt, TripRoute } from '../../contract/route-schemas.js';
-import type { RouteDraftInverse } from '../services/route-draft-effects.js';
+import type { RouteDraftInverse } from './route-draft-types.js';
 
 /** Single aggregate owns root and alternative order; JSON preserves typed, heterogeneous membership. */
 export const tripRoutes = sqliteTable('trip_routes', {

@@ -8,7 +8,7 @@ import { expect, it } from 'vitest';
 import { openTripsDb } from '../index.js';
 import { createPlace, createTrip, createVisit, listVisits } from '../services/records.js';
 import { operateRouteDraft } from '../services/route-draft-operations.js';
-import { previewRouteDraftDeletion } from '../services/route-draft-snapshot.js';
+import { previewRouteDraftDeletion } from '../services/route-draft-preview.js';
 import { operateTripRoute } from '../services/route-operations.js';
 import { getTripRoute } from '../services/route-queries.js';
 import { deletionRequest } from './route-draft-test-utils.js';

@@ -26,7 +26,7 @@ import { operateMeetingPlan } from '../services/meeting-plans.js';
 import { getPlace, getVisit, listVisits } from '../services/records.js';
 import { createRental, getRental } from '../services/rentals.js';
 import { operateRouteDraft } from '../services/route-draft-operations.js';
-import { previewRouteDraftDeletion } from '../services/route-draft-snapshot.js';
+import { previewRouteDraftDeletion } from '../services/route-draft-preview.js';
 import { createStay, getStay, updateStay } from '../services/stays.js';
 import { send } from './capture-test-utils.js';
 import {
