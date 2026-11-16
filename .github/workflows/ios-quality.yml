@@ -549,8 +549,8 @@ jobs:
       # `clients/ios/.maestro/README.md`
       # argues for Maestro over XCUITest; what follows is only about getting a
       # pillar running next to it.
-      # Run 43878013536 reached its seventh flow at 40 minutes and was still
-      # progressing when the 45-minute action cap expired; 60 leaves 15 minutes.
+      # Run 43878013536 was still in Inventory search when its 45-minute cap
+      # expired; 60 allows 15 minutes beyond the previous cap.
       #
       # THERE IS NO DOCKER ON THIS RUNNER. GitHub's macOS images ship no Docker
       # daemon, so `infra/docker-compose.dev.yml` — the obvious way to get a
