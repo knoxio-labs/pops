@@ -21,7 +21,7 @@ export function RouteSourceRow(
   const { item } = props;
   if (!props.historical && resolvedVisit(item))
     return <OverviewVisit {...props} visit={item.source} />;
-  if (!props.historical && resolvedJourney(item))
+  if (resolvedJourney(item))
     return (
       <li
         data-route-kind="journey"
@@ -32,6 +32,7 @@ export function RouteSourceRow(
         <JourneyRecord
           {...props}
           journey={item.source}
+          historical={props.historical}
           onJourneyVisibilityChange={props.onJourneyVisibilityChange}
         />
       </li>

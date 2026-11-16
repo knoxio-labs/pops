@@ -141,6 +141,77 @@ describe('source-backed TripOverview', () => {
     expect(await screen.findByText('workspace.noRouteResults')).toBeVisible();
     expect(screen.queryByRole('list', { name: 'Route' })).not.toBeInTheDocument();
   });
+  it('searches Journey legs inside an applied path and shows only the matching legs', async () => {
+    const responses = overviewResponses();
+    responses.set(
+      '/trips/7/route',
+      routeRead({
+        order: [{ kind: 'gap', id: 90 }],
+        paths: [
+          {
+            id: 8,
+            title: 'Applied path',
+            gapId: 90,
+            state: 'applied',
+            members: [{ kind: 'journey', id: 20 }],
+          },
+        ],
+      })
+    );
+    responses.set('/trips/7/journeys/20/legs', {
+      legs: [
+        sourceLeg(),
+        sourceLeg({
+          id: 41,
+          mode: 'Rail',
+          operator: 'Other operator',
+          arrangement: 'Not arranged',
+        }),
+      ],
+    });
+    mount(responses);
+    const search = await screen.findByRole('textbox', { name: 'workspace.search' });
+    await userEvent.type(search, 'Harbour operator');
+    const path = screen.getByRole('region', { name: 'Applied path' });
+    expect(await within(path).findByRole('link', { name: 'Harbour connection' })).toBeVisible();
+    expect(await within(path).findByText('Hydrofoil · Harbour operator')).toBeVisible();
+    expect(within(path).queryByText('Rail · Other operator')).not.toBeInTheDocument();
+  });
+  it('applies the booked filter to Journey legs inside an applied path', async () => {
+    const responses = overviewResponses();
+    responses.set(
+      '/trips/7/route',
+      routeRead({
+        order: [{ kind: 'gap', id: 90 }],
+        paths: [
+          {
+            id: 8,
+            title: 'Applied path',
+            gapId: 90,
+            state: 'applied',
+            members: [{ kind: 'journey', id: 20 }],
+          },
+        ],
+      })
+    );
+    responses.set('/trips/7/journeys/20/legs', {
+      legs: [
+        sourceLeg(),
+        sourceLeg({
+          id: 41,
+          mode: 'Rail',
+          operator: 'Unarranged service',
+          arrangement: 'Not arranged',
+        }),
+      ],
+    });
+    mount(responses);
+    await screen.findByRole('textbox', { name: 'workspace.search' });
+    await userEvent.click(screen.getByRole('button', { name: 'workspace.booked' }));
+    const path = screen.getByRole('region', { name: 'Applied path' });
+    expect(await within(path).findByText('Hydrofoil · Harbour operator')).toBeVisible();
+    expect(within(path).queryByText('Rail · Unarranged service')).not.toBeInTheDocument();
+  });
   it('opens the published Documents workspace even before the first association exists', async () => {
     mount(overviewResponses(), undefined, { documentsHref: '/trips/7/documents' });
     expect(await screen.findByRole('link', { name: 'Documents' })).toHaveAttribute(

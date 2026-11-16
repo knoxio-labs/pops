@@ -16,6 +16,7 @@ import type { JSX } from 'react';
 import type { Journey, JourneyLeg } from '../journey/types';
 import type { SourceQuery } from '../shared/use-source-query';
 import type { OverviewViewProps } from './types';
+import type { WorkspaceJourneyRecord } from './workspace-journey-record';
 
 /** Historical Journey group references remain distinct from active route placement. */
 export function OverviewJourneys(props: OverviewViewProps): JSX.Element | null {
@@ -77,14 +78,20 @@ function JourneyReference(props: OverviewViewProps & { id: number }): JSX.Elemen
 /** Read one canonical Journey and its actual ordered leg facts without assigning it to a Visit. */
 export function JourneyRecord({
   journey,
+  historical = false,
   onJourneyVisibilityChange,
   ...props
 }: OverviewViewProps & {
   journey: Journey;
+  historical?: boolean;
   onJourneyVisibilityChange?: (journeyId: number, visible: boolean) => void;
 }): JSX.Element | null {
   const legs = useJourneyLegs(props, journey);
   const presentation = workspaceJourneyRecord(journey, legs.data, props);
+  const showLegs =
+    !historical ||
+    Boolean(props.workspaceQuery?.trim()) ||
+    (props.workspaceFilter ?? 'everything') === 'booked';
   useEffect(() => {
     onJourneyVisibilityChange?.(journey.id, presentation.visible);
   }, [journey.id, onJourneyVisibilityChange, presentation.visible]);
@@ -105,34 +112,61 @@ export function JourneyRecord({
             document.targetId === journey.id
         )}
       />
-      {legs.isPending && (
+      <JourneyLegRecords
+        journeyId={journey.id}
+        overview={props}
+        presentation={presentation}
+        query={legs}
+        show={showLegs}
+      />
+    </div>
+  );
+}
+
+function JourneyLegRecords({
+  journeyId,
+  overview,
+  presentation,
+  query,
+  show,
+}: {
+  journeyId: number;
+  overview: OverviewViewProps;
+  presentation: WorkspaceJourneyRecord;
+  query: SourceQuery<JourneyLeg[]>;
+  show: boolean;
+}): JSX.Element | null {
+  if (!show) return null;
+  return (
+    <>
+      {query.isPending && (
         <p role="status" className="text-xs text-muted-foreground">
-          {props.labels.loading}
+          {overview.labels.loading}
         </p>
       )}
-      {legs.isError && (
-        <ErrorState error={requestProblem(legs.error)} onRetry={() => void legs.refetch()} />
+      {query.isError && (
+        <ErrorState error={requestProblem(query.error)} onRetry={() => void query.refetch()} />
       )}
       {presentation.legs?.map((leg) => (
         <SourceCard
           key={leg.id}
           kind="journey"
-          {...sourceAction(props, { kind: 'journey', id: journey.id })}
+          {...sourceAction(overview, { kind: 'journey', id: journeyId })}
           title={
             [leg.mode, leg.operator, leg.service].filter(Boolean).join(' · ') ||
-            props.labels.source('leg', leg.id)
+            overview.labels.source('leg', leg.id)
           }
-          when={journeyEndpoint(leg.from, props)}
+          when={journeyEndpoint(leg.from, overview)}
           purchased={leg.purchase === 'Purchased'}
           statuses={[leg.intention, leg.arrangement, leg.purchase]}
-          labels={props.labels}
+          labels={overview.labels}
         >
           <span className="block">
-            {journeyEndpoint(leg.from, props)} → {journeyEndpoint(leg.to, props)}
+            {journeyEndpoint(leg.from, overview)} → {journeyEndpoint(leg.to, overview)}
           </span>
         </SourceCard>
       ))}
-    </div>
+    </>
   );
 }
 
