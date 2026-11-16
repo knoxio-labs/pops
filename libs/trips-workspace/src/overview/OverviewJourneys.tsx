@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+
 import { unwrap } from '@pops/pillar-sdk/client';
 import { Badge, ErrorState } from '@pops/ui';
 
@@ -75,11 +77,18 @@ function JourneyReference(props: OverviewViewProps & { id: number }): JSX.Elemen
 /** Read one canonical Journey and its actual ordered leg facts without assigning it to a Visit. */
 export function JourneyRecord({
   journey,
+  onJourneyVisibilityChange,
   ...props
-}: OverviewViewProps & { journey: Journey }): JSX.Element | null {
+}: OverviewViewProps & {
+  journey: Journey;
+  onJourneyVisibilityChange?: (journeyId: number, visible: boolean) => void;
+}): JSX.Element | null {
   const legs = useJourneyLegs(props, journey);
-  if (legs.ownershipError) return <ErrorState error={legs.ownershipError} />;
   const presentation = workspaceJourneyRecord(journey, legs.data, props);
+  useEffect(() => {
+    onJourneyVisibilityChange?.(journey.id, presentation.visible);
+  }, [journey.id, onJourneyVisibilityChange, presentation.visible]);
+  if (legs.ownershipError) return <ErrorState error={legs.ownershipError} />;
   if (!presentation.visible) return null;
 
   return (

@@ -46,6 +46,11 @@ export interface OverviewCalendarControl {
   selection: OverviewCalendarSelection;
   onChange: (selection: OverviewCalendarSelection) => void;
 }
+/** Resolved Journey visibility for the active search and booking filter, shared by route views. */
+export interface WorkspaceJourneyVisibility {
+  hiddenJourneyIds: ReadonlySet<number>;
+  onJourneyVisibilityChange: (journeyId: number, visible: boolean) => void;
+}
 /** Independently available collections; undefined never means an empty successful read. */
 export interface OverviewSources {
   visits?: Visit[];

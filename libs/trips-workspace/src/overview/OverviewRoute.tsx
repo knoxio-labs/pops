@@ -1,3 +1,5 @@
+import { useCallback, useMemo, useState } from 'react';
+
 import { ErrorState } from '@pops/ui';
 
 import { requestProblem } from '../stay/api';
@@ -11,18 +13,55 @@ import { workspaceItemVisible } from './workspace-projection';
 import type { JSX } from 'react';
 
 import type { ProjectedRouteItem } from '../route/projection';
-import type { OverviewViewProps } from './types';
+import type { OverviewViewProps, WorkspaceJourneyVisibility } from './types';
+
+interface JourneyVisibilityResult {
+  criteria: string;
+  visible: boolean;
+}
 
 /** Canonical mixed root order, gaps and complete paths come only from the shared route projector. */
 export function OverviewRoute(props: OverviewViewProps): JSX.Element {
+  const criteria = JSON.stringify([
+    props.workspaceFilter ?? 'everything',
+    props.workspaceQuery?.trim().toLowerCase() ?? '',
+  ]);
+  const [journeyResults, setJourneyResults] = useState<
+    ReadonlyMap<number, JourneyVisibilityResult>
+  >(() => new Map());
+  const hiddenJourneyIds = useMemo(
+    () =>
+      new Set(
+        [...journeyResults]
+          .filter(([, result]) => result.criteria === criteria && !result.visible)
+          .map(([journeyId]) => journeyId)
+      ),
+    [criteria, journeyResults]
+  );
+  const onJourneyVisibilityChange = useCallback(
+    (journeyId: number, visible: boolean) => {
+      setJourneyResults((current) => {
+        const previous = current.get(journeyId);
+        if (previous?.criteria === criteria && previous.visible === visible) return current;
+        const next = new Map(current);
+        next.set(journeyId, { criteria, visible });
+        return next;
+      });
+    },
+    [criteria]
+  );
+  const journeyVisibility: WorkspaceJourneyVisibility = {
+    hiddenJourneyIds,
+    onJourneyVisibilityChange,
+  };
   return (
     <>
       <section aria-label={props.labels.route} className="min-w-0 space-y-4">
         <h2 className="font-trip-display text-xl font-semibold">{props.labels.route}</h2>
         <WorkspaceColumns {...props} />
         <RouteReadState {...props} />
-        <RouteItems {...props} />
-        <OverviewPaths {...props} />
+        <RouteItems {...props} {...journeyVisibility} />
+        <OverviewPaths {...props} {...journeyVisibility} />
       </section>
       <OverviewUnplaced {...props} />
       <OverviewJourneys {...props} />
@@ -49,8 +88,10 @@ function RouteReadState(props: OverviewViewProps): JSX.Element {
   );
 }
 
-function RouteItems(props: OverviewViewProps): JSX.Element | null {
-  const items = (props.projection?.order ?? []).filter((item) => workspaceItemVisible(item, props));
+function RouteItems(props: OverviewViewProps & WorkspaceJourneyVisibility): JSX.Element | null {
+  const items = (props.projection?.order ?? []).filter((item) =>
+    workspaceItemVisible(item, props, props)
+  );
   if (!props.projection?.order.length) return null;
   if (!items.length)
     return (
@@ -77,7 +118,9 @@ function RouteItems(props: OverviewViewProps): JSX.Element | null {
   );
 }
 
-function RouteItem(props: OverviewViewProps & { item: ProjectedRouteItem }): JSX.Element {
+function RouteItem(
+  props: OverviewViewProps & WorkspaceJourneyVisibility & { item: ProjectedRouteItem }
+): JSX.Element {
   if (props.item.state !== 'gap') return <RouteSourceRow {...props} item={props.item} />;
   return (
     <li

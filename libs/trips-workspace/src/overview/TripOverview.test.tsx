@@ -120,6 +120,27 @@ describe('source-backed TripOverview', () => {
     expect(await screen.findByText('Hydrofoil · Harbour operator')).toBeVisible();
     expect(screen.queryByRole('link', { name: /Cedar guesthouse/ })).not.toBeInTheDocument();
   });
+  it('shows an empty result when a Journey leg does not match the search', async () => {
+    const responses = overviewResponses();
+    responses.set('/trips/7/route', routeRead({ order: [{ kind: 'journey', id: 20 }] }));
+    mount(responses);
+    const search = await screen.findByRole('textbox', { name: 'workspace.search' });
+    await userEvent.type(search, 'not in this itinerary');
+    expect(await screen.findByText('workspace.noRouteResults')).toBeVisible();
+    expect(screen.queryByRole('list', { name: 'Route' })).not.toBeInTheDocument();
+  });
+  it('shows an empty result when the booked filter excludes every Journey leg', async () => {
+    const responses = overviewResponses();
+    responses.set('/trips/7/route', routeRead({ order: [{ kind: 'journey', id: 20 }] }));
+    responses.set('/trips/7/journeys/20/legs', {
+      legs: [sourceLeg({ arrangement: 'Not arranged' })],
+    });
+    mount(responses);
+    await screen.findByRole('textbox', { name: 'workspace.search' });
+    await userEvent.click(screen.getByRole('button', { name: 'workspace.booked' }));
+    expect(await screen.findByText('workspace.noRouteResults')).toBeVisible();
+    expect(screen.queryByRole('list', { name: 'Route' })).not.toBeInTheDocument();
+  });
   it('opens the published Documents workspace even before the first association exists', async () => {
     mount(overviewResponses(), undefined, { documentsHref: '/trips/7/documents' });
     expect(await screen.findByRole('link', { name: 'Documents' })).toHaveAttribute(

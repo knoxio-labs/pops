@@ -6,12 +6,14 @@ import { workspaceItemVisible, workspaceTextMatches } from './workspace-projecti
 
 import type { JSX } from 'react';
 
-import type { OverviewViewProps } from './types';
+import type { OverviewViewProps, WorkspaceJourneyVisibility } from './types';
 
 /** Complete paths retain order, gap ownership and alternative/applied state from the canonical route. */
-export function OverviewPaths(props: OverviewViewProps): JSX.Element[] {
+export function OverviewPaths(
+  props: OverviewViewProps & WorkspaceJourneyVisibility
+): JSX.Element[] {
   return (props.projection?.paths ?? []).flatMap(({ path, members }) => {
-    const visibleMembers = members.filter((item) => workspaceItemVisible(item, props));
+    const visibleMembers = members.filter((item) => workspaceItemVisible(item, props, props));
     const titleMatches =
       (props.workspaceFilter ?? 'everything') === 'everything' &&
       workspaceTextMatches(props, [

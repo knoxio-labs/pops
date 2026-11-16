@@ -6,7 +6,7 @@ import { resolvedJourney, resolvedVisit } from './route-context';
 import type { ProjectedRouteItem } from '../route/projection';
 import type { Visit } from '../stay/types';
 import type { OverviewContextRecord } from './ContextSources';
-import type { OverviewViewProps } from './types';
+import type { OverviewViewProps, WorkspaceJourneyVisibility } from './types';
 
 interface WorkspaceRecordFacts {
   text: (string | null | undefined)[];
@@ -14,10 +14,15 @@ interface WorkspaceRecordFacts {
   needsAttention?: boolean;
 }
 
-/** Match route groups against explicit source text and confirmed arrangement states. */
-export function workspaceItemVisible(item: ProjectedRouteItem, props: OverviewViewProps): boolean {
+/** Match route items against source facts and the loaded Journey results for the active filter. */
+export function workspaceItemVisible(
+  item: ProjectedRouteItem,
+  props: OverviewViewProps,
+  journeyVisibility?: Pick<WorkspaceJourneyVisibility, 'hiddenJourneyIds'>
+): boolean {
   const filter = props.workspaceFilter ?? 'everything';
-  if (resolvedJourney(item)) return filter !== 'needs-attention';
+  if (resolvedJourney(item))
+    return filter !== 'needs-attention' && !journeyVisibility?.hiddenJourneyIds.has(item.source.id);
   const needsAttention =
     item.state === 'gap' ||
     item.state === 'missing' ||
