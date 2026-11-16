@@ -1,5 +1,6 @@
 import { JourneyRecord } from './OverviewJourneys';
 import { OverviewVisit } from './OverviewVisit';
+import { workspaceJourneyFilterVisible, workspaceVisitVisible } from './workspace-projection';
 
 import type { JSX } from 'react';
 
@@ -11,17 +12,19 @@ export function OverviewUnplaced(props: OverviewViewProps): JSX.Element | null {
     visits: props.sources.visits?.filter((visit) => visit.tripId === props.tripId) ?? [],
     journeys: props.sources.journeys?.filter((journey) => journey.tripId === props.tripId) ?? [],
   };
-  if (!sources.visits.length && !sources.journeys.length) return null;
+  const visits = sources.visits.filter((visit) => workspaceVisitVisible(visit, props));
+  const journeys = workspaceJourneyFilterVisible(props) ? sources.journeys : [];
+  if (!visits.length && !journeys.length) return null;
   const title = props.projection ? props.labels.status('unplaced') : props.labels.unresolved;
   return (
     <section aria-label={title} className="min-w-0 space-y-3">
       <h2 className="border-b pb-2 text-lg font-semibold">{title}</h2>
       <ul>
-        {sources.visits.map((visit) => (
+        {visits.map((visit) => (
           <OverviewVisit key={visit.id} {...props} visit={visit} />
         ))}
       </ul>
-      {sources.journeys.map((journey) => (
+      {journeys.map((journey) => (
         <JourneyRecord key={journey.id} {...props} journey={journey} />
       ))}
     </section>

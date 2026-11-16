@@ -16,23 +16,32 @@ internal struct TripsTimelineView: View {
                 visibleSources: sources, visibleVisits: visits)
             ScrollViewReader { reader in
                 List {
-                    TripsOverviewView(projection: overview, date: context.date)
-                        .listRowSeparator(.hidden)
-                        .listRowBackground(Color.popsBackground)
-                    if !overview.chaptersFollowFocus {
-                        chapters(overview.chapters, reader: reader)
+                    TripsOverviewView(
+                        projection: overview, date: context.date, trip: snapshot.trip
+                    )
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.popsBackground)
+                    ForEach(overview.focusSections) { section in
+                        switch section {
+                        case .now(let sources):
+                            Section {
+                                ForEach(sources) {
+                                    TripsSourceRow(
+                                        source: $0, zone: zone, places: snapshot.places,
+                                        context: "In progress", isCurrent: true)
+                                }
+                            } header: {
+                                sectionTitle("Now")
+                            }
+                        case .next(let sources):
+                            ForEach(sources) {
+                                TripsNextSummaryRow(
+                                    source: $0, zone: zone, places: snapshot.places)
+                            }
+                        }
                     }
-                    ForEach(overview.now) {
-                        TripsSourceRow(
-                            source: $0, zone: zone, places: snapshot.places, isCurrent: true)
-                    }
-                    ForEach(overview.nextFocus) {
-                        TripsNextSummaryRow(source: $0, zone: zone, places: snapshot.places)
-                    }
+                    chapters(overview.chapters, reader: reader)
                     attention
-                    if overview.chaptersFollowFocus {
-                        chapters(overview.chapters, reader: reader)
-                    }
                     DisclosureGroup("Timeline options") {
                         TripsTimelineControls(filter: $filter)
                     }

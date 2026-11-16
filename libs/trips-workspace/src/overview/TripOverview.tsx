@@ -1,14 +1,10 @@
-import { Button, cn, ErrorState, PageHeader } from '@pops/ui';
+import { cn, ErrorState } from '@pops/ui';
 
 import { projectTripRoute } from '../route/projection';
 import { useTripRoute } from '../route/use-trip-route';
 import { requestProblem } from '../stay/api';
-import { OverviewCalendar } from './OverviewCalendar';
-import { OverviewDetached, OverviewReferences } from './OverviewReferences';
-import { OverviewRoute } from './OverviewRoute';
-import { routeDateRange } from './route-context';
+import { OverviewContent } from './OverviewContent';
 import { useOverviewSources } from './use-overview-sources';
-import { WorkspaceCoverage } from './WorkspaceCoverage';
 
 import type { JSX } from 'react';
 
@@ -120,80 +116,5 @@ function OverviewErrors({
         ) : null
       )}
     </>
-  );
-}
-
-function OverviewContent(props: OverviewViewProps): JSX.Element | null {
-  const { trip } = props;
-  return (
-    <>
-      <OverviewHeader {...props} />
-      <WorkspaceCoverage {...props} />
-      {props.captureComposer}
-      {props.sourceControls}
-      {props.calendar && <OverviewCalendar {...props} calendar={props.calendar} />}
-      <div className="min-w-0 space-y-6">
-        <div className="min-w-0 space-y-6">
-          <OverviewRoute {...props} />
-          <OverviewDetached {...props} />
-          {trip.notes && (
-            <section className="space-y-2">
-              <h2 className="text-base font-semibold">{props.labels.notes}</h2>
-              <p className="whitespace-pre-wrap break-words text-muted-foreground">{trip.notes}</p>
-            </section>
-          )}
-        </div>
-        <OverviewReferences {...props} />
-      </div>
-    </>
-  );
-}
-
-function OverviewHeader(props: OverviewViewProps): JSX.Element {
-  const { trip } = props;
-  const title = trip.name?.trim() || trip.destination.trim() || props.labels.trip;
-  const bounds = routeDateRange(props.projection, props.locale);
-  return (
-    <>
-      <PageHeader
-        title={title}
-        titleClassName="break-words font-trip-display text-3xl font-semibold tracking-tight sm:text-4xl"
-        description={
-          trip.when ? (
-            <span className="whitespace-pre-wrap break-words">{trip.when}</span>
-          ) : undefined
-        }
-        backHref={props.backHref}
-        actions={<OverviewActions {...props} />}
-      />
-      {bounds && <p className="text-sm text-muted-foreground">{bounds}</p>}
-    </>
-  );
-}
-
-function OverviewActions(props: TripOverviewProps): JSX.Element {
-  const legacy =
-    props.controls === undefined &&
-    props.onOpenSource === undefined &&
-    props.calendar === undefined;
-  return (
-    <div className="flex flex-wrap gap-2">
-      {props.controls}
-      {legacy && props.calendarLink && (
-        <Button asChild variant="outline" className="min-h-11">
-          <a href={props.calendarLink.href}>{props.calendarLink.label}</a>
-        </Button>
-      )}
-      {props.documentsHref && (
-        <Button asChild variant="outline" className="min-h-11">
-          <a href={props.documentsHref}>{props.labels.documents}</a>
-        </Button>
-      )}
-      {legacy && props.settingsHref && (
-        <Button asChild variant="outline" className="min-h-11">
-          <a href={props.settingsHref}>{props.labels.settings}</a>
-        </Button>
-      )}
-    </div>
   );
 }
