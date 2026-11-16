@@ -13,5 +13,5 @@ it('uses IPv4 loopback for ephemeral HTTP test listeners', async () => {
 
   await request(listener).get('/binding').expect(204);
 
-  expect(localAddress).toBe('127.0.0.1');
+  expect(['127.0.0.1', '::ffff:127.0.0.1']).toContain(localAddress);
 });

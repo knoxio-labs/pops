@@ -6,30 +6,30 @@ import Testing
 
 @Suite("Operational trip focus")
 internal struct TripFocusPresentationTests {
-    @Test("active Now and earliest Next precede chapters without losing later sources")
+    @Test("active Now and earliest Next lead the mobile focus while later sources remain available")
     internal func activeFocus() throws {
         let snapshot = try TripTestSources.snapshot()
         let value = try overview(snapshot, at: "2026-01-02T12:00")
-        #expect(value.chaptersFollowFocus)
+        #expect(value.focusSections.map(\.id) == [.now, .next])
         #expect(value.now.map(\.id) == ["stay-1"])
         #expect(value.nextFocus.map(\.id) == ["stay-2"])
         #expect(value.next.map(\.id) == ["stay-2", "journey-1"])
         #expect(allTripSources(snapshot).contains { $0.id == "journey-1" })
     }
 
-    @Test("before-trip overview retains its chapter rail near the countdown")
+    @Test("before-trip overview puts the next source before the route chapters")
     internal func beforeTrip() throws {
         let value = try overview(TripTestSources.snapshot(), at: "2025-12-30T12:00")
-        #expect(!value.chaptersFollowFocus)
+        #expect(value.focusSections.map(\.id) == [.next])
         #expect(value.now.isEmpty)
         #expect(value.nextFocus.map(\.id) == ["stay-1"])
         #expect(value.heading == .upcoming(days: 2, source: "Current stay"))
     }
 
-    @Test("a recorded travel day prioritizes practical focus even before its departure")
+    @Test("a recorded travel day puts its next departure before the route chapters")
     internal func travelDay() throws {
         let value = try overview(TripTestSources.snapshot(), at: "2026-02-01T09:00")
-        #expect(value.chaptersFollowFocus)
+        #expect(value.focusSections.map(\.id) == [.next])
         #expect(value.now.isEmpty)
         #expect(value.nextFocus.map(\.id) == ["journey-1"])
     }
