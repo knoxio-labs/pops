@@ -30,6 +30,8 @@ internal struct ContrastTests {
         ("popsInventory", .popsInventory),
         ("popsPurchases", .popsPurchases),
         ("popsTrips", .popsTrips),
+        ("popsTripsStay", .popsTripsStay),
+        ("popsTripsActivity", .popsTripsActivity),
         ("popsTripsAttention", .popsTripsAttention),
     ]
 

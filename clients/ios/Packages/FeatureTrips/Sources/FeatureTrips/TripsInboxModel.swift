@@ -51,7 +51,7 @@ internal final class TripsInboxModel {
         }
     }
 
-    internal func clear() {
+    internal func reset() {
         readTask?.cancel()
         readTask = nil
         request = UUID()

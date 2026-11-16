@@ -1,6 +1,7 @@
 import { Button } from '@pops/ui';
 
 import { sourceAction } from './source-action';
+import { workspaceRecordVisible } from './workspace-projection';
 
 import type { JSX } from 'react';
 
@@ -8,12 +9,21 @@ import type { OverviewDocument, OverviewViewProps } from './types';
 
 /** Explicit document associations retain both original identities and exact owning target references. */
 export function OverviewDocuments(props: OverviewViewProps): JSX.Element | null {
-  if (!props.sources.documents?.length) return null;
+  const documents = (props.sources.documents ?? []).filter((document) =>
+    workspaceRecordVisible(props, {
+      text: [
+        props.labels.source('document', document.documentId),
+        document.targetKind,
+        props.labels.source(document.targetKind, document.targetId),
+      ],
+    })
+  );
+  if (!documents.length) return null;
   return (
     <section aria-label={props.labels.documents} className="space-y-2">
       <h2 className="border-b pb-2 text-lg font-semibold">{props.labels.documents}</h2>
       <ul className="divide-y divide-border">
-        {props.sources.documents.map((document) => (
+        {documents.map((document) => (
           <li key={document.id} className="break-words py-2 text-sm">
             <p>{props.labels.source('document', document.documentId)}</p>
             <DocumentTarget {...props} document={document} />

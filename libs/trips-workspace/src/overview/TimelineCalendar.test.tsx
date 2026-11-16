@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import { calendarSnapshot } from '../calendar/test-utils';
@@ -102,6 +103,38 @@ it('keeps unavailable canonical journey timing diagnostic instead of manufacturi
   expect(screen.queryByText(/Journey window:/)).not.toBeInTheDocument();
   expect(screen.getByLabelText('Journey window')).toHaveValue('20');
   expect(screen.getByRole('option', { name: 'Harbour connection' })).toBeDisabled();
+});
+
+it('filters inline Calendar to confirmed bookings and then timing conflicts', async () => {
+  const snapshot = calendarSnapshot();
+  const journey = snapshot.journeys[0];
+  if (!journey) throw new Error('fixture missing');
+  journey.timing.findings = [
+    { id: 'conflict', kind: 'conflict', code: 'arrival_before_departure', legIds: [40] },
+  ];
+  snapshot.events = snapshot.events.map((event) => ({ ...event, arrangement: 'Not arranged' }));
+  mountOverview(calendarResponses(snapshot), undefined, {
+    calendar: {
+      selection: { from: '', to: '', zone: 'UTC', kind: 'all', journey: '' },
+      onChange: vi.fn(),
+    },
+    onOpenSource: vi.fn(),
+  });
+
+  const results = await screen.findByRole('region', { name: 'Calendar results' });
+  await userEvent.click(screen.getByRole('button', { name: 'workspace.booked' }));
+  expect(within(results).getAllByRole('button', { name: /Harbour connection/ })).toHaveLength(2);
+  expect(within(results).getAllByRole('button', { name: /Harbour house/ })).toHaveLength(2);
+  expect(
+    within(results).queryByRole('button', { name: /Evening exhibition/ })
+  ).not.toBeInTheDocument();
+
+  await userEvent.click(screen.getByRole('button', { name: 'workspace.needs-attention' }));
+  expect(within(results).getAllByRole('button', { name: /Harbour connection/ })).toHaveLength(2);
+  expect(within(results).queryByRole('button', { name: /Harbour house/ })).not.toBeInTheDocument();
+  expect(
+    within(results).queryByRole('button', { name: /Evening exhibition/ })
+  ).not.toBeInTheDocument();
 });
 
 function calendarResponses(snapshot = calendarSnapshot()) {

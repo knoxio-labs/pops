@@ -2,6 +2,7 @@ import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, expect, it } from 'vitest';
 
 import { deferred } from '../capture/test-utils';
+import { sourceEvent } from '../event/test-utils';
 import { sourceStay, sourceVisits } from '../stay/test-utils';
 import { mountOverview } from './render.test-utils';
 import { overviewResponses } from './test-utils';
@@ -32,9 +33,30 @@ it('shows Reserved coverage without a Purchased assertion and preserves a separa
   });
   mountOverview(responses);
   const coverage = await screen.findByRole('region', { name: 'workspace.sleep' });
-  expect(await within(coverage).findByText(/workspace.covered/)).toBeVisible();
-  expect(within(coverage).getByText(/workspace.open/)).toBeVisible();
+  const summary = within(coverage).getByRole('group', { name: 'workspace.summary' });
+  expect(await within(summary).findByText(/workspace.covered/)).toBeVisible();
+  expect(within(summary).getByText('5 · workspace.open')).toBeVisible();
   expect(within(coverage).queryByText('Purchased')).not.toBeInTheDocument();
+});
+
+it('does not count a booked and purchased event as overnight coverage', async () => {
+  const responses = overviewResponses();
+  responses.set('/trips/7/stays', { stays: [] });
+  responses.set('/trips/7/events', {
+    events: [
+      sourceEvent({
+        intention: 'In plan',
+        arrangement: 'Booked',
+        purchase: 'Purchased',
+        timing: { start: '2029-05-03' },
+      }),
+    ],
+  });
+  mountOverview(responses);
+  const coverage = await screen.findByRole('region', { name: 'workspace.sleep' });
+  const summary = within(coverage).getByRole('group', { name: 'workspace.summary' });
+  expect(await within(summary).findByText('8 · workspace.open')).toBeVisible();
+  expect(within(summary).queryByText(/workspace.covered/)).not.toBeInTheDocument();
 });
 
 it('retains uncertainty when the Stay collection is unavailable rather than claiming open nights', async () => {
@@ -53,7 +75,8 @@ it.each(['stays', 'visits'] as const)(
     responses.set('/trips/7/stays', { stays: [] });
     const { cache, client } = mountOverview(responses);
     const coverage = await screen.findByRole('region', { name: 'workspace.sleep' });
-    expect(await within(coverage).findByText(/workspace.open/)).toBeVisible();
+    const summary = within(coverage).getByRole('group', { name: 'workspace.summary' });
+    expect(await within(summary).findByText(/workspace.open/)).toBeVisible();
     const originalFetch = client.getConfig().fetch;
     if (!originalFetch) throw new Error('Missing source transport');
     const refreshResponse = deferred<Response>();
@@ -107,8 +130,9 @@ it('keeps independently proven coverage while withholding a neighbouring gap dur
   });
   const { cache, client } = mountOverview(responses);
   const coverage = await screen.findByRole('region', { name: 'workspace.sleep' });
-  expect(await within(coverage).findByText(/workspace.covered/)).toBeVisible();
-  expect(within(coverage).getByText(/workspace.open/)).toBeVisible();
+  const summary = within(coverage).getByRole('group', { name: 'workspace.summary' });
+  expect(await within(summary).findByText(/workspace.covered/)).toBeVisible();
+  expect(within(summary).getByText(/workspace.open/)).toBeVisible();
   const originalFetch = client.getConfig().fetch;
   if (!originalFetch) throw new Error('Missing source transport');
   const refreshResponse = deferred<Response>();
@@ -125,7 +149,7 @@ it('keeps independently proven coverage while withholding a neighbouring gap dur
   });
   expect(cache.getQueryState(queryKey)?.fetchStatus).toBe('fetching');
   expect(await within(coverage).findByText('workspace.unjudged')).toBeVisible();
-  expect(within(coverage).getByText(/workspace.covered/)).toBeVisible();
+  expect(within(summary).getByText(/workspace.covered/)).toBeVisible();
   expect(within(coverage).queryByText(/workspace.open/)).not.toBeInTheDocument();
   await act(async () => {
     refreshResponse.resolve(
@@ -141,7 +165,7 @@ it('keeps independently proven coverage while withholding a neighbouring gap dur
     expect.objectContaining({ id: 13, status: 'Reserved' }),
   ]);
   await waitFor(() => {
-    expect(within(coverage).getByText(/workspace.covered/)).toBeVisible();
+    expect(within(summary).getByText(/workspace.covered/)).toBeVisible();
     expect(within(coverage).queryByText(/workspace.open/)).not.toBeInTheDocument();
     expect(within(coverage).getByText('workspace.unjudged')).toBeVisible();
   });
