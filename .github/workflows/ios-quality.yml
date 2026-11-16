@@ -263,8 +263,8 @@ jobs:
           !startsWith(github.head_ref, 'integration/'))
       ) }}
     runs-on: xcode-27
-    # Run 42751509516 attempt 2 reached 1,755/1,935 analyzer files at 75 minutes
-    # with continuous progress, projecting 82.7 minutes; 100 adds about 20% headroom.
+    # Run 43878013536 reached 2,033/2,154 analyzer files at 100 minutes with
+    # continuous progress, projecting about 106 minutes; 120 adds about 13% headroom.
     # Worker budgets retain the existing limits; measured durations are not guarantees.
     timeout-minutes: ${{ (github.event_name == 'merge_group' || inputs['full-validation'] == true) && 190 || 100 }}
     defaults:
@@ -452,7 +452,7 @@ jobs:
         if: >-
           success() &&
           (github.event_name == 'merge_group' || inputs['full-validation'] == true)
-        timeout-minutes: 100
+        timeout-minutes: 120
         env:
           POPS_IOS_ANALYZER_ARTIFACTS: ${{ runner.temp }}/ios-analyzer-diagnostics
         run: mise run --skip-deps lint:analyze
@@ -549,6 +549,8 @@ jobs:
       # `clients/ios/.maestro/README.md`
       # argues for Maestro over XCUITest; what follows is only about getting a
       # pillar running next to it.
+      # Run 43878013536 was still in Inventory search when its 45-minute cap
+      # expired; 60 allows 15 minutes beyond the previous cap.
       #
       # THERE IS NO DOCKER ON THIS RUNNER. GitHub's macOS images ship no Docker
       # daemon, so `infra/docker-compose.dev.yml` — the obvious way to get a
@@ -589,7 +591,7 @@ jobs:
 
       - name: UI flow (Maestro, against a real BFM)
         if: github.event_name == 'merge_group' || inputs['full-validation'] == true
-        timeout-minutes: 45
+        timeout-minutes: 60
         working-directory: .
         run: mise run e2e:ios
 
