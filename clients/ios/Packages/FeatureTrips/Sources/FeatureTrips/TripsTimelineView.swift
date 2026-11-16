@@ -66,11 +66,17 @@ internal struct TripsTimelineView: View {
                                 description: Text(
                                     "Add a place, booking or idea to start your trip."))
                         case .noMatches:
-                            ContentUnavailableView(
-                                "No matching recorded sources",
-                                systemImage: "line.3.horizontal.decrease.circle",
-                                description: Text("Try changing or clearing your timeline filters.")
-                            )
+                            ContentUnavailableView {
+                                Label(
+                                    "No matching recorded sources",
+                                    systemImage: "line.3.horizontal.decrease.circle")
+                            } description: {
+                                Text("Try changing or clearing your timeline filters.")
+                            } actions: {
+                                Button("Clear filters") {
+                                    filter.clearSelection()
+                                }
+                            }
                         }
                     }
                 }

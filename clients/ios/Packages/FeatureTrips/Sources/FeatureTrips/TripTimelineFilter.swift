@@ -25,6 +25,14 @@ internal struct TripTimelineFilter {
             || throughDay != nil
     }
 
+    internal mutating func clearSelection() {
+        query = ""
+        scope = .all
+        includeAlternatives = true
+        fromDay = nil
+        throughDay = nil
+    }
+
     internal var invalidRange: Bool {
         if let fromDay, let throughDay { return fromDay > throughDay }
         return false

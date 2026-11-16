@@ -22,8 +22,19 @@ internal struct TripTimelineEmptyStateTests {
         #expect(tripTimelineEmptyState(filter: filter, sources: [], visits: []) == .noMatches)
 
         filter.query = ""
+        filter.scope = .past
+        filter.includeAlternatives = false
         filter.fromDay = "2026-01-01"
+        filter.throughDay = "2026-02-01"
         #expect(tripTimelineEmptyState(filter: filter, sources: [], visits: []) == .noMatches)
+
+        filter.clearSelection()
+        #expect(!filter.hasActiveSelection)
+        #expect(filter.query.isEmpty)
+        #expect(filter.scope == .all)
+        #expect(filter.includeAlternatives)
+        #expect(filter.fromDay == nil)
+        #expect(filter.throughDay == nil)
     }
 
     @Test("visible sources or visits suppress an empty state")
