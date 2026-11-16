@@ -56,9 +56,22 @@ internal struct TripsTimelineView: View {
                         TripsTimelineCalendar(
                             sources: sources, places: snapshot.places, filter: filter)
                     }
-                    if sources.isEmpty && visits.isEmpty {
-                        Text("No matching recorded sources")
-                            .foregroundStyle(Color.popsMutedForeground)
+                    if let emptyState = tripTimelineEmptyState(
+                        filter: filter, sources: sources, visits: visits)
+                    {
+                        switch emptyState {
+                        case .nothingRecorded:
+                            ContentUnavailableView(
+                                "Nothing recorded yet", systemImage: "sparkles",
+                                description: Text(
+                                    "Add a place, booking or idea to start your trip."))
+                        case .noMatches:
+                            ContentUnavailableView(
+                                "No matching recorded sources",
+                                systemImage: "line.3.horizontal.decrease.circle",
+                                description: Text("Try changing or clearing your timeline filters.")
+                            )
+                        }
                     }
                 }
                 .listStyle(.plain)
