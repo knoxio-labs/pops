@@ -17,6 +17,22 @@ internal struct TripTimelineFilter {
     internal var fromDay: String?
     internal var throughDay: String?
 
+    internal var hasActiveSelection: Bool {
+        !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || scope != .all
+            || !includeAlternatives
+            || fromDay != nil
+            || throughDay != nil
+    }
+
+    internal mutating func clearSelection() {
+        query = ""
+        scope = .all
+        includeAlternatives = true
+        fromDay = nil
+        throughDay = nil
+    }
+
     internal var invalidRange: Bool {
         if let fromDay, let throughDay { return fromDay > throughDay }
         return false
@@ -78,6 +94,18 @@ internal struct TripTimelineFilter {
             return includes(days: days, spanning: days.count == 2 && days[0] <= days[1])
         }
     }
+}
+
+internal enum TripTimelineEmptyState: Equatable {
+    case nothingRecorded
+    case noMatches
+}
+
+internal func tripTimelineEmptyState(
+    filter: TripTimelineFilter, sources: [TripSource], visits: [TripVisit]
+) -> TripTimelineEmptyState? {
+    guard sources.isEmpty && visits.isEmpty else { return nil }
+    return filter.hasActiveSelection ? .noMatches : .nothingRecorded
 }
 
 extension TripSource {
