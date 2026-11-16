@@ -9,13 +9,14 @@ import { assertSourceOwner } from '../shared/retained-session-store';
 import { useSourceQuery } from '../shared/use-source-query';
 import { requestProblem } from '../stay/api';
 import { readOverviewSource } from './source-read';
+import { workspaceTextMatches } from './workspace-projection';
 
 import type { JSX } from 'react';
 
 import type { CalendarSnapshot } from '../calendar/types';
-import type { TripOverviewProps, OverviewCalendarControl } from './types';
+import type { OverviewCalendarControl, OverviewViewProps } from './types';
 
-type CalendarProps = TripOverviewProps & { calendar: OverviewCalendarControl };
+type CalendarProps = OverviewViewProps & { calendar: OverviewCalendarControl };
 
 /** The existing Calendar projection inside its owning Timeline, with host-controlled explicit filters. */
 export function OverviewCalendar(props: CalendarProps): JSX.Element {
@@ -46,7 +47,23 @@ function CalendarProjection(props: CalendarProps & { snapshot: CalendarSnapshot 
     calendar: { selection, onChange },
   } = props;
   const problem = selectionProblem(selection, snapshot);
-  const entries = visibleEntries(snapshot, selection);
+  const entries = visibleEntries(snapshot, selection).filter((entry) => {
+    const filter = props.workspaceFilter ?? 'everything';
+    if (filter === 'booked' && !entry.confirmed) return false;
+    if (filter === 'needs-attention' && !entry.conflict) return false;
+    return workspaceTextMatches(props, [
+      entry.title,
+      entry.source.kind,
+      props.labels.source(entry.source.kind, entry.source.id),
+      String(entry.source.id),
+      entry.boundary,
+      ...entry.facts,
+      entry.date,
+      entry.clock,
+      entry.zone,
+      entry.endDate,
+    ]);
+  });
   return (
     <>
       <CalendarControls snapshot={snapshot} selection={selection} onChange={onChange} />

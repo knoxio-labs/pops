@@ -27,6 +27,10 @@ export type OverviewDocument = DocumentAssociationsListResponses[200]['associati
 export type OverviewLinkKind = 'visit' | 'stay' | 'event' | 'journey' | 'decision';
 /** Canonical source kinds opened contextually inside the owning Trip. */
 export type OverviewKind = OverviewLinkKind | 'rental' | 'meeting' | 'capture' | 'idea';
+/** Presentation-only controls for the owning Trip workspace. */
+export type OverviewDisplay = 'sheet' | 'journey';
+/** Explicit filtering mode for the route presentation. */
+export type OverviewFilter = 'everything' | 'needs-attention' | 'booked';
 /** Exact source identities remain discriminated even when numeric IDs coincide. */
 export type OverviewSource = { [K in OverviewKind]: { kind: K; id: number } }[OverviewKind];
 /** Persisted structural identity; the host owns the canonical route controller and editor. */
@@ -114,4 +118,7 @@ export type OverviewViewProps = TripOverviewProps & {
   accommodationComplete: boolean;
   route: TripRouteController;
   projection: RouteProjection | undefined;
+  workspaceDisplay?: OverviewDisplay;
+  workspaceFilter?: OverviewFilter;
+  workspaceQuery?: string;
 };

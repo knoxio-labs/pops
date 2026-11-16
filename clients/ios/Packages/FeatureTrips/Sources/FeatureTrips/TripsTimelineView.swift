@@ -14,47 +14,46 @@ internal struct TripsTimelineView: View {
             let overview = TripOverviewProjection(
                 snapshot: snapshot, at: context.date, zone: zone,
                 visibleSources: sources, visibleVisits: visits)
-            ScrollViewReader { reader in
-                List {
-                    TripsOverviewView(projection: overview, date: context.date)
-                        .listRowSeparator(.hidden)
-                        .listRowBackground(Color.popsBackground)
-                    if !overview.chaptersFollowFocus {
-                        chapters(overview.chapters, reader: reader)
-                    }
-                    ForEach(overview.now) {
-                        TripsSourceRow(
-                            source: $0, zone: zone, places: snapshot.places, isCurrent: true)
-                    }
-                    ForEach(overview.nextFocus) {
-                        TripsNextSummaryRow(source: $0, zone: zone, places: snapshot.places)
-                    }
+            let groups = tripTimelineGroups(
+                snapshot: snapshot, sources: sources, visits: visits,
+                grouping: filter.grouping, zone: zone)
+
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: PopsSpacing.xxl) {
+                    TripsOverviewView(
+                        projection: overview, date: context.date, trip: snapshot.trip)
+                    focus(overview)
                     attention
-                    if overview.chaptersFollowFocus {
-                        chapters(overview.chapters, reader: reader)
-                    }
-                    DisclosureGroup("Timeline options") {
-                        TripsTimelineControls(filter: $filter)
-                    }
-                    .font(.popsSubheadline)
-                    .foregroundStyle(Color.popsMutedForeground)
-                    .listRowSeparator(.hidden)
-                    .listRowBackground(Color.popsBackground)
-                    if filter.grouping == .sourceOrder {
-                        TripsTimelineRoute(snapshot: snapshot, sources: sources, visits: visits)
-                    } else {
-                        TripsTimelineVisits(snapshot: snapshot, sources: [], visits: visits)
-                        TripsTimelineCalendar(
-                            sources: sources, places: snapshot.places, filter: filter)
-                    }
-                    if sources.isEmpty && visits.isEmpty {
-                        Text("No matching recorded sources")
-                            .foregroundStyle(Color.popsMutedForeground)
+                    timeline(groups)
+                }
+                .padding(.horizontal, PopsSpacing.lg)
+                .padding(.top, PopsSpacing.lg)
+                .padding(.bottom, PopsSpacing.xxl)
+            }
+            .scrollIndicators(.hidden)
+            .background(Color.popsBackground)
+        }
+    }
+
+    @ViewBuilder private func focus(_ overview: TripOverviewProjection) -> some View {
+        if !overview.now.isEmpty || !overview.nextFocus.isEmpty {
+            VStack(alignment: .leading, spacing: PopsSpacing.md) {
+                if !overview.now.isEmpty {
+                    sectionTitle("Now")
+                    ForEach(overview.now) { source in
+                        TripsSourceRow(
+                            source: source, zone: zone, places: snapshot.places,
+                            context: "In progress", isCurrent: true)
                     }
                 }
-                .listStyle(.plain)
-                .scrollContentBackground(.hidden)
-                .background(Color.popsBackground)
+                if !overview.nextFocus.isEmpty {
+                    sectionTitle(overview.now.isEmpty ? "Up next" : "Coming up")
+                    ForEach(overview.nextFocus) { source in
+                        TripsSourceRow(
+                            source: source, zone: zone, places: snapshot.places,
+                            context: "Next")
+                    }
+                }
             }
         }
     }
@@ -62,39 +61,51 @@ internal struct TripsTimelineView: View {
     @ViewBuilder private var attention: some View {
         let findings = tripReferenceFindings(snapshot)
         if !findings.isEmpty {
-            Section {
+            VStack(alignment: .leading, spacing: PopsSpacing.md) {
+                sectionTitle("Needs you")
                 PopsCard(appearance: .featured) {
                     VStack(alignment: .leading, spacing: PopsSpacing.md) {
                         ForEach(findings) { finding in
                             Label(finding.message, systemImage: "exclamationmark.triangle")
                                 .font(.popsSubheadline)
                                 .foregroundStyle(Color.popsTripsAttention)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                     }
                 }
-                .listRowSeparator(.hidden)
-                .listRowBackground(Color.popsBackground)
-            } header: {
-                sectionTitle("Needs you")
             }
         }
     }
 
-    @ViewBuilder private func chapters(
-        _ chapters: [TripOverviewChapter], reader: ScrollViewProxy
-    ) -> some View {
-        if !chapters.isEmpty {
-            TripsChapterRail(chapters: chapters) { id in
-                reader.scrollTo(id, anchor: .top)
+    @ViewBuilder private func timeline(_ groups: [TripTimelineGroup]) -> some View {
+        VStack(alignment: .leading, spacing: PopsSpacing.lg) {
+            sectionTitle("Your timeline")
+            timelineOptions
+            if groups.isEmpty {
+                ContentUnavailableView(
+                    "Nothing recorded yet", systemImage: "sparkles",
+                    description: Text("Add a place, booking or idea to start your trip."))
+            } else {
+                ForEach(groups) { group in
+                    TripsTimelineGroupView(group: group, places: snapshot.places, zone: zone)
+                }
             }
         }
+    }
+
+    private var timelineOptions: some View {
+        DisclosureGroup("Timeline options") {
+            TripsTimelineControls(filter: $filter)
+        }
+        .font(.popsSubheadline)
+        .foregroundStyle(Color.popsMutedForeground)
+        .padding(.top, PopsSpacing.sm)
     }
 
     private func sectionTitle(_ title: String) -> some View {
         Text(title)
             .font(.popsTitle)
             .foregroundStyle(Color.popsForeground)
-            .textCase(nil)
             .accessibilityAddTraits(.isHeader)
     }
 }

@@ -21,6 +21,57 @@ describe('source-backed TripOverview', () => {
     expect(await screen.findByText('29 Feb 2028 → …')).toBeVisible();
     expect(screen.queryByText(/2028-02-29T00:00/)).not.toBeInTheDocument();
   });
+  it('searches recorded visit and booking facts and switches between sheet and journey layouts', async () => {
+    const responses = overviewResponses();
+    responses.set('/trips/7/stays', {
+      stays: [
+        sourceStay({
+          timing: { arrival: '2029-05-01', departure: '2029-05-04' },
+          status: 'Reserved',
+        }),
+      ],
+    });
+    responses.set('/trips/7/events', { events: [] });
+    mount(responses);
+    const search = await screen.findByRole('textbox', { name: 'workspace.search' });
+    await userEvent.type(search, 'Cedar Lane');
+    expect(await screen.findByRole('link', { name: 'Wellington' })).toBeVisible();
+    await userEvent.clear(search);
+    await userEvent.click(screen.getByRole('button', { name: 'workspace.booked' }));
+    expect(await screen.findByRole('link', { name: 'Cedar guesthouse' })).toBeVisible();
+    await userEvent.click(screen.getByRole('button', { name: 'workspace.journey' }));
+    expect(screen.getByRole('list', { name: 'Route' })).toHaveAttribute(
+      'data-workspace-display',
+      'journey'
+    );
+  });
+  it('searches unplaced arrangements and keeps only confirmed sources in the booked filter', async () => {
+    const responses = overviewResponses();
+    responses.set('/trips/7/stays', {
+      stays: [
+        sourceStay({ visitId: null, name: "Dad's place", status: 'Agreed' }),
+        sourceStay({ id: 14, visitId: null, name: 'Coast hotel idea', status: 'Considering' }),
+      ],
+    });
+    responses.set('/trips/7/events', { events: [] });
+    mount(responses);
+    const search = await screen.findByRole('textbox', { name: 'workspace.search' });
+    await userEvent.type(search, "Dad's");
+    expect(await screen.findByRole('link', { name: "Dad's place" })).toBeVisible();
+    expect(screen.queryByRole('link', { name: 'Wellington' })).not.toBeInTheDocument();
+    await userEvent.clear(search);
+    await userEvent.click(screen.getByRole('button', { name: 'workspace.booked' }));
+    expect(screen.getByRole('link', { name: "Dad's place" })).toBeVisible();
+    expect(screen.queryByRole('link', { name: 'Coast hotel idea' })).not.toBeInTheDocument();
+  });
+  it('searches journey leg details while retaining the owning Journey source', async () => {
+    mount(overviewResponses());
+    const search = await screen.findByRole('textbox', { name: 'workspace.search' });
+    await userEvent.type(search, 'Harbour operator');
+    expect(await screen.findByRole('link', { name: 'Harbour connection' })).toBeVisible();
+    expect(await screen.findByText('Hydrofoil · Harbour operator')).toBeVisible();
+    expect(screen.queryByRole('link', { name: /Cedar guesthouse/ })).not.toBeInTheDocument();
+  });
   it('opens the published Documents workspace even before the first association exists', async () => {
     mount(overviewResponses(), undefined, { documentsHref: '/trips/7/documents' });
     expect(await screen.findByRole('link', { name: 'Documents' })).toHaveAttribute(

@@ -12,7 +12,7 @@ internal enum TripTimelineGrouping: String, CaseIterable, Identifiable {
 internal struct TripTimelineFilter {
     internal var query = ""
     internal var scope = TripBookingScope.all
-    internal var grouping = TripTimelineGrouping.sourceOrder
+    internal var grouping = TripTimelineGrouping.day
     internal var includeAlternatives = true
     internal var fromDay: String?
     internal var throughDay: String?

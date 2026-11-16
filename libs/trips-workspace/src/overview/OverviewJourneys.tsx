@@ -4,10 +4,10 @@ import { Badge, ErrorState } from '@pops/ui';
 import { useSourceQuery } from '../shared/use-source-query';
 import { requestProblem } from '../stay/api';
 import { journeyLegsList } from '../trips-api/sdk.gen';
-import { dateLabel } from './model';
 import { sourceAction } from './source-action';
 import { readOverviewSource } from './source-read';
 import { SourceCard } from './SourceCard';
+import { journeyEndpoint, workspaceJourneyRecord } from './workspace-journey-record';
 
 import type { JSX } from 'react';
 
@@ -17,6 +17,11 @@ import type { OverviewViewProps } from './types';
 
 /** Historical Journey group references remain distinct from active route placement. */
 export function OverviewJourneys(props: OverviewViewProps): JSX.Element | null {
+  if (
+    props.workspaceQuery?.trim() ||
+    (props.workspaceFilter !== undefined && props.workspaceFilter !== 'everything')
+  )
+    return null;
   const groups = props.sources.groups ?? [];
   if (!groups.length) return null;
   return (
@@ -74,6 +79,8 @@ export function JourneyRecord({
 }: OverviewViewProps & { journey: Journey }): JSX.Element | null {
   const legs = useJourneyLegs(props, journey);
   if (legs.ownershipError) return <ErrorState error={legs.ownershipError} />;
+  const presentation = workspaceJourneyRecord(journey, legs.data, props);
+  if (!presentation.visible) return null;
 
   return (
     <div className="min-w-0 space-y-2">
@@ -97,7 +104,7 @@ export function JourneyRecord({
       {legs.isError && (
         <ErrorState error={requestProblem(legs.error)} onRetry={() => void legs.refetch()} />
       )}
-      {legs.data?.map((leg) => (
+      {presentation.legs?.map((leg) => (
         <SourceCard
           key={leg.id}
           kind="journey"
@@ -106,34 +113,17 @@ export function JourneyRecord({
             [leg.mode, leg.operator, leg.service].filter(Boolean).join(' · ') ||
             props.labels.source('leg', leg.id)
           }
-          when={endpoint(leg.from, props)}
+          when={journeyEndpoint(leg.from, props)}
           purchased={leg.purchase === 'Purchased'}
           statuses={[leg.intention, leg.arrangement, leg.purchase]}
           labels={props.labels}
         >
           <span className="block">
-            {endpoint(leg.from, props)} → {endpoint(leg.to, props)}
+            {journeyEndpoint(leg.from, props)} → {journeyEndpoint(leg.to, props)}
           </span>
         </SourceCard>
       ))}
     </div>
-  );
-}
-
-function endpoint(source: JourneyLeg['from'], props: OverviewViewProps): string {
-  return (
-    [
-      source.sourceLabel ??
-        (source.placeId
-          ? (props.sources.places?.find((place) => place.id === source.placeId)?.name ??
-            props.labels.source('place', source.placeId))
-          : undefined),
-      source.local ??
-        (source.date === undefined ? undefined : dateLabel(source.date, props.locale)),
-      source.timeZone,
-    ]
-      .filter(Boolean)
-      .join(' · ') || '…'
   );
 }
 

@@ -6,7 +6,7 @@ import type { CalendarEntry } from './types';
 
 /** Resolve complete clocks; floating Event dates imply no occupancy. Published stay bounds and resolved instants may span a range. */
 export function sourceEndpoints(
-  common: Pick<CalendarEntry, 'source' | 'title' | 'purchased' | 'facts'>,
+  common: Pick<CalendarEntry, 'source' | 'title' | 'confirmed' | 'purchased' | 'facts'>,
   endpoints: [
     CalendarEntry['boundary'],
     string | undefined,

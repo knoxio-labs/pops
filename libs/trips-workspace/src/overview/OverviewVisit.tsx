@@ -25,7 +25,11 @@ export function OverviewVisit({
       data-route-kind="visit"
       data-route-id={visit.id}
       data-route-state="resolved"
-      className="mb-4 min-w-0 overflow-hidden rounded-2xl border border-trip-line bg-trip-surface"
+      className={
+        props.workspaceDisplay === 'journey'
+          ? 'min-w-0 overflow-hidden rounded-2xl border border-trip-line border-l-4 border-l-trip-stay bg-trip-surface shadow-sm'
+          : 'min-w-0 overflow-hidden rounded-2xl border border-trip-line bg-trip-surface'
+      }
     >
       <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-1 bg-trip-sunken/40 px-4 py-2">
         <span className="flex min-w-0 items-center gap-2">
