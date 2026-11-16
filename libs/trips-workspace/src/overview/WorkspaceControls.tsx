@@ -67,7 +67,7 @@ function DisplaySelector({
           aria-pressed={display === value}
           onClick={() => onDisplayChange(value)}
           className={cn(
-            'inline-flex min-h-9 items-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trip-transport',
+            'inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trip-transport',
             display === value
               ? 'bg-trip-sunken text-trip-ink'
               : 'text-trip-muted hover:text-trip-ink'
@@ -100,7 +100,7 @@ function FilterSelector({
           aria-pressed={filter === value}
           onClick={() => onFilterChange(value)}
           className={cn(
-            'min-h-9 rounded-lg px-3 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trip-transport',
+            'min-h-11 rounded-lg px-3 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trip-transport',
             filter === value
               ? 'bg-trip-surface font-medium text-trip-ink shadow-sm'
               : 'text-trip-muted hover:text-trip-ink'
