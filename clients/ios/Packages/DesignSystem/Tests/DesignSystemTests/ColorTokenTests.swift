@@ -24,6 +24,8 @@ internal struct ColorTokenTests {
         ("popsPurchases", .popsPurchases),
         ("popsTrips", .popsTrips),
         ("popsTripsTint", .popsTripsTint),
+        ("popsTripsStay", .popsTripsStay),
+        ("popsTripsActivity", .popsTripsActivity),
         ("popsTripsAttention", .popsTripsAttention),
     ]
 

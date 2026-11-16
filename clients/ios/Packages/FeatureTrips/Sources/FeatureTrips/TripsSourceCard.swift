@@ -106,7 +106,7 @@ internal struct TripsSourceStyle {
                 kind = "Stay"
             }
             symbol = "bed.double.fill"
-            accent = .teal
+            accent = .popsTripsStay
         case .journey(let journey):
             let modes = journey.legs.compactMap { $0.mode }
                 .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
@@ -118,15 +118,18 @@ internal struct TripsSourceStyle {
                 symbol =
                     mode.caseInsensitiveCompare("flight") == .orderedSame
                     ? "airplane" : "arrow.triangle.swap"
+                accent =
+                    mode.caseInsensitiveCompare("flight") == .orderedSame
+                    ? .popsAccent : .popsTrips
             } else {
                 kind = "Journey"
                 symbol = "arrow.triangle.swap"
+                accent = .popsTrips
             }
-            accent = .popsTrips
         case .event:
             kind = "Event"
             symbol = "calendar"
-            accent = .purple
+            accent = .popsTripsActivity
         }
     }
 }
