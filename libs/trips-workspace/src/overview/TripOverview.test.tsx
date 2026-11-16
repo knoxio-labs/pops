@@ -64,6 +64,54 @@ describe('source-backed TripOverview', () => {
     expect(screen.getByRole('link', { name: "Dad's place" })).toBeVisible();
     expect(screen.queryByRole('link', { name: 'Coast hotel idea' })).not.toBeInTheDocument();
   });
+  it('keeps route and orphaned stay issues while hiding complete visits and journeys', async () => {
+    const responses = overviewResponses();
+    responses.set('/trips/7/journeys', {
+      journeys: [sourceJourney(), sourceJourney({ id: 21, name: 'Unplaced ferry' })],
+    });
+    responses.set('/trips/7/stays', {
+      stays: [
+        sourceStay({
+          timing: { arrival: '2029-05-01', departure: '2029-05-09' },
+          status: 'Reserved',
+        }),
+        sourceStay({
+          id: 14,
+          visitId: 998,
+          name: 'Orphaned stay',
+          timing: {},
+          status: 'Considering',
+        }),
+      ],
+    });
+    responses.set(
+      '/trips/7/route',
+      routeRead({
+        order: [
+          { kind: 'visit', id: 31 },
+          { kind: 'gap', id: 90 },
+          { kind: 'journey', id: 20 },
+          { kind: 'visit', id: 999 },
+        ],
+        missingSources: [{ kind: 'visit', id: 999 }],
+      })
+    );
+    mount(responses);
+    expect(await screen.findByRole('link', { name: 'Harbour connection' })).toBeVisible();
+    expect(await screen.findByRole('link', { name: 'Unplaced ferry' })).toBeVisible();
+
+    await userEvent.click(screen.getByRole('button', { name: 'workspace.needs-attention' }));
+
+    const route = screen.getByRole('list', { name: 'Route' });
+    expect(within(route).getByText('gap #90')).toBeVisible();
+    expect(within(route).getByRole('link', { name: 'visit #999 · missing' })).toBeVisible();
+    expect(within(route).queryByRole('link', { name: 'Wellington' })).not.toBeInTheDocument();
+    expect(
+      within(route).queryByRole('link', { name: 'Harbour connection' })
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Orphaned stay' })).toBeVisible();
+    expect(screen.queryByRole('link', { name: 'Unplaced ferry' })).not.toBeInTheDocument();
+  });
   it('searches journey leg details while retaining the owning Journey source', async () => {
     mount(overviewResponses());
     const search = await screen.findByRole('textbox', { name: 'workspace.search' });

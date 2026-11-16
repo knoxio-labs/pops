@@ -5,6 +5,7 @@ import { Badge, cn } from '@pops/ui';
 import { accommodationCoverage } from '../visit/coverage';
 import { dateRange } from './model';
 import { sourceAction } from './source-action';
+import { calendarDaysBetween } from './workspace-date';
 
 import type { JSX } from 'react';
 
@@ -46,9 +47,10 @@ export function WorkspaceCoverage(props: OverviewViewProps): JSX.Element | null 
 
 function coverageRecords(visits: Visit[], props: OverviewViewProps): CoverageRecord[] {
   const stays = (props.sources.stays ?? []).filter((stay) => stay.tripId === props.tripId);
+  const events = (props.sources.events ?? []).filter((event) => event.tripId === props.tripId);
   return visits.map((visit) => ({
     visit,
-    coverage: accommodationCoverage(visit, stays, [], props.accommodationComplete),
+    coverage: accommodationCoverage(visit, stays, events, props.accommodationComplete),
   }));
 }
 
@@ -56,7 +58,7 @@ function coverageTotals(records: CoverageRecord[]): CoverageTotals {
   return records.reduce(
     (total, { coverage }) => {
       for (const period of coverage.periods) {
-        const nights = calendarDays(period.arrival, period.departure);
+        const nights = calendarDaysBetween(period.arrival, period.departure);
         if (period.coverage.state === 'covered') total.covered += nights;
         if (period.coverage.state === 'missing') total.open += nights;
       }
@@ -134,14 +136,6 @@ function CoverageVisitContent(
       <CoverageIntervals {...props} intervals={props.intervals} />
     </>
   );
-}
-
-function calendarDays(start: string, end: string): number {
-  const startTime = Date.parse(`${start}T00:00:00Z`);
-  const endTime = Date.parse(`${end}T00:00:00Z`);
-  return Number.isFinite(startTime) && Number.isFinite(endTime)
-    ? Math.max(0, (endTime - startTime) / 86_400_000)
-    : 0;
 }
 
 function CoverageIntervals({

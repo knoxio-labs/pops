@@ -34,7 +34,7 @@ it('shows Reserved coverage without a Purchased assertion and preserves a separa
   const coverage = await screen.findByRole('region', { name: 'workspace.sleep' });
   const summary = within(coverage).getByRole('group', { name: 'workspace.summary' });
   expect(await within(summary).findByText(/workspace.covered/)).toBeVisible();
-  expect(within(summary).getByText(/workspace.open/)).toBeVisible();
+  expect(within(summary).getByText('5 · workspace.open')).toBeVisible();
   expect(within(coverage).queryByText('Purchased')).not.toBeInTheDocument();
 });
 

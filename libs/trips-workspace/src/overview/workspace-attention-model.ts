@@ -1,6 +1,7 @@
 import { AlertTriangle, CalendarDays, Moon, Route } from 'lucide-react';
 
 import { accommodationCoverage } from '../visit/coverage';
+import { calendarDaysBetween } from './workspace-date';
 
 import type { LucideIcon } from 'lucide-react';
 
@@ -43,7 +44,7 @@ function openNightsItem(
         (nights, period) =>
           nights +
           (period.coverage.state === 'missing'
-            ? calendarDays(period.arrival, period.departure)
+            ? calendarDaysBetween(period.arrival, period.departure)
             : 0),
         0
       )
@@ -109,12 +110,4 @@ function unresolvedItems(props: OverviewViewProps): WorkspaceAttentionItem | und
           .join(' · '),
       }
     : undefined;
-}
-
-function calendarDays(start: string, end: string): number {
-  const startTime = Date.parse(`${start}T00:00:00Z`);
-  const endTime = Date.parse(`${end}T00:00:00Z`);
-  return Number.isFinite(startTime) && Number.isFinite(endTime)
-    ? Math.max(0, (endTime - startTime) / 86_400_000)
-    : 0;
 }
