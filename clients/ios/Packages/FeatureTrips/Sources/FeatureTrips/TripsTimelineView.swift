@@ -17,9 +17,10 @@ internal struct TripsTimelineView: View {
             ScrollViewReader { reader in
                 List {
                     TripsOverviewView(
-                        projection: overview, date: context.date, trip: snapshot.trip)
-                        .listRowSeparator(.hidden)
-                        .listRowBackground(Color.popsBackground)
+                        projection: overview, date: context.date, trip: snapshot.trip
+                    )
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.popsBackground)
                     ForEach(overview.focusSections) { section in
                         switch section {
                         case .now(let sources):

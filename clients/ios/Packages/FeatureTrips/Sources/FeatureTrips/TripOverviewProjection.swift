@@ -61,7 +61,7 @@ internal struct TripOverviewProjection {
     }
 
     internal var focusSections: [TripOverviewFocusSection] {
-        var sections = [TripOverviewFocusSection]()
+        var sections: [TripOverviewFocusSection] = []
         if !now.isEmpty { sections.append(.now(now)) }
         if !nextFocus.isEmpty { sections.append(.next(nextFocus)) }
         return sections
