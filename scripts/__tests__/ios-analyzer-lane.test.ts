@@ -201,7 +201,7 @@ describe('the iOS analyzer lane', () => {
     const analyze = steps.find(
       (step) => step.name === 'SwiftLint analyzer rules (reuse the test compile)'
     );
-    expect(analyze?.['timeout-minutes']).toBe(100);
+    expect(analyze?.['timeout-minutes']).toBe(120);
     const analyzerJob = Object.values(workflow.jobs).find(
       (job) => isMapping(job) && Array.isArray(job.steps) && job.steps.includes(analyze)
     );
@@ -219,7 +219,7 @@ describe('the iOS analyzer lane', () => {
       steps.find((step) => step.name === 'UI flow (Maestro, against a real BFM)')?.[
         'timeout-minutes'
       ]
-    ).toBe(45);
+    ).toBe(60);
     expect(analyze?.run).toBe('mise run --skip-deps lint:analyze');
     expect(analyze?.env).toEqual({
       POPS_IOS_ANALYZER_ARTIFACTS: '${{ runner.temp }}/ios-analyzer-diagnostics',
