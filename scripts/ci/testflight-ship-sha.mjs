@@ -46,6 +46,24 @@ export const PROMOTION_QUALITY_JOB_NAME = `ios / ${QUALITY_JOB_NAME}`;
 /** The `name:` of `promotion-quality.yml` itself. */
 export const PROMOTION_QUALITY_WORKFLOW_NAME = 'Promotion Quality';
 
+// GitHub caps REST pages at 100: https://docs.github.com/en/rest/actions/workflow-jobs
+const API_PAGE_SIZE = 100;
+
+/**
+ * @template T
+ * @param {(page: number) => Promise<readonly T[]>} requestPage
+ * @returns {Promise<T[]>}
+ */
+async function collectPages(requestPage) {
+  /** @type {T[]} */
+  const items = [];
+  for (let page = 1; ; page += 1) {
+    const batch = await requestPage(page);
+    items.push(...batch);
+    if (batch.length < API_PAGE_SIZE) return items;
+  }
+}
+
 /** @param {string} name @param {string} workflowName */
 function isWorkflowRunName(name, workflowName) {
   return name === workflowName || name.startsWith(`${workflowName} for `);
@@ -118,15 +136,23 @@ export async function verdictFor(sha, api) {
  * @returns {Promise<string>}
  */
 async function laneVerdict(sha, event, { repo, request }, { workflowName, jobName }) {
-  const { workflow_runs: runs = [] } = await request(
-    `/repos/${repo}/actions/runs?head_sha=${sha}&event=${event}&per_page=100`
-  );
+  const runs = await collectPages(async (page) => {
+    const { workflow_runs = [] } = await request(
+      `/repos/${repo}/actions/runs?head_sha=${sha}&event=${event}&per_page=${API_PAGE_SIZE}${page === 1 ? '' : `&page=${page}`}`
+    );
+    return workflow_runs;
+  });
   const latest = runs
     .filter((run) => isWorkflowRunName(run.name, workflowName))
     .toSorted((a, b) => b.run_number - a.run_number || b.run_attempt - a.run_attempt)[0];
   if (!latest) return 'absent';
   if (latest.status !== 'completed') return 'pending';
-  const { jobs = [] } = await request(`/repos/${repo}/actions/runs/${latest.id}/jobs?per_page=100`);
+  const jobs = await collectPages(async (page) => {
+    const { jobs: batch = [] } = await request(
+      `/repos/${repo}/actions/runs/${latest.id}/jobs?per_page=${API_PAGE_SIZE}${page === 1 ? '' : `&page=${page}`}`
+    );
+    return batch;
+  });
   const job = jobs.find((candidate) => candidate.name === jobName);
   return job?.conclusion ?? 'absent';
 }

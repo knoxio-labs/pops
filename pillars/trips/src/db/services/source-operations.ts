@@ -4,7 +4,7 @@ import { SourceOperationSchema, SourceReceiptSchema } from '../../contract/sourc
 import { sourceOperations } from '../schema.js';
 import { getTrip } from './records.js';
 import { canonicalSourceValue } from './source-canonical.js';
-import { currentAffectedSources, emptySourceWorkspace } from './source-operation-projections.js';
+import { currentAffected } from './source-operation-current.js';
 import { TripsServiceError } from './source-record.js';
 import { undoSourceOperation } from './source-undo.js';
 import { writeSourceCommand } from './source-write.js';
@@ -13,6 +13,7 @@ import type {
   SourceOperation,
   SourceOperationResult,
   SourceReceipt,
+  SourceWorkspace,
   SourceCommand,
 } from '../../contract/source-workspace.js';
 import type { TripsDb } from '../index.js';
@@ -32,6 +33,27 @@ export const IDEA_COMMANDS = ['idea.create', 'idea.update', 'idea.remove'] as co
 /** Membership actions permitted through the Explore Undo scope. */
 export const EXPLORE_COMMANDS = ['explore.add', 'explore.remove'] as const;
 
+function emptyWorkspace(): SourceWorkspace {
+  return {
+    captures: [],
+    ideas: [],
+    associations: [],
+    memberships: [],
+    events: [],
+    journeys: [],
+    stays: [],
+    journeyLegSets: [],
+  };
+}
+function omitsJourneyLegProof(command: SourceCommand): boolean {
+  if (command.kind === 'capture.create')
+    return command.target?.mode === 'createJourney' && command.target.legs === undefined;
+  return (
+    command.kind === 'capture.organise' &&
+    command.target.mode === 'createJourney' &&
+    command.target.legs === undefined
+  );
+}
 interface OperationContext {
   db: TripsDb;
   tripId: number;
@@ -52,10 +74,10 @@ function findOperation(
     )
     .get();
 }
-function parseStoredReceipt(receipt: SourceReceipt): SourceReceipt {
-  return SourceReceiptSchema.parse(
-    receipt.journeyLegSets === undefined ? { ...receipt, journeyLegSets: [] } : receipt
-  );
+function readReceipt(value: unknown, command: SourceCommand): SourceReceipt {
+  const receipt = SourceReceiptSchema.parse(value);
+  if (omitsJourneyLegProof(command) && receipt.journeyLegSets === undefined) return receipt;
+  return { ...receipt, journeyLegSets: receipt.journeyLegSets ?? [] };
 }
 function replayOperation(
   context: OperationContext,
@@ -70,10 +92,10 @@ function replayOperation(
     if (original === undefined || !context.allowedKinds.includes(original.request.command.kind))
       throw new TripsServiceError('source_undo_conflict');
   }
-  const receipt = parseStoredReceipt(existing.receipt);
+  const receipt = readReceipt(existing.receipt, operation.command);
   return {
     receipt,
-    current: currentAffectedSources(context.db, context.tripId, receipt),
+    current: currentAffected(context.db, context.tripId, receipt),
     undone: existing.undoneBy !== null,
     replayed: true,
   };
@@ -84,7 +106,7 @@ function applyOperation(
   canonical: string
 ): SourceOperationResult {
   const receipt: SourceReceipt = {
-    ...emptySourceWorkspace(),
+    ...emptyWorkspace(),
     operationId: operation.operationId,
     undoneOperationId: null,
   };
@@ -95,13 +117,15 @@ function applyOperation(
     memberships: [],
     createdEvents: [],
     createdJourneys: [],
-    createdJourneyLegSets: [],
     createdStays: [],
   };
   const write = { db: context.db, tripId: context.tripId, receipt, inverse };
   if (operation.command.kind === 'undo')
     undoSourceOperation(write, operation.command.targetOperationId, context.allowedKinds);
-  else writeSourceCommand(write, operation.command);
+  else {
+    writeSourceCommand(write, operation.command);
+    if (omitsJourneyLegProof(operation.command)) delete receipt.journeyLegSets;
+  }
   context.db
     .insert(sourceOperations)
     .values({
@@ -115,7 +139,7 @@ function applyOperation(
     .run();
   return {
     receipt,
-    current: currentAffectedSources(context.db, context.tripId, receipt),
+    current: currentAffected(context.db, context.tripId, receipt),
     undone: false,
     replayed: false,
   };
@@ -146,7 +170,7 @@ export function operateSourceWorkspace(
   });
 }
 
-/** Read an existing immutable operation proof with current/undone truth without applying its command. */
+/** Read a saved source-operation receipt with its current affected records and Undo state. */
 export function readSourceOperation(
   db: TripsDb,
   tripId: number,
@@ -154,10 +178,10 @@ export function readSourceOperation(
 ): SourceOperationResult {
   const row = findOperation({ db, tripId, allowedKinds: [] }, operationId);
   if (row === undefined) throw new TripsServiceError('not_found');
-  const receipt = parseStoredReceipt(row.receipt);
+  const receipt = readReceipt(row.receipt, SourceOperationSchema.parse(row.request).command);
   return {
     receipt,
-    current: currentAffectedSources(db, tripId, receipt),
+    current: currentAffected(db, tripId, receipt),
     undone: row.undoneBy !== null,
     replayed: true,
   };

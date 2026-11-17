@@ -28,7 +28,10 @@ import {
 export { describeFileValidationError, validateFiles } from './FileUpload.utils';
 export type { FileValidationError, FileValidationErrorReason } from './FileUpload.utils';
 
+/** File selection and validation shared by a full drop zone or a compact attachment action. */
 export interface FileUploadProps {
+  /** Compact keeps drop, keyboard and validation behaviour with a smaller inline presentation. */
+  compact?: boolean;
   multiple?: boolean;
   accept?: string;
   maxSize?: number;
@@ -114,6 +117,7 @@ function useFileHandlers({
 
 export function FileUpload(props: FileUploadProps) {
   const {
+    compact = false,
     multiple = false,
     accept,
     onFilesSelected,
@@ -145,6 +149,7 @@ export function FileUpload(props: FileUploadProps) {
   return (
     <div className={cn('flex flex-col gap-3', className)}>
       <DropZone
+        compact={compact}
         inputRef={inputRef}
         inputId={inputId}
         isDragging={isDragging}

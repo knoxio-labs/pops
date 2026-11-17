@@ -209,4 +209,95 @@ describe('Rental source persistence', () => {
       opened.raw.close();
     }
   });
+
+  it.each(['pickupVisitId', 'returnVisitId'] as const)(
+    'retains an archived %s but rejects new adoption and reattachment after clearing',
+    (key) => {
+      const opened = openTripsDb(':memory:');
+      try {
+        const db = opened.db;
+        const trip = createTrip(db, {});
+        const place = createPlace(db, { name: 'Archived occurrence' });
+        const archived = createVisit(db, trip.id, { placeId: place.id });
+        const active = createVisit(db, trip.id, { placeId: place.id });
+        const retained = createRental(db, trip.id, { [key]: archived.id });
+        const changed = createRental(db, trip.id, { [key]: active.id });
+        db.update(visits)
+          .set({ removedAt: '2028-01-02T03:04:05.000Z', removalRevision: 1 })
+          .where(eq(visits.id, archived.id))
+          .run();
+        expect(
+          updateRental(db, trip.id, retained.id, {
+            expectedRevision: 0,
+            [key]: archived.id,
+            provider: 'Retained',
+          })
+        ).toMatchObject({ [key]: archived.id, provider: 'Retained', revision: 1 });
+        expect(() => createRental(db, trip.id, { [key]: archived.id })).toThrow('not_found');
+        expect(() =>
+          updateRental(db, trip.id, changed.id, {
+            expectedRevision: 0,
+            [key]: archived.id,
+            provider: 'Rejected',
+          })
+        ).toThrow('not_found');
+        expect(getRental(db, trip.id, changed.id)).toEqual(changed);
+        const cleared = updateRental(db, trip.id, retained.id, {
+          expectedRevision: 1,
+          [key]: null,
+        });
+        expect(cleared).toMatchObject({ [key]: null, revision: 2 });
+        expect(() =>
+          updateRental(db, trip.id, retained.id, {
+            expectedRevision: 2,
+            [key]: archived.id,
+            provider: 'Rejected reattachment',
+          })
+        ).toThrow('not_found');
+        expect(getRental(db, trip.id, retained.id)).toEqual(cleared);
+      } finally {
+        opened.raw.close();
+      }
+    }
+  );
+
+  it.each([null, '2028-01-02T03:04:05.000Z'])(
+    'rejects explicitly retained foreign endpoints with removedAt %s without revalidating omitted links',
+    (removedAt) => {
+      const opened = openTripsDb(':memory:');
+      try {
+        const db = opened.db;
+        const trip = createTrip(db, {});
+        const foreign = createTrip(db, {});
+        const visit = createVisit(db, trip.id, {
+          placeId: createPlace(db, { name: 'Historical occurrence' }).id,
+        });
+        const rental = createRental(db, trip.id, {
+          pickupVisitId: visit.id,
+          returnVisitId: visit.id,
+        });
+        db.update(visits)
+          .set({ tripId: foreign.id, removedAt })
+          .where(eq(visits.id, visit.id))
+          .run();
+        const unrelated = updateRental(db, trip.id, rental.id, {
+          expectedRevision: 0,
+          provider: 'Unrelated',
+        });
+        for (const key of ['pickupVisitId', 'returnVisitId'] as const) {
+          expect(() =>
+            updateRental(db, trip.id, rental.id, {
+              expectedRevision: 1,
+              [key]: visit.id,
+              provider: 'Rejected',
+            })
+          ).toThrow('not_found');
+          expect(getRental(db, trip.id, rental.id)).toEqual(unrelated);
+          expect(() => createRental(db, trip.id, { [key]: visit.id })).toThrow('not_found');
+        }
+      } finally {
+        opened.raw.close();
+      }
+    }
+  );
 });

@@ -12,6 +12,7 @@ import { journeysContract, journeyLegsContract } from './journeys.js';
 import { meetingPlansContract } from './meeting-plans.js';
 import { rentalsContract } from './rentals.js';
 import { responsibilitiesContract } from './responsibilities.js';
+import { routeDraftsContract } from './route-drafts.js';
 import { routeContract } from './route.js';
 import {
   CreatePlaceBody,
@@ -49,6 +50,7 @@ export const tripsContract = c.router(
   {
     bookingImports: bookingImportsContract,
     route: routeContract,
+    routeDrafts: routeDraftsContract,
     captureWorkspace: captureWorkspaceContract,
     captures: capturesContract,
     ideas: ideasContract,

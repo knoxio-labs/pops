@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 
 import {
+  DocumentUploadProvider,
   AccommodationGapProvider,
   ArrangementResponsibilityProvider,
   TripOverview,
@@ -24,6 +25,7 @@ import type { OverviewLinkKind } from '@pops/trips-workspace';
 
 import type { ApiClients } from './api/types';
 import type { CaptureContextProps } from './CaptureContext';
+import type { TimelineContextProps } from './TimelineContext';
 
 type TimelineOwnerProps = RemotePageHostProps &
   Pick<CaptureContextProps, 'client' | 'documentsClient'> & {
@@ -53,16 +55,23 @@ export function TripOverviewPage(props: TimelineOwnerProps = {}) {
       />
     );
   return (
-    <AccommodationGapProvider identity={{ tripId, client: props.client }}>
-      <ArrangementResponsibilityProvider identity={{ tripId, client: props.client }}>
-        <TimelineSession
-          key={`${(props.client ?? defaultClient).getConfig().baseUrl}:${tripId}`}
-          {...props}
-          tripId={tripId}
-          {...chooser}
-        />
-      </ArrangementResponsibilityProvider>
-    </AccommodationGapProvider>
+    <DocumentUploadProvider
+      host={props.documentUploads}
+      tripId={tripId}
+      tripsClient={props.client}
+      documentsClient={props.documentsClient}
+    >
+      <AccommodationGapProvider identity={{ tripId, client: props.client }}>
+        <ArrangementResponsibilityProvider identity={{ tripId, client: props.client }}>
+          <TimelineSession
+            key={`${(props.client ?? defaultClient).getConfig().baseUrl}:${tripId}`}
+            {...props}
+            tripId={tripId}
+            {...chooser}
+          />
+        </ArrangementResponsibilityProvider>
+      </AccommodationGapProvider>
+    </DocumentUploadProvider>
   );
 }
 
@@ -126,7 +135,6 @@ function TimelineOverview({
       controls={<TimelineControls {...presentation} onSelect={onSelect} />}
       sourceVisibility={presentation.sourceVisibility}
       sourceControls={sourceFilters(props, presentation, onSelect)}
-      captureComposer={captureComposer(props, selection, tripId)}
       calendar={
         presentation.calendarEnabled
           ? {
@@ -136,9 +144,27 @@ function TimelineOverview({
           : undefined
       }
       renderVisitContext={accommodationContext({ tripId, client: props.client, onSelect })}
-      contextualEditor={<TimelineContext {...props} selection={selection} onSelect={onSelect} />}
+      {...timelineContexts({ ...props, selection, onSelect })}
     />
   );
+}
+
+function timelineContexts(props: TimelineContextProps) {
+  const { selection, onSelect } = props;
+  const captureComposer =
+    selection?.kind === 'tool' && selection.tool !== 'people' ? undefined : (
+      <CaptureContext
+        tripId={props.tripId}
+        client={props.client}
+        documentsClient={props.documentsClient}
+        contacts={props.contacts}
+        view="capture"
+        compact
+        onViewEvent={(id) => onSelect({ kind: 'source', source: { kind: 'event', id } })}
+      />
+    );
+  const contextualEditor = selection ? <TimelineContext {...props} workspace /> : undefined;
+  return { captureComposer, contextualEditor };
 }
 
 function sourceHref(tripId: number, kind: OverviewLinkKind, id: number): string {
@@ -168,23 +194,6 @@ function sourceFilters(
       onChange={presentation.setSourceFilter}
       onVisibility={presentation.setSourceVisibility}
       onSelect={onSelect}
-    />
-  );
-}
-
-function captureComposer(
-  props: TimelineSessionProps,
-  selection: ReturnType<typeof useTimelineSelection>['selection'],
-  tripId: number
-) {
-  if (selection?.kind === 'tool' && selection.tool === 'capture') return undefined;
-  return (
-    <CaptureContext
-      tripId={tripId}
-      client={props.client}
-      contacts={props.contacts}
-      documentsClient={props.documentsClient}
-      view="capture"
     />
   );
 }

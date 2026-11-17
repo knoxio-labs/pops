@@ -14,6 +14,7 @@ import { PillarSdkProvider } from '@pops/pillar-sdk/react';
 import { toastError, Toaster, TooltipProvider } from '@pops/ui';
 
 import { BootRegistryProvider } from './BootRegistryProvider';
+import { DocumentUploadsLifecycle } from './DocumentUploadsLifecycle';
 import { PillarStatusProvider } from './pillars';
 import { buildRouter } from './router';
 
@@ -98,6 +99,7 @@ export function App({ bootRegistry }: AppProps) {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <DocumentUploadsLifecycle />
       <PillarSdkProvider options={browserSdkOptions}>
         <BootRegistryProvider value={bootRegistry}>
           <PillarStatusProvider>

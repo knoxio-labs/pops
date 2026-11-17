@@ -99,6 +99,18 @@ booting or installing the app; the root harness passes the ID it validated.
 flow runs without anything being added anywhere — and an empty glob fails the
 lane rather than passing it having driven nothing.
 
+Full CI validation partitions the sorted discovered files across two independent
+UI workers. Each worker owns its simulator, local fixture and Debug products;
+`POPS_E2E_SHARD_INDEX` (zero based) and `POPS_E2E_SHARD_COUNT` select its partition.
+The selector rejects incomplete or invalid shard settings and empty partitions.
+Every discovered flow belongs to exactly one partition, so adding a flow needs
+no CI allowlist. The final admission check requires every matrix worker to
+succeed. The 45-minute Maestro allowance remains per worker.
+
+Local runs without shard settings drive the whole discovered suite. Explicit
+`POPS_E2E_FLOWS` remains available for acceptance flows and cannot be combined
+with shard settings.
+
 That glob is one directory deep, which is what keeps `subflows/` out of it.
 Everything in there is called through `runFlow` and takes values from its
 caller, so driven on its own it would fail on the ones nobody passed it.

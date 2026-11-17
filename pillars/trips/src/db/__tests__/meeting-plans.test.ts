@@ -98,6 +98,77 @@ describe('Meeting source ownership and independent facts', () => {
     expect(cleared).toMatchObject({ contactUri: null, visitId: null });
   });
 
+  it('retains an archived Visit but rejects new adoption and reattachment after clearing', () => {
+    const retained = f.create({ visitId: f.first.id }).current;
+    const changed = f.create({ visitId: f.second.id }).current;
+    f.db
+      .update(visits)
+      .set({ removedAt: '2028-01-02T03:04:05.000Z', removalRevision: 1 })
+      .where(eq(visits.id, f.first.id))
+      .run();
+    const edited = f.run({
+      kind: 'update',
+      id: retained.id,
+      expectedRevision: retained.revision,
+      patch: { visitId: f.first.id, notes: 'Retained' },
+    }).current;
+    expect(edited).toMatchObject({ visitId: f.first.id, notes: 'Retained', revision: 2 });
+    expect(() => f.create({ visitId: f.first.id })).toThrow('not_found');
+    expect(() =>
+      f.run({
+        kind: 'update',
+        id: changed.id,
+        expectedRevision: changed.revision,
+        patch: { visitId: f.first.id, notes: 'Rejected' },
+      })
+    ).toThrow('not_found');
+    expect(getMeetingPlan(f.db, f.trip.id, changed.id)).toEqual(changed);
+    const cleared = f.run({
+      kind: 'update',
+      id: retained.id,
+      expectedRevision: edited.revision,
+      patch: { visitId: null },
+    }).current;
+    expect(cleared).toMatchObject({ visitId: null, revision: 3 });
+    expect(() =>
+      f.run({
+        kind: 'update',
+        id: retained.id,
+        expectedRevision: cleared.revision,
+        patch: { visitId: f.first.id, notes: 'Rejected reattachment' },
+      })
+    ).toThrow('not_found');
+    expect(getMeetingPlan(f.db, f.trip.id, retained.id)).toEqual(cleared);
+  });
+
+  it.each([null, '2028-01-02T03:04:05.000Z'])(
+    'rejects an explicitly retained foreign Visit with removedAt %s without revalidating an omitted link',
+    (removedAt) => {
+      const source = f.create({ visitId: f.first.id }).current;
+      f.db
+        .update(visits)
+        .set({ tripId: f.other.id, removedAt })
+        .where(eq(visits.id, f.first.id))
+        .run();
+      const unrelated = f.run({
+        kind: 'update',
+        id: source.id,
+        expectedRevision: source.revision,
+        patch: { notes: 'Unrelated' },
+      }).current;
+      expect(() =>
+        f.run({
+          kind: 'update',
+          id: source.id,
+          expectedRevision: unrelated.revision,
+          patch: { visitId: f.first.id, notes: 'Rejected' },
+        })
+      ).toThrow('not_found');
+      expect(getMeetingPlan(f.db, f.trip.id, source.id)).toEqual(unrelated);
+      expect(() => f.create({ visitId: f.first.id })).toThrow('not_found');
+    }
+  );
+
   it('requires verified new Contact identity and rejects stale/exhausted revisions atomically', () => {
     expect(() =>
       f.run({ kind: 'create', input: { contactUri: 'pops:contacts/contact/a' } })

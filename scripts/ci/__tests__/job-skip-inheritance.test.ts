@@ -397,13 +397,15 @@ describe('validation workflow cancellation', () => {
     ).toBe(false);
   });
 
-  it.each(['failure', 'skipped'])(
+  it.each(['failure', 'cancelled', 'skipped', ''])(
     'still runs promotion admission to reject an upstream %s',
     (result) => {
       const needs = results('promotion-quality.yml', 'validation', 'success');
-      needs.quality = { result, outputs: { dockerfiles: '' } };
-      expect(evaluate('promotion-quality.yml', 'validation', false, needs)).toBe(true);
-      expect(promotionFailures(true, needs)).toEqual(['quality']);
+      for (const lane of ['quality', 'ios']) {
+        const rejected = { ...needs, [lane]: { result, outputs: { dockerfiles: '' } } };
+        expect(evaluate('promotion-quality.yml', 'validation', false, rejected)).toBe(true);
+        expect(promotionFailures(true, rejected)).toEqual([lane]);
+      }
     }
   );
 

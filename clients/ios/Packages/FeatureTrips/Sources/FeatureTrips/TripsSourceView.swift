@@ -7,71 +7,59 @@ internal struct TripsSourceView: View {
     internal let places: [TripPlace]
 
     internal var body: some View {
+        let detail = TripSourceDetailPresentation(source: source)
         ScrollView {
-            VStack(alignment: .leading, spacing: PopsSpacing.lg) {
-                TripsSourceHero(
-                    title: source.displayName(places: places),
-                    subtitle: subtitle,
-                    symbol: source.symbol,
-                    accent: tripsSourceAccent(source),
-                    states: states
-                )
-                details
+            VStack(alignment: .leading, spacing: PopsSpacing.xl) {
+                header(detail)
+                if !detail.timings.isEmpty {
+                    TripSourceDetailSchedule(timings: detail.timings)
+                }
+                if case .journey(let journey) = source {
+                    if journey.legs.isEmpty {
+                        PopsCard(appearance: .featured) {
+                            Text("No journey legs recorded")
+                                .foregroundStyle(Color.popsMutedForeground)
+                        }
+                    }
+                    ForEach(TripSourceDetailLegPosition.ordered(journey.legs)) { position in
+                        TripSourceDetailLeg(position: position, places: places)
+                    }
+                }
+                TripSourceDetailFacts(title: "Booking details", facts: detail.facts)
+                ForEach(Array(detail.references.enumerated()), id: \.offset) { _, group in
+                    TripSourceDetailReferences(group: group)
+                }
+                if let start = source.start, let end = source.end, start >= end {
+                    Label("Recorded times conflict", systemImage: "exclamationmark.triangle")
+                        .font(.popsBody)
+                        .foregroundStyle(Color.popsTripsAttention)
+                }
             }
-            .padding(.horizontal, PopsSpacing.lg)
-            .padding(.top, PopsSpacing.lg)
-            .padding(.bottom, PopsSpacing.xxl)
+            .padding(PopsSpacing.lg)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .textSelection(.enabled)
         }
+        .font(.popsBody)
         .background(Color.popsBackground)
-        .navigationTitle(source.displayName(places: places))
+        .navigationTitle("Details")
         .popsTitleDisplay(large: false)
     }
 
-    @ViewBuilder private var details: some View {
-        switch source {
-        case .stay(let stay):
-            TripsStayDetailView(stay: stay)
-        case .journey(let journey):
-            TripsJourneyDetailView(journey: journey, places: places)
-        case .event(let event):
-            TripsEventDetailView(event: event)
-        }
-    }
-
-    private var subtitle: String {
-        switch source {
-        case .journey: source.routeLabel(places: places)
-        case .stay(let stay): stay.kind ?? "Stay details"
-        case .event: "An experience on your trip"
-        }
-    }
-
-    private var states: [TripSourceState] {
-        switch source {
-        case .journey(let journey):
-            journey.legs.flatMap { leg in
-                [
-                    leg.intention.map { TripSourceState(axis: "Plan", value: $0) },
-                    leg.arrangement.map { TripSourceState(axis: "Arrangement", value: $0) },
-                    leg.purchase.map { TripSourceState(axis: "Purchase", value: $0) },
-                ].compactMap { $0 }
+    private func header(_ detail: TripSourceDetailPresentation) -> some View {
+        VStack(alignment: .leading, spacing: PopsSpacing.md) {
+            Label(detail.kind, systemImage: source.symbol)
+                .font(.popsSectionLabel)
+                .foregroundStyle(Color.popsTrips)
+            Text(source.displayName(places: places))
+                .font(.popsLargeTitle)
+                .foregroundStyle(Color.popsForeground)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityAddTraits(.isHeader)
+            if !detail.states.isEmpty {
+                PopsCard(appearance: .featured) {
+                    TripSourceDetailFactRows(facts: detail.states)
+                }
             }
-        case .stay(let stay):
-            stay.status.map { [TripSourceState(axis: "Booking", value: $0)] } ?? []
-        case .event(let event):
-            [
-                event.intention.map { TripSourceState(axis: "Plan", value: $0) },
-                event.arrangement.map { TripSourceState(axis: "Arrangement", value: $0) },
-                event.purchase.map { TripSourceState(axis: "Purchase", value: $0) },
-            ].compactMap { $0 }
         }
-    }
-}
-
-internal func tripsSourceAccent(_ source: TripSource) -> Color {
-    switch source {
-    case .stay: .popsSuccess
-    case .journey: .popsAccent
-    case .event: .popsPurchases
     }
 }

@@ -13,7 +13,7 @@
  * @see docs/architecture/adr-045-guards-must-prove-they-report.md
  */
 
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -37,7 +37,7 @@ const helper = join(repoRoot, 'scripts', 'ci', 'merge-group-scope.mjs');
 
 /** Every workflow whose expensive jobs are scoped inside the merge-queue lane. */
 const SCOPED_WORKFLOWS = [
-  { file: 'ios-quality.yml', expensiveJobs: ['quality'] },
+  { file: 'ios-quality.yml', expensiveJobs: ['native', 'ui', 'quality'] },
   { file: 'docker-build.yml', expensiveJobs: ['discover', 'compose-validate'] },
 ] as const;
 
@@ -241,22 +241,28 @@ describe('the scope job is wired to the workflow it scopes', () => {
     ['merge_group', undefined, 190],
     ['merge_group', false, 190],
   ])('budgets the %s full=%s iOS job at %s minutes', (event, full, expected) => {
-    const expression = jobsOf('ios-quality.yml').get('quality')?.['timeout-minutes'];
-    if (typeof expression !== 'string') throw new Error('Missing lane-specific timeout expression');
-    const evaluate = new Function(
-      'github',
-      'inputs',
-      `return (${expression.replace(/^\s*\$\{\{\s*|\s*\}\}\s*$/gu, '').replace(/==/gu, '===')});`
-    ) as (
-      github: { event_name: string },
-      inputs: { 'full-validation': boolean | undefined }
-    ) => unknown;
-    expect(evaluate({ event_name: event }, { 'full-validation': full })).toBe(expected);
+    for (const jobName of ['native', 'ui']) {
+      const expression = jobsOf('ios-quality.yml').get(jobName)?.['timeout-minutes'];
+      if (typeof expression !== 'string')
+        throw new Error('Missing lane-specific timeout expression');
+      const evaluate = new Function(
+        'github',
+        'inputs',
+        `return (${expression.replace(/^\s*\$\{\{\s*|\s*\}\}\s*$/gu, '').replace(/==/gu, '===')});`
+      ) as (
+        github: { event_name: string },
+        inputs: { 'full-validation': boolean | undefined }
+      ) => unknown;
+      expect(evaluate({ event_name: event }, { 'full-validation': full })).toBe(expected);
+    }
   });
 
   it('runs the analyzer and Maestro in every explicit full lane', () => {
-    const steps = stepsOf(jobsOf('ios-quality.yml').get('quality'));
+    const jobs = jobsOf('ios-quality.yml');
+    const steps = stepsOf(jobs.get('native'));
+    const uiSteps = stepsOf(jobs.get('ui'));
     const namedStep = (name: string) => steps.find((step) => step.name === name);
+    const uiStep = (name: string) => uiSteps.find((step) => step.name === name);
 
     const pullRequestSuite = namedStep('Test (iOS Simulator)');
     expect(pullRequestSuite?.if).toBeUndefined();
@@ -289,13 +295,16 @@ describe('the scope job is wired to the workflow it scopes', () => {
       "Install the BFM's and inventory's subgraphs",
       'UI flow (Maestro, against a real BFM)',
     ]) {
-      expect(namedStep(name)?.if).toBe(
+      expect(uiStep(name)?.if).toBe(
         "github.event_name == 'merge_group' || inputs['full-validation'] == true"
       );
     }
-    expect(namedStep('UI flow (Maestro, against a real BFM)')?.['timeout-minutes']).toBe(45);
+    expect(uiStep('UI flow (Maestro, against a real BFM)')?.['timeout-minutes']).toBe(45);
 
-    expect(namedStep('Release carries no BFM host')?.if).toBeUndefined();
+    expect(uiStep('Release carries no BFM host')?.run).toBe(
+      'mise run verify:release-carries-no-host'
+    );
+    expect(uiStep('Release carries no BFM host')?.if).toBe('strategy.job-index == 0');
 
     const workflowCall = triggersOf('ios-quality.yml').workflow_call;
     expect(isMapping(workflowCall)).toBe(true);
@@ -312,15 +321,13 @@ describe('the scope job is wired to the workflow it scopes', () => {
   });
 
   it('reports source lint before restoring or compiling host packages', () => {
-    const quality = jobsOf('ios-quality.yml').get('quality');
-    const steps = stepsOf(quality);
+    const native = jobsOf('ios-quality.yml').get('native');
+    const steps = stepsOf(native);
     const names = steps
       .map((step) => step.name)
       .filter((name): name is string => typeof name === 'string');
 
-    expect(isMapping(quality?.env) ? quality.env.POPS_IOS_TEST_DIAGNOSTICS : undefined).toBe(
-      'never'
-    );
+    expect(isMapping(native?.env) ? native.env.POPS_IOS_TEST_DIAGNOSTICS : undefined).toBe('never');
     expect(names.indexOf('Lint (swift-format + SwiftLint)')).toBeLessThan(
       names.indexOf('Restore host-toolchain package builds')
     );
@@ -363,6 +370,150 @@ describe('the scope job is wired to the workflow it scopes', () => {
   });
 });
 
+describe('parallel iOS admission', () => {
+  it.each([
+    ['pull_request', false, [0]],
+    ['pull_request', true, [0, 1]],
+    ['merge_group', false, [0, 1]],
+  ])('selects the %s full=%s UI partitions', (eventName, fullValidation, expected) => {
+    const ui = jobsOf('ios-quality.yml').get('ui');
+    const strategy = isMapping(ui?.strategy) ? ui.strategy : undefined;
+    const matrix = isMapping(strategy?.matrix) ? strategy.matrix : undefined;
+    expect(strategy?.['fail-fast']).toBe(false);
+    const expression = scalarText(matrix?.shard);
+    if (expression === undefined) throw new Error('UI shard matrix expression is missing');
+    const body = expression.replace(/^\s*\$\{\{\s*|\s*\}\}\s*$/gu, '').replace(/==/gu, '===');
+    const evaluate = new Function('github', 'inputs', 'fromJSON', `return (${body});`) as (
+      github: { event_name: string },
+      inputs: { 'full-validation': boolean },
+      fromJSON: (source: string) => unknown
+    ) => unknown;
+    expect(
+      evaluate({ event_name: eventName }, { 'full-validation': fullValidation }, JSON.parse)
+    ).toEqual(expected);
+  });
+
+  it('binds each UI partition to its actual matrix position and isolated diagnostics', () => {
+    const ui = jobsOf('ios-quality.yml').get('ui');
+    const env = isMapping(ui?.env) ? ui.env : undefined;
+    expect(env?.POPS_E2E_SHARD_INDEX).toBe('${{ strategy.job-index }}');
+    expect(env?.POPS_E2E_SHARD_COUNT).toBe('${{ strategy.job-total }}');
+    const steps = stepsOf(ui);
+    expect(
+      steps.find((step) => step.name === "Maestro's screenshots and view hierarchies")?.with
+    ).toEqual({
+      name: 'maestro-debug-${{ strategy.job-index }}',
+      path: '~/.maestro/tests',
+      'retention-days': 7,
+      'if-no-files-found': 'warn',
+    });
+    const simulator = steps.find(
+      (step) => step.name === 'Create a disposable simulator for Maestro'
+    );
+    expect(scalarText(simulator?.run)).toContain('${POPS_E2E_SHARD_INDEX}');
+    const taskSource = readFileSync(join(repoRoot, 'clients/ios/mise.toml'), 'utf8');
+    expect(taskSource).toContain('flows=$(node ../../scripts/ios-e2e/flow-selection.mjs)');
+    expect(taskSource).not.toContain("flows=$(find .maestro -maxdepth 1 -name '*.yaml' | sort)");
+    expect(taskSource).toContain('for flow in $flows; do');
+    expect(taskSource).toContain('maestro --device "$udid" test "$flow"');
+  });
+
+  it('joins independent macOS workers in the existing terminal admission job', () => {
+    const jobs = jobsOf('ios-quality.yml');
+    for (const jobName of ['native', 'ui']) {
+      const worker = jobs.get(jobName);
+      expect(worker?.['runs-on']).toBe('xcode-27');
+      expect(needsOf(worker)).toEqual(['scope']);
+      expect(worker?.['continue-on-error']).toBeUndefined();
+      expect(stepsOf(worker).every((step) => step['continue-on-error'] === undefined)).toBe(true);
+    }
+    const admission = jobs.get('quality');
+    expect(admission?.name).toBe('build + test + lint + UI flow');
+    expect(admission?.['runs-on']).toBe('ubuntu-latest');
+    expect(needsOf(admission)).toEqual(['scope', 'native', 'ui']);
+    const verdictStep = stepsOf(admission).find(
+      (step) => isMapping(step.env) && 'NATIVE_RESULT' in step.env
+    );
+    expect(verdictStep?.env).toEqual({
+      NATIVE_RESULT: '${{ needs.native.result }}',
+      UI_RESULT: '${{ needs.ui.result }}',
+    });
+  });
+
+  it('keeps the simulator compile, analyzer and generated-client guard in one worker', () => {
+    const steps = stepsOf(jobsOf('ios-quality.yml').get('native'));
+    const regenerate = steps.findIndex((step) => step.run === 'mise run generate:bfm-client');
+    const driftGuard = steps.findIndex(
+      (step) => step.name === 'Verify the vendored contract and generated client are up to date'
+    );
+    const simulator = steps.findIndex((step) => step.run === 'mise run test');
+    const analyzer = steps.findIndex((step) => step.run === 'mise run --skip-deps lint:analyze');
+    expect(regenerate).toBeGreaterThanOrEqual(0);
+    expect(driftGuard).toBeGreaterThan(regenerate);
+    expect(simulator).toBeGreaterThan(driftGuard);
+    expect(analyzer).toBeGreaterThan(simulator);
+  });
+
+  it('prepares independent Debug products before Release and Maestro', () => {
+    const jobs = jobsOf('ios-quality.yml');
+    const steps = stepsOf(jobs.get('ui'));
+    const generation = steps.findIndex((step) => step.run === 'mise run generate');
+    const resolution = steps.findIndex((step) =>
+      String(step.run ?? '').includes('-resolvePackageDependencies')
+    );
+    const debug = steps.findIndex((step) => step.run === 'mise run build:for-testing');
+    const release = steps.findIndex(
+      (step) => step.run === 'mise run verify:release-carries-no-host'
+    );
+    const maestro = steps.findIndex((step) => step.run === 'mise run e2e:ios');
+    expect(generation).toBeGreaterThanOrEqual(0);
+    expect(resolution).toBeGreaterThan(generation);
+    expect(debug).toBeGreaterThan(resolution);
+    expect(release).toBeGreaterThan(debug);
+    expect(maestro).toBeGreaterThan(release);
+    expect(steps[debug]?.if).toBe(
+      "github.event_name == 'merge_group' || inputs['full-validation'] == true"
+    );
+    expect(steps.some((step) => String(step.run ?? '').includes('lint:analyze'))).toBe(false);
+    expect(stepsOf(jobs.get('native')).some((step) => step.run === 'mise run e2e:ios')).toBe(false);
+    for (const worker of ['native', 'ui']) {
+      const transfers = stepsOf(jobs.get(worker)).filter((step) =>
+        /actions\/(?:download-artifact|cache)/u.test(String(step.uses ?? ''))
+      );
+      expect(JSON.stringify(transfers)).not.toMatch(/derived[-_ ]?data/iu);
+    }
+  });
+
+  it.each(
+    ['success', 'failure', 'cancelled', 'skipped', '', undefined].flatMap((native) =>
+      ['success', 'failure', 'cancelled', 'skipped', '', undefined].map(
+        (ui) => [native, ui] as const
+      )
+    )
+  )(
+    'admits native=%s ui=%s only when both succeeded',
+    (native, ui) => {
+      const admission = jobsOf('ios-quality.yml').get('quality');
+      if (admission === undefined) throw new Error('quality admission job is missing');
+      const script = runScriptOf(admission);
+      expect(script.length).toBeGreaterThan(0);
+      const result = spawnSync('bash', ['-c', script], {
+        env: {
+          PATH: process.env.PATH,
+          ...(native === undefined ? {} : { NATIVE_RESULT: native }),
+          ...(ui === undefined ? {} : { UI_RESULT: ui }),
+        },
+        encoding: 'utf8',
+        timeout: 5_000,
+      });
+      expect(result.error).toBeUndefined();
+      if (native === 'success' && ui === 'success') expect(result.status).toBe(0);
+      else expect(result.status).not.toBe(0);
+    },
+    10_000
+  );
+});
+
 describe("ios-quality.yml's macOS job conditions", () => {
   // Evaluated rather than pattern-matched: these conditions select the iOS
   // validation lane for each PR base, and a regex would still pass with an
@@ -373,13 +524,15 @@ describe("ios-quality.yml's macOS job conditions", () => {
   type Event = {
     eventName: string;
     selected?: string;
+    nativeResult?: string;
+    uiResult?: string;
     baseRef?: string;
     headRef?: string;
     fullValidation?: boolean;
     cancelled?: boolean;
   };
 
-  function runsFor(jobName: 'quality' | 'stacked-build', event: Event): boolean {
+  function runsFor(jobName: 'native' | 'ui' | 'quality' | 'stacked-build', event: Event): boolean {
     const raw = jobsOf('ios-quality.yml').get(jobName)?.if;
     if (typeof raw !== 'string') throw new Error(`${jobName} job has no string \`if:\``);
     const body = /^\$\{\{([\s\S]*)\}\}$/u.exec(raw.trim())?.[1];
@@ -394,7 +547,11 @@ describe("ios-quality.yml's macOS job conditions", () => {
         repository: { default_branch: 'main' },
       },
     };
-    const needs = { scope: { outputs: { selected: event.selected ?? '' } } };
+    const needs = {
+      scope: { outputs: { selected: event.selected ?? '' } },
+      native: { result: event.nativeResult ?? 'success' },
+      ui: { result: event.uiResult ?? 'success' },
+    };
     const inputs = { 'full-validation': event.fullValidation === true };
     const evaluate = new Function(
       'github',
@@ -461,8 +618,25 @@ describe("ios-quality.yml's macOS job conditions", () => {
       { eventName: 'pull_request', baseRef: 'main', fullValidation: true, cancelled: true },
     ],
   ] as const)('%s → runs=%s', (_label, expected, event) => {
-    expect(runsFor('quality', event)).toBe(expected);
+    for (const jobName of ['native', 'ui', 'quality'] as const) {
+      expect(runsFor(jobName, event), jobName).toBe(expected);
+    }
   });
+
+  it.each(['failure', 'cancelled', 'skipped', ''])(
+    'runs selected admission to reject a worker result of %s',
+    (result) => {
+      for (const worker of ['nativeResult', 'uiResult'] as const) {
+        const event = {
+          eventName: 'pull_request',
+          baseRef: 'main',
+          [worker]: result,
+        };
+        expect(runsFor('quality', event)).toBe(true);
+        expect(runsFor('quality', { ...event, cancelled: true })).toBe(false);
+      }
+    }
+  );
 
   it.each([
     ['a PR based on main', false, { eventName: 'pull_request', baseRef: 'main' }],

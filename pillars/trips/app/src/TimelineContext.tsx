@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
-import { Sheet } from '@pops/ui';
+import { Sheet, SheetPanel, useWideWorkspace } from '@pops/ui';
 
 import { CaptureContext } from './CaptureContext';
 import { PeopleContext } from './PeopleContext';
@@ -16,11 +16,22 @@ import type { TimelineContextProps, TimelineSelection } from './timeline-context
 export type { TimelineContextProps, TimelineSelection } from './timeline-context-types';
 
 /** Mount canonical source editors and tools over the same Timeline without another destination. */
-export function TimelineContext(props: TimelineContextProps) {
+export function TimelineContext(props: TimelineContextProps & { workspace?: boolean }) {
   const { t } = useTranslation('trips');
   const { selection, onSelect } = props;
+  const desktop = useWideWorkspace();
   if (selection === null) return null;
   const title = contextTitle(selection, t);
+  if (props.workspace && desktop)
+    return (
+      <SheetPanel
+        title={title}
+        onClose={() => onSelect(null)}
+        className="trips-workspace max-h-screen w-full rounded-2xl border-trip-line bg-trip-surface font-trip-body text-trip-ink shadow-sm"
+      >
+        <ContextContent {...props} selection={selection} />
+      </SheetPanel>
+    );
   return (
     <Sheet
       open
@@ -28,6 +39,9 @@ export function TimelineContext(props: TimelineContextProps) {
         if (!open) onSelect(null);
       }}
       title={title}
+      className={
+        props.workspace ? 'trips-workspace bg-trip-surface font-trip-body text-trip-ink' : undefined
+      }
     >
       <ContextContent {...props} selection={selection} />
     </Sheet>

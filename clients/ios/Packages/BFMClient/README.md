@@ -12,6 +12,13 @@ The same transport relays barcode lookups through `/mobile/barcode/lookup/{code}
 
 `BFMTripsRepository` reads complete cursor snapshots and complete trip aggregates; required source collections never default to empty after a failed or incomplete response. `BFMDocumentsRepository` uses Documents-original IDs under its independent `documents.read` grant, not Inventory link IDs. Original metadata does not establish file availability: files stream through the shared device authorization and retain only actual response-header size, MIME and filename facts. Missing originals and an unconfigured Paperless connection remain distinct from transport or capability failures. A retained paired Documents reader supplies `expectedDevice` and an owner-bound `BFMStreamAuthorizer`: raw requests reject another origin or credential revision before sending, including the single refresh retry. The legacy nil owner remains available for existing unbound consumers; it is not the app’s paired Documents path.
 
+`BFMTripRouteRepository` implements `TripsRouteReading` through the generated
+`mobileTrips.getRoute` operation under the existing `trips.read` grant. It retains
+canonical mixed placement, alternatives, applied history and missing source
+identities independently of source detail. Only a Trips-qualified upstream 404
+means no route; unavailable or malformed reads never become an empty success.
+It adds no route write, offline cache or inferred source state.
+
 `BFMTripMetadataRepository` applies only selected metadata through the generated PATCH operation. Its named `MobileTripPatchInput` component uses the pinned generator's supported typed override to distinguish omitted fields from explicit null for name, tag and parent. Empty text and source-link arrays remain explicit values, and When stays opaque. Missing Trips remain distinct from unavailable or malformed responses; the adapter never replays a write or substitutes a different returned identity.
 
 ## The client is generated, committed, and gated

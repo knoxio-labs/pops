@@ -33,29 +33,56 @@ it('upgrades an existing trip database without changing its route and persists r
       db.insert(schema.trips).values({ name: 'Retained' }).returning().get()
     );
     const place = createPlace(db, { name: 'Repeated town' });
-    const first = VisitSchema.parse(
-      db
-        .insert(schema.visits)
-        .values({ tripId: trip.id, placeId: place.id, position: 0 })
-        .returning()
-        .get()
+    const timestamp = '2028-01-01T00:00:00.000Z';
+    const firstId = Number(
+      raw
+        .prepare(
+          'INSERT INTO visits (trip_id, place_id, position, created_at, updated_at) VALUES (?, ?, ?, ?, ?)'
+        )
+        .run(trip.id, place.id, 0, timestamp, timestamp).lastInsertRowid
     );
-    const second = VisitSchema.parse(
-      db
-        .insert(schema.visits)
-        .values({ tripId: trip.id, placeId: place.id, position: 1 })
-        .returning()
-        .get()
+    const secondId = Number(
+      raw
+        .prepare(
+          'INSERT INTO visits (trip_id, place_id, position, created_at, updated_at) VALUES (?, ?, ?, ?, ?)'
+        )
+        .run(trip.id, place.id, 1, timestamp, timestamp).lastInsertRowid
     );
+    const first = VisitSchema.parse({
+      id: firstId,
+      tripId: trip.id,
+      placeId: place.id,
+      revision: 0,
+      timing: {},
+      notes: '',
+      sourceLinks: [],
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    });
+    const second = VisitSchema.parse({ ...first, id: secondId });
     const route = [first, second];
+    const retainedCaptureId = Number(
+      raw
+        .prepare(
+          'INSERT INTO captures (trip_id, place_id, visit_id, created_at, updated_at, original_text, attachments, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+        )
+        .run(
+          trip.id,
+          place.id,
+          second.id,
+          timestamp,
+          timestamp,
+          'Retained capture source',
+          '[]',
+          ''
+        ).lastInsertRowid
+    );
     const captureOperationId = randomUUID();
     const captureCommand = {
       kind: 'capture.create',
-      input: { originalText: 'Retained capture source', visitId: second.id },
+      input: { originalText: 'Capture operation after migration', visitId: second.id },
       explore: true,
     } as const;
-    const captureReceipt = operateCapture(db, trip.id, captureCommand, captureOperationId).receipt;
-    const captured = readSourceWorkspace(db, trip.id);
     raw.close();
     const upgraded = openTripsDb(path);
     const operation = {
@@ -66,10 +93,21 @@ it('upgrades an existing trip database without changing its route and persists r
       },
     } as const;
     let receipt: MeetingPlanReceipt;
+    let captureReceipt: ReturnType<typeof operateCapture>['receipt'] | undefined;
+    let captured: ReturnType<typeof readSourceWorkspace> | undefined;
     try {
       expect(getTrip(upgraded.db, trip.id)).toEqual(trip);
       expect(listVisits(upgraded.db, trip.id)).toEqual(route);
-      expect(readSourceWorkspace(upgraded.db, trip.id)).toEqual(captured);
+      expect(readSourceWorkspace(upgraded.db, trip.id).captures).toContainEqual(
+        expect.objectContaining({ id: retainedCaptureId, originalText: 'Retained capture source' })
+      );
+      captureReceipt = operateCapture(
+        upgraded.db,
+        trip.id,
+        captureCommand,
+        captureOperationId
+      ).receipt;
+      captured = readSourceWorkspace(upgraded.db, trip.id);
       expect(
         operateCapture(upgraded.db, trip.id, captureCommand, captureOperationId)
       ).toMatchObject({
@@ -84,6 +122,9 @@ it('upgrades an existing trip database without changing its route and persists r
       ).receipt;
     } finally {
       upgraded.raw.close();
+    }
+    if (captureReceipt === undefined || captured === undefined) {
+      throw new Error('Expected capture migration state');
     }
     const reopened = openTripsDb(path);
     try {

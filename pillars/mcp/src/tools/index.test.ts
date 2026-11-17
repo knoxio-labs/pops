@@ -18,8 +18,23 @@ describe('allTools', () => {
     }
   });
 
-  it('exports exactly 203 tools', () => {
-    expect(allTools).toHaveLength(203);
+  it('exports exactly 211 tools', () => {
+    expect(allTools).toHaveLength(211);
+  });
+
+  it('registers the finite direct Documents owner/recovery family alongside Inventory associations', () => {
+    const tools = allTools.filter(
+      (tool) => tool.name.startsWith('documents.') && tool.name !== 'documents.delete'
+    );
+    expect(tools.map((tool) => [tool.name, tool.readOnly, tool.scope])).toEqual([
+      ['documents.status', true, 'documents.paperless.status'],
+      ['documents.search', true, 'documents.paperless.search'],
+      ['documents.get', true, 'documents.paperless.get'],
+      ['documents.task', true, 'documents.paperless.task'],
+      ['documents.uploadStatus', true, 'documents.paperless.upload'],
+      ['documents.createUpload', false, 'documents.write.createUpload'],
+      ['documents.dispatchUpload', false, 'documents.write.dispatchUpload'],
+    ]);
   });
 
   it('registers purchases inventory proposal tools', () => {

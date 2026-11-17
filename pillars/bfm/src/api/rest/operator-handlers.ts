@@ -18,6 +18,7 @@ import { issuePairingCode, listDevices, revokeDevice } from '../../db/index.js';
 import { readPrincipal, requireOperator, requirePairingIssuer } from '../middleware/identity.js';
 import { NotFoundError, TooManyRequestsError } from '../shared/errors.js';
 import { runHttp } from './error-mapping.js';
+import { makeOperatorDeviceGrantHandlers } from './operator-device-grant-handlers.js';
 
 import type { ServerInferRequest } from '@ts-rest/core';
 import type { Response } from 'express';
@@ -62,6 +63,7 @@ function buildPairingUrl(publicBaseUrl: string, code: string): string {
 
 export function makeOperatorHandlers(deps: OperatorHandlerDeps) {
   return {
+    ...makeOperatorDeviceGrantHandlers(deps.db),
     issuePairingCode: ({ res }: { res: Response }) =>
       runHttp(() => {
         const issuer = requirePairingIssuer(res);

@@ -1,72 +1,33 @@
-import { useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect } from 'react';
 
-import { loadPaperlessTask, loadPaperlessUploadPolicy } from './api';
+import { client as defaultDocumentsClient } from '../documents-api/client.gen';
+import { documentOwnerUrl } from './document-owner-url';
+import { useUploadJournal } from './DocumentUploadProvider';
 import { uploadFileProblem } from './model';
-import { completedDocumentId, retainOwnerOriginal } from './owner-task-receipt';
-import { documentQueryKeys } from './query-keys';
-import { recoverAmbiguousUpload, submitSelectedFile } from './upload-actions';
-import { runUploadContextAction } from './upload-context';
+import { completedDocumentId } from './owner-task-receipt';
+import { uploadPolicyFile } from './upload-actions';
+import { useOwnerUploadActions } from './useOwnerUploadActions';
 import { useUploadFields } from './useUploadFields';
-import { useUploadMutation } from './useUploadMutations';
+import { useUploadPolicy, useUploadTask } from './useUploadOwnerQueries';
 
-import type { UseMutationResult, UseQueryResult } from '@tanstack/react-query';
-import type { Dispatch, SetStateAction } from 'react';
+import type {
+  DocumentUploadOptions,
+  DocumentUploadController,
+} from './document-upload-controller-types';
+import type { PaperlessUploadPolicy } from './types';
+import type { UploadFields } from './useUploadFields';
 
-import type { Client as DocumentsClient } from '../documents-api/client';
-import type { PaperlessTask, PaperlessUploadPolicy } from './types';
-import type { DocumentUploadSession, UploadFields } from './useUploadFields';
-
-/**
- * Controlled storage outlives conditional views. Each file intent binds its first owner transport;
- * create a new session when that owner changes rather than rebinding retained task proof.
- */
-export interface DocumentUploadOptions {
-  session: DocumentUploadSession;
-  onSessionChange: Dispatch<SetStateAction<DocumentUploadSession>>;
-  documentsClient?: DocumentsClient;
-  /** Revalidate a retaining parent's captured context immediately before owner operations. */
-  beforeRequest?: () => void;
-  /** Retaining parents supply their captured owner namespace rather than a mutable transport origin. */
-  taskScope?: readonly [string, string];
-}
-
-/** The owner upload task and canonical result, without any Trips route association. */
-export interface DocumentUploadController {
-  /** Fence a separate owner picker or recovery callback with this intent's transport and parent context. */
-  assertOwnerContext: () => void;
-  fields: UploadFields;
-  actions: {
-    uploadMutation: UseMutationResult<string, Error, { file: File; fields: UploadFields }, unknown>;
-    submitUpload: () => void;
-    recoverSelection: () => void;
-    searchCompleted: (count: number | null) => void;
-  };
-  policyQuery: UseQueryResult<PaperlessUploadPolicy, Error>;
-  taskQuery: UseQueryResult<PaperlessTask, Error>;
-  policy: PaperlessUploadPolicy | null;
-  unavailable: boolean;
-  documentId: number | undefined;
-  taskFailed: boolean;
-  error: string | null;
-}
+export type {
+  DocumentUploadOptions,
+  DocumentUploadController,
+} from './document-upload-controller-types';
 
 /** Upload one controlled File once; accepted tasks and uncertain responses block duplicate POSTs across remounts. */
-export function useDocumentUpload({
-  session,
-  onSessionChange,
-  documentsClient,
-  beforeRequest,
-  taskScope: retainedTaskScope,
-}: DocumentUploadOptions): DocumentUploadController {
+export function useDocumentUpload(options: DocumentUploadOptions): DocumentUploadController {
+  const { session, onSessionChange, documentsClient } = options;
   const fields = useUploadFields(session, onSessionChange);
-  const intent = session.intent;
-  const taskScope = intent.bindOwner(documentsClient, retainedTaskScope);
-  const assertOwner = useCallback(() => {
-    intent.assertOwner(documentsClient);
-    beforeRequest?.();
-  }, [intent, documentsClient, beforeRequest]);
-  const policyQuery = useUploadPolicy(documentsClient, assertOwner);
+  const { taskScope, assertOwner, persistenceProblem } = useOwnerScope(options);
+  const policyQuery = useUploadPolicy(documentsClient, assertOwner, taskScope);
   const taskQuery = useUploadTask({
     fields,
     documentsClient,
@@ -78,100 +39,73 @@ export function useDocumentUpload({
     policy: policyQuery.data,
     client: documentsClient,
     beforeRequest: assertOwner,
+    persistenceProblem,
   });
+  const { recoverSelection } = actions;
+  useEffect(() => {
+    if (persistenceProblem === null && fields.durable.takeRestoredRead()) recoverSelection();
+  }, [fields.durable, persistenceProblem, recoverSelection]);
   return {
     assertOwnerContext: assertOwner,
     fields,
+    persistenceReady: persistenceProblem === null,
     actions,
     policyQuery,
     taskQuery,
     policy: policyQuery.data ?? null,
     unavailable: policyQuery.isError || policyUnavailable(policyQuery.data),
-    documentId: completedDocumentId(taskQuery.data),
+    documentId:
+      persistenceProblem === null && fields.ownerMatches !== false
+        ? completedDocumentId(taskQuery.data)
+        : undefined,
     taskFailed: taskQuery.data?.state === 'failed',
-    error: uploadProblem(fields, policyQuery.data),
+    error:
+      persistenceProblem ??
+      fields.durable.storageProblem() ??
+      (fields.ownerMatches === false
+        ? 'Restore the original Documents archive before opening or linking this upload.'
+        : uploadProblem(fields, policyQuery.data)),
   };
 }
 
-function useOwnerUploadActions({
-  fields,
-  policy,
-  client,
-  beforeRequest,
-}: {
-  fields: UploadFields;
-  policy: PaperlessUploadPolicy | undefined;
-  client: DocumentsClient | undefined;
-  beforeRequest: (() => void) | undefined;
-}): DocumentUploadController['actions'] {
-  const uploadMutation = useUploadMutation(client, beforeRequest);
-  const submitUpload = (): void => {
-    if (!fields.canStartUpload()) return;
-    submitSelectedFile({
-      file: fields.file,
-      policy,
-      upload: (file) => {
-        if (!fields.claimUpload()) return;
-        uploadMutation.mutate({ file, fields });
-      },
-      setError: fields.setUploadError,
-      setRejected: fields.setUploadRejected,
-    });
-  };
-  return {
-    uploadMutation,
-    submitUpload,
-    recoverSelection: () =>
-      runUploadContextAction(fields, beforeRequest, () => recoverAmbiguousUpload(fields)),
-    searchCompleted: fields.setOwnerLookupCount,
-  };
-}
-
-function useUploadPolicy(
-  documentsClient: DocumentsClient | undefined,
-  beforeRequest: (() => void) | undefined
-): UseQueryResult<PaperlessUploadPolicy, Error> {
-  return useQuery({
-    queryKey: documentQueryKeys.status(documentsClient),
-    queryFn: () => {
-      beforeRequest?.();
-      return loadPaperlessUploadPolicy(documentsClient);
-    },
-    retry: false,
-  });
-}
-
-function useUploadTask({
-  fields,
+function useOwnerScope({
+  session,
   documentsClient,
   beforeRequest,
-  taskScope,
-}: {
-  fields: UploadFields;
-  documentsClient: DocumentsClient | undefined;
-  beforeRequest: (() => void) | undefined;
+  taskScope: retainedTaskScope,
+  journal,
+}: DocumentUploadOptions): {
   taskScope: readonly [string, string];
-}): UseQueryResult<PaperlessTask, Error> {
-  const { taskId, taskReceipt, setTaskReceipt } = fields;
-  const query = useQuery({
-    queryKey: [taskScope[0], taskScope[1], taskId ?? ''],
-    queryFn: async () => {
-      beforeRequest?.();
-      const result = await loadPaperlessTask(taskId ?? '', documentsClient);
-      if (taskId !== null) setTaskReceipt(taskId, result);
-      return result;
-    },
-    initialData: taskReceipt?.taskId === taskId ? taskReceipt.result : undefined,
-    select: (result) =>
-      retainOwnerOriginal(taskReceipt?.taskId === taskId ? taskReceipt.result : undefined, result),
-    enabled: taskId !== null,
-    retry: false,
-    refetchInterval: (query) => (query.state.data?.state === 'pending' ? 1500 : false),
-  });
-  useEffect(() => {
-    if (taskId !== null && query.data !== undefined) setTaskReceipt(taskId, query.data);
-  }, [query.data, setTaskReceipt, taskId]);
-  return query;
+  assertOwner: () => void;
+  persistenceProblem: string | null;
+} {
+  const intent = session.intent;
+  const fallbackPersistence = useUploadJournal(null);
+  const persistence = journal ?? fallbackPersistence.journal;
+  let persistenceProblem = persistence === null ? fallbackPersistence.problem : null;
+  if (persistence !== null) {
+    try {
+      persistence.assertDocumentsOwner(
+        documentOwnerUrl((documentsClient ?? defaultDocumentsClient).getConfig().baseUrl)
+      );
+      intent.durable.bindJournal(persistence);
+    } catch (error) {
+      persistenceProblem =
+        error instanceof Error ? error.message : 'Upload recovery context changed.';
+    }
+  }
+  const taskScope = intent.bindOwner(documentsClient, retainedTaskScope);
+  const assertOwner = useCallback(() => {
+    intent.assertOwner(documentsClient);
+    if (persistence === null || intent.durable.persistenceBinding() !== persistence.bindingKey())
+      throw new Error('Restore the original upload account and source before continuing.');
+    persistence.assertDocumentsOwner(
+      documentOwnerUrl((documentsClient ?? defaultDocumentsClient).getConfig().baseUrl)
+    );
+    beforeRequest?.();
+    intent.assertOwner(documentsClient);
+  }, [intent, documentsClient, beforeRequest, persistence]);
+  return { taskScope, assertOwner, persistenceProblem };
 }
 
 function policyUnavailable(policy: PaperlessUploadPolicy | undefined): boolean {
@@ -184,5 +118,5 @@ function uploadProblem(
 ): string | null {
   if (fields.uploadError !== null) return fields.uploadError;
   if (fields.file === null || fields.taskId !== null) return null;
-  return uploadFileProblem(fields.file, policy ?? null) ?? null;
+  return uploadFileProblem(uploadPolicyFile(fields.file, fields.metadata), policy ?? null) ?? null;
 }

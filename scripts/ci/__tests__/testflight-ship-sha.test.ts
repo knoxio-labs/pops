@@ -90,10 +90,21 @@ describe('verdictFor', () => {
       repo: 'o/r',
       request: (path: string) => {
         paths.push(path);
+        const query = new URL(path, 'https://api.github.com').searchParams;
+        const page = Number(query.get('page') ?? 1);
+        const pageSize = Number(query.get('per_page') ?? 30);
+        const start = (page - 1) * pageSize;
         const jobs = /\/runs\/(\d+)\/jobs/u.exec(path);
-        if (jobs) return Promise.resolve({ jobs: jobsByRun[Number(jobs[1])] ?? [] });
+        if (jobs) {
+          return Promise.resolve({
+            jobs: (jobsByRun[Number(jobs[1])] ?? []).slice(start, start + pageSize),
+          });
+        }
         return Promise.resolve({
-          workflow_runs: path.includes('event=pull_request') ? prRuns : runs,
+          workflow_runs: (path.includes('event=pull_request') ? prRuns : runs).slice(
+            start,
+            start + pageSize
+          ),
         });
       },
       requestPulls: (path: string) => {
@@ -107,6 +118,78 @@ describe('verdictFor', () => {
     merge_commit_sha: mergeSha,
     merged_at: '2026-09-23T09:06:48Z',
     head: { sha: headSha },
+  });
+
+  it.each(['success', 'failure', 'cancelled', 'skipped'])(
+    'reads a later-page promotion aggregate with conclusion %s',
+    async (conclusion) => {
+      const workers = Array.from({ length: 100 }, (_, index) => ({
+        name: `worker ${index}`,
+        conclusion: 'success',
+      }));
+      const a = api(
+        [],
+        { 7: [...workers, { name: PROMOTION_QUALITY_JOB_NAME, conclusion }] },
+        {
+          pulls: [merged('abc', 'head')],
+          prRuns: [run(7, 3, 1, 'completed', PROMOTION_QUALITY_WORKFLOW_NAME)],
+        }
+      );
+      const verdict = await verdictFor('abc', a);
+      expect(verdict).toBe(conclusion);
+      expect(pickShipSha(['abc'], new Map([['abc', verdict]]))).toBe(
+        conclusion === 'success' ? 'abc' : null
+      );
+      expect(a.paths).toContain('/repos/o/r/actions/runs/7/jobs?per_page=100&page=2');
+    }
+  );
+
+  it.each(['completed', 'in_progress'])(
+    'selects the newest matching run across pages when it is %s',
+    async (status) => {
+      const runs = Array.from({ length: 100 }, (_, index) => run(index + 1, index + 1, 1));
+      const a = api([...runs, run(101, 101, 1, status)], {
+        100: [{ name: QUALITY_JOB_NAME, conclusion: 'success' }],
+        101: [{ name: QUALITY_JOB_NAME, conclusion: 'failure' }],
+      });
+      expect(await verdictFor('abc', a)).toBe(status === 'completed' ? 'failure' : 'pending');
+      expect(a.paths).toContain(
+        '/repos/o/r/actions/runs?head_sha=abc&event=merge_group&per_page=100&page=2'
+      );
+      expect(a.paths.some((path) => path.includes('/runs/100/jobs'))).toBe(false);
+    }
+  );
+
+  it('checks the empty next page when exactly 100 jobs omit the aggregate', async () => {
+    const a = api([run(1, 1, 1)], {
+      1: Array.from({ length: 100 }, (_, index) => ({
+        name: `worker ${index}`,
+        conclusion: 'success',
+      })),
+    });
+    expect(await verdictFor('abc', a)).toBe('absent');
+    expect(a.paths).toContain('/repos/o/r/actions/runs/1/jobs?per_page=100&page=2');
+    expect(a.paths.some((path) => path.includes('page=3'))).toBe(false);
+  });
+
+  it('propagates a later-page request failure instead of accepting partial results', async () => {
+    const a = api([run(1, 1, 1)], {
+      1: [
+        { name: QUALITY_JOB_NAME, conclusion: 'success' },
+        ...Array.from({ length: 99 }, (_, index) => ({
+          name: `worker ${index}`,
+          conclusion: 'success',
+        })),
+      ],
+    });
+    const failingApi = {
+      ...a,
+      request: (path: string) => {
+        if (path.endsWith('&page=2')) return Promise.reject(new Error('GitHub unavailable'));
+        return a.request(path);
+      },
+    };
+    await expect(verdictFor('abc', failingApi)).rejects.toThrow('GitHub unavailable');
   });
 
   it('asks only for merge-group runs of that commit', async () => {
@@ -126,6 +209,44 @@ describe('verdictFor', () => {
     });
     expect(await verdictFor('abc', a)).toBe('failure');
   });
+
+  it.each(['success', 'failure', 'cancelled', 'skipped'])(
+    'uses only aggregate %s despite successful worker jobs',
+    async (conclusion) => {
+      const doc = workflow('ios-quality.yml');
+      const jobs = doc.jobs;
+      if (!isMapping(jobs)) throw new Error('iOS workflow jobs are missing');
+      const workers = ['native', 'ui'].map((id) => {
+        const job = jobs[id];
+        if (!isMapping(job) || typeof job.name !== 'string') {
+          throw new Error(`Missing worker name: ${id}`);
+        }
+        return { name: job.name, conclusion: 'success' };
+      });
+      for (const promotion of [false, true]) {
+        const jobName = promotion ? PROMOTION_QUALITY_JOB_NAME : QUALITY_JOB_NAME;
+        const namedWorkers = workers.map((job) => ({
+          ...job,
+          name: promotion ? `ios / ${job.name}` : job.name,
+        }));
+        const a = promotion
+          ? api(
+              [],
+              { 7: [...namedWorkers, { name: jobName, conclusion }] },
+              {
+                pulls: [merged('abc', 'head')],
+                prRuns: [run(7, 3, 1, 'completed', PROMOTION_QUALITY_WORKFLOW_NAME)],
+              }
+            )
+          : api([run(7, 3, 1)], { 7: [...namedWorkers, { name: jobName, conclusion }] });
+        const verdict = await verdictFor('abc', a);
+        expect(verdict).toBe(conclusion);
+        expect(pickShipSha(['abc'], new Map([['abc', verdict]]))).toBe(
+          conclusion === 'success' ? 'abc' : null
+        );
+      }
+    }
+  );
 
   it('ignores other workflows at the same commit', async () => {
     const other = { ...run(9, 99, 1), name: 'Docker Build' };

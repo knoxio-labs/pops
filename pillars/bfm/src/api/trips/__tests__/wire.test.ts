@@ -11,10 +11,12 @@ import { sdkWireFactory } from '../../__tests__/sdk-wire.js';
 import { createPillarGateway } from '../../pillars/gateway.js';
 import { createMobileTripsClient } from '../client.js';
 import { tripsFixture } from './fixtures.js';
+import { tripRouteFixture } from './route-fixture.js';
 
 import type { WireOperation } from '../../__tests__/sdk-wire.js';
 
 const operations: WireOperation[] = [
+  { operationId: 'route.get', method: 'get', path: '/trips/{tripId}/route' },
   { operationId: 'trips.list', method: 'get', path: '/trips' },
   { operationId: 'trips.get', method: 'get', path: '/trips/{id}' },
   { operationId: 'places.list', method: 'get', path: '/places' },
@@ -42,6 +44,17 @@ describe('Trips reads through the real SDK wire', () => {
     __resetServerPillarCache();
     __resetSharedPillarClient();
     __resetSharedOpenApiCache();
+  });
+
+  it('addresses canonical route membership through the producer route operation', async () => {
+    const value = tripRouteFixture();
+    const { factory, requests } = sdkWireFactory('trips', operations, () => ({
+      status: 200,
+      body: value,
+    }));
+    const client = createMobileTripsClient(createPillarGateway(factory));
+    expect(await client.getRoute(7)).toEqual({ kind: 'ok', value });
+    expect(requests).toEqual([{ method: 'GET', url: '/trips/7/route', body: undefined }]);
   });
 
   it('sends trip and journey identities as path parameters without query/body substitution', async () => {

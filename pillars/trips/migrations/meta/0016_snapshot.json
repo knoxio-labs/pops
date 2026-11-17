@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "8e23ba5d-e24f-4e0b-aef1-29ab8b236078",
+  "id": "afbed031-201c-45a4-bfa6-23846ccb61e1",
   "prevId": "b03d4f00-850d-4307-8d30-e5b8df4fbee2",
   "tables": {
     "arrangement_responsibilities": {
@@ -61,507 +61,6 @@
         "arrangement_responsibilities_trip_id_trips_id_fk": {
           "name": "arrangement_responsibilities_trip_id_trips_id_fk",
           "tableFrom": "arrangement_responsibilities",
-          "tableTo": "trips",
-          "columnsFrom": ["trip_id"],
-          "columnsTo": ["id"],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "booking_import_attempts": {
-      "name": "booking_import_attempts",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "trip_id": {
-          "name": "trip_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "source_id": {
-          "name": "source_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "binding_id": {
-          "name": "binding_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "provider_id": {
-          "name": "provider_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "model_id": {
-          "name": "model_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "predecessor_id": {
-          "name": "predecessor_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "state": {
-          "name": "state",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "proposals": {
-          "name": "proposals",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "'[]'"
-        },
-        "failure": {
-          "name": "failure",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "idx_booking_import_attempts_source": {
-          "name": "idx_booking_import_attempts_source",
-          "columns": ["source_id"],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "booking_import_attempts_trip_id_trips_id_fk": {
-          "name": "booking_import_attempts_trip_id_trips_id_fk",
-          "tableFrom": "booking_import_attempts",
-          "tableTo": "trips",
-          "columnsFrom": ["trip_id"],
-          "columnsTo": ["id"],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "booking_import_attempts_source_id_booking_import_sources_id_fk": {
-          "name": "booking_import_attempts_source_id_booking_import_sources_id_fk",
-          "tableFrom": "booking_import_attempts",
-          "tableTo": "booking_import_sources",
-          "columnsFrom": ["source_id"],
-          "columnsTo": ["id"],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "booking_import_attempts_binding_id_booking_import_bindings_id_fk": {
-          "name": "booking_import_attempts_binding_id_booking_import_bindings_id_fk",
-          "tableFrom": "booking_import_attempts",
-          "tableTo": "booking_import_bindings",
-          "columnsFrom": ["binding_id"],
-          "columnsTo": ["id"],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "booking_import_bindings": {
-      "name": "booking_import_bindings",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "trip_id": {
-          "name": "trip_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "source_id": {
-          "name": "source_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "selection": {
-          "name": "selection",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "documents_origin": {
-          "name": "documents_origin",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "media_type": {
-          "name": "media_type",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "idx_booking_import_bindings_source": {
-          "name": "idx_booking_import_bindings_source",
-          "columns": ["source_id"],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "booking_import_bindings_trip_id_trips_id_fk": {
-          "name": "booking_import_bindings_trip_id_trips_id_fk",
-          "tableFrom": "booking_import_bindings",
-          "tableTo": "trips",
-          "columnsFrom": ["trip_id"],
-          "columnsTo": ["id"],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "booking_import_bindings_source_id_booking_import_sources_id_fk": {
-          "name": "booking_import_bindings_source_id_booking_import_sources_id_fk",
-          "tableFrom": "booking_import_bindings",
-          "tableTo": "booking_import_sources",
-          "columnsFrom": ["source_id"],
-          "columnsTo": ["id"],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "booking_import_decisions": {
-      "name": "booking_import_decisions",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "trip_id": {
-          "name": "trip_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "source_id": {
-          "name": "source_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "binding_id": {
-          "name": "binding_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "expected_source_revision": {
-          "name": "expected_source_revision",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "expected_capture_revision": {
-          "name": "expected_capture_revision",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "admission": {
-          "name": "admission",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "attempt_id": {
-          "name": "attempt_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "proposal_ids": {
-          "name": "proposal_ids",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "target": {
-          "name": "target",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "committed_operation_id": {
-          "name": "committed_operation_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "idx_booking_import_decisions_source": {
-          "name": "idx_booking_import_decisions_source",
-          "columns": ["source_id"],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "booking_import_decisions_trip_id_trips_id_fk": {
-          "name": "booking_import_decisions_trip_id_trips_id_fk",
-          "tableFrom": "booking_import_decisions",
-          "tableTo": "trips",
-          "columnsFrom": ["trip_id"],
-          "columnsTo": ["id"],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "booking_import_decisions_source_id_booking_import_sources_id_fk": {
-          "name": "booking_import_decisions_source_id_booking_import_sources_id_fk",
-          "tableFrom": "booking_import_decisions",
-          "tableTo": "booking_import_sources",
-          "columnsFrom": ["source_id"],
-          "columnsTo": ["id"],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "booking_import_decisions_binding_id_booking_import_bindings_id_fk": {
-          "name": "booking_import_decisions_binding_id_booking_import_bindings_id_fk",
-          "tableFrom": "booking_import_decisions",
-          "tableTo": "booking_import_bindings",
-          "columnsFrom": ["binding_id"],
-          "columnsTo": ["id"],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "booking_import_requests": {
-      "name": "booking_import_requests",
-      "columns": {
-        "trip_id": {
-          "name": "trip_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "operation_id": {
-          "name": "operation_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "source_id": {
-          "name": "source_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "canonical_request": {
-          "name": "canonical_request",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "receipt": {
-          "name": "receipt",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "idx_booking_import_requests_operation": {
-          "name": "idx_booking_import_requests_operation",
-          "columns": ["trip_id", "operation_id"],
-          "isUnique": true
-        }
-      },
-      "foreignKeys": {
-        "booking_import_requests_trip_id_trips_id_fk": {
-          "name": "booking_import_requests_trip_id_trips_id_fk",
-          "tableFrom": "booking_import_requests",
-          "tableTo": "trips",
-          "columnsFrom": ["trip_id"],
-          "columnsTo": ["id"],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "booking_import_requests_source_id_booking_import_sources_id_fk": {
-          "name": "booking_import_requests_source_id_booking_import_sources_id_fk",
-          "tableFrom": "booking_import_requests",
-          "tableTo": "booking_import_sources",
-          "columnsFrom": ["source_id"],
-          "columnsTo": ["id"],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "booking_import_sources": {
-      "name": "booking_import_sources",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "trip_id": {
-          "name": "trip_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "representation": {
-          "name": "representation",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "sha256": {
-          "name": "sha256",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "byte_length": {
-          "name": "byte_length",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "revision": {
-          "name": "revision",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "latest_attempt_id": {
-          "name": "latest_attempt_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "idx_booking_import_sources_content": {
-          "name": "idx_booking_import_sources_content",
-          "columns": ["trip_id", "representation", "sha256", "byte_length"],
-          "isUnique": true
-        }
-      },
-      "foreignKeys": {
-        "booking_import_sources_trip_id_trips_id_fk": {
-          "name": "booking_import_sources_trip_id_trips_id_fk",
-          "tableFrom": "booking_import_sources",
           "tableTo": "trips",
           "columnsFrom": ["trip_id"],
           "columnsTo": ["id"],
@@ -1036,6 +535,28 @@
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
+        },
+        "removed_at": {
+          "name": "removed_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "removal_operation_id": {
+          "name": "removal_operation_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "removal_revision": {
+          "name": "removal_revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
         },
         "name": {
           "name": "name",
@@ -1767,6 +1288,28 @@
           "autoincrement": false,
           "default": 0
         },
+        "removed_at": {
+          "name": "removed_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "removal_operation_id": {
+          "name": "removal_operation_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "removal_revision": {
+          "name": "removal_revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
         "name": {
           "name": "name",
           "type": "text",
@@ -2069,6 +1612,13 @@
           "autoincrement": false,
           "default": false
         },
+        "removal_operation_id": {
+          "name": "removal_operation_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "contact_uri": {
           "name": "contact_uri",
           "type": "text",
@@ -2279,6 +1829,28 @@
           "autoincrement": false,
           "default": 0
         },
+        "removed_at": {
+          "name": "removed_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "removal_operation_id": {
+          "name": "removal_operation_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "removal_revision": {
+          "name": "removal_revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
         "created_at": {
           "name": "created_at",
           "type": "text",
@@ -2374,6 +1946,14 @@
           "notNull": true,
           "autoincrement": false
         },
+        "family": {
+          "name": "family",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'placement'"
+        },
         "request": {
           "name": "request",
           "type": "text",
@@ -2386,6 +1966,13 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true,
+          "autoincrement": false
+        },
+        "source_inverse": {
+          "name": "source_inverse",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
           "autoincrement": false
         },
         "expected_after": {
@@ -2595,6 +2182,28 @@
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
+        },
+        "removed_at": {
+          "name": "removed_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "removal_operation_id": {
+          "name": "removal_operation_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "removal_revision": {
+          "name": "removal_revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
         },
         "name": {
           "name": "name",
@@ -3034,6 +2643,28 @@
         },
         "revision": {
           "name": "revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "removed_at": {
+          "name": "removed_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "removal_operation_id": {
+          "name": "removal_operation_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "removal_revision": {
+          "name": "removal_revision",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,

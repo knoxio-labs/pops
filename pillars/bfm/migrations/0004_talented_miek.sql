@@ -1,0 +1,1 @@
+ALTER TABLE `devices` ADD `capability_revision` integer DEFAULT 0 NOT NULL;

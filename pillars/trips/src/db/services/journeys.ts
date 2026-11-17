@@ -1,4 +1,4 @@
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, isNull } from 'drizzle-orm';
 
 import { JourneySchema } from '../../contract/journey-schemas.js';
 import { journeys, journeyLegs, journeyGroupMembers } from '../schema.js';
@@ -7,6 +7,7 @@ import { getTrip } from './records.js';
 import { deleteResponsibilityForTarget } from './responsibility-cleanup.js';
 import { requireOwnedRecord, TripsServiceError } from './source-record.js';
 import { assertSourceUnreferenced } from './source-references.js';
+import { nextSourceWriteGeneration } from './source-write-generation.js';
 
 import type { Journey, JourneyInput } from '../../contract/journey-schemas.js';
 import type { TripsDb } from '../index.js';
@@ -17,7 +18,7 @@ export function listJourneys(db: TripsDb, tripId: number): Journey[] {
   return db
     .select()
     .from(journeys)
-    .where(eq(journeys.tripId, tripId))
+    .where(and(eq(journeys.tripId, tripId), isNull(journeys.removedAt)))
     .orderBy(asc(journeys.id))
     .all()
     .map((row) => JourneySchema.parse(row));
@@ -30,7 +31,7 @@ export function getJourney(db: TripsDb, tripId: number, id: number): Journey {
       db
         .select()
         .from(journeys)
-        .where(and(eq(journeys.tripId, tripId), eq(journeys.id, id)))
+        .where(and(eq(journeys.tripId, tripId), eq(journeys.id, id), isNull(journeys.removedAt)))
         .get()
     )
   );
@@ -62,15 +63,23 @@ export function updateJourney(
   id: number,
   input: JourneyInput
 ): Journey {
-  return JourneySchema.parse(
-    requireOwnedRecord(
-      db
-        .update(journeys)
-        .set({ ...input, updatedAt: new Date().toISOString() })
-        .where(and(eq(journeys.tripId, tripId), eq(journeys.id, id)))
-        .returning()
-        .get()
-    )
+  return db.transaction(
+    (tx) => {
+      const removalRevision = nextSourceWriteGeneration(tx, journeys, tripId, id);
+      return JourneySchema.parse(
+        requireOwnedRecord(
+          tx
+            .update(journeys)
+            .set({ ...input, removalRevision, updatedAt: new Date().toISOString() })
+            .where(
+              and(eq(journeys.tripId, tripId), eq(journeys.id, id), isNull(journeys.removedAt))
+            )
+            .returning()
+            .get()
+        )
+      );
+    },
+    { behavior: 'immediate' }
   );
 }
 

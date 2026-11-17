@@ -24,7 +24,9 @@ describe('DeviceTable', () => {
   it('renders a touch-sized device card with the revoke action below md', async () => {
     const user = userEvent.setup();
     const onRevoke = vi.fn();
-    render(<DeviceTable list={readyList(TRUSTED_DEVICE)} onRevoke={onRevoke} />);
+    render(
+      <DeviceTable list={readyList(TRUSTED_DEVICE)} onRevoke={onRevoke} onPermissions={vi.fn()} />
+    );
 
     const cards = screen.getByRole('list', { name: 'Devices' });
     expect(cards).toHaveClass('md:hidden');
@@ -38,7 +40,7 @@ describe('DeviceTable', () => {
     expect(within(card).getByText('Trusted')).toBeVisible();
 
     const revoke = within(card).getByRole('button', { name: "Revoke Joao's iPhone" });
-    expect(revoke).toHaveClass('h-11', 'w-full');
+    expect(revoke).toHaveClass('h-11', 'max-md:w-full');
     await user.click(revoke);
     expect(onRevoke).toHaveBeenCalledWith(TRUSTED_DEVICE);
 
@@ -50,10 +52,31 @@ describe('DeviceTable', () => {
       ...TRUSTED_DEVICE,
       revokedAt: '2026-08-07T08:00:00.000Z',
     };
-    render(<DeviceTable list={readyList(revokedDevice)} onRevoke={vi.fn()} />);
+    render(
+      <DeviceTable list={readyList(revokedDevice)} onRevoke={vi.fn()} onPermissions={vi.fn()} />
+    );
 
     const card = within(screen.getByRole('list', { name: 'Devices' })).getByRole('listitem');
     expect(within(card).getByText(/Revoked/)).toBeVisible();
     expect(within(card).queryByRole('button')).not.toBeInTheDocument();
+  });
+  it('offers contextual permissions for operator devices in both layouts, never guests', async () => {
+    const user = userEvent.setup(),
+      onPermissions = vi.fn();
+    const guest = { ...TRUSTED_DEVICE, id: 'guest', subjectEmail: 'guest@example.test' };
+    render(
+      <DeviceTable
+        list={readyList(TRUSTED_DEVICE, guest)}
+        onRevoke={vi.fn()}
+        onPermissions={onPermissions}
+      />
+    );
+    const actions = screen.getAllByRole('button', { name: "Permissions for Joao's iPhone" });
+    expect(actions).toHaveLength(2);
+    const action = actions[0];
+    if (!action) throw new Error('Missing operator permissions action');
+    await user.click(action);
+    expect(onPermissions).toHaveBeenCalledWith(TRUSTED_DEVICE, action);
+    expect(action).toHaveClass('min-h-11');
   });
 });

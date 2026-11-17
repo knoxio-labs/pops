@@ -1,7 +1,8 @@
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, isNull } from 'drizzle-orm';
 
 import { JourneyGroupSchema } from '../../contract/journey-groups.js';
-import { journeyGroups, journeyGroupMembers } from '../schema.js';
+import { journeys, journeyGroups, journeyGroupMembers } from '../schema.js';
+import { getJourney } from './journeys.js';
 import { getTrip } from './records.js';
 import { requireOwnedRecord, TripsServiceError } from './source-record.js';
 
@@ -18,10 +19,18 @@ export function getJourneyGroup(db: TripsDb, tripId: number, id: number): Journe
         .where(and(eq(journeyGroups.tripId, tripId), eq(journeyGroups.id, id)))
         .get()
     );
+    getJourney(tx, tripId, group.currentJourneyId);
     const members = tx
-      .select()
+      .select({ journeyId: journeyGroupMembers.journeyId })
       .from(journeyGroupMembers)
-      .where(eq(journeyGroupMembers.groupId, id))
+      .innerJoin(journeys, eq(journeys.id, journeyGroupMembers.journeyId))
+      .where(
+        and(
+          eq(journeyGroupMembers.groupId, id),
+          eq(journeys.tripId, tripId),
+          isNull(journeys.removedAt)
+        )
+      )
       .orderBy(asc(journeyGroupMembers.position))
       .all();
     return JourneyGroupSchema.parse({
@@ -40,7 +49,14 @@ export function listJourneyGroups(db: TripsDb, tripId: number): JourneyGroup[] {
     return tx
       .select({ id: journeyGroups.id })
       .from(journeyGroups)
-      .where(eq(journeyGroups.tripId, tripId))
+      .innerJoin(journeys, eq(journeys.id, journeyGroups.currentJourneyId))
+      .where(
+        and(
+          eq(journeyGroups.tripId, tripId),
+          eq(journeys.tripId, tripId),
+          isNull(journeys.removedAt)
+        )
+      )
       .orderBy(asc(journeyGroups.id))
       .all()
       .map((group) => getJourneyGroup(tx, tripId, group.id));

@@ -11,7 +11,9 @@
     "test": "node ../../scripts/require-built-graph.mjs && vitest run",
     "test:coverage": "node ../../scripts/require-built-graph.mjs && vitest run --coverage",
     "test:watch": "vitest",
-    "generate:openapi": "tsx scripts/generate-openapi.ts"
+    "generate:openapi": "tsx scripts/generate-openapi.ts",
+    "db:generate": "drizzle-kit generate",
+    "upload:guard:init": "node dist/api/uploads/provision-guard.js"
   },
   "dependencies": {
     "@pops/pillar-express": "workspace:*",
@@ -20,15 +22,19 @@
     "@ts-rest/core": "3.53.0-rc.1",
     "@ts-rest/express": "3.53.0-rc.1",
     "@ts-rest/open-api": "3.53.0-rc.1",
+    "better-sqlite3": "^13.0.3",
+    "drizzle-orm": "^0.45.2",
     "express": "^5.1.0",
     "zod": "^4.6.2"
   },
   "devDependencies": {
     "@pops/contract-openapi": "workspace:*",
+    "@types/better-sqlite3": "^7.6.12",
     "@types/express": "^5.0.4",
     "@types/node": "^24.13.4",
     "@types/supertest": "^7.2.1",
     "@vitest/coverage-v8": "^4.1.10",
+    "drizzle-kit": "^0.31.11",
     "supertest": "^7.1.4",
     "tsx": "^4.23.13",
     "typescript": "^6.0.3",

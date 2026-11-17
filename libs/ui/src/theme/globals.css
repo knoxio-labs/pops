@@ -3,6 +3,8 @@
  * No tailwind.config.ts file needed
  */
 @import '@fontsource-variable/plus-jakarta-sans';
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/space-grotesk';
 @import 'tailwindcss' source(none);
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
@@ -19,12 +21,35 @@
  */
 @custom-variant dark (&:is(.dark *));
 
+@theme static {
+  --breakpoint-xl: 1280px;
+}
+
+@theme inline {
+  --font-trip-body: 'Inter Variable', system-ui, sans-serif;
+  --font-trip-display: 'Space Grotesk Variable', 'Inter Variable', sans-serif;
+  --color-trip-canvas: var(--trip-canvas);
+  --color-trip-surface: var(--trip-surface);
+  --color-trip-sunken: var(--trip-sunken);
+  --color-trip-ink: var(--trip-ink);
+  --color-trip-muted: var(--trip-muted);
+  --color-trip-line: var(--trip-line);
+  --color-trip-transport: var(--trip-transport);
+  --color-trip-transport-soft: var(--trip-transport-soft);
+  --color-trip-stay: var(--trip-stay);
+  --color-trip-stay-soft: var(--trip-stay-soft);
+  --color-trip-experience: var(--trip-experience);
+  --color-trip-experience-soft: var(--trip-experience-soft);
+  --color-trip-attention: var(--trip-attention);
+  --color-trip-attention-soft: var(--trip-attention-soft);
+  --color-trip-on-solid: var(--trip-on-solid);
+}
+
 @theme {
   /* Breakpoints */
   --breakpoint-sm: 640px;
   --breakpoint-md: 768px;
   --breakpoint-lg: 1024px;
-  --breakpoint-xl: 1280px;
   --breakpoint-2xl: 1536px;
 
   /* Color system - these map to the CSS variables defined in :root */
@@ -620,4 +645,51 @@
   textarea {
     font-size: max(16px, 1em);
   }
+}
+
+:root {
+  --trip-canvas: oklch(0.97008 0.00412 91.446);
+  --trip-surface: oklch(1 0 89.876);
+  --trip-sunken: oklch(0.94626 0.00701 88.644);
+  --trip-ink: oklch(0.20912 0.01038 268.187);
+  --trip-muted: oklch(0.49129 0.01912 262.681);
+  --trip-line: oklch(0.90709 0.00998 87.475);
+  --trip-transport: oklch(0.51404 0.19152 264.975);
+  --trip-transport-soft: oklch(0.94869 0.01993 267.287);
+  --trip-stay: oklch(0.52927 0.0896 186.784);
+  --trip-stay-soft: oklch(0.95101 0.01812 188.385);
+  --trip-experience: oklch(0.50639 0.16289 317.926);
+  --trip-experience-soft: oklch(0.9467 0.02196 318.964);
+  --trip-attention: oklch(0.5217 0.14284 45.691);
+  --trip-attention-soft: oklch(0.96187 0.02227 67.559);
+  --trip-on-solid: oklch(1 0 89.876);
+}
+
+.dark {
+  --trip-canvas: oklch(0.16755 0.00708 258.372);
+  --trip-surface: oklch(0.2081 0.01097 260.669);
+  --trip-sunken: oklch(0.24206 0.01294 258.372);
+  --trip-ink: oklch(0.94591 0.00289 264.542);
+  --trip-muted: oklch(0.72945 0.01777 259.421);
+  --trip-line: oklch(0.28349 0.01637 259.787);
+  --trip-transport: oklch(0.73834 0.1342 268.027);
+  --trip-transport-soft: oklch(0.26384 0.05586 269.301);
+  --trip-stay: oklch(0.77157 0.10245 185.694);
+  --trip-stay-soft: oklch(0.27141 0.03264 185.678);
+  --trip-experience: oklch(0.76953 0.12352 319.04);
+  --trip-experience-soft: oklch(0.25401 0.0489 313.829);
+  --trip-attention: oklch(0.78457 0.12872 63.943);
+  --trip-attention-soft: oklch(0.2559 0.03665 71.864);
+  --trip-on-solid: oklch(0.16755 0.00708 258.372);
+}
+
+.trips-workspace {
+  --background: var(--trip-canvas);
+  --foreground: var(--trip-ink);
+  --card: var(--trip-surface);
+  --card-foreground: var(--trip-ink);
+  --muted: var(--trip-sunken);
+  --muted-foreground: var(--trip-muted);
+  --border: var(--trip-line);
+  --app-accent: var(--trip-transport);
 }

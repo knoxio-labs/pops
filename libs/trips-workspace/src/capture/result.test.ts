@@ -22,10 +22,9 @@ function journey(id: number): CaptureSource['journeys'][number] {
   };
 }
 
-function leg(
-  id: number,
-  journeyId: number
-): CaptureSource['journeyLegSets'][number]['legs'][number] {
+type JourneyLegSet = NonNullable<CaptureSource['journeyLegSets']>[number];
+
+function leg(id: number, journeyId: number): JourneyLegSet['legs'][number] {
   return {
     id,
     journeyId,
@@ -45,7 +44,7 @@ function leg(
   };
 }
 
-function journeySet(id: number): CaptureSource['journeyLegSets'][number] {
+function journeySet(id: number): JourneyLegSet {
   return { journeyId: id, revision: 1, legs: [leg(id * 10, id)] };
 }
 
@@ -62,6 +61,9 @@ it('accepts journey leg sets only for journeys owned by the requested trip', () 
   };
 
   expect(sourceBelongsToTrip(owned, 1)).toBe(true);
+  const olderSource = captureSource();
+  delete olderSource.journeyLegSets;
+  expect(sourceBelongsToTrip(olderSource, 1)).toBe(true);
   expect(sourceBelongsToTrip({ ...owned, journeyLegSets: [journeySet(8)] }, 1)).toBe(false);
   expect(
     sourceBelongsToTrip({ ...owned, journeys: [journey(7), { ...journey(8), tripId: 2 }] }, 1)

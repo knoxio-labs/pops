@@ -11,6 +11,7 @@
  *                                        which `IndexRedirect` lands `/` on
  *   GET  /pillars, /pillars/health       the boot projection + health
  *                                        aggregator `PillarGuard` reads
+ *   GET  /registry-api/session          verified identity for upload recovery
  *   POST /orchestrator-api/search        federated search behind the top bar
  *   POST /cerebrum-api/nudges/search     the top-bar nudge bell's poll
  *
@@ -64,11 +65,13 @@ import { z } from 'zod';
 import { parseSearchResponse } from '@pops/navigation';
 import { ManifestPayloadSchema, RegistrySnapshotPayloadSchema } from '@pops/pillar-sdk';
 
+import { zSessionGetResponse } from '../../src/registry-api/zod.gen';
+
 import type { Page, Route } from '@playwright/test';
 
 import type { PillarRegistryEntry } from '@pops/types';
 
-import type { ShellManifestResponses } from '../../src/registry-api/types.gen';
+import type { SessionGetResponses, ShellManifestResponses } from '../../src/registry-api/types.gen';
 
 /** `<origin>/pillars` and nothing deeper — see the anchoring note above. */
 const PILLAR_BOOT_URL = /^https?:\/\/[^/]+\/pillars$/;
@@ -77,6 +80,7 @@ const REGISTRY_SNAPSHOT_URL = /\/registry-api\/registry\/pillars$/;
 /** Registry health request made by the shell chrome to read its build version. */
 export const REGISTRY_HEALTH_URL = /\/registry-api\/health$/;
 const SHELL_MANIFEST_URL = /\/registry-api\/shell\/manifest$/;
+const REGISTRY_SESSION_URL = /^https?:\/\/[^/]+\/registry-api\/session$/;
 const ORCHESTRATOR_SEARCH_URL = /\/orchestrator-api\/search$/;
 const NUDGES_SEARCH_URL = /\/cerebrum-api\/nudges\/search$/;
 
@@ -677,7 +681,8 @@ export async function failRegistry(page: Page): Promise<void> {
 
 /**
  * Report every pillar in `pillarIds` healthy to `PillarGuard`, and answer the
- * top-bar nudge poll with zero pending.
+ * top-bar nudge poll with zero pending and upload recovery with a fictional
+ * verified operator session.
  *
  * The nudge poll rides along here rather than getting its own call at every
  * site: `NudgeIndicator` fires at shell-chrome mount exactly like the health
@@ -685,8 +690,18 @@ export async function failRegistry(page: Page): Promise<void> {
  * pillar a spec is about — so anywhere `stubPillarHealth` is called on its
  * own (`shell-boot.spec.ts`, `pops-apps-finance-only-install-set.spec.ts`)
  * is a site that needs the nudge poll answered too.
+ * `DocumentUploadsLifecycle` likewise verifies the Registry session when the
+ * chrome mounts and when the browser regains focus, independently of pillars.
  */
 export async function stubPillarHealth(page: Page, pillarIds: readonly string[]): Promise<void> {
+  const sessionBody: SessionGetResponses[200] = {
+    email: 'a@example.test',
+    kind: 'operator',
+  };
+  const sessionResponse = fulfilWith(200, zSessionGetResponse, sessionBody, 'registry session');
+  await page.route(REGISTRY_SESSION_URL, (route) =>
+    route.request().method() === 'GET' ? sessionResponse(route) : route.fallback()
+  );
   const bootBody = { pillars: pillarIds.map((id) => ({ id, baseUrl: `http://${id}-api:3000` })) };
   await page.route(
     PILLAR_BOOT_URL,

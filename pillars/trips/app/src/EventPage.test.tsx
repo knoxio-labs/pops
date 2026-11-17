@@ -7,7 +7,8 @@ import { EventPage } from './EventPage';
 import type { ContactsHostCapability } from '@pops/pillar-sdk';
 
 const workspace = vi.hoisted(() => vi.fn());
-vi.mock('@pops/trips-workspace', () => ({
+vi.mock('@pops/trips-workspace', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@pops/trips-workspace')>()),
   EventWorkspace: (props: {
     tripId: number;
     eventId: number;

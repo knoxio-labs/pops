@@ -44,6 +44,7 @@ It also holds a service-account credential and one way to spend it — see
 | `GET /mobile/documents/:id/file`                    | Original bytes; Range and representation headers preserved.                                                                                      |
 | `GET /mobile/trips`                                 | A snapshot-bound cursor page of original trip metadata.                                                                                          |
 | `GET /mobile/v2/trips/:id`                          | Day-aware complete source snapshot with independent Journey day precision and unchanged device/read capability checks.                           |
+| `GET /mobile/trips/:tripId/route`                   | Canonical mixed route order, alternatives, applied history and missing source identities at the route revision.                                  |
 | `GET /mobile/trips/:id`                             | Legacy-compatible complete source snapshot; Journey day-only fields are omitted without inventing clocks.                                        |
 | `GET /mobile/finance/transactions`                  | One cursor-paginated page of list rows — see [The mobile shape](#the-mobile-shape).                                                              |
 | `GET /mobile/finance/accounts`                      | One cursor-paginated page of accounts after search and filters — see [The mobile shape](#the-mobile-shape).                                      |
@@ -104,8 +105,9 @@ BFM build supporting the new protocol before Inventory activates that minimum.
 
 When `POPS_REGISTRY_ENABLED=true` it self-registers with the `registry` pillar
 on boot via `bootstrapPillar` from `@pops/pillar-sdk/bootstrap`. Registration
-runs **after** `app.listen` and never gates boot: an unavailable registry
-delays bfm joining the fleet, it does not delay bfm serving traffic.
+runs after the HTTP listener binds. A bind error fails startup before credential
+pruning or registration begins. Registration never gates serving traffic: an
+unavailable registry delays bfm joining the fleet, it does not delay bfm serving traffic.
 `src/api/__tests__/registration.test.ts` is the proof — it boots against a
 registry that refuses every call and asserts `/health` still answers.
 
@@ -540,6 +542,15 @@ association and Documents-original identities separately; trip/visit/journey/sta
 targets must belong to this snapshot. Shared originals retain every explicit crosslink.
 The aggregate does not resolve metadata or assert file/device availability.
 
+`GET /mobile/trips/:tripId/route` reads the producer's canonical mixed route
+under the same `trips.read` capability and exact `trips.route.get` backend scope.
+Root Visit/Journey/gap order, path member order, alternative/applied state and
+`missingSources` remain authoritative. Applied history can share identities with
+live placement; active alternatives cannot. Missing source records remain visible
+references rather than being dropped. Route and detail reads have independent
+snapshots and revisions; BFM does not claim atomicity across them or infer dates,
+transport, booking status or placement. This endpoint grants no route mutations.
+
 Every required collection must succeed. Missing referenced identities,
 duplicate IDs or wrong trip/journey ownership produce a contract mismatch;
 unavailable sources never become empty successful arrays. The exact upstream
@@ -774,6 +785,12 @@ have installed a phantom app — which is why it waited for the app. Registry
 registration is a separate mechanism and still goes through the
 `ManifestPayload` in `src/api/manifest.ts`.
 
+Device grant editing is available through the operator-only GET/PUT
+capability routes and the contextual Permissions editor on the shell's Devices
+page. It replaces a complete explicit selection against revision and policy
+CAS; guest and revoked devices remain unavailable. Conflicts and uncertain
+writes require an explicit fresh read and never replay a pending selection.
+
 ## What deliberately does not live here
 
 - **Destructive and administrative operations.** Deleting a record, revoking a
@@ -788,8 +805,6 @@ registration is a separate mechanism and still goes through the
   the vocabulary in `src/contract/capabilities.ts` and
   `src/contract/__tests__/mobile-capabilities.test.ts` enforcing that no mobile
   route is reachable without declaring one.
-- **A way to see or narrow a device's grant.** Every device is granted the full
-  vocabulary at pairing and nothing reads it back to an operator (POPS-2460).
 - **The bootstrap route and the nginx route.** `GET /mobile/bootstrap`
   (POPS-1378) and the nginx route plus the compiled pillar roster (POPS-1386)
   are each their own ticket. Revocation here sets `devices.revokedAt`, which is
@@ -832,7 +847,7 @@ and send it in that header, against the registry's admin surface reachable
 externally through the shell proxy:
 
 ```bash
-curl -sS -X POST https://pops.local/registry-api/service-accounts -H 'Content-Type: application/json' -H "cf-access-jwt-assertion: $ACCESS_JWT" -d '{"name":"bfm","scopes":["finance.transactions","finance.transactionHistory","finance.transactionAttachments","finance.accounts","finance.checkpoints","finance.delegatedSubject","purchases.purchase","purchases.search","purchases.receipt","inventory.sync","inventory.types.catalogue","inventory.types.read","inventory.codes","inventory.media","inventory.documents","inventory.paperless.status","inventory.items.getParts","inventory.items.addPart","inventory.items.removePart","barcode.lookup","cerebrum.ego","documents.paperless.get","documents.paperless.download","documents.paperless.status","documents.paperless.task","documents.write.upload","trips.trips.create","trips.trips.update","trips.captureWorkspace.get","trips.captures.create","trips.captures.update","trips.captures.attach","trips.captures.undo","trips.trips.list","trips.trips.get","trips.places.list","trips.visits.list","trips.journeys.list","trips.journeyLegs.list","trips.journeyGroups.list","trips.stays.list","trips.events.list","trips.documentAssociations.list"]}'
+curl -sS -X POST https://pops.local/registry-api/service-accounts -H 'Content-Type: application/json' -H "cf-access-jwt-assertion: $ACCESS_JWT" -d '{"name":"bfm","scopes":["finance.transactions","finance.transactionHistory","finance.transactionAttachments","finance.accounts","finance.checkpoints","finance.delegatedSubject","purchases.purchase","purchases.search","purchases.receipt","inventory.sync","inventory.types.catalogue","inventory.types.read","inventory.codes","inventory.media","inventory.documents","inventory.paperless.status","inventory.items.getParts","inventory.items.addPart","inventory.items.removePart","barcode.lookup","cerebrum.ego","documents.paperless.get","documents.paperless.download","documents.paperless.status","documents.paperless.task","documents.write.upload","trips.trips.create","trips.trips.update","trips.captureWorkspace.get","trips.captures.create","trips.captures.update","trips.captures.attach","trips.captures.undo","trips.route.get","trips.trips.list","trips.trips.get","trips.places.list","trips.visits.list","trips.journeys.list","trips.journeyLegs.list","trips.journeyGroups.list","trips.stays.list","trips.events.list","trips.documentAssociations.list"]}'
 ```
 
 Two deployment shapes let a bare `curl` through, which is why this can work on
@@ -1029,6 +1044,7 @@ pnpm --filter @pops/bfm build
 | Var                                      | Default                    | Notes                                                                                       |
 | ---------------------------------------- | -------------------------- | ------------------------------------------------------------------------------------------- |
 | `PORT`                                   | `3014`                     | HTTP listen port.                                                                           |
+| `BFM_HOST`                               | Node wildcard default      | Explicit HTTP bind host. The iOS harness sets `127.0.0.1` to match its loopback URLs.       |
 | `BFM_SELF_BASE_URL`                      | `http://localhost:${PORT}` | Advertised to the registry as this pillar's `baseUrl`.                                      |
 | `BFM_PUBLIC_BASE_URL`                    | `BFM_SELF_BASE_URL`        | The origin the **phone** dials. Baked into the pairing QR — see below.                      |
 | `BFM_SQLITE_PATH`                        | `./data/bfm.db`            | Where `bfm.db` lives. Falls back to `dirname(SQLITE_PATH)`.                                 |
@@ -1127,3 +1143,9 @@ Raw `POST /mobile/documents?fileName=...&title=...` takes bytes with their Conte
 A validated owner 202 returns only `{taskId}`. Task tracking separately needs read authority; if it is unavailable, retain the accepted task without claiming a completed original. Only actual done/duplicate task facts with a document ID establish that identity. Filename/title are never a correlation key, and no Inventory item or link participates.
 
 The upload relay counts actual bytes against the owner policy, streams one POST without following redirects, and never retries it. `bfm.documents.upload_outcome_unknown` is non-retryable: a lost response, redirect, malformed acceptance or unexpected answer after dispatch may hide an accepted upload. An owner 401/403 remains an unknown non-retryable upload, with only finite upstream status/cause diagnostics; it never becomes a device 401 that could trigger refresh and replay. Neither another POST nor an archive search proves the outcome. BFM retains no upload intent and offers no restart recovery; authoritative lost-receipt recovery remains POPS-6266. Native callers retain their exact accepted task or ambiguous attempt.
+
+## Explicit device capability selection
+
+A verified human operator can read `GET /operator/devices/:id/capabilities` and submit a complete selection to `PUT` on the same path. The selection uses only the published capability vocabulary, including nondefault Trips writes; it changes that device to `explicit` mode and retains exactly the selected unrelated grants. Empty is an explicit empty selection, never a default grant. Existing device listing and mobile response shapes are unchanged. No service-account or mobile token grants operator administration.
+
+The request must echo the monotonic `expectedRevision` and current `expectedPolicyToken` from the read. A stale revision (including A→B→A), changed running policy, malformed or unknown-version grant, revoked device, or guest-bound device cannot be overwritten. Conflicts require a fresh read and human selection; they are not automatically retried. Grant writes leave pairing identity, refresh tokens, and other devices unchanged. `tracks-default` effective permissions are shown separately from the stored pairing snapshot, and selection intentionally stops future default tracking.

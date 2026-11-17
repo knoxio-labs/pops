@@ -5,11 +5,13 @@ import {
   tripsContractMismatch,
   validTripsReferences,
 } from './references.js';
+import { readMobileTripRoute } from './route.js';
 import { TripsWire } from './wire.js';
 import { createMobileTrip, updateMobileTrip } from './write.js';
 
 import type { z } from 'zod';
 
+import type { MobileTripRoute } from '../../contract/mobile-trip-route-schemas.js';
 import type { MobileTripInput } from '../../contract/mobile-trip-write-schemas.js';
 import type { MobileTripDetailV2 } from '../../contract/mobile-trips-detail-schemas.js';
 import type { MobileJourney } from '../../contract/mobile-trips-journey-schemas.js';
@@ -35,6 +37,8 @@ export interface MobileTripsClient {
   listTrips(): Promise<GatewayOutcome<MobileTrip[]>>;
   /** Assembles day-aware source once; each published handler selects its explicit wire projection. */
   getTrip(id: number): Promise<GatewayOutcome<MobileTripDetailV2>>;
+  /** Reads mixed membership at the route's own revision, retaining unavailable source identities. */
+  getRoute(tripId: number): Promise<GatewayOutcome<MobileTripRoute>>;
 }
 
 /** Builds the source-backed native Trips reader over BFM's authenticated federation gateway. */
@@ -50,6 +54,7 @@ export function createMobileTripsClient(gateway: PillarGateway): MobileTripsClie
       return isGatewayOk(parsed) ? { kind: 'ok', value: parsed.value.trips } : parsed;
     },
     getTrip: (id) => getTrip(gateway, id),
+    getRoute: (tripId: number) => readMobileTripRoute(gateway, tripId),
   };
 }
 

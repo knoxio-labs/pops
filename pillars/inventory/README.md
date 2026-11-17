@@ -672,6 +672,11 @@ registry users scope until that leg has an operation to call.
 
 ## Commands
 
+`INVENTORY_HOST` selects the HTTP bind host; unset retains Node's wildcard
+default. The iOS harness sets `127.0.0.1` to match its loopback URLs. Listener
+binding must succeed before readiness, background workers or registration begin;
+a bind error fails startup.
+
 ```bash
 pnpm --filter @pops/inventory typecheck     # tsc --noEmit (src + scripts)
 pnpm --filter @pops/inventory test          # vitest against a real temp SQLite DB

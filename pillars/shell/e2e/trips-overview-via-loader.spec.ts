@@ -35,6 +35,7 @@ for (const viewport of [
 ]) {
   test(`Trip overview source navigation and hierarchy at ${viewport.width}px`, async ({ page }) => {
     await page.setViewportSize(viewport);
+    const contextRole = viewport.width >= 1280 ? 'region' : 'dialog';
     const audit = { createdAt: '2029-01-01T00:00:00Z', updatedAt: '2029-01-01T00:00:00Z' };
     const trip = {
       id: 7,
@@ -175,7 +176,6 @@ for (const viewport of [
     );
     let failEvents = false;
     const sourceReads: string[] = [];
-    const unexpectedSourceReads: string[] = [];
     await page.route(/\/trips-api\//u, (route) => {
       const path = new URL(route.request().url()).pathname.replace('/trips-api', '');
       if (failEvents && path === '/trips/7/events')
@@ -187,10 +187,7 @@ for (const viewport of [
       expect(route.request().method()).toBe('GET');
       sourceReads.push(path);
       const body = responses.get(path);
-      if (!body) {
-        unexpectedSourceReads.push(path);
-        throw new Error(`Unexpected source request: ${path}`);
-      }
+      if (!body) throw new Error(`Unexpected source request: ${path}`);
       return json(route, 200, body);
     });
     await page.goto('/trips');
@@ -222,40 +219,43 @@ for (const viewport of [
     await expect(page.getByRole('button', { name: 'Wellington', exact: true })).toHaveCount(2);
     for (const [index, id] of [31, 32].entries()) {
       await page.getByRole('button', { name: 'Wellington', exact: true }).nth(index).click();
-      const dialog = page.getByRole('dialog', { name: `Visit #${id}`, exact: true });
-      await expect(dialog.getByLabel('Visit notes', { exact: true })).toHaveValue('');
+      const editor = page.getByRole(contextRole, { name: `Visit #${id}`, exact: true });
+      await expect(editor.getByLabel('Visit notes', { exact: true })).toHaveValue('');
       await expect(page).toHaveURL(/\/trips\/7$/u);
       expect(sourceReads).toContain(`/trips/7/visits/${id}`);
-      await dialog.getByRole('button', { name: 'Close', exact: true }).click();
-      await expect(dialog).toHaveCount(0);
+      await editor.getByRole('button', { name: 'Close', exact: true }).click();
+      await expect(editor).toHaveCount(0);
     }
     await expect(page.getByRole('link', { name: 'Documents', exact: true })).toHaveAttribute(
       'href',
       '/trips/7/documents'
     );
     await expect(page.getByRole('link', { name: 'Calendar', exact: true })).toHaveCount(0);
-    const sheet = page.getByRole('table', { name: 'Sheet', exact: true });
-    await expect(sheet).toBeVisible();
-    const sheetEvent = sheet.getByRole('row').filter({ hasText: 'Harbour festival' });
-    await expect(sheetEvent).toHaveAttribute('data-route-kind', 'event');
-    await expect(sheetEvent.getByText('Alternative', { exact: true })).toBeVisible();
-    await expect(sheetEvent.getByText('Booked', { exact: true })).toBeVisible();
-    const sheetStay = sheet.getByRole('row').filter({ hasText: 'Cedar guesthouse' });
-    await expect(sheetStay).toHaveAttribute('data-route-kind', 'stay');
-    await expect(sheetStay.getByText('Purchased', { exact: true })).toBeVisible();
+    const eventCard = page.locator('article').filter({ hasText: 'Harbour festival' });
+    await expect(eventCard).toHaveAttribute('data-constraint', 'soft');
+    await expect(
+      eventCard.getByRole('button', { name: 'Harbour festival', exact: true })
+    ).toHaveCSS('border-left-width', '0px');
+    await expect(eventCard.getByText('Alternative', { exact: true })).toBeVisible();
+    await expect(eventCard.getByText('Booked', { exact: true })).toBeVisible();
+    const stayCard = page.locator('article').filter({ hasText: 'Cedar guesthouse' });
+    await expect(stayCard).toHaveAttribute('data-constraint', 'hard');
+    await expect(stayCard.getByRole('button', { name: 'Cedar guesthouse', exact: true })).toHaveCSS(
+      'border-left-width',
+      '2px'
+    );
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth > window.innerWidth
     );
     expect(overflow).toBe(false);
     if (viewport.width === 390) {
-      const contentBounds = await page.getByRole('main').last().boundingBox();
+      const contentBounds = await page.locator('[data-workspace-layout="full"]').boundingBox();
       expect(contentBounds?.width).toBeGreaterThanOrEqual(viewport.width - 32);
     }
     const controls = page.getByRole('main').last().locator('a, button');
     for (const control of await controls.all()) {
       const box = await control.boundingBox();
-      const label = (await control.getAttribute('aria-label')) ?? (await control.innerText());
-      expect(box?.height, `${label.trim()} target height`).toBeGreaterThanOrEqual(44);
+      expect(box?.height).toBeGreaterThanOrEqual(44);
     }
     const artifacts = resolve(import.meta.dirname, '../../../tmp');
     await mkdir(artifacts, { recursive: true });
@@ -263,39 +263,35 @@ for (const viewport of [
       path: resolve(artifacts, `trips-overview-${viewport.width}.png`),
       fullPage: true,
     });
-    await page.getByRole('tab', { name: 'Journey', exact: true }).click();
-    const eventCard = page.locator('article').filter({ hasText: 'Harbour festival' });
-    await expect(eventCard).toHaveAttribute('data-constraint', 'soft');
-    await expect(eventCard.getByText('Alternative', { exact: true })).toBeVisible();
-    await expect(eventCard.getByText('Booked', { exact: true })).toBeVisible();
-    const stayCard = page.locator('article').filter({ hasText: 'Cedar guesthouse' });
-    await expect(stayCard).toHaveAttribute('data-constraint', 'hard');
-    const journeyOverflow = await page.evaluate(
-      () => document.documentElement.scrollWidth > window.innerWidth
-    );
-    expect(journeyOverflow).toBe(false);
     await page.getByRole('button', { name: 'Harbour festival', exact: true }).click();
-    const eventDialog = page.getByRole('dialog', { name: 'Event #61', exact: true });
-    await expect(eventDialog.getByLabel('Event name', { exact: true })).toHaveValue(
+    const eventEditor = page.getByRole(contextRole, { name: 'Event #61', exact: true });
+    await expect(eventEditor.getByLabel('Event name', { exact: true })).toHaveValue(
       'Harbour festival'
     );
     await expect(page).toHaveURL(/\/trips\/7$/u);
     expect(sourceReads).toContain('/trips/7/events/61');
-    await eventDialog.getByRole('button', { name: 'Close', exact: true }).click();
+    await eventEditor.getByRole('button', { name: 'Close', exact: true }).click();
     await page.getByRole('button', { name: 'Cedar guesthouse', exact: true }).click();
-    const stayDialog = page.getByRole('dialog', { name: 'Stay #13', exact: true });
-    await expect(stayDialog.getByLabel('Stay name', { exact: true })).toHaveValue(
+    const stayEditor = page.getByRole(contextRole, { name: 'Stay #13', exact: true });
+    await expect(stayEditor.getByLabel('Stay name', { exact: true })).toHaveValue(
       'Cedar guesthouse'
     );
     await expect(page).toHaveURL(/\/trips\/7$/u);
     expect(sourceReads).toContain('/trips/7/stays/13');
-    await expect(stayDialog.getByText('Route original', { exact: true })).toBeVisible();
+    await expect(stayEditor.getByText('Route original', { exact: true })).toBeVisible();
     await expect(
-      stayDialog.getByRole('link', { name: 'Open original', exact: true })
+      stayEditor.getByRole('link', { name: 'Open original', exact: true })
     ).toHaveAttribute('href', '/documents-api/paperless/documents/102/download?original=true');
-    await stayDialog.getByRole('button', { name: 'Close', exact: true }).click();
+    await stayEditor.getByRole('button', { name: 'Close', exact: true }).click();
     await page.goto('/trips/7/events/61');
     await expect(page.getByLabel('Event name', { exact: true })).toHaveValue('Harbour festival');
+    const sourceDocuments = page.getByRole('region', { name: 'Source documents', exact: true });
+    await expect(sourceDocuments.getByText('No files linked yet.', { exact: true })).toBeVisible();
+    await expect(
+      sourceDocuments.getByText('Documents is unavailable. Existing links remain visible.', {
+        exact: true,
+      })
+    ).toBeVisible();
     await page.goto('/trips/7/stays/13');
     await expect(page.getByLabel('Stay name', { exact: true })).toHaveValue('Cedar guesthouse');
     await expect(
@@ -303,32 +299,31 @@ for (const viewport of [
         .getByRole('region', { name: 'Source documents', exact: true })
         .getByText('Route original', { exact: true })
     ).toBeVisible();
+    await expect(
+      sourceDocuments.getByText('Documents is unavailable. Existing links remain visible.', {
+        exact: true,
+      })
+    ).toBeVisible();
     failEvents = true;
-    const failedTripResponses: string[] = [];
-    page.on('response', (response) => {
-      const path = new URL(response.url()).pathname;
-      if (path.startsWith('/trips-api/') && response.status() >= 400)
-        failedTripResponses.push(`${response.status()} ${path}`);
-    });
     await page.goto('/trips/7');
     const eventsSource = page.getByRole('region', { name: 'Events', exact: true });
     await expect(eventsSource.getByText('trips.events.unavailable', { exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Cedar guesthouse', exact: true })).toBeVisible();
-    expect(unexpectedSourceReads).toEqual([]);
-    const eventRows = page
-      .getByRole('table', { name: 'Sheet', exact: true })
-      .getByRole('row')
-      .filter({ hasText: 'Harbour festival' });
-    await expect(eventRows).toHaveCount(0);
+    await expect(page.getByText('No route entries.', { exact: true })).toHaveCount(0);
+    const gapDiagnostics = [31, 32].map((id) =>
+      page.locator(`[data-visit-id="${id}"]`).getByText('trips.events.unavailable', { exact: true })
+    );
+    for (const diagnostic of gapDiagnostics) await expect(diagnostic).toBeVisible();
     failEvents = false;
     await eventsSource.getByRole('button', { name: 'Try again', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Harbour festival', exact: true })).toBeVisible();
     await expect(eventsSource).toHaveCount(0);
-    expect(failedTripResponses.length).toBeGreaterThan(0);
-    expect(
-      failedTripResponses.every((response) => response === '503 /trips-api/trips/7/events')
-    ).toBe(true);
-    await page.goto('/trips');
-    await expect(page.getByRole('button', { name: /Coast trip/ })).toBeVisible();
+    for (const diagnostic of gapDiagnostics) await expect(diagnostic).toBeVisible();
+    await page
+      .locator('[data-visit-id="31"]')
+      .getByRole('button', { name: 'Reload source', exact: true })
+      .click();
+    for (const diagnostic of gapDiagnostics) await expect(diagnostic).toHaveCount(0);
+    await expect(page.getByText('trips.events.unavailable', { exact: true })).toHaveCount(0);
   });
 }

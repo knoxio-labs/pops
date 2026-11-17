@@ -11,6 +11,11 @@ import { zodSchemaTransformer } from './zod-schema-transformer.js';
 
 import type { AppRouter } from '@ts-rest/core';
 
+/** Custom projection for one canonical contract operation and its OpenAPI representation. */
+export type PillarOpenApiOperationMapper = NonNullable<
+  NonNullable<Parameters<typeof generateOpenApi>[2]>['operationMapper']
+>;
+
 /** What a pillar has to say about itself for its snapshot to be reproducible. */
 export interface PillarOpenApiProjection {
   /** The pillar's ts-rest contract — the canonical declaration being projected. */
@@ -30,6 +35,8 @@ export interface PillarOpenApiProjection {
    * deliberate change to that pillar's published document.
    */
   hoistRecursiveDefinitions: boolean;
+  /** Optional projection for explicit route metadata that belongs in the published OpenAPI operation. */
+  operationMapper?: PillarOpenApiOperationMapper;
 }
 
 interface PillarPackageManifest {
@@ -74,7 +81,11 @@ export function buildPillarOpenApiDocument(projection: PillarOpenApiProjection):
         version: manifest.version ?? '0.0.0',
       },
     },
-    { schemaTransformer: zodSchemaTransformer, setOperationId: 'concatenated-path' }
+    {
+      schemaTransformer: zodSchemaTransformer,
+      setOperationId: 'concatenated-path',
+      operationMapper: projection.operationMapper,
+    }
   );
 
   if (projection.hoistRecursiveDefinitions) hoistRecursiveDefinitions(document);

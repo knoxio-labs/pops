@@ -1,6 +1,6 @@
 import { useParams } from 'react-router';
 
-import { EventWorkspace } from '@pops/trips-workspace';
+import { DocumentUploadProvider, EventWorkspace } from '@pops/trips-workspace';
 import { ErrorState } from '@pops/ui';
 
 import { sourceId } from './source-id';
@@ -8,7 +8,7 @@ import { sourceId } from './source-id';
 import type { RemotePageHostProps } from '@pops/pillar-sdk';
 
 /** Bind the source-backed event workspace to its validated owning route identities. */
-export function EventPage({ contacts }: RemotePageHostProps) {
+export function EventPage({ contacts, documentUploads }: RemotePageHostProps) {
   const params = useParams();
   const tripId = sourceId(params.tripId);
   const eventId = sourceId(params.eventId);
@@ -21,6 +21,8 @@ export function EventPage({ contacts }: RemotePageHostProps) {
       }}
     />
   ) : (
-    <EventWorkspace tripId={tripId} eventId={eventId} contacts={contacts} />
+    <DocumentUploadProvider host={documentUploads} tripId={tripId}>
+      <EventWorkspace tripId={tripId} eventId={eventId} contacts={contacts} />
+    </DocumentUploadProvider>
   );
 }

@@ -58,7 +58,8 @@ export function sourceBelongsToTrip(source: CaptureSource, tripId: number): bool
     source.journeys.filter((journey) => journey.tripId === tripId).map((journey) => journey.id)
   );
   return (
-    recordsBelongToTrip && source.journeyLegSets.every((legSet) => journeyIds.has(legSet.journeyId))
+    recordsBelongToTrip &&
+    (source.journeyLegSets ?? []).every((legSet) => journeyIds.has(legSet.journeyId))
   );
 }
 function mergeRows<T extends { id: number }>(before: readonly T[], changed: readonly T[]): T[] {
@@ -77,14 +78,14 @@ function mergeJourneyLegSets(
   before: CaptureSource['journeyLegSets'],
   changed: CaptureSource['journeyLegSets'],
   inverse: CaptureHistory | null
-): CaptureSource['journeyLegSets'] {
+): NonNullable<CaptureSource['journeyLegSets']> {
   const removed = new Set(inverse?.receipt.journeys.map((journey) => journey.id) ?? []);
   const rows = new Map(
-    before
+    (before ?? [])
       .filter((legSet) => !removed.has(legSet.journeyId))
       .map((legSet) => [legSet.journeyId, legSet])
   );
-  for (const legSet of changed) rows.set(legSet.journeyId, legSet);
+  for (const legSet of changed ?? []) rows.set(legSet.journeyId, legSet);
   return [...rows.values()];
 }
 /** Apply only current affected rows; successful Undo removes only its proven operation-created local targets. */

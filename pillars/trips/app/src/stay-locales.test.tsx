@@ -8,7 +8,8 @@ import enAU from './locales/en-AU.json';
 import ptBR from './locales/pt-BR.json';
 import { StayPage } from './StayPage';
 
-vi.mock('@pops/trips-workspace', () => ({
+vi.mock('@pops/trips-workspace', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@pops/trips-workspace')>()),
   StayWorkspace: ({ formatNights }: { formatNights: (count: number) => string }) => (
     <section>
       <span>{formatNights(1)}</span>

@@ -128,6 +128,10 @@ it('confirms a lost Idea-link response through its exact request replay without 
   if (!choice) throw new Error('Missing intent');
   session.contacts.accept(choice.id, selection);
   await vi.waitFor(() => expect(requests).toHaveLength(1));
+  await vi.waitFor(() => {
+    expect(session.editor.getState().busy).toBe(false);
+    expect(session.editor.getState().failure?.canRetry).toBe(true);
+  });
   expect(session.contacts.snapshot()?.applied).toBe(false);
   await session.editor.retry();
   expect(requests[1]).toEqual(requests[0]);

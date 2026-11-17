@@ -42,3 +42,15 @@ it('keeps host controls inside the Timeline and the contextual editor outside it
   expect(main).not.toContainElement(screen.getByRole('complementary', { name: 'Existing editor' }));
   expect(screen.queryByRole('link', { name: 'Calendar destination' })).not.toBeInTheDocument();
 });
+
+it('keeps the whole workspace width when no contextual editor is selected', async () => {
+  const { rerender } = mountOverview(overviewResponses());
+  const main = await screen.findByRole('main');
+  expect(main.parentElement).not.toHaveClass('xl:grid-cols-3');
+  expect(main).not.toHaveClass('xl:col-span-2');
+  rerender({ contextualEditor: <aside aria-label="Selected editor">Exact source</aside> });
+  expect(main.parentElement).toHaveClass('xl:grid-cols-3');
+  rerender({ contextualEditor: undefined });
+  expect(screen.queryByRole('complementary', { name: 'Selected editor' })).not.toBeInTheDocument();
+  expect(main.parentElement).not.toHaveClass('xl:grid-cols-3');
+});

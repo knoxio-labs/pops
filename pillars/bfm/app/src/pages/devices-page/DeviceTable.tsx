@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 
 import {
   Badge,
-  Button,
   Card,
   EmptyState,
   ErrorAlert,
@@ -19,6 +18,7 @@ import {
 } from '@pops/ui';
 
 import { DEVICE_LIST_FAILURE_KEYS } from './failure-messages.js';
+import { DeviceActions } from './permissions/DeviceActions.js';
 
 import type { ReactElement } from 'react';
 
@@ -31,9 +31,11 @@ import type { DeviceListModel, PairedDevice } from './useDevicesPageModel.js';
 export function DeviceTable({
   list,
   onRevoke,
+  onPermissions,
 }: {
   list: DeviceListModel;
   onRevoke: (device: PairedDevice) => void;
+  onPermissions: (device: PairedDevice, origin: HTMLButtonElement) => void;
 }): ReactElement {
   const { t } = useTranslation('bfm');
 
@@ -64,25 +66,25 @@ export function DeviceTable({
     <>
       <ul aria-label={t('devices.title')} className="space-y-3 md:hidden">
         {list.devices.map((device) => (
-          <DeviceCard key={device.id} device={device} onRevoke={onRevoke} />
+          <DeviceCard
+            key={device.id}
+            device={device}
+            onRevoke={onRevoke}
+            onPermissions={onPermissions}
+          />
         ))}
       </ul>
       <div className="hidden md:block" data-testid="device-table">
         <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{t('devices.column.name')}</TableHead>
-              <TableHead>{t('devices.column.model')}</TableHead>
-              <TableHead>{t('devices.column.owner')}</TableHead>
-              <TableHead>{t('devices.column.paired')}</TableHead>
-              <TableHead>{t('devices.column.lastSeen')}</TableHead>
-              <TableHead>{t('devices.column.state')}</TableHead>
-              <TableHead className="text-right">{t('devices.column.actions')}</TableHead>
-            </TableRow>
-          </TableHeader>
+          <DeviceTableHead />
           <TableBody>
             {list.devices.map((device) => (
-              <DeviceRow key={device.id} device={device} onRevoke={onRevoke} />
+              <DeviceRow
+                key={device.id}
+                device={device}
+                onRevoke={onRevoke}
+                onPermissions={onPermissions}
+              />
             ))}
           </TableBody>
         </Table>
@@ -94,9 +96,11 @@ export function DeviceTable({
 function DeviceCard({
   device,
   onRevoke,
+  onPermissions,
 }: {
   device: PairedDevice;
   onRevoke: (device: PairedDevice) => void;
+  onPermissions: (device: PairedDevice, origin: HTMLButtonElement) => void;
 }): ReactElement {
   const { t } = useTranslation('bfm');
   const { revokedAt } = device;
@@ -126,15 +130,7 @@ function DeviceCard({
             {t('devices.column.lastSeen')}: {formatRelativeTime(device.lastSeenAt)}
           </span>
         </div>
-        {revokedAt === null ? (
-          <Button
-            className="h-11 w-full text-destructive hover:text-destructive"
-            aria-label={t('devices.revokeAction', { name: device.name })}
-            onClick={() => onRevoke(device)}
-          >
-            {t('devices.revoke')}
-          </Button>
-        ) : null}
+        <DeviceActions device={device} onRevoke={onRevoke} onPermissions={onPermissions} />
       </Card>
     </li>
   );
@@ -143,9 +139,11 @@ function DeviceCard({
 function DeviceRow({
   device,
   onRevoke,
+  onPermissions,
 }: {
   device: PairedDevice;
   onRevoke: (device: PairedDevice) => void;
+  onPermissions: (device: PairedDevice, origin: HTMLButtonElement) => void;
 }): ReactElement {
   const { t } = useTranslation('bfm');
   const { revokedAt } = device;
@@ -165,17 +163,7 @@ function DeviceRow({
         <DeviceStateBadge revokedAt={revokedAt} />
       </TableCell>
       <TableCell className="text-right">
-        {revokedAt === null ? (
-          <Button
-            size="sm"
-            variant="ghost"
-            className="text-destructive hover:text-destructive"
-            aria-label={t('devices.revokeAction', { name: device.name })}
-            onClick={() => onRevoke(device)}
-          >
-            {t('devices.revoke')}
-          </Button>
-        ) : null}
+        <DeviceActions device={device} onRevoke={onRevoke} onPermissions={onPermissions} />
       </TableCell>
     </TableRow>
   );
@@ -190,5 +178,22 @@ function DeviceStateBadge({ revokedAt }: { revokedAt: string | null }): ReactEle
     <Badge variant="destructive">
       {t('devices.state.revoked', { when: formatDate(revokedAt) })}
     </Badge>
+  );
+}
+
+function DeviceTableHead(): ReactElement {
+  const { t } = useTranslation('bfm');
+  return (
+    <TableHeader>
+      <TableRow>
+        <TableHead>{t('devices.column.name')}</TableHead>
+        <TableHead>{t('devices.column.model')}</TableHead>
+        <TableHead>{t('devices.column.owner')}</TableHead>
+        <TableHead>{t('devices.column.paired')}</TableHead>
+        <TableHead>{t('devices.column.lastSeen')}</TableHead>
+        <TableHead>{t('devices.column.state')}</TableHead>
+        <TableHead className="text-right">{t('devices.column.actions')}</TableHead>
+      </TableRow>
+    </TableHeader>
   );
 }

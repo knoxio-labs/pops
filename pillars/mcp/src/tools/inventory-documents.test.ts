@@ -79,7 +79,6 @@ beforeEach(() => {
 describe('registration', () => {
   it('registers every document tool once, writes marked as writes, each with a scope', () => {
     const expected = {
-      'documents.search': true,
       'inventory.documents.list': true,
       'inventory.documents.createUpload': false,
       'inventory.documents.link': false,
@@ -90,28 +89,6 @@ describe('registration', () => {
     };
     expect(Object.fromEntries(documentTools.map((t) => [t.name, t.readOnly]))).toEqual(expected);
     for (const entry of documentTools) expect(entry.scope, entry.name).toBeDefined();
-  });
-});
-
-describe('documents.search', () => {
-  it("searches through inventory's pass-through and keeps only the documented fields", async () => {
-    const result = await tool('documents.search').handler({ query: 'receipt' });
-    expect(inventory.paperless.search).toHaveBeenCalledWith({ query: 'receipt' });
-    expect(parseResult(result)).toEqual({
-      data: [{ id: 42, title: 'Receipt', created: '2026-01-01', originalFileName: 'r.pdf' }],
-    });
-  });
-
-  it('refuses a missing query without calling the pillar', async () => {
-    expect((await tool('documents.search').handler({})).isError).toBe(true);
-    expect(inventory.paperless.search).not.toHaveBeenCalled();
-  });
-
-  it('names the scope when inventory refuses the credential', async () => {
-    inventory.paperless.search.mockResolvedValueOnce(unauthorized);
-    const result = await tool('documents.search').handler({ query: 'receipt' });
-    expect(result.isError).toBe(true);
-    expect(extractText(result)).toContain("'inventory.paperless.search'");
   });
 });
 

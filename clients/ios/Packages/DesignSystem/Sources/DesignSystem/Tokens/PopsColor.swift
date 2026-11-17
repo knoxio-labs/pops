@@ -32,6 +32,15 @@ extension Color {
     /// A degraded outcome that has not failed.
     public static let popsWarning = Color(popsToken: "popsWarning")
 
+    /// Trips' route emphasis and actions; independent of booking or purchase state.
+    public static let popsTrips = Color(popsToken: "popsTrips")
+
+    /// The quiet wash behind Trips route markers, with adaptive light and dark appearances.
+    public static let popsTripsTint = Color(popsToken: "popsTripsTint")
+
+    /// Missing or conflicting Trips source facts requiring attention, independent of booking state.
+    public static let popsTripsAttention = Color(popsToken: "popsTripsAttention")
+
     /// Inventory's own colour: the tint every Inventory screen carries, and the
     /// wash behind an open container's row.
     ///

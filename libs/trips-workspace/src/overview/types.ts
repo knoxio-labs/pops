@@ -119,11 +119,11 @@ interface OverviewBaseProps {
   controls?: ReactNode;
   /** Inline Capture-domain filters/references; distinct from the header actions and contextual editor. */
   sourceControls?: ReactNode;
-  /** Persistent composer for adding an original or an idea directly from the Trip workspace. */
-  captureComposer?: ReactNode;
   /** Exact presentation-only Capture/Idea/Event visibility; unclassified IDs and other kinds stay visible. */
   sourceVisibility?: CaptureTimelineVisibility;
   contextualEditor?: ReactNode;
+  /** The canonical retained Capture composer, mounted by its owning host. */
+  captureComposer?: ReactNode;
   /** Host context follows resolved owning Visit facts; optional route outages do not hide a known Visit. */
   renderVisitContext?: (identity: { tripId: Trip['id']; visitId: Visit['id'] }) => ReactNode;
   documentsHref?: string;
@@ -139,6 +139,8 @@ export type TripOverviewProps = OverviewBaseProps &
 export type OverviewViewProps = TripOverviewProps & {
   trip: Trip;
   sources: OverviewSources;
+  /** Missing-night claims require settled successful Visit and Stay reads, including during cached refetches. */
+  accommodationComplete: boolean;
   route: TripRouteController;
   projection: RouteProjection | undefined;
 };

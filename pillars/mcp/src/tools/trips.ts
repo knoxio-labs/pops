@@ -6,6 +6,7 @@ import { projectOperationInput, projectOperationSuccess } from './openapi-input.
 import { arrangementOperations } from './trips/arrangements.js';
 import { bookingImportOperations } from './trips/booking-imports.js';
 import { planningOperations } from './trips/planning.js';
+import { routeDraftOperations } from './trips/route-drafts.js';
 import { sourceOperations } from './trips/sources.js';
 import { mapCallResult, toolError } from './utils.js';
 
@@ -19,9 +20,11 @@ const operations = {
   ...sourceOperations,
   ...arrangementOperations,
   ...bookingImportOperations,
+  ...routeDraftOperations,
 };
 const receiptOperations = new Set([
   'route.operate',
+  'routeDrafts.operate',
   'meetingPlans.operate',
   'journeyLegs.remove',
   'captures.create',
@@ -71,7 +74,7 @@ function defineTool(operationId: string, description: string): ToolDef {
   if (parts.length !== 2 || router === undefined || procedure === undefined)
     throw new Error(`Invalid finite Trips operation: ${operationId}`);
   const scope = `trips.${operationId}`;
-  const readOnly = input.method === 'GET';
+  const readOnly = input.readOnly;
   return {
     name: scope,
     scope,

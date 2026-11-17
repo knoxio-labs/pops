@@ -47,7 +47,7 @@ describe('source-backed TripOverview', () => {
     const stay = within(table).getByRole('row', { name: /Cedar guesthouse/ });
     expect(stay).toHaveAttribute('data-route-kind', 'stay');
     expect(stay).toHaveTextContent('Reserved');
-    expect(stay).toHaveTextContent('1 originals');
+    expect(stay).toHaveTextContent('document #91');
     const event = within(table).getByRole('row', { name: /Harbour festival/ });
     expect(event).toHaveAttribute('data-route-kind', 'event');
     expect(event).toHaveTextContent('Alternative');

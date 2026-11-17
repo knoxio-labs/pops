@@ -1,5 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 
+import { useUploadJournal } from '../documents/DocumentUploadProvider';
 import { TripDocumentLinks } from '../documents/TripDocumentLinks';
 import { TripDocumentUpload } from '../documents/TripDocumentUpload';
 import { sourceUploadSession } from './source-upload-sessions';
@@ -12,7 +13,8 @@ import type { DocumentAssociationTarget, TripDocumentsWorkspaceProps } from '../
 export function SourceDocuments(
   props: Omit<TripDocumentsWorkspaceProps, 'target'> & { target: DocumentAssociationTarget }
 ): JSX.Element {
-  const session = sourceUploadSession(useQueryClient(), props);
+  const persistence = useUploadJournal(props.target);
+  const session = sourceUploadSession(useQueryClient(), props, persistence.journal?.bindingKey());
   return (
     <section aria-label="Source documents" className="space-y-4">
       <TripDocumentUpload {...props} session={session} />

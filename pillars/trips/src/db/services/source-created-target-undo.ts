@@ -1,11 +1,16 @@
+import { and, eq } from 'drizzle-orm';
+
+import { events, journeys, stays } from '../schema.js';
 import { deleteEvent, getEvent } from './events.js';
+import { deleteJourneyLeg } from './journey-legs.js';
 import { deleteJourney, getJourney } from './journeys.js';
-import { getJourneyLegSetWithinOperation } from './leg-set.js';
+import { getJourneyLegSet } from './leg-set.js';
 import { canonicalSourceValue } from './source-canonical.js';
 import { TripsServiceError } from './source-record.js';
 import { assertCreatedTargetUnreferenced } from './source-references.js';
 import { deleteStay, getStay } from './stays.js';
 
+import type { TripsDb } from '../index.js';
 import type { SourceInverse } from './source-inverse-types.js';
 import type { SourceWrite } from './source-write-types.js';
 
@@ -13,29 +18,44 @@ function requireUnchanged(actual: unknown, expected: unknown): void {
   if (canonicalSourceValue(actual) !== canonicalSourceValue(expected))
     throw new TripsServiceError('source_undo_conflict');
 }
+function requireOriginalLifecycle(
+  db: TripsDb,
+  tripId: number,
+  table: typeof events | typeof journeys | typeof stays,
+  id: number
+): void {
+  const current = db
+    .select({ removedAt: table.removedAt, removalRevision: table.removalRevision })
+    .from(table)
+    .where(and(eq(table.tripId, tripId), eq(table.id, id)))
+    .get();
+  if (current === undefined || current.removedAt !== null || current.removalRevision !== 0)
+    throw new TripsServiceError('source_undo_conflict');
+}
 /** Delete only operation-created local targets whose source facts and dependency sets remain untouched. */
 export function undoCreatedTargets(write: SourceWrite, inverse: SourceInverse): void {
   for (const event of inverse.createdEvents) {
+    requireOriginalLifecycle(write.db, write.tripId, events, event.id);
     requireUnchanged(getEvent(write.db, write.tripId, event.id), event);
     assertCreatedTargetUnreferenced(write.db, write.tripId, { kind: 'event', id: event.id });
     deleteEvent(write.db, write.tripId, event.id);
   }
   for (const journey of inverse.createdJourneys) {
+    requireOriginalLifecycle(write.db, write.tripId, journeys, journey.id);
     requireUnchanged(getJourney(write.db, write.tripId, journey.id), journey);
-    const currentLegSet = {
-      journeyId: journey.id,
-      ...getJourneyLegSetWithinOperation(write.db, write.tripId, journey.id),
-    };
-    const expectedLegSet = inverse.createdJourneyLegSets?.find(
-      (legSet) => legSet.journeyId === journey.id
-    );
-    if (expectedLegSet === undefined) {
-      if (currentLegSet.legs.length > 0) throw new TripsServiceError('source_undo_conflict');
-    } else requireUnchanged(currentLegSet, expectedLegSet);
+    const proof = inverse.createdJourneyLegSets?.find((entry) => entry.journeyId === journey.id);
+    const expectedLegSet =
+      proof === undefined
+        ? { revision: 0, legs: [] }
+        : { revision: proof.revision, legs: proof.legs };
+    requireUnchanged(getJourneyLegSet(write.db, write.tripId, journey.id), expectedLegSet);
+    for (const leg of expectedLegSet.legs)
+      deleteJourneyLeg(write.db, write.tripId, journey.id, leg.id);
     assertCreatedTargetUnreferenced(write.db, write.tripId, { kind: 'journey', id: journey.id });
     deleteJourney(write.db, write.tripId, journey.id);
   }
   for (const stay of inverse.createdStays) {
+    requireOriginalLifecycle(write.db, write.tripId, stays, stay.id);
     requireUnchanged(getStay(write.db, write.tripId, stay.id), stay);
     assertCreatedTargetUnreferenced(write.db, write.tripId, { kind: 'stay', id: stay.id });
     deleteStay(write.db, write.tripId, stay.id);

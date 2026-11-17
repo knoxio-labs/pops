@@ -4,7 +4,7 @@ import { CaptureSchema } from '../../contract/capture-schemas.js';
 import { IdeaSchema } from '../../contract/idea-schemas.js';
 import { captures, ideas, sourceOperations } from '../schema.js';
 import { undoCreatedTargets } from './source-created-target-undo.js';
-import { getCapture, getIdea } from './source-queries.js';
+import { getCapture, getIdea, validateSourceLocation } from './source-queries.js';
 import { requireOwnedRecord, TripsServiceError } from './source-record.js';
 import { assertCreatedTargetUnreferenced, assertSourceUnreferenced } from './source-references.js';
 import { acknowledgeSourceInverse } from './source-undo-lineage.js';
@@ -18,6 +18,8 @@ import type { SourceWrite } from './source-write-types.js';
 function restoreSources(write: SourceWrite, inverse: SourceInverse): void {
   for (const entry of inverse.captures) {
     guardSourceInverse(getCapture(write.db, write.tripId, entry.after.id), entry.after);
+    if (entry.before?.removedAt === null)
+      validateSourceLocation(write.db, write.tripId, entry.before);
     if (entry.before === null)
       assertSourceUnreferenced(write.db, write.tripId, { kind: 'capture', id: entry.after.id });
     const after = CaptureSchema.parse(
@@ -33,6 +35,8 @@ function restoreSources(write: SourceWrite, inverse: SourceInverse): void {
   }
   for (const entry of inverse.ideas) {
     guardSourceInverse(getIdea(write.db, write.tripId, entry.after.id), entry.after);
+    if (entry.before?.removedAt === null)
+      validateSourceLocation(write.db, write.tripId, entry.before);
     if (entry.before === null)
       assertCreatedTargetUnreferenced(write.db, write.tripId, { kind: 'idea', id: entry.after.id });
     const after = IdeaSchema.parse(

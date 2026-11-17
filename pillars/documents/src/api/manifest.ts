@@ -1,8 +1,8 @@
 /**
  * Documents pillar manifest payload builder.
  *
- * The documents pillar (ADR-035 bridge kind, ADR-039 workstream 13) owns
- * the paperless-ngx integration. It has no frontend surface (no `nav` /
+ * Documents owns upload admission/receipts and the Paperless integration.
+ * Paperless retains ownership of archive documents/tasks. It has no frontend surface (no `nav` /
  * `pages` dimension) and declares no `search`/`ai` dimensions — the
  * paperless bridge exposes only its thin REST contract for now. A future
  * increment can populate `search.adapters` / `ai.tools` once the pillar

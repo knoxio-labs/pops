@@ -18,22 +18,6 @@ function rowsAt(value: unknown, key: string): readonly unknown[] | undefined {
   return Array.isArray(rows) ? rows : undefined;
 }
 
-function searchHit(row: unknown): unknown {
-  if (!isRow(row)) return row;
-  return {
-    id: row['id'],
-    title: row['title'],
-    created: row['created'],
-    originalFileName: row['originalFileName'],
-  };
-}
-
-function compactSearch(result: CallResult<unknown>): CallResult<unknown> {
-  if (result.kind !== 'ok') return result;
-  const rows = rowsAt(result.value, 'data');
-  return rows === undefined ? result : { ...result, value: { data: rows.map(searchHit) } };
-}
-
 /** The pops web page that shows an item's documents. */
 function itemWebPath(itemId: string): string {
   return `/inventory/items/${encodeURIComponent(itemId)}`;
@@ -51,32 +35,7 @@ function withWebPath(result: CallResult<unknown>, itemId: string): CallResult<un
   };
 }
 
-const SEARCH_SCOPE = 'inventory.paperless.search';
 const LIST_SCOPE = 'inventory.documents.listForItem';
-
-const documentsSearch: ToolDef = {
-  name: 'documents.search',
-  readOnly: true,
-  scope: SEARCH_SCOPE,
-  description:
-    'Search the Paperless document archive by text (2–200 characters). Returns each match as ' +
-    '{ id, title, created, originalFileName }; pass the id as paperlessDocumentId to inventory.documents.link. ' +
-    'Fails when Paperless is not configured.',
-  inputSchema: {
-    type: 'object',
-    additionalProperties: false,
-    properties: {
-      query: { type: 'string', minLength: 2, maxLength: 200, description: 'Search text' },
-    },
-    required: ['query'],
-  },
-  handler: async (args) => {
-    const query = reqStr(args, 'query');
-    if (!query) return toolError('Missing required field: query');
-    const result = await inventoryDocuments().paperless.search({ query });
-    return mapCallResult(compactSearch(result), SEARCH_SCOPE);
-  },
-};
 
 const documentsList: ToolDef = {
   name: 'inventory.documents.list',
@@ -116,5 +75,5 @@ const documentsList: ToolDef = {
   },
 };
 
-/** Read-only document tools: Paperless search and an item's linked, pending and failed documents. */
-export const documentReadTools: readonly ToolDef[] = [documentsSearch, documentsList];
+/** Read the Inventory-owned links, pending uploads and failed uploads for an item. */
+export const documentReadTools: readonly ToolDef[] = [documentsList];

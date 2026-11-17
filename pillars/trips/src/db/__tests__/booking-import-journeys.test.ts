@@ -170,7 +170,7 @@ describe('Reviewed booking Journey persistence', () => {
         decisionIds: reviewed.decisions.map((decision) => decision.id),
       });
       const operation = committed.results[0];
-      const proof = operation?.receipt.journeyLegSets[0];
+      const proof = operation?.receipt.journeyLegSets?.[0];
       if (operation === undefined || proof === undefined)
         throw new Error('Expected canonical leg proof');
       createJourneyLeg(db, fixture.tripId, proof.journeyId, { mode: 'Ground transport' });

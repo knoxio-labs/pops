@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { getSourceRetry } from '../shared/source-retry-test-utils';
 import { problem } from '../stay/test-utils';
 import { eventQueryKey } from './api';
 import { EventWorkspace } from './EventWorkspace';
@@ -112,7 +113,7 @@ describe('Source-backed event workspace', () => {
     expect(screen.getByLabelText('Event name')).toHaveValue('Uncommitted event');
     expect(screen.getByText('Unsaved changes')).toBeVisible();
     transport.restoreReads();
-    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    fireEvent.click(getSourceRetry());
     await waitFor(() => expect(screen.queryByText('trips.temporarily_unavailable')).toBeNull());
     expect(screen.getByLabelText('Event name')).toHaveValue('Uncommitted event');
     expect(transport.patches).toEqual([]);
@@ -198,7 +199,7 @@ describe('Source-backed event workspace', () => {
     expect(await screen.findByText('trips.request.invalid')).toBeVisible();
     expect(screen.getByLabelText('Address')).toHaveValue('East quay');
     expect(screen.getByRole('button', { name: 'Undo' })).toBeDisabled();
-    fireEvent.click(screen.getByRole('button', { name: /try again/i }));
+    fireEvent.click(getSourceRetry());
     await saved();
     expect(transport.patches).toEqual([{ address: 'East quay' }, { address: 'East quay' }]);
   });

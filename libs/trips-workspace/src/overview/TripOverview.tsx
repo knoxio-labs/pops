@@ -1,14 +1,14 @@
-import { Button, ErrorState, PageHeader } from '@pops/ui';
+import { cn, ErrorState } from '@pops/ui';
 
 import { projectTripRoute } from '../route/projection';
 import { useTripRoute } from '../route/use-trip-route';
 import { requestProblem } from '../stay/api';
 import { OverviewCalendar } from './OverviewCalendar';
+import { OverviewHeader } from './OverviewHeader';
 import { OverviewBeforeYouGo, OverviewSleepPlan } from './OverviewReadiness';
 import { OverviewDetached, OverviewReferences } from './OverviewReferences';
 import { OverviewRoute } from './OverviewRoute';
 import { tripReadiness } from './readiness';
-import { routeDateRange } from './route-context';
 import { useOverviewSources } from './use-overview-sources';
 
 import type { JSX } from 'react';
@@ -17,12 +17,7 @@ import type { OverviewSources, TripOverviewProps, OverviewViewProps } from './ty
 
 /** Approved route-first overview, reading each trip-owned source independently through its generated client. */
 export function TripOverview(props: TripOverviewProps): JSX.Element | null {
-  return (
-    <>
-      <OverviewSession {...props} />
-      {props.contextualEditor}
-    </>
-  );
+  return <OverviewSession {...props} />;
 }
 
 function OverviewSession(props: TripOverviewProps): JSX.Element | null {
@@ -42,25 +37,58 @@ function OverviewSession(props: TripOverviewProps): JSX.Element | null {
   if (!trip.data)
     return <ErrorState error={requestProblem(trip.error)} onRetry={() => void trip.refetch()} />;
   const sources = overviewSources(context);
-  const coverageComplete =
-    sources.visits !== undefined &&
-    sources.stays !== undefined &&
-    !queries.visits.isError &&
-    !queries.stays.isError &&
-    !route.readError;
+  const accommodationComplete =
+    context.visits.isSuccess &&
+    !context.visits.isFetching &&
+    context.stays.isSuccess &&
+    !context.stays.isFetching;
+  const coverageComplete = accommodationComplete && !route.readError;
   return (
-    <main className="w-full min-w-0 space-y-5 text-sm">
-      <OverviewQueryWarnings queries={queries} labels={props.labels} />
-      <OverviewContent
-        {...props}
-        trip={trip.data}
-        sources={sources}
-        route={route}
-        coverageComplete={coverageComplete}
-        projection={route.view ? projectTripRoute(route.view, sources) : undefined}
-      />
-      <OverviewContextLoading context={context} label={props.labels.loading} />
-    </main>
+    <OverviewFrame
+      {...props}
+      queries={queries}
+      context={context}
+      trip={trip.data}
+      sources={sources}
+      route={route}
+      accommodationComplete={accommodationComplete}
+      coverageComplete={coverageComplete}
+      projection={route.view ? projectTripRoute(route.view, sources) : undefined}
+    />
+  );
+}
+
+function OverviewFrame({
+  queries,
+  context,
+  ...props
+}: OverviewViewProps & {
+  queries: ReturnType<typeof useOverviewSources>;
+  context: Omit<ReturnType<typeof useOverviewSources>, 'trip'>;
+  coverageComplete: boolean;
+}): JSX.Element {
+  return (
+    <div
+      data-workspace-layout={props.contextualEditor ? 'split' : 'full'}
+      className={cn(
+        'trips-workspace grid min-w-0 items-start gap-6 rounded-2xl bg-trip-canvas p-4 font-trip-body text-trip-ink sm:p-6',
+        props.contextualEditor && 'xl:grid-cols-3'
+      )}
+    >
+      <main
+        className={cn(
+          'w-full min-w-0 space-y-5 text-sm',
+          props.contextualEditor && 'xl:col-span-2'
+        )}
+      >
+        <OverviewQueryWarnings queries={queries} labels={props.labels} />
+        <OverviewContent {...props} />
+        <OverviewContextLoading context={context} label={props.labels.loading} />
+      </main>
+      {props.contextualEditor && (
+        <div className="min-w-0 xl:sticky xl:top-6">{props.contextualEditor}</div>
+      )}
+    </div>
   );
 }
 
@@ -152,53 +180,5 @@ function OverviewContent(props: OverviewContentProps): JSX.Element | null {
         </aside>
       </div>
     </>
-  );
-}
-
-function OverviewHeader(props: OverviewViewProps): JSX.Element {
-  const { trip } = props;
-  const title = trip.name?.trim() || trip.destination.trim() || props.labels.trip;
-  const bounds = routeDateRange(props.projection, props.locale);
-  return (
-    <>
-      <PageHeader
-        title={<span className="break-words">{title}</span>}
-        description={
-          trip.when ? (
-            <span className="whitespace-pre-wrap break-words">{trip.when}</span>
-          ) : undefined
-        }
-        backHref={props.backHref}
-        actions={<OverviewActions {...props} />}
-      />
-      {bounds && <p className="text-sm text-muted-foreground">{bounds}</p>}
-    </>
-  );
-}
-
-function OverviewActions(props: TripOverviewProps): JSX.Element {
-  const legacy =
-    props.controls === undefined &&
-    props.onOpenSource === undefined &&
-    props.calendar === undefined;
-  return (
-    <div className="flex flex-wrap gap-2">
-      {props.controls}
-      {legacy && props.calendarLink && (
-        <Button asChild variant="outline" className="min-h-11">
-          <a href={props.calendarLink.href}>{props.calendarLink.label}</a>
-        </Button>
-      )}
-      {props.documentsHref && (
-        <Button asChild variant="outline" className="min-h-11">
-          <a href={props.documentsHref}>{props.labels.documents}</a>
-        </Button>
-      )}
-      {legacy && props.settingsHref && (
-        <Button asChild variant="outline" className="min-h-11">
-          <a href={props.settingsHref}>{props.labels.settings}</a>
-        </Button>
-      )}
-    </div>
   );
 }

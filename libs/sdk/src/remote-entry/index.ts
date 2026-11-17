@@ -55,3 +55,9 @@ export const RemotePillarI18nSchema = z.object({
 
 /** A pillar remote entry's `i18n` export; see {@link RemotePillarI18nSchema}. */
 export type RemotePillarI18n = z.infer<typeof RemotePillarI18nSchema>;
+
+export type {
+  UploadPersistenceIdentity,
+  UploadPersistenceLease,
+  DocumentUploadHostCapability,
+} from './document-uploads.js';

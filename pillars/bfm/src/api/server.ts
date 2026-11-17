@@ -37,6 +37,7 @@
  *     means the deploy that first breaks the invariant is the one that
  *     crashes, not the incident that later depends on it.
  */
+import { listenPillarServer } from '@pops/pillar-express';
 import {
   bootstrapPillar,
   shutdownPillar,
@@ -54,6 +55,7 @@ import { createBfmApiApp } from './app.js';
 import { resolveAccessTokenSigningKey } from './auth/signing-key.js';
 import { createMobileBarcodeClient } from './barcode/client.js';
 import {
+  resolveListenHost,
   resolvePairingCodeIssuanceLimit,
   resolvePairingCodeTtlMs,
   resolvePort,
@@ -64,10 +66,7 @@ import {
   shouldSelfRegister,
 } from './boot-env.js';
 import { createMobileContactsClient } from './contacts/client.js';
-import {
-  startPruneCredentialsWorker,
-  type PruneCredentialsWorkerHandle,
-} from './cron/prune-credentials.js';
+import { startPruneCredentialsWorker } from './cron/prune-credentials.js';
 import { createMobileDocumentsBytesClient } from './documents/bytes-client.js';
 import { createMobileDocumentsClient } from './documents/client.js';
 import { createMobileDocumentsUploadClient } from './documents/upload-client.js';
@@ -206,28 +205,26 @@ const app = createBfmApiApp(
   }
 );
 
-let pruneCredentialsWorker: PruneCredentialsWorkerHandle | undefined;
-const server = app.listen(port, () => {
-  console.warn(`[bfm-api] Listening on port ${port}`);
-  // After listen, like the sweep runner in the purchases pillar: this
-  // worker's first tick is synchronous DB work, not the fire-and-forget
-  // async kind the cross-pillar reconcile crons start with, so running it
-  // before `listen` would put the first prune pass — potentially the
-  // largest one, against a database that has never been swept — on the
-  // boot critical path. Unconditional otherwise: a tick against a table
-  // with nothing to prune is a no-op, so there is no deployment shape
-  // gating this would protect.
-  pruneCredentialsWorker = startPruneCredentialsWorker({
-    db: bfmDb.db,
-    logger: {
-      info: (message, context) => {
-        console.warn(`[bfm-api] ${message}`, context ?? {});
-      },
-      warn: (message, context) => {
-        console.error(`[bfm-api] ${message}`, context ?? {});
-      },
+const server = await listenPillarServer(app, port, resolveListenHost());
+console.warn(`[bfm-api] Listening on port ${port}`);
+// After listen, like the sweep runner in the purchases pillar: this
+// worker's first tick is synchronous DB work, not the fire-and-forget
+// async kind the cross-pillar reconcile crons start with, so running it
+// before `listen` would put the first prune pass — potentially the
+// largest one, against a database that has never been swept — on the
+// boot critical path. Unconditional otherwise: a tick against a table
+// with nothing to prune is a no-op, so there is no deployment shape
+// gating this would protect.
+const pruneCredentialsWorker = startPruneCredentialsWorker({
+  db: bfmDb.db,
+  logger: {
+    info: (message, context) => {
+      console.warn(`[bfm-api] ${message}`, context ?? {});
     },
-  });
+    warn: (message, context) => {
+      console.error(`[bfm-api] ${message}`, context ?? {});
+    },
+  },
 });
 
 let pillarHandle: PillarBootstrapHandle | undefined;
@@ -243,7 +240,7 @@ function shutdown(signal: NodeJS.Signals): void {
   if (shuttingDown) return;
   shuttingDown = true;
   console.warn(`[bfm-api] Shutting down (${signal})`);
-  pruneCredentialsWorker?.stop();
+  pruneCredentialsWorker.stop();
   // The database closes only once the last request has been answered — an
   // in-flight handler holding the handle would otherwise fail on a closed
   // connection rather than finish. Closing at all is what checkpoints the WAL,

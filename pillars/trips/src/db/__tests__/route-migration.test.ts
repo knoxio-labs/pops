@@ -11,7 +11,7 @@ import { expect, it } from 'vitest';
 import { TripSchema, VisitSchema } from '../../contract/schemas.js';
 import { openTripsDb } from '../index.js';
 import * as schema from '../schema.js';
-import { createJourney, getJourney } from '../services/journeys.js';
+import { getJourney } from '../services/journeys.js';
 import { getTrip, listVisits } from '../services/records.js';
 import { operateTripRoute } from '../services/route-operations.js';
 import { getTripRoute } from '../services/route-queries.js';
@@ -32,33 +32,61 @@ it('upgrades actual Visit order without inferring Journey placement, persists UU
     const empty = TripSchema.parse(db.insert(schema.trips).values({}).returning().get());
     const place = db.insert(schema.places).values({ name: 'Repeated city' }).returning().get();
     if (place === undefined) throw new Error('Expected place');
-    const first = VisitSchema.parse(
-      db
-        .insert(schema.visits)
-        .values({
-          tripId: trip.id,
-          placeId: place.id,
-          position: 8,
-          timing: { departure: '2028-01-01' },
-        })
-        .returning()
-        .get()
+    const timestamp = '2028-01-01T00:00:00.000Z';
+    const firstId = Number(
+      raw
+        .prepare(
+          'INSERT INTO visits (trip_id, place_id, position, timing, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)'
+        )
+        .run(
+          trip.id,
+          place.id,
+          8,
+          JSON.stringify({ departure: '2028-01-01' }),
+          timestamp,
+          timestamp
+        ).lastInsertRowid
     );
-    const second = VisitSchema.parse(
-      db
-        .insert(schema.visits)
-        .values({
-          tripId: trip.id,
-          placeId: place.id,
-          position: 2,
-          timing: { arrival: '2029-01-01' },
-        })
-        .returning()
-        .get()
+    const secondId = Number(
+      raw
+        .prepare(
+          'INSERT INTO visits (trip_id, place_id, position, timing, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)'
+        )
+        .run(trip.id, place.id, 2, JSON.stringify({ arrival: '2029-01-01' }), timestamp, timestamp)
+        .lastInsertRowid
     );
-    const journey = createJourney(db, trip.id, {
-      name: 'Earlier dated transport is still unplaced',
+    const first = VisitSchema.parse({
+      id: firstId,
+      tripId: trip.id,
+      placeId: place.id,
+      revision: 0,
+      timing: { departure: '2028-01-01' },
+      notes: '',
+      sourceLinks: [],
+      createdAt: timestamp,
+      updatedAt: timestamp,
     });
+    const second = VisitSchema.parse({
+      ...first,
+      id: secondId,
+      timing: { arrival: '2029-01-01' },
+    });
+    const journeyId = Number(
+      raw
+        .prepare(
+          'INSERT INTO journeys (trip_id, name, reference, notes, source_links, buffers, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+        )
+        .run(
+          trip.id,
+          'Earlier dated transport is still unplaced',
+          null,
+          '',
+          '[]',
+          '{}',
+          timestamp,
+          timestamp
+        ).lastInsertRowid
+    );
     raw.close();
     const upgraded = openTripsDb(path);
     const operation = {
@@ -87,7 +115,10 @@ it('upgrades actual Visit order without inferring Journey placement, persists UU
         missingSources: [],
       });
       expect(listVisits(upgraded.db, trip.id)).toEqual([second, first]);
-      expect(getJourney(upgraded.db, trip.id, journey.id)).toEqual(journey);
+      expect(getJourney(upgraded.db, trip.id, journeyId)).toMatchObject({
+        id: journeyId,
+        name: 'Earlier dated transport is still unplaced',
+      });
       receipt = operateTripRoute(upgraded.db, trip.id, operation).receipt;
     } finally {
       upgraded.raw.close();

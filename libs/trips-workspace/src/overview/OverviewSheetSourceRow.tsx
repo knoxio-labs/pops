@@ -1,5 +1,6 @@
 import { Badge, Button, TableCell, TableRow } from '@pops/ui';
 
+import { OverviewOriginals } from './OverviewOriginals';
 import { sourceAction } from './source-action';
 
 import type { JSX } from 'react';
@@ -26,9 +27,13 @@ export function OverviewSheetSourceRow({
       document.tripId === props.tripId &&
       document.targetKind === source.kind &&
       document.targetId === source.id
-  ).length;
+  );
   return (
-    <TableRow data-route-kind={source.kind} data-route-id={source.id}>
+    <TableRow
+      data-constraint={statuses.includes('Purchased') ? 'hard' : 'soft'}
+      data-route-kind={source.kind}
+      data-route-id={source.id}
+    >
       <TableCell className="text-muted-foreground">
         {when || props.labels.sheet.unknownDate}
       </TableCell>
@@ -53,15 +58,15 @@ export function OverviewSheetSourceRow({
           <Badge variant="secondary">{props.labels.sheet.onRoute}</Badge>
         )}
       </TableCell>
-      <TableCell className="text-muted-foreground">{originalsLabel(originals, props)}</TableCell>
+      <TableCell className="text-muted-foreground">
+        <OverviewOriginals
+          documents={originals}
+          labels={props.labels}
+          unknownLabel={props.labels.sheet.originalsUnknown}
+        />
+      </TableCell>
     </TableRow>
   );
-}
-
-function originalsLabel(count: number | undefined, props: OverviewViewProps): string {
-  if (count === undefined) return props.labels.sheet.originalsUnknown;
-  if (count === 0) return '—';
-  return props.labels.sheet.originalCount(count);
 }
 
 function SourceTitle({

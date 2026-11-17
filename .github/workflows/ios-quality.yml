@@ -246,25 +246,13 @@ jobs:
       - name: Build the app and test targets
         run: mise run build:for-testing
 
-  quality:
-    name: build + test + lint + UI flow
+  # Separate runners keep the complete analyzer compile independent from
+  # Maestro's build freshness checks, which may replace private DerivedData.
+  # Admission retains its shipping name and rejects any selected worker that
+  # did not succeed; an unselected event still skips admission.
+  native:
+    name: host + simulator + analyzer
     needs: [scope]
-    # A reusable full-validation call always runs. On an ordinary native pull
-    # request the event's `paths:` filter already decided and `scope` is skipped,
-    # so this must not inherit that skip. Promotion and integration pull
-    # requests are already covered by promotion-quality.yml's reusable full
-    # call, which includes this job with `full-validation: true`; skipping the
-    # direct invocation keeps the scarce macOS pool for one lane per candidate.
-    # On a merge group it runs only on an explicit `selected=true`: a `scope` job
-    # that FAILED leaves the output empty, so this stays skipped and the workflow
-    # goes red on the scope job — never green over an unbuilt tree.
-    #
-    # The full simulator, analyzer, Release and UI lane runs only for a PR based
-    # on the default branch. A stacked PR gets the app and test-target compile
-    # above; reserving the full lane for the default branch and frozen merge
-    # group keeps simulator and UI work to one candidate validation (POPS-4150).
-    # Retargeting triggers a fresh run through the edited event; CI Gate accepts
-    # only runs associated with the current base branch.
     if: >-
       ${{ !cancelled() && (
         inputs['full-validation'] == true ||
@@ -277,8 +265,7 @@ jobs:
     runs-on: xcode-27
     # Run 42751509516 attempt 2 reached 1,755/1,935 analyzer files at 75 minutes
     # with continuous progress, projecting 82.7 minutes; 100 adds about 20% headroom.
-    # The full job limit also covers host/simulator tests and Release/UI validation;
-    # these measurements are not a duration guarantee.
+    # Worker budgets retain the existing limits; measured durations are not guarantees.
     timeout-minutes: ${{ (github.event_name == 'merge_group' || inputs['full-validation'] == true) && 190 || 100 }}
     defaults:
       run:
@@ -287,11 +274,6 @@ jobs:
       # mise merges config UP the tree, so a bare `mise install` here would also
       # install the root `mise.toml`'s Rust — a full rustup toolchain download
       # in a job that compiles no Rust.
-      #
-      # Node and pnpm used to be disabled alongside it, and are not any more:
-      # the UI-level step at the bottom of this job runs a real `@pops/bfm`
-      # for the app to talk to, and that is a Node process. They cost about
-      # twenty seconds to install; Rust costs minutes.
       MISE_DISABLE_TOOLS: rust
 
       # Xcode 27 spends ten minutes asking a failed simulator for a sysdiagnose
@@ -493,27 +475,78 @@ jobs:
           retention-days: 7
           if-no-files-found: warn
 
-      # THE ONE INVARIANT HERE THAT BUILDING, TESTING AND LINTING DO NOT COVER:
-      # a shipped binary names no BFM host, and is re-pointed by re-pairing
-      # rather than by a rebuild (POPS-1392). Debug builds fine with a host
-      # baked in — that is the state this check exists to distinguish Release
-      # from — so nothing above can see a regression in it.
-      #
-      # It matters more here than the usual gate does because this app is
-      # DISTRIBUTED: a Release that bakes in a hostname is not a bad deploy to
-      # be rolled forward, it is an install on hardware the operator does not
-      # control.
-      #
-      # It is a SECOND FULL COMPILE of the tree, in the Release configuration
-      # and into its own `-derivedDataPath`, sharing nothing above but the
-      # generated xcodeproj. That cost is the reason it sits here rather than
-      # up with `lint`: everything cheaper, and everything more likely to fail,
-      # has already reported by this point.
+  ui:
+    name: Release + UI flow (${{ matrix.shard }})
+    needs: [scope]
+    if: >-
+      ${{ !cancelled() && (
+        inputs['full-validation'] == true ||
+        (github.event_name == 'merge_group' && needs.scope.outputs.selected == 'true') ||
+        (github.event_name == 'pull_request' &&
+          github.event.pull_request.base.ref == github.event.repository.default_branch &&
+          !startsWith(github.head_ref, 'promotion/') &&
+          !startsWith(github.head_ref, 'integration/'))
+      ) }}
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON((github.event_name == 'merge_group' || inputs['full-validation'] == true) && '[0,1]' || '[0]') }}
+    runs-on: xcode-27
+    # Worker budgets retain the existing limits; measured durations are not guarantees.
+    timeout-minutes: ${{ (github.event_name == 'merge_group' || inputs['full-validation'] == true) && 190 || 100 }}
+    defaults:
+      run:
+        working-directory: clients/ios
+    env:
+      # mise merges config UP the tree, so a bare `mise install` here would also
+      # install the root `mise.toml`'s Rust — a full rustup toolchain download
+      # in a job that compiles no Rust.
+      MISE_DISABLE_TOOLS: rust
+      POPS_E2E_SHARD_INDEX: ${{ strategy.job-index }}
+      POPS_E2E_SHARD_COUNT: ${{ strategy.job-total }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/select-xcode
+
+      - uses: ./.github/actions/setup-mise
+        with:
+          working_directory: clients/ios
+
+      - name: Generate Pops.xcodeproj
+        run: mise run generate
+
+      # Keyed on the Package.swift files as well as Package.resolved. Most
+      # packages here depend only on their siblings by path and pin nothing;
+      # only `Packages/BFMClient` reaches outside the repo, for Apple's
+      # swift-openapi runtime. `hashFiles` over a pattern that matches nothing
+      # contributes an empty string, so a key built from Package.resolved alone
+      # would go constant the moment that one file moved or was removed, and
+      # restore a stale cache at every commit after. Scoped to `Packages/*/`
+      # rather than every `Package.resolved` under `clients/ios` so a change to
+      # `Tools/OpenAPIGenerator`'s own dependency graph — cached separately
+      # below and irrelevant to the app's packages — does not invalidate this.
+      - name: Cache resolved SPM dependencies
+        uses: actions/cache@v6
+        with:
+          path: ~/Library/Caches/org.swift.swiftpm
+          key: spm-${{ runner.os }}-${{ hashFiles('clients/ios/Packages/*/Package.swift', 'clients/ios/Packages/*/Package.resolved') }}
+          restore-keys: |
+            spm-${{ runner.os }}-
+      - name: Resolve SPM dependencies
+        run: xcodebuild -project Pops.xcodeproj -scheme Pops -resolvePackageDependencies
+
+      - name: Build independent Debug products for Maestro
+        if: github.event_name == 'merge_group' || inputs['full-validation'] == true
+        run: mise run build:for-testing
+
       - name: Release carries no BFM host
+        if: strategy.job-index == 0
         run: mise run verify:release-carries-no-host
 
-      # Everything below drives the built app on the simulator the step above
-      # just left booted, against a real BFM. `clients/ios/.maestro/README.md`
+      # Maestro drives this worker's Debug products against a real BFM.
+      # `clients/ios/.maestro/README.md`
       # argues for Maestro over XCUITest; what follows is only about getting a
       # pillar running next to it.
       #
@@ -549,15 +582,11 @@ jobs:
         if: github.event_name == 'merge_group' || inputs['full-validation'] == true
         run: |
           set -euo pipefail
-          simulator_udid="$(xcrun simctl create "POPS-E2E-disposable-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+          simulator_udid="$(xcrun simctl create "POPS-E2E-disposable-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${POPS_E2E_SHARD_INDEX}" \
             com.apple.CoreSimulator.SimDeviceType.iPhone-17 \
             com.apple.CoreSimulator.SimRuntime.iOS-27-0)"
           echo "POPS_IOS_E2E_SIMULATOR_UDID=$simulator_udid" >> "$GITHUB_ENV"
 
-      # Last, because it is the only step here that depends on every earlier
-      # one: it installs the products `build:for-testing` wrote and drives the
-      # simulator `test` booted. Its own task rebuilds when those are missing,
-      # so a reordering degrades into a second compile rather than into a lie.
       - name: UI flow (Maestro, against a real BFM)
         if: github.event_name == 'merge_group' || inputs['full-validation'] == true
         timeout-minutes: 45
@@ -575,7 +604,33 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: maestro-debug
+          name: maestro-debug-${{ strategy.job-index }}
           path: ~/.maestro/tests
           retention-days: 7
           if-no-files-found: warn
+
+  quality:
+    name: build + test + lint + UI flow
+    needs: [scope, native, ui]
+    if: >-
+      ${{ !cancelled() && (
+        inputs['full-validation'] == true ||
+        (github.event_name == 'merge_group' && needs.scope.outputs.selected == 'true') ||
+        (github.event_name == 'pull_request' &&
+          github.event.pull_request.base.ref == github.event.repository.default_branch &&
+          !startsWith(github.head_ref, 'promotion/') &&
+          !startsWith(github.head_ref, 'integration/'))
+      ) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require both selected native workers
+        env:
+          NATIVE_RESULT: ${{ needs.native.result }}
+          UI_RESULT: ${{ needs.ui.result }}
+        run: |
+          set -euo pipefail
+          if [ "$NATIVE_RESULT" != success ] || [ "$UI_RESULT" != success ]; then
+            echo "::error::iOS workers did not both succeed (native=$NATIVE_RESULT, ui=$UI_RESULT)"
+            exit 1
+          fi

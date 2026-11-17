@@ -5,6 +5,7 @@ import { createPillarErrorHandlers } from '@pops/pillar-express';
 import { storeDocumentUpload } from './document-upload-handler.js';
 import { sniffImageType } from './image-format.js';
 import { INVENTORY_MEDIA_MAX_BYTES, storeInventoryMedia } from './inventory-media.js';
+import { storePaperlessUpload } from './paperless-upload-handler.js';
 import { uploadErrors } from './upload-errors.js';
 import { uploadTokens } from './upload-tokens.js';
 
@@ -15,7 +16,7 @@ import type { UploadTokenStore } from './upload-tokens.js';
 /** Path of the upload route; the `createUpload` tools build URLs from it. */
 export const UPLOAD_ROUTE_PREFIX = '/uploads';
 
-/** Seams for tests; production uses the shared token store and the real inventory clients. */
+/** Seams for tests; production uses shared token/receipt stores and discovered owner clients. */
 export interface UploadRouterDeps {
   readonly tokens?: UploadTokenStore;
   readonly media?: MediaStoreDeps;
@@ -63,10 +64,16 @@ async function storePhoto(req: Request, res: Response, media?: MediaStoreDeps): 
  * `inventory.items.attachPhoto`. A document
  * (`inventory.documents.createUpload`) is streamed to inventory's item
  * document upload under documents' size cap and answered with the pending
- * ingestion. The token is the credential, so the route sits outside the
+ * ingestion. A direct Documents original (`documents.createUpload`) is
+ * streamed to the durable Documents content route under its caller-retained
+ * operationId, then explicitly dispatched through Documents' durable claim.
+ * The token is the
+ * credential, so the route sits outside the
  * `/mcp` bearer check: a client that can call tools hands the URL to a shell
  * (`curl -T`), which has no bearer token. The token is spent before the body
- * is read, so a failed upload needs a new URL.
+ * is read. Direct Documents callers recover with documents.uploadStatus. An
+ * admitted operation can be explicitly dispatched with the same operationId;
+ * accepted or outcome_unknown proof never authorizes resending bytes.
  */
 export function createUploadRouter(deps: UploadRouterDeps = {}): Router {
   const tokens = deps.tokens ?? uploadTokens;
@@ -79,6 +86,10 @@ export function createUploadRouter(deps: UploadRouterDeps = {}): Router {
       return uploadErrors.not_found();
     }
     if (target.kind === 'photo') return storePhoto(req, res, deps.media);
+    if (target.kind === 'paperless-document')
+      return storePaperlessUpload(req, res, target, {
+        deps: deps.documents,
+      });
     return storeDocumentUpload(req, res, target, deps.documents);
   };
 

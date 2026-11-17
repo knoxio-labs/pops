@@ -1,9 +1,9 @@
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, isNull } from 'drizzle-orm';
 
 import { RentalSchema } from '../../contract/rental-schemas.js';
 import { rentals } from '../schema.js';
 import { requireArrangementRevision } from './arrangement-revision.js';
-import { getTrip, getVisit } from './records.js';
+import { getTrip, validateRetainedVisitReference } from './records.js';
 import { deleteResponsibilityForTarget } from './responsibility-cleanup.js';
 import { requireOwnedRecord } from './source-record.js';
 
@@ -12,8 +12,7 @@ import type { TripsDb } from '../index.js';
 
 function validateVisits(db: TripsDb, tripId: number, input: RentalInput, current?: Rental): void {
   for (const key of ['pickupVisitId', 'returnVisitId'] as const) {
-    const id = input[key];
-    if (id !== undefined && id !== null && id !== current?.[key]) getVisit(db, tripId, id);
+    validateRetainedVisitReference(db, tripId, input[key], current?.[key]);
   }
 }
 /** Read rentals in stable identity order without projecting route coverage. */
@@ -22,7 +21,7 @@ export function listRentals(db: TripsDb, tripId: number): Rental[] {
   return db
     .select()
     .from(rentals)
-    .where(eq(rentals.tripId, tripId))
+    .where(and(eq(rentals.tripId, tripId), isNull(rentals.removedAt)))
     .orderBy(asc(rentals.id))
     .all()
     .map((row) => RentalSchema.parse(row));
@@ -34,7 +33,7 @@ export function getRental(db: TripsDb, tripId: number, id: number): Rental {
       db
         .select()
         .from(rentals)
-        .where(and(eq(rentals.tripId, tripId), eq(rentals.id, id)))
+        .where(and(eq(rentals.tripId, tripId), eq(rentals.id, id), isNull(rentals.removedAt)))
         .get()
     )
   );
