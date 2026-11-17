@@ -6,14 +6,26 @@ internal struct TripsSelectedTripStack: View {
     @Bindable internal var model: TripsModel
     internal let tab: TripsTab
     internal let documents: any DocumentsReading
+    internal let placePinWriter: (any TripPlacePinWriting)?
     internal let capture: (() -> Void)?
+
+    internal init(
+        model: TripsModel, tab: TripsTab, documents: any DocumentsReading,
+        placePinWriter: (any TripPlacePinWriting)? = nil, capture: (() -> Void)? = nil
+    ) {
+        self.model = model
+        self.tab = tab
+        self.documents = documents
+        self.placePinWriter = placePinWriter
+        self.capture = capture
+    }
 
     internal var body: some View {
         NavigationStack {
             Group {
                 if model.selectedID != nil {
                     TripsWorkspaceView(
-                        model: model, tab: tab, capture: capture)
+                        model: model, tab: tab, placePinWriter: placePinWriter, capture: capture)
                 } else if model.loading {
                     LoadingStateView()
                 } else if let failure = model.failure {

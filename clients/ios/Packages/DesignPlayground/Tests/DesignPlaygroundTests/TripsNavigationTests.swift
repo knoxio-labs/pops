@@ -47,7 +47,9 @@ internal struct TripsNavigationTests {
             documentAssociations: original.documentAssociations)
         let date = try #require(TripClock.instant(local: "2026-01-02T12:00", zone: "UTC"))
         let view = TripsTodayContent(snapshot: snapshot, date: date)
-        #expect(try view.environment(\.timeZone, .gmt).inspect().find(text: "Parallel event").string() == "Parallel event")
+        #expect(
+            try view.environment(\.timeZone, .gmt).inspect().find(text: "Parallel event").string()
+                == "Parallel event")
     }
 
     @Test("Inbox is part of the selected Trip workspace")

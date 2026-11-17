@@ -2,6 +2,7 @@ import {
   DEFAULT_DEVICE_CAPABILITIES,
   serialiseDeviceCapabilities,
 } from '../../contract/capabilities.js';
+import { MobileTripDetailV3Schema } from '../../contract/mobile-trips-detail-schemas.js';
 import { deviceRow } from '../../db/__tests__/helpers.js';
 import { devices } from '../../db/index.js';
 import { mintAccessToken } from '../auth/access-token.js';
@@ -32,6 +33,26 @@ export function mobileTripsReader(overrides: Partial<MobileTripsClient> = {}): M
           value: { tripId, revision: 0, order: [], paths: [], missingSources: [] },
         })),
     getTrip: overrides.getTrip ?? (() => Promise.resolve({ kind: 'ok', value: tripsFixture() })),
+    getTripV3:
+      overrides.getTripV3 ??
+      (() =>
+        Promise.resolve({
+          kind: 'ok',
+          value: MobileTripDetailV3Schema.parse({
+            ...tripsFixture(),
+            places: tripsFixture().places.map((place) => ({ ...place, pin: null })),
+          }),
+        })),
+    updatePlacePin:
+      overrides.updatePlacePin ??
+      ((_tripID, placeID, pin) => {
+        const place = tripsFixture().places.find((record) => record.id === placeID);
+        return Promise.resolve(
+          place === undefined
+            ? { kind: 'not-found', pillar: 'trips', status: 404 }
+            : { kind: 'ok', value: { ...place, pin } }
+        );
+      }),
   };
 }
 /** Opens a real authenticated BFM app over an injected source reader and isolated migrated database. */

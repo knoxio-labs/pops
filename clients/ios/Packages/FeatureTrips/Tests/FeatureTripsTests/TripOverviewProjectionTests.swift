@@ -45,7 +45,7 @@ internal struct TripOverviewProjectionTests {
         #expect(projection.heading == .recorded("Journey"))
         #expect(projection.now.isEmpty)
         #expect(projection.next.isEmpty)
-        #expect(projection.other.isEmpty)
+        #expect(projection.other.map(\.id) == ["stay-3"])
         #expect(projection.chapters.first?.hasOpenDates == true)
         #expect(projection.chapters.first?.isCurrent == false)
         #expect(stay.status == nil)

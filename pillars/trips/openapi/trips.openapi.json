@@ -2861,6 +2861,24 @@
                           "name": {
                             "type": "string"
                           },
+                          "pin": {
+                            "additionalProperties": false,
+                            "nullable": true,
+                            "properties": {
+                              "latitude": {
+                                "maximum": 90,
+                                "minimum": -90,
+                                "type": "number"
+                              },
+                              "longitude": {
+                                "maximum": 180,
+                                "minimum": -180,
+                                "type": "number"
+                              }
+                            },
+                            "required": ["latitude", "longitude"],
+                            "type": "object"
+                          },
                           "sourceLinks": {
                             "items": {
                               "additionalProperties": false,
@@ -2930,6 +2948,24 @@
                   "name": {
                     "type": "string"
                   },
+                  "pin": {
+                    "additionalProperties": false,
+                    "nullable": true,
+                    "properties": {
+                      "latitude": {
+                        "maximum": 90,
+                        "minimum": -90,
+                        "type": "number"
+                      },
+                      "longitude": {
+                        "maximum": 180,
+                        "minimum": -180,
+                        "type": "number"
+                      }
+                    },
+                    "required": ["latitude", "longitude"],
+                    "type": "object"
+                  },
                   "sourceLinks": {
                     "items": {
                       "additionalProperties": false,
@@ -2983,6 +3019,24 @@
                     },
                     "name": {
                       "type": "string"
+                    },
+                    "pin": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "latitude": {
+                          "maximum": 90,
+                          "minimum": -90,
+                          "type": "number"
+                        },
+                        "longitude": {
+                          "maximum": 180,
+                          "minimum": -180,
+                          "type": "number"
+                        }
+                      },
+                      "required": ["latitude", "longitude"],
+                      "type": "object"
                     },
                     "sourceLinks": {
                       "items": {
@@ -3073,6 +3127,24 @@
                     "name": {
                       "type": "string"
                     },
+                    "pin": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "latitude": {
+                          "maximum": 90,
+                          "minimum": -90,
+                          "type": "number"
+                        },
+                        "longitude": {
+                          "maximum": 180,
+                          "minimum": -180,
+                          "type": "number"
+                        }
+                      },
+                      "required": ["latitude", "longitude"],
+                      "type": "object"
+                    },
                     "sourceLinks": {
                       "items": {
                         "additionalProperties": false,
@@ -3158,6 +3230,24 @@
                   "name": {
                     "type": "string"
                   },
+                  "pin": {
+                    "additionalProperties": false,
+                    "nullable": true,
+                    "properties": {
+                      "latitude": {
+                        "maximum": 90,
+                        "minimum": -90,
+                        "type": "number"
+                      },
+                      "longitude": {
+                        "maximum": 180,
+                        "minimum": -180,
+                        "type": "number"
+                      }
+                    },
+                    "required": ["latitude", "longitude"],
+                    "type": "object"
+                  },
                   "sourceLinks": {
                     "items": {
                       "additionalProperties": false,
@@ -3210,6 +3300,24 @@
                     },
                     "name": {
                       "type": "string"
+                    },
+                    "pin": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "latitude": {
+                          "maximum": 90,
+                          "minimum": -90,
+                          "type": "number"
+                        },
+                        "longitude": {
+                          "maximum": 180,
+                          "minimum": -180,
+                          "type": "number"
+                        }
+                      },
+                      "required": ["latitude", "longitude"],
+                      "type": "object"
                     },
                     "sourceLinks": {
                       "items": {

@@ -5,6 +5,7 @@ import SwiftUI
 internal struct TripsPlanView: View {
     internal let route: TripRouteSnapshot
     internal let snapshot: TripSnapshot?
+    internal let placePinWriter: (any TripPlacePinWriting)?
     @Binding internal var lens: TripsPlanLens
     @Binding internal var selectedDay: String?
     internal let openSource: (TripSource) -> Void
@@ -13,6 +14,7 @@ internal struct TripsPlanView: View {
         VStack(alignment: .leading, spacing: PopsSpacing.xl) {
             Picker("Plan view", selection: $lens) {
                 Text("Line").tag(TripsPlanLens.line)
+                Text("Map").tag(TripsPlanLens.map)
                 Text("Calendar").tag(TripsPlanLens.calendar)
             }
             .pickerStyle(.segmented)
@@ -20,6 +22,8 @@ internal struct TripsPlanView: View {
             switch lens {
             case .line:
                 TripsPlanLineView(route: route, snapshot: snapshot, openSource: openSource)
+            case .map:
+                TripsPlanMapView(route: route, snapshot: snapshot, writer: placePinWriter)
             case .calendar:
                 TripsPlanCalendarView(
                     route: route, snapshot: snapshot, selectedDay: $selectedDay,
@@ -29,4 +33,4 @@ internal struct TripsPlanView: View {
     }
 }
 
-internal enum TripsPlanLens: Hashable { case line, calendar }
+internal enum TripsPlanLens: Hashable { case line, map, calendar }

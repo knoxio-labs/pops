@@ -25,10 +25,13 @@ internal struct TripsOverviewView: View {
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: PopsSpacing.sm)
                 if !projection.chapters.isEmpty {
-                    Label("\(projection.chapters.count) stops", systemImage: "point.topleft.down.to.point.bottomright.curvepath")
-                        .font(.popsCaption)
-                        .foregroundStyle(Color.popsMutedForeground)
-                        .lineLimit(1)
+                    Label(
+                        "\(projection.chapters.count) stops",
+                        systemImage: "point.topleft.down.to.point.bottomright.curvepath"
+                    )
+                    .font(.popsCaption)
+                    .foregroundStyle(Color.popsMutedForeground)
+                    .lineLimit(1)
                 }
             }
             Label("Local time · \(TripClock.clockLabel(date, zone: zone))", systemImage: "clock")

@@ -7,17 +7,20 @@ import SwiftUI
 public struct TripsRootView: View {
     @State private var model: TripsModel
     private let documents: any DocumentsReading
+    private let placePinWriter: (any TripPlacePinWriting)?
     @State private var captureDrafts: TripCaptureDrafts?
 
-    /// Creates the feature with authenticated readers and optional explicitly authorized capture writes.
+    /// Creates the feature with authenticated readers and explicitly authorized capture and place-pin writes.
     /// Omitting the writer keeps capture read-only. The app supplies an owner-bound durable store;
     /// omitting storage retains only in-memory drafts for injected previews and host tests.
     /// Optional selection retention restores only an earlier explicit selection, never the first Trip by default.
     /// Route, capture and detail readers complete independently and do not promise an atomic snapshot.
     /// Omitting a reader presents its destination as unbound, never as a successful empty read.
+    /// Omitting the pin writer keeps the Map lens read-only.
     public init(
         repository: any TripsReading, documents: any DocumentsReading,
         captureWriter: (any TripCapturesWriting)? = nil,
+        placePinWriter: (any TripPlacePinWriting)? = nil,
         captureStore: (any TripCaptureDraftStore)? = nil,
         selection: (any TripOfflineSelection)? = nil,
         routeReader: (any TripsRouteReading)? = nil,
@@ -29,6 +32,7 @@ public struct TripsRootView: View {
         self.init(
             model: model,
             documents: documents,
+            placePinWriter: placePinWriter,
             captureDrafts: captureWriter.map {
                 TripCaptureDrafts(writer: $0, storage: captureStore) { [weak model] tripID in
                     model?.captureAccepted(tripID: tripID)
@@ -37,9 +41,12 @@ public struct TripsRootView: View {
     }
 
     internal init(
-        model: TripsModel, documents: any DocumentsReading, captureDrafts: TripCaptureDrafts? = nil
+        model: TripsModel, documents: any DocumentsReading,
+        placePinWriter: (any TripPlacePinWriting)? = nil,
+        captureDrafts: TripCaptureDrafts? = nil
     ) {
         self.documents = documents
+        self.placePinWriter = placePinWriter
         _model = State(initialValue: model)
         _captureDrafts = State(initialValue: captureDrafts)
     }
@@ -88,7 +95,7 @@ public struct TripsRootView: View {
 
     private func stack(_ tab: TripsTab) -> some View {
         TripsSelectedTripStack(
-            model: model, tab: tab, documents: documents,
+            model: model, tab: tab, documents: documents, placePinWriter: placePinWriter,
             capture: captureAction)
     }
 

@@ -196,8 +196,10 @@ describe('GET /openapi', () => {
       '/mobile/trips/{tripId}/captures/create',
       '/mobile/trips/{tripId}/captures/undo',
       '/mobile/trips/{tripId}/captures/update',
+      '/mobile/trips/{tripId}/places/{placeId}/pin',
       '/mobile/trips/{tripId}/route',
       '/mobile/v2/trips/{id}',
+      '/mobile/v3/trips/{id}',
     ]);
   });
 
