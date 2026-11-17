@@ -24,16 +24,13 @@ internal struct TripsTodayContent: View {
         return ScrollView {
             VStack(alignment: .leading, spacing: PopsSpacing.xl) {
                 TripsOverviewView(projection: projection, date: date)
-                if !projection.now.isEmpty {
-                    currentFocus(projection.now)
-                } else if let next = projection.next.first {
-                    TripsTodayFocusCard(
-                        source: next, title: "Up next", detail: dateLabel(next),
-                        snapshot: snapshot, zone: zone)
-                } else {
+                if projection.focusSections.isEmpty {
                     breathingRoom
                 }
-                upcoming(projection.next, excluding: projection.now.isEmpty ? 1 : 0)
+                ForEach(projection.focusSections) { section in
+                    priorityCards(section)
+                }
+                upcoming(projection.nextAfterFocus)
                 TripsPlanStopStrip(snapshot: snapshot)
                 if !projection.other.isEmpty { unscheduled(projection.other) }
                 if !snapshot.trip.notes.isEmpty { notes }
@@ -45,19 +42,19 @@ internal struct TripsTodayContent: View {
         .background(Color.popsBackground)
     }
 
-    @ViewBuilder private func currentFocus(_ sources: [TripSource]) -> some View {
-        if let source = sources.first, sources.count == 1 {
-            TripsTodayFocusCard(
-                source: source, title: "Happening now", detail: "In progress",
-                snapshot: snapshot, zone: zone)
-        } else if !sources.isEmpty {
-            VStack(alignment: .leading, spacing: PopsSpacing.md) {
-                Text("Happening now").font(.popsTitle)
-                ForEach(sources) { source in
-                    TripsTodayFocusCard(
-                        source: source, title: "Now", detail: dateLabel(source),
-                        snapshot: snapshot, zone: zone)
-                }
+    @ViewBuilder private func priorityCards(_ section: TripOverviewFocusSection) -> some View {
+        switch section {
+        case .now(let sources):
+            ForEach(sources) { source in
+                TripsTodayFocusCard(
+                    source: source, title: "Now", detail: "In progress",
+                    snapshot: snapshot, zone: zone)
+            }
+        case .next(let sources):
+            ForEach(sources) { source in
+                TripsTodayFocusCard(
+                    source: source, title: "Next", detail: dateLabel(source),
+                    snapshot: snapshot, zone: zone)
             }
         }
     }
@@ -76,14 +73,14 @@ internal struct TripsTodayContent: View {
         }
     }
 
-    @ViewBuilder private func upcoming(_ sources: [TripSource], excluding count: Int) -> some View {
-        let items = Array(sources.dropFirst(count).prefix(4))
+    @ViewBuilder private func upcoming(_ sources: [TripSource]) -> some View {
+        let items = Array(sources.prefix(4))
         if !items.isEmpty {
             VStack(alignment: .leading, spacing: PopsSpacing.md) {
                 HStack(alignment: .firstTextBaseline) {
                     Text("Coming up").font(.popsTitle)
                     Spacer()
-                    Text("\(sources.count) planned")
+                    Text("\(items.count) later")
                         .font(.popsCaption).foregroundStyle(Color.popsMutedForeground)
                 }
                 ForEach(items) { source in
@@ -132,45 +129,49 @@ private struct TripsTodayFocusCard: View {
         NavigationLink {
             TripsSourceView(source: source, places: snapshot.places)
         } label: {
-            VStack(alignment: .leading, spacing: PopsSpacing.lg) {
-                HStack(spacing: PopsSpacing.sm) {
-                    Image(systemName: source.symbol).font(.popsHeadline)
-                    Text(title.uppercased()).font(.popsSectionLabel)
-                    Spacer()
-                    Image(systemName: "arrow.up.right").font(.popsCaption)
+            PopsCard(appearance: .featured) {
+                VStack(alignment: .leading, spacing: PopsSpacing.lg) {
+                    HStack(spacing: PopsSpacing.sm) {
+                        Image(systemName: source.symbol).font(.popsHeadline)
+                        Text(title.uppercased()).font(.popsSectionLabel)
+                        Spacer()
+                        Image(systemName: "arrow.up.right").font(.popsCaption)
+                    }
+                    Text(source.displayName(places: snapshot.places))
+                        .font(.popsLargeTitle).fixedSize(horizontal: false, vertical: true)
+                    Text(detail).font(.popsSubheadline)
+                    focusDetails
+                    if let status = source.status {
+                        Label(
+                            status,
+                            systemImage: status == "Purchased" ? "checkmark.circle.fill" : "circle"
+                        )
+                        .font(.popsSubheadline)
+                    }
+                    TripSourceStateLines(source: source)
                 }
-                Text(source.displayName(places: snapshot.places))
-                    .font(.popsLargeTitle).fixedSize(horizontal: false, vertical: true)
-                Text(detail).font(.popsSubheadline)
-                if !source.summary.isEmpty {
-                    Text(source.summary).font(.popsBody)
-                }
-                if let status = source.status {
-                    Label(
-                        status,
-                        systemImage: status == "Purchased" ? "checkmark.circle.fill" : "circle"
-                    )
-                    .font(.popsSubheadline)
-                }
-                TripSourceStateLines(source: source)
+                .foregroundStyle(Color.popsForeground)
             }
-            .foregroundStyle(Color.popsForeground)
-            .padding(PopsSpacing.xl)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background {
-                RoundedRectangle(cornerRadius: PopsRadius.card)
-                    .fill(
-                        LinearGradient(
-                            colors: [accent.opacity(0.2), Color.popsSurface],
-                            startPoint: .topLeading, endPoint: .bottomTrailing))
-            }
-            .overlay {
-                RoundedRectangle(cornerRadius: PopsRadius.card)
-                    .stroke(accent.opacity(0.35), lineWidth: PopsBorder.hairline)
+            .overlay(alignment: .leading) {
+                Capsule()
+                    .fill(accent)
+                    .frame(width: PopsBorder.emphasis)
+                    .padding(.vertical, PopsSpacing.md)
+                    .accessibilityHidden(true)
             }
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
+    }
+
+    @ViewBuilder private var focusDetails: some View {
+        if case .journey(let journey) = source {
+            ForEach(journey.legs) { leg in
+                TripsJourneyLegView(leg: leg, places: snapshot.places, showsReference: false)
+            }
+        } else if !source.summary.isEmpty {
+            Text(source.summary).font(.popsBody)
+        }
     }
 }
 

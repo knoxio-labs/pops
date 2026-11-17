@@ -61,6 +61,10 @@ internal struct TripOverviewProjection {
         return next.filter { $0.start == start }
     }
 
+    internal var nextAfterFocus: [TripSource] {
+        Array(next.dropFirst(nextFocus.count))
+    }
+
     internal var focusSections: [TripOverviewFocusSection] {
         var sections: [TripOverviewFocusSection] = []
         if !now.isEmpty { sections.append(.now(now)) }
