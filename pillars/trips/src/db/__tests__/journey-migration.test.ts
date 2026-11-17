@@ -14,7 +14,7 @@ import { createJourneyGroup } from '../services/journey-groups.js';
 import { createJourneyLeg, listJourneyLegs } from '../services/journey-legs.js';
 import { createJourney, getJourney } from '../services/journeys.js';
 import { getJourneyLegSet } from '../services/leg-set.js';
-import { createPlace, getTrip, listVisits } from '../services/records.js';
+import { getTrip, listVisits } from '../services/records.js';
 import { getRental } from '../services/rentals.js';
 import { getResponsibility } from '../services/responsibilities.js';
 import { readSourceWorkspace } from '../services/source-queries.js';
@@ -107,7 +107,15 @@ it.each([1, 2, 3, 4, 11, 12])(
             .run('original trip', timestamp, timestamp).lastInsertRowid
         ),
       };
-      const place = createPlace(db, { name: 'Original place' });
+      const place = {
+        id: Number(
+          raw
+            .prepare(
+              'INSERT INTO places (name, source_links, created_at, updated_at) VALUES (?, ?, ?, ?)'
+            )
+            .run('Original place', '[]', timestamp, timestamp).lastInsertRowid
+        ),
+      };
       const visitId = Number(
         raw
           .prepare(

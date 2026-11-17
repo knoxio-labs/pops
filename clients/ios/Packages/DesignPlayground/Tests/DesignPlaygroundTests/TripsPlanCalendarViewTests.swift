@@ -33,7 +33,7 @@ internal struct TripsPlanCalendarViewTests {
         await model.select(snapshot.trip.id)
         let selection = TripsPlanCalendarSelection()
         let view = TripsPlanView(
-            route: route, snapshot: snapshot,
+            route: route, snapshot: snapshot, placePinWriter: nil,
             lens: Binding(get: { lens }, set: { lens = $0 }),
             selectedDay: selection.binding(for: model),
             openSource: {
@@ -128,7 +128,7 @@ internal struct TripsPlanCalendarViewTests {
         let route = TripRouteSnapshot(
             tripId: snapshot.trip.id, revision: 1, order: [], paths: [], missingSources: [])
         let view = TripsPlanView(
-            route: route, snapshot: nil, lens: .constant(.calendar),
+            route: route, snapshot: nil, placePinWriter: nil, lens: .constant(.calendar),
             selectedDay: newBinding, openSource: { _ in })
         #expect(try view.inspect().find(TripsPlanCalendarView.self).actualView().selectedDay == nil)
         oldBinding.wrappedValue = "2029-01-01"

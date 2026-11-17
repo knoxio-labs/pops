@@ -43,7 +43,10 @@ credential is created by Trips. Both compose variants mount the Trips-owned
 host file using the [Trips deployment runbook](../../infra/secrets.example/trips/README.md).
 Inbound domain routes require either a service account with the projected Trips scope or a verified Cloudflare Access operator. Missing or invalid Access identity is never treated as an operator when service-account credentials are required; a presented service-account key is always verified for its scope. This inbound authentication is separate from the outbound credentials Trips uses to read Tags and Contacts. An unknown explicit tag selection without the outbound Tags credential returns retryable 503.
 
-Equivalent `/places` routes manage reusable names and source links.
+Equivalent `/places` routes manage reusable names and source links. A place may
+also carry a nullable WGS84 point, stored only after an explicit selection such
+as Apple Maps search or map adjustment. Names never produce coordinates;
+omitted pins are retained and an explicit null clears both coordinates.
 `GET/POST /trips/:tripId/visits` and `GET/PATCH /trips/:tripId/visits/:id` manage
 visit facts. A new visit appends to that trip's mixed root route with revision zero. Visit
 responses include a monotonic safe-integer `revision`. PATCH accepts optional

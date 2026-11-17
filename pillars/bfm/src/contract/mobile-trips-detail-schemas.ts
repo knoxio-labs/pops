@@ -10,6 +10,7 @@ import {
 } from './mobile-trips-journey-schemas.js';
 import {
   MobileTripPlaceSchema,
+  MobileTripPlaceV3Schema,
   MobileTripSchema,
   MobileTripVisitSchema,
 } from './mobile-trips-schemas.js';
@@ -35,6 +36,10 @@ export const MobileTripDetailSchema = z.object({
 export const MobileTripDetailV2Schema = MobileTripDetailSchema.extend({
   journeys: z.array(MobileJourneyDetailSchema.extend({ legs: z.array(MobileJourneyLegV2Schema) })),
 });
+/** V3 adds explicitly selected place pins without changing the published v1 or v2 detail shapes. */
+export const MobileTripDetailV3Schema = MobileTripDetailV2Schema.extend({
+  places: z.array(MobileTripPlaceV3Schema),
+});
 /** Snapshot-bound cursor page, with the exact total count of source trips. */
 export const MobileTripsPageSchema = z.object({
   items: z.array(MobileTripSchema),
@@ -50,6 +55,8 @@ export const MobileTripsQuerySchema = z.object({
 export type MobileTripDetail = z.infer<typeof MobileTripDetailSchema>;
 /** Day-aware detail returned only by the explicitly versioned mobile operation. */
 export type MobileTripDetailV2 = z.infer<typeof MobileTripDetailV2Schema>;
+/** Day-aware trip detail including persisted place pins. */
+export type MobileTripDetailV3 = z.infer<typeof MobileTripDetailV3Schema>;
 /** One mobile trip-list page. */
 export type MobileTripsPage = z.infer<typeof MobileTripsPageSchema>;
 /** Validated mobile trip-list input. */

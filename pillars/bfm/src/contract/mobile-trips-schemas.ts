@@ -72,6 +72,17 @@ export const MobileTripPlaceSchema = z.object({
   sourceLinks: z.array(MobileTripSourceLinkSchema),
   ...MobileTripAuditFields,
 });
+/** One complete WGS84 point explicitly selected for a reusable place. */
+export const MobileTripPlacePinSchema = z
+  .object({
+    latitude: z.number().min(-90).max(90),
+    longitude: z.number().min(-180).max(180),
+  })
+  .strict();
+/** V3 adds an explicitly selected map point while older detail versions keep their original shape. */
+export const MobileTripPlaceV3Schema = MobileTripPlaceSchema.extend({
+  pin: MobileTripPlacePinSchema.nullable(),
+});
 /** A source visit occurrence, returned in the producer's independently stored order. */
 export const MobileTripVisitSchema = z.object({
   id: MobileTripIdSchema,
@@ -86,5 +97,9 @@ export const MobileTripVisitSchema = z.object({
 export type MobileTrip = z.infer<typeof MobileTripSchema>;
 /** Original place record. */
 export type MobileTripPlace = z.infer<typeof MobileTripPlaceSchema>;
+/** Original place record with its persisted explicit pin. */
+export type MobileTripPlaceV3 = z.infer<typeof MobileTripPlaceV3Schema>;
+/** Complete explicitly selected WGS84 coordinates. */
+export type MobileTripPlacePin = z.infer<typeof MobileTripPlacePinSchema>;
 /** Original ordered visit record. */
 export type MobileTripVisit = z.infer<typeof MobileTripVisitSchema>;

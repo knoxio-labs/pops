@@ -44,7 +44,9 @@ internal struct TripsModelTests {
         #expect(model.trips == [snapshot.trip])
     }
 
-    @Test("an injected saved selection restores its exact Today state, while a fresh selection stays explicit")
+    @Test(
+        "an injected saved selection restores its exact Today state, while a fresh selection stays explicit"
+    )
     internal func restoreSelection() async throws {
         let snapshot = try TripTestSources.snapshot()
         let repository = TripTestRepository(snapshot: snapshot)

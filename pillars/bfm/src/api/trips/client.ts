@@ -1,33 +1,26 @@
 import { isGatewayOk, type GatewayOutcome, type PillarGateway } from '../pillars/gateway.js';
 import { parseOrMismatch } from '../pillars/parse-response.js';
-import {
-  referencedTripsPlaceIds,
-  tripsContractMismatch,
-  validTripsReferences,
-} from './references.js';
+import { getTrip, getTripV3 } from './detail-reader.js';
+import { referencedTripsPlaceIds, tripsContractMismatch } from './references.js';
 import { readMobileTripRoute } from './route.js';
 import { TripsWire } from './wire.js';
 import { createMobileTrip, updateMobileTrip } from './write.js';
 
-import type { z } from 'zod';
-
 import type { MobileTripRoute } from '../../contract/mobile-trip-route-schemas.js';
 import type { MobileTripInput } from '../../contract/mobile-trip-write-schemas.js';
-import type { MobileTripDetailV2 } from '../../contract/mobile-trips-detail-schemas.js';
-import type { MobileJourney } from '../../contract/mobile-trips-journey-schemas.js';
-import type { MobileTrip } from '../../contract/mobile-trips-schemas.js';
+import type {
+  MobileTripDetailV2,
+  MobileTripDetailV3,
+} from '../../contract/mobile-trips-detail-schemas.js';
+import type {
+  MobileTripPlacePin,
+  MobileTripPlaceV3,
+  MobileTrip,
+} from '../../contract/mobile-trips-schemas.js';
 
-/** Callable producer operations discovered from the Trips pillar's published OpenAPI. */
 type TripsReadRouter = {
-  trips: { list: () => Promise<unknown>; get: (input: { id: number }) => Promise<unknown> };
-  places: { list: () => Promise<unknown> };
-  visits: { list: (input: { tripId: number }) => Promise<unknown> };
-  journeys: { list: (input: { tripId: number }) => Promise<unknown> };
-  journeyLegs: { list: (input: { tripId: number; journeyId: number }) => Promise<unknown> };
-  journeyGroups: { list: (input: { tripId: number }) => Promise<unknown> };
-  documentAssociations: { list: (input: { tripId: number }) => Promise<unknown> };
-  events: { list: (input: { tripId: number }) => Promise<unknown> };
-  stays: { list: (input: { tripId: number }) => Promise<unknown> };
+  trips: { list: () => Promise<unknown> };
+  places: { update: (input: { id: number; pin: MobileTripPlacePin }) => Promise<unknown> };
 };
 
 /** Source-backed reads and explicit metadata writes; all persistence remains in Trips. */
@@ -37,6 +30,14 @@ export interface MobileTripsClient {
   listTrips(): Promise<GatewayOutcome<MobileTrip[]>>;
   /** Assembles day-aware source once; each published handler selects its explicit wire projection. */
   getTrip(id: number): Promise<GatewayOutcome<MobileTripDetailV2>>;
+  /** Reads the explicit-pin version; legacy detail operations retain their original wire shape. */
+  getTripV3(id: number): Promise<GatewayOutcome<MobileTripDetailV3>>;
+  /** Persists an explicit point only when the source place belongs to the requested trip. */
+  updatePlacePin(
+    tripId: number,
+    placeId: number,
+    pin: MobileTripPlacePin
+  ): Promise<GatewayOutcome<MobileTripPlaceV3>>;
   /** Reads mixed membership at the route's own revision, retaining unavailable source identities. */
   getRoute(tripId: number): Promise<GatewayOutcome<MobileTripRoute>>;
 }
@@ -54,122 +55,33 @@ export function createMobileTripsClient(gateway: PillarGateway): MobileTripsClie
       return isGatewayOk(parsed) ? { kind: 'ok', value: parsed.value.trips } : parsed;
     },
     getTrip: (id) => getTrip(gateway, id),
+    getTripV3: (id) => getTripV3(gateway, id),
+    updatePlacePin: (tripId, placeId, pin) => updatePlacePin(gateway, tripId, placeId, pin),
     getRoute: (tripId: number) => readMobileTripRoute(gateway, tripId),
   };
 }
 
-type TripsCollections = {
-  [
-    K in 'places' | 'visits' | 'journeys' | 'groups' | 'stays' | 'events' | 'associations'
-  ]: GatewayOutcome<z.infer<(typeof TripsWire)[K]>>;
-};
-function parseCollection<T>(
-  response: GatewayOutcome<unknown>,
-  schema: z.ZodType<T>,
-  operation: string
-): GatewayOutcome<T> {
-  if (response.kind === 'not-found') {
-    return { ...response, kind: 'contract-mismatch', status: 502, upstreamStatus: 404 };
-  }
-  return parseOrMismatch('trips', response, schema, operation);
-}
-async function readCollections(gateway: PillarGateway, tripId: number): Promise<TripsCollections> {
-  const [places, visits, journeys, groups, stays, events, associations] = await Promise.all([
-    gateway.call<TripsReadRouter, unknown>('trips', (h) => h.places.list()),
-    gateway.call<TripsReadRouter, unknown>('trips', (h) => h.visits.list({ tripId })),
-    gateway.call<TripsReadRouter, unknown>('trips', (h) => h.journeys.list({ tripId })),
-    gateway.call<TripsReadRouter, unknown>('trips', (h) => h.journeyGroups.list({ tripId })),
-    gateway.call<TripsReadRouter, unknown>('trips', (h) => h.stays.list({ tripId })),
-    gateway.call<TripsReadRouter, unknown>('trips', (h) => h.events.list({ tripId })),
-    gateway.call<TripsReadRouter, unknown>('trips', (h) => h.documentAssociations.list({ tripId })),
-  ]);
-  return {
-    places: parseCollection(places, TripsWire.places, 'places.list'),
-    visits: parseCollection(visits, TripsWire.visits, 'visits.list'),
-    journeys: parseCollection(journeys, TripsWire.journeys, 'journeys.list'),
-    groups: parseCollection(groups, TripsWire.groups, 'journeyGroups.list'),
-    stays: parseCollection(stays, TripsWire.stays, 'stays.list'),
-    events: parseCollection(events, TripsWire.events, 'events.list'),
-    associations: parseCollection(
-      associations,
-      TripsWire.associations,
-      'documentAssociations.list'
-    ),
-  };
-}
-
-type TripCollections = { [K in keyof TripsCollections]: z.infer<(typeof TripsWire)[K]> };
-function checkedCollections(reads: TripsCollections): GatewayOutcome<TripCollections> {
-  if (!isGatewayOk(reads.places)) return reads.places;
-  if (!isGatewayOk(reads.visits)) return reads.visits;
-  if (!isGatewayOk(reads.journeys)) return reads.journeys;
-  if (!isGatewayOk(reads.groups)) return reads.groups;
-  if (!isGatewayOk(reads.stays)) return reads.stays;
-  if (!isGatewayOk(reads.events)) return reads.events;
-  if (!isGatewayOk(reads.associations)) return reads.associations;
-  return {
-    kind: 'ok',
-    value: {
-      places: reads.places.value,
-      visits: reads.visits.value,
-      journeys: reads.journeys.value,
-      groups: reads.groups.value,
-      stays: reads.stays.value,
-      events: reads.events.value,
-      associations: reads.associations.value,
-    },
-  };
-}
-
-async function readJourney(
+/** Resolves a source pin update through Trips after validating trip/place ownership. */
+async function updatePlacePin(
   gateway: PillarGateway,
   tripId: number,
-  journey: MobileJourney
-): Promise<GatewayOutcome<MobileTripDetailV2['journeys'][number]>> {
-  const response = await gateway.call<TripsReadRouter, unknown>('trips', (h) =>
-    h.journeyLegs.list({ tripId, journeyId: journey.id })
-  );
-  const legs = parseCollection(response, TripsWire.legs, 'journeyLegs.list');
-  return isGatewayOk(legs)
-    ? { kind: 'ok' as const, value: { ...journey, legs: legs.value.legs } }
-    : legs;
-}
-
-async function getTrip(
-  gateway: PillarGateway,
-  id: number
-): Promise<GatewayOutcome<MobileTripDetailV2>> {
-  const response = await gateway.call<TripsReadRouter, unknown>('trips', (h) =>
-    h.trips.get({ id })
-  );
-  const trip = parseOrMismatch('trips', response, TripsWire.trip, 'trips.get');
+  placeId: number,
+  pin: MobileTripPlacePin
+): Promise<GatewayOutcome<MobileTripPlaceV3>> {
+  const trip = await getTripV3(gateway, tripId);
   if (!isGatewayOk(trip)) return trip;
-  if (trip.value.id !== id)
-    return tripsContractMismatch('Trips get returned a different source identity');
-  const collectionRead = checkedCollections(await readCollections(gateway, id));
-  if (!isGatewayOk(collectionRead)) return collectionRead;
-  const reads = collectionRead.value;
-  const journeys: MobileTripDetailV2['journeys'] = [];
-  for (const journey of reads.journeys.journeys) {
-    const detailed = await readJourney(gateway, id, journey);
-    if (!isGatewayOk(detailed)) return detailed;
-    journeys.push(detailed.value);
+  if (!referencedTripsPlaceIds(trip.value).has(placeId)) {
+    return { kind: 'not-found', pillar: 'trips', status: 404 };
   }
-  const detail: MobileTripDetailV2 = {
-    trip: trip.value,
-    places: reads.places.places,
-    visits: reads.visits.visits,
-    journeys,
-    journeyGroups: reads.groups.groups,
-    stays: reads.stays.stays,
-    events: reads.events.events,
-    documentAssociations: reads.associations.associations,
-  };
-  if (!validTripsReferences(detail, id))
-    return tripsContractMismatch('Trips read contained inconsistent source references');
-  const referenced = referencedTripsPlaceIds(detail);
-  return {
-    kind: 'ok',
-    value: { ...detail, places: detail.places.filter((place) => referenced.has(place.id)) },
-  };
+  const outcome = parseOrMismatch(
+    'trips',
+    await gateway.call<TripsReadRouter, unknown>('trips', (handle) =>
+      handle.places.update({ id: placeId, pin })
+    ),
+    TripsWire.placeV3,
+    'places.update'
+  );
+  return isGatewayOk(outcome) && outcome.value.id !== placeId
+    ? tripsContractMismatch('Trips place update returned a different source identity')
+    : outcome;
 }

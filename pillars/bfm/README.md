@@ -44,6 +44,8 @@ It also holds a service-account credential and one way to spend it — see
 | `GET /mobile/documents/:id/file`                    | Original bytes; Range and representation headers preserved.                                                                                      |
 | `GET /mobile/trips`                                 | A snapshot-bound cursor page of original trip metadata.                                                                                          |
 | `GET /mobile/v2/trips/:id`                          | Day-aware complete source snapshot with independent Journey day precision and unchanged device/read capability checks.                           |
+| `GET /mobile/v3/trips/:id`                          | Day-aware complete source snapshot with explicitly selected place pins.                                                                          |
+| `PATCH /mobile/trips/:tripId/places/:placeId/pin`   | Selects or moves one complete map point on a place belonging to the trip.                                                                        |
 | `GET /mobile/trips/:tripId/route`                   | Canonical mixed route order, alternatives, applied history and missing source identities at the route revision.                                  |
 | `GET /mobile/trips/:id`                             | Legacy-compatible complete source snapshot; Journey day-only fields are omitted without inventing clocks.                                        |
 | `GET /mobile/finance/transactions`                  | One cursor-paginated page of list rows — see [The mobile shape](#the-mobile-shape).                                                              |
@@ -527,11 +529,14 @@ Detail retains source identities and producer visit/leg order. Endpoint local
 clocks and zones remain independent optional facts; date-only stays never gain
 an inferred clock. The installed-client `GET /mobile/trips/:id` response schema
 remains unchanged: its typed compatibility projection omits only endpoint `date`,
-retaining all other facts and leaving missing clocks absent. New native readers
-intentionally call `mobileTrips.getTripV2`; no header, app-build inference or
-additional grant selects the wire. The explicitly versioned
-`GET /mobile/v2/trips/:id` retains an optional Journey day-only `date`, mutually
-exclusive with `local`; BFM forwards it without inventing a clock, zone or instant.
+retaining all other facts and leaving missing clocks absent. The explicitly
+versioned `GET /mobile/v2/trips/:id` retains an optional Journey day-only `date`,
+mutually exclusive with `local`; BFM forwards it without inventing a clock, zone
+or instant. Native readers use `GET /mobile/v3/trips/:id`, which carries the same
+source facts plus explicitly selected place pins. Pin writes use
+`PATCH /mobile/trips/:tripId/places/:placeId/pin` under `trips.write` and the
+producer scope `trips.places.update`; BFM verifies the place belongs to that trip
+before forwarding the complete point to Trips.
 When remains opaque. Intention, arrangement and purchase
 stay independent, and journey groups retain explicit current/alternative IDs.
 Event date bounds, clocks and zone also remain independent; BFM creates no
@@ -847,7 +852,7 @@ and send it in that header, against the registry's admin surface reachable
 externally through the shell proxy:
 
 ```bash
-curl -sS -X POST https://pops.local/registry-api/service-accounts -H 'Content-Type: application/json' -H "cf-access-jwt-assertion: $ACCESS_JWT" -d '{"name":"bfm","scopes":["finance.transactions","finance.transactionHistory","finance.transactionAttachments","finance.accounts","finance.checkpoints","finance.delegatedSubject","purchases.purchase","purchases.search","purchases.receipt","inventory.sync","inventory.types.catalogue","inventory.types.read","inventory.codes","inventory.media","inventory.documents","inventory.paperless.status","inventory.items.getParts","inventory.items.addPart","inventory.items.removePart","barcode.lookup","cerebrum.ego","documents.paperless.get","documents.paperless.download","documents.paperless.status","documents.paperless.task","documents.write.upload","trips.trips.create","trips.trips.update","trips.captureWorkspace.get","trips.captures.create","trips.captures.update","trips.captures.attach","trips.captures.undo","trips.route.get","trips.trips.list","trips.trips.get","trips.places.list","trips.visits.list","trips.journeys.list","trips.journeyLegs.list","trips.journeyGroups.list","trips.stays.list","trips.events.list","trips.documentAssociations.list"]}'
+curl -sS -X POST https://pops.local/registry-api/service-accounts -H 'Content-Type: application/json' -H "cf-access-jwt-assertion: $ACCESS_JWT" -d '{"name":"bfm","scopes":["finance.transactions","finance.transactionHistory","finance.transactionAttachments","finance.accounts","finance.checkpoints","finance.delegatedSubject","purchases.purchase","purchases.search","purchases.receipt","inventory.sync","inventory.types.catalogue","inventory.types.read","inventory.codes","inventory.media","inventory.documents","inventory.paperless.status","inventory.items.getParts","inventory.items.addPart","inventory.items.removePart","barcode.lookup","cerebrum.ego","documents.paperless.get","documents.paperless.download","documents.paperless.status","documents.paperless.task","documents.write.upload","trips.trips.create","trips.trips.update","trips.captureWorkspace.get","trips.captures.create","trips.captures.update","trips.captures.attach","trips.captures.undo","trips.route.get","trips.trips.list","trips.trips.get","trips.places.list","trips.places.update","trips.visits.list","trips.journeys.list","trips.journeyLegs.list","trips.journeyGroups.list","trips.stays.list","trips.events.list","trips.documentAssociations.list"]}'
 ```
 
 Two deployment shapes let a bare `curl` through, which is why this can work on

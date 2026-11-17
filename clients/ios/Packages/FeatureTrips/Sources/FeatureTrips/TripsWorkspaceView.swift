@@ -5,6 +5,7 @@ import SwiftUI
 internal struct TripsWorkspaceView: View {
     @Bindable internal var model: TripsModel
     internal let tab: TripsTab
+    internal let placePinWriter: (any TripPlacePinWriting)?
     internal var capture: (() -> Void)?
     @State private var planLens = TripsPlanLens.line
     @State private var calendarSelection = TripsPlanCalendarSelection()
@@ -42,7 +43,8 @@ internal struct TripsWorkspaceView: View {
         case .loaded(let route):
             ScrollView {
                 TripsPlanView(
-                    route: route, snapshot: model.snapshot, lens: $planLens,
+                    route: route, snapshot: model.snapshot, placePinWriter: placePinWriter,
+                    lens: $planLens,
                     selectedDay: calendarSelection.binding(for: model)
                 ) {
                     model.source = $0

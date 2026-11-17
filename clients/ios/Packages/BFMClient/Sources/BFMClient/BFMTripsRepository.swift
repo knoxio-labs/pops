@@ -4,7 +4,7 @@ import OpenAPIRuntime
 
 /// Reads complete trip sources through the authenticated BFM transport.
 /// Clocks, statuses and offline files are never inferred.
-public struct BFMTripsRepository: TripsReading {
+public struct BFMTripsRepository: TripsReading, TripPlacePinWriting {
     private let client: BFMHTTPClient
 
     /// Creates the reader with the app's existing authenticated client and transport policy.
@@ -24,12 +24,12 @@ public struct BFMTripsRepository: TripsReading {
 
     /// Returns nil only for a missing trip; an incomplete or mismatched response fails the read.
     public func trip(id: Int) async throws -> TripSnapshot? {
-        let output: Operations.MobileTrips_getTripV2.Output
+        let output: Operations.MobileTrips_getTripV3.Output
         do {
-            output = try await client.generated.mobileTrips_getTripV2(path: .init(id: id))
+            output = try await client.generated.mobileTrips_getTripV3(path: .init(id: id))
         } catch let error as ClientError {
             if BFMRepositoryFailure.statusCode(in: error) == 404 { return nil }
-            throw bfmReadFailure(error, operation: "mobileTrips.getTripV2")
+            throw bfmReadFailure(error, operation: "mobileTrips.getTripV3")
         }
         switch output {
         case .ok(let ok):
@@ -46,10 +46,49 @@ public struct BFMTripsRepository: TripsReading {
                 retryAfterSeconds: try value.body.json.retryAfterSeconds)
         case .badGateway(let value):
             throw BFMRepositoryFailure.upstreamFailure(
-                try value.body.json.code, operation: "mobileTrips.getTripV2")
+                try value.body.json.code, operation: "mobileTrips.getTripV3")
         case .serviceUnavailable(let value):
             throw BFMRepositoryFailure.upstreamFailure(
-                try value.body.json.code, operation: "mobileTrips.getTripV2")
+                try value.body.json.code, operation: "mobileTrips.getTripV3")
+        case .undocumented: throw RepositoryError.contractMismatch
+        }
+    }
+
+    /// Stores the selected WGS84 point in Trips and returns the exact persisted source record.
+    public func updatePin(
+        tripID: Int, placeID: Int, pin: TripPlacePin
+    ) async throws -> TripPlace? {
+        let output: Operations.MobileTrips_updatePlacePin.Output
+        do {
+            output = try await client.generated.mobileTrips_updatePlacePin(
+                path: .init(tripId: tripID, placeId: placeID),
+                body: .json(.init(pin: .init(latitude: pin.latitude, longitude: pin.longitude)))
+            )
+        } catch let error as ClientError {
+            if BFMRepositoryFailure.statusCode(in: error) == 404 { return nil }
+            throw bfmReadFailure(error, operation: "mobileTrips.updatePlacePin")
+        }
+        switch output {
+        case .ok(let ok):
+            let place: TripPlace = try tripDomain(try ok.body.json)
+            guard place.id == placeID, place.pin == pin else {
+                throw RepositoryError.contractMismatch
+            }
+            return place
+        case .notFound: return nil
+        case .badRequest: throw RepositoryError.requestRejected
+        case .unauthorized: throw RepositoryError.unauthorized
+        case .forbidden(let value):
+            throw BFMRepositoryFailure.forbiddenFailure(try value.body.json)
+        case .tooManyRequests(let value):
+            throw RepositoryError.rateLimited(
+                retryAfterSeconds: try value.body.json.retryAfterSeconds)
+        case .badGateway(let value):
+            throw BFMRepositoryFailure.upstreamFailure(
+                try value.body.json.code, operation: "mobileTrips.updatePlacePin")
+        case .serviceUnavailable(let value):
+            throw BFMRepositoryFailure.upstreamFailure(
+                try value.body.json.code, operation: "mobileTrips.updatePlacePin")
         case .undocumented: throw RepositoryError.contractMismatch
         }
     }

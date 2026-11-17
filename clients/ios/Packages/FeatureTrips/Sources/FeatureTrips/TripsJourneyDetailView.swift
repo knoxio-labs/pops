@@ -10,7 +10,8 @@ internal struct TripsJourneyDetailView: View {
         VStack(alignment: .leading, spacing: PopsSpacing.lg) {
             if journey.legs.isEmpty {
                 ContentUnavailableView(
-                    "No route segments recorded", systemImage: "point.3.connected.trianglepath.dotted",
+                    "No route segments recorded",
+                    systemImage: "point.3.connected.trianglepath.dotted",
                     description: Text("Route details will appear here when they are added."))
             } else {
                 ForEach(Array(journey.legs.enumerated()), id: \.element.id) { index, leg in
