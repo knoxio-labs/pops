@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import { ErrorBodySchema } from '@pops/types';
 
+import { bookingImportsContract } from './booking-imports.js';
 import { decisionsContract, decisionOptionsContract } from './decisions.js';
 import { documentAssociationsContract } from './document-associations.js';
 import { eventsContract } from './events.js';
@@ -47,6 +48,7 @@ const VisitList = z.object({ visits: z.array(VisitSchema) });
 /** Trips-owned source metadata and route identity contract; ordering never rewrites dates. */
 export const tripsContract = c.router(
   {
+    bookingImports: bookingImportsContract,
     route: routeContract,
     routeDrafts: routeDraftsContract,
     captureWorkspace: captureWorkspaceContract,

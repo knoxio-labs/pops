@@ -1,5 +1,6 @@
 import { defineErrors } from '@pops/pillar-express';
 
+import { bookingImportErrors } from './booking-import-errors.js';
 import { routeErrors } from './route-errors.js';
 
 const recordErrors = defineErrors('trips', {
@@ -199,4 +200,4 @@ const recordErrors = defineErrors('trips', {
 });
 
 /** Stable registered constructors for all Trips domain failures. */
-export const tripsErrors = { ...recordErrors, ...routeErrors };
+export const tripsErrors = { ...recordErrors, ...routeErrors, ...bookingImportErrors };

@@ -271,6 +271,50 @@ return `409` atomically. Created capture/Idea identities are tombstoned, and
 receipts and accepted attachment identities remain durable. Undo never modifies
 Documents originals or tasks. Web composer text and actual File handles remain
 the consumer's in-session responsibility; this API does not persist file bytes.
+
+Booking import uses `POST /trips/:tripId/booking-imports` to bind one explicitly
+selected active Capture original. Text identity is SHA-256 over the UTF-8 JSON
+string representation, without Unicode normalization; document identity is over
+actual Documents original bytes. A task, URL, filename or caller digest is not
+an original. Equal content shares a Trip-scoped source while each verified
+Capture/owner binding remains distinct. Raw original reads use the sanctioned
+Documents download route with `original=true`, authenticated discovery and no
+redirects. The outbound account additionally requires `documents.paperless.download`.
+The actual owner response media type is retained in the binding. Only PDF
+document originals are admitted to the current extraction document path;
+image, text, absent or invalid media types are refused before an AI claim.
+Stored Capture text uses the separate plaintext representation. A filename
+never supplies a media type, and extraction rechecks the owner media identity.
+
+`GET .../:sourceId` returns retained source, attempt, decision and accepted
+operation history. `POST .../:sourceId/extract` requires an explicit configured
+provider/model, current source revision and current predecessor attempt. Trips
+durably claims the attempt before its sole AI invocation. Claimed/restarted or
+unconfirmed attempts are exposed as unknown and never automatically dispatched
+again, including with a new UUID lacking the current predecessor. A deliberate
+new attempt can lose another result; the AI owner is one-shot and supplies no
+durable receipt or exactly-once provider guarantee. The default extraction
+adapter is unavailable until the canonical public AI contract and applicable
+privacy admission are integrated under POPS-6321. No private original is sent
+by an unavailable adapter. Injected test adapters are not provider acceptance.
+
+`POST .../:sourceId/review` stores explicit immutable decisions; no extraction
+or review writes canonical bookings. Proposal IDs identify stored attempt rows,
+not real-world bookings across model segmentation. `POST .../:sourceId/commit`
+atomically applies several decisions through existing Capture organisation and
+Event/Journey/Stay producers. Capture and source revisions guard the batch.
+Once any binding is accepted, another initial import conflicts; additional
+bookings require an explicit additional decision against current history.
+Existing-target admission links without editing the target. Equal fields never
+imply duplicate or distinct reservations automatically.
+
+Every import mutation binds exact typed input to a Trip-scoped UUID. A fresh
+commit UUID addressing accepted decisions returns `alreadyCommitted` with the
+original parent identity and canonical child receipts, never a new Undo proof.
+Those child operation IDs use existing conditional Capture Undo. Accepted
+decisions and immutable receipts survive Undo, deletion, re-extraction and
+foreign edits; current state remains separate and replay never recreates a
+target. The five routes project distinct `trips.bookingImports` child scopes.
 Independent active Handled by assignments prevent Undo from deleting a created
 Journey, Stay or Event. Explicitly cleared assignments do not block the inverse.
 Successful Undo advances only a prior active inverse whose complete expected

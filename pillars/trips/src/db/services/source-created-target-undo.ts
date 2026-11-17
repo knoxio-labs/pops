@@ -44,13 +44,13 @@ export function undoCreatedTargets(write: SourceWrite, inverse: SourceInverse): 
     requireOriginalLifecycle(write.db, write.tripId, journeys, journey.id);
     requireUnchanged(getJourney(write.db, write.tripId, journey.id), journey);
     const proof = inverse.createdJourneyLegSets?.find((entry) => entry.journeyId === journey.id);
-    if (proof !== undefined) {
-      requireUnchanged(getJourneyLegSet(write.db, write.tripId, journey.id), {
-        revision: proof.revision,
-        legs: proof.legs,
-      });
-      for (const leg of proof.legs) deleteJourneyLeg(write.db, write.tripId, journey.id, leg.id);
-    }
+    const expectedLegSet =
+      proof === undefined
+        ? { revision: 0, legs: [] }
+        : { revision: proof.revision, legs: proof.legs };
+    requireUnchanged(getJourneyLegSet(write.db, write.tripId, journey.id), expectedLegSet);
+    for (const leg of expectedLegSet.legs)
+      deleteJourneyLeg(write.db, write.tripId, journey.id, leg.id);
     assertCreatedTargetUnreferenced(write.db, write.tripId, { kind: 'journey', id: journey.id });
     deleteJourney(write.db, write.tripId, journey.id);
   }

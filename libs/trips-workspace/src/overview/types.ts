@@ -27,6 +27,10 @@ export type OverviewDocument = DocumentAssociationsListResponses[200]['associati
 export type OverviewLinkKind = 'visit' | 'stay' | 'event' | 'journey' | 'decision';
 /** Canonical source kinds opened contextually inside the owning Trip. */
 export type OverviewKind = OverviewLinkKind | 'rental' | 'meeting' | 'capture' | 'idea';
+/** Presentation-only controls for the owning Trip workspace. */
+export type OverviewDisplay = 'sheet' | 'journey';
+/** Explicit filtering mode for the route presentation. */
+export type OverviewFilter = 'everything' | 'needs-attention' | 'booked';
 /** Exact source identities remain discriminated even when numeric IDs coincide. */
 export type OverviewSource = { [K in OverviewKind]: { kind: K; id: number } }[OverviewKind];
 /** Persisted structural identity; the host owns the canonical route controller and editor. */
@@ -41,6 +45,11 @@ export type OverviewCalendarSelection = CalendarSelection;
 export interface OverviewCalendarControl {
   selection: OverviewCalendarSelection;
   onChange: (selection: OverviewCalendarSelection) => void;
+}
+/** Resolved Journey visibility for the active search and booking filter, shared by route views. */
+export interface WorkspaceJourneyVisibility {
+  hiddenJourneyIds: ReadonlySet<number>;
+  onJourneyVisibilityChange: (journeyId: number, visible: boolean) => void;
 }
 /** Independently available collections; undefined never means an empty successful read. */
 export interface OverviewSources {
@@ -74,7 +83,36 @@ export interface OverviewLabels {
   alternatives: string;
   selected: string;
   unresolved: string;
+  sheet: {
+    title: string;
+    journey: string;
+    when: string;
+    what: string;
+    state: string;
+    originals: string;
+    originalsUnknown: string;
+    originalCount: (count: number) => string;
+    unknownDate: string;
+    onRoute: string;
+    gap: string;
+  };
+  sleepPlan: {
+    title: string;
+    stopCount: (count: number) => string;
+    covered: string;
+    open: string;
+    openNights: (count: number) => string;
+    overlap: string;
+    unknown: string;
+    datesUndecided: string;
+    noVisits: string;
+    noIssues: string;
+    attention: string;
+    reviewGap: (label: string) => string;
+    unverified: (count: number) => string;
+  };
   source: (kind: string, id: number) => string;
+  kind: (kind: string) => string;
   status: (value: string) => string;
 }
 interface OverviewBaseProps {
@@ -114,4 +152,7 @@ export type OverviewViewProps = TripOverviewProps & {
   accommodationComplete: boolean;
   route: TripRouteController;
   projection: RouteProjection | undefined;
+  workspaceDisplay?: OverviewDisplay;
+  workspaceFilter?: OverviewFilter;
+  workspaceQuery?: string;
 };

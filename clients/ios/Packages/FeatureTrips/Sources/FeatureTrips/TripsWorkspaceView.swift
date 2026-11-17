@@ -1,3 +1,4 @@
+import AppCore
 import DesignSystem
 import SwiftUI
 
@@ -11,13 +12,9 @@ internal struct TripsWorkspaceView: View {
     internal var body: some View {
         Group {
             switch tab {
-            case .trips: today
+            case .today: today
             case .plan: plan
-            case .inbox:
-                ScrollView {
-                    TripsInboxView(model: model.inbox, capture: capture)
-                        .padding(PopsSpacing.xl)
-                }
+            case .inbox: inbox
             case .search: EmptyView()
             }
         }
@@ -34,7 +31,7 @@ internal struct TripsWorkspaceView: View {
         } else if let failure = model.failure {
             TripsFailureView(failure: failure) { Task { await model.load() } }
         } else if let snapshot = model.snapshot {
-            TripsTimelineView(snapshot: snapshot)
+            TripsTodayView(snapshot: snapshot)
         } else {
             ContentUnavailableView("Trip details unavailable", systemImage: "map")
         }
@@ -77,5 +74,13 @@ internal struct TripsWorkspaceView: View {
         case .idle:
             ContentUnavailableView("Route not loaded", systemImage: "map")
         }
+    }
+
+    private var inbox: some View {
+        ScrollView {
+            TripsInboxView(model: model.inbox, capture: capture)
+                .padding(PopsSpacing.xl)
+        }
+        .background(Color.popsBackground)
     }
 }

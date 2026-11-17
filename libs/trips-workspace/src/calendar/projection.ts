@@ -12,6 +12,8 @@ export function calendarEntries(snapshot: CalendarSnapshot): CalendarEntry[] {
         {
           source: { kind: 'stay', id: stay.id },
           title: stay.name ?? '',
+          confirmed:
+            stay.status === 'Agreed' || stay.status === 'Reserved' || stay.status === 'Purchased',
           purchased: stay.status === 'Purchased',
           facts: [stay.status].filter((value) => value !== null),
         },
@@ -27,6 +29,10 @@ export function calendarEntries(snapshot: CalendarSnapshot): CalendarEntry[] {
         {
           source: { kind: 'event', id: event.id },
           title: event.name ?? '',
+          confirmed:
+            event.purchase === 'Purchased' ||
+            event.arrangement === 'Booked' ||
+            event.arrangement === 'Agreed',
           purchased: event.purchase === 'Purchased',
           facts: [event.intention, event.arrangement, event.purchase].filter(
             (value) => value !== null
@@ -56,6 +62,7 @@ function journeyEntries({
         title,
         boundary: 'unknown',
         instant: null,
+        confirmed: false,
         purchased: false,
         facts: [],
         conflict: false,
@@ -86,6 +93,10 @@ function journeyEntries({
           }
         : {}),
       purchased: leg.purchase === 'Purchased',
+      confirmed:
+        leg.purchase === 'Purchased' ||
+        leg.arrangement === 'Booked' ||
+        leg.arrangement === 'Agreed',
       facts: [leg.mode, leg[side].sourceLabel, leg.intention, leg.arrangement, leg.purchase].filter(
         (value) => value !== null && value !== undefined
       ),

@@ -4,6 +4,7 @@ import { contractInputs } from '../contract-inputs.js';
 import { getPillar } from '../pillar-client.js';
 import { projectOperationInput, projectOperationSuccess } from './openapi-input.js';
 import { arrangementOperations } from './trips/arrangements.js';
+import { bookingImportOperations } from './trips/booking-imports.js';
 import { planningOperations } from './trips/planning.js';
 import { routeDraftOperations } from './trips/route-drafts.js';
 import { sourceOperations } from './trips/sources.js';
@@ -18,6 +19,7 @@ const operations = {
   ...planningOperations,
   ...sourceOperations,
   ...arrangementOperations,
+  ...bookingImportOperations,
   ...routeDraftOperations,
 };
 const receiptOperations = new Set([
@@ -39,6 +41,10 @@ const receiptOperations = new Set([
   'explore.add',
   'explore.remove',
   'explore.undo',
+  'bookingImports.bind',
+  'bookingImports.extract',
+  'bookingImports.review',
+  'bookingImports.commit',
 ]);
 
 function retryGuidance(operationId: string): string {

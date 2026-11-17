@@ -15,6 +15,7 @@ internal struct TripTimelineFilterTests {
     internal func originals() throws {
         let snapshot = try TripTestSources.snapshot()
         var filter = TripTimelineFilter()
+        #expect(filter.grouping == .day)
         #expect(filter.sources(in: snapshot, at: now, zone: zone) == allTripSources(snapshot))
         #expect(filter.visits(in: snapshot, sources: allTripSources(snapshot)) == snapshot.visits)
         filter.includeAlternatives = false

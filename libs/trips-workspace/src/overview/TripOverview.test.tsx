@@ -12,6 +12,59 @@ import { overviewResponses, overviewTrip } from './test-utils';
 afterEach(cleanup);
 
 describe('source-backed TripOverview', () => {
+  it('keeps quick capture inside the selected Trip workspace', async () => {
+    mount(overviewResponses(), undefined, { captureComposer: <p>Trip capture</p> });
+    expect(await screen.findByText('Trip capture')).toBeVisible();
+  });
+
+  it('switches between the compact Sheet and chronological Journey without changing route sources', async () => {
+    mount();
+    const sheet = await screen.findByRole('table', { name: 'Sheet' });
+    expect(within(sheet).getByText('Wellington')).toBeVisible();
+    expect(screen.queryByRole('list', { name: 'Route' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'workspace.journey' }));
+    const journey = await screen.findByRole('list', { name: 'Route' });
+    expect(within(journey).getByText('Wellington')).toBeVisible();
+    expect(screen.queryByRole('table', { name: 'Sheet' })).not.toBeInTheDocument();
+  });
+
+  it('shows stays and events as separate source rows with their own statuses and originals', async () => {
+    const responses = overviewResponses();
+    responses.set('/trips/7/document-associations', {
+      associations: [
+        {
+          id: 71,
+          tripId: 7,
+          documentId: 91,
+          targetKind: 'stay',
+          targetId: 13,
+          createdAt: '2029-01-01T00:00:00Z',
+        },
+      ],
+    });
+    mount(responses);
+    const table = await screen.findByRole('table', { name: 'Sheet' });
+    const stay = within(table).getByRole('row', { name: /Cedar guesthouse/ });
+    expect(stay).toHaveAttribute('data-route-kind', 'stay');
+    expect(stay).toHaveTextContent('Reserved');
+    expect(stay).toHaveTextContent('document #91');
+    const event = within(table).getByRole('row', { name: /Harbour festival/ });
+    expect(event).toHaveAttribute('data-route-kind', 'event');
+    expect(event).toHaveTextContent('Alternative');
+    expect(event).toHaveTextContent('Booked');
+  });
+
+  it('keeps an explicit structural route gap visible in both presentations', async () => {
+    const responses = overviewResponses();
+    responses.set('/trips/7/route', routeRead({ order: [{ kind: 'gap', id: 44 }] }));
+    mount(responses);
+    const table = await screen.findByRole('table', { name: 'Sheet' });
+    expect(within(table).getByText('gap #44')).toBeVisible();
+    await userEvent.click(screen.getByRole('button', { name: 'workspace.journey' }));
+    const journey = await screen.findByRole('list', { name: 'Route' });
+    expect(within(journey).getByText('gap #44')).toBeVisible();
+  });
+
   it('shows the known Journey day without inventing a clock or changing its independent source', async () => {
     const responses = overviewResponses();
     responses.set('/trips/7/journeys/20/legs', {
@@ -20,6 +73,198 @@ describe('source-backed TripOverview', () => {
     mount(responses);
     expect(await screen.findByText('29 Feb 2028 → …')).toBeVisible();
     expect(screen.queryByText(/2028-02-29T00:00/)).not.toBeInTheDocument();
+  });
+  it('searches recorded visit and booking facts and switches between sheet and journey layouts', async () => {
+    const responses = overviewResponses();
+    responses.set('/trips/7/stays', {
+      stays: [
+        sourceStay({
+          timing: { arrival: '2029-05-01', departure: '2029-05-04' },
+          status: 'Reserved',
+        }),
+      ],
+    });
+    responses.set('/trips/7/events', { events: [] });
+    mount(responses);
+    const search = await screen.findByRole('textbox', { name: 'workspace.search' });
+    await userEvent.type(search, 'Cedar Lane');
+    expect(await screen.findByRole('link', { name: 'Wellington' })).toBeVisible();
+    await userEvent.clear(search);
+    await userEvent.click(screen.getByRole('button', { name: 'workspace.booked' }));
+    expect(await screen.findByRole('link', { name: 'Cedar guesthouse' })).toBeVisible();
+    await userEvent.click(screen.getByRole('button', { name: 'workspace.journey' }));
+    expect(screen.getByRole('list', { name: 'Route' })).toHaveAttribute(
+      'data-workspace-display',
+      'journey'
+    );
+  });
+  it('searches unplaced arrangements and keeps only confirmed sources in the booked filter', async () => {
+    const responses = overviewResponses();
+    responses.set('/trips/7/stays', {
+      stays: [
+        sourceStay({ visitId: null, name: "Dad's place", status: 'Agreed' }),
+        sourceStay({ id: 14, visitId: null, name: 'Coast hotel idea', status: 'Considering' }),
+      ],
+    });
+    responses.set('/trips/7/events', { events: [] });
+    mount(responses);
+    const search = await screen.findByRole('textbox', { name: 'workspace.search' });
+    await userEvent.type(search, "Dad's");
+    expect(await screen.findByRole('link', { name: "Dad's place" })).toBeVisible();
+    expect(screen.queryByRole('link', { name: 'Wellington' })).not.toBeInTheDocument();
+    await userEvent.clear(search);
+    await userEvent.click(screen.getByRole('button', { name: 'workspace.booked' }));
+    expect(screen.getByRole('link', { name: "Dad's place" })).toBeVisible();
+    expect(screen.queryByRole('link', { name: 'Coast hotel idea' })).not.toBeInTheDocument();
+  });
+  it('keeps route and orphaned stay issues while hiding complete visits and journeys', async () => {
+    const responses = overviewResponses();
+    responses.set('/trips/7/journeys', {
+      journeys: [sourceJourney(), sourceJourney({ id: 21, name: 'Unplaced ferry' })],
+    });
+    responses.set('/trips/7/stays', {
+      stays: [
+        sourceStay({
+          timing: { arrival: '2029-05-01', departure: '2029-05-09' },
+          status: 'Reserved',
+        }),
+        sourceStay({
+          id: 14,
+          visitId: 998,
+          name: 'Orphaned stay',
+          timing: {},
+          status: 'Considering',
+        }),
+      ],
+    });
+    responses.set(
+      '/trips/7/route',
+      routeRead({
+        order: [
+          { kind: 'visit', id: 31 },
+          { kind: 'gap', id: 90 },
+          { kind: 'journey', id: 20 },
+          { kind: 'visit', id: 999 },
+        ],
+        missingSources: [{ kind: 'visit', id: 999 }],
+      })
+    );
+    mount(responses);
+    expect(await screen.findByRole('link', { name: 'Harbour connection' })).toBeVisible();
+    expect(await screen.findByRole('link', { name: 'Unplaced ferry' })).toBeVisible();
+
+    await userEvent.click(screen.getByRole('button', { name: 'workspace.needs-attention' }));
+    await userEvent.click(screen.getByRole('button', { name: 'workspace.journey' }));
+
+    const route = screen.getByRole('list', { name: 'Route' });
+    expect(within(route).getByText('gap #90')).toBeVisible();
+    expect(within(route).getByRole('link', { name: 'visit #999 · missing' })).toBeVisible();
+    expect(within(route).queryByRole('link', { name: 'Wellington' })).not.toBeInTheDocument();
+    expect(
+      within(route).queryByRole('link', { name: 'Harbour connection' })
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Orphaned stay' })).toBeVisible();
+    expect(screen.queryByRole('link', { name: 'Unplaced ferry' })).not.toBeInTheDocument();
+  });
+  it('searches journey leg details while retaining the owning Journey source', async () => {
+    mount(overviewResponses());
+    const search = await screen.findByRole('textbox', { name: 'workspace.search' });
+    await userEvent.type(search, 'Harbour operator');
+    expect(await screen.findByRole('link', { name: 'Harbour connection' })).toBeVisible();
+    expect(await screen.findByText('Hydrofoil · Harbour operator')).toBeVisible();
+    expect(screen.queryByRole('link', { name: /Cedar guesthouse/ })).not.toBeInTheDocument();
+  });
+  it('shows an empty result when a Journey leg does not match the search', async () => {
+    const responses = overviewResponses();
+    responses.set('/trips/7/route', routeRead({ order: [{ kind: 'journey', id: 20 }] }));
+    mount(responses);
+    const search = await screen.findByRole('textbox', { name: 'workspace.search' });
+    await userEvent.type(search, 'not in this itinerary');
+    expect(await screen.findByText('workspace.noRouteResults')).toBeVisible();
+    expect(screen.queryByRole('list', { name: 'Route' })).not.toBeInTheDocument();
+  });
+  it('shows an empty result when the booked filter excludes every Journey leg', async () => {
+    const responses = overviewResponses();
+    responses.set('/trips/7/route', routeRead({ order: [{ kind: 'journey', id: 20 }] }));
+    responses.set('/trips/7/journeys/20/legs', {
+      legs: [sourceLeg({ arrangement: 'Not arranged' })],
+    });
+    mount(responses);
+    await screen.findByRole('textbox', { name: 'workspace.search' });
+    await userEvent.click(screen.getByRole('button', { name: 'workspace.booked' }));
+    expect(await screen.findByText('workspace.noRouteResults')).toBeVisible();
+    expect(screen.queryByRole('list', { name: 'Route' })).not.toBeInTheDocument();
+  });
+  it('searches Journey legs inside an applied path and shows only the matching legs', async () => {
+    const responses = overviewResponses();
+    responses.set(
+      '/trips/7/route',
+      routeRead({
+        order: [{ kind: 'gap', id: 90 }],
+        paths: [
+          {
+            id: 8,
+            title: 'Applied path',
+            gapId: 90,
+            state: 'applied',
+            members: [{ kind: 'journey', id: 20 }],
+          },
+        ],
+      })
+    );
+    responses.set('/trips/7/journeys/20/legs', {
+      legs: [
+        sourceLeg(),
+        sourceLeg({
+          id: 41,
+          mode: 'Rail',
+          operator: 'Other operator',
+          arrangement: 'Not arranged',
+        }),
+      ],
+    });
+    mount(responses);
+    const search = await screen.findByRole('textbox', { name: 'workspace.search' });
+    await userEvent.type(search, 'Harbour operator');
+    const path = screen.getByRole('region', { name: 'Applied path' });
+    expect(await within(path).findByRole('link', { name: 'Harbour connection' })).toBeVisible();
+    expect(await within(path).findByText('Hydrofoil · Harbour operator')).toBeVisible();
+    expect(within(path).queryByText('Rail · Other operator')).not.toBeInTheDocument();
+  });
+  it('applies the booked filter to Journey legs inside an applied path', async () => {
+    const responses = overviewResponses();
+    responses.set(
+      '/trips/7/route',
+      routeRead({
+        order: [{ kind: 'gap', id: 90 }],
+        paths: [
+          {
+            id: 8,
+            title: 'Applied path',
+            gapId: 90,
+            state: 'applied',
+            members: [{ kind: 'journey', id: 20 }],
+          },
+        ],
+      })
+    );
+    responses.set('/trips/7/journeys/20/legs', {
+      legs: [
+        sourceLeg(),
+        sourceLeg({
+          id: 41,
+          mode: 'Rail',
+          operator: 'Unarranged service',
+          arrangement: 'Not arranged',
+        }),
+      ],
+    });
+    mount(responses);
+    await screen.findByRole('textbox', { name: 'workspace.search' });
+    await userEvent.click(screen.getByRole('button', { name: 'workspace.booked' }));
+    const path = screen.getByRole('region', { name: 'Applied path' });
+    expect(await within(path).findByText('Hydrofoil · Harbour operator')).toBeVisible();
+    expect(within(path).queryByText('Rail · Unarranged service')).not.toBeInTheDocument();
   });
   it('opens the published Documents workspace even before the first association exists', async () => {
     mount(overviewResponses(), undefined, { documentsHref: '/trips/7/documents' });
@@ -65,6 +310,7 @@ describe('source-backed TripOverview', () => {
     const { requests } = mount(responses);
     await screen.findByRole('heading', { name: 'Coast trip' });
     expect(screen.getByText('After the exams')).toBeVisible();
+    await userEvent.click(await screen.findByRole('button', { name: 'workspace.journey' }));
     const event = await screen.findByRole('link', { name: /Harbour festival/ });
     expect(event.closest('article')).toHaveAttribute('data-constraint', 'soft');
     expect(within(event).getByText('Alternative')).toBeVisible();
@@ -88,7 +334,10 @@ describe('source-backed TripOverview', () => {
         '/trips/7/journey-groups',
       ])
     );
-    expect(screen.queryByText(/unset|Before|After Wellington/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/unset|After Wellington/)).not.toBeInTheDocument();
+    const attention = screen.getByRole('region', { name: 'Before you go' });
+    expect(attention).toHaveTextContent('8');
+    expect(attention).toHaveTextContent('workspace.openNights');
   });
 
   it('keeps repeated towns distinct and does not assign an independent journey to matching places', async () => {
@@ -106,6 +355,7 @@ describe('source-backed TripOverview', () => {
       })
     );
     mount(responses);
+    await userEvent.click(await screen.findByRole('button', { name: 'workspace.journey' }));
     await screen.findByRole('list', { name: 'Route' });
     await screen.findAllByRole('heading', { name: /Wellington/ });
     const occurrences = document.querySelectorAll('[data-visit-id]');
@@ -189,6 +439,7 @@ describe('source-backed TripOverview', () => {
     mount(responses);
     await screen.findByText('trips.source.unavailable');
     expect(screen.queryByText('No route entries.')).not.toBeInTheDocument();
+    await userEvent.click(await screen.findByRole('button', { name: 'workspace.journey' }));
     const root = await screen.findByRole('list', { name: 'Route' });
     expect(within(root).getByText('Cedar guesthouse')).toBeVisible();
     expect(within(root).getByText('Harbour festival')).toBeVisible();

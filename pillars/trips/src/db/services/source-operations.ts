@@ -1,19 +1,10 @@
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
-import { EventSchema } from '../../contract/event-schemas.js';
-import { JourneySchema } from '../../contract/journey-schemas.js';
-import { SourceOperationSchema } from '../../contract/source-workspace.js';
-import { StaySchema } from '../../contract/stay-schemas.js';
-import { events, journeys, stays, sourceOperations } from '../schema.js';
+import { SourceOperationSchema, SourceReceiptSchema } from '../../contract/source-workspace.js';
+import { sourceOperations } from '../schema.js';
 import { getTrip } from './records.js';
 import { canonicalSourceValue } from './source-canonical.js';
-import { currentJourneyLegSets } from './source-journey-leg-sets.js';
-import {
-  getCapture,
-  getIdea,
-  getCaptureAssociation,
-  getExploreMembership,
-} from './source-queries.js';
+import { currentAffected } from './source-operation-current.js';
 import { TripsServiceError } from './source-record.js';
 import { undoSourceOperation } from './source-undo.js';
 import { writeSourceCommand } from './source-write.js';
@@ -51,48 +42,18 @@ function emptyWorkspace(): SourceWorkspace {
     events: [],
     journeys: [],
     stays: [],
+    journeyLegSets: [],
   };
 }
-function currentAffected(db: TripsDb, tripId: number, receipt: SourceReceipt): SourceWorkspace {
-  return {
-    ...(receipt.journeyLegSets === undefined
-      ? {}
-      : {
-          journeyLegSets: currentJourneyLegSets(db, tripId, receipt.journeyLegSets),
-        }),
-    captures: receipt.captures.map((row) => getCapture(db, tripId, row.id)),
-    ideas: receipt.ideas.map((row) => getIdea(db, tripId, row.id)),
-    associations: receipt.associations.map((row) => getCaptureAssociation(db, tripId, row.id)),
-    memberships: receipt.memberships.map((row) => getExploreMembership(db, tripId, row.id)),
-    events: receipt.events.flatMap((event) => {
-      const current = db
-        .select()
-        .from(events)
-        .where(and(eq(events.tripId, tripId), eq(events.id, event.id), isNull(events.removedAt)))
-        .get();
-      return current === undefined ? [] : [EventSchema.parse(current)];
-    }),
-    journeys: receipt.journeys.flatMap((journey) => {
-      const current = db
-        .select()
-        .from(journeys)
-        .where(
-          and(eq(journeys.tripId, tripId), eq(journeys.id, journey.id), isNull(journeys.removedAt))
-        )
-        .get();
-      return current === undefined ? [] : [JourneySchema.parse(current)];
-    }),
-    stays: receipt.stays.flatMap((stay) => {
-      const current = db
-        .select()
-        .from(stays)
-        .where(and(eq(stays.tripId, tripId), eq(stays.id, stay.id), isNull(stays.removedAt)))
-        .get();
-      return current === undefined ? [] : [StaySchema.parse(current)];
-    }),
-  };
+function omitsJourneyLegProof(command: SourceCommand): boolean {
+  if (command.kind === 'capture.create')
+    return command.target?.mode === 'createJourney' && command.target.legs === undefined;
+  return (
+    command.kind === 'capture.organise' &&
+    command.target.mode === 'createJourney' &&
+    command.target.legs === undefined
+  );
 }
-
 interface OperationContext {
   db: TripsDb;
   tripId: number;
@@ -113,6 +74,11 @@ function findOperation(
     )
     .get();
 }
+function readReceipt(value: unknown, command: SourceCommand): SourceReceipt {
+  const receipt = SourceReceiptSchema.parse(value);
+  if (omitsJourneyLegProof(command) && receipt.journeyLegSets === undefined) return receipt;
+  return { ...receipt, journeyLegSets: receipt.journeyLegSets ?? [] };
+}
 function replayOperation(
   context: OperationContext,
   existing: typeof sourceOperations.$inferSelect,
@@ -126,9 +92,10 @@ function replayOperation(
     if (original === undefined || !context.allowedKinds.includes(original.request.command.kind))
       throw new TripsServiceError('source_undo_conflict');
   }
+  const receipt = readReceipt(existing.receipt, operation.command);
   return {
-    receipt: existing.receipt,
-    current: currentAffected(context.db, context.tripId, existing.receipt),
+    receipt,
+    current: currentAffected(context.db, context.tripId, receipt),
     undone: existing.undoneBy !== null,
     replayed: true,
   };
@@ -155,7 +122,10 @@ function applyOperation(
   const write = { db: context.db, tripId: context.tripId, receipt, inverse };
   if (operation.command.kind === 'undo')
     undoSourceOperation(write, operation.command.targetOperationId, context.allowedKinds);
-  else writeSourceCommand(write, operation.command);
+  else {
+    writeSourceCommand(write, operation.command);
+    if (omitsJourneyLegProof(operation.command)) delete receipt.journeyLegSets;
+  }
   context.db
     .insert(sourceOperations)
     .values({
@@ -198,4 +168,21 @@ export function operateSourceWorkspace(
   return db.transaction((tx) => runOperation({ db: tx, tripId, allowedKinds }, operation), {
     behavior: 'immediate',
   });
+}
+
+/** Read a saved source-operation receipt with its current affected records and Undo state. */
+export function readSourceOperation(
+  db: TripsDb,
+  tripId: number,
+  operationId: string
+): SourceOperationResult {
+  const row = findOperation({ db, tripId, allowedKinds: [] }, operationId);
+  if (row === undefined) throw new TripsServiceError('not_found');
+  const receipt = readReceipt(row.receipt, SourceOperationSchema.parse(row.request).command);
+  return {
+    receipt,
+    current: currentAffected(db, tripId, receipt),
+    undone: row.undoneBy !== null,
+    replayed: true,
+  };
 }

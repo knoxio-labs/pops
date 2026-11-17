@@ -4,7 +4,7 @@ import { afterEach, expect, it } from 'vitest';
 import { deferred } from '../capture/test-utils';
 import { sourceStay, sourceVisits } from '../stay/test-utils';
 import { mountOverview } from './render.test-utils';
-import { overviewResponses } from './test-utils';
+import { overviewResponses, sourceEvent } from './test-utils';
 
 afterEach(cleanup);
 
@@ -15,9 +15,9 @@ it('does not turn an undated Visit into a missing-night interval', async () => {
   });
   responses.set('/trips/7/stays', { stays: [] });
   mountOverview(responses);
-  const coverage = await screen.findByRole('region', { name: 'workspace.sleep' });
-  expect(within(coverage).getByText('workspace.unjudged')).toBeVisible();
-  expect(within(coverage).queryByText(/workspace.open|workspace.covered/)).not.toBeInTheDocument();
+  const coverage = await screen.findByRole('region', { name: 'Where you sleep' });
+  expect(await within(coverage).findAllByText('Dates undecided')).not.toHaveLength(0);
+  expect(within(coverage).queryByText(/open nights|Needs a stay|Covered/)).not.toBeInTheDocument();
 });
 
 it('shows Reserved coverage without a Purchased assertion and preserves a separate proven gap', async () => {
@@ -31,19 +31,42 @@ it('shows Reserved coverage without a Purchased assertion and preserves a separa
     ],
   });
   mountOverview(responses);
-  const coverage = await screen.findByRole('region', { name: 'workspace.sleep' });
-  expect(await within(coverage).findByText(/workspace.covered/)).toBeVisible();
-  expect(within(coverage).getByText(/workspace.open/)).toBeVisible();
+  const coverage = await screen.findByRole('region', { name: 'Where you sleep' });
+  expect(await within(coverage).findByText('Needs a stay')).toBeVisible();
+  expect(await within(coverage).findAllByText('5 open nights')).not.toHaveLength(0);
   expect(within(coverage).queryByText('Purchased')).not.toBeInTheDocument();
+  const stay = await screen.findByRole('link', { name: 'Cedar guesthouse' });
+  const stayRow = stay.closest('tr');
+  if (!(stayRow instanceof HTMLTableRowElement)) throw new Error('Expected the stay route row');
+  expect(within(stayRow).getByText('Reserved')).toBeVisible();
+});
+
+it('does not count a booked and purchased event as overnight coverage', async () => {
+  const responses = overviewResponses();
+  responses.set('/trips/7/stays', { stays: [] });
+  responses.set('/trips/7/events', {
+    events: [
+      sourceEvent({
+        intention: 'In plan',
+        arrangement: 'Booked',
+        purchase: 'Purchased',
+        timing: { start: '2029-05-03' },
+      }),
+    ],
+  });
+  mountOverview(responses);
+  const coverage = await screen.findByRole('region', { name: 'Where you sleep' });
+  expect(await within(coverage).findByText('Needs a stay')).toBeVisible();
+  expect(await within(coverage).findAllByText('8 open nights')).not.toHaveLength(0);
 });
 
 it('retains uncertainty when the Stay collection is unavailable rather than claiming open nights', async () => {
   const responses = overviewResponses();
   responses.delete('/trips/7/stays');
   mountOverview(responses);
-  const coverage = await screen.findByRole('region', { name: 'workspace.sleep' });
-  expect(within(coverage).getByText('workspace.unjudged')).toBeVisible();
-  expect(within(coverage).queryByText(/workspace.open/)).not.toBeInTheDocument();
+  const coverage = await screen.findByRole('region', { name: 'Where you sleep' });
+  expect(within(coverage).getByText('Check coverage')).toBeVisible();
+  expect(within(coverage).queryByText(/open nights|Needs a stay/)).not.toBeInTheDocument();
 });
 
 it.each(['stays', 'visits'] as const)(
@@ -52,8 +75,8 @@ it.each(['stays', 'visits'] as const)(
     const responses = overviewResponses();
     responses.set('/trips/7/stays', { stays: [] });
     const { cache, client } = mountOverview(responses);
-    const coverage = await screen.findByRole('region', { name: 'workspace.sleep' });
-    expect(await within(coverage).findByText(/workspace.open/)).toBeVisible();
+    const coverage = await screen.findByRole('region', { name: 'Where you sleep' });
+    expect(await within(coverage).findByText('Needs a stay')).toBeVisible();
     const originalFetch = client.getConfig().fetch;
     if (!originalFetch) throw new Error('Missing source transport');
     const refreshResponse = deferred<Response>();
@@ -73,9 +96,9 @@ it.each(['stays', 'visits'] as const)(
       });
     });
     await waitFor(() =>
-      expect(within(coverage).queryByText(/workspace.open/)).not.toBeInTheDocument()
+      expect(within(coverage).queryByText(/open nights/)).not.toBeInTheDocument()
     );
-    expect(within(coverage).getByText('workspace.unjudged')).toBeVisible();
+    expect(within(coverage).getByText('Check coverage')).toBeVisible();
     await act(async () => {
       refreshResponse.resolve(
         Response.json(
@@ -89,13 +112,13 @@ it.each(['stays', 'visits'] as const)(
       status: 'error',
       fetchStatus: 'idle',
     });
-    expect(within(coverage).queryByText(/workspace.open/)).not.toBeInTheDocument();
-    expect(within(coverage).getByText('workspace.unjudged')).toBeVisible();
+    expect(within(coverage).queryByText(/open nights/)).not.toBeInTheDocument();
+    expect(within(coverage).getByText('Check coverage')).toBeVisible();
     expect(cache.getQueryData(['trips', 'http://overview.test', 7, 'stays'])).toEqual([]);
   }
 );
 
-it('keeps independently proven coverage while withholding a neighbouring gap during pending and failed Stay refreshes', async () => {
+it('retains recorded stay facts while withholding an unverified gap during pending and failed refreshes', async () => {
   const responses = overviewResponses();
   responses.set('/trips/7/stays', {
     stays: [
@@ -106,9 +129,9 @@ it('keeps independently proven coverage while withholding a neighbouring gap dur
     ],
   });
   const { cache, client } = mountOverview(responses);
-  const coverage = await screen.findByRole('region', { name: 'workspace.sleep' });
-  expect(await within(coverage).findByText(/workspace.covered/)).toBeVisible();
-  expect(within(coverage).getByText(/workspace.open/)).toBeVisible();
+  const coverage = await screen.findByRole('region', { name: 'Where you sleep' });
+  expect(await within(coverage).findByText('Needs a stay')).toBeVisible();
+  expect(await within(coverage).findAllByText('5 open nights')).not.toHaveLength(0);
   const originalFetch = client.getConfig().fetch;
   if (!originalFetch) throw new Error('Missing source transport');
   const refreshResponse = deferred<Response>();
@@ -124,9 +147,12 @@ it('keeps independently proven coverage while withholding a neighbouring gap dur
     refresh = cache.refetchQueries({ queryKey, exact: true });
   });
   expect(cache.getQueryState(queryKey)?.fetchStatus).toBe('fetching');
-  expect(await within(coverage).findByText('workspace.unjudged')).toBeVisible();
-  expect(within(coverage).getByText(/workspace.covered/)).toBeVisible();
-  expect(within(coverage).queryByText(/workspace.open/)).not.toBeInTheDocument();
+  expect(await within(coverage).findByText('Check coverage')).toBeVisible();
+  expect(within(coverage).queryByText(/open nights/)).not.toBeInTheDocument();
+  const stay = await screen.findByRole('link', { name: 'Cedar guesthouse' });
+  const stayRow = stay.closest('tr');
+  if (!(stayRow instanceof HTMLTableRowElement)) throw new Error('Expected the stay route row');
+  expect(within(stayRow).getByText('Reserved')).toBeVisible();
   await act(async () => {
     refreshResponse.resolve(
       Response.json(
@@ -141,8 +167,7 @@ it('keeps independently proven coverage while withholding a neighbouring gap dur
     expect.objectContaining({ id: 13, status: 'Reserved' }),
   ]);
   await waitFor(() => {
-    expect(within(coverage).getByText(/workspace.covered/)).toBeVisible();
-    expect(within(coverage).queryByText(/workspace.open/)).not.toBeInTheDocument();
-    expect(within(coverage).getByText('workspace.unjudged')).toBeVisible();
+    expect(within(coverage).getByText('Check coverage')).toBeVisible();
+    expect(within(coverage).queryByText(/open nights/)).not.toBeInTheDocument();
   });
 });

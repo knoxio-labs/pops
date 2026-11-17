@@ -6,7 +6,7 @@ import { meetingPlan } from '../people/test-utils';
 import { routeSession } from '../route/registry';
 import { routeRead } from '../route/test-utils';
 import { sourceVisits } from '../stay/test-utils';
-import { mountOverview } from './render.test-utils';
+import { mountOverview, selectJourney } from './render.test-utils';
 import { overviewResponses } from './test-utils';
 
 afterEach(cleanup);
@@ -59,6 +59,7 @@ it('uses canonical mixed order, structural gaps and complete paths rather than c
     })
   );
   mountOverview(responses, undefined, { onOpenSource: vi.fn() });
+  await selectJourney();
   const root = await screen.findByRole('list', { name: 'Route' });
   expect(
     [...root.children].map((row) => [
@@ -111,6 +112,7 @@ it('observes the retained canonical route reader and preserves availability as u
   const responses = overviewResponses();
   responses.set('/trips/7/route', routeRead({ order: [{ kind: 'visit', id: 31 }] }));
   const { cache, client } = mountOverview(responses);
+  await selectJourney();
   const root = await screen.findByRole('list', { name: 'Route' });
   responses.set(
     '/trips/7/route',
@@ -167,6 +169,7 @@ it('does not replace unavailable canonical boundary Visits with the nearest reso
     })
   );
   mountOverview(responses);
+  await selectJourney();
   await screen.findByRole('list', { name: 'Route' });
   expect(screen.getByRole('main').querySelector(':scope > p')).toBeNull();
 });

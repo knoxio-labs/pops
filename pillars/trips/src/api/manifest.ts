@@ -10,6 +10,7 @@ import type {
 const TRIPS_WIRE_NAV = { ...TRIPS_NAV, items: [...TRIPS_NAV.items] } satisfies NavConfigDescriptor;
 const TRIPS_WIRE_PAGES = [...TRIPS_PAGES] satisfies PageDescriptor[];
 const TRIPS_QUERIES = [
+  'trips.bookingImports.get',
   'trips.route.get',
   'trips.routeDrafts.preview',
   'trips.meetingPlans.list',
@@ -45,6 +46,10 @@ const TRIPS_QUERIES = [
   'trips.visits.get',
 ] as const;
 const TRIPS_MUTATIONS = [
+  'trips.bookingImports.bind',
+  'trips.bookingImports.extract',
+  'trips.bookingImports.review',
+  'trips.bookingImports.commit',
   'trips.route.operate',
   'trips.routeDrafts.operate',
   'trips.meetingPlans.operate',

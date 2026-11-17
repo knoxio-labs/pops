@@ -2,7 +2,7 @@ import { cleanup, fireEvent, screen } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import { sourceRental } from '../arrangements/test-utils';
-import { mountOverview } from './render.test-utils';
+import { mountOverview, selectJourney } from './render.test-utils';
 import { overviewResponses } from './test-utils';
 
 afterEach(cleanup);
@@ -18,6 +18,7 @@ it.each(['Considering', 'Reserved', 'Purchased'] as const)(
     });
     const onOpenSource = vi.fn();
     mountOverview(responses, undefined, { onOpenSource });
+    await selectJourney();
     const card = await screen.findByRole('button', { name: 'Exact car' });
     expect(screen.getAllByRole('button', { name: 'Exact car' })).toHaveLength(1);
     expect(card.closest('[data-visit-id]')).toHaveAttribute('data-visit-id', '31');

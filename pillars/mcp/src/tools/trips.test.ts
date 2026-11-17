@@ -60,9 +60,9 @@ describe('finite canonical Trips MCP surface', () => {
           );
       }
     }
-    expect(expected.size).toBe(91);
-    expect(tripsTools).toHaveLength(91);
-    expect(new Set(tripsTools.map((entry) => entry.name)).size).toBe(91);
+    expect(expected.size).toBe(96);
+    expect(tripsTools).toHaveLength(96);
+    expect(new Set(tripsTools.map((entry) => entry.name)).size).toBe(96);
     expect(tripsTools.map((entry) => entry.name).toSorted()).toEqual(
       [...expected.keys()].toSorted()
     );

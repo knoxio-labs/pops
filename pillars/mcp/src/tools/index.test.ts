@@ -18,8 +18,8 @@ describe('allTools', () => {
     }
   });
 
-  it('exports exactly 206 tools', () => {
-    expect(allTools).toHaveLength(206);
+  it('exports exactly 211 tools', () => {
+    expect(allTools).toHaveLength(211);
   });
 
   it('registers the finite direct Documents owner/recovery family alongside Inventory associations', () => {

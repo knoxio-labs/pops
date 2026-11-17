@@ -32,10 +32,28 @@ internal enum TripOverviewHeading: Equatable {
     }
 }
 
+internal enum TripOverviewFocusKind: Hashable {
+    case now
+    case next
+}
+
+internal enum TripOverviewFocusSection: Identifiable {
+    case now([TripSource])
+    case next([TripSource])
+
+    internal var id: TripOverviewFocusKind {
+        switch self {
+        case .now: .now
+        case .next: .next
+        }
+    }
+}
+
 internal struct TripOverviewProjection {
     internal let heading: TripOverviewHeading
     internal let now: [TripSource]
     internal let next: [TripSource]
+    internal let other: [TripSource]
     internal let chapters: [TripOverviewChapter]
 
     internal var nextFocus: [TripSource] {
@@ -43,10 +61,11 @@ internal struct TripOverviewProjection {
         return next.filter { $0.start == start }
     }
 
-    internal var chaptersFollowFocus: Bool {
-        if !now.isEmpty { return true }
-        if case .travelDay = heading { return true }
-        return false
+    internal var focusSections: [TripOverviewFocusSection] {
+        var sections: [TripOverviewFocusSection] = []
+        if !now.isEmpty { sections.append(.now(now)) }
+        if !nextFocus.isEmpty { sections.append(.next(nextFocus)) }
+        return sections
     }
 
     internal init(
@@ -57,6 +76,7 @@ internal struct TripOverviewProjection {
         let visible = Set(visibleSources.map(\.id))
         now = today.now.filter { visible.contains($0.id) }
         next = today.next.filter { visible.contains($0.id) }
+        other = today.other.filter { visible.contains($0.id) }
         chapters = tripOverviewChapters(snapshot: snapshot, visits: visibleVisits, now: now)
         let selected = tripSources(snapshot).filter { visible.contains($0.id) }
         heading = tripOverviewHeading(

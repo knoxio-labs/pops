@@ -278,7 +278,7 @@ describe('the scope job is wired to the workflow it scopes', () => {
       "success() && (github.event_name == 'merge_group' || inputs['full-validation'] == true)"
     );
     expect(fullSuite?.run).toBe('mise run --skip-deps lint:analyze');
-    expect(fullSuite?.['timeout-minutes']).toBe(100);
+    expect(fullSuite?.['timeout-minutes']).toBe(120);
     const debugArtifact = namedStep('Simulator test log and result bundle');
     expect(debugArtifact?.if).toBe('failure()');
     expect(debugArtifact?.uses).toBe('actions/upload-artifact@v7');
@@ -299,7 +299,7 @@ describe('the scope job is wired to the workflow it scopes', () => {
         "github.event_name == 'merge_group' || inputs['full-validation'] == true"
       );
     }
-    expect(uiStep('UI flow (Maestro, against a real BFM)')?.['timeout-minutes']).toBe(45);
+    expect(uiStep('UI flow (Maestro, against a real BFM)')?.['timeout-minutes']).toBe(60);
 
     expect(uiStep('Release carries no BFM host')?.run).toBe(
       'mise run verify:release-carries-no-host'

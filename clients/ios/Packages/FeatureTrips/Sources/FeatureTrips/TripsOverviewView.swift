@@ -1,3 +1,4 @@
+import AppCore
 import DesignSystem
 import SwiftUI
 
@@ -17,10 +18,23 @@ internal struct TripsOverviewView: View {
                 .foregroundStyle(Color.popsForeground)
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityAddTraits(.isHeader)
-            Text(projection.heading.context)
+            HStack(alignment: .firstTextBaseline) {
+                Text(projection.heading.context)
+                    .font(.popsSubheadline)
+                    .foregroundStyle(Color.popsTrips)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: PopsSpacing.sm)
+                if !projection.chapters.isEmpty {
+                    Label("\(projection.chapters.count) stops", systemImage: "point.topleft.down.to.point.bottomright.curvepath")
+                        .font(.popsCaption)
+                        .foregroundStyle(Color.popsMutedForeground)
+                        .lineLimit(1)
+                }
+            }
+            Label("Local time · \(TripClock.clockLabel(date, zone: zone))", systemImage: "clock")
                 .font(.popsSubheadline)
-                .foregroundStyle(Color.popsTrips)
-                .fixedSize(horizontal: false, vertical: true)
+                .foregroundStyle(Color.popsMutedForeground)
+                .monospacedDigit()
         }
     }
 

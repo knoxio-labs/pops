@@ -34,6 +34,9 @@ interface OwnerState {
 
 function workspaceForTrip(source: CaptureSource, path: string): CaptureSource {
   const tripId = Number(path.match(/\/trips\/(\d+)\//)?.[1]);
+  const journeyIds = new Set(
+    source.journeys.filter((row) => row.tripId === tripId).map((row) => row.id)
+  );
   return {
     captures: source.captures.filter((row) => row.tripId === tripId),
     ideas: source.ideas.filter((row) => row.tripId === tripId),
@@ -41,6 +44,7 @@ function workspaceForTrip(source: CaptureSource, path: string): CaptureSource {
     memberships: source.memberships.filter((row) => row.tripId === tripId),
     events: source.events.filter((row) => row.tripId === tripId),
     journeys: source.journeys.filter((row) => row.tripId === tripId),
+    journeyLegSets: (source.journeyLegSets ?? []).filter((row) => journeyIds.has(row.journeyId)),
     stays: source.stays.filter((row) => row.tripId === tripId),
   };
 }
@@ -132,6 +136,7 @@ export async function captureOwner() {
       memberships: [],
       events: [],
       journeys: [],
+      journeyLegSets: [],
       stays: [],
     },
   };

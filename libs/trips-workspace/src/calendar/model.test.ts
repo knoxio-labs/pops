@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { sourceJourney, sourceLeg } from '../journey/test-utils';
+import { sourceStay } from '../stay/test-utils';
 import { activeJourneys, calendarEntries, selectionProblem, visibleEntries } from './model';
 import { calendarSnapshot, sourceEvent } from './test-utils';
 import { calendarInstant, displayDate, validDate } from './time';
@@ -235,6 +236,45 @@ describe('source-backed calendar selection', () => {
     expect(calendarEntries(snapshot).find((row) => row.source.kind === 'event')?.purchased).toBe(
       false
     );
+  });
+
+  it.each([
+    { status: 'Agreed' as const, confirmed: true },
+    { status: 'Reserved' as const, confirmed: true },
+    { status: 'Purchased' as const, confirmed: true },
+    { status: 'Considering' as const, confirmed: false },
+    { status: null, confirmed: false },
+  ])('marks stay $status as confirmed=$confirmed', ({ status, confirmed }) => {
+    const snapshot = calendarSnapshot();
+    snapshot.journeys = [];
+    snapshot.events = [];
+    snapshot.stays = [sourceStay({ status })];
+    expect(calendarEntries(snapshot)[0]?.confirmed).toBe(confirmed);
+  });
+
+  it.each([
+    { arrangement: 'Agreed' as const, purchase: null, confirmed: true },
+    { arrangement: 'Booked' as const, purchase: null, confirmed: true },
+    { arrangement: 'Not arranged' as const, purchase: null, confirmed: false },
+    { arrangement: null, purchase: 'Purchased' as const, confirmed: true },
+    { arrangement: null, purchase: null, confirmed: false },
+  ])(
+    'marks event arrangement=$arrangement purchase=$purchase as confirmed=$confirmed',
+    ({ arrangement, purchase, confirmed }) => {
+      const snapshot = calendarSnapshot();
+      snapshot.journeys = [];
+      snapshot.stays = [];
+      snapshot.events = [sourceEvent({ arrangement, purchase })];
+      expect(calendarEntries(snapshot)[0]?.confirmed).toBe(confirmed);
+    }
+  );
+
+  it('marks explicitly agreed or booked journey legs confirmed while preserving purchase styling separately', () => {
+    const snapshot = calendarSnapshot();
+    const journey = snapshot.journeys[0];
+    if (!journey) throw new Error('fixture missing');
+    journey.legs = [sourceLeg({ arrangement: 'Booked', purchase: null })];
+    expect(calendarEntries(snapshot)[0]).toMatchObject({ confirmed: true, purchased: false });
   });
 
   it('uses actual half-open timing.window, including its first instant and excluding its last', () => {

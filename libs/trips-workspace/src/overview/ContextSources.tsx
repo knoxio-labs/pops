@@ -75,7 +75,8 @@ export function ContextSources(
     });
 }
 
-function contextFacts(
+/** Resolves display facts for a canonical contextual Trip source without inferring missing fields. */
+export function contextFacts(
   record: OverviewContextRecord,
   props: OverviewViewProps
 ): { title: string; statuses: (string | null)[]; timing: string | undefined } {

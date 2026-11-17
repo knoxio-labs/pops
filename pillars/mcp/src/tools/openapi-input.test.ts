@@ -261,7 +261,7 @@ describe('published OpenAPI MCP input admission', () => {
     expect(input.validate({ id: 10 }).valid).toBe(false);
   });
 
-  it('admits every input and successful response from the 91 canonical Trips operations', () => {
+  it('admits every input and successful response from the 96 canonical Trips operations', () => {
     const trips = read('trips');
     if (
       typeof trips !== 'object' ||
@@ -284,7 +284,7 @@ describe('published OpenAPI MCP input admission', () => {
           operations.push(operation.operationId);
       }
     }
-    expect(operations).toHaveLength(91);
+    expect(operations).toHaveLength(96);
     for (const operation of operations) {
       expect(() => projectOperationInput(trips, operation), operation).not.toThrow();
       expect(() => projectOperationSuccess(trips, operation), operation).not.toThrow();
