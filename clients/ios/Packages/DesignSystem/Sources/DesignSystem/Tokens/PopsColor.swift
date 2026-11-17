@@ -38,6 +38,12 @@ extension Color {
     /// The quiet wash behind Trips route markers, with adaptive light and dark appearances.
     public static let popsTripsTint = Color(popsToken: "popsTripsTint")
 
+    /// Stay source identity within a Trips plan, independent of arrangement state.
+    public static let popsTripsStay = Color(popsToken: "popsTripsStay")
+
+    /// Activity source identity within a Trips plan, independent of purchase state.
+    public static let popsTripsActivity = Color(popsToken: "popsTripsActivity")
+
     /// Missing or conflicting Trips source facts requiring attention, independent of booking state.
     public static let popsTripsAttention = Color(popsToken: "popsTripsAttention")
 

@@ -38,6 +38,7 @@ export interface CalendarEntry {
   endExclusive?: boolean;
   placementDate?: string;
   continuing?: boolean;
+  confirmed: boolean;
   purchased: boolean;
   facts: string[];
   conflict: boolean;

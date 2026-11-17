@@ -4,13 +4,19 @@ import { OverviewSheetRow } from './OverviewSheetRow';
 
 import type { JSX } from 'react';
 
+import type { ProjectedRouteItem } from '../route/projection';
 import type { OverviewViewProps } from './types';
 
 /** Compact, source-linked view of the exact ordered items in the current route. */
-export function OverviewSheet(props: OverviewViewProps): JSX.Element {
-  const items = props.projection?.order ?? [];
+export function OverviewSheet(
+  props: OverviewViewProps & { items: ProjectedRouteItem[] }
+): JSX.Element | null {
+  if (!props.projection && (props.route.reading || props.route.readError)) return null;
   return (
-    <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+    <div
+      className="overflow-hidden rounded-xl border bg-card shadow-sm"
+      data-workspace-display="sheet"
+    >
       <Table aria-label={props.labels.sheet.title}>
         <TableHeader>
           <TableRow>
@@ -21,14 +27,16 @@ export function OverviewSheet(props: OverviewViewProps): JSX.Element {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {items.length === 0 ? (
+          {props.items.length === 0 ? (
             <TableRow>
               <TableCell colSpan={4} className="whitespace-normal text-muted-foreground">
-                {props.labels.empty}
+                {props.projection?.order.length
+                  ? props.labels.status('workspace.noRouteResults')
+                  : props.labels.empty}
               </TableCell>
             </TableRow>
           ) : (
-            items.map((item) => (
+            props.items.map((item) => (
               <OverviewSheetRow
                 key={`${item.reference.kind}:${item.reference.id}`}
                 {...props}

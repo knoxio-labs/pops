@@ -64,5 +64,5 @@ export function mountOverview(
 }
 
 export async function selectJourney(): Promise<void> {
-  await userEvent.click(await screen.findByRole('tab', { name: 'Journey' }));
+  await userEvent.click(await screen.findByRole('button', { name: 'workspace.journey' }));
 }

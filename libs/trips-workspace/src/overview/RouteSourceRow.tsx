@@ -8,16 +8,20 @@ import { VisitFacts } from './VisitFacts';
 import type { JSX } from 'react';
 
 import type { ProjectedRouteSource } from '../route/projection';
-import type { OverviewViewProps } from './types';
+import type { OverviewViewProps, WorkspaceJourneyVisibility } from './types';
 
 /** Render the shared projector's exact source/availability DTO without reconstructing membership. */
 export function RouteSourceRow(
-  props: OverviewViewProps & { item: ProjectedRouteSource; historical?: boolean }
+  props: OverviewViewProps & {
+    item: ProjectedRouteSource;
+    historical?: boolean;
+    onJourneyVisibilityChange?: WorkspaceJourneyVisibility['onJourneyVisibilityChange'];
+  }
 ): JSX.Element {
   const { item } = props;
   if (!props.historical && resolvedVisit(item))
     return <OverviewVisit {...props} visit={item.source} />;
-  if (!props.historical && resolvedJourney(item))
+  if (resolvedJourney(item))
     return (
       <li
         data-route-kind="journey"
@@ -25,7 +29,12 @@ export function RouteSourceRow(
         data-route-state={item.state}
         className="min-w-0 pb-5"
       >
-        <JourneyRecord {...props} journey={item.source} />
+        <JourneyRecord
+          {...props}
+          journey={item.source}
+          historical={props.historical}
+          onJourneyVisibilityChange={props.onJourneyVisibilityChange}
+        />
       </li>
     );
   const title = props.labels.source(item.reference.kind, item.reference.id);

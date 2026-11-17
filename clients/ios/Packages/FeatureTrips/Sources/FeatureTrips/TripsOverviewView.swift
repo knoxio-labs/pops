@@ -1,3 +1,4 @@
+import AppCore
 import DesignSystem
 import SwiftUI
 
@@ -30,6 +31,10 @@ internal struct TripsOverviewView: View {
                         .lineLimit(1)
                 }
             }
+            Label("Local time · \(TripClock.clockLabel(date, zone: zone))", systemImage: "clock")
+                .font(.popsSubheadline)
+                .foregroundStyle(Color.popsMutedForeground)
+                .monospacedDigit()
         }
     }
 

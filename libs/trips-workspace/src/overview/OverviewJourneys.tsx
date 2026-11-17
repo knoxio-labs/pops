@@ -1,22 +1,30 @@
+import { useEffect } from 'react';
+
 import { unwrap } from '@pops/pillar-sdk/client';
 import { Badge, ErrorState } from '@pops/ui';
 
 import { useSourceQuery } from '../shared/use-source-query';
 import { requestProblem } from '../stay/api';
 import { journeyLegsList } from '../trips-api/sdk.gen';
-import { dateLabel } from './model';
 import { sourceAction } from './source-action';
 import { readOverviewSource } from './source-read';
 import { SourceCard } from './SourceCard';
+import { journeyEndpoint, workspaceJourneyRecord } from './workspace-journey-record';
 
 import type { JSX } from 'react';
 
 import type { Journey, JourneyLeg } from '../journey/types';
 import type { SourceQuery } from '../shared/use-source-query';
 import type { OverviewViewProps } from './types';
+import type { WorkspaceJourneyRecord } from './workspace-journey-record';
 
 /** Historical Journey group references remain distinct from active route placement. */
 export function OverviewJourneys(props: OverviewViewProps): JSX.Element | null {
+  if (
+    props.workspaceQuery?.trim() ||
+    (props.workspaceFilter !== undefined && props.workspaceFilter !== 'everything')
+  )
+    return null;
   const groups = props.sources.groups ?? [];
   if (!groups.length) return null;
   return (
@@ -67,13 +75,31 @@ function JourneyReference(props: OverviewViewProps & { id: number }): JSX.Elemen
   );
 }
 
-/** Read one canonical Journey and its actual ordered leg facts without assigning it to a Visit. */
+/** Read ordered Journey leg facts, optionally reporting match visibility without rendering the card. */
 export function JourneyRecord({
   journey,
+  historical = false,
+  visibilityOnly = false,
+  onJourneyVisibilityChange,
   ...props
-}: OverviewViewProps & { journey: Journey }): JSX.Element | null {
+}: OverviewViewProps & {
+  journey: Journey;
+  historical?: boolean;
+  visibilityOnly?: boolean;
+  onJourneyVisibilityChange?: (journeyId: number, visible: boolean) => void;
+}): JSX.Element | null {
   const legs = useJourneyLegs(props, journey);
+  const presentation = workspaceJourneyRecord(journey, legs.data, props);
+  const showLegs =
+    !historical ||
+    Boolean(props.workspaceQuery?.trim()) ||
+    (props.workspaceFilter ?? 'everything') === 'booked';
+  useEffect(() => {
+    onJourneyVisibilityChange?.(journey.id, presentation.visible);
+  }, [journey.id, onJourneyVisibilityChange, presentation.visible]);
+  if (visibilityOnly) return null;
   if (legs.ownershipError) return <ErrorState error={legs.ownershipError} />;
+  if (!presentation.visible) return null;
 
   return (
     <div className="min-w-0 space-y-2">
@@ -89,51 +115,61 @@ export function JourneyRecord({
             document.targetId === journey.id
         )}
       />
-      {legs.isPending && (
-        <p role="status" className="text-xs text-muted-foreground">
-          {props.labels.loading}
-        </p>
-      )}
-      {legs.isError && (
-        <ErrorState error={requestProblem(legs.error)} onRetry={() => void legs.refetch()} />
-      )}
-      {legs.data?.map((leg) => (
-        <SourceCard
-          key={leg.id}
-          kind="journey"
-          {...sourceAction(props, { kind: 'journey', id: journey.id })}
-          title={
-            [leg.mode, leg.operator, leg.service].filter(Boolean).join(' · ') ||
-            props.labels.source('leg', leg.id)
-          }
-          when={endpoint(leg.from, props)}
-          purchased={leg.purchase === 'Purchased'}
-          statuses={[leg.intention, leg.arrangement, leg.purchase]}
-          labels={props.labels}
-        >
-          <span className="block">
-            {endpoint(leg.from, props)} → {endpoint(leg.to, props)}
-          </span>
-        </SourceCard>
-      ))}
+      <JourneyLegRecords
+        journeyId={journey.id}
+        overview={props}
+        presentation={presentation}
+        query={legs}
+        show={showLegs}
+      />
     </div>
   );
 }
 
-function endpoint(source: JourneyLeg['from'], props: OverviewViewProps): string {
+function JourneyLegRecords({
+  journeyId,
+  overview,
+  presentation,
+  query,
+  show,
+}: {
+  journeyId: number;
+  overview: OverviewViewProps;
+  presentation: WorkspaceJourneyRecord;
+  query: SourceQuery<JourneyLeg[]>;
+  show: boolean;
+}): JSX.Element | null {
+  if (!show) return null;
   return (
-    [
-      source.sourceLabel ??
-        (source.placeId
-          ? (props.sources.places?.find((place) => place.id === source.placeId)?.name ??
-            props.labels.source('place', source.placeId))
-          : undefined),
-      source.local ??
-        (source.date === undefined ? undefined : dateLabel(source.date, props.locale)),
-      source.timeZone,
-    ]
-      .filter(Boolean)
-      .join(' · ') || '…'
+    <>
+      {query.isPending && (
+        <p role="status" className="text-xs text-muted-foreground">
+          {overview.labels.loading}
+        </p>
+      )}
+      {query.isError && (
+        <ErrorState error={requestProblem(query.error)} onRetry={() => void query.refetch()} />
+      )}
+      {presentation.legs?.map((leg) => (
+        <SourceCard
+          key={leg.id}
+          kind="journey"
+          {...sourceAction(overview, { kind: 'journey', id: journeyId })}
+          title={
+            [leg.mode, leg.operator, leg.service].filter(Boolean).join(' · ') ||
+            overview.labels.source('leg', leg.id)
+          }
+          when={journeyEndpoint(leg.from, overview)}
+          purchased={leg.purchase === 'Purchased'}
+          statuses={[leg.intention, leg.arrangement, leg.purchase]}
+          labels={overview.labels}
+        >
+          <span className="block">
+            {journeyEndpoint(leg.from, overview)} → {journeyEndpoint(leg.to, overview)}
+          </span>
+        </SourceCard>
+      ))}
+    </>
   );
 }
 

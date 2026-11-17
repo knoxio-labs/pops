@@ -4,7 +4,7 @@ import { afterEach, expect, it } from 'vitest';
 import { deferred } from '../capture/test-utils';
 import { sourceStay, sourceVisits } from '../stay/test-utils';
 import { mountOverview } from './render.test-utils';
-import { overviewResponses } from './test-utils';
+import { overviewResponses, sourceEvent } from './test-utils';
 
 afterEach(cleanup);
 
@@ -39,6 +39,25 @@ it('shows Reserved coverage without a Purchased assertion and preserves a separa
   const stayRow = stay.closest('tr');
   if (!(stayRow instanceof HTMLTableRowElement)) throw new Error('Expected the stay route row');
   expect(within(stayRow).getByText('Reserved')).toBeVisible();
+});
+
+it('does not count a booked and purchased event as overnight coverage', async () => {
+  const responses = overviewResponses();
+  responses.set('/trips/7/stays', { stays: [] });
+  responses.set('/trips/7/events', {
+    events: [
+      sourceEvent({
+        intention: 'In plan',
+        arrangement: 'Booked',
+        purchase: 'Purchased',
+        timing: { start: '2029-05-03' },
+      }),
+    ],
+  });
+  mountOverview(responses);
+  const coverage = await screen.findByRole('region', { name: 'Where you sleep' });
+  expect(await within(coverage).findByText('Needs a stay')).toBeVisible();
+  expect(await within(coverage).findAllByText('8 open nights')).not.toHaveLength(0);
 });
 
 it('retains uncertainty when the Stay collection is unavailable rather than claiming open nights', async () => {

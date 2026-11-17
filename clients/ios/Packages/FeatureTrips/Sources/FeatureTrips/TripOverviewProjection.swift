@@ -32,6 +32,23 @@ internal enum TripOverviewHeading: Equatable {
     }
 }
 
+internal enum TripOverviewFocusKind: Hashable {
+    case now
+    case next
+}
+
+internal enum TripOverviewFocusSection: Identifiable {
+    case now([TripSource])
+    case next([TripSource])
+
+    internal var id: TripOverviewFocusKind {
+        switch self {
+        case .now: .now
+        case .next: .next
+        }
+    }
+}
+
 internal struct TripOverviewProjection {
     internal let heading: TripOverviewHeading
     internal let now: [TripSource]
@@ -44,10 +61,11 @@ internal struct TripOverviewProjection {
         return next.filter { $0.start == start }
     }
 
-    internal var chaptersFollowFocus: Bool {
-        if !now.isEmpty { return true }
-        if case .travelDay = heading { return true }
-        return false
+    internal var focusSections: [TripOverviewFocusSection] {
+        var sections: [TripOverviewFocusSection] = []
+        if !now.isEmpty { sections.append(.now(now)) }
+        if !nextFocus.isEmpty { sections.append(.next(nextFocus)) }
+        return sections
     }
 
     internal init(

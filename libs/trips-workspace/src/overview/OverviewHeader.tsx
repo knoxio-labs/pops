@@ -4,9 +4,9 @@ import { routeDateRange } from './route-context';
 
 import type { JSX } from 'react';
 
-import type { TripOverviewProps, OverviewViewProps } from './types';
+import type { OverviewViewProps, TripOverviewProps } from './types';
 
-/** Renders the trip title, date range, and actions for the overview. */
+/** Show the selected Trip's recorded name, When text, route bounds and published workspace actions. */
 export function OverviewHeader(props: OverviewViewProps): JSX.Element {
   const { trip } = props;
   const title = trip.name?.trim() || trip.destination.trim() || props.labels.trip;
@@ -14,7 +14,8 @@ export function OverviewHeader(props: OverviewViewProps): JSX.Element {
   return (
     <>
       <PageHeader
-        title={<span className="break-words">{title}</span>}
+        title={title}
+        titleClassName="break-words font-trip-display text-3xl font-semibold tracking-tight sm:text-4xl"
         description={
           trip.when ? (
             <span className="whitespace-pre-wrap break-words">{trip.when}</span>
