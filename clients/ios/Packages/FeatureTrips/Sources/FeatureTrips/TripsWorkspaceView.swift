@@ -13,7 +13,7 @@ internal struct TripsWorkspaceView: View {
     internal var body: some View {
         Group {
             switch tab {
-            case .trips: today
+            case .today: today
             case .plan: plan
             case .bookings: bookings
             case .documents: documents

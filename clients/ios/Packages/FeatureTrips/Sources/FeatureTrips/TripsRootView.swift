@@ -46,8 +46,8 @@ public struct TripsRootView: View {
 
     public var body: some View {
         TabView(selection: $model.tab) {
-            Tab("Today", systemImage: "sun.max", value: TripsTab.trips) {
-                stack(.trips)
+            Tab("Today", systemImage: "sun.max", value: TripsTab.today) {
+                stack(.today)
             }
             Tab("Plan", systemImage: "map", value: TripsTab.plan) {
                 stack(.plan)
@@ -101,4 +101,4 @@ public struct TripsRootView: View {
     }
 }
 
-internal enum TripsTab: Hashable { case trips, plan, bookings, documents, search }
+internal enum TripsTab: Hashable { case today, plan, bookings, documents, search }

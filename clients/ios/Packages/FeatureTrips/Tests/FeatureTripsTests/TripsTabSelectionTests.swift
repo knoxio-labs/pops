@@ -49,7 +49,7 @@ internal struct TripsTabSelectionTests {
         #expect(model.inbox.selectedID == snapshot.trip.id)
         #expect(model.inbox.state == .loaded(TripCaptureWorkspace(captures: [])))
         #expect(await reader.requestedCaptures == [snapshot.trip.id])
-        for tab in [TripsTab.plan, .bookings, .documents, .search, .trips] {
+        for tab in [TripsTab.plan, .bookings, .documents, .search, .today] {
             model.tab = tab
             #expect(model.selectedID == snapshot.trip.id)
             #expect(model.inbox.selectedID == snapshot.trip.id)
