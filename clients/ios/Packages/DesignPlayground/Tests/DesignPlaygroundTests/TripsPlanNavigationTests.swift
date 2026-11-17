@@ -34,7 +34,7 @@ internal struct TripsPlanNavigationTests {
         try sourceRow.find(ViewType.Button.self).tap()
         #expect(model.source == .journey(journey))
         #expect(model.canonicalSource(try #require(model.source)) == .journey(journey))
-        model.tab = .trips
+        model.tab = .today
         #expect(try root.inspect().find(TripsTimelineView.self).actualView().snapshot == snapshot)
     }
 
@@ -45,7 +45,7 @@ internal struct TripsPlanNavigationTests {
         let model = TripsModel(repository: reader, routeReader: reader)
         await model.select(snapshot.trip.id)
         await model.route.readTask?.value
-        let today = TripsWorkspaceView(model: model, tab: .trips)
+        let today = TripsWorkspaceView(model: model, tab: .today)
         #expect(try today.inspect().findAll(TripsTimelineView.self).count == 1)
         model.tab = .plan
         let view = TripsWorkspaceView(model: model, tab: .plan)

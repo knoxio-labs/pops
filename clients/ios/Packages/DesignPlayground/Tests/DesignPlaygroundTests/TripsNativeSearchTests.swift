@@ -8,7 +8,7 @@ import ViewInspector
 internal struct TripsNativeSearchTests {
     @Test(
         "cancelling search returns to its originating destination",
-        arguments: [TripsTab.trips, .plan, .bookings, .documents])
+        arguments: [TripsTab.today, .plan, .bookings, .documents])
     internal func cancelSearch(origin: TripsTab) async throws {
         let context = try await TripNavigationTestContext.make()
         context.model.tab = origin

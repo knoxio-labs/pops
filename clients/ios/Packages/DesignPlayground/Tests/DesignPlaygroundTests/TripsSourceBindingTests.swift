@@ -19,7 +19,7 @@ internal struct TripsSourceBindingTests {
         let stack = TripsSelectedTripStack(
             model: model, tab: .plan, documents: reader, capture: nil)
         let old = stack.sourceSelection
-        model.tab = .trips
+        model.tab = .today
         model.tab = .plan
         model.source = second
         old.wrappedValue = nil

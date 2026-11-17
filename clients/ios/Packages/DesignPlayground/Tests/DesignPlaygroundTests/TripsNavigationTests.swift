@@ -41,7 +41,7 @@ internal struct TripsNavigationTests {
         await model.select(snapshot.trip.id)
         let source = try #require(allTripSources(snapshot).first)
         let today = TripsSelectedTripStack(
-            model: model, tab: .trips, documents: reader, capture: nil)
+            model: model, tab: .today, documents: reader, capture: nil)
         let plan = TripsSelectedTripStack(
             model: model, tab: .plan, documents: reader, capture: nil)
         let bookings = TripsSelectedTripStack(
