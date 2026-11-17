@@ -345,6 +345,7 @@ describe('source-backed TripOverview', () => {
     expect(await screen.findByRole('link', { name: 'Harbour connection' })).toBeVisible();
     expect(await screen.findByRole('link', { name: 'Unplaced ferry' })).toBeVisible();
 
+    await userEvent.click(screen.getByRole('button', { name: 'workspace.journey' }));
     await userEvent.click(screen.getByRole('button', { name: 'workspace.needs-attention' }));
 
     const route = screen.getByRole('list', { name: 'Route' });
