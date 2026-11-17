@@ -63,10 +63,17 @@ internal struct TripsReadTests {
     internal func persistedPlacePin() async throws {
         let timestamp = "2028-01-01T00:00:00Z"
         let place = """
-            {"id":11,"name":"Recife","sourceLinks":[],"createdAt":"\(timestamp)","updatedAt":"\(timestamp)","pin":{"latitude":-8.0476,"longitude":-34.877}}
+            {
+                "id":11,"name":"Recife","sourceLinks":[],"createdAt":"\(timestamp)",
+                "updatedAt":"\(timestamp)","pin":{"latitude":-8.0476,"longitude":-34.877}
+            }
             """
         let visit = """
-            {"id":21,"tripId":1,"placeId":11,"timing":{"month":{"year":2028,"month":1}},"notes":"","sourceLinks":[],"createdAt":"\(timestamp)","updatedAt":"\(timestamp)"}
+            {
+                "id":21,"tripId":1,"placeId":11,"timing":{"month":{"year":2028,"month":1}},
+                "notes":"","sourceLinks":[],"createdAt":"\(timestamp)",
+                "updatedAt":"\(timestamp)"
+            }
             """
         let body = TripsWire.detail
             .replacingOccurrences(

@@ -3,7 +3,7 @@ import Testing
 
 @testable import FeatureTrips
 
-struct TripPlanMapProjectionTests {
+internal struct TripPlanMapProjectionTests {
     @Test func includesCanonicalAndAlternativeRoutePlacesOnceInRouteOrder() {
         let snapshot = snapshot()
         let route = TripRouteSnapshot(

@@ -53,7 +53,6 @@ internal struct TripOverviewProjection {
     internal let heading: TripOverviewHeading
     internal let now: [TripSource]
     internal let next: [TripSource]
-    internal let other: [TripSource]
     internal let chapters: [TripOverviewChapter]
 
     internal var nextFocus: [TripSource] {
@@ -76,7 +75,6 @@ internal struct TripOverviewProjection {
         let visible = Set(visibleSources.map(\.id))
         now = today.now.filter { visible.contains($0.id) }
         next = today.next.filter { visible.contains($0.id) }
-        other = today.other.filter { visible.contains($0.id) }
         chapters = tripOverviewChapters(snapshot: snapshot, visits: visibleVisits, now: now)
         let selected = tripSources(snapshot).filter { visible.contains($0.id) }
         heading = tripOverviewHeading(

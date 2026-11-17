@@ -71,7 +71,7 @@ internal struct CatalogTests {
         for experiment in Catalog.experiments where experiment.isOpen {
             #expect(
                 experiment.variants.count >= 2,
-                "\(experiment.id) has \(experiment.variants.count) variant(s); an open experiment with one answer is a screen"
+                "\(experiment.id) has fewer than two variants while open"
             )
         }
     }
