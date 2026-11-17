@@ -13,7 +13,8 @@ internal struct TripPlanMapProjection {
         let visits = Self.uniqueByID(snapshot.visits)
         let journeys = Self.uniqueByID(snapshot.journeys)
         let placeByID = Self.uniqueByID(snapshot.places)
-        let sourceGroups = [route.order.compactMap(\.source)]
+        let sourceGroups =
+            [route.order.compactMap(\.source)]
             + route.paths.filter { $0.state == .alternative }.map(\.members)
         paths = sourceGroups.map {
             Self.resolve($0, visits: visits, journeys: journeys, places: placeByID)

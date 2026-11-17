@@ -92,7 +92,6 @@ internal struct TripsTodayContent: View {
             }
         }
     }
-
 }
 
 private struct TripsTodayFocusCard: View {

@@ -2,7 +2,7 @@ import AppCore
 import Foundation
 import Testing
 
-struct TripPlacePinTests {
+internal struct TripPlacePinTests {
     @Test func acceptsGeographicBoundariesAndRoundTripsExplicitPoints() throws {
         for pin in [
             try TripPlacePin(latitude: -90, longitude: -180),

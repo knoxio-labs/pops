@@ -10,7 +10,10 @@ internal struct TripPlacePinRepositoryTests {
         let transport = StubTransport(
             status: .ok,
             json:
-                #"{"id":11,"name":"Recife","sourceLinks":[],"createdAt":"2028-01-01T00:00:00Z","updatedAt":"2028-01-02T00:00:00Z","pin":{"latitude":-8.0476,"longitude":-34.8770}}"#
+                #"""
+                {"id":11,"name":"Recife","sourceLinks":[],"createdAt":"2028-01-01T00:00:00Z",
+                "updatedAt":"2028-01-02T00:00:00Z","pin":{"latitude":-8.0476,"longitude":-34.8770}}
+                """#
         )
         let repository = try BFMTripsRepository.stubbed(transport)
         let pin = try TripPlacePin(latitude: -8.0476, longitude: -34.8770)
@@ -30,7 +33,10 @@ internal struct TripPlacePinRepositoryTests {
         let transport = StubTransport(
             status: .ok,
             json:
-                #"{"id":12,"name":"Recife","sourceLinks":[],"createdAt":"2028-01-01T00:00:00Z","updatedAt":"2028-01-02T00:00:00Z","pin":{"latitude":-8.0476,"longitude":-34.8770}}"#
+                #"""
+                {"id":12,"name":"Recife","sourceLinks":[],"createdAt":"2028-01-01T00:00:00Z",
+                "updatedAt":"2028-01-02T00:00:00Z","pin":{"latitude":-8.0476,"longitude":-34.8770}}
+                """#
         )
         let repository = try BFMTripsRepository.stubbed(transport)
         let pin = try TripPlacePin(latitude: -8.0476, longitude: -34.8770)

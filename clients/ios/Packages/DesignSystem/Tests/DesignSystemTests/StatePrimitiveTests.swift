@@ -106,3 +106,11 @@ internal struct SpacingScaleTests {
         }
     }
 }
+
+@Suite("Map canvas size")
+internal struct MapCanvasSizeTests {
+    @Test("the minimum map canvas is larger than a touch target")
+    func mapCanvasExceedsTouchTarget() {
+        #expect(PopsSize.mapCanvasHeight > PopsSize.touchTarget)
+    }
+}

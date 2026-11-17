@@ -8,6 +8,7 @@ internal struct TripsPlanMapView: View {
     internal let snapshot: TripSnapshot?
     internal let writer: (any TripPlacePinWriting)?
     @State private var camera: MapCameraPosition = .automatic
+    @ScaledMetric(relativeTo: .body) private var mapCanvasHeight = PopsSize.mapCanvasHeight
     @State private var selectedPlaceID: Int?
     @State private var searchText = ""
     @State private var results: [MKMapItem] = []
@@ -46,10 +47,13 @@ internal struct TripsPlanMapView: View {
     internal var body: some View {
         VStack(alignment: .leading, spacing: PopsSpacing.lg) {
             placePicker
-            searchField
-            if !results.isEmpty { searchResults }
+            TripsPlanMapSearchPanel(
+                searchText: $searchText, results: results, isSearching: isSearching,
+                search: search, choose: choose)
             map
-            selectedPlaceCard
+            TripsPlanMapSelectedPlaceCard(
+                place: selectedPlace, coordinatesLabel: coordinatesLabel, isSaving: isSaving,
+                canSave: writer != nil && draft != nil && !isSaving, failure: failure, save: save)
         }
         .onAppear(perform: prepare)
         .onChange(of: selectedPlaceID) { _, _ in prepareDraft() }
@@ -64,67 +68,6 @@ internal struct TripsPlanMapView: View {
         .pickerStyle(.menu)
         .frame(minHeight: PopsSize.touchTarget)
         .accessibilityIdentifier("trip-map-place-picker")
-    }
-
-    private var searchField: some View {
-        HStack(spacing: PopsSpacing.sm) {
-            Image(systemName: "magnifyingglass")
-                .foregroundStyle(Color.popsMutedForeground)
-                .accessibilityHidden(true)
-            TextField("Search Apple Maps", text: $searchText)
-                .textContentType(.location)
-                .submitLabel(.search)
-                .onSubmit(search)
-                .accessibilityIdentifier("trip-map-search")
-            Button(action: search) {
-                if isSearching {
-                    ProgressView()
-                } else {
-                    Text("Search")
-                }
-            }
-            .disabled(
-                searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSearching
-            )
-            .frame(minWidth: PopsSize.touchTarget, minHeight: PopsSize.touchTarget)
-            .accessibilityIdentifier("trip-map-search-button")
-        }
-        .padding(.horizontal, PopsSpacing.md)
-        .background(Color.popsSurface, in: RoundedRectangle(cornerRadius: PopsRadius.control))
-    }
-
-    private var searchResults: some View {
-        ScrollView(.horizontal) {
-            HStack(spacing: PopsSpacing.sm) {
-                ForEach(Array(results.enumerated()), id: \.offset) { _, item in
-                    Button {
-                        choose(item)
-                    } label: {
-                        VStack(alignment: .leading, spacing: PopsSpacing.xs) {
-                            Text(item.name ?? "Map result")
-                                .font(.popsSubheadline)
-                                .lineLimit(1)
-                            if let address = item.addressRepresentations?.fullAddress(
-                                includingRegion: false, singleLine: true)
-                            {
-                                Text(address)
-                                    .font(.popsCaption)
-                                    .foregroundStyle(Color.popsMutedForeground)
-                                    .lineLimit(1)
-                            }
-                        }
-                        .frame(minHeight: PopsSize.touchTarget, alignment: .leading)
-                        .padding(.horizontal, PopsSpacing.md)
-                        .background(
-                            Color.popsSurface,
-                            in: RoundedRectangle(cornerRadius: PopsRadius.control))
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-        }
-        .scrollIndicators(.hidden)
-        .accessibilityLabel("Apple Maps search results")
     }
 
     private var map: some View {
@@ -150,7 +93,7 @@ internal struct TripsPlanMapView: View {
                 MapCompass()
                 MapScaleView()
             }
-            .frame(minHeight: 300)
+            .frame(minHeight: mapCanvasHeight)
             .clipShape(RoundedRectangle(cornerRadius: PopsRadius.featuredCard))
             .overlay(alignment: .bottomLeading) {
                 Label("Tap map to adjust selected pin", systemImage: "hand.tap")
@@ -174,44 +117,8 @@ internal struct TripsPlanMapView: View {
         }
     }
 
-    @ViewBuilder private var selectedPlaceCard: some View {
-        if let place = selectedPlace {
-            VStack(alignment: .leading, spacing: PopsSpacing.md) {
-                HStack(alignment: .firstTextBaseline) {
-                    VStack(alignment: .leading, spacing: PopsSpacing.xs) {
-                        Text(place.name).font(.popsTitle)
-                        Text(
-                            draft == nil
-                                ? "Choose a search result or tap the map" : coordinatesLabel
-                        )
-                        .font(.popsCaption)
-                        .foregroundStyle(Color.popsMutedForeground)
-                    }
-                    Spacer(minLength: PopsSpacing.md)
-                    PopsButton(
-                        isSaving ? "Saving…" : "Save pin", prominence: .prominent, action: save
-                    )
-                    .disabled(writer == nil || draft == nil || isSaving)
-                    .accessibilityIdentifier("trip-map-save-pin")
-                }
-                if let failure {
-                    Label(failure, systemImage: "exclamationmark.triangle")
-                        .font(.popsCaption)
-                        .foregroundStyle(Color.popsTripsAttention)
-                        .accessibilityAddTraits(.isStaticText)
-                }
-            }
-            .padding(PopsSpacing.lg)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                Color.popsTripsTint, in: RoundedRectangle(cornerRadius: PopsRadius.featuredCard))
-        } else {
-            ContentUnavailableView("No route places", systemImage: "map")
-        }
-    }
-
     private var coordinatesLabel: String {
-        guard let draft else { return "No selected point" }
+        guard let draft else { return "Choose a search result or tap the map" }
         return String(format: "%.5f, %.5f", draft.latitude, draft.longitude)
     }
 
@@ -264,7 +171,7 @@ internal struct TripsPlanMapView: View {
     }
 
     private func choose(_ item: MKMapItem) {
-        let coordinate = item.location.coordinate
+        let coordinate = tripMapItemCoordinate(item)
         guard let selectedPlaceID,
             let pin = try? TripPlacePin(
                 latitude: coordinate.latitude, longitude: coordinate.longitude)
