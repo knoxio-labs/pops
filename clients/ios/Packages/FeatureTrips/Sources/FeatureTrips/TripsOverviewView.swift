@@ -28,10 +28,13 @@ internal struct TripsOverviewView: View {
                 }
                 Spacer(minLength: PopsSpacing.sm)
                 if !projection.chapters.isEmpty {
-                    Label("\(projection.chapters.count) stops", systemImage: "point.topleft.down.to.point.bottomright.curvepath")
-                        .font(.popsCaption)
-                        .foregroundStyle(Color.popsMutedForeground)
-                        .lineLimit(1)
+                    Label(
+                        "\(projection.chapters.count) stops",
+                        systemImage: "point.topleft.down.to.point.bottomright.curvepath"
+                    )
+                    .font(.popsCaption)
+                    .foregroundStyle(Color.popsMutedForeground)
+                    .lineLimit(1)
                 }
             }
             VStack(alignment: .leading, spacing: PopsSpacing.xs) {
