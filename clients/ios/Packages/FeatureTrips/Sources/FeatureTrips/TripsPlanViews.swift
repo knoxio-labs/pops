@@ -16,8 +16,9 @@ internal struct TripsPlanStopStrip: View {
                 }
                 ScrollView(.horizontal) {
                     HStack(spacing: PopsSpacing.sm) {
-                        ForEach(Array(snapshot.visits.enumerated()), id: \.element.id) {
-                            index, visit in
+                        ForEach(
+                            Array(snapshot.visits.enumerated()), id: \.element.id
+                        ) { index, visit in
                             stop(visit, index: index)
                         }
                     }
