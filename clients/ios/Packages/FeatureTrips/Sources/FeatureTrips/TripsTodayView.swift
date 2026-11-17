@@ -4,37 +4,61 @@ import SwiftUI
 
 internal struct TripsTodayView: View {
     internal let snapshot: TripSnapshot
-    @Environment(\.timeZone) private var zone
 
     internal var body: some View {
         TimelineView(.everyMinute) { context in
-            let projection = TripOverviewProjection(
-                snapshot: snapshot, at: context.date, zone: zone,
-                visibleSources: tripSources(snapshot), visibleVisits: snapshot.visits)
-            ScrollView {
-                VStack(alignment: .leading, spacing: PopsSpacing.xl) {
-                    TripsOverviewView(projection: projection, date: context.date)
-                    if let current = projection.now.first {
-                        TripsTodayFocusCard(
-                            source: current, title: "Happening now", detail: "In progress",
-                            snapshot: snapshot, zone: zone)
-                    } else if let next = projection.next.first {
-                        TripsTodayFocusCard(
-                            source: next, title: "Up next", detail: date(next),
-                            snapshot: snapshot, zone: zone)
-                    } else {
-                        breathingRoom
-                    }
-                    upcoming(projection.next, excluding: projection.now.isEmpty ? 1 : 0)
-                    TripsPlanStopStrip(snapshot: snapshot)
-                    if !projection.other.isEmpty { unscheduled(projection.other) }
-                    if !snapshot.trip.notes.isEmpty { notes }
+            TripsTodayContent(snapshot: snapshot, date: context.date)
+        }
+    }
+}
+
+internal struct TripsTodayContent: View {
+    internal let snapshot: TripSnapshot
+    internal let date: Date
+    @Environment(\.timeZone) private var zone
+
+    internal var body: some View {
+        let projection = TripOverviewProjection(
+            snapshot: snapshot, at: date, zone: zone,
+            visibleSources: tripSources(snapshot), visibleVisits: snapshot.visits)
+        return ScrollView {
+            VStack(alignment: .leading, spacing: PopsSpacing.xl) {
+                TripsOverviewView(projection: projection, date: date)
+                if !projection.now.isEmpty {
+                    currentFocus(projection.now)
+                } else if let next = projection.next.first {
+                    TripsTodayFocusCard(
+                        source: next, title: "Up next", detail: dateLabel(next),
+                        snapshot: snapshot, zone: zone)
+                } else {
+                    breathingRoom
                 }
-                .padding(.horizontal, PopsSpacing.lg)
-                .padding(.top, PopsSpacing.lg)
-                .padding(.bottom, PopsSpacing.xxl)
+                upcoming(projection.next, excluding: projection.now.isEmpty ? 1 : 0)
+                TripsPlanStopStrip(snapshot: snapshot)
+                if !projection.other.isEmpty { unscheduled(projection.other) }
+                if !snapshot.trip.notes.isEmpty { notes }
             }
-            .background(Color.popsBackground)
+            .padding(.horizontal, PopsSpacing.lg)
+            .padding(.top, PopsSpacing.lg)
+            .padding(.bottom, PopsSpacing.xxl)
+        }
+        .background(Color.popsBackground)
+    }
+
+    @ViewBuilder private func currentFocus(_ sources: [TripSource]) -> some View {
+        if let source = sources.first, sources.count == 1 {
+            TripsTodayFocusCard(
+                source: source, title: "Happening now", detail: "In progress",
+                snapshot: snapshot, zone: zone)
+        } else if !sources.isEmpty {
+            VStack(alignment: .leading, spacing: PopsSpacing.md) {
+                Text("Happening now").font(.popsTitle)
+                ForEach(sources) { source in
+                    TripsTodayFocusCard(
+                        source: source, title: "Now", detail: dateLabel(source),
+                        snapshot: snapshot, zone: zone)
+                }
+            }
         }
     }
 
@@ -88,7 +112,7 @@ internal struct TripsTodayView: View {
         }
     }
 
-    private func date(_ source: TripSource) -> String {
+    private func dateLabel(_ source: TripSource) -> String {
         guard let start = source.start else { return "Time not set" }
         return
             "\(TripClock.dateLabel(start, zone: zone)) · \(TripClock.clockLabel(start, zone: zone))"

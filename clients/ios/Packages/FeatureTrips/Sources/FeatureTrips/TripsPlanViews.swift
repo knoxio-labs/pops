@@ -38,7 +38,9 @@ internal struct TripsPlanStopStrip: View {
 
         return VStack(alignment: .leading, spacing: PopsSpacing.sm) {
             HStack(spacing: PopsSpacing.xs) {
-                Circle().fill(Color.popsAccent).frame(width: 7, height: 7)
+                Image(systemName: "mappin.circle.fill")
+                    .font(.popsCaption)
+                    .foregroundStyle(Color.popsAccent)
                 Text("STOP \(index + 1)").font(.popsSectionLabel)
                     .foregroundStyle(Color.popsAccent)
             }
@@ -51,7 +53,7 @@ internal struct TripsPlanStopStrip: View {
                 Text(duration).font(.popsCaption).foregroundStyle(Color.popsSuccess)
             }
         }
-        .frame(width: 180, alignment: .leading)
+        .containerRelativeFrame(.horizontal, count: 2, spacing: PopsSpacing.sm)
         .padding(PopsSpacing.md)
         .background {
             RoundedRectangle(cornerRadius: PopsRadius.card)

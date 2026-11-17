@@ -29,6 +29,27 @@ internal struct TripsNavigationTests {
         #expect(await reader.requested == [snapshot.trip.id])
     }
 
+    @Test("Today keeps every simultaneously active source visible")
+    internal func concurrentNowSources() throws {
+        let original = try TripNavigationTestContext.snapshot()
+        let event = TripEvent(
+            id: 99, tripId: original.trip.id, visitId: nil, name: "Parallel event",
+            intention: "Considering", arrangement: nil, purchase: nil,
+            timing: TripEventTiming(
+                start: "2026-01-02", end: "2026-01-02", startTime: "11:00",
+                endTime: "13:00", timeZone: "UTC"),
+            address: nil, reference: nil, sourceUrl: nil, ticketUrl: nil, notes: "",
+            sourceLinks: [], venueLinks: [], organiserLinks: [], documentLinks: [])
+        let snapshot = TripSnapshot(
+            trip: original.trip, places: original.places, visits: original.visits,
+            journeys: original.journeys, journeyGroups: original.journeyGroups,
+            stays: original.stays, events: [event],
+            documentAssociations: original.documentAssociations)
+        let date = try #require(TripClock.instant(local: "2026-01-02T12:00", zone: "UTC"))
+        let view = TripsTodayContent(snapshot: snapshot, date: date)
+        #expect(try view.environment(\.timeZone, .gmt).inspect().find(text: "Parallel event").string() == "Parallel event")
+    }
+
     @Test("Inbox is part of the selected Trip workspace")
     internal func inboxWorkspace() async throws {
         let snapshot = try TripNavigationTestContext.snapshot()
