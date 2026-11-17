@@ -97,6 +97,7 @@ function DecisionReferences(props: OverviewViewProps): JSX.Element | null {
           {...sourceAction(props, { kind: 'decision', id: decision.id })}
           labels={props.labels}
           statuses={[decision.selectedOptionId === null ? 'unresolved' : 'selected']}
+          compact
         >
           {decision.deadline && (
             <span className="block">{dateLabel(decision.deadline, props.locale)}</span>

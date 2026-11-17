@@ -121,6 +121,7 @@ async function stubSources(page: Page) {
       paths: [],
       missingSources: [],
     },
+    rentals: { rentals: [] },
   };
   for (const [collection, response] of Object.entries(timelineReads)) {
     await page.route(new RegExp(`/trips-api/trips/7/${collection}$`), (route) =>
@@ -252,57 +253,23 @@ for (const viewport of [
     });
     await page.goto('/trips/7/arrangements');
     await expect(page.getByRole('heading', { name: 'Coast trip', exact: true })).toBeVisible();
-    const rentalCard = page
-      .getByRole('article')
-      .filter({ has: page.getByRole('button', { name: 'Harbour cars', exact: true }) });
-    await expect(rentalCard).toHaveCount(1);
+    const rentalRow = page.locator('[data-route-kind="rental"][data-route-id="61"]');
+    await expect(rentalRow).toHaveCount(1);
     await expect(
-      page
-        .locator('[data-visit-id="31"]')
-        .getByRole('article')
-        .filter({ has: page.getByRole('button', { name: 'Harbour cars', exact: true }) })
+      rentalRow.getByRole('button', { name: 'Harbour cars', exact: true })
     ).toBeVisible();
-    await expect(rentalCard.getByText('Return · Visit #32', { exact: true })).toBeVisible();
     await expect(
       page
         .locator('[data-route-kind="journey"][data-route-id="20"]')
         .getByRole('button', { name: 'Harbour connection', exact: true })
     ).toBeVisible();
-    for (const name of ['Harbour cars', 'Cedar guesthouse', 'Harbour connection']) {
-      const row = page
-        .getByRole('article')
-        .filter({ has: page.getByRole('button', { name, exact: true }) });
-      await expect(row).toHaveAttribute('data-constraint', 'soft');
-      await expect(row.getByRole('button', { name, exact: true })).toHaveCSS(
-        'border-left-width',
-        '0px'
-      );
-    }
-    const workspace = page.locator('[data-workspace-layout]');
-    await expect(workspace).toHaveAttribute('data-workspace-layout', 'full');
-    const layout = await workspace.evaluate((element) => {
-      const parent = element.parentElement;
-      if (!parent) throw new Error('Expected the shell workspace host');
-      const styles = getComputedStyle(parent);
-      const available =
-        parent.clientWidth -
-        Number.parseFloat(styles.paddingLeft) -
-        Number.parseFloat(styles.paddingRight);
-      return {
-        actual: element.getBoundingClientRect().width,
-        expected: available,
-        columns: getComputedStyle(element).gridTemplateColumns.split(' ').length,
-        content: element.querySelector('main')?.getBoundingClientRect().width,
-        inner:
-          element.clientWidth -
-          Number.parseFloat(getComputedStyle(element).paddingLeft) -
-          Number.parseFloat(getComputedStyle(element).paddingRight),
-      };
-    });
-    expect(layout.actual).toBeCloseTo(layout.expected, 0);
-    expect(layout.columns).toBe(1);
-    expect(layout.content).toBeCloseTo(layout.inner, 0);
-    const open = rentalCard.getByRole('button');
+    await expect(rentalRow.getByText('Reserved', { exact: true })).toHaveAttribute(
+      'data-variant',
+      'outline'
+    );
+    const routeRegion = page.getByRole('region', { name: 'Route', exact: true });
+    await expect(routeRegion.getByRole('table', { name: 'Sheet', exact: true })).toBeVisible();
+    const open = rentalRow.getByRole('button', { name: 'Harbour cars', exact: true });
     const bounds = await open.boundingBox();
     expect(bounds?.height).toBeGreaterThanOrEqual(44);
     expect(bounds?.width).toBeGreaterThanOrEqual(44);
@@ -314,6 +281,8 @@ for (const viewport of [
     await open.click();
     await expect(rentalEditor).toBeVisible();
     await expect(page.getByLabel('Provider', { exact: true })).toHaveValue('Harbour cars');
+    await expect(page.getByLabel('Pickup', { exact: true })).toHaveValue('31');
+    await expect(page.getByLabel('Return', { exact: true })).toHaveValue('32');
     await expect(page.getByRole('region', { name: 'Add files', exact: true })).toHaveCount(0);
     await page.getByLabel('Provider', { exact: true }).fill('Updated provider');
     await page.getByRole('button', { name: 'Save changes', exact: true }).click();
@@ -344,7 +313,8 @@ for (const viewport of [
     await page.getByRole('button', { name: 'Close', exact: true }).click();
     await expect(rentalEditor).toHaveCount(0);
     await expect(page.getByRole('dialog')).toHaveCount(0);
-    await expect(workspace).toHaveAttribute('data-workspace-layout', 'full');
+    await expect(routeRegion).toBeVisible();
+    await page.getByRole('tab', { name: 'Journey', exact: true }).click();
     const gap = page
       .locator('[data-visit-id="31"]')
       .getByRole('button', { name: /Accommodation not arranged/ });

@@ -23,6 +23,7 @@ const noStatuses: (string | null)[] = [];
 interface SourceCardProps {
   kind: OverviewKind;
   title: string;
+  compact?: boolean;
   href?: string;
   onOpen?: () => void;
   purchased?: boolean;
@@ -80,6 +81,23 @@ const purchaseBadges: Record<OverviewKind, string> = {
   rental: 'bg-trip-transport text-trip-on-solid border-trip-transport',
 };
 
+const cardLayouts = {
+  compact: {
+    container: 'grid min-w-0 grid-cols-1 gap-3',
+    when: 'min-w-0 break-words text-xs font-medium text-muted-foreground',
+    title: 'flex min-w-0 items-start gap-3',
+    statuses: 'flex flex-wrap gap-1.5',
+    withWhom: 'min-w-0 break-words text-xs text-muted-foreground',
+  },
+  table: {
+    container: 'grid min-w-0 grid-cols-1 gap-3 lg:grid-cols-12 lg:items-start',
+    when: 'min-w-0 break-words text-xs font-medium text-muted-foreground lg:col-span-2 lg:pt-1',
+    title: 'flex min-w-0 items-start gap-3 lg:col-span-4',
+    statuses: 'flex flex-wrap gap-1.5 lg:col-span-2',
+    withWhom: 'min-w-0 break-words text-xs text-muted-foreground lg:col-span-2 lg:pt-1',
+  },
+} as const;
+
 /** A source-backed workspace row; only an explicit purchase receives hard constraint styling. */
 export function SourceCard(props: SourceCardProps): JSX.Element {
   const { title, href, onOpen, purchased = false, kind } = props;
@@ -109,6 +127,7 @@ export function SourceCard(props: SourceCardProps): JSX.Element {
 function CardContent({
   kind,
   title,
+  compact = false,
   href,
   statuses = noStatuses,
   labels,
@@ -118,12 +137,11 @@ function CardContent({
   documents,
 }: SourceCardProps): JSX.Element {
   const Icon = icons[kind];
+  const layout = compact ? cardLayouts.compact : cardLayouts.table;
   return (
-    <span className="grid min-w-0 grid-cols-1 gap-3 lg:grid-cols-12 lg:items-start">
-      <span className="min-w-0 break-words text-xs font-medium text-muted-foreground lg:col-span-2 lg:pt-1">
-        {when ?? '—'}
-      </span>
-      <span className="flex min-w-0 items-start gap-3 lg:col-span-4">
+    <span className={layout.container}>
+      <span className={layout.when}>{when ?? '—'}</span>
+      <span className={layout.title}>
         <span
           className={cn('flex size-9 shrink-0 items-center justify-center rounded-lg', tones[kind])}
         >
@@ -141,24 +159,38 @@ function CardContent({
           <ArrowUpRight className="size-4 shrink-0 text-muted-foreground lg:hidden" aria-hidden />
         )}
       </span>
-      <span className="flex flex-wrap gap-1.5 lg:col-span-2">
-        {!statuses.some(Boolean) && <span className="text-xs text-muted-foreground">—</span>}
-        {statuses
-          .filter((value) => value !== null)
-          .map((value) => (
-            <Badge
-              key={value}
-              variant={value === 'Purchased' ? 'default' : 'outline'}
-              className={value === 'Purchased' ? purchaseBadges[kind] : undefined}
-            >
-              {labels.status(value)}
-            </Badge>
-          ))}
-      </span>
-      <span className="min-w-0 break-words text-xs text-muted-foreground lg:col-span-2 lg:pt-1">
-        {withWhom ?? '—'}
-      </span>
+      <SourceStatuses statuses={statuses} kind={kind} labels={labels} className={layout.statuses} />
+      <span className={layout.withWhom}>{withWhom ?? '—'}</span>
       <OverviewOriginals documents={documents} labels={labels} />
+    </span>
+  );
+}
+
+function SourceStatuses({
+  statuses,
+  kind,
+  labels,
+  className,
+}: {
+  statuses: (string | null)[];
+  kind: OverviewKind;
+  labels: OverviewLabels;
+  className: string;
+}): JSX.Element {
+  return (
+    <span className={className}>
+      {!statuses.some(Boolean) && <span className="text-xs text-muted-foreground">—</span>}
+      {statuses
+        .filter((value) => value !== null)
+        .map((value) => (
+          <Badge
+            key={value}
+            variant={value === 'Purchased' ? 'default' : 'outline'}
+            className={value === 'Purchased' ? purchaseBadges[kind] : undefined}
+          >
+            {labels.status(value)}
+          </Badge>
+        ))}
     </span>
   );
 }
