@@ -32,6 +32,10 @@ it('shows Reserved coverage without a Purchased assertion and preserves a separa
   });
   mountOverview(responses);
   const coverage = await screen.findByRole('region', { name: 'Where you sleep' });
+  expect(within(coverage).getByText('May 2029')).toBeVisible();
+  expect(
+    within(coverage).getByRole('img', { name: /Wellington.*Covered.*Needs a stay/u })
+  ).toBeInTheDocument();
   expect(await within(coverage).findByText('Needs a stay')).toBeVisible();
   expect(await within(coverage).findAllByText('5 open nights')).not.toHaveLength(0);
   expect(within(coverage).queryByText('Purchased')).not.toBeInTheDocument();
@@ -39,6 +43,32 @@ it('shows Reserved coverage without a Purchased assertion and preserves a separa
   const stayRow = stay.closest('tr');
   if (!(stayRow instanceof HTMLTableRowElement)) throw new Error('Expected the stay route row');
   expect(within(stayRow).getByText('Reserved')).toBeVisible();
+});
+
+it('keeps the month axis in calendar order across a year boundary', async () => {
+  const responses = overviewResponses();
+  responses.set('/trips/7/visits', {
+    visits: sourceVisits.map((visit) => ({
+      ...visit,
+      timing: { arrival: '2029-12-30', departure: '2030-01-02' },
+    })),
+  });
+  responses.set('/trips/7/stays', {
+    stays: [
+      sourceStay({
+        timing: { arrival: '2029-12-30', departure: '2030-01-01' },
+        status: 'Reserved',
+      }),
+    ],
+  });
+  mountOverview(responses);
+  const coverage = await screen.findByRole('region', { name: 'Where you sleep' });
+  const axis = within(coverage).getByRole('list', { name: 'Dec 2029 – Jan 2030' });
+  expect(
+    within(axis)
+      .getAllByRole('listitem')
+      .map((month) => month.textContent)
+  ).toEqual(['Dec 2029', 'Jan 2030']);
 });
 
 it('does not count a booked and purchased event as overnight coverage', async () => {
