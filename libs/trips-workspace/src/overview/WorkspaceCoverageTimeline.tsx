@@ -1,7 +1,7 @@
 import { cn } from '@pops/ui';
 
-import { dateRange } from './model';
 import { sourceAction } from './source-action';
+import { coverageIntervalLabel, coverageLabelTone } from './workspace-coverage-presentation';
 import { CoverageLegend, CoverageMonthAxis, CoverageTrack } from './WorkspaceCoverageChart';
 
 import type { JSX } from 'react';
@@ -47,7 +47,7 @@ function CoverageVisit(
     state: period.coverage.state,
   }));
   const descriptions = intervals.map((interval) =>
-    intervalDescription(interval, props.labels, props.locale)
+    coverageIntervalLabel(interval, props.labels, props.locale)
   );
   const rowLabel = `${title} · ${descriptions.length ? descriptions.join(' · ') : props.labels.sleepPlan.datesUndecided}`;
   const className =
@@ -83,8 +83,7 @@ function CoveragePeriodLabels(
             key={`${interval.arrival}:${interval.departure}`}
             className={cn('rounded-md px-1.5 py-0.5', coverageLabelTone(interval.state))}
           >
-            {dateRange(interval.arrival, interval.departure, props.locale)} ·{' '}
-            {coverageLabel(interval.state, props.labels)}
+            {coverageIntervalLabel(interval, props.labels, props.locale)}
           </span>
         ))
       ) : (
@@ -92,27 +91,4 @@ function CoveragePeriodLabels(
       )}
     </span>
   );
-}
-
-function intervalDescription(
-  interval: CoverageInterval,
-  labels: OverviewViewProps['labels'],
-  locale: string
-): string {
-  return `${dateRange(interval.arrival, interval.departure, locale)} · ${coverageLabel(interval.state, labels)}`;
-}
-
-function coverageLabel(
-  state: AccommodationCoverage['state'],
-  labels: OverviewViewProps['labels']
-): string {
-  if (state === 'covered') return labels.sleepPlan.covered;
-  if (state === 'missing') return labels.sleepPlan.open;
-  return labels.sleepPlan.unknown;
-}
-
-function coverageLabelTone(state: AccommodationCoverage['state']): string {
-  if (state === 'covered') return 'bg-trip-stay-soft text-trip-stay';
-  if (state === 'missing') return 'bg-trip-attention-soft text-trip-attention';
-  return 'bg-trip-sunken text-trip-muted';
 }

@@ -63,8 +63,12 @@ it('keeps the month axis in calendar order across a year boundary', async () => 
   });
   mountOverview(responses);
   const coverage = await screen.findByRole('region', { name: 'Where you sleep' });
-  expect(within(coverage).getByText('Dec 2029')).toBeVisible();
-  expect(within(coverage).getByText('Jan 2030')).toBeVisible();
+  const axis = within(coverage).getByRole('list', { name: 'Dec 2029 – Jan 2030' });
+  expect(
+    within(axis)
+      .getAllByRole('listitem')
+      .map((month) => month.textContent)
+  ).toEqual(['Dec 2029', 'Jan 2030']);
 });
 
 it('does not count a booked and purchased event as overnight coverage', async () => {

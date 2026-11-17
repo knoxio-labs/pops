@@ -71,7 +71,6 @@ export function coverageScale(
     .at(-1);
   if (!start || !end) return undefined;
   const days = calendarDaysBetween(start, end);
-  if (days <= 0) return undefined;
   return { start, end, days, months: coverageMonths(start, end, locale) };
 }
 
@@ -90,7 +89,7 @@ function coverageMonths(start: string, end: string, locale: string): CoverageMon
     const monthStart = cursor.toISOString().slice(0, 10);
     const next = new Date(cursor);
     next.setUTCMonth(cursor.getUTCMonth() + 1, 1);
-    const nextMonth = next.toISOString().slice(0, 10);
+    const nextMonth = next.getTime() > endTime ? end : next.toISOString().slice(0, 10);
     const clippedStart = monthStart < start ? start : monthStart;
     const clippedEnd = nextMonth > end ? end : nextMonth;
     const days = calendarDaysBetween(clippedStart, clippedEnd);

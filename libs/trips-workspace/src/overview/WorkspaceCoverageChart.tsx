@@ -1,12 +1,15 @@
 import { cn } from '@pops/ui';
 
-import { dateRange } from './model';
 import { isDatedPeriod } from './workspace-coverage-model';
+import {
+  coverageIntervalLabel,
+  coverageLabel,
+  coverageTrackTone,
+} from './workspace-coverage-presentation';
 import { calendarDaysBetween } from './workspace-date';
 
 import type { JSX } from 'react';
 
-import type { AccommodationCoverage } from '../visit/coverage';
 import type { OverviewViewProps } from './types';
 import type { CoverageRecord, CoverageScale } from './workspace-coverage-model';
 
@@ -37,9 +40,12 @@ export function CoverageTrack(
   const intervals = props.record.coverage.periods.filter(isDatedPeriod);
   const accessibleText = intervals.length
     ? intervals
-        .map(
-          (period) =>
-            `${dateRange(period.arrival, period.departure, props.locale)} · ${coverageLabel(period.coverage.state, props.labels)}`
+        .map((period) =>
+          coverageIntervalLabel(
+            { arrival: period.arrival, departure: period.departure, state: period.coverage.state },
+            props.labels,
+            props.locale
+          )
         )
         .join(' · ')
     : props.labels.sleepPlan.datesUndecided;
@@ -88,19 +94,4 @@ export function CoverageLegend(
       ))}
     </ul>
   );
-}
-
-function coverageLabel(
-  state: AccommodationCoverage['state'],
-  labels: OverviewViewProps['labels']
-): string {
-  if (state === 'covered') return labels.sleepPlan.covered;
-  if (state === 'missing') return labels.sleepPlan.open;
-  return labels.sleepPlan.unknown;
-}
-
-function coverageTrackTone(state: AccommodationCoverage['state']): string {
-  if (state === 'covered') return 'bg-trip-stay';
-  if (state === 'missing') return 'bg-trip-attention';
-  return 'border-y border-dashed border-trip-line bg-trip-sunken';
 }
