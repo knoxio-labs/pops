@@ -216,6 +216,7 @@ for (const viewport of [
     });
     expect(headerLayout.titleHeight).toBeLessThanOrEqual(headerLayout.lineHeight + 1);
     expect(headerLayout.controlsFit).toBe(true);
+    await page.getByRole('button', { name: 'Journey', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Wellington', exact: true })).toHaveCount(2);
     await expect(page.getByRole('button', { name: 'Wellington', exact: true })).toHaveCount(2);
     for (const [index, id] of [31, 32].entries()) {
@@ -233,6 +234,7 @@ for (const viewport of [
       '/trips/7/documents'
     );
     await expect(page.getByRole('link', { name: 'Calendar', exact: true })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Sheet', exact: true }).click();
     const table = page.getByRole('table', { name: 'Sheet', exact: true });
     const eventRow = table.locator('[data-route-kind="event"][data-route-id="61"]');
     await expect(eventRow.getByText('Booked', { exact: true })).toHaveAttribute(
@@ -318,7 +320,7 @@ for (const viewport of [
     await expect(eventsSource.getByText('trips.events.unavailable', { exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Cedar guesthouse', exact: true })).toBeVisible();
     await expect(page.getByText('No route entries.', { exact: true })).toHaveCount(0);
-    await page.getByRole('tab', { name: 'Journey', exact: true }).click();
+    await page.getByRole('button', { name: 'Journey', exact: true }).click();
     const gapDiagnostics = [31, 32].map((id) =>
       page.locator(`[data-visit-id="${id}"]`).getByText('trips.events.unavailable', { exact: true })
     );

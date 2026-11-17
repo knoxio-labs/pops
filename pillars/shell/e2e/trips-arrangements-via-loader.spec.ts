@@ -314,7 +314,7 @@ for (const viewport of [
     await expect(rentalEditor).toHaveCount(0);
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(routeRegion).toBeVisible();
-    await page.getByRole('tab', { name: 'Journey', exact: true }).click();
+    await page.getByRole('button', { name: 'Journey', exact: true }).click();
     const gap = page
       .locator('[data-visit-id="31"]')
       .getByRole('button', { name: /Accommodation not arranged/ });
