@@ -25,11 +25,11 @@ internal struct TripsTabSelectionTests {
         #expect(model.inbox.selectedID == 987)
     }
 
-    @Test("choosing a trip in Plan, Bookings, or Documents preserves the active tab")
+    @Test("choosing a trip preserves the active tab")
     internal func selectedTab() async throws {
         let snapshot = try TripTestSources.snapshot()
         let model = TripsModel(repository: TabSelectionReader(snapshot: snapshot))
-        for tab in [TripsTab.plan, .bookings, .documents] {
+        for tab in [TripsTab.today, .plan, .inbox, .search] {
             model.tab = tab
             await model.select(snapshot.trip.id)
             #expect(model.tab == tab)
@@ -49,7 +49,7 @@ internal struct TripsTabSelectionTests {
         #expect(model.inbox.selectedID == snapshot.trip.id)
         #expect(model.inbox.state == .loaded(TripCaptureWorkspace(captures: [])))
         #expect(await reader.requestedCaptures == [snapshot.trip.id])
-        for tab in [TripsTab.plan, .bookings, .documents, .search, .today] {
+        for tab in [TripsTab.plan, .inbox, .search, .today] {
             model.tab = tab
             #expect(model.selectedID == snapshot.trip.id)
             #expect(model.inbox.selectedID == snapshot.trip.id)

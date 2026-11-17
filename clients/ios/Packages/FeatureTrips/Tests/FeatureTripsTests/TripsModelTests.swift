@@ -20,7 +20,7 @@ internal struct TripsModelTests {
         await model.select(snapshot.trip.id)
         #expect(model.snapshot == snapshot)
         #expect(await repository.ids == [snapshot.trip.id])
-        model.tab = .bookings
+        model.tab = .inbox
         model.openTrip(snapshot.trip.id)
         await model.navigationTask?.value
         #expect(model.tab == .today)
@@ -44,9 +44,7 @@ internal struct TripsModelTests {
         #expect(model.trips == [snapshot.trip])
     }
 
-    @Test(
-        "an injected saved selection restores its exact Timeline, while a fresh selection stays explicit"
-    )
+    @Test("an injected saved selection restores its exact Today state, while a fresh selection stays explicit")
     internal func restoreSelection() async throws {
         let snapshot = try TripTestSources.snapshot()
         let repository = TripTestRepository(snapshot: snapshot)
@@ -71,24 +69,6 @@ internal struct TripsModelTests {
         #expect(model.selectedID == nil)
         #expect(model.snapshot == nil)
         #expect(selection.accepted.isEmpty)
-    }
-}
-
-@Suite("Trip booking sections")
-internal struct TripsBookingGroupsTests {
-    @Test("groups every recorded booking once and retains alternatives")
-    internal func groupRecordedSources() throws {
-        let snapshot = try TripTestSources.snapshot()
-        let groups = tripBookingGroups(snapshot)
-        let ids = groups.flatMap { $0.sources.map(\.id) }
-        let alternatives = groups.first { $0.kind == .transport }?.sources.filter {
-            $0.isAlternative(in: snapshot)
-        }
-
-        #expect(groups.map(\.kind) == [.transport, .stays])
-        #expect(Set(ids) == Set(allTripSources(snapshot).map(\.id)))
-        #expect(ids.count == Set(ids).count)
-        #expect(alternatives?.map(\.id) == ["journey-2"])
     }
 }
 

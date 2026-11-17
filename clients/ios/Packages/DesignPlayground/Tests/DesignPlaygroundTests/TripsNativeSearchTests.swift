@@ -8,7 +8,7 @@ import ViewInspector
 internal struct TripsNativeSearchTests {
     @Test(
         "cancelling search returns to its originating destination",
-        arguments: [TripsTab.today, .plan, .bookings, .documents])
+        arguments: [TripsTab.today, .plan, .inbox])
     internal func cancelSearch(origin: TripsTab) async throws {
         let context = try await TripNavigationTestContext.make()
         context.model.tab = origin
@@ -17,9 +17,9 @@ internal struct TripsNativeSearchTests {
         let search = try context.root.inspect().find(TripsSearchView.self).actualView()
         search.dismissSearch()
         #expect(context.model.tab == origin)
-        context.model.tab = .documents
+        context.model.tab = .inbox
         search.dismissSearch()
-        #expect(context.model.tab == .documents)
+        #expect(context.model.tab == .inbox)
     }
 
     @Test("the native search field and results share a query across tab changes")

@@ -8,10 +8,12 @@ internal struct TripsTodayView: View {
 
     internal var body: some View {
         TimelineView(.everyMinute) { context in
-            let projection = TripTodayProjection(snapshot: snapshot, at: context.date)
+            let projection = TripOverviewProjection(
+                snapshot: snapshot, at: context.date, zone: zone,
+                visibleSources: tripSources(snapshot), visibleVisits: snapshot.visits)
             ScrollView {
                 VStack(alignment: .leading, spacing: PopsSpacing.xl) {
-                    header(context.date)
+                    TripsOverviewView(projection: projection, date: context.date)
                     if let current = projection.now.first {
                         TripsTodayFocusCard(
                             source: current, title: "Happening now", detail: "In progress",
@@ -34,21 +36,6 @@ internal struct TripsTodayView: View {
             }
             .background(Color.popsBackground)
         }
-    }
-
-    private func header(_ instant: Date) -> some View {
-        VStack(alignment: .leading, spacing: PopsSpacing.sm) {
-            Text(instant.formatted(.dateTime.weekday(.wide).month(.wide).day()))
-                .font(.popsSectionLabel).foregroundStyle(Color.popsAccent)
-            Text(tripName(snapshot.trip)).font(.popsLargeTitle)
-                .foregroundStyle(Color.popsForeground)
-                .fixedSize(horizontal: false, vertical: true)
-            if !snapshot.trip.destination.isEmpty {
-                Text(snapshot.trip.destination).font(.popsSubheadline)
-                    .foregroundStyle(Color.popsMutedForeground)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var breathingRoom: some View {

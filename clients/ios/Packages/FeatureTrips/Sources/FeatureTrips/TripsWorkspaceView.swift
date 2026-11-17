@@ -5,7 +5,6 @@ import SwiftUI
 internal struct TripsWorkspaceView: View {
     @Bindable internal var model: TripsModel
     internal let tab: TripsTab
-    internal let documentLibrary: any DocumentsReading
     internal var capture: (() -> Void)?
     @State private var planLens = TripsPlanLens.line
     @State private var calendarSelection = TripsPlanCalendarSelection()
@@ -15,8 +14,7 @@ internal struct TripsWorkspaceView: View {
             switch tab {
             case .today: today
             case .plan: plan
-            case .bookings: bookings
-            case .documents: documents
+            case .inbox: inbox
             case .search: EmptyView()
             }
         }
@@ -33,7 +31,7 @@ internal struct TripsWorkspaceView: View {
         } else if let failure = model.failure {
             TripsFailureView(failure: failure) { Task { await model.load() } }
         } else if let snapshot = model.snapshot {
-            TripsTimelineView(snapshot: snapshot)
+            TripsTodayView(snapshot: snapshot)
         } else {
             ContentUnavailableView("Trip details unavailable", systemImage: "map")
         }
@@ -78,27 +76,11 @@ internal struct TripsWorkspaceView: View {
         }
     }
 
-    @ViewBuilder private var bookings: some View {
-        if model.loading {
-            LoadingStateView()
-        } else if let failure = model.failure {
-            TripsFailureView(failure: failure) { Task { await model.load() } }
-        } else if let snapshot = model.snapshot {
-            TripsBookingsView(snapshot: snapshot)
-        } else {
-            ContentUnavailableView("Bookings unavailable", systemImage: "ticket")
+    private var inbox: some View {
+        ScrollView {
+            TripsInboxView(model: model.inbox, capture: capture)
+                .padding(PopsSpacing.xl)
         }
-    }
-
-    @ViewBuilder private var documents: some View {
-        if model.loading {
-            LoadingStateView()
-        } else if let failure = model.failure {
-            TripsFailureView(failure: failure) { Task { await model.load() } }
-        } else if let snapshot = model.snapshot {
-            TripsDocumentsView(snapshot: snapshot, repository: documentLibrary)
-        } else {
-            ContentUnavailableView("Documents unavailable", systemImage: "doc.text")
-        }
+        .background(Color.popsBackground)
     }
 }

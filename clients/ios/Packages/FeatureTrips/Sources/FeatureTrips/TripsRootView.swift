@@ -2,8 +2,8 @@ import AppCore
 import DesignSystem
 import SwiftUI
 
-/// Native Today, Plan, Bookings, Documents and Search destinations sharing one explicit Trip selection.
-/// Documents open only after an authenticated download; capture writes retain their operation identities.
+/// Native Today, Plan, Inbox and Search destinations sharing one explicit Trip selection.
+/// Documents stay available as a trip shortcut, and capture writes retain their operation identities.
 public struct TripsRootView: View {
     @State private var model: TripsModel
     private let documents: any DocumentsReading
@@ -52,11 +52,8 @@ public struct TripsRootView: View {
             Tab("Plan", systemImage: "map", value: TripsTab.plan) {
                 stack(.plan)
             }
-            Tab("Bookings", systemImage: "ticket", value: TripsTab.bookings) {
-                stack(.bookings)
-            }
-            Tab("Documents", systemImage: "doc.text", value: TripsTab.documents) {
-                stack(.documents)
+            Tab("Inbox", systemImage: "tray", value: TripsTab.inbox) {
+                stack(.inbox)
             }
             Tab(
                 "Search", systemImage: "magnifyingglass", value: TripsTab.search,
@@ -101,4 +98,4 @@ public struct TripsRootView: View {
     }
 }
 
-internal enum TripsTab: Hashable { case today, plan, bookings, documents, search }
+internal enum TripsTab: Hashable { case today, plan, inbox, search }

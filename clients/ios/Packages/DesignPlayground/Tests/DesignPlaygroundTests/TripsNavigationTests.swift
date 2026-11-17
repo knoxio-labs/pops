@@ -8,29 +8,36 @@ import ViewInspector
 @Suite("One Trip workspace")
 @MainActor
 internal struct TripsNavigationTests {
-    @Test("Today, Plan, Bookings, Documents and native Search are navigation tabs")
+    @Test("Today, Plan, Inbox and native Search are navigation tabs")
     internal func appDestinations() throws {
         let reader = NavigationReader()
         let view = TripsRootView(repository: reader, documents: reader)
         let tabs = try view.inspect().find(ViewType.TabView.self)
-        #expect(tabs.count == 5)
-        let stack = try view.inspect().find(TripsSelectedTripStack.self).actualView()
-        let inbox = try stack.inspect().find(ViewType.NavigationLink.self)
-            .view(TripsInboxDestination.self).actualView()
-        #expect(inbox.model === stack.model.inbox)
+        #expect(tabs.count == 4)
     }
 
-    @Test("the selected snapshot is the one Timeline and retains its exact reader identity")
+    @Test("Today renders the selected snapshot and retains its exact reader identity")
     internal func selectedTimeline() async throws {
         let snapshot = try TripNavigationTestContext.snapshot()
         let reader = NavigationReader(snapshot: snapshot)
         let model = TripsModel(repository: reader)
         await model.select(snapshot.trip.id)
         let root = TripsRootView(model: model, documents: reader)
-        let timeline = try root.inspect().find(TripsTimelineView.self).actualView()
-        #expect(timeline.snapshot == snapshot)
+        let today = try root.inspect().find(TripsTodayView.self).actualView()
+        #expect(today.snapshot == snapshot)
         #expect(try root.inspect().findAll(ViewType.TabView.self).count == 1)
         #expect(await reader.requested == [snapshot.trip.id])
+    }
+
+    @Test("Inbox is part of the selected Trip workspace")
+    internal func inboxWorkspace() async throws {
+        let snapshot = try TripNavigationTestContext.snapshot()
+        let reader = NavigationReader(snapshot: snapshot)
+        let model = TripsModel(repository: reader)
+        await model.select(snapshot.trip.id)
+        model.tab = .inbox
+        let view = TripsWorkspaceView(model: model, tab: .inbox)
+        #expect(try view.inspect().find(TripsInboxView.self).actualView().model === model.inbox)
     }
 
     @Test("source destinations belong only to the active tab and switching clears detail")
@@ -44,12 +51,12 @@ internal struct TripsNavigationTests {
             model: model, tab: .today, documents: reader, capture: nil)
         let plan = TripsSelectedTripStack(
             model: model, tab: .plan, documents: reader, capture: nil)
-        let bookings = TripsSelectedTripStack(
-            model: model, tab: .bookings, documents: reader, capture: nil)
+        let inbox = TripsSelectedTripStack(
+            model: model, tab: .inbox, documents: reader, capture: nil)
         model.source = source
         #expect(today.sourceSelection.wrappedValue == source)
         #expect(plan.sourceSelection.wrappedValue == nil)
-        #expect(bookings.sourceSelection.wrappedValue == nil)
+        #expect(inbox.sourceSelection.wrappedValue == nil)
         plan.sourceSelection.wrappedValue = nil
         #expect(model.source == source)
         model.tab = .plan
@@ -59,7 +66,7 @@ internal struct TripsNavigationTests {
         #expect(today.sourceSelection.wrappedValue == nil)
         today.sourceSelection.wrappedValue = nil
         #expect(model.source == source)
-        model.tab = .bookings
+        model.tab = .inbox
         #expect(model.source == nil)
         #expect(model.selectedID == snapshot.trip.id)
         #expect(model.snapshot == snapshot)

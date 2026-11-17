@@ -13,7 +13,7 @@ internal struct TripsSelectedTripStack: View {
             Group {
                 if model.selectedID != nil {
                     TripsWorkspaceView(
-                        model: model, tab: tab, documentLibrary: documents, capture: capture)
+                        model: model, tab: tab, capture: capture)
                 } else if model.loading {
                     LoadingStateView()
                 } else if let failure = model.failure {
@@ -27,17 +27,9 @@ internal struct TripsSelectedTripStack: View {
             .toolbar {
                 ToolbarItem(placement: .principal) { tripMenu }
                 ToolbarItem(placement: .primaryAction) {
-                    if let capture {
+                    if let capture, tab != .inbox {
                         Button("Capture", systemImage: "plus", action: capture)
                     }
-                }
-                ToolbarItem(placement: .primaryAction) {
-                    NavigationLink {
-                        TripsInboxDestination(model: model.inbox, capture: capture)
-                    } label: {
-                        Image(systemName: "tray")
-                    }
-                    .accessibilityLabel("Inbox")
                 }
                 ToolbarItem(placement: .primaryAction) {
                     if let snapshot = model.snapshot {
@@ -101,19 +93,5 @@ internal struct TripsSelectedTripStack: View {
         }
         .accessibilityLabel("Choose Trip")
         .accessibilityValue(selectedTrip.map(tripName) ?? "No selected Trip")
-    }
-}
-
-internal struct TripsInboxDestination: View {
-    internal let model: TripsInboxModel
-    internal let capture: (() -> Void)?
-
-    internal var body: some View {
-        ScrollView {
-            TripsInboxView(model: model, capture: capture)
-                .padding(PopsSpacing.xl)
-        }
-        .navigationTitle("Inbox")
-        .navigationBarTitleDisplayMode(.inline)
     }
 }
