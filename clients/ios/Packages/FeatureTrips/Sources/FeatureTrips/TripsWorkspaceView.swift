@@ -10,6 +10,16 @@ internal struct TripsWorkspaceView: View {
     @State private var planLens = TripsPlanLens.line
     @State private var calendarSelection = TripsPlanCalendarSelection()
 
+    internal init(
+        model: TripsModel, tab: TripsTab, placePinWriter: (any TripPlacePinWriting)? = nil,
+        capture: (() -> Void)? = nil
+    ) {
+        self.model = model
+        self.tab = tab
+        self.placePinWriter = placePinWriter
+        self.capture = capture
+    }
+
     internal var body: some View {
         Group {
             switch tab {

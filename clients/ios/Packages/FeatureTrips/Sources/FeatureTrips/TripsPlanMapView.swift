@@ -25,7 +25,7 @@ internal struct TripsPlanMapView: View {
         TripPlanMapProjection(route: route, snapshot: snapshot)
     }
 
-    private var mapSegments: [[TripPlacePin]] {
+    private var mapSegments: [TripPlanMapSegment] {
         projection.pinnedSegments(using: pin(for:))
     }
 
@@ -101,10 +101,12 @@ internal struct TripsPlanMapView: View {
                         choose(item)
                     } label: {
                         VStack(alignment: .leading, spacing: PopsSpacing.xs) {
-                            Text(item.name ?? item.placemark.title ?? "Map result")
+                            Text(item.name ?? "Map result")
                                 .font(.popsSubheadline)
                                 .lineLimit(1)
-                            if let address = item.placemark.title {
+                            if let address = item.addressRepresentations?.fullAddress(
+                                includingRegion: false, singleLine: true)
+                            {
                                 Text(address)
                                     .font(.popsCaption)
                                     .foregroundStyle(Color.popsMutedForeground)
@@ -262,7 +264,7 @@ internal struct TripsPlanMapView: View {
     }
 
     private func choose(_ item: MKMapItem) {
-        let coordinate = item.placemark.coordinate
+        let coordinate = item.location.coordinate
         guard let selectedPlaceID,
             let pin = try? TripPlacePin(
                 latitude: coordinate.latitude, longitude: coordinate.longitude)
