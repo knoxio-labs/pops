@@ -50,6 +50,7 @@ export function captureReadSource(title: string): CaptureSource {
     memberships: [],
     events: [],
     journeys: [],
+    journeyLegSets: [],
     stays: [],
   };
 }

@@ -30,11 +30,11 @@ export function OverviewVisit({
       <p className="min-w-0 break-words pl-10 text-xs font-medium text-muted-foreground sm:pl-0 sm:pt-3 sm:text-right">
         {visitTiming(visit, props.locale, props.labels.status)}
       </p>
-      <div className="relative min-w-0 border-l border-dotted border-border pl-5 sm:col-span-3">
-        <span className="absolute -left-4 top-2 flex size-8 items-center justify-center rounded-full border border-border bg-background">
+      <div className="relative min-w-0 border-l border-border/70 pl-5 sm:col-span-3">
+        <span className="absolute -left-4 top-2 flex size-8 items-center justify-center rounded-full border border-border bg-background shadow-sm">
           <MapPin className="size-4 text-app-accent" aria-hidden />
         </span>
-        <div className="min-w-0 space-y-3 rounded-lg border border-dashed border-border p-3">
+        <div className="min-w-0 space-y-3 rounded-xl border bg-card p-4 shadow-sm sm:p-5">
           <VisitTitle {...props} id={visit.id} title={title} />
           {visit.notes && (
             <p className="whitespace-pre-wrap break-words text-sm text-muted-foreground">

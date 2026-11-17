@@ -67,7 +67,7 @@ async function withGateway(run: (client: Client) => Promise<void>): Promise<void
 it('lists all five Contacts tools through the actual MCP server with exact scopes and annotations', async () => {
   await withGateway(async (client) => {
     const listed = await client.listTools();
-    expect(listed.tools).toHaveLength(198);
+    expect(listed.tools).toHaveLength(203);
     const contacts = listed.tools.filter((tool) => tool.name.startsWith('contacts.'));
     expect(contacts.map((tool) => tool.name).toSorted()).toEqual(names);
     for (const tool of contacts) {

@@ -85,6 +85,7 @@ describe('Atomic explicitly organised capture creation', () => {
           ideas: [],
           events: [],
           journeys: [],
+          journeyLegSets: [],
           stays: [],
           associations: [],
           memberships: [],

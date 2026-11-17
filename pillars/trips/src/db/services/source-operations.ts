@@ -1,18 +1,10 @@
 import { and, eq } from 'drizzle-orm';
 
-import { EventSchema } from '../../contract/event-schemas.js';
-import { JourneySchema } from '../../contract/journey-schemas.js';
-import { SourceOperationSchema } from '../../contract/source-workspace.js';
-import { StaySchema } from '../../contract/stay-schemas.js';
-import { events, journeys, stays, sourceOperations } from '../schema.js';
+import { SourceOperationSchema, SourceReceiptSchema } from '../../contract/source-workspace.js';
+import { sourceOperations } from '../schema.js';
 import { getTrip } from './records.js';
 import { canonicalSourceValue } from './source-canonical.js';
-import {
-  getCapture,
-  getIdea,
-  getCaptureAssociation,
-  getExploreMembership,
-} from './source-queries.js';
+import { currentAffectedSources, emptySourceWorkspace } from './source-operation-projections.js';
 import { TripsServiceError } from './source-record.js';
 import { undoSourceOperation } from './source-undo.js';
 import { writeSourceCommand } from './source-write.js';
@@ -21,7 +13,6 @@ import type {
   SourceOperation,
   SourceOperationResult,
   SourceReceipt,
-  SourceWorkspace,
   SourceCommand,
 } from '../../contract/source-workspace.js';
 import type { TripsDb } from '../index.js';
@@ -40,50 +31,6 @@ export const CAPTURE_COMMANDS = [
 export const IDEA_COMMANDS = ['idea.create', 'idea.update', 'idea.remove'] as const;
 /** Membership actions permitted through the Explore Undo scope. */
 export const EXPLORE_COMMANDS = ['explore.add', 'explore.remove'] as const;
-
-function emptyWorkspace(): SourceWorkspace {
-  return {
-    captures: [],
-    ideas: [],
-    associations: [],
-    memberships: [],
-    events: [],
-    journeys: [],
-    stays: [],
-  };
-}
-function currentAffected(db: TripsDb, tripId: number, receipt: SourceReceipt): SourceWorkspace {
-  return {
-    captures: receipt.captures.map((row) => getCapture(db, tripId, row.id)),
-    ideas: receipt.ideas.map((row) => getIdea(db, tripId, row.id)),
-    associations: receipt.associations.map((row) => getCaptureAssociation(db, tripId, row.id)),
-    memberships: receipt.memberships.map((row) => getExploreMembership(db, tripId, row.id)),
-    events: receipt.events.flatMap((event) => {
-      const current = db
-        .select()
-        .from(events)
-        .where(and(eq(events.tripId, tripId), eq(events.id, event.id)))
-        .get();
-      return current === undefined ? [] : [EventSchema.parse(current)];
-    }),
-    journeys: receipt.journeys.flatMap((journey) => {
-      const current = db
-        .select()
-        .from(journeys)
-        .where(and(eq(journeys.tripId, tripId), eq(journeys.id, journey.id)))
-        .get();
-      return current === undefined ? [] : [JourneySchema.parse(current)];
-    }),
-    stays: receipt.stays.flatMap((stay) => {
-      const current = db
-        .select()
-        .from(stays)
-        .where(and(eq(stays.tripId, tripId), eq(stays.id, stay.id)))
-        .get();
-      return current === undefined ? [] : [StaySchema.parse(current)];
-    }),
-  };
-}
 
 interface OperationContext {
   db: TripsDb;
@@ -105,6 +52,11 @@ function findOperation(
     )
     .get();
 }
+function parseStoredReceipt(receipt: SourceReceipt): SourceReceipt {
+  return SourceReceiptSchema.parse(
+    receipt.journeyLegSets === undefined ? { ...receipt, journeyLegSets: [] } : receipt
+  );
+}
 function replayOperation(
   context: OperationContext,
   existing: typeof sourceOperations.$inferSelect,
@@ -118,9 +70,10 @@ function replayOperation(
     if (original === undefined || !context.allowedKinds.includes(original.request.command.kind))
       throw new TripsServiceError('source_undo_conflict');
   }
+  const receipt = parseStoredReceipt(existing.receipt);
   return {
-    receipt: existing.receipt,
-    current: currentAffected(context.db, context.tripId, existing.receipt),
+    receipt,
+    current: currentAffectedSources(context.db, context.tripId, receipt),
     undone: existing.undoneBy !== null,
     replayed: true,
   };
@@ -131,7 +84,7 @@ function applyOperation(
   canonical: string
 ): SourceOperationResult {
   const receipt: SourceReceipt = {
-    ...emptyWorkspace(),
+    ...emptySourceWorkspace(),
     operationId: operation.operationId,
     undoneOperationId: null,
   };
@@ -142,6 +95,7 @@ function applyOperation(
     memberships: [],
     createdEvents: [],
     createdJourneys: [],
+    createdJourneyLegSets: [],
     createdStays: [],
   };
   const write = { db: context.db, tripId: context.tripId, receipt, inverse };
@@ -161,7 +115,7 @@ function applyOperation(
     .run();
   return {
     receipt,
-    current: currentAffected(context.db, context.tripId, receipt),
+    current: currentAffectedSources(context.db, context.tripId, receipt),
     undone: false,
     replayed: false,
   };
@@ -190,4 +144,21 @@ export function operateSourceWorkspace(
   return db.transaction((tx) => runOperation({ db: tx, tripId, allowedKinds }, operation), {
     behavior: 'immediate',
   });
+}
+
+/** Read an existing immutable operation proof with current/undone truth without applying its command. */
+export function readSourceOperation(
+  db: TripsDb,
+  tripId: number,
+  operationId: string
+): SourceOperationResult {
+  const row = findOperation({ db, tripId, allowedKinds: [] }, operationId);
+  if (row === undefined) throw new TripsServiceError('not_found');
+  const receipt = parseStoredReceipt(row.receipt);
+  return {
+    receipt,
+    current: currentAffectedSources(db, tripId, receipt),
+    undone: row.undoneBy !== null,
+    replayed: true,
+  };
 }

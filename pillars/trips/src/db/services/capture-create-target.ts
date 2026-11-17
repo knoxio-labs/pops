@@ -1,6 +1,8 @@
 import { requireCaptureTarget } from './capture-targets.js';
 import { createEvent } from './events.js';
+import { createJourneyLegWithinOperation } from './journey-legs.js';
 import { createJourney } from './journeys.js';
+import { getJourneyLegSetWithinOperation } from './leg-set.js';
 import { createIdeaSource } from './source-row-write.js';
 import { createStay } from './stays.js';
 
@@ -28,6 +30,14 @@ export function resolveOrganisationTarget(
       const journey = createJourney(write.db, write.tripId, target.input);
       write.receipt.journeys.push(journey);
       write.inverse.createdJourneys.push(journey);
+      for (const leg of target.legs ?? [])
+        createJourneyLegWithinOperation(write.db, write.tripId, journey.id, leg);
+      const legSet = {
+        journeyId: journey.id,
+        ...getJourneyLegSetWithinOperation(write.db, write.tripId, journey.id),
+      };
+      write.receipt.journeyLegSets.push(legSet);
+      write.inverse.createdJourneyLegSets?.push(legSet);
       return { kind: 'journey', id: journey.id };
     }
     case 'createStay': {

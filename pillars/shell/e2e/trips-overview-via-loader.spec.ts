@@ -175,6 +175,7 @@ for (const viewport of [
     );
     let failEvents = false;
     const sourceReads: string[] = [];
+    const unexpectedSourceReads: string[] = [];
     await page.route(/\/trips-api\//u, (route) => {
       const path = new URL(route.request().url()).pathname.replace('/trips-api', '');
       if (failEvents && path === '/trips/7/events')
@@ -186,7 +187,10 @@ for (const viewport of [
       expect(route.request().method()).toBe('GET');
       sourceReads.push(path);
       const body = responses.get(path);
-      if (!body) throw new Error(`Unexpected source request: ${path}`);
+      if (!body) {
+        unexpectedSourceReads.push(path);
+        throw new Error(`Unexpected source request: ${path}`);
+      }
       return json(route, 200, body);
     });
     await page.goto('/trips');
@@ -230,12 +234,15 @@ for (const viewport of [
       '/trips/7/documents'
     );
     await expect(page.getByRole('link', { name: 'Calendar', exact: true })).toHaveCount(0);
-    const eventCard = page.locator('article').filter({ hasText: 'Harbour festival' });
-    await expect(eventCard).toHaveAttribute('data-constraint', 'soft');
-    await expect(eventCard.getByText('Alternative', { exact: true })).toBeVisible();
-    await expect(eventCard.getByText('Booked', { exact: true })).toBeVisible();
-    const stayCard = page.locator('article').filter({ hasText: 'Cedar guesthouse' });
-    await expect(stayCard).toHaveAttribute('data-constraint', 'hard');
+    const sheet = page.getByRole('table', { name: 'Sheet', exact: true });
+    await expect(sheet).toBeVisible();
+    const sheetEvent = sheet.getByRole('row').filter({ hasText: 'Harbour festival' });
+    await expect(sheetEvent).toHaveAttribute('data-route-kind', 'event');
+    await expect(sheetEvent.getByText('Alternative', { exact: true })).toBeVisible();
+    await expect(sheetEvent.getByText('Booked', { exact: true })).toBeVisible();
+    const sheetStay = sheet.getByRole('row').filter({ hasText: 'Cedar guesthouse' });
+    await expect(sheetStay).toHaveAttribute('data-route-kind', 'stay');
+    await expect(sheetStay.getByText('Purchased', { exact: true })).toBeVisible();
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth > window.innerWidth
     );
@@ -247,7 +254,8 @@ for (const viewport of [
     const controls = page.getByRole('main').last().locator('a, button');
     for (const control of await controls.all()) {
       const box = await control.boundingBox();
-      expect(box?.height).toBeGreaterThanOrEqual(44);
+      const label = (await control.getAttribute('aria-label')) ?? (await control.innerText());
+      expect(box?.height, `${label.trim()} target height`).toBeGreaterThanOrEqual(44);
     }
     const artifacts = resolve(import.meta.dirname, '../../../tmp');
     await mkdir(artifacts, { recursive: true });
@@ -255,6 +263,17 @@ for (const viewport of [
       path: resolve(artifacts, `trips-overview-${viewport.width}.png`),
       fullPage: true,
     });
+    await page.getByRole('tab', { name: 'Journey', exact: true }).click();
+    const eventCard = page.locator('article').filter({ hasText: 'Harbour festival' });
+    await expect(eventCard).toHaveAttribute('data-constraint', 'soft');
+    await expect(eventCard.getByText('Alternative', { exact: true })).toBeVisible();
+    await expect(eventCard.getByText('Booked', { exact: true })).toBeVisible();
+    const stayCard = page.locator('article').filter({ hasText: 'Cedar guesthouse' });
+    await expect(stayCard).toHaveAttribute('data-constraint', 'hard');
+    const journeyOverflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > window.innerWidth
+    );
+    expect(journeyOverflow).toBe(false);
     await page.getByRole('button', { name: 'Harbour festival', exact: true }).click();
     const eventDialog = page.getByRole('dialog', { name: 'Event #61', exact: true });
     await expect(eventDialog.getByLabel('Event name', { exact: true })).toHaveValue(
@@ -285,25 +304,31 @@ for (const viewport of [
         .getByText('Route original', { exact: true })
     ).toBeVisible();
     failEvents = true;
+    const failedTripResponses: string[] = [];
+    page.on('response', (response) => {
+      const path = new URL(response.url()).pathname;
+      if (path.startsWith('/trips-api/') && response.status() >= 400)
+        failedTripResponses.push(`${response.status()} ${path}`);
+    });
     await page.goto('/trips/7');
     const eventsSource = page.getByRole('region', { name: 'Events', exact: true });
     await expect(eventsSource.getByText('trips.events.unavailable', { exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Cedar guesthouse', exact: true })).toBeVisible();
-    await expect(page.getByText('No route entries.', { exact: true })).toHaveCount(0);
-    const gapDiagnostics = [31, 32].map((id) =>
-      page.locator(`[data-visit-id="${id}"]`).getByText('trips.events.unavailable', { exact: true })
-    );
-    for (const diagnostic of gapDiagnostics) await expect(diagnostic).toBeVisible();
+    expect(unexpectedSourceReads).toEqual([]);
+    const eventRows = page
+      .getByRole('table', { name: 'Sheet', exact: true })
+      .getByRole('row')
+      .filter({ hasText: 'Harbour festival' });
+    await expect(eventRows).toHaveCount(0);
     failEvents = false;
     await eventsSource.getByRole('button', { name: 'Try again', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Harbour festival', exact: true })).toBeVisible();
     await expect(eventsSource).toHaveCount(0);
-    for (const diagnostic of gapDiagnostics) await expect(diagnostic).toBeVisible();
-    await page
-      .locator('[data-visit-id="31"]')
-      .getByRole('button', { name: 'Reload source', exact: true })
-      .click();
-    for (const diagnostic of gapDiagnostics) await expect(diagnostic).toHaveCount(0);
-    await expect(page.getByText('trips.events.unavailable', { exact: true })).toHaveCount(0);
+    expect(failedTripResponses.length).toBeGreaterThan(0);
+    expect(
+      failedTripResponses.every((response) => response === '503 /trips-api/trips/7/events')
+    ).toBe(true);
+    await page.goto('/trips');
+    await expect(page.getByRole('button', { name: /Coast trip/ })).toBeVisible();
   });
 }

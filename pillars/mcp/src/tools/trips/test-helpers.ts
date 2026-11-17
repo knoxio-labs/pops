@@ -27,6 +27,7 @@ export const workspace = {
   memberships: [],
   events: [],
   journeys: [],
+  journeyLegSets: [],
   stays: [],
 };
 /** Published receipt/current separation, including historical Undo/replay flags. */

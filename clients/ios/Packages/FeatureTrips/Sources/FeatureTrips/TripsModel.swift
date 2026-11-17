@@ -10,7 +10,7 @@ internal final class TripsModel {
     internal private(set) var selectedID: Int?
     internal private(set) var loading = false
     internal private(set) var failure: RepositoryError?
-    internal var tab = TripsTab.trips {
+    internal var tab = TripsTab.today {
         didSet {
             if tab != oldValue {
                 navigationIntent = UUID()
@@ -33,7 +33,7 @@ internal final class TripsModel {
 
     internal func openTrip(_ id: Int, sourceID: String? = nil) {
         source = nil
-        tab = .trips
+        tab = .today
         let intent = UUID()
         navigationIntent = intent
         navigationTask = Task {

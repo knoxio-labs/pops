@@ -58,8 +58,8 @@ export function SourceCard({
     </CardContent>
   );
   const className = cn(
-    'block min-h-11 space-y-2 rounded-lg border p-3 text-sm',
-    purchased ? 'border-solid border-l-4 border-l-app-accent' : 'border-dashed border-border'
+    'block min-h-11 space-y-2 rounded-lg border border-border bg-background p-3 text-sm',
+    purchased && 'border-l-4 border-l-app-accent'
   );
   const actionClass = cn(
     className,

@@ -9,10 +9,13 @@ import {
   CapturePatchSchema,
   CaptureSchema,
 } from './capture-schemas.js';
-import { EventInputSchema, EventSchema } from './event-schemas.js';
-import { IdeaContactLinkSchema, IdeaInputSchema, IdeaSchema } from './idea-schemas.js';
-import { JourneyInputSchema, JourneySchema } from './journey-schemas.js';
-import { StayInputSchema, StaySchema } from './stay-schemas.js';
+import { CaptureOrganiseTargetSchema, CaptureTargetSchema } from './capture-target-schemas.js';
+import { EventSchema } from './event-schemas.js';
+import { IdeaInputSchema, IdeaSchema } from './idea-schemas.js';
+import { JourneyLegSetSchema, JourneySchema } from './journey-schemas.js';
+import { StaySchema } from './stay-schemas.js';
+
+export { CaptureTargetSchema } from './capture-target-schemas.js';
 
 const Id = z.number().int().positive();
 const Revision = z.number().int().positive();
@@ -27,14 +30,6 @@ export const ExploreSourceSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('capture'), id: Id }),
   z.object({ kind: z.literal('idea'), id: Id }),
   z.object({ kind: z.literal('event'), id: Id }),
-]);
-/** Explicit organisation target; capture identity is retained after association. */
-export const CaptureTargetSchema = z.discriminatedUnion('kind', [
-  z.object({ kind: z.literal('idea'), id: Id }),
-  z.object({ kind: z.literal('event'), id: Id }),
-  z.object({ kind: z.literal('journey'), id: Id }),
-  z.object({ kind: z.literal('stay'), id: Id }),
-  z.object({ kind: z.literal('contact'), reference: IdeaContactLinkSchema }),
 ]);
 /** Source-to-target provenance survives edits and removal; classification does not create this relation. */
 export const CaptureAssociationSchema = z.object({
@@ -62,23 +57,17 @@ export const SourceWorkspaceSchema = z
     memberships: z.array(ExploreMembershipSchema),
     events: z.array(EventSchema),
     journeys: z.array(JourneySchema),
+    journeyLegSets: z.array(JourneyLegSetSchema),
     stays: z.array(StaySchema),
   })
   .meta({ id: 'CaptureWorkspace' });
 
 const Guard = { id: Id, expectedRevision: Revision };
-const OrganiseTarget = z.discriminatedUnion('mode', [
-  z.object({ mode: z.literal('existing'), target: CaptureTargetSchema }),
-  z.object({ mode: z.literal('createIdea'), input: IdeaInputSchema }),
-  z.object({ mode: z.literal('createEvent'), input: EventInputSchema }),
-  z.object({ mode: z.literal('createJourney'), input: JourneyInputSchema }),
-  z.object({ mode: z.literal('createStay'), input: StayInputSchema }),
-]);
 const Commands = {
   captureCreate: z.object({
     kind: z.literal('capture.create'),
     input: CaptureInputSchema,
-    target: OrganiseTarget.optional(),
+    target: CaptureOrganiseTargetSchema.optional(),
     explore: z.boolean().optional(),
   }),
   captureUpdate: z.object({
@@ -95,7 +84,7 @@ const Commands = {
   captureOrganise: z.object({
     kind: z.literal('capture.organise'),
     ...Guard,
-    target: OrganiseTarget,
+    target: CaptureOrganiseTargetSchema,
     explore: z.boolean().optional(),
   }),
   associationRemove: z.object({ kind: z.literal('association.remove'), ...Guard }),

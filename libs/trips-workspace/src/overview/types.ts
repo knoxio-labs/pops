@@ -74,7 +74,36 @@ export interface OverviewLabels {
   alternatives: string;
   selected: string;
   unresolved: string;
+  sheet: {
+    title: string;
+    journey: string;
+    when: string;
+    what: string;
+    state: string;
+    originals: string;
+    originalsUnknown: string;
+    originalCount: (count: number) => string;
+    unknownDate: string;
+    onRoute: string;
+    gap: string;
+  };
+  sleepPlan: {
+    title: string;
+    stopCount: (count: number) => string;
+    covered: string;
+    open: string;
+    openNights: (count: number) => string;
+    overlap: string;
+    unknown: string;
+    datesUndecided: string;
+    noVisits: string;
+    noIssues: string;
+    attention: string;
+    reviewGap: (label: string) => string;
+    unverified: (count: number) => string;
+  };
   source: (kind: string, id: number) => string;
+  kind: (kind: string) => string;
   status: (value: string) => string;
 }
 interface OverviewBaseProps {
@@ -90,6 +119,8 @@ interface OverviewBaseProps {
   controls?: ReactNode;
   /** Inline Capture-domain filters/references; distinct from the header actions and contextual editor. */
   sourceControls?: ReactNode;
+  /** Persistent composer for adding an original or an idea directly from the Trip workspace. */
+  captureComposer?: ReactNode;
   /** Exact presentation-only Capture/Idea/Event visibility; unclassified IDs and other kinds stay visible. */
   sourceVisibility?: CaptureTimelineVisibility;
   contextualEditor?: ReactNode;

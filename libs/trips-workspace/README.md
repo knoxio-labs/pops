@@ -44,6 +44,11 @@ newer foreign revisions and already-undone replay outcomes grant no inverse.
 
 `TripOverview` is the shared Trip Timeline. Its host supplies translated labels,
 controlled tools and exact `onOpenSource({ kind, id })` callbacks for existing editors.
+The route defaults to a compact Sheet table and can switch to the chronological Journey
+cards. Sheet rows keep Places, Stays, Events and Rentals separate, with each source's own
+dates and status plus only its directly associated document count. Document counts remain
+unknown until their association read succeeds. The overview also summarizes exact Visit
+overnight coverage and route gaps; undated visits stay distinct from open nights.
 The `controls` slot belongs to that host; `contextualEditor` renders after the Timeline's
 main landmark so a Sheet or Dialog can reuse its existing workspace without nested mains.
 The optional `renderVisitContext({ tripId, visitId })` renders a host-owned node after resolved

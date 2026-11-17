@@ -8,6 +8,7 @@ import { sourceJourney } from '../journey/test-utils';
 import { routeRead } from '../route/test-utils';
 import { sourceStay, sourceVisits } from '../stay/test-utils';
 import { createClient } from '../trips-api/client';
+import { selectJourney } from './render.test-utils';
 import { overviewProps, overviewResponses } from './test-utils';
 
 import type { TripOverviewProps } from './types';
@@ -106,6 +107,7 @@ it('renders exact resolved root, alternative and unplaced Visits after their fac
   );
   const renderContext = vi.fn(context);
   const host = mount(data, renderContext);
+  await selectJourney();
   const root = await screen.findByRole('list', { name: 'Route' });
   await screen.findByRole('complementary', { name: 'Host Visit 7:33' });
   await waitFor(() => expect(host.cache.isFetching()).toBe(0));
@@ -137,6 +139,7 @@ it('keeps an actual owning Visit usable when optional route placement is unavail
   const data = responses();
   data.delete('/trips/7/route');
   const host = mount(data, context);
+  await selectJourney();
   expect(await screen.findByRole('complementary', { name: 'Host Visit 7:31' })).toBeVisible();
   await waitFor(() => expect(host.cache.isFetching()).toBe(0));
   expect(screen.getByRole('region', { name: 'Unresolved' })).toContainElement(
@@ -161,6 +164,7 @@ it.each(['missing', 'foreign', 'unavailable'] as const)(
     if (state === 'unavailable') data.delete('/trips/7/visits');
     const renderContext = vi.fn(context);
     const host = mount(data, renderContext);
+    await selectJourney();
     await screen.findByRole('list', { name: 'Route' });
     await waitFor(() => expect(host.cache.isFetching()).toBe(0));
     expect(
@@ -173,6 +177,7 @@ it.each(['missing', 'foreign', 'unavailable'] as const)(
 
 it('preserves the absent callback rendering and issues no additional owner requests', async () => {
   const withContext = mount(responses(), context);
+  await selectJourney();
   await screen.findByRole('complementary', { name: 'Host Visit 7:31' });
   await waitFor(() => expect(withContext.cache.isFetching()).toBe(0));
   const requests = withContext.requests

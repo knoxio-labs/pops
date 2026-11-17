@@ -18,8 +18,8 @@ describe('allTools', () => {
     }
   });
 
-  it('exports exactly 198 tools', () => {
-    expect(allTools).toHaveLength(198);
+  it('exports exactly 203 tools', () => {
+    expect(allTools).toHaveLength(203);
   });
 
   it('registers purchases inventory proposal tools', () => {

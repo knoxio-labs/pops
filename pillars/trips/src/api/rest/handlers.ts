@@ -8,6 +8,7 @@ import {
   reorderVisits,
   updateVisit,
 } from '../../db/services/records.js';
+import { makeBookingImportHandlers } from './booking-imports.js';
 import {
   makeCaptureHandlers,
   makeIdeaHandlers,
@@ -38,6 +39,7 @@ export function makeTripsRestHandlers(
 ): ReturnType<typeof server.router<typeof tripsContract>> {
   const db = deps.tripsDb.db;
   return server.router(tripsContract, {
+    bookingImports: makeBookingImportHandlers(deps),
     route: makeRouteHandlers(db),
     captureWorkspace: makeCaptureWorkspaceHandlers(db),
     captures: makeCaptureHandlers(db),

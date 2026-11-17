@@ -2,7 +2,7 @@ import AppCore
 import DesignSystem
 import SwiftUI
 
-/// One selected-Trip timeline and app-level search backed only by injected source reads.
+/// A selected-Trip workspace with Today, Plan, Bookings, Documents and native Search tabs.
 /// Optional device-authorized capture writes retain their own operation identities; documents open only after
 /// an authenticated download.
 public struct TripsRootView: View {
@@ -37,8 +37,17 @@ public struct TripsRootView: View {
 
     public var body: some View {
         TabView(selection: $model.tab) {
-            Tab("Trips", systemImage: "map.fill", value: TripsTab.trips) {
-                stack
+            Tab("Today", systemImage: "sun.max.fill", value: TripsTab.today) {
+                workspace(.today)
+            }
+            Tab("Plan", systemImage: "map", value: TripsTab.plan) {
+                workspace(.plan)
+            }
+            Tab("Bookings", systemImage: "ticket", value: TripsTab.bookings) {
+                workspace(.bookings)
+            }
+            Tab("Documents", systemImage: "doc.text", value: TripsTab.documents) {
+                workspace(.documents)
             }
             Tab(value: TripsTab.search, role: .search) {
                 NavigationStack {
@@ -57,7 +66,7 @@ public struct TripsRootView: View {
         }
     }
 
-    private var stack: some View {
+    private func workspace(_ tab: TripsTab) -> some View {
         NavigationStack {
             Group {
                 if model.loading {
@@ -65,13 +74,13 @@ public struct TripsRootView: View {
                 } else if let failure = model.failure {
                     TripsFailureView(failure: failure) { Task { await model.load() } }
                 } else if let snapshot = model.snapshot {
-                    TripsTimelineView(snapshot: snapshot)
+                    destination(tab, snapshot: snapshot)
                 } else {
                     TripsSelectionView(model: model)
                 }
             }
-            .navigationTitle(model.snapshot == nil ? "Trips" : "Timeline")
-            .popsTitleDisplay(large: true)
+            .navigationTitle(model.snapshot == nil ? "Trips" : tab.title)
+            .popsTitleDisplay(large: tab == .today)
             .toolbar {
                 ToolbarItem(placement: .principal) { tripMenu }
                 ToolbarItem(placement: .primaryAction) {
@@ -79,11 +88,6 @@ public struct TripsRootView: View {
                         Button("Capture", systemImage: "plus") {
                             model.capture = captureDrafts.draft(tripID: id)
                         }
-                    }
-                }
-                ToolbarItem(placement: .primaryAction) {
-                    if let snapshot = model.snapshot {
-                        TripsDocumentShortcut(snapshot: snapshot, repository: documents)
                     }
                 }
             }
@@ -97,7 +101,22 @@ public struct TripsRootView: View {
             }
             .refreshable { await model.load() }
         }
-        .id(model.selectedID)
+        .id("\(model.selectedID ?? -1)-\(tab.rawValue)")
+    }
+
+    @ViewBuilder private func destination(_ tab: TripsTab, snapshot: TripSnapshot) -> some View {
+        switch tab {
+        case .today:
+            TripsTodayView(snapshot: snapshot)
+        case .plan:
+            TripsTimelineView(snapshot: snapshot)
+        case .bookings:
+            TripsBookingsView(snapshot: snapshot)
+        case .documents:
+            TripsDocumentsView(snapshot: snapshot, repository: documents)
+        case .search:
+            TripsTimelineView(snapshot: snapshot)
+        }
     }
 
     private func openTrip(_ id: Int, sourceID: String? = nil) {
@@ -125,4 +144,20 @@ public struct TripsRootView: View {
     }
 }
 
-internal enum TripsTab: Hashable { case trips, search }
+internal enum TripsTab: String, Hashable {
+    case today
+    case plan
+    case bookings
+    case documents
+    case search
+
+    internal var title: String {
+        switch self {
+        case .today: "Today"
+        case .plan: "Plan"
+        case .bookings: "Bookings"
+        case .documents: "Documents"
+        case .search: "Search"
+        }
+    }
+}

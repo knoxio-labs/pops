@@ -57,9 +57,9 @@ describe('finite canonical Trips MCP surface', () => {
           expected.set(`trips.${operation['operationId']}`, method === 'get');
       }
     }
-    expect(expected.size).toBe(89);
-    expect(tripsTools).toHaveLength(89);
-    expect(new Set(tripsTools.map((entry) => entry.name)).size).toBe(89);
+    expect(expected.size).toBe(94);
+    expect(tripsTools).toHaveLength(94);
+    expect(new Set(tripsTools.map((entry) => entry.name)).size).toBe(94);
     expect(tripsTools.map((entry) => entry.name).toSorted()).toEqual(
       [...expected.keys()].toSorted()
     );

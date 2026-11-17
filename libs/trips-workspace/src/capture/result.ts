@@ -45,7 +45,7 @@ export function requireCaptureResult(
 }
 /** Validate only explicit ownership, without inventing source fields for an empty workspace. */
 export function sourceBelongsToTrip(source: CaptureSource, tripId: number): boolean {
-  return [
+  const recordsBelongToTrip = [
     ...source.captures,
     ...source.ideas,
     ...source.associations,
@@ -54,6 +54,12 @@ export function sourceBelongsToTrip(source: CaptureSource, tripId: number): bool
     ...source.journeys,
     ...source.stays,
   ].every((row) => row.tripId === tripId);
+  const journeyIds = new Set(
+    source.journeys.filter((journey) => journey.tripId === tripId).map((journey) => journey.id)
+  );
+  return (
+    recordsBelongToTrip && source.journeyLegSets.every((legSet) => journeyIds.has(legSet.journeyId))
+  );
 }
 function mergeRows<T extends { id: number }>(before: readonly T[], changed: readonly T[]): T[] {
   const rows = new Map(before.map((row) => [row.id, row]));
@@ -66,6 +72,20 @@ function removeCreated<T extends { id: number }>(
 ): T[] {
   const ids = new Set(created.map((row) => row.id));
   return rows.filter((row) => !ids.has(row.id));
+}
+function mergeJourneyLegSets(
+  before: CaptureSource['journeyLegSets'],
+  changed: CaptureSource['journeyLegSets'],
+  inverse: CaptureHistory | null
+): CaptureSource['journeyLegSets'] {
+  const removed = new Set(inverse?.receipt.journeys.map((journey) => journey.id) ?? []);
+  const rows = new Map(
+    before
+      .filter((legSet) => !removed.has(legSet.journeyId))
+      .map((legSet) => [legSet.journeyId, legSet])
+  );
+  for (const legSet of changed) rows.set(legSet.journeyId, legSet);
+  return [...rows.values()];
 }
 /** Apply only current affected rows; successful Undo removes only its proven operation-created local targets. */
 export function applyCaptureResult(
@@ -87,6 +107,7 @@ export function applyCaptureResult(
       inverse ? removeCreated(source.journeys, inverse.receipt.journeys) : source.journeys,
       current.journeys
     ),
+    journeyLegSets: mergeJourneyLegSets(source.journeyLegSets, current.journeyLegSets, inverse),
     stays: mergeRows(
       inverse ? removeCreated(source.stays, inverse.receipt.stays) : source.stays,
       current.stays

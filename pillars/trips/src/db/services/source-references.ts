@@ -6,7 +6,6 @@ import {
   tripDocumentAssociations,
   decisionOptions,
   decisions,
-  journeyLegs,
   journeyGroupMembers,
 } from '../schema.js';
 import { sameCaptureTarget } from './capture-target-identity.js';
@@ -44,7 +43,7 @@ export function assertSourceUnreferenced(db: TripsDb, tripId: number, source: Lo
     );
   if (member || associated) throw new TripsServiceError('source_referenced');
 }
-/** Creation Undo preserves Documents links, active Decisions/responsibilities and Journey legs/group memberships. */
+/** Creation Undo preserves Documents links, active Decisions, responsibilities and Journey group memberships. */
 export function assertCreatedTargetUnreferenced(
   db: TripsDb,
   tripId: number,
@@ -70,17 +69,11 @@ export function assertCreatedTargetUnreferenced(
     target.kind !== 'idea' && hasResponsibilityForTarget(db, tripId, target.kind, target.id);
   if (document || decision || responsibility) throw new TripsServiceError('source_undo_conflict');
   if (target.kind === 'journey') {
-    const leg = db
-      .select({ id: journeyLegs.id })
-      .from(journeyLegs)
-      .where(eq(journeyLegs.journeyId, target.id))
-      .get();
     const group = db
       .select({ groupId: journeyGroupMembers.groupId })
       .from(journeyGroupMembers)
       .where(eq(journeyGroupMembers.journeyId, target.id))
       .get();
-    if (leg !== undefined || group !== undefined)
-      throw new TripsServiceError('source_undo_conflict');
+    if (group !== undefined) throw new TripsServiceError('source_undo_conflict');
   }
 }

@@ -98,6 +98,13 @@ export const JourneyLegSchema = z.object({
   ...Audit,
 });
 
+/** Ordered leg membership and its collection revision captured with a source operation. */
+export const JourneyLegSetSchema = z.strictObject({
+  journeyId: Id,
+  revision: z.number().int().nonnegative(),
+  legs: z.array(JourneyLegSchema),
+});
+
 /** Journey creation and patch input; omission retains fields, null clears nullable text. */
 export const JourneyInputSchema = z.object(JourneyFields);
 /** Supplied endpoints replace old fields; omitted date preserves a day-only value, null clears it and local selects datetime precision. */
@@ -112,6 +119,8 @@ export const ReorderJourneyLegsBody = z.object({ legIds: z.array(Id) });
 export type Journey = z.infer<typeof JourneySchema>;
 /** A persisted ordered leg source record. */
 export type JourneyLeg = z.infer<typeof JourneyLegSchema>;
+/** Complete current ordered leg collection for one Journey. */
+export type JourneyLegSet = z.infer<typeof JourneyLegSetSchema>;
 /** Explicit source endpoint facts, without a derived instant. */
 export type JourneyEndpoint = z.infer<typeof JourneyEndpointSchema>;
 /** Endpoint write with an explicit day-only clear distinct from legacy omission. */

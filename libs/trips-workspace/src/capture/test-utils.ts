@@ -9,6 +9,7 @@ export function captureSource(captures: Capture[] = []): CaptureSource {
     memberships: [],
     events: [],
     journeys: [],
+    journeyLegSets: [],
     stays: [],
   };
 }

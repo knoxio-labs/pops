@@ -10,7 +10,7 @@ import { tripsErrors } from '../errors.js';
 
 it('statically registers every published Trips error constructor with the actual ADR-054 analyser', () => {
   const guard = new URL('../../../../../scripts/ci/check-error-codes.mjs', import.meta.url);
-  const sources = ['errors.ts', 'route-errors.ts'].map((name) => ({
+  const sources = ['errors.ts', 'route-errors.ts', 'booking-import-errors.ts'].map((name) => ({
     path: `pillars/trips/src/api/${name}`,
     text: readFileSync(new URL(`../${name}`, import.meta.url), 'utf8'),
   }));

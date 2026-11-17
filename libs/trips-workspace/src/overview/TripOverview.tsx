@@ -1,17 +1,19 @@
-import { Button, cn, ErrorState, PageHeader } from '@pops/ui';
+import { Button, ErrorState, PageHeader } from '@pops/ui';
 
 import { projectTripRoute } from '../route/projection';
 import { useTripRoute } from '../route/use-trip-route';
 import { requestProblem } from '../stay/api';
 import { OverviewCalendar } from './OverviewCalendar';
+import { OverviewBeforeYouGo, OverviewSleepPlan } from './OverviewReadiness';
 import { OverviewDetached, OverviewReferences } from './OverviewReferences';
 import { OverviewRoute } from './OverviewRoute';
+import { tripReadiness } from './readiness';
 import { routeDateRange } from './route-context';
 import { useOverviewSources } from './use-overview-sources';
 
 import type { JSX } from 'react';
 
-import type { TripOverviewProps, OverviewViewProps } from './types';
+import type { OverviewSources, TripOverviewProps, OverviewViewProps } from './types';
 
 /** Approved route-first overview, reading each trip-owned source independently through its generated client. */
 export function TripOverview(props: TripOverviewProps): JSX.Element | null {
@@ -39,7 +41,33 @@ function OverviewSession(props: TripOverviewProps): JSX.Element | null {
     );
   if (!trip.data)
     return <ErrorState error={requestProblem(trip.error)} onRetry={() => void trip.refetch()} />;
-  const sources = {
+  const sources = overviewSources(context);
+  const coverageComplete =
+    sources.visits !== undefined &&
+    sources.stays !== undefined &&
+    !queries.visits.isError &&
+    !queries.stays.isError &&
+    !route.readError;
+  return (
+    <main className="w-full min-w-0 space-y-5 text-sm">
+      <OverviewQueryWarnings queries={queries} labels={props.labels} />
+      <OverviewContent
+        {...props}
+        trip={trip.data}
+        sources={sources}
+        route={route}
+        coverageComplete={coverageComplete}
+        projection={route.view ? projectTripRoute(route.view, sources) : undefined}
+      />
+      <OverviewContextLoading context={context} label={props.labels.loading} />
+    </main>
+  );
+}
+
+function overviewSources(
+  context: Omit<ReturnType<typeof useOverviewSources>, 'trip'>
+): OverviewSources {
+  return {
     visits: context.visits.data,
     places: context.places.data,
     stays: context.stays.data,
@@ -52,44 +80,63 @@ function OverviewSession(props: TripOverviewProps): JSX.Element | null {
     capture: context.capture.data,
     rentals: context.rentals.data,
   };
-  return (
-    <main className="w-full min-w-0 space-y-5 text-sm">
-      {Object.entries(queries).map(([name, query]) =>
-        query.isError ? (
-          <section key={name} aria-label={props.labels.status(name)} className="space-y-1">
+}
+
+function OverviewQueryWarnings({
+  queries,
+  labels,
+}: {
+  queries: ReturnType<typeof useOverviewSources>;
+  labels: TripOverviewProps['labels'];
+}): JSX.Element[] {
+  return Object.entries(queries).flatMap(([name, query]) =>
+    query.isError
+      ? [
+          <section key={name} aria-label={labels.status(name)} className="space-y-1">
             <p className="font-medium">
-              {props.labels.status(name)} · {props.labels.unavailable}
+              {labels.status(name)} · {labels.unavailable}
             </p>
             <ErrorState error={requestProblem(query.error)} onRetry={() => void query.refetch()} />
-          </section>
-        ) : null
-      )}
-      <OverviewContent
-        {...props}
-        trip={trip.data}
-        sources={sources}
-        route={route}
-        projection={route.view ? projectTripRoute(route.view, sources) : undefined}
-      />
-      {Object.values(context).some((query) => query.isPending) && (
-        <p role="status" className="text-muted-foreground">
-          {props.labels.loading}
-        </p>
-      )}
-    </main>
+          </section>,
+        ]
+      : []
   );
 }
 
-function OverviewContent(props: OverviewViewProps): JSX.Element | null {
+function OverviewContextLoading({
+  context,
+  label,
+}: {
+  context: Omit<ReturnType<typeof useOverviewSources>, 'trip'>;
+  label: string;
+}): JSX.Element | null {
+  return Object.values(context).some((query) => query.isPending) ? (
+    <p role="status" className="text-muted-foreground">
+      {label}
+    </p>
+  ) : null;
+}
+
+type OverviewContentProps = OverviewViewProps & { coverageComplete: boolean };
+
+function OverviewContent(props: OverviewContentProps): JSX.Element | null {
   const { trip, sources } = props;
   const hasReferences = !!(sources.decisions?.length || sources.documents?.length);
+  const readiness = tripReadiness(props.projection, sources, {
+    tripId: props.tripId,
+    locale: props.locale,
+    sourceLabel: props.labels.source,
+    coverageComplete: props.coverageComplete,
+  });
   return (
     <>
       <OverviewHeader {...props} />
+      {props.captureComposer}
+      <OverviewSleepPlan {...props} readiness={readiness} />
       {props.sourceControls}
       {props.calendar && <OverviewCalendar {...props} calendar={props.calendar} />}
-      <div className={cn('grid min-w-0 gap-6', hasReferences && 'xl:grid-cols-3')}>
-        <div className={cn('min-w-0 space-y-6', hasReferences && 'xl:col-span-2')}>
+      <div className="grid min-w-0 gap-6 xl:grid-cols-4">
+        <div className="min-w-0 space-y-6 xl:col-span-3">
           <OverviewRoute {...props} />
           <OverviewDetached {...props} />
           {trip.notes && (
@@ -99,7 +146,10 @@ function OverviewContent(props: OverviewViewProps): JSX.Element | null {
             </section>
           )}
         </div>
-        {hasReferences && <OverviewReferences {...props} />}
+        <aside className="min-w-0 space-y-6">
+          <OverviewBeforeYouGo {...props} readiness={readiness} />
+          {hasReferences && <OverviewReferences {...props} />}
+        </aside>
       </div>
     </>
   );

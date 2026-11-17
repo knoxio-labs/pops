@@ -137,7 +137,9 @@ it('applies controlled exact-source visibility to linked and detached cards with
   expect(screen.queryByText('Linked capture')).not.toBeInTheDocument();
   expect(screen.queryByText('Unassigned capture')).not.toBeInTheDocument();
   expect(screen.queryByText('Harbour festival')).not.toBeInTheDocument();
-  expect(await screen.findByText('Wellington')).toBeVisible();
+  expect(
+    await within(screen.getByRole('region', { name: 'Route' })).findByText('Wellington')
+  ).toBeVisible();
   expect(await screen.findByText('Cedar guesthouse')).toBeVisible();
   mounted.rerender({ sourceVisibility: undefined });
   expect(await screen.findByText('Linked capture')).toBeVisible();

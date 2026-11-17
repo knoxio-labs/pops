@@ -1,12 +1,38 @@
+import { sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
 import { sourceOperations } from '../schema.js';
 import { createEvent, updateEvent } from '../services/events.js';
 import { createTrip } from '../services/records.js';
+import { readSourceOperation } from '../services/source-operations.js';
 import { getCapture, getIdea, readSourceWorkspace } from '../services/source-queries.js';
 import { send, withCaptureDb } from './capture-test-utils.js';
 
 describe('Confirmed inverse lineage and repeated LIFO Undo', () => {
+  it('normalises old receipts without journey leg sets during reads and exact retries', () =>
+    withCaptureDb((db) => {
+      const trip = createTrip(db, {});
+      const operation = send(db, trip.id, {
+        kind: 'capture.create',
+        input: { originalText: 'Legacy receipt' },
+      });
+      db.run(sql`UPDATE source_operations
+        SET receipt = json_remove(receipt, '$.journeyLegSets')
+        WHERE operation_id = ${operation.receipt.operationId}`);
+
+      expect(
+        readSourceOperation(db, trip.id, operation.receipt.operationId).receipt.journeyLegSets
+      ).toEqual([]);
+      expect(
+        send(
+          db,
+          trip.id,
+          { kind: 'capture.create', input: { originalText: 'Legacy receipt' } },
+          operation.receipt.operationId
+        ).receipt.journeyLegSets
+      ).toEqual([]);
+    }));
+
   it('undoes successive capture edits and original creation without rewriting immutable receipts', () =>
     withCaptureDb((db) => {
       const trip = createTrip(db, {});

@@ -4,6 +4,7 @@ import { contractInputs } from '../contract-inputs.js';
 import { getPillar } from '../pillar-client.js';
 import { projectOperationInput, projectOperationSuccess } from './openapi-input.js';
 import { arrangementOperations } from './trips/arrangements.js';
+import { bookingImportOperations } from './trips/booking-imports.js';
 import { planningOperations } from './trips/planning.js';
 import { sourceOperations } from './trips/sources.js';
 import { mapCallResult, toolError } from './utils.js';
@@ -13,7 +14,12 @@ import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import type { ToolDef } from './tool-def.js';
 
 const document: unknown = JSON.parse(readFileSync(contractInputs.trips, 'utf8'));
-const operations = { ...planningOperations, ...sourceOperations, ...arrangementOperations };
+const operations = {
+  ...planningOperations,
+  ...sourceOperations,
+  ...arrangementOperations,
+  ...bookingImportOperations,
+};
 const receiptOperations = new Set([
   'route.operate',
   'meetingPlans.operate',
@@ -32,6 +38,10 @@ const receiptOperations = new Set([
   'explore.add',
   'explore.remove',
   'explore.undo',
+  'bookingImports.bind',
+  'bookingImports.extract',
+  'bookingImports.review',
+  'bookingImports.commit',
 ]);
 
 function retryGuidance(operationId: string): string {

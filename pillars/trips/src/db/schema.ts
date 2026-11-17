@@ -19,3 +19,10 @@ export { rentals } from './schema/rentals.js';
 export { arrangementResponsibilities } from './schema/responsibilities.js';
 export { legRemovals } from './schema/leg-removals.js';
 export { tripRoutes, routeGaps, routePaths, routeOperations } from './schema/route.js';
+export {
+  bookingImportSources,
+  bookingImportBindings,
+  bookingImportAttempts,
+  bookingImportDecisions,
+  bookingImportRequests,
+} from './schema/booking-imports.js';

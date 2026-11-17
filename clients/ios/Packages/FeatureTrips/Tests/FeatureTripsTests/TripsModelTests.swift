@@ -11,6 +11,7 @@ internal struct TripsModelTests {
         let snapshot = try TripTestSources.snapshot()
         let repository = TripTestRepository(snapshot: snapshot)
         let model = TripsModel(repository: repository)
+        #expect(model.tab == .today)
         await model.load()
         #expect(model.trips == [snapshot.trip])
         #expect(model.snapshot == nil)
@@ -19,6 +20,10 @@ internal struct TripsModelTests {
         await model.select(snapshot.trip.id)
         #expect(model.snapshot == snapshot)
         #expect(await repository.ids == [snapshot.trip.id])
+        model.tab = .bookings
+        model.openTrip(snapshot.trip.id)
+        await model.navigationTask?.value
+        #expect(model.tab == .today)
     }
 
     @Test("missing and failed source reads do not become an empty successful trip")
@@ -66,6 +71,24 @@ internal struct TripsModelTests {
         #expect(model.selectedID == nil)
         #expect(model.snapshot == nil)
         #expect(selection.accepted.isEmpty)
+    }
+}
+
+@Suite("Trip booking sections")
+internal struct TripsBookingGroupsTests {
+    @Test("groups every recorded booking once and retains alternatives")
+    internal func groupRecordedSources() throws {
+        let snapshot = try TripTestSources.snapshot()
+        let groups = tripBookingGroups(snapshot)
+        let ids = groups.flatMap { $0.sources.map(\.id) }
+        let alternatives = groups.first { $0.kind == .transport }?.sources.filter {
+            $0.isAlternative(in: snapshot)
+        }
+
+        #expect(groups.map(\.kind) == [.transport, .stays])
+        #expect(Set(ids) == Set(allTripSources(snapshot).map(\.id)))
+        #expect(ids.count == Set(ids).count)
+        #expect(alternatives?.map(\.id) == ["journey-2"])
     }
 }
 
