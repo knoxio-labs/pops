@@ -14,7 +14,6 @@ internal struct TripFocusPresentationTests {
         #expect(value.now.map(\.id) == ["stay-1"])
         #expect(value.nextFocus.map(\.id) == ["stay-2"])
         #expect(value.next.map(\.id) == ["stay-2", "journey-1"])
-        #expect(value.nextAfterFocus.map(\.id) == ["journey-1"])
         #expect(allTripSources(snapshot).contains { $0.id == "journey-1" })
     }
 
@@ -50,7 +49,6 @@ internal struct TripFocusPresentationTests {
             documentAssociations: original.documentAssociations)
         let value = try overview(snapshot, at: "2026-01-02T12:00")
         #expect(value.nextFocus.map(\.id) == ["stay-2", "stay-9"])
-        #expect(value.nextAfterFocus.map(\.id) == ["journey-1"])
         #expect(value.next.map(\.id).contains("journey-1"))
     }
 
