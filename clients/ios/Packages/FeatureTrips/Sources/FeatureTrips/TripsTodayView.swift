@@ -23,7 +23,7 @@ internal struct TripsTodayContent: View {
             visibleSources: tripSources(snapshot), visibleVisits: snapshot.visits)
         return ScrollView {
             VStack(alignment: .leading, spacing: PopsSpacing.xl) {
-                TripsOverviewView(projection: projection, date: date)
+                TripsOverviewView(projection: projection, date: date, trip: snapshot.trip)
                 if !projection.now.isEmpty {
                     currentFocus(projection.now)
                 } else if let next = projection.next.first {
