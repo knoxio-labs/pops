@@ -5,22 +5,22 @@ import SwiftUI
 internal struct TripsTodayView: View {
     internal let snapshot: TripSnapshot
     internal let route: TripRouteSnapshot?
-    internal let selectPlanVisit: (Int?) -> Void
+    internal let selectPlanTarget: (TripPlanLineIdentity) -> Void
 
     internal init(
         snapshot: TripSnapshot, route: TripRouteSnapshot? = nil,
-        selectPlanVisit: @escaping (Int?) -> Void = { _ in }
+        selectPlanTarget: @escaping (TripPlanLineIdentity) -> Void = { _ in }
     ) {
         self.snapshot = snapshot
         self.route = route
-        self.selectPlanVisit = selectPlanVisit
+        self.selectPlanTarget = selectPlanTarget
     }
 
     internal var body: some View {
         TimelineView(.everyMinute) { context in
             TripsTodayContent(
                 snapshot: snapshot, date: context.date, route: route,
-                selectPlanVisit: selectPlanVisit)
+                selectPlanTarget: selectPlanTarget)
         }
     }
 }
@@ -29,17 +29,17 @@ internal struct TripsTodayContent: View {
     internal let snapshot: TripSnapshot
     internal let route: TripRouteSnapshot?
     internal let date: Date
-    internal let selectPlanVisit: (Int?) -> Void
+    internal let selectPlanTarget: (TripPlanLineIdentity) -> Void
     @Environment(\.timeZone) private var zone
 
     internal init(
         snapshot: TripSnapshot, date: Date, route: TripRouteSnapshot? = nil,
-        selectPlanVisit: @escaping (Int?) -> Void = { _ in }
+        selectPlanTarget: @escaping (TripPlanLineIdentity) -> Void = { _ in }
     ) {
         self.snapshot = snapshot
         self.date = date
         self.route = route
-        self.selectPlanVisit = selectPlanVisit
+        self.selectPlanTarget = selectPlanTarget
     }
 
     internal var body: some View {
@@ -58,12 +58,12 @@ internal struct TripsTodayContent: View {
                 }
                 if route != nil, !projection.chapters.isEmpty {
                     TripsChapterRail(chapters: projection.chapters) {
-                        selectPlanVisit($0)
+                        selectPlanTarget(.root(.visit($0)))
                     }
                 }
                 if !projection.attention.isEmpty {
                     TripsTodayNeedsYouView(attention: projection.attention) {
-                        selectPlanVisit($0.visitID)
+                        selectPlanTarget($0.target)
                     }
                 }
                 if projection.now.isEmpty { nextFocus(projection) }

@@ -75,9 +75,11 @@ internal enum TripOverviewAttention: Identifiable, Equatable {
         }
     }
 
-    internal var visitID: Int? {
-        guard case .openDates(let visitID, _) = self else { return nil }
-        return visitID
+    internal var target: TripPlanLineIdentity {
+        switch self {
+        case .openDates(let visitID, _): .root(.visit(visitID))
+        case .openRouteSection(let gapID, _): .root(.gap(gapID))
+        }
     }
 }
 

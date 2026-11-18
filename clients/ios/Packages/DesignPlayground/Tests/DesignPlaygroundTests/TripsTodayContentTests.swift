@@ -28,10 +28,10 @@ internal struct TripsTodayContentTests {
             tripId: snapshot.trip.id, revision: 1,
             order: [.gap(999), .visit(visit.id)], paths: [], missingSources: [])
         let date = try #require(TripClock.instant(local: "2026-01-01T12:00", zone: "UTC"))
-        var selectedVisitIDs: [Int?] = []
+        var selectedTargets: [TripPlanLineIdentity] = []
         let inspected = try TripsTodayContent(
             snapshot: snapshot, date: date, route: route,
-            selectPlanVisit: { selectedVisitIDs.append($0) }
+            selectPlanTarget: { selectedTargets.append($0) }
         )
         .environment(\.timeZone, .gmt)
         .inspect()
@@ -39,9 +39,9 @@ internal struct TripsTodayContentTests {
         #expect(inspected.findAll(TripsChapterRail.self).count == 1)
         #expect(inspected.findAll(TripsTodayNeedsYouView.self).count == 1)
         try inspected.find(TripsChapterRail.self).find(ViewType.Button.self).tap()
-        #expect(selectedVisitIDs == [visit.id])
+        #expect(selectedTargets == [.root(.visit(visit.id))])
         try inspected.find(TripsTodayNeedsYouView.self).find(ViewType.Button.self).tap()
-        #expect(selectedVisitIDs == [visit.id, nil])
+        #expect(selectedTargets == [.root(.visit(visit.id)), .root(.gap(999))])
     }
 
     @Test("Today promotes the first future source and excludes it from the four later rows")

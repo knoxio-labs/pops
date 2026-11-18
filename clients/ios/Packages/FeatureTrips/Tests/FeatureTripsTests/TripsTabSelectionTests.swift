@@ -43,12 +43,12 @@ internal struct TripsTabSelectionTests {
             repository: TabSelectionReader(snapshot: try TripTestSources.snapshot()))
         model.tab = .today
 
-        model.openPlanVisit(42)
+        model.openPlanTarget(.root(.visit(42)))
 
         #expect(model.tab == .plan)
-        #expect(model.pendingPlanVisitID == 42)
-        #expect(model.consumePendingPlanVisit() == 42)
-        #expect(model.pendingPlanVisitID == nil)
+        #expect(model.pendingPlanTarget == .root(.visit(42)))
+        #expect(model.consumePendingPlanTarget() == .root(.visit(42)))
+        #expect(model.pendingPlanTarget == nil)
     }
 
     @Test("selecting another trip clears an unconsumed Plan visit target")
@@ -62,12 +62,12 @@ internal struct TripsTabSelectionTests {
             documentAssociations: [])
         let model = TripsModel(repository: TabSelectionReader(snapshots: [first, second]))
         await model.select(first.trip.id)
-        model.openPlanVisit(42)
+        model.openPlanTarget(.root(.visit(42)))
 
         await model.select(second.trip.id)
 
         #expect(model.selectedID == second.trip.id)
-        #expect(model.pendingPlanVisitID == nil)
+        #expect(model.pendingPlanTarget == nil)
     }
 
     @Test("explicit selection starts capture reading even when detail fails")

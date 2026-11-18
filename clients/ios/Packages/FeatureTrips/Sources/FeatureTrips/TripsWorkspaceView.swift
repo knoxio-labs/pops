@@ -42,9 +42,9 @@ internal struct TripsWorkspaceView: View {
         } else if let failure = model.failure {
             TripsFailureView(failure: failure) { Task { await model.load() } }
         } else if let snapshot = model.snapshot {
-            TripsTodayView(snapshot: snapshot, route: loadedRoute) { visitID in
+            TripsTodayView(snapshot: snapshot, route: loadedRoute) { target in
                 planLens = .line
-                model.openPlanVisit(visitID)
+                model.openPlanTarget(target)
             }
         } else {
             ContentUnavailableView("Trip details unavailable", systemImage: "map")
@@ -64,10 +64,10 @@ internal struct TripsWorkspaceView: View {
                     }
                     .padding(PopsSpacing.xl)
                 }
-                .onChange(of: model.pendingPlanVisitID, initial: true) { _, visitID in
-                    guard let visitID else { return }
-                    proxy.scrollTo(TripPlanLineIdentity.root(.visit(visitID)), anchor: .center)
-                    _ = model.consumePendingPlanVisit()
+                .onChange(of: model.pendingPlanTarget, initial: true) { _, target in
+                    guard let target else { return }
+                    proxy.scrollTo(target, anchor: .center)
+                    _ = model.consumePendingPlanTarget()
                 }
             }
         case .failed(let error):
