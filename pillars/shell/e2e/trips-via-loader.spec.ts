@@ -50,6 +50,7 @@ test('Trips loads its real remote, creates permanently, and edits metadata throu
     ['journeys', { journeys: [] }],
     ['journey-groups', { groups: [] }],
     ['decisions', { decisions: [] }],
+    ['responsibilities', { responsibilities: [] }],
     ['document-associations', { associations: [] }],
   ] as const) {
     await page.route(new RegExp(`/trips-api/trips/72/${collection}$`), (route) =>

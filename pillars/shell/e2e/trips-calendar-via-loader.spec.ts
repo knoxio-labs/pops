@@ -290,6 +290,11 @@ async function stubTimelineSources(page: Page, order: { kind: 'journey'; id: num
   await page.route(/\/trips-api\/trips\/7\/meeting-plans$/, (route) =>
     route.request().method() === 'GET' ? json(route, 200, { meetingPlans: [] }) : route.fallback()
   );
+  await page.route(/\/trips-api\/trips\/7\/responsibilities$/, (route) =>
+    route.request().method() === 'GET'
+      ? json(route, 200, { responsibilities: [] })
+      : route.fallback()
+  );
   await page.route(/\/trips-api\/trips\/7\/capture-workspace$/, (route) =>
     route.request().method() === 'GET'
       ? json(route, 200, {
