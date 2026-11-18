@@ -42,7 +42,10 @@ internal struct TripsWorkspaceView: View {
         } else if let failure = model.failure {
             TripsFailureView(failure: failure) { Task { await model.load() } }
         } else if let snapshot = model.snapshot {
-            TripsTodayView(snapshot: snapshot)
+            TripsTodayView(snapshot: snapshot, route: loadedRoute) { visitID in
+                planLens = .line
+                model.openPlanVisit(visitID)
+            }
         } else {
             ContentUnavailableView("Trip details unavailable", systemImage: "map")
         }
@@ -51,15 +54,21 @@ internal struct TripsWorkspaceView: View {
     @ViewBuilder private var plan: some View {
         switch model.route.state {
         case .loaded(let route):
-            ScrollView {
-                TripsPlanView(
-                    route: route, snapshot: model.snapshot, placePinWriter: placePinWriter,
-                    lens: $planLens,
-                    selectedDay: calendarSelection.binding(for: model)
-                ) {
-                    model.source = $0
+            ScrollViewReader { proxy in
+                ScrollView {
+                    TripsPlanView(
+                        route: route, snapshot: model.snapshot, placePinWriter: placePinWriter,
+                        lens: $planLens, selectedDay: calendarSelection.binding(for: model)
+                    ) {
+                        model.source = $0
+                    }
+                    .padding(PopsSpacing.xl)
                 }
-                .padding(PopsSpacing.xl)
+                .onChange(of: model.pendingPlanVisitID, initial: true) { _, visitID in
+                    guard let visitID else { return }
+                    proxy.scrollTo(TripPlanLineIdentity.root(.visit(visitID)), anchor: .center)
+                    _ = model.consumePendingPlanVisit()
+                }
             }
         case .failed(let error):
             TripsFailureView(failure: error) { model.route.retry() }
@@ -86,6 +95,11 @@ internal struct TripsWorkspaceView: View {
         case .idle:
             ContentUnavailableView("Route not loaded", systemImage: "map")
         }
+    }
+
+    private var loadedRoute: TripRouteSnapshot? {
+        guard case .loaded(let route) = model.route.state else { return nil }
+        return route
     }
 
     private var inbox: some View {

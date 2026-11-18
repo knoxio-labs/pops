@@ -37,6 +37,20 @@ internal struct TripsTabSelectionTests {
         }
     }
 
+    @Test("opening a visit moves to Plan and consumes its shared scroll target")
+    internal func planVisitNavigation() throws {
+        let model = TripsModel(
+            repository: TabSelectionReader(snapshot: try TripTestSources.snapshot()))
+        model.tab = .today
+
+        model.openPlanVisit(42)
+
+        #expect(model.tab == .plan)
+        #expect(model.pendingPlanVisitID == 42)
+        #expect(model.consumePendingPlanVisit() == 42)
+        #expect(model.pendingPlanVisitID == nil)
+    }
+
     @Test("explicit selection starts capture reading even when detail fails")
     internal func independentInbox() async throws {
         let snapshot = try TripTestSources.snapshot()

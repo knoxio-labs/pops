@@ -49,12 +49,45 @@ internal enum TripOverviewFocusSection: Identifiable {
     }
 }
 
+internal enum TripOverviewAttention: Identifiable, Equatable {
+    case openDates(visitID: Int, place: String)
+    case openRouteSection(gapID: Int, hasPaths: Bool)
+
+    internal var id: String {
+        switch self {
+        case .openDates(let visitID, _): "visit-\(visitID)"
+        case .openRouteSection(let gapID, _): "gap-\(gapID)"
+        }
+    }
+
+    internal var title: String {
+        switch self {
+        case .openDates(_, let place): "Dates open · \(place)"
+        case .openRouteSection: "Open route section"
+        }
+    }
+
+    internal var detail: String {
+        switch self {
+        case .openDates: "Choose when you’ll be there"
+        case .openRouteSection(_, true): "Review the paths saved here"
+        case .openRouteSection(_, false): "Add to this part of the route when ready"
+        }
+    }
+
+    internal var visitID: Int? {
+        guard case .openDates(let visitID, _) = self else { return nil }
+        return visitID
+    }
+}
+
 internal struct TripOverviewProjection {
     internal let heading: TripOverviewHeading
     internal let now: [TripSource]
     internal let next: [TripSource]
     internal let other: [TripSource]
     internal let chapters: [TripOverviewChapter]
+    internal let attention: [TripOverviewAttention]
 
     internal var nextFocus: [TripSource] {
         guard let start = next.first?.start else { return [] }
@@ -70,14 +103,34 @@ internal struct TripOverviewProjection {
 
     internal init(
         snapshot: TripSnapshot, at instant: Date, zone: TimeZone,
-        visibleSources: [TripSource], visibleVisits: [TripVisit]
+        visibleSources: [TripSource], visibleVisits: [TripVisit],
+        route: TripRouteSnapshot? = nil
     ) {
         let today = TripTodayProjection(snapshot: snapshot, at: instant)
         let visible = Set(visibleSources.map(\.id))
         now = today.now.filter { visible.contains($0.id) }
         next = today.next.filter { visible.contains($0.id) }
         other = today.other.filter { visible.contains($0.id) }
-        chapters = tripOverviewChapters(snapshot: snapshot, visits: visibleVisits, now: now)
+        let routeLine = route.map { TripPlanLineProjection(route: $0, snapshot: snapshot) }
+        let chapterVisits =
+            routeLine.map { line in
+                line.root.compactMap { item -> TripVisit? in
+                    guard case .visit(let visit, _, _) = item.content else { return nil }
+                    return visit
+                }
+            } ?? visibleVisits
+        chapters = tripOverviewChapters(snapshot: snapshot, visits: chapterVisits, now: now)
+        attention =
+            routeLine?.root.compactMap { item -> TripOverviewAttention? in
+                switch item.content {
+                case .visit(let visit, let place, _) where !tripChapterHasBounds(visit.timing):
+                    return .openDates(visitID: visit.id, place: place)
+                case .gap(let id):
+                    return .openRouteSection(gapID: id, hasPaths: !item.paths.isEmpty)
+                default:
+                    return nil
+                }
+            } ?? []
         let selected = tripSources(snapshot).filter { visible.contains($0.id) }
         heading = tripOverviewHeading(
             snapshot: snapshot, at: instant, zone: zone, focus: (now, next),
