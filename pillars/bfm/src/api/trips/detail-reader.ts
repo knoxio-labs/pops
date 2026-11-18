@@ -29,7 +29,7 @@ type TripsReadRouter = {
   };
 };
 
-type TripsCollections<TPlace> = {
+type TripsCollections<TPlace extends MobileTripDetailV2['places'][number]> = {
   places: GatewayOutcome<{ places: TPlace[] }>;
   visits: GatewayOutcome<z.infer<typeof TripsWire.visits>>;
   journeys: GatewayOutcome<z.infer<typeof TripsWire.journeys>>;
@@ -48,7 +48,7 @@ function parseCollection<T>(
   }
   return parseOrMismatch('trips', response, schema, operation);
 }
-async function readCollections<TPlace>(
+async function readCollections<TPlace extends MobileTripDetailV2['places'][number]>(
   gateway: PillarGateway,
   tripId: number,
   placesSchema: z.ZodType<{ places: TPlace[] }>
@@ -77,7 +77,7 @@ async function readCollections<TPlace>(
   };
 }
 
-type TripCollections<TPlace> = {
+type TripCollections<TPlace extends MobileTripDetailV2['places'][number]> = {
   places: { places: TPlace[] };
   visits: z.infer<typeof TripsWire.visits>;
   journeys: z.infer<typeof TripsWire.journeys>;
@@ -86,7 +86,15 @@ type TripCollections<TPlace> = {
   events: z.infer<typeof TripsWire.events>;
   associations: z.infer<typeof TripsWire.associations>;
 };
-function checkedCollections<TPlace>(
+
+type TripDetail<TPlace extends MobileTripDetailV2['places'][number]> = Omit<
+  MobileTripDetailV2,
+  'places'
+> & {
+  places: TPlace[];
+};
+
+function checkedCollections<TPlace extends MobileTripDetailV2['places'][number]>(
   reads: TripsCollections<TPlace>
 ): GatewayOutcome<TripCollections<TPlace>> {
   if (!isGatewayOk(reads.places)) return reads.places;
@@ -129,6 +137,14 @@ export async function getTrip(
   gateway: PillarGateway,
   id: number
 ): Promise<GatewayOutcome<MobileTripDetailV2>> {
+  return readTrip(gateway, id, TripsWire.places);
+}
+
+async function readTrip<TPlace extends MobileTripDetailV2['places'][number]>(
+  gateway: PillarGateway,
+  id: number,
+  placesSchema: z.ZodType<{ places: TPlace[] }>
+): Promise<GatewayOutcome<TripDetail<TPlace>>> {
   const response = await gateway.call<TripsReadRouter, unknown>('trips', (h) =>
     h.trips.get({ id })
   );
@@ -136,7 +152,7 @@ export async function getTrip(
   if (!isGatewayOk(trip)) return trip;
   if (trip.value.id !== id)
     return tripsContractMismatch('Trips get returned a different source identity');
-  const collectionRead = checkedCollections(await readCollections(gateway, id, TripsWire.places));
+  const collectionRead = checkedCollections(await readCollections(gateway, id, placesSchema));
   if (!isGatewayOk(collectionRead)) return collectionRead;
   const reads = collectionRead.value;
   const journeys: MobileTripDetailV2['journeys'] = [];
@@ -145,7 +161,7 @@ export async function getTrip(
     if (!isGatewayOk(detailed)) return detailed;
     journeys.push(detailed.value);
   }
-  const detail: MobileTripDetailV2 = {
+  const detail: TripDetail<TPlace> = {
     trip: trip.value,
     places: reads.places.places,
     visits: reads.visits.visits,
@@ -169,37 +185,5 @@ export async function getTripV3(
   gateway: PillarGateway,
   id: number
 ): Promise<GatewayOutcome<MobileTripDetailV3>> {
-  const response = await gateway.call<TripsReadRouter, unknown>('trips', (handle) =>
-    handle.trips.get({ id })
-  );
-  const trip = parseOrMismatch('trips', response, TripsWire.trip, 'trips.get');
-  if (!isGatewayOk(trip)) return trip;
-  if (trip.value.id !== id)
-    return tripsContractMismatch('Trips get returned a different source identity');
-  const collectionRead = checkedCollections(await readCollections(gateway, id, TripsWire.placesV3));
-  if (!isGatewayOk(collectionRead)) return collectionRead;
-  const reads = collectionRead.value;
-  const journeys: MobileTripDetailV3['journeys'] = [];
-  for (const journey of reads.journeys.journeys) {
-    const detailed = await readJourney(gateway, id, journey);
-    if (!isGatewayOk(detailed)) return detailed;
-    journeys.push(detailed.value);
-  }
-  const detail: MobileTripDetailV3 = {
-    trip: trip.value,
-    places: reads.places.places,
-    visits: reads.visits.visits,
-    journeys,
-    journeyGroups: reads.groups.groups,
-    stays: reads.stays.stays,
-    events: reads.events.events,
-    documentAssociations: reads.associations.associations,
-  };
-  if (!validTripsReferences(detail, id))
-    return tripsContractMismatch('Trips read contained inconsistent source references');
-  const referenced = referencedTripsPlaceIds(detail);
-  return {
-    kind: 'ok',
-    value: { ...detail, places: detail.places.filter((place) => referenced.has(place.id)) },
-  };
+  return readTrip(gateway, id, TripsWire.placesV3);
 }
