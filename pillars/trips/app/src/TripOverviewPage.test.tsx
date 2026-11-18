@@ -389,11 +389,12 @@ describe('Selected Trip Timeline host', () => {
   it.each([
     ['en-AU', enAU],
     ['pt-BR', ptBR],
-  ])('translates the controlled calendar diagnostics for %s', async (language, resource) => {
+  ])('translates overview status labels for %s', async (language, resource) => {
     await translation.changeLanguage(language);
     mount('/7');
     const labels = observed.overview.mock.lastCall?.[0].labels;
     expect(labels?.status('calendar')).toBe(resource.calendar);
+    expect(labels?.status('responsibilities')).toBe(resource.overview.status.responsibilities);
     for (const key of ['zone', 'range', 'window', 'empty'] as const)
       expect(labels?.status(`calendar.${key}`)).toBe(resource.overview.status.calendar[key]);
   });
