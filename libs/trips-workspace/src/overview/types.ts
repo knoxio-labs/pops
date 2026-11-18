@@ -1,6 +1,9 @@
 import type { ReactNode } from 'react';
 
-import type { Rental } from '../arrangements/types';
+import type { ContactsHostCapability } from '@pops/pillar-sdk';
+
+import type { ResponsibilityLabels } from '../arrangements/responsibility-context';
+import type { ArrangementResponsibility, Rental } from '../arrangements/types';
 import type { CalendarSelection } from '../calendar/types';
 import type { CaptureTimelineVisibility } from '../capture/timeline-filters';
 import type { CaptureSource } from '../capture/types';
@@ -64,6 +67,12 @@ export interface OverviewSources {
   meetings?: MeetingPlan[];
   capture?: CaptureSource;
   rentals?: Rental[];
+  responsibilities?: ArrangementResponsibility[];
+}
+/** Optional owner-backed identity reader and translations for the Sheet's responsibility column. */
+export interface OverviewResponsibilityHost {
+  contacts?: ContactsHostCapability;
+  labels: ResponsibilityLabels;
 }
 /** Host-localized control labels and deterministic source identity formatting. */
 export interface OverviewLabels {
@@ -91,6 +100,11 @@ export interface OverviewLabels {
     state: string;
     originals: string;
     originalsUnknown: string;
+    with: string;
+    ownerUnknown: string;
+    ownerUnset: string;
+    self: string;
+    contact: string;
     originalCount: (count: number) => string;
     unknownDate: string;
     onRoute: string;
@@ -130,6 +144,8 @@ interface OverviewBaseProps {
   sourceControls?: ReactNode;
   /** Exact presentation-only Capture/Idea/Event visibility; unclassified IDs and other kinds stay visible. */
   sourceVisibility?: CaptureTimelineVisibility;
+  /** Explicit owner assignments and the host capability used to resolve linked Contact names. */
+  responsibility?: OverviewResponsibilityHost;
   contextualEditor?: ReactNode;
   /** The canonical retained Capture composer, mounted by its owning host. */
   captureComposer?: ReactNode;

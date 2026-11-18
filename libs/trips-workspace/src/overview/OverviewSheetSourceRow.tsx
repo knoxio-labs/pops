@@ -1,6 +1,7 @@
 import { Badge, Button, TableCell, TableRow } from '@pops/ui';
 
 import { OverviewOriginals } from './OverviewOriginals';
+import { OverviewOwnerCell } from './OverviewOwner';
 import { sourceAction } from './source-action';
 
 import type { JSX } from 'react';
@@ -22,12 +23,7 @@ export function OverviewSheetSourceRow({
   statuses: string[];
 }): JSX.Element {
   const action = sourceAction(props, source);
-  const originals = props.sources.documents?.filter(
-    (document) =>
-      document.tripId === props.tripId &&
-      document.targetKind === source.kind &&
-      document.targetId === source.id
-  );
+  const originals = sourceDocuments(props, source);
   return (
     <TableRow
       data-constraint={statuses.includes('Purchased') ? 'hard' : 'soft'}
@@ -58,6 +54,7 @@ export function OverviewSheetSourceRow({
           <Badge variant="secondary">{props.labels.sheet.onRoute}</Badge>
         )}
       </TableCell>
+      <OverviewOwnerCell props={props} source={source} />
       <TableCell className="text-muted-foreground">
         <OverviewOriginals
           documents={originals}
@@ -66,6 +63,18 @@ export function OverviewSheetSourceRow({
         />
       </TableCell>
     </TableRow>
+  );
+}
+
+function sourceDocuments(
+  props: OverviewViewProps,
+  source: OverviewSource
+): OverviewViewProps['sources']['documents'] {
+  return props.sources.documents?.filter(
+    (document) =>
+      document.tripId === props.tripId &&
+      document.targetKind === source.kind &&
+      document.targetId === source.id
   );
 }
 

@@ -34,6 +34,7 @@ export function useOverviewSources(props: TripOverviewProps): OverviewQueries {
   const meetings = useOverviewCollection(props, 'meetings');
   const capture = useOverviewCollection(props, 'capture');
   const rentals = useOverviewCollection(props, 'rentals');
+  const responsibilities = useOverviewCollection(props, 'responsibilities');
   return {
     trip,
     visits,
@@ -47,6 +48,7 @@ export function useOverviewSources(props: TripOverviewProps): OverviewQueries {
     meetings,
     capture,
     rentals,
+    responsibilities,
   };
 }
 

@@ -1,6 +1,6 @@
 import { unwrap } from '@pops/pillar-sdk/client';
 
-import { loadRentals } from '../arrangements/api';
+import { loadRentals, loadResponsibilities } from '../arrangements/api';
 import { loadCaptureSource } from '../capture/api';
 import { loadMeetingPlans } from '../people/api';
 import {
@@ -43,5 +43,6 @@ export function overviewLoaders({
     meetings: () => loadMeetingPlans({ tripId, client }),
     capture: () => loadCaptureSource({ tripId, client }),
     rentals: () => loadRentals({ tripId, client }),
+    responsibilities: () => loadResponsibilities({ tripId, client }),
   };
 }

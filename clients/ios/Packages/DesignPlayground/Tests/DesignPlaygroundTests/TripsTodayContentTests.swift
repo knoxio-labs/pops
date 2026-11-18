@@ -46,8 +46,8 @@ internal struct TripsTodayContentTests {
         #expect(selectedTargets == [.root(.visit(visit.id)), .root(.gap(999))])
     }
 
-    @Test("Today promotes the first future source and excludes it from the four later rows")
-    internal func nextFocusDoesNotRepeat() throws {
+    @Test("Today promotes the next source and includes every source in the dated timeline")
+    internal func nextFocusLeadsTheTimeline() throws {
         let original = try TripNavigationTestContext.snapshot()
         let events = (0..<6).map { index in
             plannedEvent(
@@ -70,13 +70,31 @@ internal struct TripsTodayContentTests {
             }
 
         let focused = try #require(labels.first { $0.contains("UP NEXT") })
-        let upcoming = labels.filter { !$0.contains("UP NEXT") }.flatMap { $0 }
+        let timeline = labels.filter { !$0.contains("UP NEXT") }.flatMap { $0 }
         #expect(focused.contains("Future 0"))
         #expect(!renderedTexts.contains("Next · Future 0"))
-        #expect(labels.filter { !$0.contains("UP NEXT") }.count == 4)
-        #expect((1...4).allSatisfy { upcoming.contains("Future \($0)") })
-        #expect(!upcoming.contains("Future 0"))
-        #expect(!upcoming.contains("Future 5"))
+        #expect(labels.filter { !$0.contains("UP NEXT") }.count == 6)
+        #expect((0...5).allSatisfy { timeline.contains("Future \($0)") })
+    }
+
+    @Test("the upcoming focus precedes route and attention sections before the trip starts")
+    internal func beforeTripFocusPrecedesRouteAndAttention() throws {
+        let snapshot = try TripNavigationTestContext.snapshot()
+        let route = TripRouteSnapshot(
+            tripId: snapshot.trip.id, revision: 1,
+            order: [.visit(4), .gap(999)], paths: [], missingSources: [])
+        let date = try #require(TripClock.instant(local: "2025-12-30T12:00", zone: "UTC"))
+        let texts = try TripsTodayContent(snapshot: snapshot, date: date, route: route)
+            .environment(\.timeZone, .gmt)
+            .inspect()
+            .findAll(ViewType.Text.self)
+            .map { try $0.string() }
+
+        let next = try #require(texts.firstIndex(of: "UP NEXT"))
+        let chapters = try #require(texts.firstIndex(of: "The route"))
+        let attention = try #require(texts.firstIndex(of: "Needs your attention"))
+        #expect(next < chapters)
+        #expect(chapters < attention)
     }
 
     @Test("Today keeps the other sources that share the next start time")
@@ -102,8 +120,8 @@ internal struct TripsTodayContentTests {
         #expect(labels.contains { !$0.contains("UP NEXT") && $0.contains("Second event") })
     }
 
-    @Test("Now and Next remain distinct when the upcoming focus is summarized")
-    internal func nextFocusDoesNotRepeatAlongsideNow() throws {
+    @Test("Now and Next lead the page while the full timeline retains every item")
+    internal func nextFocusLeadsTheFullTimeline() throws {
         let original = try TripNavigationTestContext.snapshot()
         let currentStay = try #require(original.stays.first { $0.id == 1 })
         let event = plannedEvent(
@@ -124,10 +142,10 @@ internal struct TripsTodayContentTests {
 
         #expect(labels.contains { $0.contains("HAPPENING NOW") && $0.contains("Current stay") })
         #expect(labels.contains { $0.contains("UP NEXT") && $0.contains("Tomorrow appointment") })
-        #expect(!labels.contains { !$0.contains("UP NEXT") && $0.contains("Tomorrow appointment") })
+        #expect(labels.contains { !$0.contains("UP NEXT") && $0.contains("Tomorrow appointment") })
     }
 
-    @Test("Today keeps undated sources available while limiting the section to three")
+    @Test("Today keeps all undated sources together in the Dates to decide group")
     internal func unscheduledSourcesStayVisible() throws {
         let original = try TripNavigationTestContext.snapshot()
         let events = (0..<5).map { index in
@@ -143,10 +161,9 @@ internal struct TripsTodayContentTests {
             .findAll(ViewType.Text.self)
             .map { try $0.string() }
 
-        #expect(strings.contains("Still in your plan"))
-        #expect((0...2).allSatisfy { strings.contains("Unscheduled \($0)") })
-        #expect(!strings.contains("Unscheduled 3"))
-        #expect(!strings.contains("Unscheduled 4"))
+        #expect(strings.contains("The journey"))
+        #expect(strings.contains("Dates to decide"))
+        #expect((0...4).allSatisfy { strings.contains("Unscheduled \($0)") })
     }
 
     private func plannedEvent(_ id: Int, name: String, day: String?, time: String?) -> TripEvent {

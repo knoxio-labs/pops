@@ -99,6 +99,7 @@ function overviewSources(
     meetings: context.meetings.data,
     capture: context.capture.data,
     rentals: context.rentals.data,
+    responsibilities: context.responsibilities.data,
   };
 }
 
