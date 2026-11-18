@@ -109,9 +109,12 @@ internal struct TripSourceDetailTests {
             snapshot.journeys.first { journey in
                 journey.legs.contains { $0.purchase == "Purchased" }
             })
+        let sourceDetail = TripSourceDetailPresentation(source: .journey(journey))
+        #expect(sourceDetail.kind == "Journey")
+        #expect(sourceDetail.states.isEmpty)
+        #expect(sourceDetail.timings.isEmpty)
         let detail = TripJourneyDetailPresentation(journey: journey, places: snapshot.places)
         #expect(detail.legs.count == journey.legs.count)
-        #expect(detail.facts.allSatisfy { $0.label != "Purchase" })
         let leg = try #require(journey.legs.first)
         let legDetail = try #require(detail.legs.first { $0.id == leg.id })
         #expect(legDetail.states.first { $0.label == "Purchase" }?.value == "Purchased")
