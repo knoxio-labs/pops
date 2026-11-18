@@ -107,6 +107,49 @@ internal struct TripFocusPresentationTests {
         #expect(summary.hasConflictingTimes)
     }
 
+    @Test("focus cards expose checkout for Now and check-in for Next")
+    internal func stayFocusDetails() throws {
+        let snapshot = try TripTestSources.snapshot()
+        let stay = try #require(snapshot.stays.first { $0.id == 1 })
+
+        switch tripsTodayFocusDetail(source: .stay(stay), isCurrent: true) {
+        case .schedule(let schedule):
+            #expect(schedule.label == "Checkout")
+            #expect(schedule.recordedClock == stay.timing.checkOut)
+            #expect(schedule.instant == TripSource.stay(stay).end)
+        case .journey:
+            Issue.record("A stay focus must use its recorded schedule")
+        }
+
+        switch tripsTodayFocusDetail(source: .stay(stay), isCurrent: false) {
+        case .schedule(let schedule):
+            #expect(schedule.label == "Check-in")
+            #expect(schedule.recordedClock == stay.timing.checkIn)
+            #expect(schedule.instant == TripSource.stay(stay).start)
+        case .journey:
+            Issue.record("A stay focus must use its recorded schedule")
+        }
+    }
+
+    @Test("focus cards retain every recorded journey leg and endpoint")
+    internal func journeyFocusDetails() throws {
+        let snapshot = try TripTestSources.snapshot()
+        let journey = try #require(snapshot.journeys.first { $0.id == 1 })
+
+        guard
+            case .journey(let legs) = tripsTodayFocusDetail(
+                source: .journey(journey), isCurrent: false
+            )
+        else {
+            Issue.record("A journey focus must show its recorded legs")
+            return
+        }
+
+        #expect(legs.map(\.id) == journey.legs.map(\.id))
+        #expect(legs.first?.from.local == journey.legs.first?.from.local)
+        #expect(legs.first?.to.local == journey.legs.first?.to.local)
+    }
+
     private func overview(_ snapshot: TripSnapshot, at local: String) throws
         -> TripOverviewProjection
     {
