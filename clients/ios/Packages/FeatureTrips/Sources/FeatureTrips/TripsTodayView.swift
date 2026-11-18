@@ -52,8 +52,11 @@ internal struct TripsTodayContent: View {
                 TripsOverviewView(projection: projection, date: date, trip: snapshot.trip)
                 if !projection.now.isEmpty {
                     currentFocus(projection.now)
+                }
+                if !projection.nextFocus.isEmpty {
                     nextFocus(projection)
-                } else if projection.next.isEmpty {
+                }
+                if projection.now.isEmpty && projection.nextFocus.isEmpty {
                     breathingRoom
                 }
                 if route != nil, !projection.chapters.isEmpty {
@@ -66,7 +69,6 @@ internal struct TripsTodayContent: View {
                         selectPlanTarget($0.target)
                     }
                 }
-                if projection.now.isEmpty { nextFocus(projection) }
                 upcoming(projection.next, excluding: projection.nextFocus.isEmpty ? 0 : 1)
                 if !projection.other.isEmpty { unscheduled(projection.other) }
                 if !snapshot.trip.notes.isEmpty { notes }
