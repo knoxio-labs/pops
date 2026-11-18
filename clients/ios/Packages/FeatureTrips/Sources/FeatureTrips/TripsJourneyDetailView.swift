@@ -12,7 +12,8 @@ internal struct TripsJourneyDetailView: View {
                 ContentUnavailableView(
                     "No route segments recorded",
                     systemImage: "point.3.connected.trianglepath.dotted",
-                    description: Text("Route details will appear here when they are added."))
+                    description: Text("Route details will appear here when they are added.")
+                )
             } else {
                 ForEach(Array(journey.legs.enumerated()), id: \.element.id) { index, leg in
                     legCard(leg, index: index)
@@ -44,7 +45,8 @@ internal struct TripsJourneyDetailView: View {
                     TripsSourceFactLine(label: "Reference", value: reference, monospaced: true)
                 }
                 if !leg.notes.isEmpty {
-                    TripsSourceFactLine(label: "Notes", value: leg.notes)
+                    TripsSourceFactLine(
+                        label: "Notes", value: leg.notes)
                 }
                 TripsSourceReferencesCard(title: "Segment sources", links: leg.sourceLinks)
             }
