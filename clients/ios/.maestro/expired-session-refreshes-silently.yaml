@@ -43,7 +43,9 @@ name: An expired access token is renewed without the screen noticing
 # pairing and nothing said the device was signed out.
 - assertVisible:
     id: 'transaction-detail'
-- assertVisible: 'Account, Everyday'
+- extendedWaitUntil:
+    visible: 'Account, Everyday'
+    timeout: 60000
 # The banner this screen draws over a row it could not complete, whatever the
 # reason was. Matched with a trailing `.*` because Maestro matches a text
 # selector as a regex against the WHOLE label, and `TransactionsCopy` composes

@@ -86,9 +86,18 @@ internal struct ContentViewTabSelectionTests {
 
     @Test("the More tab exposes the identifier used by the UI flow")
     func moreTabAccessibilityIsWired() {
+        let source = ContentViewFeatureSwitchingWiringTests.contentViewSource
+            .split(whereSeparator: \.isNewline)
+            .map { String($0.drop(while: \.isWhitespace)) }
+            .joined(separator: "\n")
         #expect(
-            ContentViewFeatureSwitchingWiringTests.contentViewSource.contains(
-                ".accessibilityIdentifier(Self.moreTabAccessibilityIdentifier)"
+            source.contains(
+                """
+                } label: {
+                Label(RootCopy.more, systemImage: "ellipsis")
+                .accessibilityIdentifier(Self.moreTabAccessibilityIdentifier)
+                }
+                """
             )
         )
     }
