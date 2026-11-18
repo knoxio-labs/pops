@@ -12,8 +12,7 @@ internal struct TripsPlanMapView: View {
     @State private var selectedPlaceID: Int?
     @State private var searchText = ""
     @State private var results: [MKMapItem] = []
-    @State private var pins: [Int: TripPlacePin] = [:]
-    @State private var draft: TripPlacePin?
+    @State private var pinState = TripPlanMapPinState()
     @State private var isSearching = false
     @State private var isSaving = false
     @State private var failure: String?
@@ -27,7 +26,7 @@ internal struct TripsPlanMapView: View {
     }
 
     private var mapSegments: [TripPlanMapSegment] {
-        projection.pinnedSegments(using: pin(for:))
+        projection.pinnedSegments(using: pinState.storedPin(for:))
     }
 
     private var selectedPlace: TripPlace? {
@@ -36,9 +35,7 @@ internal struct TripsPlanMapView: View {
 
     private var renderedCoordinates: [CLLocationCoordinate2D] {
         places.compactMap { place in
-            let pin =
-                place.id == selectedPlaceID
-                ? (draft ?? pins[place.id] ?? place.pin) : (pins[place.id] ?? place.pin)
+            let pin = pinState.storedPin(for: place)
             guard let pin else { return nil }
             return CLLocationCoordinate2D(latitude: pin.latitude, longitude: pin.longitude)
         }
@@ -53,10 +50,13 @@ internal struct TripsPlanMapView: View {
             map
             TripsPlanMapSelectedPlaceCard(
                 place: selectedPlace, coordinatesLabel: coordinatesLabel, isSaving: isSaving,
-                canSave: writer != nil && draft != nil && !isSaving, failure: failure, save: save)
+                canSave: pinState.canSave(writerAvailable: writer != nil, place: selectedPlace)
+                    && !isSaving,
+                failure: failure, save: save)
         }
         .onAppear(perform: prepare)
-        .onChange(of: selectedPlaceID) { _, _ in prepareDraft() }
+        .onChange(of: selectedPlaceID) { _, placeID in selectPlace(placeID) }
+        .onChange(of: snapshot) { _, _ in pinState.refreshFromServer() }
     }
 
     private var placePicker: some View {
@@ -82,9 +82,13 @@ internal struct TripsPlanMapView: View {
                             lineWidth: PopsBorder.emphasis)
                 }
                 ForEach(places) { place in
-                    if let pin = pin(for: place) {
+                    if let pin = pinState.storedPin(for: place) {
                         Marker(place.name, coordinate: coordinate(for: pin))
                             .tint(place.id == selectedPlaceID ? Color.popsTrips : Color.popsAccent)
+                    }
+                    if let draft = pinState.draftPin(for: place) {
+                        Marker("Unsaved pin for \(place.name)", coordinate: coordinate(for: draft))
+                            .tint(Color.popsTripsAttention)
                     }
                 }
             }
@@ -109,8 +113,7 @@ internal struct TripsPlanMapView: View {
                     let pin = try? TripPlacePin(
                         latitude: point.latitude, longitude: point.longitude)
                 else { return }
-                draft = pin
-                pins[selectedPlaceID] = pin
+                pinState.propose(pin, for: selectedPlaceID)
                 failure = nil
             }
             .accessibilityIdentifier("trip-plan-map")
@@ -118,29 +121,28 @@ internal struct TripsPlanMapView: View {
     }
 
     private var coordinatesLabel: String {
-        guard let draft else { return "Choose a search result or tap the map" }
-        return String(format: "%.5f, %.5f", draft.latitude, draft.longitude)
+        guard let selectedPlace else { return "Choose a route place" }
+        if let draft = pinState.draftPin(for: selectedPlace) {
+            return "Unsaved · \(formattedCoordinates(draft))"
+        }
+        if let pin = pinState.storedPin(for: selectedPlace) {
+            return "Saved · \(formattedCoordinates(pin))"
+        }
+        return "Choose a search result or tap the map"
     }
 
     private func prepare() {
-        for place in places {
-            if let pin = place.pin { pins[place.id] = pin }
-        }
         if selectedPlaceID == nil { selectedPlaceID = places.first?.id }
-        prepareDraft()
+        pinState.select(placeID: selectedPlaceID)
     }
 
-    private func prepareDraft() {
-        guard let selectedPlaceID else {
-            draft = nil
-            return
-        }
-        draft = pins[selectedPlaceID]
+    private func selectPlace(_ placeID: Int?) {
+        pinState.select(placeID: placeID)
+        failure = nil
     }
 
-    private func pin(for place: TripPlace) -> TripPlacePin? {
-        if place.id == selectedPlaceID { return draft ?? pins[place.id] ?? place.pin }
-        return pins[place.id] ?? place.pin
+    private func formattedCoordinates(_ pin: TripPlacePin) -> String {
+        String(format: "%.5f, %.5f", pin.latitude, pin.longitude)
     }
 
     private func coordinate(for pin: TripPlacePin) -> CLLocationCoordinate2D {
@@ -176,15 +178,18 @@ internal struct TripsPlanMapView: View {
             let pin = try? TripPlacePin(
                 latitude: coordinate.latitude, longitude: coordinate.longitude)
         else { return }
-        pins[selectedPlaceID] = pin
-        draft = pin
+        pinState.propose(pin, for: selectedPlaceID)
         camera = .item(item)
         results = []
         failure = nil
     }
 
     private func save() {
-        guard let writer, let place = selectedPlace, let draft else { return }
+        guard let writer, let place = selectedPlace,
+            let draft = pinState.draftPin(for: place),
+            pinState.canSave(writerAvailable: true, place: place)
+        else { return }
+        let expectedServerRevision = pinState.serverRevision
         isSaving = true
         failure = nil
         Task { @MainActor in
@@ -197,8 +202,12 @@ internal struct TripsPlanMapView: View {
                     failure = "This place is no longer on the trip. Refresh Plan and try again."
                     return
                 }
-                pins[saved.id] = saved.pin
-                self.draft = saved.pin
+                guard let savedPin = saved.pin else {
+                    failure = "Save unconfirmed. Refresh Plan to verify."
+                    return
+                }
+                pinState.confirm(
+                    savedPin, for: saved.id, expectedServerRevision: expectedServerRevision)
             } catch {
                 failure = "Could not save this pin. Check your connection and try again."
             }
