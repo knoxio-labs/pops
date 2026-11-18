@@ -44,6 +44,7 @@ function GapRow(
         <Badge variant="outline">{props.labels.sheet.gap}</Badge>
       </TableCell>
       <TableCell className="text-muted-foreground">—</TableCell>
+      <TableCell className="text-muted-foreground">—</TableCell>
     </TableRow>
   );
 }

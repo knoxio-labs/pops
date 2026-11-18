@@ -59,7 +59,8 @@ describe('source-backed TripOverview', () => {
     responses.set('/trips/7/route', routeRead({ order: [{ kind: 'gap', id: 44 }] }));
     mount(responses);
     const table = await screen.findByRole('table', { name: 'Sheet' });
-    expect(within(table).getByText('gap #44')).toBeVisible();
+    const gap = within(table).getByRole('row', { name: /gap #44/ });
+    expect(gap.querySelectorAll('td').length).toBe(5);
     await userEvent.click(screen.getByRole('button', { name: 'workspace.journey' }));
     const journey = await screen.findByRole('list', { name: 'Route' });
     expect(within(journey).getByText('gap #44')).toBeVisible();
