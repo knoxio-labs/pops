@@ -2,6 +2,5 @@ appId: com.knoxiolabs.pops.local
 name: Select Transactions from More
 ---
 - tapOn:
-    text: 'More'
-    index: 1
+    id: 'more-tab'
 - tapOn: 'Transactions'

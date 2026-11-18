@@ -161,7 +161,7 @@ internal struct ContentView: View {
                     }
                 }
                 if !Self.moreFeatures(for: surface.available).isEmpty {
-                    Tab(RootCopy.more, systemImage: "ellipsis", value: Self.moreTab) {
+                    Tab(value: Self.moreTab) {
                         MoreFeaturesView(
                             features: Self.moreFeatures(for: surface.available),
                             onSelectionChange: {
@@ -169,8 +169,10 @@ internal struct ContentView: View {
                             },
                             destination: { feature in screen(for: feature) }
                         )
+                    } label: {
+                        Label(RootCopy.more, systemImage: "ellipsis")
+                            .accessibilityIdentifier(Self.moreTabAccessibilityIdentifier)
                     }
-                    .accessibilityIdentifier(Self.moreTabAccessibilityIdentifier)
                 }
                 if Self.showsEgoEntry(available: surface.available) {
                     Tab(value: Self.egoLauncherTab) {
