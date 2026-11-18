@@ -22,7 +22,7 @@ internal struct TripPlanMapPinState: Equatable {
     ) {
         guard expectedServerRevision == serverRevision else { return }
         savedPins[placeID] = pin
-        if draftPlaceID == placeID { draft = nil }
+        if draftPlaceID == placeID, draft == pin { draft = nil }
     }
 
     internal mutating func refreshFromServer() {

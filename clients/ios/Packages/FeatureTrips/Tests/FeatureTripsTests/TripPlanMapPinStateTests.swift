@@ -73,4 +73,22 @@ internal struct TripPlanMapPinStateTests {
 
         #expect(state.storedPin(for: place) == refreshed)
     }
+
+    @Test func saveResponsePreservesANewerDraftForTheSamePlace() throws {
+        let saving = try TripPlacePin(latitude: -34.92, longitude: 138.60)
+        let newerDraft = try TripPlacePin(latitude: -23.55, longitude: -46.63)
+        let place = TripPlace(id: 1, name: "Sydney", sourceLinks: [])
+        var state = TripPlanMapPinState()
+
+        state.select(placeID: place.id)
+        state.propose(saving, for: place.id)
+        let saveRevision = state.serverRevision
+        state.propose(newerDraft, for: place.id)
+
+        state.confirm(saving, for: place.id, expectedServerRevision: saveRevision)
+
+        #expect(state.storedPin(for: place) == saving)
+        #expect(state.draftPin(for: place) == newerDraft)
+        #expect(state.canSave(writerAvailable: true, place: place))
+    }
 }

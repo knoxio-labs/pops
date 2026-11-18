@@ -203,7 +203,7 @@ internal struct TripsPlanMapView: View {
                     return
                 }
                 guard let savedPin = saved.pin else {
-                    failure = "The save could not be confirmed. Refresh Plan to check the saved pin."
+                    failure = "Save unconfirmed. Refresh Plan to verify."
                     return
                 }
                 pinState.confirm(
