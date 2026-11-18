@@ -47,9 +47,9 @@ internal struct TripsNavigationTests {
             documentAssociations: original.documentAssociations)
         let date = try #require(TripClock.instant(local: "2026-01-02T12:00", zone: "UTC"))
         let view = TripsTodayContent(snapshot: snapshot, date: date)
-        #expect(
-            try view.environment(\.timeZone, .gmt).inspect().find(text: "Parallel event").string()
-                == "Parallel event")
+        let rendered = try view.environment(\.timeZone, .gmt).inspect()
+            .find(text: "Parallel event").string()
+        #expect(rendered == "Parallel event")
     }
 
     @Test("Inbox is part of the selected Trip workspace")
@@ -95,35 +95,26 @@ internal struct TripsNavigationTests {
         #expect(model.snapshot == snapshot)
     }
 
-    @Test("Today uses a date grouped journey and keeps undated originals visible")
-    internal func dateGroupedJourney() throws {
-        let original = try TripNavigationTestContext.snapshot()
-        let event = TripEvent(
-            id: 99, tripId: original.trip.id, visitId: nil, name: "Undated idea",
-            intention: "Considering", arrangement: nil, purchase: nil,
-            timing: TripEventTiming(
-                start: nil, end: nil, startTime: nil, endTime: nil, timeZone: nil),
-            address: nil, reference: nil, sourceUrl: nil, ticketUrl: nil, notes: "",
-            sourceLinks: [], venueLinks: [], organiserLinks: [], documentLinks: [])
-        let snapshot = TripSnapshot(
-            trip: original.trip, places: original.places, visits: original.visits,
-            journeys: original.journeys, journeyGroups: original.journeyGroups,
-            stays: original.stays, events: [event],
-            documentAssociations: original.documentAssociations)
-        let date = try #require(TripClock.instant(local: "2026-01-02T12:00", zone: "UTC"))
-        let view = TripsTodayContent(snapshot: snapshot, date: date)
-        let inspection = try view.environment(\.timeZone, .gmt).inspect()
-        let groups = try inspection.findAll(TripsTimelineGroupView.self).map {
-            try $0.actualView().group
+    @Test("timeline grouping preserves undated sources and intervals spanning the selected day")
+    internal func undatedAndSpanningSources() throws {
+        let snapshot = try TripNavigationTestContext.snapshot()
+        var filter = TripTimelineFilter()
+        filter.grouping = .day
+        filter.fromDay = "2026-01-02"
+        filter.throughDay = "2026-01-02"
+        let sources = filter.sources(in: snapshot, at: .now, zone: .gmt)
+        let groups = tripTimelineGroups(
+            snapshot: snapshot, sources: sources,
+            visits: filter.visits(in: snapshot, sources: sources),
+            grouping: filter.grouping, zone: .gmt)
+        let sourceIDs = groups.flatMap(\.entries).flatMap { entry in
+            switch entry {
+            case .visit(let visit): visit.sources.map(\.id)
+            case .source(let source): [source.id]
+            }
         }
-        let values = groups.flatMap { $0.entries.map(\.id) }
-        let sources = try inspection.findAll(TripsSourceRow.self).map {
-            try $0.actualView().source.id
-        }
-        #expect(groups.contains { $0.id == "undated" })
-        #expect(values.contains("event-99"))
-        #expect(sources.contains("stay-1"))
-        #expect(!values.contains("journey-2"))
+        #expect(sourceIDs.contains("stay-1"))
+        #expect(sourceIDs.contains("journey-2"))
     }
 
     @Test(

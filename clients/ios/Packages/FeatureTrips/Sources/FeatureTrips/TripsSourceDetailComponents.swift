@@ -45,7 +45,9 @@ internal struct TripsSourceHero: View {
                                 .font(.popsSubheadline.weight(.semibold))
                                 .foregroundStyle(
                                     state.value == "Purchased"
-                                        ? Color.popsSuccess : Color.popsForeground)
+                                        ? Color.popsSuccess
+                                        : Color.popsForeground
+                                )
                         }
                     }
                 }

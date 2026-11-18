@@ -271,7 +271,7 @@ export const MOBILE_CAPABILITY_SCOPES: Readonly<Record<MobileCapability, readonl
     'documents.paperless.status',
     'documents.paperless.task',
   ],
-  'trips.write': ['trips.trips.create', 'trips.trips.update'],
+  'trips.write': ['trips.trips.create', 'trips.trips.update', 'trips.places.update'],
   'trips.capture.write': [
     'trips.captures.create',
     'trips.captures.update',

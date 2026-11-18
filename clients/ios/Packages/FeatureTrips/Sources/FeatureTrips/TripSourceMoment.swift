@@ -8,8 +8,9 @@ internal struct TripSourceMoment: Equatable {
     internal let resolutionNote: String?
 }
 
-internal func tripSourceMoment(day: String?, clock: String?, timeZone: String?) -> TripSourceMoment
-{
+internal func tripSourceMoment(
+    day: String?, clock: String?, timeZone: String?
+) -> TripSourceMoment {
     let displayDay = day.map(TripClock.dayLabel)
     let displayClock = clock?.trimmingCharacters(in: .whitespacesAndNewlines)
     let zone = timeZone?.trimmingCharacters(in: .whitespacesAndNewlines)

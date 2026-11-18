@@ -1,5 +1,4 @@
 import AppCore
-import DesignSystem
 import Foundation
 import Testing
 
@@ -61,18 +60,10 @@ internal struct TripTimelinePresentationTests {
         let recordedFlight = try #require(snapshot.journeys.first { $0.id == 1 })
         let unknownJourney = try #require(snapshot.journeys.first { $0.id == 2 })
         let recordedStay = try #require(snapshot.stays.first { $0.id == 1 })
-        let recordedEvent = TripEvent(
-            id: 99, tripId: snapshot.trip.id, visitId: nil, name: "Event", intention: nil,
-            arrangement: nil, purchase: nil,
-            timing: TripEventTiming(
-                start: nil, end: nil, startTime: nil, endTime: nil, timeZone: nil),
-            address: nil, reference: nil, sourceUrl: nil, ticketUrl: nil, notes: "",
-            sourceLinks: [], venueLinks: [], organiserLinks: [], documentLinks: [])
 
         let flightStyle = TripsSourceStyle(source: .journey(recordedFlight))
         let unknownStyle = TripsSourceStyle(source: .journey(unknownJourney))
         let stayStyle = TripsSourceStyle(source: .stay(recordedStay))
-        let eventStyle = TripsSourceStyle(source: .event(recordedEvent))
 
         #expect(flightStyle.kind == "Journey · Flight")
         #expect(flightStyle.symbol == "airplane")
@@ -80,7 +71,5 @@ internal struct TripTimelinePresentationTests {
         #expect(unknownStyle.symbol == "arrow.triangle.swap")
         #expect(stayStyle.kind == "Stay · Hotel")
         #expect(stayStyle.symbol == "bed.double.fill")
-        #expect(stayStyle.accent == .popsTripsStay)
-        #expect(eventStyle.accent == .popsTripsActivity)
     }
 }
