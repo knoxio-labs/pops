@@ -69,8 +69,10 @@ command engine.
 controlled tools and exact `onOpenSource({ kind, id })` callbacks for existing editors.
 The route defaults to a compact Sheet table and can switch to the chronological Journey
 cards. Sheet rows keep Places, Stays, Events and Rentals separate, with each source's own
-dates and status plus only its directly associated document count. Document counts remain
-unknown until their association read succeeds. The overview also summarizes exact Visit
+dates and status, directly associated document count and explicitly saved responsibility.
+Contact names resolve only through the owning host capability; a missing assignment is
+distinct from an unavailable responsibility read. Document counts remain unknown until
+their association read succeeds. The overview also summarizes exact Visit
 overnight coverage and route gaps; undated visits stay distinct from open nights.
 The `controls` slot belongs to that host; `contextualEditor` renders after the Timeline's
 main landmark so a Sheet or Dialog can reuse its existing workspace without nested mains.

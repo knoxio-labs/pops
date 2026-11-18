@@ -10,6 +10,7 @@ import {
 import { ErrorState } from '@pops/ui';
 
 import { useArrangementContacts } from './arrangements/use-arrangement-contacts';
+import { useArrangementLabels } from './arrangements/use-arrangement-labels';
 import { CaptureContext } from './CaptureContext';
 import { sourceId } from './source-id';
 import { useOverviewLabels } from './timeline-labels';
@@ -119,12 +120,17 @@ function TimelineOverview({
   const { i18n } = useTranslation('trips');
   const { tripId } = props;
   const labels = useOverviewLabels();
+  const responsibilityLabels = useArrangementLabels();
   return (
     <TripOverview
       tripId={tripId}
       client={props.client}
       locale={i18n.resolvedLanguage ?? i18n.language}
       labels={labels}
+      responsibility={{
+        labels: responsibilityLabels,
+        ...(props.contacts ? { contacts: props.contacts } : {}),
+      }}
       backHref="/trips"
       documentsHref={`/trips/${tripId}/documents`}
       settingsHref={`/trips/${tripId}/settings`}
