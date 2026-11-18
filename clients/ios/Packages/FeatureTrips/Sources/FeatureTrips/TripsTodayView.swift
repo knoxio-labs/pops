@@ -67,7 +67,7 @@ internal struct TripsTodayContent: View {
                     }
                 }
                 if projection.now.isEmpty { nextFocus(projection) }
-                upcoming(projection.next, excluding: projection.nextFocus.count)
+                upcoming(projection.next, excluding: projection.nextFocus.isEmpty ? 0 : 1)
                 if !projection.other.isEmpty { unscheduled(projection.other) }
                 if !snapshot.trip.notes.isEmpty { notes }
             }

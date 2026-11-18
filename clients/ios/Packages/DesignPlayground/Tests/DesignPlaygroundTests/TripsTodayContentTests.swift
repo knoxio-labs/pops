@@ -79,6 +79,29 @@ internal struct TripsTodayContentTests {
         #expect(!upcoming.contains("Future 5"))
     }
 
+    @Test("Today keeps the other sources that share the next start time")
+    internal func sameStartSourcesRemainVisible() throws {
+        let original = try TripNavigationTestContext.snapshot()
+        let events = [
+            plannedEvent(100, name: "First event", day: "2026-01-02", time: "09:00"),
+            plannedEvent(101, name: "Second event", day: "2026-01-02", time: "09:00"),
+        ]
+        let snapshot = TripSnapshot(
+            trip: original.trip, places: original.places, visits: [], journeys: [],
+            journeyGroups: [], stays: [], events: events, documentAssociations: [])
+        let date = try #require(TripClock.instant(local: "2026-01-01T12:00", zone: "UTC"))
+        let labels = try TripsTodayContent(snapshot: snapshot, date: date)
+            .environment(\.timeZone, .gmt)
+            .inspect()
+            .findAll(ViewType.NavigationLink.self)
+            .map { link in
+                try link.labelView().findAll(ViewType.Text.self).map { try $0.string() }
+            }
+
+        #expect(labels.contains { $0.contains("UP NEXT") && $0.contains("First event") })
+        #expect(labels.contains { !$0.contains("UP NEXT") && $0.contains("Second event") })
+    }
+
     @Test("Now and Next remain distinct when the upcoming focus is summarized")
     internal func nextFocusDoesNotRepeatAlongsideNow() throws {
         let original = try TripNavigationTestContext.snapshot()
