@@ -19,7 +19,7 @@ internal struct TripsPlanNavigationTests {
         await model.select(snapshot.trip.id)
         await model.route.readTask?.value
         let root = TripsRootView(model: model, documents: reader)
-        #expect(try root.inspect().findAll(TripsTimelineView.self).count == 1)
+        #expect(try root.inspect().findAll(TripsTodayView.self).count == 1)
         model.tab = .plan
         let workspace = TripsWorkspaceView(model: model, tab: .plan)
         let plan = try workspace.inspect().find(TripsPlanLineView.self).actualView()
@@ -34,8 +34,8 @@ internal struct TripsPlanNavigationTests {
         try sourceRow.find(ViewType.Button.self).tap()
         #expect(model.source == .journey(journey))
         #expect(model.canonicalSource(try #require(model.source)) == .journey(journey))
-        model.tab = .trips
-        #expect(try root.inspect().find(TripsTimelineView.self).actualView().snapshot == snapshot)
+        model.tab = .today
+        #expect(try root.inspect().find(TripsTodayView.self).actualView().snapshot == snapshot)
     }
 
     @Test("route failure is presented only in Plan while Today stays usable")
@@ -45,8 +45,8 @@ internal struct TripsPlanNavigationTests {
         let model = TripsModel(repository: reader, routeReader: reader)
         await model.select(snapshot.trip.id)
         await model.route.readTask?.value
-        let today = TripsWorkspaceView(model: model, tab: .trips)
-        #expect(try today.inspect().findAll(TripsTimelineView.self).count == 1)
+        let today = TripsWorkspaceView(model: model, tab: .today)
+        #expect(try today.inspect().findAll(TripsTodayView.self).count == 1)
         model.tab = .plan
         let view = TripsWorkspaceView(model: model, tab: .plan)
         let failure = try view.inspect().find(TripsFailureView.self).actualView()
@@ -79,7 +79,7 @@ internal struct TripsPlanNavigationTests {
         #expect(
             try view.inspect().find(text: "Plan is not connected").string()
                 == "Plan is not connected")
-        #expect(try view.inspect().findAll(TripsTimelineView.self).isEmpty)
+        #expect(try view.inspect().findAll(TripsTodayView.self).isEmpty)
         #expect(try view.inspect().findAll(TripsPlanLineView.self).isEmpty)
     }
 

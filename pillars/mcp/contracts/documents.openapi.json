@@ -527,6 +527,2133 @@
         "summary": "Resolve the consumption task an upload returned (404 for an unknown task id)",
         "tags": ["paperless"]
       }
+    },
+    "/paperless/uploads": {
+      "post": {
+        "operationId": "write.createUpload",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "byteLength": {
+                    "maximum": 9007199254740991,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "fileName": {
+                    "maxLength": 255,
+                    "minLength": 1,
+                    "pattern": "^[^/\\\\\\p{Cc}]+$",
+                    "type": "string"
+                  },
+                  "mimeType": {
+                    "pattern": "^[a-z0-9!#$&^_.+-]+\\/[a-z0-9!#$&^_.+-]+$",
+                    "type": "string"
+                  },
+                  "operationId": {
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "pattern": "^[a-f0-9]{64}$",
+                    "type": "string"
+                  },
+                  "title": {
+                    "maxLength": 128,
+                    "minLength": 1,
+                    "pattern": "^[^\\p{Cc}]+$",
+                    "type": "string"
+                  }
+                },
+                "required": ["operationId", "fileName", "mimeType", "byteLength", "sha256"],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Body"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "oneOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "contentAvailable": {
+                              "enum": [false],
+                              "type": "boolean"
+                            },
+                            "documentId": {
+                              "enum": [null],
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "input": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "byteLength": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                },
+                                "fileName": {
+                                  "maxLength": 255,
+                                  "minLength": 1,
+                                  "pattern": "^[^/\\\\\\p{Cc}]+$",
+                                  "type": "string"
+                                },
+                                "mimeType": {
+                                  "pattern": "^[a-z0-9!#$&^_.+-]+\\/[a-z0-9!#$&^_.+-]+$",
+                                  "type": "string"
+                                },
+                                "operationId": {
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                  "type": "string"
+                                },
+                                "sha256": {
+                                  "pattern": "^[a-f0-9]{64}$",
+                                  "type": "string"
+                                },
+                                "title": {
+                                  "maxLength": 128,
+                                  "minLength": 1,
+                                  "pattern": "^[^\\p{Cc}]+$",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "operationId",
+                                "fileName",
+                                "mimeType",
+                                "byteLength",
+                                "sha256"
+                              ],
+                              "type": "object"
+                            },
+                            "ownerMatches": {
+                              "type": "boolean"
+                            },
+                            "reason": {
+                              "enum": [null],
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "state": {
+                              "enum": ["awaiting_content"],
+                              "type": "string"
+                            },
+                            "taskId": {
+                              "enum": [null],
+                              "nullable": true,
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "input",
+                            "ownerMatches",
+                            "taskId",
+                            "documentId",
+                            "reason",
+                            "state",
+                            "contentAvailable"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "contentAvailable": {
+                              "enum": [true],
+                              "type": "boolean"
+                            },
+                            "documentId": {
+                              "enum": [null],
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "input": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "byteLength": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                },
+                                "fileName": {
+                                  "maxLength": 255,
+                                  "minLength": 1,
+                                  "pattern": "^[^/\\\\\\p{Cc}]+$",
+                                  "type": "string"
+                                },
+                                "mimeType": {
+                                  "pattern": "^[a-z0-9!#$&^_.+-]+\\/[a-z0-9!#$&^_.+-]+$",
+                                  "type": "string"
+                                },
+                                "operationId": {
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                  "type": "string"
+                                },
+                                "sha256": {
+                                  "pattern": "^[a-f0-9]{64}$",
+                                  "type": "string"
+                                },
+                                "title": {
+                                  "maxLength": 128,
+                                  "minLength": 1,
+                                  "pattern": "^[^\\p{Cc}]+$",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "operationId",
+                                "fileName",
+                                "mimeType",
+                                "byteLength",
+                                "sha256"
+                              ],
+                              "type": "object"
+                            },
+                            "ownerMatches": {
+                              "type": "boolean"
+                            },
+                            "reason": {
+                              "enum": [null],
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "state": {
+                              "enum": ["admitted"],
+                              "type": "string"
+                            },
+                            "taskId": {
+                              "enum": [null],
+                              "nullable": true,
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "input",
+                            "ownerMatches",
+                            "taskId",
+                            "documentId",
+                            "reason",
+                            "state",
+                            "contentAvailable"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "blockedBy": {
+                              "enum": [
+                                "dispatch_unproven",
+                                "restored_history",
+                                "guard_unavailable"
+                              ],
+                              "type": "string"
+                            },
+                            "contentAvailable": {
+                              "type": "boolean"
+                            },
+                            "documentId": {
+                              "enum": [null],
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "input": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "byteLength": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                },
+                                "fileName": {
+                                  "maxLength": 255,
+                                  "minLength": 1,
+                                  "pattern": "^[^/\\\\\\p{Cc}]+$",
+                                  "type": "string"
+                                },
+                                "mimeType": {
+                                  "pattern": "^[a-z0-9!#$&^_.+-]+\\/[a-z0-9!#$&^_.+-]+$",
+                                  "type": "string"
+                                },
+                                "operationId": {
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                  "type": "string"
+                                },
+                                "sha256": {
+                                  "pattern": "^[a-f0-9]{64}$",
+                                  "type": "string"
+                                },
+                                "title": {
+                                  "maxLength": 128,
+                                  "minLength": 1,
+                                  "pattern": "^[^\\p{Cc}]+$",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "operationId",
+                                "fileName",
+                                "mimeType",
+                                "byteLength",
+                                "sha256"
+                              ],
+                              "type": "object"
+                            },
+                            "ownerMatches": {
+                              "type": "boolean"
+                            },
+                            "reason": {
+                              "enum": [null],
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "state": {
+                              "enum": ["outcome_unknown"],
+                              "type": "string"
+                            },
+                            "taskId": {
+                              "enum": [null],
+                              "nullable": true,
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "input",
+                            "ownerMatches",
+                            "taskId",
+                            "documentId",
+                            "reason",
+                            "state",
+                            "contentAvailable",
+                            "blockedBy"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "contentAvailable": {
+                              "enum": [true],
+                              "type": "boolean"
+                            },
+                            "documentId": {
+                              "enum": [null],
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "input": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "byteLength": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                },
+                                "fileName": {
+                                  "maxLength": 255,
+                                  "minLength": 1,
+                                  "pattern": "^[^/\\\\\\p{Cc}]+$",
+                                  "type": "string"
+                                },
+                                "mimeType": {
+                                  "pattern": "^[a-z0-9!#$&^_.+-]+\\/[a-z0-9!#$&^_.+-]+$",
+                                  "type": "string"
+                                },
+                                "operationId": {
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                  "type": "string"
+                                },
+                                "sha256": {
+                                  "pattern": "^[a-f0-9]{64}$",
+                                  "type": "string"
+                                },
+                                "title": {
+                                  "maxLength": 128,
+                                  "minLength": 1,
+                                  "pattern": "^[^\\p{Cc}]+$",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "operationId",
+                                "fileName",
+                                "mimeType",
+                                "byteLength",
+                                "sha256"
+                              ],
+                              "type": "object"
+                            },
+                            "ownerMatches": {
+                              "type": "boolean"
+                            },
+                            "reason": {
+                              "enum": [null],
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "state": {
+                              "enum": ["accepted"],
+                              "type": "string"
+                            },
+                            "taskId": {
+                              "pattern": "^[A-Za-z0-9_-]{1,72}$",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "input",
+                            "ownerMatches",
+                            "state",
+                            "taskId",
+                            "documentId",
+                            "reason",
+                            "contentAvailable"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "contentAvailable": {
+                              "type": "boolean"
+                            },
+                            "documentId": {
+                              "exclusiveMinimum": true,
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "input": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "byteLength": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                },
+                                "fileName": {
+                                  "maxLength": 255,
+                                  "minLength": 1,
+                                  "pattern": "^[^/\\\\\\p{Cc}]+$",
+                                  "type": "string"
+                                },
+                                "mimeType": {
+                                  "pattern": "^[a-z0-9!#$&^_.+-]+\\/[a-z0-9!#$&^_.+-]+$",
+                                  "type": "string"
+                                },
+                                "operationId": {
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                  "type": "string"
+                                },
+                                "sha256": {
+                                  "pattern": "^[a-f0-9]{64}$",
+                                  "type": "string"
+                                },
+                                "title": {
+                                  "maxLength": 128,
+                                  "minLength": 1,
+                                  "pattern": "^[^\\p{Cc}]+$",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "operationId",
+                                "fileName",
+                                "mimeType",
+                                "byteLength",
+                                "sha256"
+                              ],
+                              "type": "object"
+                            },
+                            "ownerMatches": {
+                              "type": "boolean"
+                            },
+                            "reason": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "state": {
+                              "enum": ["done"],
+                              "type": "string"
+                            },
+                            "taskId": {
+                              "pattern": "^[A-Za-z0-9_-]{1,72}$",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "input",
+                            "ownerMatches",
+                            "taskId",
+                            "documentId",
+                            "reason",
+                            "contentAvailable",
+                            "state"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "contentAvailable": {
+                              "type": "boolean"
+                            },
+                            "documentId": {
+                              "exclusiveMinimum": true,
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "input": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "byteLength": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                },
+                                "fileName": {
+                                  "maxLength": 255,
+                                  "minLength": 1,
+                                  "pattern": "^[^/\\\\\\p{Cc}]+$",
+                                  "type": "string"
+                                },
+                                "mimeType": {
+                                  "pattern": "^[a-z0-9!#$&^_.+-]+\\/[a-z0-9!#$&^_.+-]+$",
+                                  "type": "string"
+                                },
+                                "operationId": {
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                  "type": "string"
+                                },
+                                "sha256": {
+                                  "pattern": "^[a-f0-9]{64}$",
+                                  "type": "string"
+                                },
+                                "title": {
+                                  "maxLength": 128,
+                                  "minLength": 1,
+                                  "pattern": "^[^\\p{Cc}]+$",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "operationId",
+                                "fileName",
+                                "mimeType",
+                                "byteLength",
+                                "sha256"
+                              ],
+                              "type": "object"
+                            },
+                            "ownerMatches": {
+                              "type": "boolean"
+                            },
+                            "reason": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "state": {
+                              "enum": ["duplicate"],
+                              "type": "string"
+                            },
+                            "taskId": {
+                              "pattern": "^[A-Za-z0-9_-]{1,72}$",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "input",
+                            "ownerMatches",
+                            "taskId",
+                            "documentId",
+                            "reason",
+                            "contentAvailable",
+                            "state"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "contentAvailable": {
+                              "enum": [true],
+                              "type": "boolean"
+                            },
+                            "documentId": {
+                              "enum": [null],
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "input": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "byteLength": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                },
+                                "fileName": {
+                                  "maxLength": 255,
+                                  "minLength": 1,
+                                  "pattern": "^[^/\\\\\\p{Cc}]+$",
+                                  "type": "string"
+                                },
+                                "mimeType": {
+                                  "pattern": "^[a-z0-9!#$&^_.+-]+\\/[a-z0-9!#$&^_.+-]+$",
+                                  "type": "string"
+                                },
+                                "operationId": {
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                  "type": "string"
+                                },
+                                "sha256": {
+                                  "pattern": "^[a-f0-9]{64}$",
+                                  "type": "string"
+                                },
+                                "title": {
+                                  "maxLength": 128,
+                                  "minLength": 1,
+                                  "pattern": "^[^\\p{Cc}]+$",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "operationId",
+                                "fileName",
+                                "mimeType",
+                                "byteLength",
+                                "sha256"
+                              ],
+                              "type": "object"
+                            },
+                            "ownerMatches": {
+                              "type": "boolean"
+                            },
+                            "reason": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "state": {
+                              "enum": ["failed"],
+                              "type": "string"
+                            },
+                            "taskId": {
+                              "pattern": "^[A-Za-z0-9_-]{1,72}$",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "input",
+                            "ownerMatches",
+                            "state",
+                            "taskId",
+                            "documentId",
+                            "reason",
+                            "contentAvailable"
+                          ],
+                          "type": "object"
+                        }
+                      ]
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "409"
+          },
+          "412": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "412"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "413"
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "415"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "503"
+          }
+        },
+        "summary": "Create or replay an immutable durable upload intent; does not send bytes to Paperless",
+        "tags": ["write"]
+      }
+    },
+    "/paperless/uploads/{operationId}": {
+      "get": {
+        "operationId": "paperless.upload",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "operationId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "oneOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "contentAvailable": {
+                              "enum": [false],
+                              "type": "boolean"
+                            },
+                            "documentId": {
+                              "enum": [null],
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "input": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "byteLength": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                },
+                                "fileName": {
+                                  "maxLength": 255,
+                                  "minLength": 1,
+                                  "pattern": "^[^/\\\\\\p{Cc}]+$",
+                                  "type": "string"
+                                },
+                                "mimeType": {
+                                  "pattern": "^[a-z0-9!#$&^_.+-]+\\/[a-z0-9!#$&^_.+-]+$",
+                                  "type": "string"
+                                },
+                                "operationId": {
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                  "type": "string"
+                                },
+                                "sha256": {
+                                  "pattern": "^[a-f0-9]{64}$",
+                                  "type": "string"
+                                },
+                                "title": {
+                                  "maxLength": 128,
+                                  "minLength": 1,
+                                  "pattern": "^[^\\p{Cc}]+$",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "operationId",
+                                "fileName",
+                                "mimeType",
+                                "byteLength",
+                                "sha256"
+                              ],
+                              "type": "object"
+                            },
+                            "ownerMatches": {
+                              "type": "boolean"
+                            },
+                            "reason": {
+                              "enum": [null],
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "state": {
+                              "enum": ["awaiting_content"],
+                              "type": "string"
+                            },
+                            "taskId": {
+                              "enum": [null],
+                              "nullable": true,
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "input",
+                            "ownerMatches",
+                            "taskId",
+                            "documentId",
+                            "reason",
+                            "state",
+                            "contentAvailable"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "contentAvailable": {
+                              "enum": [true],
+                              "type": "boolean"
+                            },
+                            "documentId": {
+                              "enum": [null],
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "input": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "byteLength": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                },
+                                "fileName": {
+                                  "maxLength": 255,
+                                  "minLength": 1,
+                                  "pattern": "^[^/\\\\\\p{Cc}]+$",
+                                  "type": "string"
+                                },
+                                "mimeType": {
+                                  "pattern": "^[a-z0-9!#$&^_.+-]+\\/[a-z0-9!#$&^_.+-]+$",
+                                  "type": "string"
+                                },
+                                "operationId": {
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                  "type": "string"
+                                },
+                                "sha256": {
+                                  "pattern": "^[a-f0-9]{64}$",
+                                  "type": "string"
+                                },
+                                "title": {
+                                  "maxLength": 128,
+                                  "minLength": 1,
+                                  "pattern": "^[^\\p{Cc}]+$",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "operationId",
+                                "fileName",
+                                "mimeType",
+                                "byteLength",
+                                "sha256"
+                              ],
+                              "type": "object"
+                            },
+                            "ownerMatches": {
+                              "type": "boolean"
+                            },
+                            "reason": {
+                              "enum": [null],
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "state": {
+                              "enum": ["admitted"],
+                              "type": "string"
+                            },
+                            "taskId": {
+                              "enum": [null],
+                              "nullable": true,
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "input",
+                            "ownerMatches",
+                            "taskId",
+                            "documentId",
+                            "reason",
+                            "state",
+                            "contentAvailable"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "blockedBy": {
+                              "enum": [
+                                "dispatch_unproven",
+                                "restored_history",
+                                "guard_unavailable"
+                              ],
+                              "type": "string"
+                            },
+                            "contentAvailable": {
+                              "type": "boolean"
+                            },
+                            "documentId": {
+                              "enum": [null],
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "input": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "byteLength": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                },
+                                "fileName": {
+                                  "maxLength": 255,
+                                  "minLength": 1,
+                                  "pattern": "^[^/\\\\\\p{Cc}]+$",
+                                  "type": "string"
+                                },
+                                "mimeType": {
+                                  "pattern": "^[a-z0-9!#$&^_.+-]+\\/[a-z0-9!#$&^_.+-]+$",
+                                  "type": "string"
+                                },
+                                "operationId": {
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                  "type": "string"
+                                },
+                                "sha256": {
+                                  "pattern": "^[a-f0-9]{64}$",
+                                  "type": "string"
+                                },
+                                "title": {
+                                  "maxLength": 128,
+                                  "minLength": 1,
+                                  "pattern": "^[^\\p{Cc}]+$",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "operationId",
+                                "fileName",
+                                "mimeType",
+                                "byteLength",
+                                "sha256"
+                              ],
+                              "type": "object"
+                            },
+                            "ownerMatches": {
+                              "type": "boolean"
+                            },
+                            "reason": {
+                              "enum": [null],
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "state": {
+                              "enum": ["outcome_unknown"],
+                              "type": "string"
+                            },
+                            "taskId": {
+                              "enum": [null],
+                              "nullable": true,
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "input",
+                            "ownerMatches",
+                            "taskId",
+                            "documentId",
+                            "reason",
+                            "state",
+                            "contentAvailable",
+                            "blockedBy"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "contentAvailable": {
+                              "enum": [true],
+                              "type": "boolean"
+                            },
+                            "documentId": {
+                              "enum": [null],
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "input": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "byteLength": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                },
+                                "fileName": {
+                                  "maxLength": 255,
+                                  "minLength": 1,
+                                  "pattern": "^[^/\\\\\\p{Cc}]+$",
+                                  "type": "string"
+                                },
+                                "mimeType": {
+                                  "pattern": "^[a-z0-9!#$&^_.+-]+\\/[a-z0-9!#$&^_.+-]+$",
+                                  "type": "string"
+                                },
+                                "operationId": {
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                  "type": "string"
+                                },
+                                "sha256": {
+                                  "pattern": "^[a-f0-9]{64}$",
+                                  "type": "string"
+                                },
+                                "title": {
+                                  "maxLength": 128,
+                                  "minLength": 1,
+                                  "pattern": "^[^\\p{Cc}]+$",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "operationId",
+                                "fileName",
+                                "mimeType",
+                                "byteLength",
+                                "sha256"
+                              ],
+                              "type": "object"
+                            },
+                            "ownerMatches": {
+                              "type": "boolean"
+                            },
+                            "reason": {
+                              "enum": [null],
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "state": {
+                              "enum": ["accepted"],
+                              "type": "string"
+                            },
+                            "taskId": {
+                              "pattern": "^[A-Za-z0-9_-]{1,72}$",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "input",
+                            "ownerMatches",
+                            "state",
+                            "taskId",
+                            "documentId",
+                            "reason",
+                            "contentAvailable"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "contentAvailable": {
+                              "type": "boolean"
+                            },
+                            "documentId": {
+                              "exclusiveMinimum": true,
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "input": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "byteLength": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                },
+                                "fileName": {
+                                  "maxLength": 255,
+                                  "minLength": 1,
+                                  "pattern": "^[^/\\\\\\p{Cc}]+$",
+                                  "type": "string"
+                                },
+                                "mimeType": {
+                                  "pattern": "^[a-z0-9!#$&^_.+-]+\\/[a-z0-9!#$&^_.+-]+$",
+                                  "type": "string"
+                                },
+                                "operationId": {
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                  "type": "string"
+                                },
+                                "sha256": {
+                                  "pattern": "^[a-f0-9]{64}$",
+                                  "type": "string"
+                                },
+                                "title": {
+                                  "maxLength": 128,
+                                  "minLength": 1,
+                                  "pattern": "^[^\\p{Cc}]+$",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "operationId",
+                                "fileName",
+                                "mimeType",
+                                "byteLength",
+                                "sha256"
+                              ],
+                              "type": "object"
+                            },
+                            "ownerMatches": {
+                              "type": "boolean"
+                            },
+                            "reason": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "state": {
+                              "enum": ["done"],
+                              "type": "string"
+                            },
+                            "taskId": {
+                              "pattern": "^[A-Za-z0-9_-]{1,72}$",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "input",
+                            "ownerMatches",
+                            "taskId",
+                            "documentId",
+                            "reason",
+                            "contentAvailable",
+                            "state"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "contentAvailable": {
+                              "type": "boolean"
+                            },
+                            "documentId": {
+                              "exclusiveMinimum": true,
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "input": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "byteLength": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                },
+                                "fileName": {
+                                  "maxLength": 255,
+                                  "minLength": 1,
+                                  "pattern": "^[^/\\\\\\p{Cc}]+$",
+                                  "type": "string"
+                                },
+                                "mimeType": {
+                                  "pattern": "^[a-z0-9!#$&^_.+-]+\\/[a-z0-9!#$&^_.+-]+$",
+                                  "type": "string"
+                                },
+                                "operationId": {
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                  "type": "string"
+                                },
+                                "sha256": {
+                                  "pattern": "^[a-f0-9]{64}$",
+                                  "type": "string"
+                                },
+                                "title": {
+                                  "maxLength": 128,
+                                  "minLength": 1,
+                                  "pattern": "^[^\\p{Cc}]+$",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "operationId",
+                                "fileName",
+                                "mimeType",
+                                "byteLength",
+                                "sha256"
+                              ],
+                              "type": "object"
+                            },
+                            "ownerMatches": {
+                              "type": "boolean"
+                            },
+                            "reason": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "state": {
+                              "enum": ["duplicate"],
+                              "type": "string"
+                            },
+                            "taskId": {
+                              "pattern": "^[A-Za-z0-9_-]{1,72}$",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "input",
+                            "ownerMatches",
+                            "taskId",
+                            "documentId",
+                            "reason",
+                            "contentAvailable",
+                            "state"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "contentAvailable": {
+                              "enum": [true],
+                              "type": "boolean"
+                            },
+                            "documentId": {
+                              "enum": [null],
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "input": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "byteLength": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                },
+                                "fileName": {
+                                  "maxLength": 255,
+                                  "minLength": 1,
+                                  "pattern": "^[^/\\\\\\p{Cc}]+$",
+                                  "type": "string"
+                                },
+                                "mimeType": {
+                                  "pattern": "^[a-z0-9!#$&^_.+-]+\\/[a-z0-9!#$&^_.+-]+$",
+                                  "type": "string"
+                                },
+                                "operationId": {
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                  "type": "string"
+                                },
+                                "sha256": {
+                                  "pattern": "^[a-f0-9]{64}$",
+                                  "type": "string"
+                                },
+                                "title": {
+                                  "maxLength": 128,
+                                  "minLength": 1,
+                                  "pattern": "^[^\\p{Cc}]+$",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "operationId",
+                                "fileName",
+                                "mimeType",
+                                "byteLength",
+                                "sha256"
+                              ],
+                              "type": "object"
+                            },
+                            "ownerMatches": {
+                              "type": "boolean"
+                            },
+                            "reason": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "state": {
+                              "enum": ["failed"],
+                              "type": "string"
+                            },
+                            "taskId": {
+                              "pattern": "^[A-Za-z0-9_-]{1,72}$",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "input",
+                            "ownerMatches",
+                            "state",
+                            "taskId",
+                            "documentId",
+                            "reason",
+                            "contentAvailable"
+                          ],
+                          "type": "object"
+                        }
+                      ]
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "409"
+          },
+          "412": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "412"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "413"
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "415"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "503"
+          }
+        },
+        "summary": "Recover durable upload proof; unknown upstream outcomes never authorize another POST",
+        "tags": ["paperless"]
+      }
+    },
+    "/paperless/uploads/{operationId}/dispatch": {
+      "post": {
+        "operationId": "write.dispatchUpload",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "operationId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "oneOf": [
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "contentAvailable": {
+                              "enum": [false],
+                              "type": "boolean"
+                            },
+                            "documentId": {
+                              "enum": [null],
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "input": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "byteLength": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                },
+                                "fileName": {
+                                  "maxLength": 255,
+                                  "minLength": 1,
+                                  "pattern": "^[^/\\\\\\p{Cc}]+$",
+                                  "type": "string"
+                                },
+                                "mimeType": {
+                                  "pattern": "^[a-z0-9!#$&^_.+-]+\\/[a-z0-9!#$&^_.+-]+$",
+                                  "type": "string"
+                                },
+                                "operationId": {
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                  "type": "string"
+                                },
+                                "sha256": {
+                                  "pattern": "^[a-f0-9]{64}$",
+                                  "type": "string"
+                                },
+                                "title": {
+                                  "maxLength": 128,
+                                  "minLength": 1,
+                                  "pattern": "^[^\\p{Cc}]+$",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "operationId",
+                                "fileName",
+                                "mimeType",
+                                "byteLength",
+                                "sha256"
+                              ],
+                              "type": "object"
+                            },
+                            "ownerMatches": {
+                              "type": "boolean"
+                            },
+                            "reason": {
+                              "enum": [null],
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "state": {
+                              "enum": ["awaiting_content"],
+                              "type": "string"
+                            },
+                            "taskId": {
+                              "enum": [null],
+                              "nullable": true,
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "input",
+                            "ownerMatches",
+                            "taskId",
+                            "documentId",
+                            "reason",
+                            "state",
+                            "contentAvailable"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "contentAvailable": {
+                              "enum": [true],
+                              "type": "boolean"
+                            },
+                            "documentId": {
+                              "enum": [null],
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "input": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "byteLength": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                },
+                                "fileName": {
+                                  "maxLength": 255,
+                                  "minLength": 1,
+                                  "pattern": "^[^/\\\\\\p{Cc}]+$",
+                                  "type": "string"
+                                },
+                                "mimeType": {
+                                  "pattern": "^[a-z0-9!#$&^_.+-]+\\/[a-z0-9!#$&^_.+-]+$",
+                                  "type": "string"
+                                },
+                                "operationId": {
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                  "type": "string"
+                                },
+                                "sha256": {
+                                  "pattern": "^[a-f0-9]{64}$",
+                                  "type": "string"
+                                },
+                                "title": {
+                                  "maxLength": 128,
+                                  "minLength": 1,
+                                  "pattern": "^[^\\p{Cc}]+$",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "operationId",
+                                "fileName",
+                                "mimeType",
+                                "byteLength",
+                                "sha256"
+                              ],
+                              "type": "object"
+                            },
+                            "ownerMatches": {
+                              "type": "boolean"
+                            },
+                            "reason": {
+                              "enum": [null],
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "state": {
+                              "enum": ["admitted"],
+                              "type": "string"
+                            },
+                            "taskId": {
+                              "enum": [null],
+                              "nullable": true,
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "input",
+                            "ownerMatches",
+                            "taskId",
+                            "documentId",
+                            "reason",
+                            "state",
+                            "contentAvailable"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "blockedBy": {
+                              "enum": [
+                                "dispatch_unproven",
+                                "restored_history",
+                                "guard_unavailable"
+                              ],
+                              "type": "string"
+                            },
+                            "contentAvailable": {
+                              "type": "boolean"
+                            },
+                            "documentId": {
+                              "enum": [null],
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "input": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "byteLength": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                },
+                                "fileName": {
+                                  "maxLength": 255,
+                                  "minLength": 1,
+                                  "pattern": "^[^/\\\\\\p{Cc}]+$",
+                                  "type": "string"
+                                },
+                                "mimeType": {
+                                  "pattern": "^[a-z0-9!#$&^_.+-]+\\/[a-z0-9!#$&^_.+-]+$",
+                                  "type": "string"
+                                },
+                                "operationId": {
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                  "type": "string"
+                                },
+                                "sha256": {
+                                  "pattern": "^[a-f0-9]{64}$",
+                                  "type": "string"
+                                },
+                                "title": {
+                                  "maxLength": 128,
+                                  "minLength": 1,
+                                  "pattern": "^[^\\p{Cc}]+$",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "operationId",
+                                "fileName",
+                                "mimeType",
+                                "byteLength",
+                                "sha256"
+                              ],
+                              "type": "object"
+                            },
+                            "ownerMatches": {
+                              "type": "boolean"
+                            },
+                            "reason": {
+                              "enum": [null],
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "state": {
+                              "enum": ["outcome_unknown"],
+                              "type": "string"
+                            },
+                            "taskId": {
+                              "enum": [null],
+                              "nullable": true,
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "input",
+                            "ownerMatches",
+                            "taskId",
+                            "documentId",
+                            "reason",
+                            "state",
+                            "contentAvailable",
+                            "blockedBy"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "contentAvailable": {
+                              "enum": [true],
+                              "type": "boolean"
+                            },
+                            "documentId": {
+                              "enum": [null],
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "input": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "byteLength": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                },
+                                "fileName": {
+                                  "maxLength": 255,
+                                  "minLength": 1,
+                                  "pattern": "^[^/\\\\\\p{Cc}]+$",
+                                  "type": "string"
+                                },
+                                "mimeType": {
+                                  "pattern": "^[a-z0-9!#$&^_.+-]+\\/[a-z0-9!#$&^_.+-]+$",
+                                  "type": "string"
+                                },
+                                "operationId": {
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                  "type": "string"
+                                },
+                                "sha256": {
+                                  "pattern": "^[a-f0-9]{64}$",
+                                  "type": "string"
+                                },
+                                "title": {
+                                  "maxLength": 128,
+                                  "minLength": 1,
+                                  "pattern": "^[^\\p{Cc}]+$",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "operationId",
+                                "fileName",
+                                "mimeType",
+                                "byteLength",
+                                "sha256"
+                              ],
+                              "type": "object"
+                            },
+                            "ownerMatches": {
+                              "type": "boolean"
+                            },
+                            "reason": {
+                              "enum": [null],
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "state": {
+                              "enum": ["accepted"],
+                              "type": "string"
+                            },
+                            "taskId": {
+                              "pattern": "^[A-Za-z0-9_-]{1,72}$",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "input",
+                            "ownerMatches",
+                            "state",
+                            "taskId",
+                            "documentId",
+                            "reason",
+                            "contentAvailable"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "contentAvailable": {
+                              "type": "boolean"
+                            },
+                            "documentId": {
+                              "exclusiveMinimum": true,
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "input": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "byteLength": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                },
+                                "fileName": {
+                                  "maxLength": 255,
+                                  "minLength": 1,
+                                  "pattern": "^[^/\\\\\\p{Cc}]+$",
+                                  "type": "string"
+                                },
+                                "mimeType": {
+                                  "pattern": "^[a-z0-9!#$&^_.+-]+\\/[a-z0-9!#$&^_.+-]+$",
+                                  "type": "string"
+                                },
+                                "operationId": {
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                  "type": "string"
+                                },
+                                "sha256": {
+                                  "pattern": "^[a-f0-9]{64}$",
+                                  "type": "string"
+                                },
+                                "title": {
+                                  "maxLength": 128,
+                                  "minLength": 1,
+                                  "pattern": "^[^\\p{Cc}]+$",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "operationId",
+                                "fileName",
+                                "mimeType",
+                                "byteLength",
+                                "sha256"
+                              ],
+                              "type": "object"
+                            },
+                            "ownerMatches": {
+                              "type": "boolean"
+                            },
+                            "reason": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "state": {
+                              "enum": ["done"],
+                              "type": "string"
+                            },
+                            "taskId": {
+                              "pattern": "^[A-Za-z0-9_-]{1,72}$",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "input",
+                            "ownerMatches",
+                            "taskId",
+                            "documentId",
+                            "reason",
+                            "contentAvailable",
+                            "state"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "contentAvailable": {
+                              "type": "boolean"
+                            },
+                            "documentId": {
+                              "exclusiveMinimum": true,
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "input": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "byteLength": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                },
+                                "fileName": {
+                                  "maxLength": 255,
+                                  "minLength": 1,
+                                  "pattern": "^[^/\\\\\\p{Cc}]+$",
+                                  "type": "string"
+                                },
+                                "mimeType": {
+                                  "pattern": "^[a-z0-9!#$&^_.+-]+\\/[a-z0-9!#$&^_.+-]+$",
+                                  "type": "string"
+                                },
+                                "operationId": {
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                  "type": "string"
+                                },
+                                "sha256": {
+                                  "pattern": "^[a-f0-9]{64}$",
+                                  "type": "string"
+                                },
+                                "title": {
+                                  "maxLength": 128,
+                                  "minLength": 1,
+                                  "pattern": "^[^\\p{Cc}]+$",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "operationId",
+                                "fileName",
+                                "mimeType",
+                                "byteLength",
+                                "sha256"
+                              ],
+                              "type": "object"
+                            },
+                            "ownerMatches": {
+                              "type": "boolean"
+                            },
+                            "reason": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "state": {
+                              "enum": ["duplicate"],
+                              "type": "string"
+                            },
+                            "taskId": {
+                              "pattern": "^[A-Za-z0-9_-]{1,72}$",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "input",
+                            "ownerMatches",
+                            "taskId",
+                            "documentId",
+                            "reason",
+                            "contentAvailable",
+                            "state"
+                          ],
+                          "type": "object"
+                        },
+                        {
+                          "additionalProperties": false,
+                          "properties": {
+                            "contentAvailable": {
+                              "enum": [true],
+                              "type": "boolean"
+                            },
+                            "documentId": {
+                              "enum": [null],
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "input": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "byteLength": {
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                },
+                                "fileName": {
+                                  "maxLength": 255,
+                                  "minLength": 1,
+                                  "pattern": "^[^/\\\\\\p{Cc}]+$",
+                                  "type": "string"
+                                },
+                                "mimeType": {
+                                  "pattern": "^[a-z0-9!#$&^_.+-]+\\/[a-z0-9!#$&^_.+-]+$",
+                                  "type": "string"
+                                },
+                                "operationId": {
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                  "type": "string"
+                                },
+                                "sha256": {
+                                  "pattern": "^[a-f0-9]{64}$",
+                                  "type": "string"
+                                },
+                                "title": {
+                                  "maxLength": 128,
+                                  "minLength": 1,
+                                  "pattern": "^[^\\p{Cc}]+$",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "operationId",
+                                "fileName",
+                                "mimeType",
+                                "byteLength",
+                                "sha256"
+                              ],
+                              "type": "object"
+                            },
+                            "ownerMatches": {
+                              "type": "boolean"
+                            },
+                            "reason": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "state": {
+                              "enum": ["failed"],
+                              "type": "string"
+                            },
+                            "taskId": {
+                              "pattern": "^[A-Za-z0-9_-]{1,72}$",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "input",
+                            "ownerMatches",
+                            "state",
+                            "taskId",
+                            "documentId",
+                            "reason",
+                            "contentAvailable"
+                          ],
+                          "type": "object"
+                        }
+                      ]
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "200"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "400"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "404"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "409"
+          },
+          "412": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "412"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "413"
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "415"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "503"
+          }
+        },
+        "summary": "Claim one upstream POST, or recover its recorded result without redispatching",
+        "tags": ["write"]
+      }
     }
   }
 }

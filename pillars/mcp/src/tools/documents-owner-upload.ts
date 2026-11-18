@@ -1,130 +1,136 @@
-import { paperlessUploadIntents } from '../uploads/paperless-upload-intents.js';
 import { UPLOAD_TOKEN_TTL_MS, uploadTokens } from '../uploads/upload-tokens.js';
-import { documentsOwner, documentUploadPolicy } from './documents-owner-client.js';
+import { documentsOwner } from './documents-owner-client.js';
+import { documentsReadContracts } from './documents-owner-contract.js';
+import { matchesUploadInput } from './documents-upload-proof.js';
 import { mapCallResult, ok, toolError } from './utils.js';
 
-import type { PaperlessUploadIntents } from '../uploads/paperless-upload-intents.js';
 import type { UploadTokenStore } from '../uploads/upload-tokens.js';
-import type { ToolContext, ToolDef } from './tool-def.js';
+import type { ToolDef } from './tool-def.js';
 
-const noControls = /^[^\p{Cc}]+$/u;
-function text(value: unknown, maximum: number): value is string {
-  return (
-    typeof value === 'string' &&
-    value.length > 0 &&
-    value.length <= maximum &&
-    noControls.test(value)
-  );
-}
+const inputContract = documentsReadContracts.createUpload.input;
+const createResponse = documentsReadContracts.createUpload.response;
+const dispatchResponse = documentsReadContracts.dispatchUpload.response;
 
-/** Mint only a direct owner upload URL; arguments never contain file content, a local path or a cross-owner target. */
-export function documentsCreateUploadTool(
-  tokens: UploadTokenStore = uploadTokens,
-  intents: PaperlessUploadIntents = paperlessUploadIntents
-): ToolDef {
+/** Create or resume a caller-identified, Documents-owned durable original upload. */
+export function documentsCreateUploadTool(tokens: UploadTokenStore = uploadTokens): ToolDef {
   return {
     name: 'documents.createUpload',
     readOnly: false,
-    scope: 'documents.write.upload',
+    scope: 'documents.write.createUpload',
     description:
-      'Create a single-use direct Documents upload URL for one file. Send file bytes outside MCP with HTTP PUT and an allowed Content-Type. Keep uploadId to recover the accepted task with documents.uploadStatus if the HTTP reply is lost. No Inventory or Trip association is created. URLs expire after ten minutes; receipts are process-local and cannot prove nonacceptance after expiry/restart. Never replay an unknown upload automatically. Also requires documents.paperless.status to read owner limits.',
-    inputSchema: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        fileName: {
-          type: 'string',
-          minLength: 1,
-          maxLength: 255,
-          pattern: noControls.source,
-          description: 'Original filename only, not a path to read.',
-        },
-        title: { type: 'string', minLength: 1, maxLength: 128, pattern: noControls.source },
-      },
-      required: ['fileName'],
+      'Create or resume one durable original using the caller-supplied operationId and exact immutable file metadata. If state is awaiting_content, PUT the bytes once to the returned URL. If state is admitted, call documents.dispatchUpload with the same operationId. Keep operationId and use documents.uploadStatus after any lost response or gateway restart. Never choose a new ID or resend bytes for accepted or outcome_unknown proof.',
+    inputSchema: inputContract.inputSchema,
+    handler: async (args, context) => {
+      if (!context?.publicBaseUrl)
+        return toolError('Cannot issue an upload URL without the gateway public address.');
+      const parsed = inputContract.validate(args);
+      if (!parsed.valid) return toolError(parsed.errorMessage);
+      const result = await documentsOwner().write.createUpload(parsed.data);
+      if (result.kind !== 'ok') return mapCallResult(result, 'documents.write.createUpload');
+      const value = createdProof(result.value, parsed.data);
+      if (value === null)
+        return toolError('Documents returned invalid or mismatched durable upload proof.');
+      const data = value;
+      if (value['ownerMatches'] !== true)
+        return ok({
+          upload: data,
+          next: 'The Documents owner identity differs; inspect status and do not upload bytes.',
+        });
+      if (value['state'] !== 'awaiting_content')
+        return ok({ upload: data, next: nextFor(value['state']) });
+      const input = inputRecord(value);
+      const grant = tokens.mint({
+        kind: 'paperless-document',
+        operationId: String(input['operationId']),
+        fileName: String(input['fileName']),
+        ...(typeof input['title'] === 'string' ? { title: input['title'] } : {}),
+        mimeType: String(input['mimeType']),
+        byteLength: Number(input['byteLength']),
+        sha256: String(input['sha256']),
+      });
+      if (!grant)
+        return toolError(
+          'The gateway upload URL capacity is full; retain operationId and retry this same intent.'
+        );
+      return ok({
+        upload: data,
+        operationId: input['operationId'],
+        uploadUrl: `${context.publicBaseUrl}/uploads/${grant.token}`,
+        method: 'PUT',
+        expiresAt: grant.expiresAt.toISOString(),
+        expiresInSeconds: UPLOAD_TOKEN_TTL_MS / 1000,
+        next: 'Stream the exact file bytes once with the declared Content-Type. After admission, call documents.dispatchUpload with this same operationId.',
+      });
     },
-    handler: (args, context) => createUpload(args, context, { tokens, intents }),
   };
 }
 
-/** Recover the retained result of one upload; unavailable is deliberately not a safe-to-retry assertion. */
-export function documentsUploadStatusTool(
-  intents: PaperlessUploadIntents = paperlessUploadIntents
-): ToolDef {
+/** Explicitly dispatch only an already admitted durable original. Replays recover proof without a second owner POST. */
+export function documentsDispatchUploadTool(): ToolDef {
   return {
-    name: 'documents.uploadStatus',
-    readOnly: true,
+    name: 'documents.dispatchUpload',
+    readOnly: false,
+    scope: 'documents.write.dispatchUpload',
     description:
-      'Read the gateway-local state of a documents.createUpload uploadId without posting bytes. accepted returns the actual owner taskId; query documents.task for completion/documentId. unknown or unavailable (including expiry/restart) never means safe to upload again. Receipts are not durable across gateway restarts.',
+      'Dispatch or recover an admitted Documents upload by its existing operationId. This is the explicit safe resume step after bytes were durably admitted but dispatch did not happen. The Documents owner claim prevents duplicate Paperless POSTs; outcome_unknown must never be retried with a new operationId.',
     inputSchema: {
       type: 'object',
+      properties: { operationId: { type: 'string', format: 'uuid' } },
+      required: ['operationId'],
       additionalProperties: false,
-      properties: { uploadId: { type: 'string', format: 'uuid' } },
-      required: ['uploadId'],
     },
     handler: async (args) => {
+      if (Object.keys(args).length !== 1 || typeof args['operationId'] !== 'string')
+        return toolError('Supply the existing operationId returned for this upload.');
+      const parsed = documentsReadContracts.dispatchUpload.input.validate(args);
+      if (!parsed.valid) return toolError(parsed.errorMessage);
+      const operationId = parsed.data['operationId'];
+      if (typeof operationId !== 'string') return toolError('Invalid operationId.');
+      const result = await documentsOwner().write.dispatchUpload({
+        operationId,
+      });
+      if (result.kind !== 'ok') return mapCallResult(result, 'documents.write.dispatchUpload');
       if (
-        Object.keys(args).some((key) => key !== 'uploadId') ||
-        typeof args['uploadId'] !== 'string' ||
-        !/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/iu.test(args['uploadId'])
+        !dispatchResponse(result.value).valid ||
+        !hasOperationId(responseData(result.value), operationId)
       )
-        return toolError('Supply the uploadId returned by documents.createUpload.');
-      return ok({ uploadId: args['uploadId'], ...intents.read(args['uploadId']) });
+        return toolError('Documents returned invalid durable upload proof.');
+      return ok(responseData(result.value) ?? result.value);
     },
   };
 }
 
-async function createUpload(
-  args: Record<string, unknown>,
-  context: ToolContext | undefined,
-  stores: { tokens: UploadTokenStore; intents: PaperlessUploadIntents }
-): Promise<Awaited<ReturnType<ToolDef['handler']>>> {
-  const { tokens, intents } = stores;
+function responseData(value: unknown): unknown {
+  return isRecord(value) ? value['data'] : undefined;
+}
 
-  if (
-    Object.keys(args).some((key) => key !== 'fileName' && key !== 'title') ||
-    !text(args['fileName'], 255) ||
-    ('title' in args && !text(args['title'], 128))
-  )
-    return toolError(
-      'Supply fileName and optional title using the owner filename/title constraints; no file bytes or paths are accepted.'
-    );
-  if (!context?.publicBaseUrl)
-    return toolError('Cannot issue an upload URL without the gateway public address.');
-  const result = await documentsOwner().paperless.status();
-  if (result.kind !== 'ok') return mapCallResult(result, 'documents.paperless.status');
-  const policy = documentUploadPolicy(result.value);
-  if (!policy)
-    return toolError(
-      'Documents is unavailable or has not provided valid upload limits. No upload URL was issued.'
-    );
-  const uploadId = intents.create();
-  if (!uploadId)
-    return toolError(
-      'The gateway upload receipt capacity is full; use existing intents or wait for expiry.'
-    );
-  const grant = tokens.mint({
-    kind: 'paperless-document',
-    uploadId,
-    fileName: args['fileName'],
-    ...(typeof args['title'] === 'string' ? { title: args['title'] } : {}),
-    ...policy,
-  });
-  if (!grant) {
-    intents.update(uploadId, {
-      state: 'not-sent',
-      reason: 'No upload URL was issued: gateway upload capacity is full.',
-    });
-    return toolError('The gateway upload URL capacity is full.');
-  }
-  return ok({
-    uploadId,
-    uploadUrl: `${context.publicBaseUrl}/uploads/${grant.token}`,
-    method: 'PUT',
-    expiresAt: grant.expiresAt.toISOString(),
-    expiresInSeconds: UPLOAD_TOKEN_TTL_MS / 1000,
-    maxBytes: policy.maxBytes,
-    allowedMimeTypes: policy.allowedMimeTypes,
-    next: 'Stream the file once with an allowed Content-Type. Read documents.uploadStatus using uploadId after any lost reply; do not resend automatically. An accepted task is polled with documents.task; only its actual done/duplicate documentId can be associated through Trips.',
-  });
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function createdProof(
+  value: unknown,
+  input: Record<string, unknown>
+): Record<string, unknown> | null {
+  if (!createResponse(value).valid) return null;
+  const data = responseData(value);
+  return isRecord(data) && matchesUploadInput(inputRecord(data), input) ? data : null;
+}
+
+function inputRecord(value: Record<string, unknown>): Record<string, unknown> {
+  const input = value['input'];
+  return isRecord(input) ? input : {};
+}
+
+function hasOperationId(value: unknown, operationId: string): boolean {
+  if (!isRecord(value)) return false;
+  return value['ownerMatches'] === true && inputRecord(value)['operationId'] === operationId;
+}
+
+function nextFor(state: unknown): string {
+  if (state === 'admitted')
+    return 'Call documents.dispatchUpload with this same operationId; the bytes are already durable.';
+  if (state === 'awaiting_content')
+    return 'Resume only with the same immutable input and operationId.';
+  return 'Use documents.uploadStatus to inspect owner proof; do not resend or create a new operation.';
 }

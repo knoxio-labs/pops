@@ -12,7 +12,7 @@ export function WorkspaceAttention(props: OverviewViewProps): JSX.Element {
   const { items, hasVisits } = workspaceAttentionModel(props);
   return (
     <section
-      aria-label={props.labels.status('workspace.beforeYouGo')}
+      aria-label={props.labels.sleepPlan.attention}
       className="min-w-0 rounded-2xl border border-trip-line bg-trip-surface p-4 sm:p-5"
     >
       <AttentionHeading {...props} count={items.reduce((total, item) => total + item.count, 0)} />
@@ -37,7 +37,7 @@ function AttentionHeading(props: OverviewViewProps & { count: number }): JSX.Ele
     <div className="flex items-start justify-between gap-3">
       <div>
         <p className="text-xs font-semibold uppercase tracking-wide text-trip-muted">
-          {props.labels.status('workspace.beforeYouGo')}
+          {props.labels.sleepPlan.attention}
         </p>
         <h2 className="mt-1 font-trip-display text-xl font-semibold">
           {props.labels.status('workspace.tripCheck')}

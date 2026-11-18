@@ -163,3 +163,6 @@ export type {
   CaptureTimelineSource,
   CaptureTimelineVisibility,
 } from './capture/timeline-filters';
+
+export { DocumentUploadProvider } from './documents/DocumentUploadProvider';
+export type { DocumentUploadProviderProps } from './documents/DocumentUploadProvider';

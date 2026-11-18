@@ -98,6 +98,54 @@ restores original path/gap identities without recreating source records or
 rewriting independent source edits. No-op receipts cannot be undone. These routes
 use the projected `trips.route` scope for both UI and MCP callers.
 
+Draft deletion uses the separate `trips.routeDrafts` scope. Placement credentials
+cannot delete source records or use placement Undo/replay to adopt a draft-delete
+receipt. `POST /trips/:tripId/route/paths/:pathId/deletion-preview` is read-only;
+its optional `deleteSources` body names the exact canonical selection. The response
+contains candidates, independent confirmation facts, source guards, retention
+reasons and a fingerprint. The default selection covers unconfirmed, unshared
+direct Visit/Journey members, their Journey legs and related Stays, Events,
+Rentals and Meetings within the draft's canonical candidate set. Explicit
+unchecked selection remains authoritative; shared records and required context
+remain protected. Changing the selection requires a new preview.
+
+`POST /trips/:tripId/route/draft-operations` accepts the same UUID/route-CAS
+envelope with `path.delete` (`pathId`, `expectedPreviewFingerprint`, exact
+`deleteSources`) or draft-scoped `undo`. Only alternative paths can be deleted;
+applied paths remain history. The producer re-reads source and reference facts
+inside one immediate transaction, rejects a stale preview, and removes the path
+plus selected unconfirmed, unshared source records atomically. Surviving former
+members remain unplaced. Other route order, paths, structural gaps and allocated
+identities are retained.
+
+Stay Agreed/Reserved/Purchased, Rental Reserved/Purchased, Meeting agreement Agreed,
+and each Event or live Journey leg with arrangement Agreed/Booked **or** purchase
+Purchased are protected. Intention never cancels purchase or arrangement. A Visit
+or Journey has no inferred confirmation status: the producer retains its exact
+identity when a confirmed/shared descendant or independent reference needs that
+context. An exclusive mixed Journey keeps confirmed legs while selected
+unconfirmed legs may be removed. Active Capture/Explore/Decision references and
+Journey groups protect shared sources; unselected independent candidates remain.
+Names, dates, reference numbers and document links never establish confirmation.
+
+Draft removal archives source identities instead of hard-deleting them. Ordinary
+source lists, gets, writes, placement adoption and association projections exclude
+archived sources; historical receipts and original data remain retained. Document
+and responsibility relation rows remain in storage but are omitted from live
+lists when their target is archived. Places, Contacts, Capture originals,
+Documents originals and external bookings are never deleted or cancelled.
+
+The immutable draft receipt records its route outcome and candidate dispositions;
+`currentSources` separately reports each affected identity's current lifecycle.
+Exact retries replay the original outcome, including after Undo. Draft Undo
+requires both the owned route after-state and untouched source, collection and
+reference guards. It restores only this operation's archived records under their
+original IDs with new lifecycle revisions, never an old whole workspace or
+independent edits to retained sources. Any failure rolls back source changes,
+route state, Undo lineage and receipt insertion together. Journey/Stay/Event
+metadata writes advance a private generation so identical-field round trips
+cannot regain an older creation-Undo claim.
+
 `PUT /trips/:tripId/visit-order` retains its complete unique canonical `visitIds`
 permutation contract. It ranks only Visit slots **within each current container**;
 Journey/gap tokens, their endpoints and root/alternative membership stay fixed.
@@ -223,6 +271,50 @@ return `409` atomically. Created capture/Idea identities are tombstoned, and
 receipts and accepted attachment identities remain durable. Undo never modifies
 Documents originals or tasks. Web composer text and actual File handles remain
 the consumer's in-session responsibility; this API does not persist file bytes.
+
+Booking import uses `POST /trips/:tripId/booking-imports` to bind one explicitly
+selected active Capture original. Text identity is SHA-256 over the UTF-8 JSON
+string representation, without Unicode normalization; document identity is over
+actual Documents original bytes. A task, URL, filename or caller digest is not
+an original. Equal content shares a Trip-scoped source while each verified
+Capture/owner binding remains distinct. Raw original reads use the sanctioned
+Documents download route with `original=true`, authenticated discovery and no
+redirects. The outbound account additionally requires `documents.paperless.download`.
+The actual owner response media type is retained in the binding. Only PDF
+document originals are admitted to the current extraction document path;
+image, text, absent or invalid media types are refused before an AI claim.
+Stored Capture text uses the separate plaintext representation. A filename
+never supplies a media type, and extraction rechecks the owner media identity.
+
+`GET .../:sourceId` returns retained source, attempt, decision and accepted
+operation history. `POST .../:sourceId/extract` requires an explicit configured
+provider/model, current source revision and current predecessor attempt. Trips
+durably claims the attempt before its sole AI invocation. Claimed/restarted or
+unconfirmed attempts are exposed as unknown and never automatically dispatched
+again, including with a new UUID lacking the current predecessor. A deliberate
+new attempt can lose another result; the AI owner is one-shot and supplies no
+durable receipt or exactly-once provider guarantee. The default extraction
+adapter is unavailable until the canonical public AI contract and applicable
+privacy admission are integrated under POPS-6321. No private original is sent
+by an unavailable adapter. Injected test adapters are not provider acceptance.
+
+`POST .../:sourceId/review` stores explicit immutable decisions; no extraction
+or review writes canonical bookings. Proposal IDs identify stored attempt rows,
+not real-world bookings across model segmentation. `POST .../:sourceId/commit`
+atomically applies several decisions through existing Capture organisation and
+Event/Journey/Stay producers. Capture and source revisions guard the batch.
+Once any binding is accepted, another initial import conflicts; additional
+bookings require an explicit additional decision against current history.
+Existing-target admission links without editing the target. Equal fields never
+imply duplicate or distinct reservations automatically.
+
+Every import mutation binds exact typed input to a Trip-scoped UUID. A fresh
+commit UUID addressing accepted decisions returns `alreadyCommitted` with the
+original parent identity and canonical child receipts, never a new Undo proof.
+Those child operation IDs use existing conditional Capture Undo. Accepted
+decisions and immutable receipts survive Undo, deletion, re-extraction and
+foreign edits; current state remains separate and replay never recreates a
+target. The five routes project distinct `trips.bookingImports` child scopes.
 Independent active Handled by assignments prevent Undo from deleting a created
 Journey, Stay or Event. Explicitly cleared assignments do not block the inverse.
 Successful Undo advances only a prior active inverse whose complete expected

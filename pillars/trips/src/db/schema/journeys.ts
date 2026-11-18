@@ -1,6 +1,7 @@
 import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
 import { trips } from './records.js';
+import { removalColumns } from './removal-columns.js';
 
 import type {
   JourneyBuffers,
@@ -27,6 +28,7 @@ export const journeys = sqliteTable(
       .notNull()
       .references(() => trips.id),
     legRevision: integer('leg_revision').notNull().default(0),
+    ...removalColumns(),
     name: text('name'),
     reference: text('reference'),
     notes: text('notes').notNull().default(''),

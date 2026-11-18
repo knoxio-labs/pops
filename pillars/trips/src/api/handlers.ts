@@ -4,11 +4,14 @@ import { getPillarRegistry } from './pillars/registry.js';
 import type { PillarRegistryEntry } from '@pops/types';
 
 import type { OpenedTripsDb } from '../db/index.js';
+import type { BookingExtractionDependencies } from '../db/services/booking-import-extract.js';
 import type { ContactReferenceResolver } from './rest/contact-reference.js';
 import type { MeetingContactResolver } from './rest/meeting-plan-contact.js';
 
 /** Dependencies for the trips pillar's liveness and roster probes. */
 export interface TripsApiDeps {
+  /** Public owner adapters only; absent until generated AI transport and privacy admission are available. */
+  readonly bookingExtraction?: BookingExtractionDependencies;
   /** Owning identity API override; unknown and unavailable are distinct from a retained source reference. */
   readonly resolveMeetingContact?: MeetingContactResolver;
   readonly tripsDb: OpenedTripsDb;

@@ -10,8 +10,17 @@ export function getJourneyLegSet(
   tripId: number,
   journeyId: number
 ): { revision: number; legs: JourneyLeg[] } {
-  return db.transaction((tx) => ({
-    revision: requireLegRevision(tx, { tripId, journeyId }),
-    legs: listJourneyLegs(tx, tripId, journeyId),
-  }));
+  return db.transaction((tx) => getJourneyLegSetWithinOperation(tx, tripId, journeyId));
+}
+
+/** Read one complete Journey leg set inside an existing SQLite snapshot. */
+export function getJourneyLegSetWithinOperation(
+  db: TripsDb,
+  tripId: number,
+  journeyId: number
+): { revision: number; legs: JourneyLeg[] } {
+  return {
+    revision: requireLegRevision(db, { tripId, journeyId }),
+    legs: listJourneyLegs(db, tripId, journeyId),
+  };
 }

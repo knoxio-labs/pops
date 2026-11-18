@@ -22,7 +22,7 @@ internal struct TripsNavigationIntentTests {
         #expect(context.model.source == expected)
         #expect(context.model.snapshot == context.first)
         #expect(context.model.failure == nil)
-        #expect(context.model.tab == .trips)
+        #expect(context.model.tab == .today)
     }
 
     @Test(

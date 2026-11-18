@@ -1,39 +1,17 @@
-import { and, asc, desc, eq, isNull } from 'drizzle-orm';
+import { and, asc, eq, isNull } from 'drizzle-orm';
 
-import {
-  JourneyEndpointInputSchema,
-  JourneyEndpointSchema,
-  JourneyLegSchema,
-} from '../../contract/journey-schemas.js';
+import { JourneyLegSchema } from '../../contract/journey-schemas.js';
 import { journeyLegs } from '../schema.js';
+import { createJourneyLegInTransaction } from './journey-leg-create.js';
+import { checkJourneyLegEndpoint, resolvedJourneyEndpoint } from './journey-leg-input.js';
 import { getJourney } from './journeys.js';
 import { writeLegOrder } from './leg-order.js';
 import { advanceLegRevision, requireWritableLegRevision } from './leg-revision.js';
-import { getPlace } from './records.js';
 import { requireOwnedRecord, TripsServiceError } from './source-record.js';
 
-import type {
-  JourneyEndpoint,
-  JourneyEndpointInput,
-  JourneyLeg,
-  JourneyLegInput,
-} from '../../contract/journey-schemas.js';
+import type { JourneyLeg, JourneyLegInput } from '../../contract/journey-schemas.js';
 import type { LegWritePrecondition } from '../../contract/leg-removal-schemas.js';
 import type { TripsDb } from '../index.js';
-
-function checkEndpoint(db: TripsDb, endpoint: Pick<JourneyEndpoint, 'placeId'> | undefined): void {
-  if (endpoint?.placeId !== undefined) getPlace(db, endpoint.placeId);
-}
-
-function sourceEndpoint(previous: JourneyEndpoint, input: JourneyEndpointInput): JourneyEndpoint {
-  const { date, ...fields } = JourneyEndpointInputSchema.parse(input);
-  if (fields.local !== undefined || date === null) return JourneyEndpointSchema.parse(fields);
-  const retainedDay = date ?? previous.date;
-  return JourneyEndpointSchema.parse({
-    ...fields,
-    ...(retainedDay === undefined ? {} : { date: retainedDay }),
-  });
-}
 
 /** List source legs in explicit order, retaining partial and contradictory timing. */
 export function listJourneyLegs(db: TripsDb, tripId: number, journeyId: number): JourneyLeg[] {
@@ -81,40 +59,21 @@ export function createJourneyLeg(
 ): JourneyLeg {
   return db.transaction(
     (tx) => {
-      const { expectedRevision, from, to, ...fields } = input;
-      const revision = requireWritableLegRevision(tx, { tripId, journeyId }, expectedRevision);
-      checkEndpoint(tx, from);
-      checkEndpoint(tx, to);
-      const endpoints = {
-        ...(from === undefined ? {} : { from: sourceEndpoint({}, from) }),
-        ...(to === undefined ? {} : { to: sourceEndpoint({}, to) }),
-      };
-      const last = tx
-        .select({ position: journeyLegs.position })
-        .from(journeyLegs)
-        .where(and(eq(journeyLegs.journeyId, journeyId), isNull(journeyLegs.removedAt)))
-        .orderBy(desc(journeyLegs.position))
-        .limit(1)
-        .get();
-      const leg = JourneyLegSchema.parse(
-        requireOwnedRecord(
-          tx
-            .insert(journeyLegs)
-            .values({
-              ...fields,
-              ...endpoints,
-              journeyId,
-              position: last === undefined ? 0 : last.position + 1,
-            })
-            .returning()
-            .get()
-        )
-      );
-      advanceLegRevision(tx, journeyId, revision);
-      return leg;
+      const { expectedRevision, ...fields } = input;
+      return createJourneyLegInTransaction(tx, { tripId, journeyId }, fields, expectedRevision);
     },
     { behavior: 'immediate' }
   );
+}
+
+/** Append a leg within a caller-owned immediate transaction. */
+export function createJourneyLegWithinOperation(
+  db: TripsDb,
+  tripId: number,
+  journeyId: number,
+  input: JourneyLegInput
+): JourneyLeg {
+  return createJourneyLegInTransaction(db, { tripId, journeyId }, input);
 }
 
 /** Replace supplied endpoints while preserving an omitted new day-only field for legacy writers; null clears and explicit local changes precision in this transaction. */
@@ -129,11 +88,11 @@ export function updateJourneyLeg(
       const { expectedRevision, from, to, ...fields } = input;
       const revision = requireWritableLegRevision(tx, { tripId, journeyId }, expectedRevision);
       const previous = getJourneyLeg(tx, tripId, journeyId, id);
-      checkEndpoint(tx, from);
-      checkEndpoint(tx, to);
+      checkJourneyLegEndpoint(tx, from);
+      checkJourneyLegEndpoint(tx, to);
       const endpoints = {
-        ...(from === undefined ? {} : { from: sourceEndpoint(previous.from, from) }),
-        ...(to === undefined ? {} : { to: sourceEndpoint(previous.to, to) }),
+        ...(from === undefined ? {} : { from: resolvedJourneyEndpoint(previous.from, from) }),
+        ...(to === undefined ? {} : { to: resolvedJourneyEndpoint(previous.to, to) }),
       };
       const leg = JourneyLegSchema.parse(
         requireOwnedRecord(

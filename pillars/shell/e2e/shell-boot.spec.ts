@@ -8,6 +8,7 @@
  * browser can show is that the resolved set is what actually reaches the DOM,
  * and that the fallback is a working shell rather than an app-less one.
  */
+import { zSessionGetResponse } from '../src/registry-api/zod.gen';
 import { expect, test } from './fixtures/pillar-rest-guard';
 import { stubFinanceDashboardEmpty } from './helpers/finance-dashboard';
 import {
@@ -16,6 +17,7 @@ import {
   json,
   stubPillarHealth,
   stubRegistry,
+  stubShellBoot,
 } from './helpers/pillar-rest';
 
 import type { Page } from '@playwright/test';
@@ -30,6 +32,26 @@ test.describe('Shell — boot install set', () => {
 
   test.afterEach(() => {
     expect(errors).toHaveLength(0);
+  });
+
+  test('verifies the shell upload session on mount and browser focus', async ({ page }) => {
+    await stubShellBoot(page, []);
+    const sessionUrl = /\/registry-api\/session$/;
+    const initialSession = page.waitForResponse(sessionUrl);
+    await page.goto('/');
+    const initial = await initialSession;
+    expect(initial.request().method()).toBe('GET');
+    expect(initial.status()).toBe(200);
+    const session = zSessionGetResponse.parse(await initial.json());
+    expect(session.kind).toBe('operator');
+    expect(session.email).toEqual(expect.stringMatching(/\S/));
+    await expect(page.getByRole('textbox', { name: 'Search POPS' })).toBeVisible();
+    const focusedSession = page.waitForResponse(sessionUrl);
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+    const focused = await focusedSession;
+    expect(focused.request().method()).toBe('GET');
+    expect(focused.status()).toBe(200);
+    expect(zSessionGetResponse.parse(await focused.json())).toEqual(session);
   });
 
   test('mounts exactly the pillars the registry lists', async ({ page }) => {

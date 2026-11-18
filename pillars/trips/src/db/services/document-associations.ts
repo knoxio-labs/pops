@@ -5,6 +5,7 @@ import { tripDocumentAssociations } from '../schema.js';
 import { getEvent } from './events.js';
 import { getJourney } from './journeys.js';
 import { getTrip, getVisit } from './records.js';
+import { isSourceTargetLive } from './source-availability.js';
 import { requireOwnedRecord, TripsServiceError } from './source-record.js';
 import { getStay } from './stays.js';
 
@@ -14,16 +15,19 @@ import type {
 } from '../../contract/document-associations.js';
 import type { TripsDb } from '../index.js';
 
-/** List a trip's explicit document associations in stable creation order. */
+/** List live-target document associations in stable order while retaining archived-target history. */
 export function listDocumentAssociations(db: TripsDb, tripId: number): TripDocumentAssociation[] {
-  getTrip(db, tripId);
-  return db
-    .select()
-    .from(tripDocumentAssociations)
-    .where(eq(tripDocumentAssociations.tripId, tripId))
-    .orderBy(asc(tripDocumentAssociations.id))
-    .all()
-    .map((association) => TripDocumentAssociationSchema.parse(association));
+  return db.transaction((tx) => {
+    getTrip(tx, tripId);
+    return tx
+      .select()
+      .from(tripDocumentAssociations)
+      .where(eq(tripDocumentAssociations.tripId, tripId))
+      .orderBy(asc(tripDocumentAssociations.id))
+      .all()
+      .filter((row) => isSourceTargetLive(tx, tripId, row.targetKind, row.targetId))
+      .map((association) => TripDocumentAssociationSchema.parse(association));
+  });
 }
 
 /** Add a reference to one Documents-owned Paperless identity and an explicitly selected same-trip target. */
@@ -77,11 +81,21 @@ export function createDocumentAssociation(
 
 /** Remove one association only, leaving the Documents-owned original unchanged. */
 export function deleteDocumentAssociation(db: TripsDb, tripId: number, id: number): void {
-  requireOwnedRecord(
-    db
-      .delete(tripDocumentAssociations)
-      .where(and(eq(tripDocumentAssociations.tripId, tripId), eq(tripDocumentAssociations.id, id)))
-      .returning()
-      .get()
+  db.transaction(
+    (tx) => {
+      const row = requireOwnedRecord(
+        tx
+          .select()
+          .from(tripDocumentAssociations)
+          .where(
+            and(eq(tripDocumentAssociations.tripId, tripId), eq(tripDocumentAssociations.id, id))
+          )
+          .get()
+      );
+      if (!isSourceTargetLive(tx, tripId, row.targetKind, row.targetId))
+        throw new TripsServiceError('not_found');
+      tx.delete(tripDocumentAssociations).where(eq(tripDocumentAssociations.id, row.id)).run();
+    },
+    { behavior: 'immediate' }
   );
 }

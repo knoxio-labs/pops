@@ -1,11 +1,26 @@
 import { uploadFileProblem } from './model';
 
+import type { DurableUploadInput } from './durable-upload-api';
 import type { PaperlessUploadPolicy } from './types';
-import type { UploadFields } from './useUploadFields';
 
-/** Check the current Documents policy before submitting the selected original. */
+/** Use immutable owner metadata only for bytes already verified against the retained fingerprint. */
+export function uploadPolicyFile(
+  file: File,
+  verifiedInput?: DurableUploadInput | null
+): Pick<File, 'name' | 'size' | 'type'> {
+  return verifiedInput === undefined || verifiedInput === null
+    ? file
+    : {
+        name: verifiedInput.fileName,
+        size: verifiedInput.byteLength,
+        type: verifiedInput.mimeType,
+      };
+}
+
+/** Check the current Documents policy using verified retained metadata when resuming the original. */
 export function submitSelectedFile(input: {
   file: File | null;
+  verifiedInput?: DurableUploadInput | null;
   policy: PaperlessUploadPolicy | undefined;
   upload: (file: File) => void;
   setError: (message: string) => void;
@@ -14,17 +29,11 @@ export function submitSelectedFile(input: {
   const { file, policy, upload, setError, setRejected } = input;
   if (file === null) return;
   setRejected(false);
-  const problem = uploadFileProblem(file, policy ?? null);
+  const problem = uploadFileProblem(uploadPolicyFile(file, input.verifiedInput), policy ?? null);
   if (problem !== undefined) {
     setError(problem);
     setRejected(false);
     return;
   }
   upload(file);
-}
-
-/** Clear an ambiguous upload only after an owner search found no matching original. */
-export function recoverAmbiguousUpload(fields: UploadFields): void {
-  if (!fields.uncertain) return;
-  fields.clearSelectedFile();
 }

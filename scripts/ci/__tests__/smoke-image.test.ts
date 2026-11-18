@@ -1,14 +1,21 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, posix, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it, vi } from 'vitest';
 
+import { extractSidecarBlocks, extractVolumeMounts } from '../check-litestream-sidecar-parity.mjs';
+import {
+  databaseMountViolations,
+  declaredDatabasePaths,
+  storageContains,
+} from '../litestream-storage.mjs';
 import {
   BOOT_PLACEHOLDER_SECRETS,
   bootPlaceholdersForDockerfile,
   collectStreams,
   dataMountsForDockerfile,
+  databaseMountsForDockerfile,
   forcesRevalidation,
   freshVolumeName,
   freshnessProbePaths,
@@ -98,17 +105,21 @@ function productionMounts(dockerfilePath: string): string[] {
   return dataMountsForDockerfile(productionCompose, dockerfilePath);
 }
 
-/**
- * Images that own a database, derived from what production actually mounts
- * onto them rather than from whether their pillar ships migrations.
- *
- * The two agreed while every pillar shipped exactly one image. They stop
- * agreeing the moment a pillar ships two: `pillars/design` ships migrations
- * and its static image mounts nothing, so the migrations rule would demand a
- * `/data/sqlite` mount point of an nginx image that never opens a database.
- */
+function databasePaths(id: string): string[] {
+  return declaredDatabasePaths(
+    readFileSync(join(repoRoot, 'infra', 'litestream', `${id}.yml`), 'utf8')
+  );
+}
+
+/** Database images actually covering a declared DB; a static sibling does not own it. */
 function databaseImages(): string[] {
-  return pillarImages().filter((path) => productionMounts(path).includes('/data/sqlite'));
+  return pillarImages().filter((path) => {
+    const id = path.split('/')[1];
+    if (!id || !existsSync(join(repoRoot, 'infra', 'litestream', `${id}.yml`))) return false;
+    return databasePaths(id).some((database) =>
+      productionMounts(path).some((mount) => storageContains(mount, database))
+    );
+  });
 }
 
 interface WorkspacePackage {
@@ -779,7 +790,7 @@ describe('the deploy step every Node pillar image depends on', () => {
 describe('the fresh-volume contract, for every pillar image that owns a database', () => {
   // Docker seeds an empty named volume from the image's contents at the mount
   // point, ownership included. An image that does not create and own
-  // /data/sqlite therefore gets a root:root volume on its first ever mount and
+  // its DATA directory therefore gets a root:root volume on its first ever mount and
   // dies on SQLITE_CANTOPEN under `USER node` — invisible against the recycled
   // volume every pillar shares today, fatal the moment one moves to its own.
   //
@@ -800,19 +811,49 @@ describe('the fresh-volume contract, for every pillar image that owns a database
   });
 
   it.each(dbImages)('%s creates its data mount point in the runtime stage', (path) => {
-    expect(runtimeStage(readDockerfile(path))).toMatch(/mkdir\s+-p\s+[^\n]*\/data\/sqlite/u);
+    expect(runtimeDataDirs(readDockerfile(path))).toEqual(productionMounts(path));
   });
 
   it.each(dbImages)('%s hands /data to the runtime user, not root', (path) => {
-    expect(runtimeStage(readDockerfile(path))).toMatch(/chown\s+-R\s+\S+\s+\/data\b/u);
+    const stage = runtimeStage(readDockerfile(path)).replace(/\\\r?\n/gu, ' ');
+    const user = /^USER\s+(\S+)/mu.exec(stage)?.[1];
+    expect(user).toBeDefined();
+    for (const mount of productionMounts(path)) {
+      const changes = [...stage.matchAll(/\bchown\s+(-R\s+)?(\S+)\s+([^;&\n]+)/gu)];
+      expect(
+        changes.some(
+          ([, recursive, owner, targets]) =>
+            owner === `${user}:${user}` &&
+            targets
+              ?.trim()
+              .split(/\s+/u)
+              .some(
+                (target) =>
+                  target === mount || (recursive !== undefined && mount.startsWith(`${target}/`))
+              )
+        )
+      ).toBe(true);
+    }
   });
 
   it.each(dbImages)('%s defaults its database onto that mount point', (path) => {
     // Without this the image only boots when a deployer supplies a path: the
     // in-code default is ./data, and /app is root-owned.
-    expect(runtimeStage(readDockerfile(path))).toMatch(
-      /^\s*ENV\s+[A-Z_]*SQLITE_PATH=\/data\/sqlite\/\S+/mu
-    );
+    const stage = runtimeStage(readDockerfile(path));
+    const values = [...stage.matchAll(/^ENV\s+[A-Z_]+=(\/data\/\S+)/gmu)].map((match) => match[1]);
+    const id = path.split('/')[1];
+    expect(id).toBeDefined();
+    const databaseDirs =
+      id === undefined ? [] : databasePaths(id).map((database) => posix.dirname(database));
+    for (const mount of productionMounts(path).filter((target) =>
+      databaseDirs.some((directory) => directory === target || storageContains(target, directory))
+    )) {
+      expect(
+        values.some(
+          (value) => value === mount || (value !== undefined && storageContains(mount, value))
+        )
+      ).toBe(true);
+    }
   });
 });
 
@@ -1098,12 +1139,56 @@ describe('what production mounts and what the image creates, for every pillar Do
   });
 });
 
+describe('long volume physical-path options', () => {
+  it('rejects nested subpath before either smoke or database projections can discard it', () => {
+    const compose = [
+      'services:',
+      '  archive-api:',
+      '    build:',
+      '      dockerfile: pillars/archive/Dockerfile',
+      '    volumes:',
+      '      - type: volume',
+      '        source: pops-archive-data',
+      '        target: /data/archive',
+      '        read_only: false',
+      '        volume:',
+      '          subpath: another-folder',
+    ].join('\n');
+    expect(() => databaseMountsForDockerfile(compose, 'pillars/archive/Dockerfile')).toThrow();
+    expect(() => dataMountsForDockerfile(compose, 'pillars/archive/Dockerfile')).toThrow();
+    const supported = compose.replace('        volume:\n          subpath: another-folder', '');
+    expect(databaseMountsForDockerfile(supported, 'pillars/archive/Dockerfile')).toEqual([
+      { source: 'pops-archive-data', target: '/data/archive', readOnly: false, isBind: false },
+    ]);
+  });
+});
+
 describe('the mount set derived from production compose', () => {
   // Guards the derivation against silently narrowing to nothing: a parser bug,
   // a schema mismatch or a renamed compose key would leave every assertion
   // above vacuously true, and the smoke would report success on a mount it
   // never touched.
   const derived = new Map(pillarImages().map((path) => [path, productionMounts(path)]));
+
+  it.each(['sqlite-data', 'explicit-records-volume'])(
+    'retains a declared nonconventional database volume %s without a naming inference',
+    (source) => {
+      const compose = `services:\n  archive-api:\n    build:\n      dockerfile: pillars/archive/Dockerfile\n    volumes:\n      - ${source}:/data/archive\n`;
+      const mounts = databaseMountsForDockerfile(compose, 'pillars/archive/Dockerfile');
+      expect(mounts).toEqual([{ source, target: '/data/archive', readOnly: false, isBind: false }]);
+      expect(
+        databaseMountViolations('archive', ['/data/archive/receipts.db'], mounts, false)
+      ).toEqual([]);
+      expect(
+        databaseMountViolations(
+          'archive',
+          ['/data/archive/receipts.db'],
+          mounts.map((mount) => ({ ...mount, readOnly: true })),
+          false
+        ).length
+      ).toBeGreaterThan(0);
+    }
+  );
 
   /**
    * The backward direction of the derivation above: a pillar that ships
@@ -1115,7 +1200,14 @@ describe('the mount set derived from production compose', () => {
       const mounts = pillarImages()
         .filter((path) => path.startsWith(`pillars/${id}/`))
         .flatMap((path) => derived.get(path) ?? []);
-      expect(mounts).toContain('/data/sqlite');
+      expect(mounts.length).toBeGreaterThan(0);
+      const databaseMounts = pillarImages()
+        .filter((path) => path.startsWith(`pillars/${id}/`))
+        .flatMap((path) => databaseMountsForDockerfile(productionCompose, path));
+      const unique = [
+        ...new Map(databaseMounts.map((mount) => [JSON.stringify(mount), mount])).values(),
+      ];
+      expect(databaseMountViolations(id, databasePaths(id), unique, false)).toEqual([]);
     }
   });
 
@@ -1125,8 +1217,27 @@ describe('the mount set derived from production compose', () => {
     expect(derived.get('pillars/cerebrum/Dockerfile')).toContain('/data/cerebrum/engrams');
   });
 
+  it('covers Documents DATA and its independent private authority without backing up the guard', () => {
+    const path = 'pillars/documents/Dockerfile';
+    const mounts = derived.get(path);
+    expect(mounts).toEqual(['/data/documents', '/data/documents-upload-guard']);
+    const stage = runtimeStage(readDockerfile(path)).replace(/\\\r?\n/gu, ' ');
+    expect(stage).toContain('chmod 0700 /data/documents /data/documents-upload-guard');
+    expect(stage).not.toMatch(/^RUN.*(?:provision-guard|binding\.json)/mu);
+    expect(stage).not.toContain('ENV DOCUMENTS_UPLOAD_GUARD_ID=');
+    const sidecar = extractSidecarBlocks(productionCompose).find(
+      (block) => block.id === 'documents'
+    );
+    expect(sidecar).toBeDefined();
+    expect(
+      extractVolumeMounts(sidecar?.lines ?? [])
+        .map((mount) => mount.source)
+        .toSorted()
+    ).toEqual(['./litestream/documents.yml', 'pops-documents-data']);
+  });
+
   it('mounts nothing on the images that own no state', () => {
-    for (const id of ['docs', 'shell', 'mcp', 'documents', 'orchestrator', 'design']) {
+    for (const id of ['docs', 'shell', 'mcp', 'orchestrator', 'design']) {
       expect(derived.get(`pillars/${id}/Dockerfile`)).toEqual([]);
     }
   });

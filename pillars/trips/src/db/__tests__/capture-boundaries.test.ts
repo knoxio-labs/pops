@@ -76,6 +76,7 @@ describe('Capture ownership and inverse boundaries', () => {
         ideas: [],
         events: [],
         journeys: [],
+        journeyLegSets: [],
         stays: [],
         associations: [],
         memberships: [],

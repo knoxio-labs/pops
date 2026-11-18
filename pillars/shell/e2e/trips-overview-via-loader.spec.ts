@@ -107,6 +107,7 @@ for (const viewport of [
       ['/trips/7/visits/32', { ...visit, id: 32, timing: {} }],
       ['/trips/7/stays', { stays: [stay] }],
       ['/trips/7/stays/13', stay],
+      ['/trips/7/rentals', { rentals: [] }],
       ['/trips/7/events', { events: [event] }],
       ['/trips/7/events/61', event],
       [
@@ -215,11 +216,13 @@ for (const viewport of [
     });
     expect(headerLayout.titleHeight).toBeLessThanOrEqual(headerLayout.lineHeight + 1);
     expect(headerLayout.controlsFit).toBe(true);
+    await page.getByRole('button', { name: 'Journey', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Wellington', exact: true })).toHaveCount(2);
     await expect(page.getByRole('button', { name: 'Wellington', exact: true })).toHaveCount(2);
     for (const [index, id] of [31, 32].entries()) {
       await page.getByRole('button', { name: 'Wellington', exact: true }).nth(index).click();
       const editor = page.getByRole(contextRole, { name: `Visit #${id}`, exact: true });
+      await editor.getByText('Notes', { exact: true }).click();
       await expect(editor.getByLabel('Visit notes', { exact: true })).toHaveValue('');
       await expect(page).toHaveURL(/\/trips\/7$/u);
       expect(sourceReads).toContain(`/trips/7/visits/${id}`);
@@ -231,26 +234,33 @@ for (const viewport of [
       '/trips/7/documents'
     );
     await expect(page.getByRole('link', { name: 'Calendar', exact: true })).toHaveCount(0);
-    const eventCard = page.locator('article').filter({ hasText: 'Harbour festival' });
-    await expect(eventCard).toHaveAttribute('data-constraint', 'soft');
-    await expect(
-      eventCard.getByRole('button', { name: 'Harbour festival', exact: true })
-    ).toHaveCSS('border-left-width', '0px');
-    await expect(eventCard.getByText('Alternative', { exact: true })).toBeVisible();
-    await expect(eventCard.getByText('Booked', { exact: true })).toBeVisible();
-    const stayCard = page.locator('article').filter({ hasText: 'Cedar guesthouse' });
-    await expect(stayCard).toHaveAttribute('data-constraint', 'hard');
-    await expect(stayCard.getByRole('button', { name: 'Cedar guesthouse', exact: true })).toHaveCSS(
-      'border-left-width',
-      '2px'
+    await page.getByRole('button', { name: 'Sheet', exact: true }).click();
+    const table = page.getByRole('table', { name: 'Sheet', exact: true });
+    const eventRow = table.locator('[data-route-kind="event"][data-route-id="61"]');
+    await expect(eventRow.getByText('Booked', { exact: true })).toHaveAttribute(
+      'data-variant',
+      'outline'
     );
+    await expect(eventRow.getByText('Alternative', { exact: true })).toBeVisible();
+    const stayRow = table.locator('[data-route-kind="stay"][data-route-id="13"]');
+    await expect(stayRow.getByText('Purchased', { exact: true })).toHaveAttribute(
+      'data-variant',
+      'default'
+    );
+    if (viewport.width >= 1280) {
+      const decisionTitle = page
+        .getByRole('button', { name: 'Which harbour transfer?', exact: true })
+        .locator('.font-semibold');
+      const titleBounds = await decisionTitle.boundingBox();
+      expect(titleBounds?.width).toBeGreaterThan(100);
+    }
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth > window.innerWidth
     );
     expect(overflow).toBe(false);
     if (viewport.width === 390) {
-      const contentBounds = await page.locator('[data-workspace-layout="full"]').boundingBox();
-      expect(contentBounds?.width).toBeGreaterThanOrEqual(viewport.width - 32);
+      const contentBounds = await page.getByRole('main').last().boundingBox();
+      expect(contentBounds?.width).toBeGreaterThanOrEqual(viewport.width - 64);
     }
     const controls = page.getByRole('main').last().locator('a, button');
     for (const control of await controls.all()) {
@@ -310,6 +320,7 @@ for (const viewport of [
     await expect(eventsSource.getByText('trips.events.unavailable', { exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Cedar guesthouse', exact: true })).toBeVisible();
     await expect(page.getByText('No route entries.', { exact: true })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Journey', exact: true }).click();
     const gapDiagnostics = [31, 32].map((id) =>
       page.locator(`[data-visit-id="${id}"]`).getByText('trips.events.unavailable', { exact: true })
     );

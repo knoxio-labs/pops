@@ -2,6 +2,12 @@
 export class TripsServiceError extends Error {
   constructor(
     readonly code:
+      | 'booking_import_conflict'
+      | 'booking_import_mismatch'
+      | 'booking_import_invalid'
+      | 'booking_import_unavailable'
+      | 'route_draft_conflict'
+      | 'route_draft_undo_conflict'
       | 'route_revision_conflict'
       | 'route_membership_conflict'
       | 'route_operation_mismatch'

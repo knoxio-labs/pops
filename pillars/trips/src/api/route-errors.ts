@@ -2,6 +2,18 @@ import { defineErrors } from '@pops/pillar-express';
 
 /** Registered aggregate CAS, exclusive placement, replay and own-Undo failures. */
 export const routeErrors = defineErrors('trips', {
+  route_draft_conflict: {
+    area: 'route',
+    status: 409,
+    message: 'The draft deletion preview or its source lifecycle changed. Preview again.',
+    retryable: false,
+  },
+  route_draft_undo_conflict: {
+    area: 'route',
+    status: 409,
+    message: 'Undo requires the owned draft deletion outcome and source lifecycle.',
+    retryable: false,
+  },
   route_revision_conflict: {
     area: 'route',
     status: 409,

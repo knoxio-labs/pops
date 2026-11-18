@@ -2,7 +2,7 @@
 ##
 ## The tags pillar owns its vocabulary and mounts `pops-tags-data` at
 ## `/data/sqlite`; the matching sidecar in `infra/docker-compose.yml` mounts
-## this file and the same volume read-only. The replica target is supplied by
+## this file and the same volume read-write. The replica target is supplied by
 ## the deployment environment.
 
 dbs:

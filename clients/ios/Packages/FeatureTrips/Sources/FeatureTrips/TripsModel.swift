@@ -6,7 +6,7 @@ import Observation
 @Observable
 internal final class TripsModel {
     internal var searchQuery = ""
-    private var searchOrigin = TripsTab.trips
+    private var searchOrigin = TripsTab.today
     internal private(set) var trips: [TripRecord] = []
     internal private(set) var snapshot: TripSnapshot?
     internal private(set) var selectedID: Int? {
@@ -19,7 +19,7 @@ internal final class TripsModel {
     internal private(set) var failure: RepositoryError?
     internal let route: TripsRouteModel
     internal let inbox: TripsInboxModel
-    internal var tab = TripsTab.trips {
+    internal var tab = TripsTab.today {
         didSet {
             if tab != oldValue {
                 if tab == .search { searchOrigin = oldValue }
@@ -57,7 +57,7 @@ internal final class TripsModel {
 
     internal func openTrip(_ id: Int, sourceID: String? = nil) {
         source = nil
-        tab = .trips
+        tab = .today
         let intent = UUID()
         navigationIntent = intent
         navigationTask = Task {

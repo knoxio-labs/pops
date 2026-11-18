@@ -3,28 +3,30 @@ import { act, cleanup, render, screen, waitFor, within } from '@testing-library/
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ApiError } from '@pops/pillar-sdk/client';
-
+import { client as defaultDocumentsClient } from '../documents-api/client.gen';
 import { client as defaultTripsClient } from '../trips-api/client.gen';
 import {
   associatePaperlessDocument,
   loadDocumentAssociations,
   loadPaperlessDocument,
-  loadPaperlessTask,
   loadPaperlessUploadPolicy,
   searchPaperlessDocuments,
   loadTripRouteVisitIds,
   loadTripDocumentTargets,
   unlinkPaperlessDocument,
-  uploadPaperlessDocument,
 } from './api';
+import { DocumentUploadProvider } from './DocumentUploadProvider';
+import {
+  createDurableUploadWire,
+  readableUploadFile,
+  uploadWebCrypto,
+} from './durable-upload-wire-test-utils';
 import { TripDocumentsWorkspace } from './TripDocumentsWorkspace';
 
 vi.mock('./api', () => ({
   associatePaperlessDocument: vi.fn(),
   loadDocumentAssociations: vi.fn(),
   loadPaperlessDocument: vi.fn(),
-  loadPaperlessTask: vi.fn(),
   loadPaperlessUploadPolicy: vi.fn(),
   loadTripRouteVisitIds: vi.fn(),
   loadTripDocumentTargets: vi.fn(),
@@ -32,40 +34,81 @@ vi.mock('./api', () => ({
   paperlessOriginalUrl: (id: number) =>
     `/documents-api/paperless/documents/${String(id)}/download?original=true`,
   unlinkPaperlessDocument: vi.fn(),
-  uploadPaperlessDocument: vi.fn(),
 }));
 
 const loadLinks = vi.mocked(loadDocumentAssociations);
 const loadOriginal = vi.mocked(loadPaperlessDocument);
-const loadTask = vi.mocked(loadPaperlessTask);
 const loadPolicy = vi.mocked(loadPaperlessUploadPolicy);
 const loadVisitIds = vi.mocked(loadTripRouteVisitIds);
 const loadTargetNames = vi.mocked(loadTripDocumentTargets);
 const searchOwner = vi.mocked(searchPaperlessDocuments);
 const unlink = vi.mocked(unlinkPaperlessDocument);
-const upload = vi.mocked(uploadPaperlessDocument);
 const associate = vi.mocked(associatePaperlessDocument);
 const caches: QueryClient[] = [];
+const originalDocuments = defaultDocumentsClient.getConfig();
+const originalTrips = defaultTripsClient.getConfig();
 
 afterEach(() => {
   cleanup();
   for (const cache of caches) cache.clear();
   caches.length = 0;
   vi.resetAllMocks();
+  vi.unstubAllGlobals();
+  defaultDocumentsClient.setConfig(originalDocuments);
+  defaultTripsClient.setConfig(originalTrips);
 });
 
 beforeEach(() => {
+  vi.stubGlobal('crypto', uploadWebCrypto);
   loadTargetNames.mockResolvedValue(new Map());
 });
 
-function mount() {
+function ownerWire(options: Parameters<typeof createDurableUploadWire>[0] = {}) {
+  const wire = createDurableUploadWire({
+    baseUrl: 'https://pops.example/documents-api',
+    ...options,
+  });
+  defaultDocumentsClient.setConfig({
+    baseUrl: 'https://pops.example/documents-api',
+    fetch: wire.client.getConfig().fetch,
+  });
+  defaultTripsClient.setConfig({ baseUrl: 'https://pops.example/trips-api' });
+  return wire;
+}
+function mount(wire = ownerWire(), initialTarget?: { kind: 'event'; id: number }) {
   const cache = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 60_000 } } });
   caches.push(cache);
-  render(
+  const tree = (target = initialTarget) => (
     <QueryClientProvider client={cache}>
-      <TripDocumentsWorkspace tripId={4} />
+      <DocumentUploadProvider tripId={4} host={wire.host}>
+        <TripDocumentsWorkspace tripId={4} target={target} />
+      </DocumentUploadProvider>
     </QueryClientProvider>
   );
+  const view = render(tree());
+  return { wire, cache, view, tree };
+}
+async function dispatchAt(wire: ReturnType<typeof ownerWire>, index = 0) {
+  await waitFor(() => expect(wire.dispatches[index]).toBeDefined());
+  const dispatch = wire.dispatches[index];
+  if (dispatch === undefined) throw new Error('Durable dispatch missing.');
+  return dispatch;
+}
+async function readAt(wire: ReturnType<typeof ownerWire>, index = 0) {
+  await waitFor(() => expect(wire.reads[index]).toBeDefined());
+  const read = wire.reads[index];
+  if (read === undefined) throw new Error('Durable status read missing.');
+  return read;
+}
+async function selectUpload(file = readableUploadFile('receipt', 'receipt.pdf')) {
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: /^Upload a file/ })).not.toHaveAttribute(
+      'aria-disabled',
+      'true'
+    )
+  );
+  await userEvent.upload(fileInput(), file);
+  await userEvent.click(screen.getByRole('button', { name: 'Send to Documents' }));
 }
 
 describe('TripDocumentsWorkspace', () => {
@@ -174,7 +217,7 @@ describe('TripDocumentsWorkspace', () => {
     await waitFor(() => expect(unlink).toHaveBeenCalledWith(4, 1, defaultTripsClient));
   });
 
-  it('locks an ambiguous upload and requires a Documents lookup before releasing the selected file', async () => {
+  it('keeps independent existing-original selection available when upload recovery authority is absent', async () => {
     loadPolicy.mockResolvedValue({
       configured: true,
       available: true,
@@ -183,41 +226,50 @@ describe('TripDocumentsWorkspace', () => {
     });
     loadLinks.mockResolvedValue([]);
     loadVisitIds.mockResolvedValue([]);
-    upload.mockRejectedValue(new Error('connection lost'));
-    searchOwner.mockResolvedValue([]);
-    mount();
-
-    await userEvent.click(await screen.findByRole('button', { name: /^Upload a file/ }));
-    const input = document.body.querySelector<HTMLInputElement>('input[type="file"]');
-    if (input === null) throw new Error('FileUpload input was not mounted');
-    await userEvent.upload(
-      input,
-      new File(['receipt'], 'receipt.pdf', { type: 'application/pdf' })
+    searchOwner.mockResolvedValue([
+      {
+        id: 72,
+        title: 'Existing original',
+        originalFileName: 'existing.pdf',
+        created: '',
+        thumbnailUrl: '',
+      },
+    ]);
+    associate.mockResolvedValue({
+      id: 2,
+      tripId: 4,
+      documentId: 72,
+      targetKind: 'trip',
+      targetId: 4,
+      createdAt: '',
+    });
+    const wire = ownerWire();
+    const cache = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    caches.push(cache);
+    render(
+      <QueryClientProvider client={cache}>
+        <TripDocumentsWorkspace tripId={4} />
+      </QueryClientProvider>
     );
-    await userEvent.click(screen.getByRole('button', { name: 'Send to Documents' }));
-
-    expect(await screen.findByText(/Search Documents for this filename/)).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Send to Documents' })).toBeDisabled();
-    await userEvent.click(screen.getByRole('button', { name: 'Search Documents for receipt.pdf' }));
-    expect(await screen.findByText('No matching originals found.')).toBeVisible();
-    expect(searchOwner).toHaveBeenCalledWith('receipt.pdf', undefined);
-    await userEvent.click(
-      await screen.findByRole('button', { name: 'No original found; choose a different file' })
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /^Upload a file/ })).toHaveAttribute(
+        'aria-disabled',
+        'true'
+      )
     );
-
-    expect(screen.queryByText('Search Documents for receipt.pdf')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Send to Documents' })).not.toBeInTheDocument();
-    expect(upload).toHaveBeenCalledTimes(1);
+    await userEvent.click(screen.getByRole('button', { name: 'Choose existing document' }));
+    await userEvent.type(screen.getByPlaceholderText('Search documents...'), 'existing');
+    await userEvent.click(await screen.findByRole('button', { name: 'Link' }));
+    await waitFor(() =>
+      expect(associate).toHaveBeenCalledWith(4, 72, { kind: 'trip', id: 4 }, undefined)
+    );
+    expect(searchOwner).toHaveBeenCalledWith('existing', undefined);
+    expect(wire.createCount()).toBe(0);
+    expect(wire.putCount()).toBe(0);
+    expect(wire.dispatchCount()).toBe(0);
   });
 
-  it('keeps an accepted task with its original target while switching away and back', async () => {
-    let acceptUpload: ((taskId: string) => void) | undefined;
-    upload.mockImplementation(
-      () =>
-        new Promise((resolve) => {
-          acceptUpload = resolve;
-        })
-    );
+  it('retains an ambiguous operation and File after an exact GET still cannot prove its dispatch outcome', async () => {
     loadPolicy.mockResolvedValue({
       configured: true,
       available: true,
@@ -226,8 +278,40 @@ describe('TripDocumentsWorkspace', () => {
     });
     loadLinks.mockResolvedValue([]);
     loadVisitIds.mockResolvedValue([]);
-    loadTargetNames.mockResolvedValue(new Map());
-    loadTask.mockResolvedValue({ state: 'done', documentId: 87, reason: null });
+    const owner = mount();
+    await selectUpload();
+    const dispatch = await dispatchAt(owner.wire);
+    await act(async () => dispatch.fail(new Error('Connection lost')));
+    const input = dispatch.input;
+    await userEvent.click(await screen.findByRole('button', { name: 'Check upload status' }));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Check upload status' })).toBeEnabled()
+    );
+    expect(screen.getByRole('button', { name: 'Send to Documents' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Remove receipt.pdf' })).not.toBeInTheDocument();
+    expect(searchOwner).not.toHaveBeenCalled();
+    expect(owner.wire.records.get(input.operationId)?.state).toBe('outcome_unknown');
+    expect(owner.wire.createCount()).toBe(1);
+    expect(owner.wire.putCount()).toBe(1);
+    expect(owner.wire.dispatchCount()).toBe(1);
+    expect(
+      owner.wire.requests.some(
+        (request) =>
+          request.url.endsWith(`/paperless/uploads/${input.operationId}`) &&
+          request.method === 'GET'
+      )
+    ).toBe(true);
+  });
+
+  it('keeps an accepted task and exact File with its original target while switching away and back', async () => {
+    loadPolicy.mockResolvedValue({
+      configured: true,
+      available: true,
+      maxUploadBytes: 1000,
+      allowedMimeTypes: ['application/pdf'],
+    });
+    loadLinks.mockResolvedValue([]);
+    loadVisitIds.mockResolvedValue([]);
     associate.mockResolvedValue({
       id: 1,
       tripId: 4,
@@ -236,56 +320,34 @@ describe('TripDocumentsWorkspace', () => {
       targetId: 8,
       createdAt: '2026-11-09T00:00:00Z',
     });
-    const cache = new QueryClient({
-      defaultOptions: { queries: { retry: false, gcTime: 60_000 } },
-    });
-    caches.push(cache);
-    const view = render(
-      <QueryClientProvider client={cache}>
-        <TripDocumentsWorkspace tripId={4} target={{ kind: 'event', id: 8 }} />
-      </QueryClientProvider>
+    const owner = mount(ownerWire({ documentId: 87 }), { kind: 'event', id: 8 });
+    const file = readableUploadFile('agenda', 'agenda.pdf');
+    await selectUpload(file);
+    const dispatch = await dispatchAt(owner.wire);
+    owner.view.rerender(owner.tree({ kind: 'event', id: 9 }));
+    expect(screen.queryByRole('button', { name: 'Link file' })).not.toBeInTheDocument();
+    const other = readableUploadFile('other', 'other.pdf');
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /^Upload a file/ })).not.toHaveAttribute(
+        'aria-disabled',
+        'true'
+      )
     );
-
-    await userEvent.click(await screen.findByRole('button', { name: /^Upload a file/ }));
-    const input = document.body.querySelector<HTMLInputElement>('input[type="file"]');
-    if (input === null) throw new Error('FileUpload input was not mounted');
-    await userEvent.upload(input, new File(['agenda'], 'agenda.pdf', { type: 'application/pdf' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Send to Documents' }));
-    await waitFor(() => expect(upload).toHaveBeenCalledTimes(1));
-
-    view.rerender(
-      <QueryClientProvider client={cache}>
-        <TripDocumentsWorkspace tripId={4} target={{ kind: 'event', id: 9 }} />
-      </QueryClientProvider>
-    );
-    expect(screen.queryByRole('button', { name: 'Link file' })).toBeNull();
-    await userEvent.upload(
-      fileInput(),
-      new File(['other'], 'other.pdf', { type: 'application/pdf' })
-    );
+    await userEvent.upload(fileInput(), other);
     expect(screen.getByRole('article', { name: 'Selected file other.pdf' })).toBeVisible();
-    const resolveAcceptance = acceptUpload;
-    if (resolveAcceptance === undefined) throw new Error('Upload acceptance was not captured');
-    await act(async () => resolveAcceptance('task-8'));
-
-    view.rerender(
-      <QueryClientProvider client={cache}>
-        <TripDocumentsWorkspace tripId={4} target={{ kind: 'event', id: 8 }} />
-      </QueryClientProvider>
-    );
-    await waitFor(() => expect(loadTask).toHaveBeenCalledWith('task-8', undefined));
-    expect(screen.queryByRole('article', { name: 'Selected file other.pdf' })).toBeNull();
+    await act(async () => dispatch.accept('task-8'));
+    owner.view.rerender(owner.tree({ kind: 'event', id: 8 }));
+    expect(
+      screen.queryByRole('article', { name: 'Selected file other.pdf' })
+    ).not.toBeInTheDocument();
     await userEvent.click(await screen.findByRole('button', { name: 'Link file' }));
     await waitFor(() =>
       expect(associate).toHaveBeenCalledWith(4, 87, { kind: 'event', id: 8 }, undefined)
     );
-    view.rerender(
-      <QueryClientProvider client={cache}>
-        <TripDocumentsWorkspace tripId={4} target={{ kind: 'event', id: 9 }} />
-      </QueryClientProvider>
-    );
+    owner.view.rerender(owner.tree({ kind: 'event', id: 9 }));
     expect(screen.getByRole('article', { name: 'Selected file other.pdf' })).toBeVisible();
-    expect(upload).toHaveBeenCalledTimes(1);
+    expect(owner.wire.dispatchCount()).toBe(1);
+    expect(dispatch.input.fileName).toBe(file.name);
   });
 });
 
@@ -301,27 +363,10 @@ describe('independent file intents', () => {
     loadVisitIds.mockResolvedValue([]);
   });
 
-  it('keeps same-name files distinct and never resends a successful file after another is rejected', async () => {
-    const accepted = new File(['first'], 'booking.pdf', {
-      type: 'application/pdf',
-      lastModified: 1,
-    });
-    const rejected = new File(['other'], 'booking.pdf', {
-      type: 'application/pdf',
-      lastModified: 1,
-    });
-    upload.mockImplementation(async (file) => {
-      if (file === rejected)
-        throw new ApiError({
-          code: 'paperless.unsupported_media_type',
-          message: 'The upload response was interrupted',
-          kind: 'client',
-          retryable: false,
-          status: 415,
-        });
-      return 'accepted-task';
-    });
-    loadTask.mockResolvedValue({ state: 'done', documentId: 42, reason: null });
+  it('keeps same-name Files distinct and retries only the original rejected UUID after canonical GET proves it unclaimed', async () => {
+    const first = readableUploadFile('first', 'booking.pdf');
+    const second = readableUploadFile('other', 'booking.pdf');
+    const owner = mount(ownerWire({ documentId: 42 }));
     associate.mockResolvedValue({
       id: 1,
       tripId: 4,
@@ -330,53 +375,65 @@ describe('independent file intents', () => {
       targetId: 4,
       createdAt: '',
     });
-    mount();
     await waitFor(() =>
       expect(screen.getByRole('button', { name: /^Upload a file/ })).not.toHaveAttribute(
         'aria-disabled',
         'true'
       )
     );
-    const input = fileInput();
-    expect(input).toHaveAttribute('multiple');
-    await userEvent.upload(input, [accepted, rejected]);
+    expect(fileInput()).toHaveAttribute('multiple');
+    await userEvent.upload(fileInput(), [first, second]);
     const rows = screen.getAllByRole('article', { name: 'Selected file booking.pdf' });
     expect(rows).toHaveLength(2);
     await userEvent.click(
       within(requiredRow(rows, 0)).getByRole('button', { name: 'Send to Documents' })
     );
+    const accepted = await dispatchAt(owner.wire, 0);
     await userEvent.click(
       within(requiredRow(rows, 1)).getByRole('button', { name: 'Send to Documents' })
     );
+    const rejected = await dispatchAt(owner.wire, 1);
+    expect(rejected.input.operationId).not.toBe(accepted.input.operationId);
+    await act(async () => {
+      accepted.accept('accepted-task');
+      rejected.reject(409, {
+        code: 'documents.upload.conflict',
+        message: 'Not dispatched.',
+        requestId: crypto.randomUUID(),
+        retryable: false,
+      });
+    });
+    const rejectedRow = requiredRow(rows, 1);
+    await within(rejectedRow).findByRole('button', { name: 'Check upload status' });
+    expect(within(rejectedRow).getByRole('button', { name: 'Send to Documents' })).toBeDisabled();
     expect(
-      await within(requiredRow(rows, 1)).findByText(/Documents rejected this file/)
-    ).toBeVisible();
-    expect(
-      within(requiredRow(rows, 1)).queryByRole('button', { name: /Search Documents for booking/ })
+      within(rejectedRow).queryByRole('button', { name: 'Remove booking.pdf' })
     ).not.toBeInTheDocument();
-    expect(
-      within(requiredRow(rows, 1)).getByRole('button', { name: 'Send to Documents' })
-    ).toBeDisabled();
     await userEvent.click(
-      await within(requiredRow(rows, 0)).findByRole('button', {
-        name: 'Link file',
-      })
+      await within(requiredRow(rows, 0)).findByRole('button', { name: 'Link file' })
     );
     await waitFor(() =>
       expect(associate).toHaveBeenCalledWith(4, 42, { kind: 'trip', id: 4 }, undefined)
     );
-    await userEvent.click(
-      within(requiredRow(rows, 1)).getByRole('button', { name: 'Remove booking.pdf' })
+    await userEvent.click(within(rejectedRow).getByRole('button', { name: 'Check upload status' }));
+    await waitFor(() =>
+      expect(within(rejectedRow).getByRole('button', { name: 'Send to Documents' })).toBeEnabled()
     );
-    const replacement = new File(['replacement'], 'new.pdf', { type: 'application/pdf' });
-    await userEvent.upload(input, replacement);
-    await userEvent.click(screen.getByRole('button', { name: 'Send to Documents' }));
-    await waitFor(() => expect(upload).toHaveBeenCalledTimes(3));
-    expect(upload.mock.calls.map(([file]) => file)).toEqual([accepted, rejected, replacement]);
+    await userEvent.click(within(rejectedRow).getByRole('button', { name: 'Send to Documents' }));
+    const retry = await dispatchAt(owner.wire, 2);
+    expect(retry.input).toEqual(rejected.input);
+    expect(
+      owner.wire.dispatches.filter(
+        (entry) => entry.input.operationId === accepted.input.operationId
+      )
+    ).toHaveLength(1);
+    expect(owner.wire.createCount()).toBe(2);
+    expect(owner.wire.putCount()).toBe(2);
+    await act(async () => retry.accept('second-task'));
   });
 
-  it('retains unsupported selected files and uses the owner MIME and size policy without guessing', async () => {
-    mount();
+  it('retains unsupported Files and uses actual owner MIME and size policy without guessing', async () => {
+    const owner = mount();
     await waitFor(() =>
       expect(screen.getByRole('button', { name: /^Upload a file/ })).not.toHaveAttribute(
         'aria-disabled',
@@ -386,9 +443,9 @@ describe('independent file intents', () => {
     await userEvent
       .setup({ applyAccept: false })
       .upload(fileInput(), [
-        new File(['unknown'], 'looks-like.pdf'),
-        new File(['x'.repeat(1001)], 'large.pdf', { type: 'application/pdf' }),
-        new File(['x'.repeat(1000)], 'boundary.pdf', { type: 'application/pdf' }),
+        readableUploadFile('unknown', 'looks-like.pdf', ''),
+        readableUploadFile('x'.repeat(1001), 'large.pdf'),
+        readableUploadFile('x'.repeat(1000), 'boundary.pdf'),
       ]);
     expect(screen.getAllByRole('article')).toHaveLength(3);
     expect(
@@ -408,14 +465,14 @@ describe('independent file intents', () => {
         { name: 'Send to Documents' }
       )
     ).toBeEnabled();
-    expect(upload).not.toHaveBeenCalled();
+    expect(owner.wire.createCount()).toBe(0);
+    expect(owner.wire.putCount()).toBe(0);
+    expect(owner.wire.dispatchCount()).toBe(0);
   });
 
-  it('retries task lookup and linking without uploading an accepted original again', async () => {
-    upload.mockResolvedValue('accepted-task');
-    loadTask.mockRejectedValueOnce(new Error('owner lookup unavailable'));
-    loadTask.mockResolvedValue({ state: 'duplicate', documentId: 54, reason: null });
-    associate.mockRejectedValueOnce(new Error('link unavailable'));
+  it('retries exact status lookup and linking without uploading the accepted original again', async () => {
+    const owner = mount(ownerWire({ deferReads: true }));
+    associate.mockRejectedValueOnce(new Error('Link unavailable'));
     associate.mockResolvedValue({
       id: 3,
       tripId: 4,
@@ -424,61 +481,61 @@ describe('independent file intents', () => {
       targetId: 4,
       createdAt: '',
     });
-    mount();
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: /^Upload a file/ })).not.toHaveAttribute(
-        'aria-disabled',
-        'true'
-      )
-    );
-    await userEvent.upload(fileInput(), new File(['a'], 'a.pdf', { type: 'application/pdf' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Send to Documents' }));
+    await selectUpload(readableUploadFile('a', 'a.pdf'));
+    const dispatch = await dispatchAt(owner.wire);
+    await act(async () => dispatch.accept('accepted-task'));
+    const firstRead = await readAt(owner.wire);
+    await act(async () => firstRead.fail(new Error('Owner lookup unavailable')));
     await userEvent.click(await screen.findByRole('button', { name: 'Retry status check' }));
+    const secondRead = await readAt(owner.wire, 1);
+    await act(async () => secondRead.done(54));
     await userEvent.click(await screen.findByRole('button', { name: 'Link file' }));
-    expect(await screen.findByText(/The original is safe in Documents/)).toBeVisible();
+    await screen.findByText(/The original is safe in Documents/);
     await userEvent.click(screen.getByRole('button', { name: 'Retry linking original' }));
     await waitFor(() => expect(associate).toHaveBeenCalledTimes(2));
     expect(associate).toHaveBeenLastCalledWith(4, 54, { kind: 'trip', id: 4 }, undefined);
-    expect(loadTask).toHaveBeenCalledTimes(2);
-    expect(upload).toHaveBeenCalledTimes(1);
+    expect(owner.wire.reads).toHaveLength(2);
+    expect(owner.wire.createCount()).toBe(1);
+    expect(owner.wire.putCount()).toBe(1);
+    expect(owner.wire.dispatchCount()).toBe(1);
   });
 
-  it('does not link a completed owner task that omitted its canonical original identity', async () => {
-    upload.mockResolvedValue('accepted-task');
-    loadTask.mockResolvedValue({ state: 'done', documentId: null, reason: null });
-    mount();
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: /^Upload a file/ })).not.toHaveAttribute(
-        'aria-disabled',
-        'true'
-      )
+  it('rejects malformed completed proof without an original and retains the accepted task without linking', async () => {
+    const owner = mount(ownerWire({ deferReads: true }));
+    await selectUpload(readableUploadFile('a', 'a.pdf'));
+    const dispatch = await dispatchAt(owner.wire);
+    await act(async () => dispatch.accept('accepted-task'));
+    const read = await readAt(owner.wire);
+    await act(async () =>
+      read.malformed({
+        data: {
+          input: dispatch.input,
+          ownerMatches: true,
+          state: 'done',
+          taskId: 'accepted-task',
+          documentId: null,
+          reason: null,
+          contentAvailable: true,
+        },
+      })
     );
-    await userEvent.upload(fileInput(), new File(['a'], 'a.pdf', { type: 'application/pdf' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Send to Documents' }));
-    expect(
-      await screen.findByText('Documents returned a completed task without an original identity.')
-    ).toBeVisible();
+    await screen.findByRole('button', { name: 'Retry status check' });
     expect(screen.queryByRole('button', { name: 'Link file' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Send to Documents' })).not.toBeInTheDocument();
     expect(associate).not.toHaveBeenCalled();
-    expect(upload).toHaveBeenCalledTimes(1);
+    expect(owner.wire.records.get(dispatch.input.operationId)?.taskId).toBe('accepted-task');
+    expect(owner.wire.dispatchCount()).toBe(1);
   });
 
-  it('uses the typed failure rather than an error sentence to guard an uncertain outcome', async () => {
-    upload.mockRejectedValue(new Error('Documents rejected this file'));
-    mount();
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: /^Upload a file/ })).not.toHaveAttribute(
-        'aria-disabled',
-        'true'
-      )
-    );
-    await userEvent.upload(fileInput(), new File(['a'], 'a.pdf', { type: 'application/pdf' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Send to Documents' }));
-    expect(await screen.findByRole('button', { name: 'Search Documents for a.pdf' })).toBeVisible();
+  it('keeps uncertainty locked even when a lost-response error sentence says the file was rejected', async () => {
+    const owner = mount();
+    await selectUpload(readableUploadFile('a', 'a.pdf'));
+    const dispatch = await dispatchAt(owner.wire);
+    await act(async () => dispatch.fail(new Error('Documents rejected this file')));
+    await screen.findByRole('button', { name: 'Check upload status' });
     expect(screen.queryByRole('button', { name: 'Remove a.pdf' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Send to Documents' })).toBeDisabled();
-    expect(upload).toHaveBeenCalledTimes(1);
+    expect(owner.wire.dispatchCount()).toBe(1);
   });
 });
 
@@ -487,9 +544,8 @@ function fileInput(): HTMLInputElement {
   if (input === null) throw new Error('FileUpload input was not mounted');
   return input;
 }
-
 function requiredRow(rows: HTMLElement[], index: number): HTMLElement {
   const row = rows[index];
-  if (!row) throw new Error('Selected file row was not mounted');
+  if (row === undefined) throw new Error('Selected file row missing.');
   return row;
 }

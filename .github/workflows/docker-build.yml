@@ -23,6 +23,9 @@ on:
       - ".github/workflows/docker-build.yml"
       - ".github/actions/**"
       - "scripts/ci/smoke-image.mjs"
+      - "scripts/ci/litestream-storage.mjs"
+      - "scripts/ci/smoke-authority-fixture.mjs"
+      - "pillars/*/smoke-fixture.json"
       # The UI images copy and run the client generator, and pnpm runs the root
       # package.json's lifecycle scripts inside every image's install.
       - "scripts/codegen/**"
@@ -43,6 +46,9 @@ on:
       - ".github/workflows/docker-build.yml"
       - ".github/actions/**"
       - "scripts/ci/smoke-image.mjs"
+      - "scripts/ci/litestream-storage.mjs"
+      - "scripts/ci/smoke-authority-fixture.mjs"
+      - "pillars/*/smoke-fixture.json"
       # The UI images copy and run the client generator, and pnpm runs the root
       # package.json's lifecycle scripts inside every image's install.
       - "scripts/codegen/**"
@@ -129,6 +135,9 @@ jobs:
               - '.github/workflows/docker-build.yml'
               - '.github/actions/**'
               - 'scripts/ci/smoke-image.mjs'
+              - 'scripts/ci/litestream-storage.mjs'
+              - 'scripts/ci/smoke-authority-fixture.mjs'
+              - 'pillars/*/smoke-fixture.json'
             compose:
               - 'infra/docker-compose*.yml'
               - '.github/workflows/docker-build.yml'

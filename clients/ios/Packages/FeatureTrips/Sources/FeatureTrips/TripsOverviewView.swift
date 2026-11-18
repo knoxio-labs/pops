@@ -9,22 +9,33 @@ internal struct TripsOverviewView: View {
     @Environment(\.timeZone) private var zone
 
     internal var body: some View {
-        VStack(alignment: .leading, spacing: PopsSpacing.md) {
+        VStack(alignment: .leading, spacing: PopsSpacing.sm) {
             Text(tripName(trip))
                 .font(.popsSectionLabel)
                 .foregroundStyle(Color.popsTrips)
-                .lineLimit(nil)
                 .fixedSize(horizontal: false, vertical: true)
             Text(title)
                 .font(.popsLargeTitle)
                 .foregroundStyle(Color.popsForeground)
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityAddTraits(.isHeader)
-            if let context {
-                Text(context)
-                    .font(.popsHeadline)
-                    .foregroundStyle(Color.popsTrips)
-                    .fixedSize(horizontal: false, vertical: true)
+            HStack(alignment: .firstTextBaseline) {
+                if let context {
+                    Text(context)
+                        .font(.popsHeadline)
+                        .foregroundStyle(Color.popsTrips)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: PopsSpacing.sm)
+                if !projection.chapters.isEmpty {
+                    Label(
+                        "\(projection.chapters.count) stops",
+                        systemImage: "point.topleft.down.to.point.bottomright.curvepath"
+                    )
+                    .font(.popsCaption)
+                    .foregroundStyle(Color.popsMutedForeground)
+                    .lineLimit(1)
+                }
             }
             VStack(alignment: .leading, spacing: PopsSpacing.xs) {
                 Label {
@@ -56,7 +67,7 @@ internal struct TripsOverviewView: View {
     private var context: String? {
         switch projection.heading {
         case .current, .recorded: nil
-        case .travelDay: projection.heading.context
+        case .travelDay: projection.heading.title
         case .upcoming(_, let source): "Next · \(source)"
         }
     }

@@ -9,7 +9,6 @@ internal struct TripsInboxView: View {
     internal var body: some View {
         VStack(alignment: .leading, spacing: PopsSpacing.xl) {
             VStack(alignment: .leading, spacing: PopsSpacing.sm) {
-                Text("Inbox").font(.popsTitle)
                 Text("Captured originals for this trip")
                     .font(.popsSubheadline)
                     .foregroundStyle(Color.popsMutedForeground)

@@ -1,8 +1,9 @@
 import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, expect, it } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { createClient as createDocumentsClient } from '../documents-api/client';
+import { readableUploadFile, uploadWebCrypto } from '../documents/durable-upload-wire-test-utils';
 import { createClient } from '../trips-api/client';
 import {
   arrangementDocumentsHarness,
@@ -14,10 +15,12 @@ import type { ArrangementsWorkspaceProps } from './types';
 
 type Harness = ReturnType<typeof arrangementDocumentsHarness>;
 const owners: Harness[] = [];
+beforeEach(() => vi.stubGlobal('crypto', uploadWebCrypto));
 afterEach(() => {
   cleanup();
   for (const owner of owners) owner.cache.clear();
   owners.length = 0;
+  vi.unstubAllGlobals();
 });
 function setup(): Harness {
   const owner = arrangementDocumentsHarness();
@@ -35,9 +38,9 @@ it.each(['stay', 'event', 'journey'] as const)(
     expect(
       owner.documents.requests.some((request) => request.url.endsWith('/paperless/status'))
     ).toBe(true);
-    expect(owner.documents.responses).toHaveLength(0);
+    expect(owner.documents.dispatches).toHaveLength(0);
     const target = { kind, id: { stay: 13, event: 19, journey: 20 }[kind] };
-    const file = new File(['source document'], `${kind}.pdf`, { type: 'application/pdf' });
+    const file = readableUploadFile('source document', `${kind}.pdf`);
     await selectArrangementFiles([file]);
     expect(owner.session(target).read()[0]?.file).toBe(file);
   }
@@ -45,8 +48,8 @@ it.each(['stay', 'event', 'journey'] as const)(
 
 async function beginUploads(owner: Harness): Promise<File[]> {
   const files = [
-    new File(['unknown original'], 'unknown.pdf', { type: 'application/pdf' }),
-    new File(['accepted original'], 'accepted.pdf', { type: 'application/pdf' }),
+    readableUploadFile('unknown original', 'unknown.pdf'),
+    readableUploadFile('accepted original', 'accepted.pdf'),
   ];
   await selectArrangementFiles(files);
   const buttons = screen.getAllByRole('button', { name: 'Send to Documents' });
@@ -57,18 +60,26 @@ async function beginUploads(owner: Harness): Promise<File[]> {
       button.click();
     }
   });
-  await waitFor(() => expect(owner.documents.responses).toHaveLength(2));
+  await waitFor(() => expect(owner.documents.dispatches).toHaveLength(2));
+  expect(owner.documents.createCount()).toBe(2);
+  expect(owner.documents.putCount()).toBe(2);
   expect(owner.session().read()[0]?.file).toBe(files[0]);
   expect(owner.session().read()[1]?.file).toBe(files[1]);
   return files;
 }
 
 async function receiveUploads(owner: Harness): Promise<void> {
-  const [unknown, accepted] = owner.documents.responses;
+  const [unknownIntent, acceptedIntent] = owner.session().read();
+  const unknown = owner.documents.dispatches.find(
+    (dispatch) => dispatch.input.operationId === unknownIntent?.upload.id
+  );
+  const accepted = owner.documents.dispatches.find(
+    (dispatch) => dispatch.input.operationId === acceptedIntent?.upload.id
+  );
   if (!unknown || !accepted) throw new Error('Actual owner requests were not captured');
   await act(async () => {
-    unknown(Response.json({ message: 'Upload interrupted' }, { status: 503 }));
-    accepted(Response.json({ data: { taskId: 'accepted-original-91' } }, { status: 202 }));
+    unknown.fail(new Error('Upload interrupted'));
+    accepted.accept('accepted-original-91');
   });
   await waitFor(() => {
     expect(owner.session().read()[0]?.upload.uncertain).toBe(true);
@@ -97,7 +108,7 @@ it('retains exact Files and late owner outcomes through source A to B to A, keye
   owner.view.rerender(owner.content(owner.identity, 1));
   await openArrangementDocuments('stay');
   expect(await screen.findByRole('button', { name: 'Link file' })).toBeVisible();
-  expect(screen.getByRole('button', { name: 'Search Documents for unknown.pdf' })).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Check upload status' })).toBeVisible();
   expect(screen.getByRole('button', { name: 'Send to Documents' })).toBeDisabled();
   expect(owner.session()).toBe(session);
   expect(session.read()[0]?.file).toBe(files[0]);
@@ -112,7 +123,7 @@ it('retains exact Files and late owner outcomes through source A to B to A, keye
       },
     ])
   );
-  expect(owner.documents.responses).toHaveLength(2);
+  expect(owner.documents.dispatchCount()).toBe(2);
 });
 
 type OwnerChange = 'trips-client' | 'documents-client' | 'trips-origin' | 'documents-origin';
@@ -145,24 +156,38 @@ it.each<OwnerChange>(['trips-client', 'documents-client', 'trips-origin', 'docum
     await closeSource();
     const replacement = replaceOwner(owner, change);
     owner.view.rerender(owner.content(replacement));
-    const other = await openArrangementDocuments('stay');
-    expect(
-      within(other).queryByRole('article', { name: /^Selected file/ })
-    ).not.toBeInTheDocument();
-    expect(owner.session({ kind: 'stay', id: 13 }, replacement).read()).toEqual([]);
+    const other = await openArrangementDocuments('stay', false);
+    const replacementSession = owner.session({ kind: 'stay', id: 13 }, replacement);
+    if (change === 'trips-client' || change === 'documents-client') {
+      expect(replacementSession).not.toBe(session);
+      expect(replacementSession.read()).toHaveLength(1);
+      expect(replacementSession.read()[0]?.file).toBeNull();
+      expect(replacementSession.read()[0]?.upload.id).toBe(session.read()[0]?.upload.id);
+      expect(
+        within(other).getByRole('article', { name: 'Selected file unknown.pdf' })
+      ).toBeVisible();
+    } else {
+      expect(
+        within(other).queryByRole('article', { name: /^Selected file/ })
+      ).not.toBeInTheDocument();
+      expect(replacementSession.read()).toEqual([]);
+    }
+    expect(owner.documents.createCount()).toBe(2);
+    expect(owner.documents.putCount()).toBe(2);
+    expect(owner.documents.dispatchCount()).toBe(2);
     expect(owner.trips.links).toEqual([]);
     await closeSource();
     owner.trips.client.setConfig({ baseUrl: 'http://arrangements.test' });
-    owner.documents.client.setConfig({ baseUrl: 'http://documents.test' });
+    owner.documents.client.setConfig({ baseUrl: 'http://arrangements.test/documents-api' });
     owner.view.rerender(owner.content());
     await openArrangementDocuments('stay');
     expect(await screen.findByRole('button', { name: 'Link file' })).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Search Documents for unknown.pdf' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Check upload status' })).toBeVisible();
     expect(owner.session()).toBe(session);
     expect(session.read()[0]?.file).toBe(files[0]);
     expect(session.read()[1]?.file).toBe(files[1]);
     expect(session.read()[1]?.upload.id).toBe(upload?.id);
     expect(session.read()[1]?.upload.taskReceipt).toEqual(receipt);
-    expect(owner.documents.responses).toHaveLength(2);
+    expect(owner.documents.dispatchCount()).toBe(2);
   }
 );

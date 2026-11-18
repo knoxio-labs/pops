@@ -1,8 +1,8 @@
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 
 import {
+  DocumentUploadProvider,
   AccommodationGapProvider,
   ArrangementResponsibilityProvider,
   TripOverview,
@@ -17,15 +17,11 @@ import { accommodationContext } from './TimelineAccommodation';
 import { TimelineContext } from './TimelineContext';
 import { TimelineControls, TimelineFilters } from './TimelineControls';
 import { client as defaultClient } from './trips-api/client.gen';
+import { useTimelinePresentationState } from './use-timeline-presentation-state';
 import { useTimelineSelection } from './use-timeline-selection';
 
 import type { RemotePageHostProps } from '@pops/pillar-sdk';
-import type {
-  CaptureTimelineSelection,
-  CaptureTimelineVisibility,
-  OverviewCalendarSelection,
-  OverviewKind,
-} from '@pops/trips-workspace';
+import type { OverviewLinkKind } from '@pops/trips-workspace';
 
 import type { ApiClients } from './api/types';
 import type { CaptureContextProps } from './CaptureContext';
@@ -59,28 +55,33 @@ export function TripOverviewPage(props: TimelineOwnerProps = {}) {
       />
     );
   return (
-    <AccommodationGapProvider identity={{ tripId, client: props.client }}>
-      <ArrangementResponsibilityProvider identity={{ tripId, client: props.client }}>
-        <TimelineSession
-          key={`${(props.client ?? defaultClient).getConfig().baseUrl}:${tripId}`}
-          {...props}
-          tripId={tripId}
-          {...chooser}
-        />
-      </ArrangementResponsibilityProvider>
-    </AccommodationGapProvider>
+    <DocumentUploadProvider
+      host={props.documentUploads}
+      tripId={tripId}
+      tripsClient={props.client}
+      documentsClient={props.documentsClient}
+    >
+      <AccommodationGapProvider identity={{ tripId, client: props.client }}>
+        <ArrangementResponsibilityProvider identity={{ tripId, client: props.client }}>
+          <TimelineSession
+            key={`${(props.client ?? defaultClient).getConfig().baseUrl}:${tripId}`}
+            {...props}
+            tripId={tripId}
+            {...chooser}
+          />
+        </ArrangementResponsibilityProvider>
+      </AccommodationGapProvider>
+    </DocumentUploadProvider>
   );
 }
 
-function TimelineSession(
-  props: TimelineOwnerProps &
-    Pick<
-      Parameters<typeof TimelineContext>[0],
-      'contactChooserIntent' | 'advanceContactChooserIntent'
-    > & { tripId: number }
-) {
-  const { tripId } = props;
-  const { i18n } = useTranslation('trips');
+type TimelineSessionProps = TimelineOwnerProps &
+  Pick<
+    Parameters<typeof TimelineContext>[0],
+    'contactChooserIntent' | 'advanceContactChooserIntent'
+  > & { tripId: number };
+
+function TimelineSession(props: TimelineSessionProps) {
   const presentation = useTimelinePresentationState(props.initialCalendar);
   const { selection, onSelect, changed } = useTimelineSelection(props.client);
   const labels = useOverviewLabels();
@@ -94,6 +95,30 @@ function TimelineSession(
         }}
       />
     );
+  return (
+    <TimelineOverview
+      props={props}
+      presentation={presentation}
+      selection={selection}
+      onSelect={onSelect}
+    />
+  );
+}
+
+function TimelineOverview({
+  props,
+  presentation,
+  selection,
+  onSelect,
+}: {
+  props: TimelineSessionProps;
+  presentation: ReturnType<typeof useTimelinePresentationState>;
+  selection: ReturnType<typeof useTimelineSelection>['selection'];
+  onSelect: ReturnType<typeof useTimelineSelection>['onSelect'];
+}) {
+  const { i18n } = useTranslation('trips');
+  const { tripId } = props;
+  const labels = useOverviewLabels();
   return (
     <TripOverview
       tripId={tripId}
@@ -109,16 +134,7 @@ function TimelineSession(
       onOpenPlacement={(target) => onSelect({ kind: 'placement', target })}
       controls={<TimelineControls {...presentation} onSelect={onSelect} />}
       sourceVisibility={presentation.sourceVisibility}
-      sourceControls={
-        <TimelineFilters
-          {...props}
-          selection={presentation.sourceFilter}
-          onChange={presentation.setSourceFilter}
-          onVisibility={presentation.setSourceVisibility}
-          onSelect={onSelect}
-        />
-      }
-
+      sourceControls={sourceFilters(props, presentation, onSelect)}
       calendar={
         presentation.calendarEnabled
           ? {
@@ -151,7 +167,7 @@ function timelineContexts(props: TimelineContextProps) {
   return { captureComposer, contextualEditor };
 }
 
-function sourceHref(tripId: number, kind: OverviewKind, id: number) {
+function sourceHref(tripId: number, kind: OverviewLinkKind, id: number): string {
   switch (kind) {
     case 'visit':
       return `/trips/${tripId}/visits/${id}`;
@@ -163,34 +179,21 @@ function sourceHref(tripId: number, kind: OverviewKind, id: number) {
       return `/trips/${tripId}/journeys/${id}`;
     case 'decision':
       return `/trips/${tripId}/decisions/${id}`;
-    default:
-      return undefined;
   }
 }
 
-function useTimelinePresentationState(initialCalendar?: boolean) {
-  const [sourceFilter, setSourceFilter] = useState<CaptureTimelineSelection>({
-    kind: 'all',
-    organisation: 'all',
-    location: 'all',
-  });
-  const [sourceVisibility, setSourceVisibility] = useState<CaptureTimelineVisibility>();
-  const [calendarEnabled, setCalendarEnabled] = useState(initialCalendar ?? false);
-  const [calendarSelection, setCalendarSelection] = useState<OverviewCalendarSelection>({
-    from: '',
-    to: '',
-    zone: '',
-    kind: 'all',
-    journey: '',
-  });
-  return {
-    sourceFilter,
-    setSourceFilter,
-    sourceVisibility,
-    setSourceVisibility,
-    calendarEnabled,
-    toggleCalendar: () => setCalendarEnabled((enabled) => !enabled),
-    calendarSelection,
-    setCalendarSelection,
-  };
+function sourceFilters(
+  props: TimelineSessionProps,
+  presentation: ReturnType<typeof useTimelinePresentationState>,
+  onSelect: ReturnType<typeof useTimelineSelection>['onSelect']
+) {
+  return (
+    <TimelineFilters
+      {...props}
+      selection={presentation.sourceFilter}
+      onChange={presentation.setSourceFilter}
+      onVisibility={presentation.setSourceVisibility}
+      onSelect={onSelect}
+    />
+  );
 }

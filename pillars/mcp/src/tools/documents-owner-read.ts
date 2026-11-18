@@ -6,7 +6,7 @@ import type { CallResult } from '@pops/pillar-sdk/client';
 
 import type { ToolDef } from './tool-def.js';
 
-type Read = 'status' | 'search' | 'get' | 'task';
+type Read = 'status' | 'search' | 'get' | 'task' | 'upload';
 
 function dispatch(operation: Read, input: Record<string, unknown>): Promise<CallResult<unknown>> {
   const owner = documentsOwner().paperless;
@@ -22,6 +22,10 @@ function dispatch(operation: Read, input: Record<string, unknown>): Promise<Call
     case 'task':
       if (typeof input['taskId'] !== 'string') throw new TypeError('Expected validated task ID');
       return owner.task({ taskId: input['taskId'] });
+    case 'upload':
+      if (typeof input['operationId'] !== 'string')
+        throw new TypeError('Expected validated operation ID');
+      return owner.upload({ operationId: input['operationId'] });
   }
 }
 
@@ -30,7 +34,7 @@ function readTool(operation: Read, description: string): ToolDef {
   const { input, response } = documentsReadContracts[operation];
   const scope = `documents.${operationId}`;
   return {
-    name: `documents.${operation}`,
+    name: operation === 'upload' ? 'documents.uploadStatus' : `documents.${operation}`,
     readOnly: true,
     scope,
     description,
@@ -42,7 +46,9 @@ function readTool(operation: Read, description: string): ToolDef {
       if (
         result.kind === 'ok' &&
         (!response(result.value).valid ||
-          (operation === 'get' && originalId(result.value) !== parsed.data['id']))
+          (operation === 'get' && originalId(result.value) !== parsed.data['id']) ||
+          (operation === 'upload' &&
+            originalOperationId(result.value) !== parsed.data['operationId']))
       )
         return toolError(
           `Documents returned an invalid ${operationId} response; no source identity or completion can be confirmed.`
@@ -70,10 +76,24 @@ export const documentsOwnerReadTools: readonly ToolDef[] = [
     'task',
     'Read the actual ingestion task returned by an accepted upload. Preserve taskId and poll reads only. pending is not complete; only done/duplicate with an actual positive documentId identifies the original for association. failed/unknown/unavailable must not trigger an automatic reupload.'
   ),
+  readTool(
+    'upload',
+    'Read durable upload proof by the caller-retained operationId, including after gateway restart. awaiting_content may resume with the exact same immutable input; admitted may be explicitly dispatched; accepted and outcome_unknown never authorize another byte upload.'
+  ),
 ];
 
 function originalId(value: unknown): unknown {
   if (typeof value !== 'object' || value === null || !('data' in value)) return undefined;
   const data = value.data;
   return typeof data === 'object' && data !== null && 'id' in data ? data.id : undefined;
+}
+
+function originalOperationId(value: unknown): unknown {
+  if (typeof value !== 'object' || value === null || !('data' in value)) return undefined;
+  const data = value.data;
+  if (typeof data !== 'object' || data === null || !('input' in data)) return undefined;
+  const input = data.input;
+  return typeof input === 'object' && input !== null && 'operationId' in input
+    ? input.operationId
+    : undefined;
 }

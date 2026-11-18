@@ -83,7 +83,36 @@ export interface OverviewLabels {
   alternatives: string;
   selected: string;
   unresolved: string;
+  sheet: {
+    title: string;
+    journey: string;
+    when: string;
+    what: string;
+    state: string;
+    originals: string;
+    originalsUnknown: string;
+    originalCount: (count: number) => string;
+    unknownDate: string;
+    onRoute: string;
+    gap: string;
+  };
+  sleepPlan: {
+    title: string;
+    stopCount: (count: number) => string;
+    covered: string;
+    open: string;
+    openNights: (count: number) => string;
+    overlap: string;
+    unknown: string;
+    datesUndecided: string;
+    noVisits: string;
+    noIssues: string;
+    attention: string;
+    reviewGap: (label: string) => string;
+    unverified: (count: number) => string;
+  };
   source: (kind: string, id: number) => string;
+  kind: (kind: string) => string;
   status: (value: string) => string;
 }
 interface OverviewBaseProps {

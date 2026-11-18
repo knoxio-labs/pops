@@ -35,7 +35,10 @@ for (const width of [1440, 390]) {
     await expect(
       page.getByRole('link', { name: 'New source contact', exact: true })
     ).toHaveAttribute('href', '/contacts/owner-organiser');
-    await page.getByRole('button', { name: 'Try again', exact: true }).click();
+    await expect(
+      page.getByText('trips.documents.recovery_unavailable', { exact: true })
+    ).toHaveCount(0);
+    await owner.sourceFailure.getByRole('button', { name: 'Try again', exact: true }).click();
     await expect(page.getByText('Changes saved', { exact: true })).toBeVisible();
     expect(owner.writes).toEqual([
       { organiserLinks: [{ uri: owner.reference.uri }] },

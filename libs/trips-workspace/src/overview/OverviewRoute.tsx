@@ -3,10 +3,12 @@ import { useCallback, useMemo, useState } from 'react';
 import { ErrorState } from '@pops/ui';
 
 import { requestProblem } from '../stay/api';
-import { OverviewJourneys } from './OverviewJourneys';
+import { OverviewJourneys, JourneyRecord } from './OverviewJourneys';
 import { OverviewPaths } from './OverviewPaths';
+import { OverviewSheet } from './OverviewSheet';
 import { OverviewUnplaced } from './OverviewUnplaced';
 import { PlacementTitle } from './PlacementTitle';
+import { resolvedJourney } from './route-context';
 import { RouteSourceRow } from './RouteSourceRow';
 import { workspaceItemVisible } from './workspace-projection';
 
@@ -20,7 +22,7 @@ interface JourneyVisibilityResult {
   visible: boolean;
 }
 
-/** Canonical mixed root order, gaps and complete paths come only from the shared route projector. */
+/** Renders the selected Trip's ordered route in the active Sheet or Journey presentation. */
 export function OverviewRoute(props: OverviewViewProps): JSX.Element {
   const criteria = JSON.stringify([
     props.workspaceFilter ?? 'everything',
@@ -54,13 +56,23 @@ export function OverviewRoute(props: OverviewViewProps): JSX.Element {
     hiddenJourneyIds,
     onJourneyVisibilityChange,
   };
+  const items = (props.projection?.order ?? []).filter((item) =>
+    workspaceItemVisible(item, props, journeyVisibility)
+  );
+  const display = props.workspaceDisplay ?? 'sheet';
   return (
     <>
       <section aria-label={props.labels.route} className="min-w-0 space-y-4">
         <h2 className="font-trip-display text-xl font-semibold">{props.labels.route}</h2>
-        <WorkspaceColumns {...props} />
-        <RouteReadState {...props} />
-        <RouteItems {...props} {...journeyVisibility} />
+        <RouteStatus {...props} />
+        {display === 'sheet' ? (
+          <OverviewSheet {...props} items={items} />
+        ) : (
+          <JourneyTimeline {...props} items={items} {...journeyVisibility} />
+        )}
+        {display === 'sheet' && (
+          <JourneyVisibilityObservers {...props} items={items} {...journeyVisibility} />
+        )}
         <OverviewPaths {...props} {...journeyVisibility} />
       </section>
       <OverviewUnplaced {...props} />
@@ -69,90 +81,83 @@ export function OverviewRoute(props: OverviewViewProps): JSX.Element {
   );
 }
 
-function RouteReadState(props: OverviewViewProps): JSX.Element {
-  return (
-    <>
-      {props.route.reading && <p role="status">{props.labels.loading}</p>}
-      {props.route.readError && (
-        <ErrorState
-          error={requestProblem(props.route.readError)}
-          onRetry={() => void props.route.reload()}
-        />
-      )}
-      {props.projection?.order.length === 0 && (
-        <p role="status" className="text-sm text-muted-foreground">
-          {props.labels.empty}
-        </p>
-      )}
-    </>
-  );
+function RouteStatus(props: OverviewViewProps): JSX.Element | null {
+  if (props.route.reading) return <p role="status">{props.labels.loading}</p>;
+  if (props.route.readError)
+    return (
+      <ErrorState
+        error={requestProblem(props.route.readError)}
+        onRetry={() => void props.route.reload()}
+      />
+    );
+  return null;
 }
 
-function RouteItems(props: OverviewViewProps & WorkspaceJourneyVisibility): JSX.Element | null {
-  const items = (props.projection?.order ?? []).filter((item) =>
-    workspaceItemVisible(item, props, props)
-  );
-  if (!props.projection?.order.length) return null;
-  if (!items.length)
+function JourneyTimeline(
+  props: OverviewViewProps & WorkspaceJourneyVisibility & { items: ProjectedRouteItem[] }
+): JSX.Element | null {
+  if (!props.projection && (props.route.reading || props.route.readError)) return null;
+  if (props.projection?.order.length === 0)
     return (
-      <p role="status" className="rounded-xl bg-trip-surface p-4 text-sm text-trip-muted">
-        {props.workspaceQuery?.trim() || (props.workspaceFilter ?? 'everything') !== 'everything'
-          ? props.labels.status('workspace.noRouteResults')
-          : props.labels.empty}
+      <p role="status" className="text-sm text-muted-foreground">
+        {props.labels.empty}
+      </p>
+    );
+  if (props.items.length === 0)
+    return (
+      <p role="status" className="text-sm text-muted-foreground">
+        {noResultsLabel(props)}
       </p>
     );
   return (
-    <ol
-      aria-label={props.labels.route}
-      data-workspace-display={props.workspaceDisplay ?? 'sheet'}
-      className={
-        props.workspaceDisplay === 'journey'
-          ? 'space-y-5 border-l-2 border-trip-transport/40 pl-4'
-          : 'space-y-1'
-      }
-    >
-      {items.map((item) => (
-        <RouteItem key={`${item.reference.kind}:${item.reference.id}`} {...props} item={item} />
-      ))}
+    <ol aria-label={props.labels.route} data-workspace-display="journey" className="space-y-1">
+      {props.items.map((item) =>
+        item.state === 'gap' ? (
+          <li
+            key={`gap:${item.reference.id}`}
+            data-route-kind="gap"
+            data-route-id={item.reference.id}
+            data-route-state="gap"
+            className="mb-4 rounded-lg border bg-muted/30 p-3 text-muted-foreground"
+          >
+            <PlacementTitle
+              onOpenPlacement={props.onOpenPlacement}
+              target={item.reference}
+              title={props.labels.source('gap', item.reference.id)}
+            />
+          </li>
+        ) : (
+          <RouteSourceRow
+            key={`${item.reference.kind}:${item.reference.id}`}
+            {...props}
+            item={item}
+          />
+        )
+      )}
     </ol>
   );
 }
 
-function RouteItem(
-  props: OverviewViewProps & WorkspaceJourneyVisibility & { item: ProjectedRouteItem }
-): JSX.Element {
-  if (props.item.state !== 'gap') return <RouteSourceRow {...props} item={props.item} />;
-  return (
-    <li
-      data-route-kind="gap"
-      data-route-id={props.item.reference.id}
-      data-route-state="gap"
-      className="min-w-0 rounded-xl border border-dashed border-trip-attention/50 bg-trip-attention-soft/40 p-4 text-trip-muted"
-    >
-      <PlacementTitle
-        onOpenPlacement={props.onOpenPlacement}
-        target={props.item.reference}
-        title={props.labels.source('gap', props.item.reference.id)}
-      />
-    </li>
+function JourneyVisibilityObservers(
+  props: OverviewViewProps & WorkspaceJourneyVisibility & { items: ProjectedRouteItem[] }
+): JSX.Element[] {
+  return props.items.flatMap((item) =>
+    resolvedJourney(item)
+      ? [
+          <JourneyRecord
+            key={item.reference.id}
+            {...props}
+            journey={item.source}
+            visibilityOnly
+            onJourneyVisibilityChange={props.onJourneyVisibilityChange}
+          />,
+        ]
+      : []
   );
 }
 
-function WorkspaceColumns(props: OverviewViewProps): JSX.Element {
-  return (
-    <div
-      aria-hidden
-      className={
-        props.workspaceDisplay === 'journey'
-          ? 'hidden'
-          : 'hidden grid-cols-12 gap-3 px-3 text-xs font-medium uppercase tracking-wide text-muted-foreground lg:grid'
-      }
-    >
-      {(['when', 'what', 'state', 'with', 'originals'] as const).map((column) => (
-        <span key={column} className={column === 'what' ? 'col-span-4' : 'col-span-2'}>
-          {props.labels.status(`workspace.${column}`)}
-        </span>
-      ))}
-    </div>
-  );
+function noResultsLabel(props: OverviewViewProps): string {
+  return props.workspaceQuery?.trim() || (props.workspaceFilter ?? 'everything') !== 'everything'
+    ? props.labels.status('workspace.noRouteResults')
+    : props.labels.empty;
 }

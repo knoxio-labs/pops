@@ -75,15 +75,17 @@ function JourneyReference(props: OverviewViewProps & { id: number }): JSX.Elemen
   );
 }
 
-/** Read one canonical Journey and its actual ordered leg facts without assigning it to a Visit. */
+/** Read ordered Journey leg facts, optionally reporting match visibility without rendering the card. */
 export function JourneyRecord({
   journey,
   historical = false,
+  visibilityOnly = false,
   onJourneyVisibilityChange,
   ...props
 }: OverviewViewProps & {
   journey: Journey;
   historical?: boolean;
+  visibilityOnly?: boolean;
   onJourneyVisibilityChange?: (journeyId: number, visible: boolean) => void;
 }): JSX.Element | null {
   const legs = useJourneyLegs(props, journey);
@@ -95,6 +97,7 @@ export function JourneyRecord({
   useEffect(() => {
     onJourneyVisibilityChange?.(journey.id, presentation.visible);
   }, [journey.id, onJourneyVisibilityChange, presentation.visible]);
+  if (visibilityOnly) return null;
   if (legs.ownershipError) return <ErrorState error={legs.ownershipError} />;
   if (!presentation.visible) return null;
 

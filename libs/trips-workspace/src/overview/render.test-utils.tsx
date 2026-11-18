@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
 import { createClient } from '../trips-api/client';
 import { overviewProps, overviewResponses } from './test-utils';
@@ -60,4 +61,8 @@ export function mountOverview(
   };
   const mounted = render(view());
   return { requests, cache, client, rerender: (nextProps) => mounted.rerender(view(nextProps)) };
+}
+
+export async function selectJourney(): Promise<void> {
+  await userEvent.click(await screen.findByRole('button', { name: 'workspace.journey' }));
 }

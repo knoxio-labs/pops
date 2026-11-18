@@ -13,6 +13,7 @@ export function UploadEntry({
   policy,
   onFilesSelected,
   beforeRequest,
+  uploadsBlocked = false,
   ...context
 }: {
   tripId: number;
@@ -22,6 +23,7 @@ export function UploadEntry({
   policy: PaperlessUploadPolicy | undefined;
   onFilesSelected: (files: File[]) => void;
   beforeRequest?: () => void;
+  uploadsBlocked?: boolean;
 }): ReactElement {
   const available = policy?.configured === true && policy.available;
   return (
@@ -34,7 +36,7 @@ export function UploadEntry({
           accept={policy?.allowedMimeTypes.join(',')}
           maxSize={policy?.maxUploadBytes}
           acceptHint={null}
-          disabled={!available}
+          disabled={!available || uploadsBlocked}
           onFilesSelected={onFilesSelected}
           onError={(reason) => {
             if ('file' in reason) onFilesSelected([reason.file]);

@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 
 import { journeys } from '../schema.js';
 import { getJourneyLegSet } from './leg-set.js';
@@ -16,7 +16,9 @@ export function currentJourneyLegSets(
     const current = db
       .select({ id: journeys.id })
       .from(journeys)
-      .where(and(eq(journeys.tripId, tripId), eq(journeys.id, journeyId)))
+      .where(
+        and(eq(journeys.tripId, tripId), eq(journeys.id, journeyId), isNull(journeys.removedAt))
+      )
       .get();
     return current === undefined ? [] : [{ journeyId, ...getJourneyLegSet(db, tripId, journeyId) }];
   });

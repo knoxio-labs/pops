@@ -1,10 +1,9 @@
 import { isDeepStrictEqual } from 'node:util';
 
-import { and, eq, isNull } from 'drizzle-orm';
-
 import { RouteOperationSchema } from '../../contract/route-schemas.js';
 import { routeOperations } from '../schema/route.js';
 import { applyRouteCommand } from './route-commands.js';
+import { acknowledgeRouteUndo, findRouteOperation } from './route-operation-records.js';
 import { readRouteSnapshot, requireRouteRevision, writeRouteSnapshot } from './route-storage.js';
 import { TripsServiceError } from './source-record.js';
 
@@ -16,22 +15,12 @@ import type {
 } from '../../contract/route-schemas.js';
 import type { TripsDb } from '../index.js';
 
-function findOperation(
-  db: TripsDb,
-  tripId: number,
-  operationId: string
-): typeof routeOperations.$inferSelect | undefined {
-  return db
-    .select()
-    .from(routeOperations)
-    .where(and(eq(routeOperations.tripId, tripId), eq(routeOperations.operationId, operationId)))
-    .get();
-}
 function undo(db: TripsDb, before: TripRoute, operation: RouteOperation): RouteReceipt {
   if (operation.command.kind !== 'undo') throw new TripsServiceError('route_undo_conflict');
-  const prior = findOperation(db, before.tripId, operation.command.targetOperationId);
+  const prior = findRouteOperation(db, before.tripId, operation.command.targetOperationId);
   if (
     prior === undefined ||
+    prior.family !== 'placement' ||
     prior.undoneBy !== null ||
     prior.request.command.kind === 'undo' ||
     isDeepStrictEqual(prior.receipt.before, prior.receipt.after) ||
@@ -39,28 +28,7 @@ function undo(db: TripsDb, before: TripRoute, operation: RouteOperation): RouteR
   )
     throw new TripsServiceError('route_undo_conflict');
   const after = { ...prior.receipt.before, revision: before.revision + 1 };
-  db.update(routeOperations)
-    .set({ undoneBy: operation.operationId })
-    .where(eq(routeOperations.id, prior.id))
-    .run();
-  const predecessors = db
-    .select()
-    .from(routeOperations)
-    .where(and(eq(routeOperations.tripId, before.tripId), isNull(routeOperations.undoneBy)))
-    .all()
-    .filter(
-      (entry) =>
-        entry.request.command.kind !== 'undo' &&
-        !isDeepStrictEqual(entry.receipt.before, entry.receipt.after) &&
-        isDeepStrictEqual(entry.expectedAfter, prior.receipt.before)
-    );
-  if (predecessors.length > 1) throw new TripsServiceError('route_undo_conflict');
-  const predecessor = predecessors[0];
-  if (predecessor !== undefined)
-    db.update(routeOperations)
-      .set({ expectedAfter: after })
-      .where(eq(routeOperations.id, predecessor.id))
-      .run();
+  acknowledgeRouteUndo(db, prior, operation.operationId, after);
   return {
     operationId: operation.operationId,
     undoneOperationId: prior.operationId,
@@ -78,10 +46,14 @@ export function operateTripRoute(
   return db.transaction(
     (tx) => {
       const before = readRouteSnapshot(tx, tripId);
-      const prior = findOperation(tx, tripId, operation.operationId);
+      const prior = findRouteOperation(tx, tripId, operation.operationId);
       if (prior !== undefined) {
-        if (!isDeepStrictEqual(prior.request, operation))
+        if (prior.family !== 'placement' || !isDeepStrictEqual(prior.request, operation))
           throw new TripsServiceError('route_operation_mismatch');
+        if (operation.command.kind === 'undo') {
+          const target = findRouteOperation(tx, tripId, operation.command.targetOperationId);
+          if (target?.family !== 'placement') throw new TripsServiceError('route_undo_conflict');
+        }
         return {
           receipt: prior.receipt,
           current: before,

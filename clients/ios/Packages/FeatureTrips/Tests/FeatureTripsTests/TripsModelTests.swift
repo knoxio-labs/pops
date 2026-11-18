@@ -11,6 +11,7 @@ internal struct TripsModelTests {
         let snapshot = try TripTestSources.snapshot()
         let repository = TripTestRepository(snapshot: snapshot)
         let model = TripsModel(repository: repository)
+        #expect(model.tab == .today)
         await model.load()
         #expect(model.trips == [snapshot.trip])
         #expect(model.snapshot == nil)
@@ -19,6 +20,10 @@ internal struct TripsModelTests {
         await model.select(snapshot.trip.id)
         #expect(model.snapshot == snapshot)
         #expect(await repository.ids == [snapshot.trip.id])
+        model.tab = .inbox
+        model.openTrip(snapshot.trip.id)
+        await model.navigationTask?.value
+        #expect(model.tab == .today)
     }
 
     @Test("missing and failed source reads do not become an empty successful trip")
@@ -40,7 +45,7 @@ internal struct TripsModelTests {
     }
 
     @Test(
-        "an injected saved selection restores its exact Timeline, while a fresh selection stays explicit"
+        "an injected saved selection restores its exact Today state, while a fresh selection stays explicit"
     )
     internal func restoreSelection() async throws {
         let snapshot = try TripTestSources.snapshot()

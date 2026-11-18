@@ -391,6 +391,14 @@ caller's decision; this file only knows how to sandbox whatever `units` names.
 | `cross-pr-line-budget.yml`       | every PR (no path filter); no push, no merge group; **not** required, **not** in `ci-gate.yml`'s gated list | `scripts/ci/check-cross-pr-line-budget.mjs` — projects this PR's diff against the heads of the other open PRs on the same base and warns when the pair would tip a file over its oxlint `max-lines` cap. **Advisory, and in its own workflow so that is true rather than claimed**: it sat in `quality.yml` calling itself advisory while `CI Gate` aggregated that workflow, so an unreadable sibling head blocked unrelated PRs (POPS-3362). Still exits non-zero when it cannot look — "could not answer" must not read like "no collision" |
 | `inventory-acceptance.yml`       | `workflow_dispatch` only — **opt-in verification, not a guard** (ADR-045's 2026-09-24 amendment); not in `ci-gate.yml`, not in the ruleset | `scripts/inventory-acceptance/run.mjs` (POPS-4354) against real registry/inventory/bfm/mcp processes: vitest always, Playwright (S7) when `run_web` (default true), Maestro against a newly created disposable iOS simulator (`xcode-27`) when `run_ios` (default false, tens of minutes). The iOS dispatch defaults to direct BFM pairing; `ios_pairing_issuer: mcp` exercises the local MCP-backed issuer. Writes evidence records, and packets when dispatched with `pull_request`/`pr_issue`, uploaded as artifacts |
 
+Images requiring externally provisioned local authority declare an owning
+`pops.smoke.fixture` JSON contract. The image smoke uses only fresh synthetic
+volumes/UUIDs: missing and mismatched authority must fail health with the
+explicit refusal status, then a separate explicitly provisioned fixture must
+pass ordinary health and every mount's runtime-user write probe. Neither the
+image nor the application initializes production authority. Fixture metadata
+and smoke helper changes select Docker validation just like the smoke entrypoint.
+
 `publish-images.yml`'s `discover` job filters on `pillars/<x>/Dockerfile`
 existing. `shell`, `mcp`, `orchestrator` and `docs` all have one, so the four
 images in the static `apps` matrix are also built by the `pillars` job.

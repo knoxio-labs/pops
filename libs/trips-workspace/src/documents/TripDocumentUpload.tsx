@@ -4,6 +4,7 @@ import { useCallback, useState, useSyncExternalStore } from 'react';
 import { ErrorState } from '@pops/ui';
 
 import { loadPaperlessUploadPolicy } from './api';
+import { useUploadJournal } from './DocumentUploadProvider';
 import { documentQueryKeys } from './query-keys';
 import {
   createTripDocumentUploadSession,
@@ -12,10 +13,12 @@ import {
 import { uploadSessionKey } from './upload-context';
 import { UploadContent } from './UploadContent';
 import { UploadEntry } from './UploadEntry';
+import { useTripUploadRestoration } from './use-trip-upload-restoration';
 import { useTripDocumentUpload } from './useTripDocumentUpload';
 
 import type { ReactElement, SetStateAction } from 'react';
 
+import type { UploadJournal } from './durable-upload-journal';
 import type {
   TripDocumentFileIntent,
   TripDocumentUploadContext,
@@ -31,7 +34,11 @@ export interface TripDocumentUploadProps extends TripDocumentUploadContext {
 /** Queue distinct browser files; an optional retained session must match this exact target and owners. */
 export function TripDocumentUpload(props: TripDocumentUploadProps): ReactElement {
   const { tripId, target, tripsClient, documentsClient, session } = props;
-  const contextKey = uploadSessionKey(tripId, target, tripsClient, documentsClient);
+  const persistence = useUploadJournal(target);
+  const contextKey = JSON.stringify([
+    uploadSessionKey(tripId, target, tripsClient, documentsClient),
+    persistence.journal?.bindingKey(),
+  ]);
   const [localSessions] = useState(() => new Map<string, TripDocumentUploadSession>());
   let activeSession = session ?? localSessions.get(contextKey);
   if (activeSession === undefined) {
@@ -63,6 +70,8 @@ function BoundUpload(
   props: TripDocumentUploadProps & { session: TripDocumentUploadSession }
 ): ReactElement {
   const { session: activeSession, documentsClient } = props;
+  const persistence = useUploadJournal(props.target);
+  const restoration = useTripUploadRestoration(activeSession, persistence.journal);
   const policy = useQuery({
     queryKey: documentQueryKeys.status(documentsClient),
     queryFn: () => {
@@ -71,13 +80,20 @@ function BoundUpload(
     },
     retry: false,
   });
+  const recoveryReady =
+    persistence.journal !== null &&
+    restoration.binding === persistence.journal.bindingKey() &&
+    restoration.error === null;
   return (
     <section aria-label="Add files" className="flex flex-col gap-3">
       <h2 className="text-lg font-medium">Add files</h2>
       <UploadEntry
         {...props}
         policy={policy.data}
-        onFilesSelected={activeSession.addFiles}
+        uploadsBlocked={!recoveryReady}
+        onFilesSelected={(files) => {
+          if (recoveryReady) activeSession.addFiles(files);
+        }}
         beforeRequest={activeSession.assertCurrentContext}
       />
       {!policy.isError && policy.data?.available && policy.data.configured ? null : (
@@ -87,17 +103,35 @@ function BoundUpload(
             : 'Documents is unavailable. Existing links remain visible.'}
         </p>
       )}
-      <UploadQueue session={activeSession} />
+      {recoveryReady && persistence.journal !== null ? (
+        <UploadQueue session={activeSession} journal={persistence.journal} />
+      ) : (
+        <ErrorState
+          error={{
+            code: 'trips.documents.recovery_unavailable',
+            message:
+              restoration.error ?? persistence.problem ?? 'Verifying upload recovery storage…',
+            retryable: true,
+          }}
+          onRetry={persistence.retry}
+        />
+      )}
     </section>
   );
 }
 
-function UploadQueue({ session }: { session: TripDocumentUploadSession }): ReactElement {
+function UploadQueue({
+  session,
+  journal,
+}: {
+  session: TripDocumentUploadSession;
+  journal: UploadJournal;
+}): ReactElement {
   const intents = useSyncExternalStore(session.subscribe, session.read, session.read);
   return (
     <div className="flex flex-col gap-3">
       {intents.map((intent) => (
-        <UploadIntent key={intent.id} intent={intent} session={session} />
+        <UploadIntent key={intent.id} intent={intent} session={session} journal={journal} />
       ))}
     </div>
   );
@@ -106,8 +140,10 @@ function UploadQueue({ session }: { session: TripDocumentUploadSession }): React
 function UploadIntent({
   intent,
   session,
+  journal,
 }: {
   intent: TripDocumentFileIntent;
+  journal: UploadJournal;
   session: TripDocumentUploadSession;
 }): ReactElement | null {
   const onSessionChange = useCallback(
@@ -116,12 +152,22 @@ function UploadIntent({
   );
   const workflow = useTripDocumentUpload({
     ...session.context,
-    storage: { session: intent.upload, onSessionChange, taskScope: session.taskScope },
+    storage: { session: intent.upload, onSessionChange, taskScope: session.taskScope, journal },
     beforeRequest: session.assertCurrentContext,
   });
-  if (workflow.fields.file === null) return null;
+  if (!workflow.persistenceReady)
+    return (
+      <ErrorState
+        error={{
+          code: 'trips.documents.recovery_unavailable',
+          message: workflow.error ?? 'Upload recovery identity changed.',
+          retryable: false,
+        }}
+      />
+    );
+  if (workflow.fields.file === null && workflow.fields.metadata === null) return null;
   return (
-    <article aria-label={`Selected file ${intent.file.name}`}>
+    <article aria-label={`Selected file ${intent.name}`}>
       <UploadContent
         {...session.context}
         workflow={workflow}

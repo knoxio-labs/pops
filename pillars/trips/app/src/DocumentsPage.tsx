@@ -1,12 +1,14 @@
 import { useParams } from 'react-router';
 
-import { TripDocumentsWorkspace } from '@pops/trips-workspace';
+import { DocumentUploadProvider, TripDocumentsWorkspace } from '@pops/trips-workspace';
 import { ErrorState } from '@pops/ui';
 
 import { sourceId } from './source-id';
 
+import type { RemotePageHostProps } from '@pops/pillar-sdk';
+
 /** Mount the shared Documents owner picker and typed association workspace for one real trip. */
-export function DocumentsPage() {
+export function DocumentsPage(props: RemotePageHostProps = {}) {
   const tripId = sourceId(useParams().tripId);
   return tripId === undefined ? (
     <ErrorState
@@ -17,6 +19,8 @@ export function DocumentsPage() {
       }}
     />
   ) : (
-    <TripDocumentsWorkspace tripId={tripId} />
+    <DocumentUploadProvider host={props.documentUploads} tripId={tripId}>
+      <TripDocumentsWorkspace tripId={tripId} />
+    </DocumentUploadProvider>
   );
 }

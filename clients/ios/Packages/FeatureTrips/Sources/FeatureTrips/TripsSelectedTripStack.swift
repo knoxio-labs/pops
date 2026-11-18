@@ -12,7 +12,8 @@ internal struct TripsSelectedTripStack: View {
         NavigationStack {
             Group {
                 if model.selectedID != nil {
-                    TripsWorkspaceView(model: model, tab: tab, capture: capture)
+                    TripsWorkspaceView(
+                        model: model, tab: tab, capture: capture)
                 } else if model.loading {
                     LoadingStateView()
                 } else if let failure = model.failure {
@@ -26,7 +27,7 @@ internal struct TripsSelectedTripStack: View {
             .toolbar {
                 ToolbarItem(placement: .principal) { tripMenu }
                 ToolbarItem(placement: .primaryAction) {
-                    if let capture {
+                    if let capture, tab != .inbox {
                         Button("Capture", systemImage: "plus", action: capture)
                     }
                 }

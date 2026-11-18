@@ -85,6 +85,7 @@ vi.mock('@pops/trips-workspace', async (importOriginal) => ({
         <main>
           <h1>Timeline {props.tripId}</h1>
           {props.controls}
+          {props.captureComposer}
           {props.renderVisitContext?.({ tripId: props.tripId, visitId: 31 })}
           {sources.map((source) => (
             <button key={source.kind} onClick={() => props.onOpenSource?.(source)}>
@@ -167,6 +168,17 @@ function mount(path: string, props: Parameters<typeof TripOverviewPage>[0] = {})
 }
 
 describe('Selected Trip Timeline host', () => {
+  it('mounts the quick capture composer with the selected Trip and host capabilities', () => {
+    const client = createClient({ baseUrl: 'https://trip-capture.invalid' });
+    mount('/7', { client });
+    expect(screen.getByText('Capture context capture')).toBeVisible();
+    expect(observed.capture.mock.lastCall?.[0]).toMatchObject({
+      tripId: 7,
+      client,
+      view: 'capture',
+    });
+  });
+
   it('opens only the acknowledged Stay for the exact accommodation owner and Visit', () => {
     const client = createClient({ baseUrl: 'https://gap-owner.invalid' });
     mount('/7', { client });

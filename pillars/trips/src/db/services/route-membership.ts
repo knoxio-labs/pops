@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 
 import { journeys, visits } from '../schema.js';
 import { TripsServiceError } from './source-record.js';
@@ -17,7 +17,7 @@ export function routeSourceExists(db: TripsDb, tripId: number, source: RouteSour
     db
       .select({ id: table.id })
       .from(table)
-      .where(and(eq(table.tripId, tripId), eq(table.id, source.id)))
+      .where(and(eq(table.tripId, tripId), eq(table.id, source.id), isNull(table.removedAt)))
       .get() !== undefined
   );
 }

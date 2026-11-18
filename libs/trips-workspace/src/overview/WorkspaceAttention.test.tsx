@@ -29,7 +29,7 @@ it('summarizes open nights, route gaps, undated visits and unresolved references
 
   mountOverview(responses);
 
-  const panel = await screen.findByRole('region', { name: 'workspace.beforeYouGo' });
+  const panel = await screen.findByRole('region', { name: 'Before you go' });
   expect(within(panel).getByText('workspace.openNights')).toBeVisible();
   expect(within(panel).getByText('workspace.nightCoverage')).toBeVisible();
   expect(within(panel).getByText('workspace.routeGaps')).toBeVisible();

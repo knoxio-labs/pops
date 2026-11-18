@@ -5,6 +5,9 @@ import { useState } from 'react';
 import { I18nextProvider } from 'react-i18next';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
+import { DocumentUploadProvider } from '@pops/trips-workspace';
+
+import { createDocumentUploadHost } from './document-upload-host-fixture';
 import enAU from './locales/en-AU.json';
 import { timelineSourceOwner } from './timeline-source-fixture';
 import { TimelineContext } from './TimelineContext';
@@ -12,13 +15,18 @@ import { TimelineContext } from './TimelineContext';
 import type { TimelineSelection } from './TimelineContext';
 
 let owner: ReturnType<typeof timelineSourceOwner>;
+let documentUploads: ReturnType<typeof createDocumentUploadHost>;
 const translation = createInstance();
 beforeEach(async () => {
   owner = timelineSourceOwner();
+  const baseUrl = owner.client.getConfig().baseUrl;
+  if (!baseUrl) throw new Error('Missing fixture upload server');
+  documentUploads = createDocumentUploadHost(new URL(baseUrl).origin);
   await translation.init({ lng: 'en-AU', resources: { 'en-AU': { trips: enAU } } });
 });
 afterEach(() => {
   cleanup();
+  documentUploads.invalidate();
   owner.cache.clear();
   expect(owner.unexpected).toEqual([]);
 });
@@ -26,7 +34,12 @@ afterEach(() => {
 function Host() {
   const [selection, onSelect] = useState<TimelineSelection | null>(null);
   return (
-    <>
+    <DocumentUploadProvider
+      host={documentUploads}
+      tripId={7}
+      tripsClient={owner.client}
+      documentsClient={owner.client}
+    >
       <main>
         <h1>Timeline</h1>
         <button onClick={() => onSelect({ kind: 'source', source: { kind: 'stay', id: 13 } })}>
@@ -40,7 +53,7 @@ function Host() {
         selection={selection}
         onSelect={onSelect}
       />
-    </>
+    </DocumentUploadProvider>
   );
 }
 function mount() {
@@ -77,6 +90,9 @@ it('retains failed exact source intent and successful Undo across contextual she
   fireEvent.blur(field);
   expect(await screen.findByText('Changes have not been saved')).toBeVisible();
   expect(await reopen()).toHaveValue('Failed source name');
+  await waitFor(() =>
+    expect(screen.queryByText('trips.documents.recovery_unavailable')).not.toBeInTheDocument()
+  );
   fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
   await waitFor(() => expect(owner.patches).toHaveLength(2));
   expect(owner.patches[1]).toEqual(owner.patches[0]);

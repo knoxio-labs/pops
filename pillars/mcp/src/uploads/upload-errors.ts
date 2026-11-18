@@ -6,14 +6,14 @@ export const uploadErrors = defineErrors('mcp', {
     area: 'upload',
     status: 502,
     message:
-      'The upload outcome is unknown. Do not resend automatically. For direct Documents uploads, read documents.uploadStatus with the original uploadId. For Inventory documents, inspect inventory.documents.list for the original item before explicit recovery.',
+      'The upload outcome is unknown. Do not resend automatically. For direct Documents uploads, read documents.uploadStatus with the caller-retained operationId. For Inventory documents, inspect inventory.documents.list for the original item before explicit recovery.',
     retryable: false,
   },
   not_found: {
     area: 'upload',
     status: 404,
     message:
-      'This upload URL is unknown, expired or already used. For a direct Documents upload, inspect documents.uploadStatus with the original uploadId; the file may have been accepted, so do not resend automatically. Other upload tools can mint a new URL.',
+      'This upload URL is unknown, expired or already used. For a direct Documents upload, inspect documents.uploadStatus with the original operationId; the file may have been accepted, so do not resend automatically. Other upload tools can mint a new URL.',
     retryable: false,
   },
   empty_body: {
@@ -55,6 +55,13 @@ export const uploadErrors = defineErrors('mcp', {
     area: 'upload',
     status: 400,
     message: 'Inventory rejected the image.',
+    retryable: false,
+  },
+  documents_refused: {
+    area: 'upload',
+    status: 502,
+    message:
+      'Documents refused the durable content write. The operationId and owner status are retained for documents.uploadStatus; do not change the operation input or resend automatically.',
     retryable: false,
   },
   upstream_unavailable: {

@@ -9,6 +9,7 @@ import {
 import { captures, ideas, captureAssociations, exploreMemberships } from '../schema.js';
 import { getEvent, listEvents } from './events.js';
 import { listJourneys } from './journeys.js';
+import { getJourneyLegSetWithinOperation } from './leg-set.js';
 import { getPlace, getTrip, getVisit } from './records.js';
 import { requireOwnedRecord, TripsServiceError } from './source-record.js';
 import { listStays } from './stays.js';
@@ -102,6 +103,7 @@ export function readSourceWorkspace(db: TripsDb, tripId: number): SourceWorkspac
   return db.transaction(
     (tx) => {
       getTrip(tx, tripId);
+      const journeyRecords = listJourneys(tx, tripId);
       return {
         captures: tx
           .select()
@@ -132,7 +134,11 @@ export function readSourceWorkspace(db: TripsDb, tripId: number): SourceWorkspac
           .all()
           .map((row) => ExploreMembershipSchema.parse(row)),
         events: listEvents(tx, tripId),
-        journeys: listJourneys(tx, tripId),
+        journeys: journeyRecords,
+        journeyLegSets: journeyRecords.map((journey) => ({
+          journeyId: journey.id,
+          ...getJourneyLegSetWithinOperation(tx, tripId, journey.id),
+        })),
         stays: listStays(tx, tripId),
       };
     },

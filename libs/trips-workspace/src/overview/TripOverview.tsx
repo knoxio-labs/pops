@@ -8,12 +8,12 @@ import { useOverviewSources } from './use-overview-sources';
 
 import type { JSX } from 'react';
 
-import type { TripOverviewProps, OverviewViewProps } from './types';
+import type { OverviewSources, TripOverviewProps, OverviewViewProps } from './types';
 import type { OverviewQueries } from './use-overview-sources';
 
 /** Approved route-first overview, reading each trip-owned source independently through its generated client. */
 export function TripOverview(props: TripOverviewProps): JSX.Element | null {
-  return <OverviewSession {...props} />;
+  return <OverviewSession key={props.tripId} {...props} />;
 }
 
 function OverviewSession(props: TripOverviewProps): JSX.Element | null {
@@ -32,19 +32,7 @@ function OverviewSession(props: TripOverviewProps): JSX.Element | null {
     );
   if (!trip.data)
     return <ErrorState error={requestProblem(trip.error)} onRetry={() => void trip.refetch()} />;
-  const sources = {
-    visits: context.visits.data,
-    places: context.places.data,
-    stays: context.stays.data,
-    events: context.events.data,
-    journeys: context.journeys.data,
-    groups: context.groups.data,
-    decisions: context.decisions.data,
-    documents: context.documents.data,
-    meetings: context.meetings.data,
-    capture: context.capture.data,
-    rentals: context.rentals.data,
-  };
+  const sources = overviewSources(context);
   return (
     <OverviewFrame
       {...props}
@@ -94,6 +82,24 @@ function OverviewFrame({
       )}
     </div>
   );
+}
+
+function overviewSources(
+  context: Omit<ReturnType<typeof useOverviewSources>, 'trip'>
+): OverviewSources {
+  return {
+    visits: context.visits.data,
+    places: context.places.data,
+    stays: context.stays.data,
+    events: context.events.data,
+    journeys: context.journeys.data,
+    groups: context.groups.data,
+    decisions: context.decisions.data,
+    documents: context.documents.data,
+    meetings: context.meetings.data,
+    capture: context.capture.data,
+    rentals: context.rentals.data,
+  };
 }
 
 function OverviewErrors({
